@@ -32,22 +32,27 @@
 
 #if ENABLE(INPUT_TYPE_TIME)
 
-#include "BaseChooserOnlyDateAndTimeInputType.h"
+#include "BaseDateAndTimeInputType.h"
 
 namespace WebCore {
 
-class TimeInputType final : public BaseChooserOnlyDateAndTimeInputType {
+class TimeInputType final : public BaseDateAndTimeInputType {
+    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
     explicit TimeInputType(HTMLInputElement&);
 
 private:
     const AtomString& formControlType() const override;
-    DateComponents::Type dateType() const override;
+    DateComponentsType dateType() const override;
     Decimal defaultValueForStepUp() const override;
     StepRange createStepRange(AnyStepHandling) const override;
     Optional<DateComponents> parseToDateComponents(const StringView&) const override;
     Optional<DateComponents> setMillisecondToDateComponents(double) const override;
-    bool isTimeField() const override;
+    void handleDOMActivateEvent(Event&) override;
+
+    bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
+    String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;
+    void setupLayoutParameters(DateTimeEditElement::LayoutParameters&, const DateComponents&) const final;
 };
 
 } // namespace WebCore

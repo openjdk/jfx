@@ -137,11 +137,11 @@ void DeleteSelectionCommand::initializeStartEnd(Position& start, Position& end)
             break;
 
         // If we're going to expand to include the startSpecialContainer, it must be fully selected.
-        if (startSpecialContainer && !endSpecialContainer && comparePositions(positionInParentAfterNode(startSpecialContainer), end) > -1)
+        if (startSpecialContainer && !endSpecialContainer && positionInParentAfterNode(startSpecialContainer) >= end)
             break;
 
         // If we're going to expand to include the endSpecialContainer, it must be fully selected.
-        if (endSpecialContainer && !startSpecialContainer && comparePositions(start, positionInParentBeforeNode(endSpecialContainer)) > -1)
+        if (endSpecialContainer && !startSpecialContainer && start >= positionInParentBeforeNode(endSpecialContainer))
             break;
 
         if (startSpecialContainer && startSpecialContainer->isDescendantOf(endSpecialContainer))
@@ -200,7 +200,7 @@ void DeleteSelectionCommand::smartDeleteParagraphSpacers()
             position = VisiblePosition(m_downstreamEnd).next().deepEquivalent();
         m_upstreamEnd = position.upstream();
         m_downstreamEnd = position.downstream();
-        m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY);
+        m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
         setStartingSelectionOnSmartDelete(m_upstreamStart, m_downstreamEnd);
     }
     if (startAndEndInSameUnsplittableElement && selectionEndIsEndOfContent && previousPositionIsBlankParagraph && selectionEndsInParagraphSeperator) {
@@ -213,7 +213,7 @@ void DeleteSelectionCommand::smartDeleteParagraphSpacers()
         auto position = endOfParagraphBeforeStart.deepEquivalent();
         m_upstreamStart = position.upstream();
         m_downstreamStart = position.downstream();
-        m_leadingWhitespace = m_upstreamStart.leadingWhitespacePosition(DOWNSTREAM);
+        m_leadingWhitespace = m_upstreamStart.leadingWhitespacePosition(Affinity::Downstream);
         setStartingSelectionOnSmartDelete(m_upstreamStart, m_upstreamEnd);
     }
 }
@@ -275,20 +275,20 @@ bool DeleteSelectionCommand::initializePositionData()
 
     // Handle leading and trailing whitespace, as well as smart delete adjustments to the selection
     m_leadingWhitespace = m_upstreamStart.leadingWhitespacePosition(m_selectionToDelete.affinity());
-    m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY);
+    m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
 
     if (m_smartDelete) {
 
         // skip smart delete if the selection to delete already starts or ends with whitespace
         Position pos = VisiblePosition(m_upstreamStart, m_selectionToDelete.affinity()).deepEquivalent();
-        bool skipSmartDelete = pos.trailingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNotNull();
+        bool skipSmartDelete = pos.trailingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
         if (!skipSmartDelete)
-            skipSmartDelete = m_downstreamEnd.leadingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNotNull();
+            skipSmartDelete = m_downstreamEnd.leadingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
 
         // extend selection upstream if there is whitespace there
         bool hasLeadingWhitespaceBeforeAdjustment = m_upstreamStart.leadingWhitespacePosition(m_selectionToDelete.affinity(), true).isNotNull();
         if (!skipSmartDelete && hasLeadingWhitespaceBeforeAdjustment) {
-            VisiblePosition visiblePos = VisiblePosition(m_upstreamStart, VP_DEFAULT_AFFINITY).previous();
+            auto visiblePos = VisiblePosition(m_upstreamStart).previous();
             pos = visiblePos.deepEquivalent();
             // Expand out one character upstream for smart delete and recalculate
             // positions based on this change.
@@ -301,13 +301,13 @@ bool DeleteSelectionCommand::initializePositionData()
 
         // trailing whitespace is only considered for smart delete if there is no leading
         // whitespace, as in the case where you double-click the first word of a paragraph.
-        if (!skipSmartDelete && !hasLeadingWhitespaceBeforeAdjustment && m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNotNull()) {
+        if (!skipSmartDelete && !hasLeadingWhitespaceBeforeAdjustment && m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull()) {
             // Expand out one character downstream for smart delete and recalculate
             // positions based on this change.
-            pos = VisiblePosition(m_downstreamEnd, VP_DEFAULT_AFFINITY).next().deepEquivalent();
+            pos = VisiblePosition(m_downstreamEnd).next().deepEquivalent();
             m_upstreamEnd = pos.upstream();
             m_downstreamEnd = pos.downstream();
-            m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY);
+            m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
 
             setStartingSelectionOnSmartDelete(m_downstreamStart, m_downstreamEnd);
         }
@@ -600,7 +600,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
 
         // handle deleting all nodes that are completely selected
         while (node && node != m_downstreamEnd.deprecatedNode()) {
-            if (comparePositions(firstPositionInOrBeforeNode(node.get()), m_downstreamEnd) >= 0) {
+            if (firstPositionInOrBeforeNode(node.get()) >= m_downstreamEnd) {
                 // NodeTraversal::nextSkippingChildren just blew past the end position, so stop deleting
                 node = nullptr;
             } else if (!m_downstreamEnd.deprecatedNode()->isDescendantOf(*node)) {
@@ -649,7 +649,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                             offset = n->computeNodeIndex() + 1;
                     }
                     removeChildrenInRange(*m_downstreamEnd.deprecatedNode(), offset, m_downstreamEnd.deprecatedEditingOffset());
-                    m_downstreamEnd = createLegacyEditingPosition(m_downstreamEnd.deprecatedNode(), offset);
+                    m_downstreamEnd = makeDeprecatedLegacyPosition(m_downstreamEnd.deprecatedNode(), offset);
                 }
             }
         }
@@ -691,15 +691,10 @@ void DeleteSelectionCommand::mergeParagraphs()
     ASSERT(!m_pruneStartBlockIfNecessary);
 
     // FIXME: Deletion should adjust selection endpoints as it removes nodes so that we never get into this state (4099839).
-    if (m_downstreamEnd.isNull() || m_upstreamStart.isNull() || !m_downstreamEnd.anchorNode()->isConnected() || !m_upstreamStart.anchorNode()->isConnected())
-         return;
-
-    // FIXME: The deletion algorithm shouldn't let this happen.
-    if (comparePositions(m_upstreamStart, m_downstreamEnd) > 0)
+    if (m_downstreamEnd.isNull() || m_upstreamStart.isNull() || m_downstreamEnd.isOrphan() || m_upstreamStart.isOrphan())
         return;
 
-    // There's nothing to merge.
-    if (m_upstreamStart == m_downstreamEnd)
+    if (m_upstreamStart >= m_downstreamEnd)
         return;
 
     VisiblePosition startOfParagraphToMove(m_downstreamEnd);
@@ -766,7 +761,7 @@ void DeleteSelectionCommand::mergeParagraphs()
     // The endingPosition was likely clobbered by the move, so recompute it (moveParagraph selects the moved paragraph).
 
     // FIXME (Bug 211793): endingSelection() becomes disconnected in moveParagraph
-    if (endingSelection().start().anchorNode()->isConnected())
+    if (auto* anchorNode = endingSelection().start().anchorNode(); anchorNode && anchorNode->isConnected())
         m_endingPosition = endingSelection().start();
 }
 
@@ -802,7 +797,7 @@ void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
                 // FIXME: We probably shouldn't remove m_endTableRow unless it's fully selected, even if it is empty.
                 // We'll need to start adjusting the selection endpoints during deletion to know whether or not m_endTableRow
                 // was fully selected here.
-                CompositeEditCommand::removeNode(*m_endTableRow);
+                removeNodeUpdatingStates(*m_endTableRow, DoNotAssumeContentIsAlwaysEditable);
             }
         }
     }
@@ -905,7 +900,7 @@ void DeleteSelectionCommand::doApply()
     }
 
     // save this to later make the selection with
-    EAffinity affinity = m_selectionToDelete.affinity();
+    auto affinity = m_selectionToDelete.affinity();
 
     Position downstreamEnd = m_selectionToDelete.end().downstream();
     m_needPlaceholder = isStartOfParagraph(m_selectionToDelete.visibleStart(), CanCrossEditingBoundary)

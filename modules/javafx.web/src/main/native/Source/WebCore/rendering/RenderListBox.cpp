@@ -49,6 +49,7 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderLayer.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
 #include "RenderScrollbar.h"
 #include "RenderText.h"
@@ -226,23 +227,11 @@ void RenderListBox::computePreferredLogicalWidths()
     m_maxPreferredLogicalWidth = 0;
 
     if (style().width().isFixed() && style().width().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width().value());
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width());
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    if (style().minWidth().isFixed() && style().minWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().minWidth().value()));
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().minWidth().value()));
-    }
-
-    if (style().maxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().maxWidth().value()));
-        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().maxWidth().value()));
-    }
-
-    LayoutUnit toAdd = horizontalBorderAndPaddingExtent();
-    m_minPreferredLogicalWidth += toAdd;
-    m_maxPreferredLogicalWidth += toAdd;
+    RenderBox::computePreferredLogicalWidths(style().minWidth(), style().maxWidth(), horizontalBorderAndPaddingExtent());
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -743,7 +732,7 @@ int RenderListBox::scrollLeft() const
     return 0;
 }
 
-void RenderListBox::setScrollLeft(int, ScrollType, ScrollClamping, AnimatedScroll)
+void RenderListBox::setScrollLeft(int, const ScrollPositionChangeOptions&)
 {
 }
 
@@ -760,7 +749,7 @@ static void setupWheelEventTestMonitor(RenderListBox& renderer)
     renderer.scrollAnimator().setWheelEventTestMonitor(renderer.page().wheelEventTestMonitor());
 }
 
-void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping, AnimatedScroll)
+void RenderListBox::setScrollTop(int newTop, const ScrollPositionChangeOptions&)
 {
     // Determine an index and scroll to it.
     int index = newTop / itemHeight();
@@ -873,7 +862,7 @@ bool RenderListBox::shouldSuspendScrollAnimations() const
 
 bool RenderListBox::forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const
 {
-    return settings().forceUpdateScrollbarsOnMainThreadForPerformanceTesting();
+    return settings().scrollingPerformanceTestingEnabled();
 }
 
 ScrollableArea* RenderListBox::enclosingScrollableArea() const
@@ -882,7 +871,11 @@ ScrollableArea* RenderListBox::enclosingScrollableArea() const
     if (!layer)
         return nullptr;
 
-    return layer->enclosingScrollableLayer(IncludeSelfOrNot::ExcludeSelf, CrossFrameBoundaries::No);
+    auto* enclosingScrollableLayer = layer->enclosingScrollableLayer(IncludeSelfOrNot::ExcludeSelf, CrossFrameBoundaries::No);
+    if (!enclosingScrollableLayer)
+        return nullptr;
+
+    return enclosingScrollableLayer->scrollableArea();
 }
 
 bool RenderListBox::isScrollableOrRubberbandable()
@@ -892,7 +885,9 @@ bool RenderListBox::isScrollableOrRubberbandable()
 
 bool RenderListBox::hasScrollableOrRubberbandableAncestor()
 {
-    return enclosingLayer() && enclosingLayer()->hasScrollableOrRubberbandableAncestor();
+    if (auto* scrollableArea = enclosingLayer() ? enclosingLayer()->scrollableArea() : nullptr)
+        return scrollableArea->hasScrollableOrRubberbandableAncestor();
+    return false;
 }
 
 IntRect RenderListBox::scrollableAreaBoundingBox(bool*) const

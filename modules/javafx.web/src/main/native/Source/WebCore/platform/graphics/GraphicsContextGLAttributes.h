@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL)
 
 namespace WebCore {
 
@@ -33,6 +33,13 @@ enum class GraphicsContextGLPowerPreference {
     Default,
     LowPower,
     HighPerformance
+};
+
+enum class GraphicsContextGLWebGLVersion {
+    WebGL1,
+#if ENABLE(WEBGL2)
+    WebGL2
+#endif
 };
 
 struct GraphicsContextGLAttributes {
@@ -49,10 +56,14 @@ struct GraphicsContextGLAttributes {
 
     // Additional attributes.
     bool shareResources { true };
-    bool isWebGL2 { false };
     bool noExtensions { false };
     float devicePixelRatio { 1 };
     PowerPreference initialPowerPreference { PowerPreference::Default };
+    using WebGLVersion = GraphicsContextGLWebGLVersion;
+    WebGLVersion webGLVersion { WebGLVersion::WebGL1 };
+#if PLATFORM(COCOA)
+    bool useMetal { false };
+#endif
 #if ENABLE(WEBXR)
     bool xrCompatible { false };
 #endif
@@ -60,4 +71,4 @@ struct GraphicsContextGLAttributes {
 
 }
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL)
+#endif // ENABLE(WEBGL)

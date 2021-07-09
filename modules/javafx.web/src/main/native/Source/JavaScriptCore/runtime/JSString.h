@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -73,7 +73,7 @@ JSString* asString(JSValue);
 // are not one pointer load operation. To make concurrent collector work correctly, we must initialize 2nd and 3rd fibers at JSRopeString creation
 // and we must not modify these part later.
 //
-//              0                        8        10               16                       32                                     48
+//              0                        8        10               16          20           24           26           28           32
 // JSString     [   ID      ][  header  ][   String pointer      0]
 // JSRopeString [   ID      ][  header  ][   1st fiber         xyz][  length  ][2nd lower32][2nd upper16][3rd lower16][3rd upper32]
 //                                                               ^
@@ -199,7 +199,6 @@ public:
 
     JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const;
     bool toBoolean() const { return !!length(); }
-    bool getPrimitiveNumber(JSGlobalObject*, double& number, JSValue&) const;
     JSObject* toObject(JSGlobalObject*) const;
     double toNumber(JSGlobalObject*) const;
 
@@ -218,7 +217,7 @@ public:
 
     static void dumpToStream(const JSCell*, PrintStream&);
     static size_t estimatedSize(JSCell*, VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     ALWAYS_INLINE bool isRope() const
     {

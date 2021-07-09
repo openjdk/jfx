@@ -58,9 +58,8 @@ public:
     void willRemoveAllChildren(ShadowRoot&);
 
     void didChangeSlot(const AtomString&, ShadowRoot&);
-    void enqueueSlotChangeEvent(const AtomString&, ShadowRoot&);
 
-    const Vector<Node*>* assignedNodesForSlot(const HTMLSlotElement&, ShadowRoot&);
+    const Vector<WeakPtr<Node>>* assignedNodesForSlot(const HTMLSlotElement&, ShadowRoot&);
 
     virtual void hostChildElementDidChange(const Element&, ShadowRoot&);
 
@@ -78,7 +77,7 @@ private:
         WeakPtr<HTMLSlotElement> oldElement;
         unsigned elementCount { 0 };
         bool seenFirstElement { false };
-        Vector<Node*> assignedNodes;
+        Vector<WeakPtr<Node>> assignedNodes;
     };
 
     bool hasAssignedNodes(ShadowRoot&, Slot&);
@@ -132,8 +131,11 @@ inline void ShadowRoot::didChangeDefaultSlot()
 
 inline void ShadowRoot::hostChildElementDidChange(const Element& childElement)
 {
-    if (m_slotAssignment)
-        m_slotAssignment->hostChildElementDidChange(childElement, *this);
+    if (!m_slotAssignment)
+        return;
+    if (m_host)
+        RenderTreeUpdater::tearDownRenderers(*m_host);
+    m_slotAssignment->hostChildElementDidChange(childElement, *this);
 }
 
 inline void ShadowRoot::hostChildElementDidChangeSlotAttribute(Element& element, const AtomString& oldValue, const AtomString& newValue)

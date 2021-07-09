@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-class GraphicsContextGLOpenGL;
+class GraphicsContextGL;
 class WebGLRenderingContextBase;
 
 // WebGLContextObject the base class for objects that are owned by a specific
@@ -47,7 +47,9 @@ public:
         return &context == m_context;
     }
 
-    void detachContext();
+    void detachContext(const WTF::AbstractLocker&);
+
+    WTF::Lock& objectGraphLockForContext() override;
 
 protected:
     WebGLContextObject(WebGLRenderingContextBase&);
@@ -57,7 +59,7 @@ protected:
         return m_context;
     }
 
-    GraphicsContextGLOpenGL* getAGraphicsContextGL() const override;
+    GraphicsContextGL* getAGraphicsContextGL() const override;
 
 private:
     WebGLRenderingContextBase* m_context;

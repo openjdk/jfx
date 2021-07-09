@@ -40,7 +40,7 @@ class VM;
 namespace WebCore {
 class JSDOMGlobalObject;
 
-class PaintWorkletGlobalScope : public WorkletGlobalScope {
+class PaintWorkletGlobalScope final : public WorkletGlobalScope {
     WTF_MAKE_ISO_ALLOCATED(PaintWorkletGlobalScope);
 public:
     static RefPtr<PaintWorkletGlobalScope> tryCreate(Document&, ScriptSourceCode&&);
@@ -65,12 +65,18 @@ public:
 
     void prepareForDestruction() final
     {
+        if (m_hasPreparedForDestruction)
+            return;
+        m_hasPreparedForDestruction = true;
+
         {
             auto locker = holdLock(paintDefinitionLock());
             paintDefinitionMap().clear();
         }
         WorkletGlobalScope::prepareForDestruction();
     }
+
+    FetchOptions::Destination destination() const final { return FetchOptions::Destination::Paintworklet; }
 
 private:
     PaintWorkletGlobalScope(Document&, Ref<JSC::VM>&&, ScriptSourceCode&&);
@@ -87,6 +93,7 @@ private:
 
     HashMap<String, std::unique_ptr<PaintDefinition>> m_paintDefinitionMap;
     Lock m_paintDefinitionLock;
+    bool m_hasPreparedForDestruction { false };
 };
 
 } // namespace WebCore

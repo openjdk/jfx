@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "WebSocketIdentifier.h"
 #include <pal/SessionID.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -44,7 +45,11 @@ class WebSocketChannelClient;
 class WEBCORE_EXPORT SocketProvider : public ThreadSafeRefCounted<SocketProvider> {
 public:
     static Ref<SocketProvider> create() { return adoptRef(*new SocketProvider); }
-    virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, PAL::SessionID, Page*, const String& credentialPartition, const StorageSessionProvider*);
+#if PLATFORM(JAVA)
+    virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, Page*, const String& credentialPartition, const StorageSessionProvider*);
+#else
+    virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, const String& credentialPartition, const StorageSessionProvider*);
+#endif
 
     virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&);
 

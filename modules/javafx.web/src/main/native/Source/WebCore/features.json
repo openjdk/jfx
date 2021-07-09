@@ -62,6 +62,15 @@
         "category": "css"
     },
     {
+        "name": "CSS Aspect ratio property",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://drafts.csswg.org/css-sizing-4/#aspect-ratio",
+        "keywords": ["css", "css-sizing", "aspect-ratio"],
+        "category": "css"
+    },
+    {
         "name": "CSS Color Level 4",
         "status": {
             "status": "Supported",
@@ -266,6 +275,7 @@
         "description": "Allows web components to define and expose stylable parts",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -505,6 +515,16 @@
         "description": "An API that can be used to understand the visibility and position of DOM elements relative to a containing element or to the top-level viewport."
     },
     {
+        "name": "Lazy image loading",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://html.spec.whatwg.org/#attr-img-loading",
+        "keywords": ["lazy", "image", "loading"],
+        "category": "html",
+        "description": "Allows defering loading of images until they are visible in the viewport."
+    },
+    {
         "name": "Media Capture and Streams",
         "status": {
             "status": "Supported"
@@ -724,6 +744,7 @@
         "description": "A collection of technologies to improve modularization of DOM subtrees.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -795,6 +816,17 @@
         }
     },
     {
+        "name": "WebXR",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://immersive-web.github.io/webxr/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=208988",
+        "keywords": ["webxr", "webgl", "webgpu"],
+        "category": "html",
+        "description": "The WebXR device API is for accessing virtual reality (VR) and augmented reality (AR) devices, including sensors and head-mounted displays on the Web."
+    },
+    {
         "name": "Worklets Level 1",
         "status": {
             "status": "Under Consideration"
@@ -825,16 +857,17 @@
     {
         "name": "CSS Selector :focus-visible",
         "status": {
-            "status": "Under Consideration",
+            "status": "In Development",
             "enabled-by-default": false
         },
         "url": "https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo",
         "specification": "CSS Selectors Level 4",
+        "keywords": ["focus visible", "focus-visible", ":focus-visible"],
         "description": "The selector :focus-visible matches an element that has received focus and the user-agent has determined that the focus should be made visible on the element.",
         "contact": {
-            "name": "Jonathan Davis",
-            "twitter": "@jonathandavis",
-            "email": "web-evangelist@apple.com"
+            "name": "Manuel Rego",
+            "twitter": "@regocas",
+            "email": "rego@igalia.com"
         }
     },
     {
@@ -1004,6 +1037,7 @@
         "description": "Define a custom HTML tag and associate it with an ES6 class.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -1021,6 +1055,21 @@
             "name": "Jon Davis",
             "twitter": "@jonathandavis",
             "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "Date and Time Input Types",
+        "status": {
+            "status": "Partially Supported"
+        },
+        "url": "https://html.spec.whatwg.org/multipage/input.html#date-state-(type=date)",
+        "specification": "HTML5",
+        "category": "html",
+        "description": "Form controls that allow users to enter a date, time or both. Refers to the following types of input elements: date, time, datetime-local, month, and week.",
+        "comment": "The month input type is unsupported on macOS. The week input type is unsupported on macOS and iOS.",
+        "contact": {
+            "name": "Aditya Keerthi",
+            "email": "akeerthi@apple.com"
         }
     },
     {
@@ -1142,6 +1191,7 @@
         "comment": "Multile browser vendors have raised concerns about how the HTML imports currently works. For example, its dependency model is not fully compatible with ES6 Modules. We are exploring other ways to package web components by integrating into ES6 Modules with other browser vendors.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -1318,6 +1368,7 @@
         "comment": "We are fixing the remainig bugs in our implementation.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },

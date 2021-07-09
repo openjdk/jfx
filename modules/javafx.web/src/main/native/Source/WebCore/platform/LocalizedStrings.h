@@ -50,6 +50,10 @@ namespace WebCore {
 #if PLATFORM(COCOA)
     String copyImageUnknownFileLabel();
 #endif
+#if ENABLE(APP_HIGHLIGHTS)
+    WEBCORE_EXPORT String contextMenuItemTagAddHighlightToCurrentGroup();
+    WEBCORE_EXPORT String contextMenuItemTagAddHighlightToNewGroup();
+#endif
 
 #if ENABLE(CONTEXT_MENUS)
     WEBCORE_EXPORT String contextMenuItemTagOpenLinkInNewWindow();
@@ -202,11 +206,9 @@ namespace WebCore {
     String AXListItemActionVerb();
 
 #if PLATFORM(COCOA)
-#if ENABLE(METER_ELEMENT)
     String AXMeterGaugeRegionOptimumText();
     String AXMeterGaugeRegionSuboptimalText();
     String AXMeterGaugeRegionLessGoodText();
-#endif
 #endif
 #if ENABLE(APPLE_PAY)
     String AXApplePayPlainLabel();
@@ -296,7 +298,6 @@ namespace WebCore {
 
     String clickToExitFullScreenText();
 
-    String textTrackSubtitlesText();
     String textTrackOffMenuItemText();
     String textTrackAutomaticMenuItemText();
     String textTrackNoLabelText();
@@ -347,6 +348,10 @@ namespace WebCore {
     WEBCORE_EXPORT String makeCredentialTouchIDPromptTitle(const String& bundleName, const String& domain);
     WEBCORE_EXPORT String getAssertionTouchIDPromptTitle(const String& bundleName, const String& domain);
     WEBCORE_EXPORT String genericTouchIDPromptTitle();
+#endif
+
+#if ENABLE(IMAGE_EXTRACTION)
+    WEBCORE_EXPORT String contextMenuItemTagRevealImage();
 #endif
 
 #if USE(GLIB) && defined(GETTEXT_PACKAGE)

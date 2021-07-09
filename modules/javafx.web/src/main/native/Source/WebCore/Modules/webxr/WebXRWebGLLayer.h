@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "CanvasBase.h"
 #include "ExceptionOr.h"
 #include "WebXRLayer.h"
 #include <wtf/IsoMalloc.h>
@@ -36,6 +37,7 @@
 
 namespace WebCore {
 
+class HTMLCanvasElement;
 class IntSize;
 class WebGLFramebuffer;
 class WebGLRenderingContext;
@@ -47,7 +49,7 @@ class WebXRView;
 class WebXRViewport;
 struct XRWebGLLayerInit;
 
-class WebXRWebGLLayer : public WebXRLayer {
+class WebXRWebGLLayer : public WebXRLayer, private CanvasObserver {
     WTF_MAKE_ISO_ALLOCATED(WebXRWebGLLayer);
 public:
 
@@ -68,21 +70,41 @@ public:
     unsigned framebufferWidth() const;
     unsigned framebufferHeight() const;
 
-    RefPtr<WebXRViewport> getViewport(const WebXRView&);
+    ExceptionOr<RefPtr<WebXRViewport>> getViewport(WebXRView&);
 
     static double getNativeFramebufferScaleFactor(const WebXRSession&);
+
+    const WebXRSession& session() { return m_session; }
+
+    bool isCompositionEnabled() const { return m_isCompositionEnabled; }
+
+    HTMLCanvasElement* canvas() const;
 
 private:
     WebXRWebGLLayer(Ref<WebXRSession>&&, WebXRRenderingContext&&, const XRWebGLLayerInit&);
 
+    void computeViewports();
     static IntSize computeNativeWebGLFramebufferResolution();
     static IntSize computeRecommendedWebGLFramebufferResolution();
 
+    void canvasChanged(CanvasBase&, const FloatRect&) final { };
+    void canvasResized(CanvasBase&) final;
+    void canvasDestroyed(CanvasBase&) final { };
+
     Ref<WebXRSession> m_session;
     WebXRRenderingContext m_context;
+
+    struct ViewportData {
+        Ref<WebXRViewport> viewport;
+        double currentScale { 1.0 };
+    };
+
+    ViewportData m_leftViewportData;
+    ViewportData m_rightViewportData;
     bool m_antialias { false };
     bool m_ignoreDepthValues { false };
-    bool m_isCompositionDisabled { false };
+    bool m_isCompositionEnabled { true };
+    bool m_viewportsDirty { true };
 
     struct {
         RefPtr<WebGLFramebuffer> object;

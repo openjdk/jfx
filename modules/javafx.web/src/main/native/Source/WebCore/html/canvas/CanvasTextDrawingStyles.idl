@@ -23,10 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    NoInterfaceObject,
-    Exposed=Window
-] interface CanvasTextDrawingStyles {
+// https://html.spec.whatwg.org/multipage/canvas.html#canvastextdrawingstyles
+interface mixin CanvasTextDrawingStyles {
     // text
     attribute DOMString font; // (default 10px sans-serif)
     attribute CanvasTextAlign textAlign; // (default: "start")

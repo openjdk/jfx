@@ -23,8 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGFEComponentTransferElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGFEComponentTransferElement : SVGElement {
     readonly attribute SVGAnimatedString in1;
 };
 
-SVGFEComponentTransferElement implements SVGFilterPrimitiveStandardAttributes;
+SVGFEComponentTransferElement includes SVGFilterPrimitiveStandardAttributes;

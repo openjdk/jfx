@@ -126,7 +126,7 @@ function repeat(count)
         @throwTypeError("String.prototype.repeat requires that |this| not be null or undefined");
 
     var string = @toString(this);
-    count = @toInteger(count);
+    count = @toIntegerOrInfinity(count);
 
     if (count < 0 || count === @Infinity)
         @throwRangeError("String.prototype.repeat argument must be greater than or equal to 0 and not be Infinity");
@@ -338,6 +338,25 @@ function concat(arg /* ... */)
     if (@argumentCount() === 1)
         return @toString(this) + @toString(arg);
     return @tailCallForwardArguments(@stringConcatSlowPath, this);
+}
+
+// FIXME: This is extremely similar to charAt, so we should optimize it accordingly.
+//        https://bugs.webkit.org/show_bug.cgi?id=217139
+function at(index)
+{
+    "use strict";
+
+    if (@isUndefinedOrNull(this))
+        @throwTypeError("String.prototype.at requires that |this| not be null or undefined");
+
+    var string = @toString(this);
+    var length = string.length;
+
+    var k = @toIntegerOrInfinity(index);
+    if (k < 0)
+        k += length;
+
+    return (k >= 0 && k < length) ? string[k] : @undefined;
 }
 
 @globalPrivate

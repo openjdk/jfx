@@ -44,7 +44,8 @@ PlatformWheelEvent::PlatformWheelEvent(
         ctrlKey,
         altKey,
         metaKey,
-                WallTime {})
+        WallTime {})
+        , m_granularity(ScrollByPixelWheelEvent)
         , m_position(pos)
         , m_globalPosition(globalPos)
       // For some unknown reason, EventHandler expects deltaX/deltaY < 0 for
@@ -54,8 +55,6 @@ PlatformWheelEvent::PlatformWheelEvent(
         , m_deltaY(-deltaY)
         , m_wheelTicksX(-deltaX)
         , m_wheelTicksY(-deltaY)
-        , m_granularity(ScrollByPixelWheelEvent)
-        , m_directionInvertedFromDevice(false)
 {
 }
 

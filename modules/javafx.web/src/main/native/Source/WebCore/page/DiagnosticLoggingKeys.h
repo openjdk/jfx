@@ -55,6 +55,8 @@ public:
     static String deviceOrientationKey();
     static String diskCacheKey();
     static String diskCacheAfterValidationKey();
+    static String memoryCacheKey();
+    static String memoryCacheAfterValidationKey();
     static String documentLoaderStoppingKey();
     WEBCORE_EXPORT static String domainCausingCrashKey();
     static String domainCausingEnergyDrainKey();
@@ -73,7 +75,6 @@ public:
     WEBCORE_EXPORT static String failedLessThan20SecondsKey();
     WEBCORE_EXPORT static String failedMoreThan20SecondsKey();
     static String fontKey();
-    static String hasPluginsKey();
     static String httpsNoStoreKey();
     static String imageKey();
     static String inMemoryCacheKey();
@@ -118,14 +119,10 @@ public:
     static String backForwardCacheFailureKey();
     static String visuallyEmptyKey();
     static String pageContainsAtLeastOneMediaEngineKey();
-    static String pageContainsAtLeastOnePluginKey();
     static String pageContainsMediaEngineKey();
-    static String pageContainsPluginKey();
     static String pageHandlesWebGLContextLossKey();
     static String pageLoadedKey();
     static String playedKey();
-    static String pluginLoadedKey();
-    static String pluginLoadingFailedKey();
     static String postPageBackgroundingCPUUsageKey();
     static String postPageBackgroundingMemoryUsageKey();
     static String postPageLoadCPUUsageKey();
@@ -191,8 +188,6 @@ public:
     WEBCORE_EXPORT static String memoryUsageToDiagnosticLoggingKey(uint64_t memoryUsage);
     WEBCORE_EXPORT static String foregroundCPUUsageToDiagnosticLoggingKey(double cpuUsage);
     WEBCORE_EXPORT static String backgroundCPUUsageToDiagnosticLoggingKey(double cpuUsage);
-
-    WEBCORE_EXPORT static String resourceLoadStatisticsTelemetryKey();
 };
 
 } // namespace WebCore

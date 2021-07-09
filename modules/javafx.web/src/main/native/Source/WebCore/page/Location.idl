@@ -26,29 +26,28 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://html.spec.whatwg.org/multipage/history.html#location
 [
     CheckSecurity,
     CustomDefineOwnProperty,
-    CustomDefineOwnPropertyOnPrototype,
     CustomDeleteProperty,
     CustomGetOwnPropertyNames,
     CustomGetOwnPropertySlot,
     CustomGetPrototype,
     CustomPreventExtensions,
     CustomPut,
-    CustomPutOnPrototype,
-    CustomToStringName,
     ExportMacro=WEBCORE_EXPORT,
     GenerateIsReachable=ReachableFromDOMWindow,
     IsImmutablePrototypeExoticObject,
     ImplementationLacksVTable,
-    Unforgeable
+    LegacyUnforgeable,
+    Exposed=Window
 ] interface Location {
     [SetterCallWith=ActiveWindow&FirstWindow, DoNotCheckSecurityOnSetter] stringifier attribute USVString href;
 
-    [CallWith=ActiveWindow&FirstWindow, MayThrowException, ForwardDeclareInHeader] void assign(USVString url);
-    [DoNotCheckSecurity, CallWith=ActiveWindow&FirstWindow, MayThrowException, ForwardDeclareInHeader] void replace(USVString url);
-    [CallWith=ActiveWindow, ForwardDeclareInHeader] void reload();
+    [CallWith=ActiveWindow&FirstWindow, MayThrowException, ForwardDeclareInHeader] undefined assign(USVString url);
+    [DoNotCheckSecurity, CallWith=ActiveWindow&FirstWindow, MayThrowException, ForwardDeclareInHeader] undefined replace(USVString url);
+    [CallWith=ActiveWindow, ForwardDeclareInHeader] undefined reload();
 
     // URI decomposition attributes
     [SetterCallWith=ActiveWindow&FirstWindow] attribute USVString protocol;
@@ -61,6 +60,5 @@
 
     readonly attribute USVString origin;
 
-    // FIXME: Add support for SameObject.
-    [Unforgeable, CachedAttribute] readonly attribute DOMStringList ancestorOrigins;
+    [LegacyUnforgeable, SameObject, CachedAttribute] readonly attribute DOMStringList ancestorOrigins;
 };

@@ -95,7 +95,7 @@ protected:
     """${classAndExportMacro} ${domainName}BackendDispatcher final : public SupplementalBackendDispatcher {
 public:
     static Ref<${domainName}BackendDispatcher> create(BackendDispatcher&, ${domainName}BackendDispatcherHandler*);
-    void dispatch(long requestId, const String& method, Ref<JSON::Object>&& message) final;
+    void dispatch(long protocol_requestId, const String& protocol_method, Ref<JSON::Object>&& protocol_message) final;
 ${commandDeclarations}
 private:
     ${domainName}BackendDispatcher(BackendDispatcher&, ${domainName}BackendDispatcherHandler*);
@@ -114,53 +114,42 @@ private:
     """    ${classAndExportMacro} ${callbackName} : public BackendDispatcher::CallbackBase {
     public:
         ${callbackName}(Ref<BackendDispatcher>&&, int id);
-        void sendSuccess(${outParameters});
+        void sendSuccess(${returns});
     };
-    virtual void ${commandName}(${inParameters}) = 0;""")
+    virtual void ${commandName}(${parameters}) = 0;""")
 
     BackendDispatcherImplementationSmallSwitch = (
-    """void ${domainName}BackendDispatcher::dispatch(long requestId, const String& method, Ref<JSON::Object>&& message)
+    """void ${domainName}BackendDispatcher::dispatch(long protocol_requestId, const String& protocol_method, Ref<JSON::Object>&& protocol_message)
 {
     Ref<${domainName}BackendDispatcher> protect(*this);
 
-    RefPtr<JSON::Object> parameters;
-    message->getObject("params"_s, parameters);
+    auto protocol_parameters = protocol_message->getObject("params"_s);
 
 ${dispatchCases}
 
-    m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, "'${domainName}." + method + "' was not found");
+    m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainName}."_s, protocol_method, "' was not found"_s));
 }""")
 
     BackendDispatcherImplementationLargeSwitch = (
-"""void ${domainName}BackendDispatcher::dispatch(long requestId, const String& method, Ref<JSON::Object>&& message)
+"""void ${domainName}BackendDispatcher::dispatch(long protocol_requestId, const String& protocol_method, Ref<JSON::Object>&& protocol_message)
 {
     Ref<${domainName}BackendDispatcher> protect(*this);
 
-    RefPtr<JSON::Object> parameters;
-    message->getObject("params"_s, parameters);
+    auto protocol_parameters = protocol_message->getObject("params"_s);
 
-    using CallHandler = void (${domainName}BackendDispatcher::*)(long requestId, RefPtr<JSON::Object>&& message);
+    using CallHandler = void (${domainName}BackendDispatcher::*)(long protocol_requestId, RefPtr<JSON::Object>&& protocol_message);
     using DispatchMap = HashMap<String, CallHandler>;
-    static NeverDestroyed<DispatchMap> dispatchMap;
-    if (dispatchMap.get().isEmpty()) {
-        static const struct MethodTable {
-            const char* name;
-            CallHandler handler;
-        } commands[] = {
+    static NeverDestroyed<DispatchMap> dispatchMap = DispatchMap({
 ${dispatchCases}
-        };
-        size_t length = WTF_ARRAY_LENGTH(commands);
-        for (size_t i = 0; i < length; ++i)
-            dispatchMap.get().add(commands[i].name, commands[i].handler);
-    }
+    });
 
-    auto findResult = dispatchMap.get().find(method);
-    if (findResult == dispatchMap.get().end()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, "'${domainName}." + method + "' was not found");
+    auto findResult = dispatchMap->find(protocol_method);
+    if (findResult == dispatchMap->end()) {
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainName}."_s, protocol_method, "' was not found"_s));
         return;
     }
 
-    ((*this).*findResult->value)(requestId, WTFMove(parameters));
+    ((*this).*findResult->value)(protocol_requestId, WTFMove(protocol_parameters));
 }""")
 
     BackendDispatcherImplementationDomainConstructor = (
@@ -177,7 +166,7 @@ ${domainName}BackendDispatcher::${domainName}BackendDispatcher(BackendDispatcher
 }""")
 
     BackendDispatcherImplementationPrepareCommandArguments = (
-"""${inParameterDeclarations}
+"""${parameterDeclarations}
     if (m_backendDispatcher->hasProtocolErrors()) {
         m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, "Some arguments of method \'${domainName}.${commandName}\' can't be processed"_s);
         return;
@@ -187,11 +176,11 @@ ${domainName}BackendDispatcher::${domainName}BackendDispatcher(BackendDispatcher
     BackendDispatcherImplementationAsyncCommand = (
 """${domainName}BackendDispatcherHandler::${callbackName}::${callbackName}(Ref<BackendDispatcher>&& backendDispatcher, int id) : BackendDispatcher::CallbackBase(WTFMove(backendDispatcher), id) { }
 
-void ${domainName}BackendDispatcherHandler::${callbackName}::sendSuccess(${formalParameters})
+void ${domainName}BackendDispatcherHandler::${callbackName}::sendSuccess(${callbackParameters})
 {
-    Ref<JSON::Object> jsonMessage = JSON::Object::create();
-${outParameterAssignments}
-    CallbackBase::sendSuccess(WTFMove(jsonMessage));
+    auto protocol_jsonMessage = JSON::Object::create();
+${returnAssignments}
+    CallbackBase::sendSuccess(WTFMove(protocol_jsonMessage));
 }""")
 
     FrontendDispatcherDomainDispatcherDeclaration = (
@@ -246,13 +235,11 @@ ${constructorExample}
     }""")
 
     ProtocolObjectRuntimeCast = (
-"""RefPtr<${objectType}> BindingTraits<${objectType}>::runtimeCast(RefPtr<JSON::Value>&& value)
+"""Ref<${objectType}> BindingTraits<${objectType}>::runtimeCast(Ref<JSON::Value>&& value)
 {
-    RefPtr<JSON::Object> result;
-    bool castSucceeded = value->asObject(result);
-    ASSERT_UNUSED(castSucceeded, castSucceeded);
+    auto result = value->asObject();
     BindingTraits<${objectType}>::assertValueHasExpectedType(result.get());
     COMPILE_ASSERT(sizeof(${objectType}) == sizeof(JSON::ObjectBase), type_cast_problem);
-    return static_cast<${objectType}*>(static_cast<JSON::ObjectBase*>(result.get()));
+    return static_reference_cast<${objectType}>(static_reference_cast<JSON::ObjectBase>(result.releaseNonNull()));
 }
 """)

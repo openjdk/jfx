@@ -781,7 +781,7 @@ void SWServer::workerContextTerminated(SWServerWorker& worker)
     // At this point if no registrations are referencing the worker then it will be destroyed,
     // removing itself from the m_workersByID map.
     auto result = m_runningOrTerminatingWorkers.take(worker.identifier());
-    ASSERT_UNUSED(result, result && result->ptr() == &worker);
+    ASSERT_UNUSED(result, result == &worker);
 
     worker.setState(SWServerWorker::State::NotRunning);
 
@@ -1095,10 +1095,17 @@ bool SWServer::canHandleScheme(StringView scheme) const
 // https://w3c.github.io/ServiceWorker/#soft-update
 void SWServer::softUpdate(SWServerRegistration& registration)
 {
+    // Let newestWorker be the result of running Get Newest Worker algorithm passing registration as its argument.
+    // If newestWorker is null, abort these steps.
+    auto* newestWorker = registration.getNewestWorker();
+    if (!newestWorker)
+        return;
+
     ServiceWorkerJobData jobData(Process::identifier(), ServiceWorkerIdentifier::generate());
     jobData.scriptURL = registration.scriptURL();
     jobData.topOrigin = registration.key().topOrigin();
     jobData.scopeURL = registration.scopeURLWithoutFragment();
+    jobData.workerType = newestWorker->type();
     jobData.type = ServiceWorkerJobType::Update;
     scheduleJob(WTFMove(jobData));
 }

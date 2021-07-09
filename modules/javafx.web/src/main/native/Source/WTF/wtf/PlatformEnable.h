@@ -181,10 +181,6 @@
 #define ENABLE_ACCESSIBILITY 1
 #endif
 
-#if !defined(ENABLE_ACCELERATED_2D_CANVAS)
-#define ENABLE_ACCELERATED_2D_CANVAS 0
-#endif
-
 #if !defined(ENABLE_OVERFLOW_SCROLLING_TOUCH)
 #define ENABLE_OVERFLOW_SCROLLING_TOUCH 0
 #endif
@@ -227,6 +223,10 @@
 
 #if !defined(ENABLE_CSS_CONIC_GRADIENTS)
 #define ENABLE_CSS_CONIC_GRADIENTS 0
+#endif
+
+#if !defined(ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+#define ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D 0
 #endif
 
 #if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
@@ -315,6 +315,17 @@
 #define ENABLE_INPUT_TYPE_WEEK 0
 #endif
 
+#if !defined(ENABLE_IOS_FORM_CONTROL_REFRESH)
+#define ENABLE_IOS_FORM_CONTROL_REFRESH 0
+#endif
+
+#if !defined(ENABLE_IPC_TESTING_API)
+/* Enable IPC testing on all ASAN builds and debug builds. */
+#if (ASAN_ENABLED || !defined(NDEBUG)) && PLATFORM(COCOA)
+#define ENABLE_IPC_TESTING_API 1
+#endif
+#endif
+
 #if ENABLE(INPUT_TYPE_DATE) || ENABLE(INPUT_TYPE_DATETIMELOCAL) || ENABLE(INPUT_TYPE_MONTH) || ENABLE(INPUT_TYPE_TIME) || ENABLE(INPUT_TYPE_WEEK)
 #if !defined(ENABLE_DATE_AND_TIME_INPUT_TYPES)
 #define ENABLE_DATE_AND_TIME_INPUT_TYPES 1
@@ -325,16 +336,16 @@
 #define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 0
 #endif
 
+#if !defined(ENABLE_INSPECTOR_EXTENSIONS)
+#define ENABLE_INSPECTOR_EXTENSIONS 0
+#endif
+
 #if !defined(ENABLE_INSPECTOR_TELEMETRY)
 #define ENABLE_INSPECTOR_TELEMETRY 0
 #endif
 
 #if !defined(ENABLE_LAYOUT_FORMATTING_CONTEXT)
 #define ENABLE_LAYOUT_FORMATTING_CONTEXT 0
-#endif
-
-#if !defined(ENABLE_LEGACY_CSS_VENDOR_PREFIXES)
-#define ENABLE_LEGACY_CSS_VENDOR_PREFIXES 0
 #endif
 
 #if !defined(ENABLE_LETTERPRESS)
@@ -363,10 +374,6 @@
 
 #if !defined(ENABLE_MEDIA_STREAM)
 #define ENABLE_MEDIA_STREAM 0
-#endif
-
-#if !defined(ENABLE_METER_ELEMENT)
-#define ENABLE_METER_ELEMENT 1
 #endif
 
 #if !defined(ENABLE_MHTML)
@@ -423,10 +430,6 @@
 #define ENABLE_POINTER_LOCK 1
 #endif
 
-#if !defined(ENABLE_QUOTA)
-#define ENABLE_QUOTA 0
-#endif
-
 #if !defined(ENABLE_REMOTE_INSPECTOR)
 #define ENABLE_REMOTE_INSPECTOR 0
 #endif
@@ -456,10 +459,6 @@
 
 #if !defined(ENABLE_SPELLCHECK)
 #define ENABLE_SPELLCHECK 0
-#endif
-
-#if !defined(ENABLE_SVG_FONTS)
-#define ENABLE_SVG_FONTS 1
 #endif
 
 #if !defined(ENABLE_TEXT_CARET)
@@ -496,10 +495,6 @@
 
 #if !defined(ENABLE_WEBGL)
 #define ENABLE_WEBGL 0
-#endif
-
-#if !defined(ENABLE_GRAPHICS_CONTEXT_GL)
-#define ENABLE_GRAPHICS_CONTEXT_GL ENABLE_WEBGL
 #endif
 
 #if !defined(ENABLE_WEB_ARCHIVE)
@@ -579,6 +574,12 @@
 #endif
 
 #if USE(JSVALUE32_64)
+/* Disable WebAssembly on all 32bit platforms. Its LLInt tier could
+ * work on them, but still needs some final touches. */
+#undef ENABLE_WEBASSEMBLY
+#define ENABLE_WEBASSEMBLY 0
+#undef ENABLE_WEBASSEMBLY_B3JIT
+#define ENABLE_WEBASSEMBLY_B3JIT 0
 #if (CPU(ARM_THUMB2) || CPU(MIPS)) && OS(LINUX)
 /* On ARMv7 and MIPS on Linux the JIT is enabled unless explicitly disabled. */
 #if !defined(ENABLE_JIT)
@@ -603,6 +604,10 @@
 #else
 #define ENABLE_C_LOOP 1
 #endif
+#endif
+
+#if !defined(ENABLE_JUMP_ISLANDS) && CPU(ARM64) && CPU(ADDRESS64) && ENABLE(JIT)
+#define ENABLE_JUMP_ISLANDS 1
 #endif
 
 /* FIXME: This should be turned into an #error invariant */
@@ -686,6 +691,7 @@
 
 #if !defined(ENABLE_WEBASSEMBLY) && (ENABLE(B3_JIT) && PLATFORM(COCOA) && CPU(ADDRESS64))
 #define ENABLE_WEBASSEMBLY 1
+#define ENABLE_WEBASSEMBLY_B3JIT 1
 #endif
 
 /* The SamplingProfiler is the probabilistic and low-overhead profiler used by
@@ -697,7 +703,7 @@
 #endif
 
 #if ENABLE(WEBASSEMBLY) && HAVE(MACHINE_CONTEXT)
-#define ENABLE_WEBASSEMBLY_FAST_MEMORY 1
+#define ENABLE_WEBASSEMBLY_SIGNALING_MEMORY 1
 #endif
 
 /* Counts uses of write barriers using sampling counters. Be sure to also
@@ -781,6 +787,24 @@
 #define ENABLE_SIGNAL_BASED_VM_TRAPS 1
 #endif
 
+/* The unified Config record feature is not available for Windows because the
+   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
+   the config record expects the config record to be directly accessible like
+   a global variable (and not have to go thru DLL shenanigans). C++ code would
+   resolve these DLL bindings automatically, but offlineasm does not.
+
+   The permanently freezing feature also currently relies on the Config records
+   being unified, and the Windows port also does not currently have an
+   implementation for the freezing mechanism anyway. For simplicity, we just
+   disable both the use of unified Config record and config freezing for the
+   Windows port.
+*/
+#if OS(WINDOWS)
+#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
+#else
+#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
+#endif
+
 /* CSS Selector JIT Compiler */
 #if !defined(ENABLE_CSS_SELECTOR_JIT) && ((CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN))) && ENABLE(JIT) && (OS(DARWIN) || PLATFORM(GTK) || PLATFORM(WPE)))
 #define ENABLE_CSS_SELECTOR_JIT 1
@@ -821,10 +845,6 @@
 #if !defined(ENABLE_INLINE_PATH_DATA) && USE(CG)
 #define ENABLE_INLINE_PATH_DATA 1
 #endif
-
-/* Disable SharedArrayBuffers until Spectre security concerns are mitigated. */
-#define ENABLE_SHARED_ARRAY_BUFFER 0
-
 
 #if ((PLATFORM(COCOA) || PLATFORM(PLAYSTATION) || PLATFORM(WPE)) && ENABLE(ASYNC_SCROLLING)) || PLATFORM(GTK)
 #define ENABLE_KINETIC_SCROLLING 1
@@ -869,14 +889,18 @@
 #error "ENABLE(IOS_TOUCH_EVENTS) requires ENABLE(TOUCH_EVENTS)"
 #endif
 
-#if ENABLE(WEBGL) && !ENABLE(GRAPHICS_CONTEXT_GL)
-#error "ENABLE(WEBGL) requires ENABLE(GRAPHICS_CONTEXT_GL)"
-#endif
-
 #if ENABLE(WEBGL2) && !ENABLE(WEBGL)
 #error "ENABLE(WEBGL2) requires ENABLE(WEBGL)"
 #endif
 
-#if CPU(ARM64) && CPU(ADDRESS64)
-#define USE_JUMP_ISLANDS 1
+#if ENABLE(WHLSL_COMPILER) && !ENABLE(WEBGPU)
+#error "ENABLE(WHLSL_COMPILER) requires ENABLE(WEBGPU)"
+#endif
+
+#if OS(DARWIN) && ENABLE(JIT) && USE(APPLE_INTERNAL_SDK) && CPU(ARM64E) && ((defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 150000) || (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 120000))
+#define ENABLE_JIT_CAGE 1
+#endif
+
+#if OS(DARWIN) && CPU(ADDRESS64) && ENABLE(JIT) && (ENABLE(JIT_CAGE) || ASSERT_ENABLED)
+#define ENABLE_JIT_OPERATION_VALIDATION 1
 #endif

@@ -37,23 +37,6 @@ void BitmapTextureJava::updateContents(const void*, const IntRect&, const IntPoi
 {
 }
 
-void BitmapTextureJava::updateContents(TextureMapper& mapper, GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& sourceOffset, float /*scale*/)
-{
-    GraphicsContext& context = m_image->context();
-    // Share RenderThemeJava context
-    context.platformContext()->setJRenderTheme(static_cast<TextureMapperJava&>(mapper).graphicsContext()->platformContext()->jRenderTheme());
-
-    context.clearRect(targetRect);
-
-    IntRect sourceRect(targetRect);
-    sourceRect.setLocation(sourceOffset);
-    context.save();
-    context.clip(targetRect);
-    context.translate(targetRect.x() - sourceOffset.x(), targetRect.y() - sourceOffset.y());
-    sourceLayer->paintGraphicsLayerContents(context, sourceRect);
-    context.restore();
-}
-
 void BitmapTextureJava::didReset()
 {
     float devicePixelRatio = 1.0;

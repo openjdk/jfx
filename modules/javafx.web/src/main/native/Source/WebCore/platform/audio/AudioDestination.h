@@ -29,33 +29,38 @@
 #ifndef AudioDestination_h
 #define AudioDestination_h
 
+#include "AudioBus.h"
+#include "AudioIOCallback.h"
 #include <memory>
+#include <wtf/CompletionHandler.h>
+#include <wtf/Lock.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-class AudioIOCallback;
 
 // AudioDestination is an abstraction for audio hardware I/O.
 // The audio hardware periodically calls the AudioIOCallback render() method asking it to render/output the next render quantum of audio.
 // It optionally will pass in local/live audio input when it calls render().
 
-class AudioDestination {
+class AudioDestination : public ThreadSafeRefCounted<AudioDestination, WTF::DestructionThread::Main> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     // Pass in (numberOfInputChannels > 0) if live/local audio input is desired.
     // Port-specific device identification information for live/local input streams can be passed in the inputDeviceId.
-    WEBCORE_EXPORT static std::unique_ptr<AudioDestination> create(AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
+    WEBCORE_EXPORT static Ref<AudioDestination> create(AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
 
     virtual ~AudioDestination() = default;
 
-    virtual void start() = 0;
-    virtual void stop() = 0;
+    void clearCallback();
+
+    virtual void start(Function<void(Function<void()>&&)>&& dispatchToRenderThread, CompletionHandler<void(bool)>&& = [](bool) { }) = 0;
+    virtual void stop(CompletionHandler<void(bool)>&& = [](bool) { }) = 0;
     virtual bool isPlaying() = 0;
 
     // Sample-rate conversion may happen in AudioDestination to the hardware sample-rate
     virtual float sampleRate() const = 0;
-    static float hardwareSampleRate();
+    WEBCORE_EXPORT static float hardwareSampleRate();
 
     virtual unsigned framesPerBuffer() const = 0;
 
@@ -66,7 +71,37 @@ public:
     // be a value: 1 <= numberOfOutputChannels <= maxChannelCount(),
     // or if maxChannelCount() equals 0, then numberOfOutputChannels must be 2.
     static unsigned long maxChannelCount();
+
+    void callRenderCallback(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition);
+
+protected:
+    explicit AudioDestination(AudioIOCallback&);
+
+    Lock m_callbackLock;
+    AudioIOCallback* m_callback { nullptr };
 };
+
+inline AudioDestination::AudioDestination(AudioIOCallback& callback)
+{
+    auto locker = holdLock(m_callbackLock);
+    m_callback = &callback;
+}
+
+inline void AudioDestination::clearCallback()
+{
+    auto locker = holdLock(m_callbackLock);
+    m_callback = nullptr;
+}
+
+inline void AudioDestination::callRenderCallback(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition)
+{
+    auto locker = tryHoldLock(m_callbackLock);
+    if (!locker || !m_callback) {
+        destinationBus->zero();
+        return;
+    }
+    m_callback->render(sourceBus, destinationBus, framesToProcess, outputPosition);
+}
 
 } // namespace WebCore
 

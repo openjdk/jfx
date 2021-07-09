@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #pragma once
 
 #include "DisplayList.h"
+#include "DisplayListDrawGlyphsRecorder.h"
+#include "DisplayListItems.h"
 #include "GraphicsContextImpl.h"
 #include "Image.h" // For Image::TileRule.
 #include "TextFlags.h"
@@ -47,28 +49,33 @@ struct ImagePaintingOptions;
 
 namespace DisplayList {
 
-class DrawingItem;
-
 class Recorder : public GraphicsContextImpl {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(Recorder);
 public:
-    class Observer;
-    WEBCORE_EXPORT Recorder(GraphicsContext&, DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, Observer* = nullptr);
+    class Delegate;
+    WEBCORE_EXPORT Recorder(GraphicsContext&, DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, Delegate* = nullptr, DrawGlyphsRecorder::DrawGlyphsDeconstruction = DrawGlyphsRecorder::DrawGlyphsDeconstruction::Deconstruct);
     WEBCORE_EXPORT virtual ~Recorder();
 
     WEBCORE_EXPORT void putImageData(AlphaPremultiplication inputFormat, const ImageData&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat);
 
-    size_t itemCount() const { return m_displayList.itemCount(); }
+    bool isEmpty() const { return m_displayList.isEmpty(); }
 
-    class Observer {
+    class Delegate {
     public:
-        virtual ~Observer() { }
-        virtual void willAppendItem(const Item&) { };
+        virtual ~Delegate() { }
+        virtual void willAppendItemOfType(ItemType) { }
+        virtual void cacheNativeImage(NativeImage&) { }
+        virtual bool isCachedImageBuffer(const ImageBuffer&) const { return false; }
+        virtual void cacheFont(Font&) { }
     };
 
+    void flushContext(FlushIdentifier identifier) { append<FlushContext>(identifier); }
+
 private:
+    friend class DrawGlyphsRecorder;
     bool hasPlatformContext() const override { return false; }
+    bool canDrawImageBuffer(const ImageBuffer&) const override;
     PlatformGraphicsContext* platformContext() const override { return nullptr; }
 
     void updateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
@@ -97,15 +104,13 @@ private:
     void applyFillPattern() override;
 #endif
 
-    void drawGlyphs(const Font&, const GlyphBuffer&, unsigned from, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) override;
+    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) override;
 
-    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&) override;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions&) override;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions&) override;
-#if USE(CG) || USE(CAIRO) || USE(DIRECT2D)
-    void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) override;
-#endif
-    void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) override;
+    void appendDrawGraphsItemWithCachedFont(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode);
+
+    void drawImageBuffer(WebCore::ImageBuffer&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&) override;
+    void drawNativeImage(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) override;
+    void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) override;
 
     void drawRect(const FloatRect&, float borderThickness) override;
     void drawLine(const FloatPoint&, const FloatPoint&) override;
@@ -136,16 +141,43 @@ private:
     void clipPath(const Path&, WindRule) override;
     IntRect clipBounds() override;
     void clipToImageBuffer(WebCore::ImageBuffer&, const FloatRect&) override;
+    void clipToDrawingCommands(const FloatRect& destination, DestinationColorSpace, Function<void(GraphicsContext&)>&&) override;
+#if ENABLE(VIDEO)
+    void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) override;
+    bool canPaintFrameForMedia(const MediaPlayer&) const override;
+#endif
 
     void applyDeviceScaleFactor(float) override;
 
     FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode) override;
 
-    Item& appendItem(Ref<Item>&&);
-    void willAppendItem(const Item&);
+    template<typename T, class... Args>
+    void append(Args&&... args)
+    {
+        willAppendItemOfType(T::itemType);
+        m_displayList.append<T>(std::forward<Args>(args)...);
+
+        if constexpr (T::isDrawingItem) {
+            if (LIKELY(!m_displayList.tracksDrawingItemExtents()))
+                return;
+
+            auto item = T(std::forward<Args>(args)...);
+            if (auto rect = item.localBounds(graphicsContext()))
+                m_displayList.addDrawingItemExtent(extentFromLocalBounds(*rect));
+            else if (auto rect = item.globalBounds())
+                m_displayList.addDrawingItemExtent(*rect);
+            else
+                m_displayList.addDrawingItemExtent(WTF::nullopt);
+        }
+    }
+
+    WEBCORE_EXPORT void willAppendItemOfType(ItemType);
+
+    void cacheNativeImage(NativeImage&);
+
+    void appendStateChangeItem(const GraphicsContextStateChange&, GraphicsContextState::StateChangeFlags);
 
     FloatRect extentFromLocalBounds(const FloatRect&) const;
-    void updateItemExtent(DrawingItem&) const;
 
     const AffineTransform& ctm() const;
     const FloatRect& clipBounds() const;
@@ -182,9 +214,11 @@ private:
     ContextState& currentState();
 
     DisplayList& m_displayList;
-    Observer* m_observer;
+    Delegate* m_delegate;
 
     Vector<ContextState, 32> m_stateStack;
+
+    DrawGlyphsRecorder m_drawGlyphsRecorder;
 };
 
 }

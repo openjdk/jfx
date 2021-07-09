@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,6 @@
 #include "CodeSpecializationKind.h"
 #include "CompleteSubspace.h"
 #include "ConcurrentJSLock.h"
-#include "DateInstanceCache.h"
 #include "DeleteAllCodeEffort.h"
 #include "DisallowVMEntry.h"
 #include "ExceptionEventLocation.h"
@@ -44,6 +43,7 @@
 #include "IsoCellSet.h"
 #include "IsoSubspace.h"
 #include "JSCJSValue.h"
+#include "JSDateMath.h"
 #include "JSLock.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Microtask.h"
@@ -108,7 +108,7 @@ struct CheckpointOSRExitSideState;
 class CodeBlock;
 class CodeCache;
 class CommonIdentifiers;
-class CompactVariableMap;
+class CompactTDZEnvironmentMap;
 class ConservativeRoots;
 class ControlFlowProfiler;
 class CustomGetterSetter;
@@ -121,22 +121,27 @@ class FastMallocAlignedMemoryAllocator;
 class GigacageAlignedMemoryAllocator;
 class HandleStack;
 class HasOwnPropertyCache;
+class HeapAnalyzer;
 class HeapProfiler;
 class Identifier;
 class Interpreter;
+class IntlCache;
 class IntlCollator;
 class IntlDateTimeFormat;
 class IntlDisplayNames;
+class IntlListFormat;
 class IntlLocale;
 class IntlNumberFormat;
 class IntlPluralRules;
 class IntlRelativeTimeFormat;
+class IntlSegmentIterator;
+class IntlSegmenter;
+class IntlSegments;
 class JSAPIGlobalObject;
 class JSAPIWrapperGlobalObject;
 class JSAPIWrapperObject;
 class JSCCallbackFunction;
 class JSCallbackConstructor;
-class JSCustomGetterSetterFunction;
 class JSDestructibleObjectHeapCellType;
 class JSGlobalObject;
 class JSGlobalLexicalEnvironment;
@@ -215,28 +220,6 @@ struct EntryFrame;
 struct HashTable;
 struct Instruction;
 struct ValueProfile;
-
-struct LocalTimeOffsetCache {
-    LocalTimeOffsetCache()
-        : start(0.0)
-        , end(-1.0)
-        , increment(0.0)
-    {
-    }
-
-    void reset()
-    {
-        offset = LocalTimeOffset();
-        start = 0.0;
-        end = -1.0;
-        increment = 0.0;
-    }
-
-    LocalTimeOffset offset;
-    double start;
-    double end;
-    double increment;
-};
 
 class QueuedTask {
     WTF_MAKE_NONCOPYABLE(QueuedTask);
@@ -327,6 +310,10 @@ public:
     HeapProfiler* heapProfiler() const { return m_heapProfiler.get(); }
     JS_EXPORT_PRIVATE HeapProfiler& ensureHeapProfiler();
 
+    bool isAnalyzingHeap() const { return m_activeHeapAnalyzer; }
+    HeapAnalyzer* activeHeapAnalyzer() const { return m_activeHeapAnalyzer; }
+    void setActiveHeapAnalyzer(HeapAnalyzer* analyzer) { m_activeHeapAnalyzer = analyzer; }
+
 #if ENABLE(SAMPLING_PROFILER)
     SamplingProfiler* samplingProfiler() { return m_samplingProfiler.get(); }
     JS_EXPORT_PRIVATE SamplingProfiler& ensureSamplingProfiler(Ref<Stopwatch>&&);
@@ -404,10 +391,14 @@ public:
     std::unique_ptr<IsoHeapCellType> intlCollatorHeapCellType;
     std::unique_ptr<IsoHeapCellType> intlDateTimeFormatHeapCellType;
     std::unique_ptr<IsoHeapCellType> intlDisplayNamesHeapCellType;
+    std::unique_ptr<IsoHeapCellType> intlListFormatHeapCellType;
     std::unique_ptr<IsoHeapCellType> intlLocaleHeapCellType;
     std::unique_ptr<IsoHeapCellType> intlNumberFormatHeapCellType;
     std::unique_ptr<IsoHeapCellType> intlPluralRulesHeapCellType;
     std::unique_ptr<IsoHeapCellType> intlRelativeTimeFormatHeapCellType;
+    std::unique_ptr<IsoHeapCellType> intlSegmentIteratorHeapCellType;
+    std::unique_ptr<IsoHeapCellType> intlSegmenterHeapCellType;
+    std::unique_ptr<IsoHeapCellType> intlSegmentsHeapCellType;
 #if ENABLE(WEBASSEMBLY)
     std::unique_ptr<IsoHeapCellType> webAssemblyCodeBlockHeapCellType;
     std::unique_ptr<IsoHeapCellType> webAssemblyFunctionHeapCellType;
@@ -478,6 +469,7 @@ public:
     IsoSubspace structureChainSpace;
     IsoSubspace structureRareDataSpace;
     IsoSubspace structureSpace;
+    IsoSubspace brandedStructureSpace;
     IsoSubspace symbolTableSpace;
 
 #define DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(name) \
@@ -506,14 +498,17 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(arrayBufferSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(arrayIteratorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(asyncGeneratorSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(bigInt64ArraySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(bigIntObjectSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(bigUint64ArraySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(booleanObjectSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(boundFunctionSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(callbackConstructorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(callbackGlobalObjectSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(callbackFunctionSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(callbackObjectSpace)
-    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(customGetterSetterFunctionSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(customGetterFunctionSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(customSetterFunctionSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(dataViewSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(debuggerScopeSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(errorInstanceSpace)
@@ -563,10 +558,14 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlCollatorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlDateTimeFormatSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlDisplayNamesSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlListFormatSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlLocaleSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlNumberFormatSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlPluralRulesSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlRelativeTimeFormatSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlSegmentIteratorSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlSegmenterSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlSegmentsSpace)
 #if ENABLE(WEBASSEMBLY)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(jsToWasmICCalleeSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(webAssemblyCodeBlockSpace)
@@ -723,17 +722,18 @@ public:
 
     AtomStringTable* m_atomStringTable;
     WTF::SymbolRegistry m_symbolRegistry;
+    WTF::SymbolRegistry m_privateSymbolRegistry;
     CommonIdentifiers* propertyNames;
     const ArgList* emptyList;
     SmallStrings smallStrings;
     NumericStrings numericStrings;
     std::unique_ptr<SimpleStats> machineCodeBytesPerBytecodeWordForBaselineJIT;
-    WeakGCMap<std::pair<CustomGetterSetter*, int>, JSCustomGetterSetterFunction> customGetterSetterFunctionMap;
     WeakGCMap<StringImpl*, JSString, PtrHash<StringImpl*>> stringCache;
     Strong<JSString> lastCachedString;
 
     AtomStringTable* atomStringTable() const { return m_atomStringTable; }
     WTF::SymbolRegistry& symbolRegistry() { return m_symbolRegistry; }
+    WTF::SymbolRegistry& privateSymbolRegistry() { return m_privateSymbolRegistry; }
 
     Strong<JSBigInt> heapBigIntConstantOne;
 
@@ -843,6 +843,11 @@ public:
         return OBJECT_OFFSETOF(VM, topEntryFrame);
     }
 
+    static ptrdiff_t offsetOfEncodedHostCallReturnValue()
+    {
+        return OBJECT_OFFSETOF(VM, encodedHostCallReturnValue);
+    }
+
     static ptrdiff_t offsetOfHeapBarrierThreshold()
     {
         return OBJECT_OFFSETOF(VM, heap) + OBJECT_OFFSETOF(Heap, m_barrierThreshold);
@@ -881,6 +886,12 @@ public:
         return heap.structureIDTable().get(decontaminate(id));
     }
 
+    // FIXME: rdar://69036888: remove this function when no longer needed.
+    ALWAYS_INLINE Structure* tryGetStructure(StructureID id)
+    {
+        return heap.structureIDTable().tryGet(decontaminate(id));
+    }
+
     void* stackPointerAtVMEntry() const { return m_stackPointerAtVMEntry; }
     void setStackPointerAtVMEntry(void*);
 
@@ -917,7 +928,7 @@ public:
         }
     }
 
-    JSValue hostCallReturnValue;
+    EncodedJSValue encodedHostCallReturnValue { };
     unsigned varargsLength;
     CallFrame* newCallFrameReturnValue;
     CallFrame* callFrameForCatch;
@@ -957,14 +968,6 @@ public:
     JSObject* stringRecursionCheckFirstObject { nullptr };
     HashSet<JSObject*> stringRecursionCheckVisitedObjects;
 
-    struct DateCache {
-        DateInstanceCache dateInstanceCache;
-        LocalTimeOffsetCache utcTimeOffsetCache;
-        LocalTimeOffsetCache localTimeOffsetCache;
-
-        String cachedDateString;
-        double cachedDateStringValue;
-    };
     DateCache dateCache;
 
     std::unique_ptr<Profiler::Database> m_perBytecodeProfiler;
@@ -983,7 +986,7 @@ public:
     static constexpr size_t patternContextBufferSize = 0; // Space allocated to save nested parenthesis context
 #endif
 
-    Ref<CompactVariableMap> m_compactVariableMap;
+    Ref<CompactTDZEnvironmentMap> m_compactVariableMap;
 
     std::unique_ptr<HasOwnPropertyCache> m_hasOwnPropertyCache;
     ALWAYS_INLINE HasOwnPropertyCache* hasOwnPropertyCache() { return m_hasOwnPropertyCache.get(); }
@@ -994,7 +997,7 @@ public:
     RTTraceList* m_rtTraceList;
 #endif
 
-    JS_EXPORT_PRIVATE void resetDateCache();
+    void resetDateCache() { dateCache.reset(); }
 
     RegExpCache* regExpCache() { return m_regExpCache; }
 #if ENABLE(REGEXP_TRACING)
@@ -1013,6 +1016,7 @@ public:
 
     JSLock& apiLock() { return *m_apiLock; }
     CodeCache* codeCache() { return m_codeCache.get(); }
+    IntlCache& intlCache() { return *m_intlCache; }
 
     JS_EXPORT_PRIVATE void whenIdle(Function<void()>&&);
 
@@ -1195,10 +1199,12 @@ public:
     bool didEnterVM { false };
 private:
     bool m_failNextNewCodeBlock { false };
-    DeletePropertyMode m_deletePropertyMode { DeletePropertyMode::Default };
     bool m_globalConstRedeclarationShouldThrow { true };
     bool m_shouldBuildPCToCodeOriginMapping { false };
+    DeletePropertyMode m_deletePropertyMode { DeletePropertyMode::Default };
+    HeapAnalyzer* m_activeHeapAnalyzer { nullptr };
     std::unique_ptr<CodeCache> m_codeCache;
+    std::unique_ptr<IntlCache> m_intlCache;
     std::unique_ptr<BuiltinExecutables> m_builtinExecutables;
     HashMap<RefPtr<UniquedStringImpl>, RefPtr<WatchpointSet>> m_impurePropertyWatchpointSets;
     std::unique_ptr<TypeProfiler> m_typeProfiler;

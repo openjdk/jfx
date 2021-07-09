@@ -38,6 +38,8 @@
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyRuntimeError.h"
 #include "ProbeContext.h"
+#include "ReleaseHeapAccessScope.h"
+#include "TypedArrayController.h"
 #include "WasmCallee.h"
 #include "WasmCallingConvention.h"
 #include "WasmContextInlines.h"
@@ -47,6 +49,7 @@
 #include "WasmOMGPlan.h"
 #include "WasmOSREntryData.h"
 #include "WasmWorklist.h"
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
 #include <wtf/StdLibExtras.h>
@@ -55,23 +58,7 @@ IGNORE_WARNINGS_BEGIN("frame-address")
 
 namespace JSC { namespace Wasm {
 
-void JIT_OPERATION operationWasmThrowBadI64(JSWebAssemblyInstance* instance)
-{
-    VM& vm = instance->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-
-    {
-        auto throwScope = DECLARE_THROW_SCOPE(vm);
-        JSGlobalObject* globalObject = instance->globalObject();
-        auto* error = ErrorInstance::create(globalObject, vm, globalObject->errorStructure(ErrorType::TypeError), "i64 not allowed as return type or argument to an imported function"_s);
-        throwException(globalObject, throwScope, error);
-    }
-
-    genericUnwind(vm, callFrame);
-    ASSERT(!!vm.callFrameForCatch);
-}
-
+#if ENABLE(WEBASSEMBLY_B3JIT)
 static bool shouldTriggerOMGCompile(TierUpCount& tierUp, OMGCallee* replacement, uint32_t functionIndex)
 {
     if (!replacement && !tierUp.checkIfOptimizationThresholdReached()) {
@@ -220,7 +207,7 @@ static void doOSREntry(Instance* instance, Probe::Context& context, BBQCallee& c
     static_assert(AssemblyHelpers::prologueStackPointerDelta() == sizeof(void*) * 2);
 #if CPU(ARM64E)
     // LR needs to be untagged since OSR entry function prologue will tag it with SP. This is similar to tail-call.
-    context.gpr(ARM64Registers::lr) = bitwise_cast<UCPURegister>(untagCodePtr(context.gpr<void*>(ARM64Registers::lr), bitwise_cast<PtrTag>(context.sp())));
+    context.gpr(ARM64Registers::lr) = bitwise_cast<UCPURegister>(untagCodePtrWithStackPointerForJITCall(context.gpr<void*>(ARM64Registers::lr), context.sp()));
 #endif
 #else
 #error Unsupported architecture.
@@ -239,7 +226,7 @@ inline bool shouldJIT(unsigned functionIndex)
     return true;
 }
 
-void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
+JSC_DEFINE_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe::Context& context))
 {
     OSREntryData& osrEntryData = *context.arg<OSREntryData*>();
     uint32_t functionIndex = osrEntryData.functionIndex();
@@ -268,11 +255,6 @@ void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
     dataLogLnIf(Options::verboseOSR(), "Consider OMGForOSREntryPlan for [", functionIndex, "] loopIndex#", loopIndex, " with executeCounter = ", tierUp, " ", RawPointer(callee.replacement()));
 
     if (!Options::useWebAssemblyOSR()) {
-        if (!wasmFunctionSizeCanBeOMGCompiled(instance->module().moduleInformation().functions[functionIndex].data.size())) {
-            tierUp.deferIndefinitely();
-            return returnWithoutOSREntry();
-        }
-
         if (shouldTriggerOMGCompile(tierUp, callee.replacement(), functionIndex))
             triggerOMGReplacementCompile(tierUp, callee.replacement(), instance, codeBlock, functionIndex);
 
@@ -339,9 +321,6 @@ void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
         return returnWithoutOSREntry();
 
     if (!triggeredSlowPathToStartCompilation) {
-        if (!wasmFunctionSizeCanBeOMGCompiled(instance->module().moduleInformation().functions[functionIndex].data.size()))
-            return returnWithoutOSREntry();
-
         triggerOMGReplacementCompile(tierUp, callee.replacement(), instance, codeBlock, functionIndex);
 
         if (!callee.replacement())
@@ -437,7 +416,7 @@ void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
     return returnWithoutOSREntry();
 }
 
-void JIT_OPERATION operationWasmTriggerTierUpNow(Instance* instance, uint32_t functionIndex)
+JSC_DEFINE_JIT_OPERATION(operationWasmTriggerTierUpNow, void, (Instance* instance, uint32_t functionIndex))
 {
     Wasm::CodeBlock& codeBlock = *instance->codeBlock();
     ASSERT(instance->memory()->mode() == codeBlock.mode());
@@ -475,8 +454,9 @@ void JIT_OPERATION operationWasmTriggerTierUpNow(Instance* instance, uint32_t fu
         }
     }
 }
+#endif
 
-void JIT_OPERATION operationWasmUnwind(CallFrame* callFrame)
+JSC_DEFINE_JIT_OPERATION(operationWasmUnwind, void, (CallFrame* callFrame))
 {
     // FIXME: Consider passing JSWebAssemblyInstance* instead.
     // https://bugs.webkit.org/show_bug.cgi?id=203206
@@ -486,7 +466,16 @@ void JIT_OPERATION operationWasmUnwind(CallFrame* callFrame)
     ASSERT(!!vm.callFrameForCatch);
 }
 
-double JIT_OPERATION operationConvertToF64(CallFrame* callFrame, JSValue v)
+JSC_DEFINE_JIT_OPERATION(operationConvertToI64, int64_t, (CallFrame* callFrame, JSValue v))
+{
+    // FIXME: Consider passing JSWebAssemblyInstance* instead.
+    // https://bugs.webkit.org/show_bug.cgi?id=203206
+    VM& vm = callFrame->deprecatedVM();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return v.toBigInt64(callFrame->lexicalGlobalObject(vm));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationConvertToF64, double, (CallFrame* callFrame, JSValue v))
 {
     // FIXME: Consider passing JSWebAssemblyInstance* instead.
     // https://bugs.webkit.org/show_bug.cgi?id=203206
@@ -495,7 +484,7 @@ double JIT_OPERATION operationConvertToF64(CallFrame* callFrame, JSValue v)
     return v.toNumber(callFrame->lexicalGlobalObject(vm));
 }
 
-int32_t JIT_OPERATION operationConvertToI32(CallFrame* callFrame, JSValue v)
+JSC_DEFINE_JIT_OPERATION(operationConvertToI32, int32_t, (CallFrame* callFrame, JSValue v))
 {
     // FIXME: Consider passing JSWebAssemblyInstance* instead.
     // https://bugs.webkit.org/show_bug.cgi?id=203206
@@ -504,7 +493,7 @@ int32_t JIT_OPERATION operationConvertToI32(CallFrame* callFrame, JSValue v)
     return v.toInt32(callFrame->lexicalGlobalObject(vm));
 }
 
-float JIT_OPERATION operationConvertToF32(CallFrame* callFrame, JSValue v)
+JSC_DEFINE_JIT_OPERATION(operationConvertToF32, float, (CallFrame* callFrame, JSValue v))
 {
     // FIXME: Consider passing JSWebAssemblyInstance* instead.
     // https://bugs.webkit.org/show_bug.cgi?id=203206
@@ -513,7 +502,17 @@ float JIT_OPERATION operationConvertToF32(CallFrame* callFrame, JSValue v)
     return static_cast<float>(v.toNumber(callFrame->lexicalGlobalObject(vm)));
 }
 
-void JIT_OPERATION operationIterateResults(CallFrame* callFrame, Instance* instance, const Signature* signature, JSValue result, uint64_t* registerResults, uint64_t* calleeFramePointer)
+JSC_DEFINE_JIT_OPERATION(operationConvertToBigInt, EncodedJSValue, (CallFrame* callFrame, Instance* instance, int64_t value))
+{
+    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
+    JSGlobalObject* globalObject = jsInstance->globalObject();
+    VM& vm = globalObject->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return JSValue::encode(JSBigInt::makeHeapBigIntOrBigInt32(globalObject, value));
+}
+
+// https://webassembly.github.io/multi-value/js-api/index.html#run-a-host-function
+JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (CallFrame* callFrame, Instance* instance, const Signature* signature, JSValue result, uint64_t* registerResults, uint64_t* calleeFramePointer))
 {
     // FIXME: Consider passing JSWebAssemblyInstance* instead.
     // https://bugs.webkit.org/show_bug.cgi?id=203206
@@ -526,53 +525,69 @@ void JIT_OPERATION operationIterateResults(CallFrame* callFrame, Instance* insta
     auto wasmCallInfo = wasmCallingConvention().callInformationFor(*signature, CallRole::Callee);
     RegisterAtOffsetList registerResultOffsets = wasmCallInfo.computeResultsOffsetList();
 
-    unsigned itemsInserted = 0;
-    forEachInIterable(globalObject, result, [&] (VM& vm, JSGlobalObject* globalObject, JSValue value) -> void {
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        if (itemsInserted < signature->returnCount()) {
-            uint64_t unboxedValue;
-            switch (signature->returnType(itemsInserted)) {
-            case I32:
-                unboxedValue = value.toInt32(globalObject);
-                break;
-            case F32:
-                unboxedValue = bitwise_cast<uint32_t>(value.toFloat(globalObject));
-                break;
-            case F64:
-                unboxedValue = bitwise_cast<uint64_t>(value.toNumber(globalObject));
-                break;
-            case Funcref:
-                if (!value.isCallable(vm)) {
-                    throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
-                    return;
-                }
-                FALLTHROUGH;
-            case Anyref:
-                unboxedValue = bitwise_cast<uint64_t>(value);
-                RELEASE_ASSERT(Options::useWebAssemblyReferences());
-                break;
-            default:
-                RELEASE_ASSERT_NOT_REACHED();
-            }
-
-            RETURN_IF_EXCEPTION(scope, void());
-            auto rep = wasmCallInfo.results[itemsInserted];
-            if (rep.isReg())
-                registerResults[registerResultOffsets.find(rep.reg())->offset() / sizeof(uint64_t)] = unboxedValue;
-            else
-                calleeFramePointer[rep.offsetFromFP() / sizeof(uint64_t)] = unboxedValue;
-        }
-        itemsInserted++;
+    unsigned iterationCount = 0;
+    MarkedArgumentBuffer buffer;
+    forEachInIterable(globalObject, result, [&] (VM&, JSGlobalObject*, JSValue value) -> void {
+        if (buffer.size() < signature->returnCount())
+            buffer.append(value);
+        ++iterationCount;
     });
     RETURN_IF_EXCEPTION(scope, void());
-    if (itemsInserted != signature->returnCount())
+
+    if (buffer.hasOverflowed()) {
+        throwOutOfMemoryError(globalObject, scope, "JS results to Wasm are too large");
+        return;
+    }
+
+    if (iterationCount != signature->returnCount()) {
         throwVMTypeError(globalObject, scope, "Incorrect number of values returned to Wasm from JS");
+        return;
+    }
+
+    for (unsigned index = 0; index < buffer.size(); ++index) {
+        JSValue value = buffer.at(index);
+
+        uint64_t unboxedValue = 0;
+        switch (signature->returnType(index)) {
+        case I32:
+            unboxedValue = value.toInt32(globalObject);
+            break;
+        case I64:
+            unboxedValue = value.toBigInt64(globalObject);
+            break;
+        case F32:
+            unboxedValue = bitwise_cast<uint32_t>(value.toFloat(globalObject));
+            break;
+        case F64:
+            unboxedValue = bitwise_cast<uint64_t>(value.toNumber(globalObject));
+            break;
+        case Funcref:
+            if (!value.isCallable(vm)) {
+                throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
+                return;
+            }
+            FALLTHROUGH;
+        case Externref:
+            unboxedValue = bitwise_cast<uint64_t>(value);
+            RELEASE_ASSERT(Options::useWebAssemblyReferences());
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+        RETURN_IF_EXCEPTION(scope, void());
+
+        auto rep = wasmCallInfo.results[index];
+        if (rep.isReg())
+            registerResults[registerResultOffsets.find(rep.reg())->offset() / sizeof(uint64_t)] = unboxedValue;
+        else
+            calleeFramePointer[rep.offsetFromFP() / sizeof(uint64_t)] = unboxedValue;
+    }
 }
 
 // FIXME: It would be much easier to inline this when we have a global GC, which could probably mean we could avoid
 // spilling the results onto the stack.
 // Saved result registers should be placed on the stack just above the last stack result.
-JSArray* JIT_OPERATION operationAllocateResultsArray(CallFrame* callFrame, Wasm::Instance* instance, const Signature* signature, IndexingType indexingType, JSValue* stackPointerFromCallee)
+JSC_DEFINE_JIT_OPERATION(operationAllocateResultsArray, JSArray*, (CallFrame* callFrame, Wasm::Instance* instance, const Signature* signature, IndexingType indexingType, JSValue* stackPointerFromCallee))
 {
     JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
     VM& vm = jsInstance->vm();
@@ -590,12 +605,12 @@ JSArray* JIT_OPERATION operationAllocateResultsArray(CallFrame* callFrame, Wasm:
 
     static_assert(sizeof(JSValue) == sizeof(CPURegister), "The code below relies on this.");
     for (unsigned i = 0; i < signature->returnCount(); ++i) {
-        B3::ValueRep rep = wasmCallInfo.results[i];
+        ValueLocation loc = wasmCallInfo.results[i];
         JSValue value;
-        if (rep.isReg())
-            value = stackPointerFromCallee[(registerResults.find(rep.reg())->offset() + wasmCallInfo.headerAndArgumentStackSizeInBytes) / sizeof(JSValue)];
+        if (loc.isReg())
+            value = stackPointerFromCallee[(registerResults.find(loc.reg())->offset() + wasmCallInfo.headerAndArgumentStackSizeInBytes) / sizeof(JSValue)];
         else
-            value = stackPointerFromCallee[rep.offsetFromSP() / sizeof(JSValue)];
+            value = stackPointerFromCallee[loc.offsetFromSP() / sizeof(JSValue)];
         result->initializeIndex(initializationScope, i, value);
     }
 
@@ -603,7 +618,7 @@ JSArray* JIT_OPERATION operationAllocateResultsArray(CallFrame* callFrame, Wasm:
     return result;
 }
 
-void JIT_OPERATION operationWasmWriteBarrierSlowPath(JSCell* cell, VM* vmPointer)
+JSC_DEFINE_JIT_OPERATION(operationWasmWriteBarrierSlowPath, void, (JSCell* cell, VM* vmPointer))
 {
     ASSERT(cell);
     ASSERT(vmPointer);
@@ -611,17 +626,17 @@ void JIT_OPERATION operationWasmWriteBarrierSlowPath(JSCell* cell, VM* vmPointer
     vm.heap.writeBarrierSlowPath(cell);
 }
 
-uint32_t JIT_OPERATION operationPopcount32(int32_t value)
+JSC_DEFINE_JIT_OPERATION(operationPopcount32, uint32_t, (int32_t value))
 {
     return __builtin_popcount(value);
 }
 
-uint64_t JIT_OPERATION operationPopcount64(int64_t value)
+JSC_DEFINE_JIT_OPERATION(operationPopcount64, uint64_t, (int64_t value))
 {
     return __builtin_popcountll(value);
 }
 
-int32_t JIT_OPERATION operationGrowMemory(void* callFrame, Instance* instance, int32_t delta)
+JSC_DEFINE_JIT_OPERATION(operationGrowMemory, int32_t, (void* callFrame, Instance* instance, int32_t delta))
 {
     instance->storeTopCallFrame(callFrame);
 
@@ -643,7 +658,17 @@ int32_t JIT_OPERATION operationGrowMemory(void* callFrame, Instance* instance, i
     return grown.value().pageCount();
 }
 
-EncodedJSValue JIT_OPERATION operationGetWasmTableElement(Instance* instance, unsigned tableIndex, int32_t signedIndex)
+JSC_DEFINE_JIT_OPERATION(operationWasmMemoryFill, bool, (Instance* instance, uint32_t dstAddress, uint32_t targetValue, uint32_t count))
+{
+    return instance->memory()->fill(dstAddress, static_cast<uint8_t>(targetValue), count);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmMemoryCopy, bool, (Instance* instance, uint32_t dstAddress, uint32_t srcAddress, uint32_t count))
+{
+    return instance->memory()->copy(dstAddress, srcAddress, count);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationGetWasmTableElement, EncodedJSValue, (Instance* instance, unsigned tableIndex, int32_t signedIndex))
 {
     ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
     if (signedIndex < 0)
@@ -656,18 +681,15 @@ EncodedJSValue JIT_OPERATION operationGetWasmTableElement(Instance* instance, un
     return JSValue::encode(instance->table(tableIndex)->get(index));
 }
 
-static bool setWasmTableElement(Instance* instance, unsigned tableIndex, int32_t signedIndex, EncodedJSValue encValue)
+static bool setWasmTableElement(Instance* instance, unsigned tableIndex, uint32_t index, EncodedJSValue encValue)
 {
     ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-    if (signedIndex < 0)
-        return false;
 
-    uint32_t index = signedIndex;
     if (index >= instance->table(tableIndex)->length())
         return false;
 
     JSValue value = JSValue::decode(encValue);
-    if (instance->table(tableIndex)->type() == Wasm::TableElementType::Anyref)
+    if (instance->table(tableIndex)->type() == Wasm::TableElementType::Externref)
         instance->table(tableIndex)->set(index, value);
     else if (instance->table(tableIndex)->type() == Wasm::TableElementType::Funcref) {
         WebAssemblyFunction* wasmFunction;
@@ -689,19 +711,48 @@ static bool setWasmTableElement(Instance* instance, unsigned tableIndex, int32_t
     return true;
 }
 
-bool JIT_OPERATION operationSetWasmTableElement(Instance* instance, unsigned tableIndex, int32_t signedIndex, EncodedJSValue encValue)
+JSC_DEFINE_JIT_OPERATION(operationSetWasmTableElement, bool, (Instance* instance, unsigned tableIndex, uint32_t signedIndex, EncodedJSValue encValue))
 {
     return setWasmTableElement(instance, tableIndex, signedIndex, encValue);
 }
 
-int32_t JIT_OPERATION operationWasmTableGrow(Instance* instance, unsigned tableIndex, EncodedJSValue fill, int32_t delta)
+JSC_DEFINE_JIT_OPERATION(operationWasmTableInit, bool, (Instance* instance, unsigned elementIndex, unsigned tableIndex, uint32_t dstOffset, uint32_t srcOffset, uint32_t length))
+{
+    ASSERT(elementIndex < instance->module().moduleInformation().elementCount());
+    ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
+
+    if (WTF::sumOverflows<uint32_t>(srcOffset, length))
+        return false;
+
+    if (WTF::sumOverflows<uint32_t>(dstOffset, length))
+        return false;
+
+    if (dstOffset + length > instance->table(tableIndex)->length())
+        return false;
+
+    const uint32_t lengthOfElementSegment = instance->elementAt(elementIndex) ? instance->elementAt(elementIndex)->length() : 0U;
+    if (srcOffset + length > lengthOfElementSegment)
+        return false;
+
+    if (!lengthOfElementSegment)
+        return true;
+
+    instance->tableInit(dstOffset, srcOffset, length, elementIndex, tableIndex);
+    return true;
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmElemDrop, void, (Instance* instance, unsigned elementIndex))
+{
+    ASSERT(elementIndex < instance->module().moduleInformation().elementCount());
+    instance->elemDrop(elementIndex);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmTableGrow, int32_t, (Instance* instance, unsigned tableIndex, EncodedJSValue fill, uint32_t delta))
 {
     ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
     auto oldSize = instance->table(tableIndex)->length();
-    if (delta < 0)
-        return oldSize;
-    auto newSize = instance->table(tableIndex)->grow(delta);
-    if (!newSize || *newSize == oldSize)
+    auto newSize = instance->table(tableIndex)->grow(delta, jsNull());
+    if (!newSize)
         return -1;
 
     for (unsigned i = oldSize; i < instance->table(tableIndex)->length(); ++i)
@@ -710,37 +761,164 @@ int32_t JIT_OPERATION operationWasmTableGrow(Instance* instance, unsigned tableI
     return oldSize;
 }
 
-bool JIT_OPERATION operationWasmTableFill(Instance* instance, unsigned tableIndex, int32_t unsafeOffset, EncodedJSValue fill, int32_t unsafeCount)
+JSC_DEFINE_JIT_OPERATION(operationWasmTableFill, bool, (Instance* instance, unsigned tableIndex, uint32_t offset, EncodedJSValue fill, uint32_t count))
 {
     ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-    if (unsafeOffset < 0 || unsafeCount < 0)
+
+    if (WTF::sumOverflows<uint32_t>(offset, count))
         return false;
 
-    unsigned offset = unsafeOffset;
-    unsigned count = unsafeCount;
-
-    if (offset >= instance->table(tableIndex)->length() || offset + count > instance->table(tableIndex)->length())
+    if (offset + count > instance->table(tableIndex)->length())
         return false;
 
-    for (unsigned j = 0; j < count; ++j)
-        setWasmTableElement(instance, tableIndex, offset + j, fill);
+    for (uint32_t index = 0; index < count; ++index)
+        setWasmTableElement(instance, tableIndex, offset + index, fill);
 
     return true;
 }
 
-EncodedJSValue JIT_OPERATION operationWasmRefFunc(Instance* instance, uint32_t index)
+JSC_DEFINE_JIT_OPERATION(operationWasmTableCopy, bool, (Instance* instance, unsigned dstTableIndex, unsigned srcTableIndex, int32_t dstOffset, int32_t srcOffset, int32_t length))
+{
+    ASSERT(dstTableIndex < instance->module().moduleInformation().tableCount());
+    ASSERT(srcTableIndex < instance->module().moduleInformation().tableCount());
+    const Table* dstTable = instance->table(dstTableIndex);
+    const Table* srcTable = instance->table(srcTableIndex);
+    ASSERT(dstTable->type() == srcTable->type());
+
+    if ((srcOffset < 0) || (dstOffset < 0) || (length < 0))
+        return false;
+
+    Checked<uint32_t, RecordOverflow> lastDstElementIndexChecked = static_cast<uint32_t>(dstOffset);
+    lastDstElementIndexChecked += static_cast<uint32_t>(length);
+
+    uint32_t lastDstElementIndex;
+    if (lastDstElementIndexChecked.safeGet(lastDstElementIndex) == CheckedState::DidOverflow)
+        return false;
+
+    if (lastDstElementIndex > dstTable->length())
+        return false;
+
+    Checked<uint32_t, RecordOverflow> lastSrcElementIndexChecked = static_cast<uint32_t>(srcOffset);
+    lastSrcElementIndexChecked += static_cast<uint32_t>(length);
+
+    uint32_t lastSrcElementIndex;
+    if (lastSrcElementIndexChecked.safeGet(lastSrcElementIndex) == CheckedState::DidOverflow)
+        return false;
+
+    if (lastSrcElementIndex > srcTable->length())
+        return false;
+
+    instance->tableCopy(dstOffset, srcOffset, length, dstTableIndex, srcTableIndex);
+    return true;
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmRefFunc, EncodedJSValue, (Instance* instance, uint32_t index))
 {
     JSValue value = instance->getFunctionWrapper(index);
     ASSERT(value.isCallable(instance->owner<JSObject>()->vm()));
     return JSValue::encode(value);
 }
 
-int32_t JIT_OPERATION operationGetWasmTableSize(Instance* instance, unsigned tableIndex)
+JSC_DEFINE_JIT_OPERATION(operationGetWasmTableSize, int32_t, (Instance* instance, unsigned tableIndex))
 {
     return instance->table(tableIndex)->length();
 }
 
-void* JIT_OPERATION operationWasmToJSException(CallFrame* callFrame, Wasm::ExceptionType type, Instance* wasmInstance)
+template<typename ValueType>
+static int32_t wait(VM& vm, ValueType* pointer, ValueType expectedValue, int64_t timeoutInNanoseconds)
+{
+    Seconds timeout = Seconds::infinity();
+    if (timeoutInNanoseconds >= 0) {
+        int64_t timeoutInMilliseconds = timeoutInNanoseconds / 1000;
+        timeout = Seconds::fromMilliseconds(timeoutInMilliseconds);
+    }
+    bool didPassValidation = false;
+    ParkingLot::ParkResult result;
+    {
+        ReleaseHeapAccessScope releaseHeapAccessScope(vm.heap);
+        result = ParkingLot::parkConditionally(
+            pointer,
+            [&] () -> bool {
+                didPassValidation = WTF::atomicLoad(pointer) == expectedValue;
+                return didPassValidation;
+            },
+            [] () { },
+            MonotonicTime::now() + timeout);
+    }
+    if (!didPassValidation)
+        return 1;
+    if (!result.wasUnparked)
+        return 2;
+    return 0;
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMemoryAtomicWait32, int32_t, (Instance* instance, unsigned base, unsigned offset, uint32_t value, int64_t timeoutInNanoseconds))
+{
+    VM& vm = instance->owner<JSWebAssemblyInstance>()->vm();
+    uint64_t offsetInMemory = static_cast<uint64_t>(base) + offset;
+    if (offsetInMemory & (0x4 - 1))
+        return -1;
+    if (!instance->memory())
+        return -1;
+    if (offsetInMemory >= instance->memory()->size())
+        return -1;
+    if (instance->memory()->sharingMode() != MemorySharingMode::Shared)
+        return -1;
+    if (!vm.m_typedArrayController->isAtomicsWaitAllowedOnCurrentThread())
+        return -1;
+    uint32_t* pointer = bitwise_cast<uint32_t*>(instance->memory()->memory()) + offsetInMemory;
+    return wait<uint32_t>(vm, pointer, value, timeoutInNanoseconds);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMemoryAtomicWait64, int32_t, (Instance* instance, unsigned base, unsigned offset, uint64_t value, int64_t timeoutInNanoseconds))
+{
+    VM& vm = instance->owner<JSWebAssemblyInstance>()->vm();
+    uint64_t offsetInMemory = static_cast<uint64_t>(base) + offset;
+    if (offsetInMemory & (0x8 - 1))
+        return -1;
+    if (!instance->memory())
+        return -1;
+    if (offsetInMemory >= instance->memory()->size())
+        return -1;
+    if (instance->memory()->sharingMode() != MemorySharingMode::Shared)
+        return -1;
+    if (!vm.m_typedArrayController->isAtomicsWaitAllowedOnCurrentThread())
+        return -1;
+    uint64_t* pointer = bitwise_cast<uint64_t*>(instance->memory()->memory()) + offsetInMemory;
+    return wait<uint64_t>(vm, pointer, value, timeoutInNanoseconds);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMemoryAtomicNotify, int32_t, (Instance* instance, unsigned base, unsigned offset, int32_t countValue))
+{
+    uint64_t offsetInMemory = static_cast<uint64_t>(base) + offset;
+    if (offsetInMemory & (0x4 - 1))
+        return -1;
+    if (!instance->memory())
+        return -1;
+    if (offsetInMemory >= instance->memory()->size())
+        return -1;
+    if (instance->memory()->sharingMode() != MemorySharingMode::Shared)
+        return 0;
+    uint8_t* pointer = bitwise_cast<uint8_t*>(instance->memory()->memory()) + offsetInMemory;
+    unsigned count = UINT_MAX;
+    if (countValue >= 0)
+        count = static_cast<unsigned>(countValue);
+    return ParkingLot::unparkCount(pointer, count);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmMemoryInit, bool, (Instance* instance, unsigned dataSegmentIndex, uint32_t dstAddress, uint32_t srcAddress, uint32_t length))
+{
+    ASSERT(dataSegmentIndex < instance->module().moduleInformation().dataSegmentsCount());
+    return instance->memoryInit(dstAddress, srcAddress, length, dataSegmentIndex);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmDataDrop, void, (Instance* instance, unsigned dataSegmentIndex))
+{
+    ASSERT(dataSegmentIndex < instance->module().moduleInformation().dataSegmentsCount());
+    instance->dataDrop(dataSegmentIndex);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmToJSException, void*, (CallFrame* callFrame, Wasm::ExceptionType type, Instance* wasmInstance))
 {
     wasmInstance->storeTopCallFrame(callFrame);
     JSWebAssemblyInstance* instance = wasmInstance->owner<JSWebAssemblyInstance>();
@@ -764,7 +942,7 @@ void* JIT_OPERATION operationWasmToJSException(CallFrame* callFrame, Wasm::Excep
     ASSERT(!!vm.callFrameForCatch);
     ASSERT(!!vm.targetMachinePCForThrow);
     // FIXME: We could make this better:
-    // This is a total hack, but the llint (both op_catch and handleUncaughtException)
+    // This is a total hack, but the llint (both op_catch and llint_handle_uncaught_exception)
     // require a cell in the callee field to load the VM. (The baseline JIT does not require
     // this since it is compiled with a constant VM pointer.) We could make the calling convention
     // for exceptions first load callFrameForCatch info call frame register before jumping

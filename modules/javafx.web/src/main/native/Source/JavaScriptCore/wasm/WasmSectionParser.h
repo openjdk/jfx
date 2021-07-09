@@ -31,6 +31,7 @@
 #include "WasmFormat.h"
 #include "WasmOps.h"
 #include "WasmParser.h"
+#include <wtf/text/ASCIILiteral.h>
 
 namespace JSC { namespace Wasm {
 
@@ -63,8 +64,19 @@ private:
     PartialResult WARN_UNUSED_RETURN parseGlobalType(GlobalInformation&);
     PartialResult WARN_UNUSED_RETURN parseMemoryHelper(bool isImport);
     PartialResult WARN_UNUSED_RETURN parseTableHelper(bool isImport);
-    PartialResult WARN_UNUSED_RETURN parseResizableLimits(uint32_t& initial, Optional<uint32_t>& maximum);
+    enum class LimitsType { Memory, Table };
+    PartialResult WARN_UNUSED_RETURN parseResizableLimits(uint32_t& initial, Optional<uint32_t>& maximum, bool& isShared, LimitsType);
     PartialResult WARN_UNUSED_RETURN parseInitExpr(uint8_t&, uint64_t&, Type& initExprType);
+    PartialResult WARN_UNUSED_RETURN parseI32InitExpr(Optional<I32InitExpr>&, ASCIILiteral failMessage);
+
+    PartialResult WARN_UNUSED_RETURN validateElementTableIdx(uint32_t);
+    PartialResult WARN_UNUSED_RETURN parseI32InitExprForElementSection(Optional<I32InitExpr>&);
+    PartialResult WARN_UNUSED_RETURN parseElementKind(uint8_t& elementKind);
+    PartialResult WARN_UNUSED_RETURN parseIndexCountForElementSection(uint32_t&, const unsigned);
+    PartialResult WARN_UNUSED_RETURN parseElementSegmentVectorOfExpressions(Vector<uint32_t>&, const unsigned, const unsigned);
+    PartialResult WARN_UNUSED_RETURN parseElementSegmentVectorOfIndexes(Vector<uint32_t>&, const unsigned, const unsigned);
+
+    PartialResult WARN_UNUSED_RETURN parseI32InitExprForDataSection(Optional<I32InitExpr>&);
 
     size_t m_offsetInSource;
     Ref<ModuleInformation> m_info;

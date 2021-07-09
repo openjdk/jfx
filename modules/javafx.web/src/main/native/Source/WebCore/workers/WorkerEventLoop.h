@@ -30,17 +30,11 @@
 
 namespace WebCore {
 
-class WorkerGlobalScope;
-class WorkletGlobalScope;
+class WorkerOrWorkletGlobalScope;
 
 class WorkerEventLoop final : public EventLoop, private ContextDestructionObserver {
 public:
-    // Explicitly take WorkerGlobalScope and WorkletGlobalScope for documentation purposes.
-    static Ref<WorkerEventLoop> create(WorkerGlobalScope&);
-
-#if ENABLE(CSS_PAINTING_API)
-    static Ref<WorkerEventLoop> create(WorkletGlobalScope&);
-#endif
+    static Ref<WorkerEventLoop> create(WorkerOrWorkletGlobalScope&);
 
     virtual ~WorkerEventLoop();
 
@@ -48,7 +42,7 @@ public:
     void clearMicrotaskQueue();
 
 private:
-    explicit WorkerEventLoop(ScriptExecutionContext&);
+    explicit WorkerEventLoop(WorkerOrWorkletGlobalScope&);
 
     void scheduleToRun() final;
     bool isContextThread() const;

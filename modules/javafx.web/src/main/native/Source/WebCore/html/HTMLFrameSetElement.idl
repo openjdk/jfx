@@ -18,10 +18,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface HTMLFrameSetElement : HTMLElement {
+[
+    Exposed=Window
+] interface HTMLFrameSetElement : HTMLElement {
     [CEReactions=NotNeeded, Reflect] attribute DOMString cols;
     [CEReactions=NotNeeded, Reflect] attribute DOMString rows;
 
+    // Non-standard
     [NotEnumerable, WindowEventHandler] attribute EventHandler onblur;
     [NotEnumerable, WindowEventHandler] attribute EventHandler onerror;
     [NotEnumerable, WindowEventHandler] attribute EventHandler onfocus;
@@ -36,4 +39,4 @@ interface HTMLFrameSetElement : HTMLElement {
     getter WindowProxy (DOMString name);
 };
 
-HTMLFrameSetElement implements WindowEventHandlers;
+HTMLFrameSetElement includes WindowEventHandlers;

@@ -41,27 +41,26 @@ const ClassInfo FinalizationRegistryConstructor::s_info = { "Function", &Base::s
 
 void FinalizationRegistryConstructor::finishCreation(VM& vm, FinalizationRegistryPrototype* prototype)
 {
-    Base::finishCreation(vm, "FinalizationRegistry"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "FinalizationRegistry"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
-static EncodedJSValue JSC_HOST_CALL callFinalizationRegistry(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructFinalizationRegistry(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callFinalizationRegistry);
+static JSC_DECLARE_HOST_FUNCTION(constructFinalizationRegistry);
 
 FinalizationRegistryConstructor::FinalizationRegistryConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callFinalizationRegistry, constructFinalizationRegistry)
 {
 }
 
-static EncodedJSValue JSC_HOST_CALL callFinalizationRegistry(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callFinalizationRegistry, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "FinalizationRegistry"));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructFinalizationRegistry(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructFinalizationRegistry, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

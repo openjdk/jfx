@@ -31,6 +31,8 @@
 
 #include "AudioContext.h"
 #include "AudioNodeOutput.h"
+#include "AudioSourceProvider.h"
+#include "AudioUtilities.h"
 #include "Logging.h"
 #include "MediaElementAudioSourceOptions.h"
 #include "MediaPlayer.h"
@@ -38,8 +40,8 @@
 #include <wtf/Locker.h>
 
 // These are somewhat arbitrary limits, but we need to do some kind of sanity-checking.
-const unsigned minSampleRate = 8000;
-const unsigned maxSampleRate = 192000;
+constexpr unsigned minSampleRate = 8000;
+constexpr unsigned maxSampleRate = 192000;
 
 namespace WebCore {
 
@@ -49,30 +51,25 @@ ExceptionOr<Ref<MediaElementAudioSourceNode>> MediaElementAudioSourceNode::creat
 {
     RELEASE_ASSERT(options.mediaElement);
 
-    if (context.isStopped())
-        return Exception { InvalidStateError };
-
     if (options.mediaElement->audioSourceNode())
         return Exception { InvalidStateError, "Media element is already associated with an audio source node"_s };
-
-    context.lazyInitialize();
 
     auto node = adoptRef(*new MediaElementAudioSourceNode(context, *options.mediaElement));
 
     options.mediaElement->setAudioSourceNode(node.ptr());
-    context.refNode(node.get()); // context keeps reference until node is disconnected
+
+    // context keeps reference until node is disconnected.
+    context.sourceNodeWillBeginPlayback(node);
 
     return node;
 }
 
 MediaElementAudioSourceNode::MediaElementAudioSourceNode(BaseAudioContext& context, Ref<HTMLMediaElement>&& mediaElement)
-    : AudioNode(context)
+    : AudioNode(context, NodeTypeMediaElementAudioSource)
     , m_mediaElement(WTFMove(mediaElement))
 {
-    setNodeType(NodeTypeMediaElementAudioSource);
-
     // Default to stereo. This could change depending on what the media element .src is set to.
-    addOutput(makeUnique<AudioNodeOutput>(this, 2));
+    addOutput(2);
 
     initialize();
 }
@@ -85,6 +82,7 @@ MediaElementAudioSourceNode::~MediaElementAudioSourceNode()
 
 void MediaElementAudioSourceNode::setFormat(size_t numberOfChannels, float sourceSampleRate)
 {
+    auto protectedThis = makeRef(*this);
     m_muted = wouldTaintOrigin();
 
     if (numberOfChannels != m_sourceNumberOfChannels || sourceSampleRate != m_sourceSampleRate) {
@@ -100,11 +98,11 @@ void MediaElementAudioSourceNode::setFormat(size_t numberOfChannels, float sourc
         m_sourceSampleRate = sourceSampleRate;
 
         // Synchronize with process().
-        auto locker = holdLock(*this);
+        auto locker = holdLock(m_processLock);
 
         if (sourceSampleRate != sampleRate()) {
             double scaleFactor = sourceSampleRate / sampleRate();
-            m_multiChannelResampler = makeUnique<MultiChannelResampler>(scaleFactor, numberOfChannels);
+            m_multiChannelResampler = makeUnique<MultiChannelResampler>(scaleFactor, numberOfChannels, AudioUtilities::renderQuantumSize, std::bind(&MediaElementAudioSourceNode::provideInput, this, std::placeholders::_1, std::placeholders::_2));
         } else {
             // Bypass resampling.
             m_multiChannelResampler = nullptr;
@@ -120,9 +118,23 @@ void MediaElementAudioSourceNode::setFormat(size_t numberOfChannels, float sourc
     }
 }
 
+void MediaElementAudioSourceNode::provideInput(AudioBus* bus, size_t framesToProcess)
+{
+    ASSERT(bus);
+    if (auto* provider = mediaElement().audioSourceProvider())
+        provider->provideInput(bus, framesToProcess);
+    else {
+        // Either this port doesn't yet support HTMLMediaElement audio stream access,
+        // or the stream is not yet available.
+        bus->zero();
+    }
+}
+
 bool MediaElementAudioSourceNode::wouldTaintOrigin()
 {
-    if (!m_mediaElement->hasSingleSecurityOrigin())
+    // If the resource is redirected to another origin, treat it as tainted if the crossorigin attribute
+    // is not set. This is done for consistency with Blink.
+    if (!m_mediaElement->hasSingleSecurityOrigin() && m_mediaElement->crossOrigin().isNull())
         return true;
 
     if (m_mediaElement->didPassCORSAccessCheck())
@@ -143,11 +155,11 @@ void MediaElementAudioSourceNode::process(size_t numberOfFrames)
         return;
     }
 
-    // Use a std::try_to_lock to avoid contention in the real-time audio thread.
+    // Use tryHoldLock() to avoid contention in the real-time audio thread.
     // If we fail to acquire the lock then the HTMLMediaElement must be in the middle of
     // reconfiguring its playback engine, so we output silence in this case.
-    std::unique_lock<Lock> lock(m_processMutex, std::try_to_lock);
-    if (!lock.owns_lock()) {
+    auto locker = tryHoldLock(m_processLock);
+    if (!locker) {
         // We failed to acquire the lock.
         outputBus->zero();
         return;
@@ -157,36 +169,14 @@ void MediaElementAudioSourceNode::process(size_t numberOfFrames)
         return;
     }
 
-    if (AudioSourceProvider* provider = mediaElement().audioSourceProvider()) {
-        if (m_multiChannelResampler.get()) {
-            ASSERT(m_sourceSampleRate != sampleRate());
-            m_multiChannelResampler->process(provider, outputBus, numberOfFrames);
-        } else {
-            // Bypass the resampler completely if the source is at the context's sample-rate.
-            ASSERT(m_sourceSampleRate == sampleRate());
-            provider->provideInput(outputBus, numberOfFrames);
-        }
+    if (m_multiChannelResampler) {
+        ASSERT(m_sourceSampleRate != sampleRate());
+        m_multiChannelResampler->process(outputBus, numberOfFrames);
     } else {
-        // Either this port doesn't yet support HTMLMediaElement audio stream access,
-        // or the stream is not yet available.
-        outputBus->zero();
+        // Bypass the resampler completely if the source is at the context's sample-rate.
+        ASSERT(m_sourceSampleRate == sampleRate());
+        provideInput(outputBus, numberOfFrames);
     }
-}
-
-void MediaElementAudioSourceNode::reset()
-{
-}
-
-void MediaElementAudioSourceNode::lock()
-{
-    ref();
-    m_processMutex.lock();
-}
-
-void MediaElementAudioSourceNode::unlock()
-{
-    m_processMutex.unlock();
-    deref();
 }
 
 } // namespace WebCore

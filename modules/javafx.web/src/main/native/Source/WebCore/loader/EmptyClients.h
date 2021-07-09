@@ -102,6 +102,11 @@ class EmptyChromeClient : public ChromeClient {
 
     KeyboardUIMode keyboardUIMode() final { return KeyboardAccessDefault; }
 
+    bool hoverSupportedByPrimaryPointingDevice() const final { return false; };
+    bool hoverSupportedByAnyAvailablePointingDevice() const final { return false; }
+    Optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const final { return WTF::nullopt; };
+    OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const final { return { }; }
+
     void invalidateRootView(const IntRect&) final { }
     void invalidateContentsAndRootView(const IntRect&) override { }
     void invalidateContentsForSlowScroll(const IntRect&) final { }
@@ -120,7 +125,7 @@ class EmptyChromeClient : public ChromeClient {
 
     void mouseDidMoveOverElement(const HitTestResult&, unsigned, const String&, TextDirection) final { }
 
-    void print(Frame&) final { }
+    void print(Frame&, const StringWithDirection&) final { }
 
     void exceededDatabaseQuota(Frame&, const String&, DatabaseDetails) final { }
 
@@ -134,6 +139,14 @@ class EmptyChromeClient : public ChromeClient {
 #if ENABLE(DATALIST_ELEMENT)
     std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
+#endif
+
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
+#endif
+
+#if ENABLE(APP_HIGHLIGHTS)
+    void storeAppHighlight(const AppHighlight&) const final;
 #endif
 
     void runOpenPanel(Frame&, FileChooser&) final;
@@ -151,7 +164,7 @@ class EmptyChromeClient : public ChromeClient {
     void attachRootGraphicsLayer(Frame&, GraphicsLayer*) final { }
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) final { }
     void setNeedsOneShotDrawingSynchronization() final { }
-    void scheduleRenderingUpdate() final { }
+    void triggerRenderingUpdate() final { }
 
 #if PLATFORM(WIN)
     void setLastSetCursorToCurrentCursor() final { }

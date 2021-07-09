@@ -23,10 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    NoInterfaceObject,
-    Exposed=(Window,Worker)
-] interface CanvasPathDrawingStyles {
+// https://html.spec.whatwg.org/multipage/canvas.html#canvaspathdrawingstyles
+interface mixin CanvasPathDrawingStyles {
     // FIXME: All the unrestricted float arguments / attributes below should be unrestricted doubles.
 
     // line caps/joins
@@ -36,7 +34,7 @@
     attribute unrestricted float miterLimit; // (default 10)
 
     // dashed lines
-    void setLineDash(sequence<unrestricted float> segments); // default empty
+    undefined setLineDash(sequence<unrestricted float> segments); // default empty
     sequence<unrestricted float> getLineDash();
     attribute unrestricted float lineDashOffset;
 };

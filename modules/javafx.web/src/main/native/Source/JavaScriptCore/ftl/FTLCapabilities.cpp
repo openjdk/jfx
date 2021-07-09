@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,6 @@ inline CapabilityLevel canCompile(Node* node)
     case KillStack:
     case GetStack:
     case MovHint:
-    case ZombieHint:
     case ExitOK:
     case Phantom:
     case Flush:
@@ -197,13 +196,14 @@ inline CapabilityLevel canCompile(Node* node)
     case ValueToInt32:
     case Branch:
     case LogicalNot:
+    case AssertInBounds:
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
     case CheckArray:
     case CheckArrayOrEmpty:
-    case CheckNeutered:
+    case CheckDetached:
     case CountExecution:
     case SuperSamplerBegin:
     case SuperSamplerEnd:
@@ -222,6 +222,7 @@ inline CapabilityLevel canCompile(Node* node)
     case CallNumberConstructor:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case MakeRope:
     case NewArrayWithSize:
     case TryGetById:
@@ -258,14 +259,15 @@ inline CapabilityLevel canCompile(Node* node)
     case WeakMapSet:
     case IsEmpty:
     case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
     case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
     case IsConstructor:
     case IsTypedArrayView:
     case CheckTypeInfoFlags:
@@ -278,11 +280,12 @@ inline CapabilityLevel canCompile(Node* node)
     case DoubleConstant:
     case Int52Constant:
     case BooleanToNumber:
-    case HasGenericProperty:
-    case HasStructureProperty:
+    case HasIndexedProperty:
+    case HasEnumerableIndexedProperty:
+    case HasEnumerableStructureProperty:
+    case HasEnumerableProperty:
     case HasOwnStructureProperty:
     case InStructureProperty:
-    case HasIndexedProperty:
     case GetDirectPname:
     case GetEnumerableLength:
     case GetIndexedPropertyStorage:
@@ -393,12 +396,20 @@ inline CapabilityLevel canCompile(Node* node)
     case PutByValAlias:
     case PutByValDirect:
     case PutByValWithThis:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case MatchStructure:
     case FilterCallLinkStatus:
     case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
     case CreateThis:
     case CreatePromise:
     case CreateGenerator:

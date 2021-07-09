@@ -38,10 +38,10 @@ using namespace Inspector;
 
 ServiceWorkerAgent::ServiceWorkerAgent(WorkerAgentContext& context)
     : InspectorAgentBase("ServiceWorker"_s, context)
-    , m_serviceWorkerGlobalScope(downcast<ServiceWorkerGlobalScope>(context.workerGlobalScope))
+    , m_serviceWorkerGlobalScope(downcast<ServiceWorkerGlobalScope>(context.globalScope))
     , m_backendDispatcher(Inspector::ServiceWorkerBackendDispatcher::create(context.backendDispatcher, this))
 {
-    ASSERT(context.workerGlobalScope.isContextThread());
+    ASSERT(context.globalScope.isContextThread());
 }
 
 ServiceWorkerAgent::~ServiceWorkerAgent() = default;
@@ -54,9 +54,9 @@ void ServiceWorkerAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReas
 {
 }
 
-void ServiceWorkerAgent::getInitializationInfo(ErrorString&, RefPtr<Inspector::Protocol::ServiceWorker::Configuration>& info)
+Protocol::ErrorStringOr<Ref<Protocol::ServiceWorker::Configuration>> ServiceWorkerAgent::getInitializationInfo()
 {
-    info = Inspector::Protocol::ServiceWorker::Configuration::create()
+    return Protocol::ServiceWorker::Configuration::create()
         .setTargetId(m_serviceWorkerGlobalScope.identifier())
         .setSecurityOrigin(m_serviceWorkerGlobalScope.securityOrigin()->toRawString())
         .setUrl(m_serviceWorkerGlobalScope.thread().contextData().scriptURL.string())

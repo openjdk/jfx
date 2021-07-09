@@ -49,17 +49,17 @@ private:
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(StringPrototype, StringObject);
 
-JSCell* JIT_OPERATION operationStringProtoFuncReplaceGeneric(JSGlobalObject*, EncodedJSValue thisValue, EncodedJSValue searchValue, EncodedJSValue replaceValue);
-JSCell* JIT_OPERATION operationStringProtoFuncReplaceRegExpEmptyStr(JSGlobalObject*, JSString* thisValue, RegExpObject* searchValue);
-JSCell* JIT_OPERATION operationStringProtoFuncReplaceRegExpString(JSGlobalObject*, JSString* thisValue, RegExpObject* searchValue, JSString* replaceValue);
+JSC_DECLARE_JIT_OPERATION(operationStringProtoFuncReplaceGeneric, JSCell*, (JSGlobalObject*, EncodedJSValue thisValue, EncodedJSValue searchValue, EncodedJSValue replaceValue));
+JSC_DECLARE_JIT_OPERATION(operationStringProtoFuncReplaceRegExpEmptyStr, JSCell*, (JSGlobalObject*, JSString* thisValue, RegExpObject* searchValue));
+JSC_DECLARE_JIT_OPERATION(operationStringProtoFuncReplaceRegExpString, JSCell*, (JSGlobalObject*, JSString* thisValue, RegExpObject* searchValue, JSString* replaceValue));
 
 void substituteBackreferences(StringBuilder& result, const String& replacement, StringView source, const int* ovector, RegExp*);
 
-EncodedJSValue JSC_HOST_CALL stringProtoFuncRepeatCharacter(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL stringProtoFuncSplitFast(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(stringProtoFuncRepeatCharacter);
+JSC_DECLARE_HOST_FUNCTION(stringProtoFuncSplitFast);
 
-EncodedJSValue JSC_HOST_CALL builtinStringSubstringInternal(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL builtinStringIncludesInternal(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL builtinStringIndexOfInternal(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(builtinStringSubstringInternal);
+JSC_DECLARE_HOST_FUNCTION(builtinStringIncludesInternal);
+JSC_DECLARE_HOST_FUNCTION(builtinStringIndexOfInternal);
 
 } // namespace JSC

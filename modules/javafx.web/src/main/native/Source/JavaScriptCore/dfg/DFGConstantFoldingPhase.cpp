@@ -599,7 +599,8 @@ private:
             case GetByIdDirect:
             case GetByIdDirectFlush:
             case GetById:
-            case GetByIdFlush: {
+            case GetByIdFlush:
+            case GetPrivateNameById: {
                 Edge childEdge = node->child1();
                 Node* child = childEdge.node();
                 UniquedStringImpl* uid = node->cacheableIdentifier().uid();
@@ -658,102 +659,17 @@ private:
                 break;
             }
 
+            case PutPrivateNameById: {
+                bool isDirect = true;
+                tryFoldAsPutByOffset(node, indexInBlock, node->child1(), node->child2(), isDirect, node->privateFieldPutKind(), changed, alreadyHandled);
+                break;
+            }
+
             case PutById:
             case PutByIdDirect:
             case PutByIdFlush: {
-                NodeOrigin origin = node->origin;
-                Edge childEdge = node->child1();
-                Node* child = childEdge.node();
-                UniquedStringImpl* uid = node->cacheableIdentifier().uid();
-
-                ASSERT(childEdge.useKind() == CellUse);
-
-                AbstractValue baseValue = m_state.forNode(child);
-                AbstractValue valueValue = m_state.forNode(node->child2());
-
-                if (!baseValue.m_structure.isFinite())
-                    break;
-
-                PutByIdStatus status = PutByIdStatus::computeFor(
-                    m_graph.globalObjectFor(origin.semantic),
-                    baseValue.m_structure.toStructureSet(),
-                    node->cacheableIdentifier().uid(),
-                    node->op() == PutByIdDirect);
-
-                if (!status.isSimple())
-                    break;
-
-                ASSERT(status.numVariants());
-
-                if (status.numVariants() > 1 && !m_graph.m_plan.isFTL())
-                    break;
-
-                changed = true;
-
-                bool allGood = true;
-                RegisteredStructureSet newSet;
-                TransitionVector transitions;
-                for (const PutByIdVariant& variant : status.variants()) {
-                    for (const ObjectPropertyCondition& condition : variant.conditionSet()) {
-                        if (m_graph.watchCondition(condition))
-                            continue;
-
-                        Structure* structure = condition.object()->structure(m_graph.m_vm);
-                        if (!condition.structureEnsuresValidity(structure)) {
-                            allGood = false;
-                            break;
-                        }
-
-                        m_insertionSet.insertNode(
-                            indexInBlock, SpecNone, CheckStructure, node->origin,
-                            OpInfo(m_graph.addStructureSet(structure)),
-                            m_insertionSet.insertConstantForUse(
-                                indexInBlock, node->origin, condition.object(), KnownCellUse));
-                    }
-
-                    if (!allGood)
-                        break;
-
-                    if (variant.kind() == PutByIdVariant::Transition) {
-                        RegisteredStructure newStructure = m_graph.registerStructure(variant.newStructure());
-                        transitions.append(
-                            Transition(
-                                m_graph.registerStructure(variant.oldStructureForTransition()), newStructure));
-                        newSet.add(newStructure);
-                    } else {
-                        ASSERT(variant.kind() == PutByIdVariant::Replace);
-                        newSet.merge(*m_graph.addStructureSet(variant.oldStructure()));
-                    }
-                }
-
-                if (!allGood)
-                    break;
-
-                // Push CFA over this node after we get the state before.
-                m_interpreter.didFoldClobberWorld();
-                m_interpreter.observeTransitions(indexInBlock, transitions);
-                if (m_state.forNode(node->child1()).changeStructure(m_graph, newSet) == Contradiction)
-                    m_state.setIsValid(false);
-
-                alreadyHandled = true; // Don't allow the default constant folder to do things to this.
-
-                m_insertionSet.insertNode(
-                    indexInBlock, SpecNone, FilterPutByIdStatus, node->origin,
-                    OpInfo(m_graph.m_plan.recordedStatuses().addPutByIdStatus(node->origin.semantic, status)),
-                    Edge(child));
-
-                unsigned identifierNumber = m_graph.identifiers().ensure(uid);
-                if (status.numVariants() == 1) {
-                    emitPutByOffset(indexInBlock, node, baseValue, status[0], identifierNumber);
-                    break;
-                }
-
-                ASSERT(m_graph.m_plan.isFTL());
-
-                MultiPutByOffsetData* data = m_graph.m_multiPutByOffsetData.add();
-                data->variants = status.variants();
-                data->identifierNumber = identifierNumber;
-                node->convertToMultiPutByOffset(data);
+                bool isDirect = node->op() == PutByIdDirect;
+                tryFoldAsPutByOffset(node, indexInBlock, node->child1(), node->child2(), isDirect, PrivateFieldPutKind::none(), changed, alreadyHandled);
                 break;
             }
 
@@ -934,13 +850,14 @@ private:
                 break;
             }
 
+            case ObjectGetOwnPropertyNames:
             case ObjectKeys: {
                 if (node->child1().useKind() == ObjectUse) {
                     auto& structureSet = m_state.forNode(node->child1()).m_structure;
                     if (structureSet.isFinite() && structureSet.size() == 1) {
                         RegisteredStructure structure = structureSet.onlyStructure();
                         if (auto* rareData = structure->rareDataConcurrently()) {
-                            if (auto* immutableButterfly = rareData->cachedOwnKeysConcurrently()) {
+                            if (auto* immutableButterfly = rareData->cachedPropertyNamesConcurrently(node->op() == ObjectGetOwnPropertyNames ? CachedPropertyNamesKind::GetOwnPropertyNames : CachedPropertyNamesKind::Keys)) {
                                 if (m_graph.isWatchingHavingABadTimeWatchpoint(node)) {
                                     node->convertToNewArrayBuffer(m_graph.freeze(immutableButterfly));
                                     changed = true;
@@ -993,8 +910,8 @@ private:
             }
 
             case NormalizeMapKey: {
-                SpeculatedType typeMaybeNormalized = (SpecFullNumber & ~SpecInt32Only);
-                if (m_state.forNode(node->child1()).m_type & typeMaybeNormalized)
+                SpeculatedType typesNeedingNormalization = (SpecFullNumber & ~SpecInt32Only) | SpecHeapBigInt;
+                if (m_state.forNode(node->child1()).m_type & typesNeedingNormalization)
                     break;
 
                 node->convertToIdentity();
@@ -1467,6 +1384,101 @@ private:
                 break;
             }
         }
+    }
+
+    void tryFoldAsPutByOffset(Node* node, unsigned indexInBlock, Edge baseEdge, Edge valueEdge, bool isDirect, PrivateFieldPutKind privateFieldPutKind, bool& changed, bool& alreadyHandled)
+    {
+        NodeOrigin origin = node->origin;
+        Node* baseNode = baseEdge.node();
+        UniquedStringImpl* uid = node->cacheableIdentifier().uid();
+
+        ASSERT(baseEdge.useKind() == CellUse);
+
+        AbstractValue baseValue = m_state.forNode(baseNode);
+        AbstractValue valueValue = m_state.forNode(valueEdge);
+
+        if (!baseValue.m_structure.isFinite())
+            return;
+
+        PutByIdStatus status = PutByIdStatus::computeFor(
+            m_graph.globalObjectFor(origin.semantic),
+            baseValue.m_structure.toStructureSet(),
+            node->cacheableIdentifier().uid(),
+            isDirect, privateFieldPutKind);
+
+        if (!status.isSimple())
+            return;
+
+        ASSERT(status.numVariants());
+
+        if (status.numVariants() > 1 && !m_graph.m_plan.isFTL())
+            return;
+
+        changed = true;
+
+        RegisteredStructureSet newSet;
+        TransitionVector transitions;
+        for (const PutByIdVariant& variant : status.variants()) {
+            for (const ObjectPropertyCondition& condition : variant.conditionSet()) {
+                if (m_graph.watchCondition(condition))
+                    continue;
+
+                Structure* structure = condition.object()->structure(m_graph.m_vm);
+                if (!condition.structureEnsuresValidity(structure))
+                    return;
+
+                if (variant.kind() == PutByIdVariant::Replace) {
+                    auto* watchpoints = structure->propertyReplacementWatchpointSet(condition.offset());
+                    if (!watchpoints || watchpoints->isStillValid())
+                        return;
+                }
+
+                m_insertionSet.insertNode(
+                    indexInBlock, SpecNone, CheckStructure, node->origin,
+                    OpInfo(m_graph.addStructureSet(structure)),
+                    m_insertionSet.insertConstantForUse(
+                        indexInBlock, node->origin, condition.object(), KnownCellUse));
+            }
+
+            if (variant.kind() == PutByIdVariant::Transition) {
+                ASSERT(privateFieldPutKind.isNone() || privateFieldPutKind.isDefine());
+                RegisteredStructure newStructure = m_graph.registerStructure(variant.newStructure());
+                transitions.append(
+                    Transition(
+                        m_graph.registerStructure(variant.oldStructureForTransition()), newStructure));
+                newSet.add(newStructure);
+            } else {
+                ASSERT(variant.kind() == PutByIdVariant::Replace);
+                ASSERT(privateFieldPutKind.isNone() || privateFieldPutKind.isSet());
+                newSet.merge(*m_graph.addStructureSet(variant.oldStructure()));
+            }
+        }
+
+        // Push CFA over this node after we get the state before.
+        m_interpreter.didFoldClobberWorld();
+        m_interpreter.observeTransitions(indexInBlock, transitions);
+        if (m_state.forNode(baseEdge).changeStructure(m_graph, newSet) == Contradiction)
+            m_state.setIsValid(false);
+
+        alreadyHandled = true; // Don't allow the default constant folder to do things to this.
+
+        m_insertionSet.insertNode(
+            indexInBlock, SpecNone, FilterPutByIdStatus, node->origin,
+            OpInfo(m_graph.m_plan.recordedStatuses().addPutByIdStatus(node->origin.semantic, status)),
+            Edge(baseNode));
+
+        unsigned identifierNumber = m_graph.identifiers().ensure(uid);
+        if (status.numVariants() == 1) {
+            emitPutByOffset(indexInBlock, node, baseValue, status[0], identifierNumber);
+            return;
+        }
+
+        ASSERT(m_graph.m_plan.isFTL());
+
+        MultiPutByOffsetData* data = m_graph.m_multiPutByOffsetData.add();
+        data->variants = status.variants();
+        data->identifierNumber = identifierNumber;
+        node->convertToMultiPutByOffset(data);
     }
 
     InPlaceAbstractState m_state;

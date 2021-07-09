@@ -45,9 +45,11 @@ private:
     void videoSampleAvailable(MediaSample&) final;
     void fetchData(FetchDataCallback&&) final;
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
-    void stopRecording() final;
+    void stopRecording(CompletionHandler<void()>&&) final;
+    void pauseRecording(CompletionHandler<void()>&&) final;
+    void resumeRecording(CompletionHandler<void()>&&) final;
+    const String& mimeType() const final;
 
-    const String& mimeType();
     void generateMockCounterString();
 
     mutable Lock m_bufferLock;

@@ -53,7 +53,7 @@ class ScriptExecutionContext;
 class WebXRSession;
 struct XRSessionInit;
 
-class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTargetWithInlineData, public ActiveDOMObject, public CanMakeWeakPtr<WebXRSystem> {
+class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(WebXRSystem);
 public:
     using IsSessionSupportedPromise = DOMPromiseDeferred<IDLBoolean>;
@@ -69,14 +69,14 @@ public:
     void requestSession(Document&, XRSessionMode, const XRSessionInit&, RequestSessionPromise&&);
 
     // This is also needed by WebGLRenderingContextBase::makeXRCompatible() and HTMLCanvasElement::createContextWebGL().
-    void ensureImmersiveXRDeviceIsSelected();
+    void ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&&);
     bool hasActiveImmersiveXRDevice() { return !!m_activeImmersiveDevice; }
 
     void sessionEnded(WebXRSession&);
 
     // For testing purpouses only.
-    void registerSimulatedXRDeviceForTesting(PlatformXR::Device&);
-    void unregisterSimulatedXRDeviceForTesting(PlatformXR::Device&);
+    WEBCORE_EXPORT void registerSimulatedXRDeviceForTesting(PlatformXR::Device&);
+    WEBCORE_EXPORT void unregisterSimulatedXRDeviceForTesting(PlatformXR::Device&);
 
 protected:
     // EventTarget
@@ -94,7 +94,7 @@ private:
 
     using FeaturesArray = PlatformXR::Device::ListOfEnabledFeatures;
     using JSFeaturesArray = Vector<JSC::JSValue>;
-    PlatformXR::Device* obtainCurrentDevice(XRSessionMode, const JSFeaturesArray& requiredFeatures, const JSFeaturesArray& optionalFeatures);
+    void obtainCurrentDevice(XRSessionMode, const JSFeaturesArray& requiredFeatures, const JSFeaturesArray& optionalFeatures, CompletionHandler<void(PlatformXR::Device*)>&&);
 
     bool immersiveSessionRequestIsAllowedForGlobalObject(DOMWindow&, Document&) const;
     bool inlineSessionRequestIsAllowedForGlobalObject(DOMWindow&, Document&, const XRSessionInit&) const;
@@ -104,9 +104,17 @@ private:
     bool isXRPermissionGranted(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&) const;
 
     // https://immersive-web.github.io/webxr/#default-inline-xr-device
-    class DummyInlineDevice final : public PlatformXR::Device {
+    class DummyInlineDevice final : public PlatformXR::Device, private ContextDestructionObserver {
     public:
-        DummyInlineDevice();
+        explicit DummyInlineDevice(ScriptExecutionContext&);
+
+    private:
+        void initializeTrackingAndRendering(PlatformXR::SessionMode) final { }
+        void shutDownTrackingAndRendering() final { }
+        void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final { }
+
+        void requestFrame(PlatformXR::Device::RequestFrameCallback&&) final;
+        Vector<Device::ViewData> views(XRSessionMode) const final;
     };
     DummyInlineDevice m_defaultInlineDevice;
 

@@ -72,7 +72,7 @@ void GradientImage::drawPattern(GraphicsContext& destContext, const FloatRect& d
     unsigned generatorHash = m_gradient->hash();
 
     if (!m_cachedImage || m_cachedGeneratorHash != generatorHash || m_cachedAdjustedSize != adjustedSize || !areEssentiallyEqual(destContext.scaleFactor(), m_cachedScaleFactor)) {
-        auto imageBuffer = ImageBuffer::createCompatibleBuffer(adjustedSize, ColorSpace::SRGB, destContext);
+        auto imageBuffer = ImageBuffer::createCompatibleBuffer(adjustedSize, DestinationColorSpace::SRGB, destContext);
         if (!imageBuffer)
             return;
 
@@ -87,6 +87,8 @@ void GradientImage::drawPattern(GraphicsContext& destContext, const FloatRect& d
             imageBuffer->convertToLuminanceMask();
 
         m_cachedImage = ImageBuffer::sinkIntoImage(WTFMove(imageBuffer), PreserveResolution::Yes);
+        if (!m_cachedImage)
+            return;
     }
 
     destContext.setDrawLuminanceMask(false);

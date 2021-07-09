@@ -114,6 +114,8 @@ enum TracePointCode {
     RenderingUpdateRunLoopObserverEnd,
     LayerTreeFreezeStart,
     LayerTreeFreezeEnd,
+    FlushRemoteImageBufferStart,
+    FlushRemoteImageBufferEnd,
 
     UIProcessRange = 14000,
     CommitLayerTreeStart,
@@ -122,6 +124,10 @@ enum TracePointCode {
     ProcessLaunchEnd,
     InitializeSandboxStart,
     InitializeSandboxEnd,
+
+    GPUProcessRange = 16000,
+    WakeUpAndApplyDisplayListStart,
+    WakeUpAndApplyDisplayListEnd,
 };
 
 #ifdef __cplusplus

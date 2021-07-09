@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2012, 2017 Igalia S.L.
+ * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,8 +21,10 @@
 #include "config.h"
 #include "TextureMapperGCGLPlatformLayer.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_GL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
 
+#include "ANGLEContext.h"
+#include "ANGLEHeaders.h"
 #include "BitmapTextureGL.h"
 #include "GLContext.h"
 #include "TextureMapperGLHeaders.h"
@@ -30,17 +33,15 @@
 
 namespace WebCore {
 
-TextureMapperGCGLPlatformLayer::TextureMapperGCGLPlatformLayer(GraphicsContextGLOpenGL& context, GraphicsContextGLOpenGL::Destination destination)
+TextureMapperGCGLPlatformLayer::TextureMapperGCGLPlatformLayer(GraphicsContextGLOpenGL& context)
     : m_context(context)
 {
-    switch (destination) {
-    case GraphicsContextGLOpenGL::Destination::Offscreen:
-        m_glContext = GLContext::createOffscreenContext(&PlatformDisplay::sharedDisplayForCompositing());
-        break;
-    case GraphicsContextGLOpenGL::Destination::DirectlyToHostWindow:
-        ASSERT_NOT_REACHED();
-        break;
-    }
+    auto sharingContext = PlatformDisplay::sharedDisplayForCompositing().sharingGLContext()->platformContext();
+#if ENABLE(WEBGL2)
+    m_glContext = ANGLEContext::createContext(sharingContext, context.contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2);
+#else
+    m_glContext = ANGLEContext::createContext(sharingContext, false);
+#endif
 
 #if USE(COORDINATED_GRAPHICS)
     m_platformLayerProxy = adoptRef(new TextureMapperPlatformLayerProxy());
@@ -101,13 +102,12 @@ void TextureMapperGCGLPlatformLayer::paintToTextureMapper(TextureMapper& texture
     ASSERT(m_context.m_state.boundReadFBO == m_context.m_state.boundDrawFBO);
     if (attrs.antialias && m_context.m_state.boundDrawFBO == m_context.m_multisampleFBO) {
         GLContext* previousActiveContext = GLContext::current();
-        if (previousActiveContext != m_glContext.get())
-            m_context.makeContextCurrent();
+        m_context.makeContextCurrent();
 
         m_context.resolveMultisamplingIfNecessary();
-        ::glBindFramebuffer(GraphicsContextGLOpenGL::FRAMEBUFFER, m_context.m_state.boundDrawFBO);
+        gl::BindFramebuffer(GL_FRAMEBUFFER, m_context.m_state.boundDrawFBO);
 
-        if (previousActiveContext && previousActiveContext != m_glContext.get())
+        if (previousActiveContext)
             previousActiveContext->makeContextCurrent();
     }
 
@@ -121,4 +121,4 @@ void TextureMapperGCGLPlatformLayer::paintToTextureMapper(TextureMapper& texture
 
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL) && USE(TEXTURE_MAPPER)
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER)

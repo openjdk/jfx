@@ -76,9 +76,27 @@ public:
     Memory* memory() { return m_memory.get(); }
     Table* table(unsigned);
     void setTable(unsigned, Ref<Table>&&);
+    const Element* elementAt(unsigned) const;
 
-    void* cachedMemory() const { return m_cachedMemory.getMayBeNull(cachedMemorySize()); }
-    size_t cachedMemorySize() const { return m_cachedMemorySize; }
+    void initElementSegment(uint32_t tableIndex, const Element& segment, uint32_t dstOffset, uint32_t srcOffset, uint32_t length);
+
+    bool isImportFunction(uint32_t functionIndex) const
+    {
+        return functionIndex < m_codeBlock->functionImportCount();
+    }
+
+    void tableInit(uint32_t dstOffset, uint32_t srcOffset, uint32_t length, uint32_t elementIndex, uint32_t tableIndex);
+
+    void tableCopy(uint32_t dstOffset, uint32_t srcOffset, uint32_t length, uint32_t dstTableIndex, uint32_t srcTableIndex);
+
+    void elemDrop(uint32_t elementIndex);
+
+    bool memoryInit(uint32_t dstAddress, uint32_t srcAddress, uint32_t length, uint32_t dataSegmentIndex);
+
+    void dataDrop(uint32_t dataSegmentIndex);
+
+    void* cachedMemory() const { return m_cachedMemory.getMayBeNull(cachedBoundsCheckingSize()); }
+    size_t cachedBoundsCheckingSize() const { return m_cachedBoundsCheckingSize; }
 
     void setMemory(Ref<Memory>&& memory)
     {
@@ -89,8 +107,8 @@ public:
     void updateCachedMemory()
     {
         if (m_memory != nullptr) {
-            m_cachedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>(memory()->memory(), memory()->size());
-            m_cachedMemorySize = memory()->size();
+            m_cachedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>(memory()->memory(), memory()->boundsCheckingSize());
+            m_cachedBoundsCheckingSize = memory()->boundsCheckingSize();
         }
     }
 
@@ -146,7 +164,7 @@ public:
     static ptrdiff_t offsetOfMemory() { return OBJECT_OFFSETOF(Instance, m_memory); }
     static ptrdiff_t offsetOfGlobals() { return OBJECT_OFFSETOF(Instance, m_globals); }
     static ptrdiff_t offsetOfCachedMemory() { return OBJECT_OFFSETOF(Instance, m_cachedMemory); }
-    static ptrdiff_t offsetOfCachedMemorySize() { return OBJECT_OFFSETOF(Instance, m_cachedMemorySize); }
+    static ptrdiff_t offsetOfCachedBoundsCheckingSize() { return OBJECT_OFFSETOF(Instance, m_cachedBoundsCheckingSize); }
     static ptrdiff_t offsetOfPointerToTopEntryFrame() { return OBJECT_OFFSETOF(Instance, m_pointerToTopEntryFrame); }
 
     static ptrdiff_t offsetOfPointerToActualStackLimit() { return OBJECT_OFFSETOF(Instance, m_pointerToActualStackLimit); }
@@ -201,7 +219,7 @@ private:
     void* m_owner { nullptr }; // In a JS embedding, this is a JSWebAssemblyInstance*.
     Context* m_context { nullptr };
     CagedPtr<Gigacage::Primitive, void, tagCagedPtr> m_cachedMemory;
-    size_t m_cachedMemorySize { 0 };
+    size_t m_cachedBoundsCheckingSize { 0 };
     Ref<Module> m_module;
     RefPtr<CodeBlock> m_codeBlock;
     RefPtr<Memory> m_memory;
@@ -216,6 +234,8 @@ private:
     StoreTopCallFrameCallback m_storeTopCallFrame;
     unsigned m_numImportFunctions { 0 };
     HashMap<uint32_t, Ref<Global>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_linkedGlobals;
+    BitVector m_passiveElements;
+    BitVector m_passiveDataSegments;
 };
 
 } } // namespace JSC::Wasm

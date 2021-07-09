@@ -43,7 +43,7 @@
 #include "Page.h"
 #include "RenderImage.h"
 #include "RenderSVGImage.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 
 #if ENABLE(VIDEO)
@@ -208,7 +208,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
         } else {
             if (m_lazyImageLoadState == LazyImageLoadState::None && isImageElement) {
                 auto& imageElement = downcast<HTMLImageElement>(element());
-                if (imageElement.isLazyLoadable() && RuntimeEnabledFeatures::sharedFeatures().lazyImageLoadingEnabled()) {
+                if (imageElement.isLazyLoadable() && document.settings().lazyImageLoadingEnabled()) {
                     m_lazyImageLoadState = LazyImageLoadState::Deferred;
                     request.setIgnoreForRequestCount(true);
                 }
@@ -275,7 +275,8 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
             // being queued to fire. Ensure this happens after beforeload is
             // dispatched.
             newImage->addClient(*this);
-        }
+        } else
+            resetLazyImageLoading(element().document());
         if (oldImage) {
             oldImage->removeClient(*this);
             updateRenderer();
@@ -327,7 +328,7 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
     ASSERT(m_failedLoadURL.isEmpty());
     ASSERT_UNUSED(resource, &resource == m_image.get());
 
-    if (m_lazyImageLoadState == LazyImageLoadState::Deferred) {
+    if (isDeferred()) {
         LazyLoadImageObserver::unobserve(element(), element().document());
         m_lazyImageLoadState = LazyImageLoadState::FullImage;
     }
@@ -578,9 +579,7 @@ void ImageLoader::elementDidMoveToNewDocument(Document& oldDocument)
 {
     clearFailedLoadURL();
     clearImage();
-    if (isDeferred())
-        LazyLoadImageObserver::unobserve(element(), oldDocument);
-    m_lazyImageLoadState = LazyImageLoadState::None;
+    resetLazyImageLoading(oldDocument);
 }
 
 inline void ImageLoader::clearFailedLoadURL()
@@ -594,6 +593,25 @@ void ImageLoader::loadDeferredImage()
         return;
     m_lazyImageLoadState = LazyImageLoadState::LoadImmediately;
     updateFromElement(RelevantMutation::No);
+}
+
+void ImageLoader::resetLazyImageLoading(Document& document)
+{
+    if (isDeferred())
+        LazyLoadImageObserver::unobserve(element(), document);
+    m_lazyImageLoadState = LazyImageLoadState::None;
+}
+
+VisibleInViewportState ImageLoader::imageVisibleInViewport(const Document& document) const
+{
+    if (&element().document() != &document)
+        return VisibleInViewportState::No;
+
+    auto* renderer = element().renderer();
+    if (!is<RenderReplaced>(renderer))
+        return VisibleInViewportState::No;
+
+    return downcast<RenderReplaced>(*renderer).isContentLikelyVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
 }
 
 }

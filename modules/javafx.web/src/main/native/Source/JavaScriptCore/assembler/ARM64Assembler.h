@@ -340,43 +340,77 @@ public:
 
     class LinkRecord {
     public:
-        LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition)
+        LinkRecord(const ARM64Assembler* assembler, intptr_t from, intptr_t to, JumpType type, Condition condition)
         {
             data.realTypes.m_from = from;
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to, static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
             data.realTypes.m_to = to;
+#endif
             data.realTypes.m_type = type;
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
         }
-        LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition, bool is64Bit, RegisterID compareRegister)
+        LinkRecord(const ARM64Assembler* assembler, intptr_t from, intptr_t to, JumpType type, Condition condition, bool is64Bit, RegisterID compareRegister)
         {
             data.realTypes.m_from = from;
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to, static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
             data.realTypes.m_to = to;
+#endif
             data.realTypes.m_type = type;
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
             data.realTypes.m_is64Bit = is64Bit;
             data.realTypes.m_compareRegister = compareRegister;
         }
-        LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition, unsigned bitNumber, RegisterID compareRegister)
+        LinkRecord(const ARM64Assembler* assembler, intptr_t from, intptr_t to, JumpType type, Condition condition, unsigned bitNumber, RegisterID compareRegister)
         {
             data.realTypes.m_from = from;
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to, static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
             data.realTypes.m_to = to;
+#endif
             data.realTypes.m_type = type;
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
             data.realTypes.m_bitNumber = bitNumber;
             data.realTypes.m_compareRegister = compareRegister;
         }
-        void operator=(const LinkRecord& other)
+        LinkRecord(const LinkRecord& other)
         {
-            data.copyTypes.content[0] = other.data.copyTypes.content[0];
-            data.copyTypes.content[1] = other.data.copyTypes.content[1];
-            data.copyTypes.content[2] = other.data.copyTypes.content[2];
+            data.copyTypes = other.data.copyTypes;
+        }
+        LinkRecord& operator=(const LinkRecord& other)
+        {
+            data.copyTypes = other.data.copyTypes;
+            return *this;
         }
         intptr_t from() const { return data.realTypes.m_from; }
-        void setFrom(intptr_t from) { data.realTypes.m_from = from; }
-        intptr_t to() const { return data.realTypes.m_to; }
+        void setFrom(const ARM64Assembler* assembler, intptr_t from)
+        {
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to(assembler), static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
+#endif
+            data.realTypes.m_from = from;
+        }
+        intptr_t to(const ARM64Assembler* assembler) const
+        {
+#if CPU(ARM64E)
+            return untagInt(data.realTypes.m_to, static_cast<PtrTag>(data.realTypes.m_from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
+            return data.realTypes.m_to;
+#endif
+        }
         JumpType type() const { return data.realTypes.m_type; }
         JumpLinkType linkType() const { return data.realTypes.m_linkType; }
         void setLinkType(JumpLinkType linkType) { ASSERT(data.realTypes.m_linkType == LinkInvalid); data.realTypes.m_linkType = linkType; }
@@ -2467,17 +2501,17 @@ public:
     AssemblerLabel labelForWatchpoint()
     {
         AssemblerLabel result = m_buffer.label();
-        if (static_cast<int>(result.m_offset) != m_indexOfLastWatchpoint)
+        if (static_cast<int>(result.offset()) != m_indexOfLastWatchpoint)
             result = label();
-        m_indexOfLastWatchpoint = result.m_offset;
-        m_indexOfTailOfLastWatchpoint = result.m_offset + maxJumpReplacementSize();
+        m_indexOfLastWatchpoint = result.offset();
+        m_indexOfTailOfLastWatchpoint = result.offset() + maxJumpReplacementSize();
         return result;
     }
 
     AssemblerLabel label()
     {
         AssemblerLabel result = m_buffer.label();
-        while (UNLIKELY(static_cast<int>(result.m_offset) < m_indexOfTailOfLastWatchpoint)) {
+        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
             nop();
             result = m_buffer.label();
         }
@@ -2495,12 +2529,12 @@ public:
     static void* getRelocatedAddress(void* code, AssemblerLabel label)
     {
         ASSERT(label.isSet());
-        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.m_offset);
+        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.offset());
     }
 
     static int getDifferenceBetweenLabels(AssemblerLabel a, AssemblerLabel b)
     {
-        return b.m_offset - a.m_offset;
+        return b.offset() - a.offset();
     }
 
     size_t codeSize() const { return m_buffer.codeSize(); }
@@ -2508,7 +2542,7 @@ public:
     static unsigned getCallReturnOffset(AssemblerLabel call)
     {
         ASSERT(call.isSet());
-        return call.m_offset;
+        return call.offset();
     }
 
     // Linking & patching:
@@ -2523,21 +2557,21 @@ public:
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition));
+        m_jumpsToLink.append(LinkRecord(this, from.offset(), to.offset(), type, condition));
     }
 
     void linkJump(AssemblerLabel from, AssemblerLabel to, JumpType type, Condition condition, bool is64Bit, RegisterID compareRegister)
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition, is64Bit, compareRegister));
+        m_jumpsToLink.append(LinkRecord(this, from.offset(), to.offset(), type, condition, is64Bit, compareRegister));
     }
 
     void linkJump(AssemblerLabel from, AssemblerLabel to, JumpType type, Condition condition, unsigned bitNumber, RegisterID compareRegister)
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition, bitNumber, compareRegister));
+        m_jumpsToLink.append(LinkRecord(this, from.offset(), to.offset(), type, condition, bitNumber, compareRegister));
     }
 
     static void linkJump(void* code, AssemblerLabel from, void* to)
@@ -2571,7 +2605,7 @@ public:
         intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(where)) >> 2;
         ASSERT(static_cast<int>(offset) == offset);
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         if (!isInt<26>(offset)) {
             to = ExecutableAllocator::singleton().getJumpIslandTo(where, to);
             offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(where)) >> 2;
@@ -2769,7 +2803,7 @@ public:
         cacheFlush(reinterpret_cast<int*>(from) - 1, sizeof(int));
     }
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
     static void* prepareForAtomicRelinkJumpConcurrently(void* from, void* to)
     {
         intptr_t offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(from)) >> 2;
@@ -3019,7 +3053,7 @@ protected:
         intptr_t offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction)) >> 2;
         ASSERT(static_cast<int>(offset) == offset);
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         if (!isInt<26>(offset)) {
             to = ExecutableAllocator::singleton().getJumpIslandTo(bitwise_cast<void*>(fromInstruction), to);
             offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction)) >> 2;
@@ -3169,7 +3203,7 @@ protected:
 
     static int* addressOf(void* code, AssemblerLabel label)
     {
-        return reinterpret_cast<int*>(static_cast<char*>(code) + label.m_offset);
+        return reinterpret_cast<int*>(static_cast<char*>(code) + label.offset());
     }
 
     static RegisterID disassembleXOrSp(int reg) { return reg == 31 ? ARM64Registers::sp : static_cast<RegisterID>(reg); }

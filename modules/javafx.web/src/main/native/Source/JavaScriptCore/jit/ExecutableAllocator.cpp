@@ -48,6 +48,18 @@
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 
+#if ENABLE(JIT_CAGE)
+#include <WebKitAdditions/JITCageAdditions.h>
+#else // ENABLE(JIT_CAGE)
+#if OS(DARWIN)
+#define MAP_EXECUTABLE_FOR_JIT MAP_JIT
+#define MAP_EXECUTABLE_FOR_JIT_WITH_JIT_CAGE MAP_JIT
+#else // OS(DARWIN)
+#define MAP_EXECUTABLE_FOR_JIT 0
+#define MAP_EXECUTABLE_FOR_JIT_WITH_JIT_CAGE 0
+#endif // OS(DARWIN)
+#endif // ENABLE(JIT_CAGE)
+
 extern "C" {
     /* Routine mach_vm_remap */
 #ifdef mig_external
@@ -81,7 +93,7 @@ static constexpr size_t fixedExecutableMemoryPoolSize = FIXED_EXECUTABLE_MEMORY_
 #elif CPU(ARM)
 static constexpr size_t fixedExecutableMemoryPoolSize = 16 * MB;
 #elif CPU(ARM64)
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
 static constexpr size_t fixedExecutableMemoryPoolSize = 1 * GB;
 // These sizes guarantee that any jump within an island can jump forwards or backwards
 // to the adjacent island in a single instruction.
@@ -139,8 +151,8 @@ void ExecutableAllocator::setJITEnabled(bool enabled)
 
         constexpr size_t size = 1;
         constexpr int protection = PROT_READ | PROT_WRITE | PROT_EXEC;
-        constexpr int flags = MAP_PRIVATE | MAP_ANON | MAP_JIT;
         constexpr int fd = OSAllocator::JSJITCodePages;
+        int flags = MAP_PRIVATE | MAP_ANON | (Options::useJITCage() ? MAP_EXECUTABLE_FOR_JIT_WITH_JIT_CAGE : MAP_EXECUTABLE_FOR_JIT);
         void* allocation = mmap(nullptr, size, protection, flags, fd, 0);
         const void* executableMemoryAllocationFailure = reinterpret_cast<void*>(-1);
         RELEASE_ASSERT_WITH_MESSAGE(allocation && allocation != executableMemoryAllocationFailure, "We should not have allocated executable memory before disabling the JIT.");
@@ -310,7 +322,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
         return reservation;
 
     reservation.size = fixedExecutableMemoryPoolSize;
-#if !USE(JUMP_ISLANDS)
+#if !ENABLE(JUMP_ISLANDS)
     // FIXME: Consider making jump islands work with Options::jitMemoryReservationSize
     // https://bugs.webkit.org/show_bug.cgi?id=209037
     if (Options::jitMemoryReservationSize())
@@ -324,9 +336,9 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
         // This makes the following JIT code logging broken and some of JIT code is not recorded correctly.
         // To avoid this problem, we use committed reservation if we need perf JITDump logging.
         if (Options::logJITCodeForPerf())
-            return PageReservation::reserveAndCommitWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true);
+            return PageReservation::reserveAndCommitWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true, false);
 #endif
-        return PageReservation::reserveWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true);
+        return PageReservation::reserveWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true, Options::useJITCage());
     };
 
     reservation.pageReservation = tryCreatePageReservation(reservation.size);
@@ -359,14 +371,14 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
 class FixedVMPoolExecutableAllocator final {
     WTF_MAKE_FAST_ALLOCATED;
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
     class Islands;
     class RegionAllocator;
 #endif
 
 public:
     FixedVMPoolExecutableAllocator()
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         : m_allocators(constructFixedSizeArrayWithArguments<RegionAllocator, numberOfRegions>(*this))
 #else
         : m_allocator(*this)
@@ -375,7 +387,7 @@ public:
         JITReservation reservation = initializeJITPageReservation();
         m_reservation = WTFMove(reservation.pageReservation);
         if (m_reservation) {
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
             uintptr_t start = bitwise_cast<uintptr_t>(memoryStart());
             uintptr_t reservationEnd = bitwise_cast<uintptr_t>(memoryEnd());
             for (size_t i = 0; i < numberOfRegions; ++i) {
@@ -415,7 +427,7 @@ public:
 
     RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes)
     {
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         auto locker = holdLock(getLock());
 
         unsigned start = 0;
@@ -434,7 +446,7 @@ public:
         return nullptr;
 #else
         return m_allocator.allocate(sizeInBytes);
-#endif // USE(JUMP_ISLANDS)
+#endif // ENABLE(JUMP_ISLANDS)
     }
 
     Lock& getLock() { return m_lock; }
@@ -467,7 +479,7 @@ public:
 
     bool isInAllocatedMemory(const AbstractLocker& locker, void* address)
     {
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         if (RegionAllocator* allocator = findRegion(bitwise_cast<uintptr_t>(address)))
             return allocator->isInAllocatedMemory(locker, address);
         return false;
@@ -498,7 +510,7 @@ public:
         return result;
     }
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
     void handleWillBeReleased(const LockHolder& locker, MetaAllocatorHandle& handle)
     {
         if (m_islandsForJumpSourceLocation.isEmpty())
@@ -632,7 +644,7 @@ private:
 
         return result;
     }
-#endif // USE(JUMP_ISLANDS)
+#endif // ENABLE(JUMP_ISLANDS)
 
 private:
     class Allocator : public MetaAllocator {
@@ -663,7 +675,7 @@ private:
         FixedVMPoolExecutableAllocator& m_fixedAllocator;
     };
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
     class RegionAllocator final : public Allocator {
         using Base = Allocator;
     public:
@@ -768,12 +780,12 @@ private:
         void* m_end;
         FastBitVector islandBits;
     };
-#endif // USE(JUMP_ISLANDS)
+#endif // ENABLE(JUMP_ISLANDS)
 
     template <typename Function>
     void forEachAllocator(Function function)
     {
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         for (RegionAllocator& allocator : m_allocators) {
             using FunctionResultType = decltype(function(allocator));
             if constexpr (std::is_same<IterationStatus, FunctionResultType>::value) {
@@ -786,10 +798,10 @@ private:
         }
 #else
         function(m_allocator);
-#endif // USE(JUMP_ISLANDS)
+#endif // ENABLE(JUMP_ISLANDS)
     }
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
     class Islands : public RedBlackTree<Islands, void*>::Node {
         WTF_MAKE_FAST_ALLOCATED;
     public:
@@ -797,16 +809,16 @@ private:
         CodeLocationLabel<ExecutableMemoryPtrTag> jumpSourceLocation;
         Vector<CodeLocationLabel<ExecutableMemoryPtrTag>> jumpIslands;
     };
-#endif // USE(JUMP_ISLANDS)
+#endif // ENABLE(JUMP_ISLANDS)
 
     Lock m_lock;
     PageReservation m_reservation;
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
     std::array<RegionAllocator, numberOfRegions> m_allocators;
     RedBlackTree<Islands, void*> m_islandsForJumpSourceLocation;
 #else
     Allocator m_allocator;
-#endif // USE(JUMP_ISLANDS)
+#endif // ENABLE(JUMP_ISLANDS)
 };
 
 // Keep this pointer in a mutable global variable to help Leaks find it.
@@ -938,7 +950,7 @@ void ExecutableAllocator::dumpProfile()
 }
 #endif
 
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
 void* ExecutableAllocator::getJumpIslandTo(void* from, void* newDestination)
 {
     FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;

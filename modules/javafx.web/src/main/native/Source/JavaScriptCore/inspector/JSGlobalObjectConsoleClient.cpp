@@ -102,7 +102,7 @@ void JSGlobalObjectConsoleClient::profile(JSC::JSGlobalObject*, const String& ti
         for (auto& existingTitle : m_profiles) {
             if (existingTitle == title) {
                 // FIXME: Send an enum to the frontend for localization?
-                String warning = title.isEmpty() ? "Unnamed Profile already exists"_s : makeString("Profile \"", title, "\" already exists");
+                String warning = title.isEmpty() ? "Unnamed Profile already exists"_s : makeString("Profile \"", ScriptArguments::truncateStringForConsoleMessage(title), "\" already exists");
                 m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Profile, MessageLevel::Warning, warning));
                 return;
             }
@@ -136,28 +136,22 @@ void JSGlobalObjectConsoleClient::profileEnd(JSC::JSGlobalObject*, const String&
 
 void JSGlobalObjectConsoleClient::startConsoleProfile()
 {
-    ErrorString ignored;
-
     if (m_debuggerAgent) {
         m_profileRestoreBreakpointActiveValue = m_debuggerAgent->breakpointsActive();
-        m_debuggerAgent->setBreakpointsActive(ignored, false);
+        m_debuggerAgent->setBreakpointsActive(false);
     }
 
-    if (m_scriptProfilerAgent) {
-        const bool includeSamples = true;
-        m_scriptProfilerAgent->startTracking(ignored, &includeSamples);
-    }
+    if (m_scriptProfilerAgent)
+        m_scriptProfilerAgent->startTracking(true);
 }
 
 void JSGlobalObjectConsoleClient::stopConsoleProfile()
 {
-    ErrorString ignored;
-
     if (m_scriptProfilerAgent)
-        m_scriptProfilerAgent->stopTracking(ignored);
+        m_scriptProfilerAgent->stopTracking();
 
     if (m_debuggerAgent)
-        m_debuggerAgent->setBreakpointsActive(ignored, m_profileRestoreBreakpointActiveValue);
+        m_debuggerAgent->setBreakpointsActive(m_profileRestoreBreakpointActiveValue);
 }
 
 void JSGlobalObjectConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String& title)

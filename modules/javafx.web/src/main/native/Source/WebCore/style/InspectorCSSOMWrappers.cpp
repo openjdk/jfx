@@ -104,7 +104,6 @@ void InspectorCSSOMWrappers::maybeCollectFromStyleSheets(const Vector<RefPtr<CSS
 void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& extensionStyleSheets)
 {
     if (m_styleRuleToCSSOMWrapperMap.isEmpty()) {
-        collectFromStyleSheetContents(UserAgentStyle::simpleDefaultStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::defaultStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::quirksStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::dialogStyleSheet);
@@ -117,6 +116,9 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
 #endif
 #if ENABLE(INPUT_TYPE_COLOR)
         collectFromStyleSheetContents(UserAgentStyle::colorInputStyleSheet);
+#endif
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+        collectFromStyleSheetContents(UserAgentStyle::formControlsIOSStyleSheet);
 #endif
         collectFromStyleSheetContents(UserAgentStyle::plugInsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaQueryStyleSheet);

@@ -35,20 +35,24 @@ class EqualPowerPanner final : public Panner {
 public:
     explicit EqualPowerPanner(float sampleRate);
 
-    void pan(double azimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBuf, size_t framesToProcess) override;
+    void pan(double azimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBuf, size_t framesToProcess) final;
+    void panWithSampleAccurateValues(double* azimuth, double* elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) final;
 
     void reset() override { m_isFirstRender = true; }
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }
+    bool requiresTailProcessing() const final { return false; }
 
 private:
+    void calculateDesiredGain(double& desiredGainL, double& desiredGainR, double azimuth, unsigned numberOfChannels);
+
     // For smoothing / de-zippering
-    bool m_isFirstRender;
+    bool m_isFirstRender { true };
     double m_smoothingConstant;
 
-    double m_gainL;
-    double m_gainR;
+    double m_gainL { 0 };
+    double m_gainR { 0 };
 };
 
 } // namespace WebCore

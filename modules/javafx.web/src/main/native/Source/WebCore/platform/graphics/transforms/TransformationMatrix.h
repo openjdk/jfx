@@ -125,6 +125,12 @@ public:
 
     WEBCORE_EXPORT TransformationMatrix(const AffineTransform&);
 
+    static TransformationMatrix fromQuaternion(double qx, double qy, double qz, double qw);
+
+    // Field of view in radians
+    static TransformationMatrix fromProjection(double fovUp, double fovDown, double fovLeft, double fovRight, double depthNear, double depthFar);
+    static TransformationMatrix fromProjection(double fovy, double aspect, double depthNear, double depthFar);
+
     static const TransformationMatrix identity;
 
     void setMatrix(double a, double b, double c, double d, double e, double f)
@@ -259,7 +265,7 @@ public:
     TransformationMatrix& scale3d(double sx, double sy, double sz);
 
     // Angle is in degrees.
-    TransformationMatrix& rotate(double d) { return rotate3d(0, 0, d); }
+    WEBCORE_EXPORT TransformationMatrix& rotate(double);
     TransformationMatrix& rotateFromVector(double x, double y);
     WEBCORE_EXPORT TransformationMatrix& rotate3d(double rx, double ry, double rz);
 
@@ -439,6 +445,23 @@ private:
         double resultZ;
         multVecMatrix(sourcePoint.x(), sourcePoint.y(), sourcePoint.z(), resultX, resultY, resultZ);
         return FloatPoint3D(static_cast<float>(resultX), static_cast<float>(resultY), static_cast<float>(resultZ));
+    }
+
+    enum class Type : uint8_t {
+        IdentityOrTranslation,
+        Affine,
+        Other
+    };
+
+    Type type() const
+    {
+        if (!m13() && !m14() && !m23() && !m24() && !m34() && !m31() && !m32() && m33() == 1 && m44() == 1) {
+            if (!m12() && !m21() && m11() == 1 && m22() == 1)
+                return Type::IdentityOrTranslation;
+            if (!m43())
+                return Type::Affine;
+        }
+        return Type::Other;
     }
 
     Matrix4 m_matrix;

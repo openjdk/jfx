@@ -72,7 +72,7 @@ public:
         EnforceIFrameAllowFullscreenRequirement,
         ExemptIFrameAllowFullscreenRequirement,
     };
-    void requestFullscreenForElement(Element*, FullscreenCheckType);
+    WEBCORE_EXPORT void requestFullscreenForElement(Element*, FullscreenCheckType);
 
     WEBCORE_EXPORT void willEnterFullscreen(Element&);
     WEBCORE_EXPORT void didEnterFullscreen();
@@ -110,6 +110,7 @@ private:
 
     RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
 
+    bool m_pendingExitFullscreen { false };
     RefPtr<Element> m_pendingFullscreenElement;
     RefPtr<Element> m_fullscreenElement;
     Vector<RefPtr<Element>> m_fullscreenElementStack;

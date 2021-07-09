@@ -19,35 +19,19 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL) && PLATFORM(WIN) && USE(CA)
 #include "GraphicsContextGLOpenGLPrivate.h"
 
 #include "HostWindow.h"
-#include <wtf/StdLibExtras.h>
-
-
-#if USE(LIBEPOXY)
-#include <epoxy/gl.h>
-#elif USE(OPENGL_ES)
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
-#else
-#include "OpenGLShims.h"
-#endif
-
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
-GraphicsContextGLOpenGLPrivate::GraphicsContextGLOpenGLPrivate(GraphicsContextGLOpenGL*, GraphicsContextGLOpenGL::Destination destination)
+GraphicsContextGLOpenGLPrivate::GraphicsContextGLOpenGLPrivate(GraphicsContextGLOpenGL*)
 {
-    switch (destination) {
-    case GraphicsContextGLOpenGL::Destination::Offscreen:
-        m_glContext = GLContext::createOffscreenContext(&PlatformDisplay::sharedDisplayForCompositing());
-        break;
-    case GraphicsContextGLOpenGL::Destination::DirectlyToHostWindow:
-        ASSERT_NOT_REACHED();
-        break;
-    }
+    m_glContext = GLContext::createOffscreenContext(&PlatformDisplay::sharedDisplayForCompositing());
 }
 
 GraphicsContextGLOpenGLPrivate::~GraphicsContextGLOpenGLPrivate() = default;
@@ -64,4 +48,4 @@ PlatformGraphicsContextGL GraphicsContextGLOpenGLPrivate::platformContext()
 
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL)
+#endif // ENABLE(WEBGL) && PLATFORM(WIN) && USE(CA)

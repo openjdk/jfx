@@ -56,7 +56,7 @@ function all(iterable)
 
     try {
         var promiseResolve = this.resolve;
-        if (typeof promiseResolve !== "function")
+        if (!@isCallable(promiseResolve))
             @throwTypeError("Promise resolve is not a function");
 
         for (var value of iterable) {
@@ -138,7 +138,7 @@ function allSettled(iterable)
 
     try {
         var promiseResolve = this.resolve;
-        if (typeof promiseResolve !== "function")
+        if (!@isCallable(promiseResolve))
             @throwTypeError("Promise resolve is not a function");
 
         for (var value of iterable) {
@@ -193,7 +193,7 @@ function any(iterable)
 
     try {
         var promiseResolve = this.resolve;
-        if (typeof promiseResolve !== "function")
+        if (!@isCallable(promiseResolve))
             @throwTypeError("Promise resolve is not a function");
 
         for (var value of iterable) {
@@ -226,7 +226,7 @@ function race(iterable)
 
     try {
         var promiseResolve = this.resolve;
-        if (typeof promiseResolve !== "function")
+        if (!@isCallable(promiseResolve))
             @throwTypeError("Promise resolve is not a function");
 
         for (var value of iterable) {
@@ -263,19 +263,7 @@ function resolve(value)
     if (!@isObject(this))
         @throwTypeError("|this| is not an object");
 
-    if (@isPromise(value)) {
-        var valueConstructor = value.constructor;
-        if (valueConstructor === this)
-            return value;
-    }
-
-    if (this === @Promise) {
-        var promise = @newPromise();
-        @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, value);
-        return promise;
-    }
-
-    return @promiseResolveSlow(this, value);
+    return @promiseResolve(this, value);
 }
 
 @nakedConstructor
@@ -283,7 +271,7 @@ function Promise(executor)
 {
     "use strict";
 
-    if (typeof executor !== "function")
+    if (!@isCallable(executor))
         @throwTypeError("Promise constructor takes a function argument");
 
     var promise = @createPromise(this, /* isInternalPromise */ false);
@@ -309,7 +297,7 @@ function InternalPromise(executor)
 {
     "use strict";
 
-    if (typeof executor !== "function")
+    if (!@isCallable(executor))
         @throwTypeError("InternalPromise constructor takes a function argument");
 
     var promise = @createPromise(this, /* isInternalPromise */ true);

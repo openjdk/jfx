@@ -38,6 +38,7 @@
 #include "AccessibilityTable.h"
 #include "Editing.h"
 #include "ElementIterator.h"
+#include "Event.h"
 #include "EventNames.h"
 #include "FloatRect.h"
 #include "Frame.h"
@@ -691,6 +692,7 @@ bool AccessibilityNodeObject::isChecked() const
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::Switch:
+    case AccessibilityRole::TreeItem:
         validRole = true;
         break;
     default:
@@ -1103,18 +1105,29 @@ static bool dispatchSimulatedKeyboardUpDownEvent(AccessibilityObject* object, co
 
     bool handled = false;
     if (auto* node = object->node()) {
-        auto event = KeyboardEvent::create(eventNames().keydownEvent, keyInit);
+        auto event = KeyboardEvent::create(eventNames().keydownEvent, keyInit, Event::IsTrusted::Yes);
         node->dispatchEvent(event);
         handled |= event->defaultHandled();
     }
 
     // Ensure node is still valid and wasn't removed after the keydown.
     if (auto* node = object->node()) {
-        auto event = KeyboardEvent::create(eventNames().keyupEvent, keyInit);
+        auto event = KeyboardEvent::create(eventNames().keyupEvent, keyInit, Event::IsTrusted::Yes);
         node->dispatchEvent(event);
         handled |= event->defaultHandled();
     }
     return handled;
+}
+
+static void InitializeLegacyKeyInitProperties(KeyboardEvent::Init &keyInit, const AccessibilityObject& object)
+{
+    keyInit.which = keyInit.keyCode;
+    keyInit.code = keyInit.key;
+
+    keyInit.view = object.document()->windowProxy();
+    keyInit.cancelable = true;
+    keyInit.composed = true;
+    keyInit.bubbles = true;
 }
 
 bool AccessibilityNodeObject::performDismissAction()
@@ -1122,6 +1135,8 @@ bool AccessibilityNodeObject::performDismissAction()
     auto keyInit = KeyboardEvent::Init();
     keyInit.key = "Escape"_s;
     keyInit.keyCode = 0x1b;
+    keyInit.keyIdentifier = "U+001B"_s;
+    InitializeLegacyKeyInitProperties(keyInit, *this);
 
     return dispatchSimulatedKeyboardUpDownEvent(this, keyInit);
 }
@@ -1133,8 +1148,13 @@ bool AccessibilityNodeObject::postKeyboardKeysForValueChange(bool increase)
     bool vertical = orientation() == AccessibilityOrientation::Vertical;
     bool isLTR = page()->userInterfaceLayoutDirection() == UserInterfaceLayoutDirection::LTR;
 
-    keyInit.key = increase ? vertical ? "ArrowUp"_s : isLTR ? "ArrowRight"_s : "ArrowLeft"_s : vertical ? "ArrowDown"_s : isLTR ? "ArrowLeft"_s : "ArrowRight"_s;
-    keyInit.keyIdentifier = increase ? vertical ? "up"_s : isLTR ? "right"_s : "left"_s : vertical ? "down"_s : isLTR ? "left"_s : "right"_s;
+    // The goal is to mimic existing keyboard dispatch completely, so that this is indistinguishable from a real key press.
+    typedef enum { left = 37, up = 38, right = 39, down = 40 } keyCode;
+    keyInit.key = increase ? (vertical ? "ArrowUp"_s : (isLTR ? "ArrowRight"_s : "ArrowLeft"_s)) : (vertical ? "ArrowDown"_s : (isLTR ? "ArrowLeft"_s : "ArrowRight"_s));
+    keyInit.keyCode = increase ? (vertical ? keyCode::up : (isLTR ? keyCode::right : keyCode::left)) : (vertical ? keyCode::down : (isLTR ? keyCode::left : keyCode::right));
+    keyInit.keyIdentifier = increase ? (vertical ? "Up"_s : (isLTR ? "Right"_s : "Left"_s)) : (vertical ? "Down"_s : (isLTR ? "Left"_s : "Right"_s));
+
+    InitializeLegacyKeyInitProperties(keyInit, *this);
 
     return dispatchSimulatedKeyboardUpDownEvent(this, keyInit);
 }
@@ -1635,8 +1655,12 @@ String AccessibilityNodeObject::accessibilityDescription() const
     // If this point is reached (i.e. there's no accessibilityDescription) and there's no title(), we should fallback to using the title attribute.
     // The title attribute is normally used as help text (because it is a tooltip), but if there is nothing else available, this should be used (according to ARIA).
     // https://bugs.webkit.org/show_bug.cgi?id=170475: An exception is when the element is semantically unimportant. In those cases, title text should remain as help text.
-    if (title().isEmpty() && !roleIgnoresTitle())
-        return getAttribute(titleAttr);
+    if (!roleIgnoresTitle()) {
+        // title() can be an expensive operation because it can invoke textUnderElement for all descendants. Thus call it last.
+        auto titleAttribute = getAttribute(titleAttr);
+        if (!titleAttribute.isEmpty() && title().isEmpty())
+            return titleAttribute;
+    }
 
     return String();
 }
@@ -1940,17 +1964,15 @@ String AccessibilityNodeObject::text() const
     if (!isTextControl())
         return String();
 
-    Node* node = this->node();
-    if (!node)
+    auto node = this->node();
+    if (!is<Element>(node))
         return String();
 
-    if (isNativeTextControl() && is<HTMLTextFormControlElement>(*node))
-        return downcast<HTMLTextFormControlElement>(*node).value();
+    auto& element = downcast<Element>(*node);
+    if (isNativeTextControl() && is<HTMLTextFormControlElement>(element))
+        return downcast<HTMLTextFormControlElement>(element).value();
 
-    if (!node->isElementNode())
-        return String();
-
-    return downcast<Element>(node)->innerText();
+    return element.innerText();
 }
 
 String AccessibilityNodeObject::stringValue() const

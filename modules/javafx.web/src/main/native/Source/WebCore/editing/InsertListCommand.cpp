@@ -56,6 +56,10 @@ RefPtr<HTMLElement> InsertListCommand::insertList(Document& document, Type type)
 
 HTMLElement* InsertListCommand::fixOrphanedListChild(Node& node)
 {
+    auto parentNode = makeRefPtr(node.parentNode());
+    if (parentNode && !parentNode->hasRichlyEditableStyle())
+        return nullptr;
+
     auto listElement = HTMLUListElement::create(document());
     insertNodeBefore(listElement.copyRef(), node);
     if (!listElement->hasEditableStyle())
@@ -210,7 +214,7 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
     Node* listChildNode = enclosingListChild(selectionNode);
     bool switchListType = false;
     if (listChildNode) {
-        // Remove the list chlild.
+        // Remove the list child.
         RefPtr<HTMLElement> listNode = enclosingList(listChildNode);
         if (!listNode) {
             RefPtr<HTMLElement> listElement = fixOrphanedListChild(*listChildNode);
@@ -231,8 +235,8 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
 
         // If the entire list is selected, then convert the whole list.
         if (switchListType && isNodeVisiblyContainedWithin(*listNode, currentSelection)) {
-            bool rangeStartIsInList = visiblePositionBeforeNode(*listNode) == createLegacyEditingPosition(currentSelection.start);
-            bool rangeEndIsInList = visiblePositionAfterNode(*listNode) == createLegacyEditingPosition(currentSelection.end);
+            bool rangeStartIsInList = visiblePositionBeforeNode(*listNode) == makeDeprecatedLegacyPosition(currentSelection.start);
+            bool rangeEndIsInList = visiblePositionAfterNode(*listNode) == makeDeprecatedLegacyPosition(currentSelection.end);
 
             RefPtr<HTMLElement> newList = createHTMLElement(document(), listTag);
             insertNodeBefore(*newList, *listNode);
@@ -295,6 +299,10 @@ void InsertListCommand::unlistifyParagraph(const VisiblePosition& originalStart,
         previousListChild = enclosingListChild(start.previous().deepEquivalent().deprecatedNode(), listNode);
         ASSERT(previousListChild != listChildNode);
     }
+
+    if (start.isNull() || end.isNull())
+        return;
+
     // When removing a list, we must always create a placeholder to act as a point of insertion
     // for the list content being removed.
     auto placeholder = HTMLBRElement::create(document());
@@ -321,7 +329,7 @@ void InsertListCommand::unlistifyParagraph(const VisiblePosition& originalStart,
         // in listNode that comes before listChildNode, as listChildNode could have ancestors
         // between it and listNode. So, we split up to listNode before inserting the placeholder
         // where we're about to move listChildNode to.
-        if (listChildNode->parentNode() != listNode)
+        if (auto listChildNodeParentNode = makeRefPtr(listChildNode->parentNode()); listChildNodeParentNode && listChildNodeParentNode != listNode)
             splitElement(*listNode, *splitTreeToNode(*listChildNode, *listNode).get());
         insertNodeBefore(nodeToInsert.releaseNonNull(), *listNode);
     } else

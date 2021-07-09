@@ -25,13 +25,30 @@
 #include "config.h"
 #include "LibWebRTCRtpReceiverBackend.h"
 
+#include "LibWebRTCRtpReceiverTransformBackend.h"
 #include "LibWebRTCUtils.h"
+#include "RTCRtpTransformBackend.h"
 #include "RealtimeIncomingAudioSource.h"
 #include "RealtimeIncomingVideoSource.h"
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+
+#include <webrtc/api/rtp_receiver_interface.h>
+
+ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_UNUSED_PARAMETERS_END
+
 namespace WebCore {
+
+LibWebRTCRtpReceiverBackend::LibWebRTCRtpReceiverBackend(rtc::scoped_refptr<webrtc::RtpReceiverInterface>&& rtcReceiver)
+    : m_rtcReceiver(WTFMove(rtcReceiver))
+{
+}
+
+LibWebRTCRtpReceiverBackend::~LibWebRTCRtpReceiverBackend() = default;
 
 RTCRtpParameters LibWebRTCRtpReceiverBackend::getParameters()
 {
@@ -41,6 +58,7 @@ RTCRtpParameters LibWebRTCRtpReceiverBackend::getParameters()
 static inline void fillRTCRtpContributingSource(RTCRtpContributingSource& source, const webrtc::RtpSource& rtcSource)
 {
     source.timestamp = rtcSource.timestamp_ms();
+    source.rtpTimestamp = rtcSource.rtp_timestamp();
     source.source = rtcSource.source_id();
     if (rtcSource.audio_level())
         source.audioLevel = (*rtcSource.audio_level() == 127) ? 0 : pow(10, -*rtcSource.audio_level() / 20);
@@ -98,6 +116,10 @@ Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource()
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+Ref<RTCRtpTransformBackend> LibWebRTCRtpReceiverBackend::createRTCRtpTransformBackend()
+{
+    return LibWebRTCRtpReceiverTransformBackend::create(m_rtcReceiver);
+}
 
 } // namespace WebCore
 

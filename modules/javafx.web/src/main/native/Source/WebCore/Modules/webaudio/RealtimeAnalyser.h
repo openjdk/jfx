@@ -43,8 +43,6 @@ public:
     RealtimeAnalyser();
     virtual ~RealtimeAnalyser();
 
-    void reset();
-
     size_t fftSize() const { return m_fftSize; }
     bool setFftSize(size_t);
 
@@ -67,34 +65,41 @@ public:
     // The audio thread writes input data here.
     void writeInput(AudioBus*, size_t framesToProcess);
 
-    static const double DefaultSmoothingTimeConstant;
-    static const double DefaultMinDecibels;
-    static const double DefaultMaxDecibels;
+    static constexpr double DefaultSmoothingTimeConstant { 0.8 };
+    static constexpr double DefaultMinDecibels { -100 };
+    static constexpr double DefaultMaxDecibels { -30 };
 
-    static const unsigned DefaultFFTSize;
-    static const unsigned MinFFTSize;
-    static const unsigned MaxFFTSize;
-    static const unsigned InputBufferSize;
+    // All FFT implementations are expected to handle power-of-two sizes MinFFTSize <= size <= MaxFFTSize.
+    static constexpr unsigned DefaultFFTSize { 2048 };
+    static constexpr unsigned MinFFTSize { 32 };
+    static constexpr unsigned MaxFFTSize { 32768 };
+    static constexpr unsigned InputBufferSize { MaxFFTSize * 2 };
 
 private:
     // The audio thread writes the input audio here.
     AudioFloatArray m_inputBuffer;
-    unsigned m_writeIndex;
+    unsigned m_writeIndex { 0 };
 
-    size_t m_fftSize;
+    // AudioBus used for downmixing input audio before copying it to m_inputBuffer.
+    RefPtr<AudioBus> m_downmixBus;
+
+    size_t m_fftSize { DefaultFFTSize };
     std::unique_ptr<FFTFrame> m_analysisFrame;
-    void doFFTAnalysis();
+    void doFFTAnalysisIfNecessary();
 
-    // doFFTAnalysis() stores the floating-point magnitude analysis data here.
-    AudioFloatArray m_magnitudeBuffer;
+    // doFFTAnalysisIfNecessary() stores the floating-point magnitude analysis data here.
+    AudioFloatArray m_magnitudeBuffer { DefaultFFTSize / 2 };
     AudioFloatArray& magnitudeBuffer() { return m_magnitudeBuffer; }
 
     // A value between 0 and 1 which averages the previous version of m_magnitudeBuffer with the current analysis magnitude data.
-    double m_smoothingTimeConstant;
+    double m_smoothingTimeConstant { DefaultSmoothingTimeConstant };
 
     // The range used when converting when using getByteFrequencyData().
-    double m_minDecibels;
-    double m_maxDecibels;
+    double m_minDecibels { DefaultMinDecibels };
+    double m_maxDecibels { DefaultMaxDecibels };
+
+    // We should only do the FFT analysis once per render quantum.
+    bool m_shouldDoFFTAnalysis { true };
 };
 
 } // namespace WebCore

@@ -39,6 +39,8 @@
 #include "EventNames.h"
 #include "Frame.h"
 #include "PerformanceEntry.h"
+#include "PerformanceMarkOptions.h"
+#include "PerformanceMeasureOptions.h"
 #include "PerformanceNavigation.h"
 #include "PerformanceObserver.h"
 #include "PerformancePaintTiming.h"
@@ -182,9 +184,8 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByName(const String& nam
     return entries;
 }
 
-bool Performance::appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>& entries) const
+void Performance::appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>& entries) const
 {
-    auto oldEntriesSize = entries.size();
     if (entryType == "resource")
         entries.appendVector(m_resourceTimingBuffer);
 
@@ -194,8 +195,6 @@ bool Performance::appendBufferedEntriesByType(const String& entryType, Vector<Re
         if (entryType.isNull() || entryType == "measure")
             entries.appendVector(m_userTiming->getMeasures());
     }
-
-    return entries.size() > oldEntriesSize;
 }
 
 void Performance::clearResourceTimings()
@@ -299,45 +298,43 @@ void Performance::resourceTimingBufferFullTimerFired()
     m_waitingForBackupBufferToBeProcessed = false;
 }
 
-ExceptionOr<void> Performance::mark(const String& markName)
+ExceptionOr<Ref<PerformanceMark>> Performance::mark(JSC::JSGlobalObject& globalObject, const String& markName, Optional<PerformanceMarkOptions>&& markOptions)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
 
-    auto result = m_userTiming->mark(markName);
-    if (result.hasException())
-        return result.releaseException();
+    auto mark = m_userTiming->mark(globalObject, markName, WTFMove(markOptions));
+    if (mark.hasException())
+        return mark.releaseException();
 
-    queueEntry(result.releaseReturnValue());
-
-    return { };
+    queueEntry(mark.returnValue().get());
+    return mark.releaseReturnValue();
 }
 
 void Performance::clearMarks(const String& markName)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
     m_userTiming->clearMarks(markName);
 }
 
-ExceptionOr<void> Performance::measure(const String& measureName, const String& startMark, const String& endMark)
+ExceptionOr<Ref<PerformanceMeasure>> Performance::measure(JSC::JSGlobalObject& globalObject, const String& measureName, Optional<StartOrMeasureOptions>&& startOrMeasureOptions, const String& endMark)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
 
-    auto result = m_userTiming->measure(measureName, startMark, endMark);
-    if (result.hasException())
-        return result.releaseException();
+    auto measure = m_userTiming->measure(globalObject, measureName, WTFMove(startOrMeasureOptions), endMark);
+    if (measure.hasException())
+        return measure.releaseException();
 
-    queueEntry(result.releaseReturnValue());
-
-    return { };
+    queueEntry(measure.returnValue().get());
+    return measure.releaseReturnValue();
 }
 
 void Performance::clearMeasures(const String& measureName)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
     m_userTiming->clearMeasures(measureName);
 }
 

@@ -29,6 +29,7 @@
 #include "JITOperations.h"
 #include "JITThunks.h"
 #include "JSBoundFunction.h"
+#include "LLIntThunks.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "SpecializedThunkJIT.h"
 #include <wtf/InlineASM.h>
@@ -44,13 +45,15 @@ inline void emitPointerValidation(CCallHelpers& jit, GPRReg pointerGPR, TagType 
 {
     if (!ASSERT_ENABLED)
         return;
-    CCallHelpers::Jump isNonZero = jit.branchTestPtr(CCallHelpers::NonZero, pointerGPR);
-    jit.abortWithReason(TGInvalidPointer);
-    isNonZero.link(&jit);
-    jit.pushToSave(pointerGPR);
-    jit.untagPtr(tag, pointerGPR);
-    jit.load8(pointerGPR, pointerGPR);
-    jit.popToRestore(pointerGPR);
+    if (!Options::useJITCage()) {
+        CCallHelpers::Jump isNonZero = jit.branchTestPtr(CCallHelpers::NonZero, pointerGPR);
+        jit.abortWithReason(TGInvalidPointer);
+        isNonZero.link(&jit);
+        jit.pushToSave(pointerGPR);
+        jit.untagPtr(tag, pointerGPR);
+        jit.validateUntaggedPtr(pointerGPR);
+        jit.popToRestore(pointerGPR);
+    }
 }
 
 // We will jump here if the JIT code tries to make a call, but the
@@ -289,11 +292,25 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFun
         auto hasExecutable = jit.branchTestPtr(CCallHelpers::Zero, GPRInfo::argumentGPR2, CCallHelpers::TrustedImm32(JSFunction::rareDataTag));
         jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, FunctionRareData::offsetOfExecutable() - JSFunction::rareDataTag), GPRInfo::argumentGPR2);
         hasExecutable.link(&jit);
-        jit.call(CCallHelpers::Address(GPRInfo::argumentGPR2, executableOffsetToFunction), JSEntryPtrTag);
+        if (Options::useJITCage()) {
+            jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, executableOffsetToFunction), GPRInfo::argumentGPR2);
+            auto operationCall = jit.call(OperationPtrTag);
+            jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryHostFunction));
+            });
+        } else
+            jit.call(CCallHelpers::Address(GPRInfo::argumentGPR2, executableOffsetToFunction), HostFunctionPtrTag);
     } else {
         ASSERT(thunkFunctionType == ThunkFunctionType::InternalFunction);
         jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, InternalFunction::offsetOfGlobalObject()), GPRInfo::argumentGPR0);
-        jit.call(CCallHelpers::Address(GPRInfo::argumentGPR2, InternalFunction::offsetOfNativeFunctionFor(kind)), JSEntryPtrTag);
+        if (Options::useJITCage()) {
+            jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, InternalFunction::offsetOfNativeFunctionFor(kind)), GPRInfo::argumentGPR2);
+            auto operationCall = jit.call(OperationPtrTag);
+            jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryHostFunction));
+            });
+        } else
+            jit.call(CCallHelpers::Address(GPRInfo::argumentGPR2, InternalFunction::offsetOfNativeFunctionFor(kind)), HostFunctionPtrTag);
     }
 
 #if CPU(X86_64) && OS(WINDOWS)
@@ -394,6 +411,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
     jit.loadPtr(JSInterfaceJIT::Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()), GPRInfo::regT3);
     jit.addPtr(JSInterfaceJIT::TrustedImm32(sizeof(CallerFrameAndPC)), GPRInfo::callFrameRegister, extraTemp);
     jit.untagPtr(extraTemp, GPRInfo::regT3);
+    jit.validateUntaggedPtr(GPRInfo::regT3, extraTemp);
     PtrTag tempReturnPCTag = static_cast<PtrTag>(random());
     jit.move(JSInterfaceJIT::TrustedImmPtr(tempReturnPCTag), extraTemp);
     jit.tagPtr(extraTemp, GPRInfo::regT3);
@@ -450,6 +468,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
     jit.loadPtr(JSInterfaceJIT::Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()), GPRInfo::regT3);
     jit.move(JSInterfaceJIT::TrustedImmPtr(tempReturnPCTag), extraTemp);
     jit.untagPtr(extraTemp, GPRInfo::regT3);
+    jit.validateUntaggedPtr(GPRInfo::regT3, extraTemp);
     jit.addPtr(JSInterfaceJIT::TrustedImm32(sizeof(CallerFrameAndPC)), GPRInfo::callFrameRegister, extraTemp);
     jit.tagPtr(extraTemp, GPRInfo::regT3);
     jit.storePtr(GPRInfo::regT3, JSInterfaceJIT::Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()));
@@ -744,6 +763,7 @@ typedef MathThunkCallingConvention(*MathThunk)(MathThunkCallingConvention);
     );\
     extern "C" { \
         MathThunkCallingConvention function##Thunk(MathThunkCallingConvention); \
+        JSC_ANNOTATE_JIT_OPERATION(function##ThunkId, function##Thunk); \
     } \
     static MathThunk UnaryDoubleOpWrapper(function) = &function##Thunk;
 
@@ -768,6 +788,7 @@ typedef MathThunkCallingConvention(*MathThunk)(MathThunkCallingConvention);
     );\
     extern "C" { \
         MathThunkCallingConvention function##Thunk(MathThunkCallingConvention); \
+        JSC_ANNOTATE_JIT_OPERATION(function##ThunkId, function##Thunk); \
     } \
     static MathThunk UnaryDoubleOpWrapper(function) = &function##Thunk;
 
@@ -788,6 +809,7 @@ typedef MathThunkCallingConvention(*MathThunk)(MathThunkCallingConvention);
     );\
     extern "C" { \
         MathThunkCallingConvention function##Thunk(MathThunkCallingConvention); \
+        JSC_ANNOTATE_JIT_OPERATION(function##ThunkId, function##Thunk); \
     } \
     static MathThunk UnaryDoubleOpWrapper(function) = &function##Thunk;
 
@@ -811,6 +833,7 @@ typedef MathThunkCallingConvention(*MathThunk)(MathThunkCallingConvention);
     ); \
     extern "C" { \
         MathThunkCallingConvention function##Thunk(MathThunkCallingConvention); \
+        JSC_ANNOTATE_JIT_OPERATION(function##ThunkId, function##Thunk); \
     } \
     static MathThunk UnaryDoubleOpWrapper(function) = &function##Thunk;
 
@@ -828,6 +851,7 @@ typedef MathThunkCallingConvention(*MathThunk)(MathThunkCallingConvention);
     ); \
     extern "C" { \
         MathThunkCallingConvention function##Thunk(MathThunkCallingConvention); \
+        JSC_ANNOTATE_JIT_OPERATION(function##ThunkId, function##Thunk); \
     } \
     static MathThunk UnaryDoubleOpWrapper(function) = &function##Thunk;
 
@@ -855,6 +879,7 @@ static double (_cdecl *jsRoundFunction)(double) = jsRound;
         __asm ret \
         } \
     } \
+    JSC_ANNOTATE_JIT_OPERATION(function##ThunkId, function##Thunk); \
     static MathThunk UnaryDoubleOpWrapper(function) = &function##Thunk;
 
 #else

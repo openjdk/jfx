@@ -64,7 +64,8 @@ public:
         SyntaxChecker* m_context;
     };
 
-    SyntaxChecker(VM& , void*)
+    SyntaxChecker(VM& vm, void*)
+        : m_vm(vm)
     {
     }
 
@@ -99,22 +100,20 @@ public:
     typedef ExpressionType Comma;
     struct Property {
         ALWAYS_INLINE Property(void* = nullptr)
-            : type((PropertyNode::Type)0)
         {
         }
-        ALWAYS_INLINE Property(const Identifier* ident, PropertyNode::Type ty)
-            : name(ident)
-            , type(ty)
+        ALWAYS_INLINE Property(PropertyNode::Type type)
+            : type(type)
         {
         }
-        ALWAYS_INLINE Property(PropertyNode::Type ty)
-            : name(nullptr)
-            , type(ty)
+        ALWAYS_INLINE Property(PropertyNode::Type type, bool isUnderscoreProtoSetter)
+            : type(type)
+            , isUnderscoreProtoSetter(isUnderscoreProtoSetter)
         {
         }
         ALWAYS_INLINE bool operator!() { return !type; }
-        const Identifier* name;
-        PropertyNode::Type type;
+        PropertyNode::Type type { static_cast<PropertyNode::Type>(0) };
+        bool isUnderscoreProtoSetter { false };
     };
     typedef int PropertyList;
     typedef int ElementList;
@@ -148,8 +147,8 @@ public:
 
     int createSourceElements() { return SourceElementsResult; }
     ExpressionType makeFunctionCallNode(const JSTokenLocation&, ExpressionType, bool, int, int, int, int, size_t, bool) { return CallExpr; }
-    ExpressionType createCommaExpr(const JSTokenLocation&, ExpressionType expr) { return expr; }
-    ExpressionType appendToCommaExpr(const JSTokenLocation&, ExpressionType& head, ExpressionType, ExpressionType next) { head = next; return next; }
+    ExpressionType createCommaExpr(const JSTokenLocation&, ExpressionType) { return CommaExpr; }
+    ExpressionType appendToCommaExpr(const JSTokenLocation&, ExpressionType, ExpressionType, ExpressionType) { return CommaExpr; }
     ExpressionType makeAssignNode(const JSTokenLocation&, ExpressionType, Operator, ExpressionType, bool, bool, int, int, int) { return AssignmentExpr; }
     ExpressionType makePrefixNode(const JSTokenLocation&, ExpressionType, Operator, int, int, int) { return PreExpr; }
     ExpressionType makePostfixNode(const JSTokenLocation&, ExpressionType, Operator, int, int, int) { return PostExpr; }
@@ -180,7 +179,7 @@ public:
     ExpressionType createBoolean(const JSTokenLocation&, bool) { return BoolExpr; }
     ExpressionType createNull(const JSTokenLocation&) { return NullExpr; }
     ExpressionType createBracketAccess(const JSTokenLocation&, ExpressionType, ExpressionType, bool, int, int, int) { return BracketExpr; }
-    ExpressionType createDotAccess(const JSTokenLocation&, ExpressionType, const Identifier*, DotType type, int, int, int) { return type == DotType::PrivateField ? PrivateDotExpr : DotExpr; }
+    ExpressionType createDotAccess(const JSTokenLocation&, ExpressionType, const Identifier*, DotType type, int, int, int) { return type == DotType::PrivateMember ? PrivateDotExpr : DotExpr; }
     ExpressionType createRegExp(const JSTokenLocation&, const Identifier& pattern, const Identifier& flags, int) { return Yarr::hasError(Yarr::checkSyntax(pattern.string(), flags.string())) ? 0 : RegExpExpr; }
     ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int, int, int) { return NewExpr; }
     ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int) { return NewExpr; }
@@ -201,7 +200,7 @@ public:
     ExpressionType createMethodDefinition(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     void setFunctionNameStart(int, int) { }
     int createArguments() { return ArgumentsResult; }
-    int createArguments(int) { return ArgumentsResult; }
+    int createArguments(int, bool) { return ArgumentsResult; }
     ExpressionType createSpreadExpression(const JSTokenLocation&, ExpressionType, int, int, int) { return SpreadExpr; }
     ExpressionType createObjectSpreadExpression(const JSTokenLocation&, ExpressionType, int, int, int) { return ObjectSpreadExpr; }
     TemplateString createTemplateString(const JSTokenLocation&, const Identifier*, const Identifier*) { return TemplateStringResult; }
@@ -215,28 +214,25 @@ public:
 
     int createArgumentsList(const JSTokenLocation&, int) { return ArgumentsListResult; }
     int createArgumentsList(const JSTokenLocation&, int, int) { return ArgumentsListResult; }
-    Property createProperty(const Identifier* name, int, PropertyNode::Type type, PropertyNode::PutType, bool complete, SuperBinding, InferName, ClassElementTag)
+    Property createProperty(const Identifier* name, int, PropertyNode::Type type, SuperBinding superBinding, InferName, ClassElementTag tag)
     {
-        if (!complete)
-            return Property(type);
-        ASSERT(name);
-        return Property(name, type);
+        bool needsSuperBinding = superBinding == SuperBinding::Needed;
+        bool isClassProperty = tag != ClassElementTag::No;
+        return Property(type, PropertyNode::isUnderscoreProtoSetter(m_vm, name, type, needsSuperBinding, isClassProperty));
     }
-    Property createProperty(int, PropertyNode::Type type, PropertyNode::PutType, bool, SuperBinding, ClassElementTag)
-    {
-        return Property(type);
-    }
-    Property createProperty(VM& vm, ParserArena& parserArena, double name, int, PropertyNode::Type type, PropertyNode::PutType, bool complete, SuperBinding, ClassElementTag)
-    {
-        if (!complete)
-            return Property(type);
-        return Property(&parserArena.identifierArena().makeNumericIdentifier(vm, name), type);
-    }
-    Property createProperty(int, int, PropertyNode::Type type, PropertyNode::PutType, bool, SuperBinding, ClassElementTag)
+    Property createProperty(int, PropertyNode::Type type, SuperBinding, ClassElementTag)
     {
         return Property(type);
     }
-    Property createProperty(const Identifier*, int, int, PropertyNode::Type type, PropertyNode::PutType, bool, SuperBinding, ClassElementTag)
+    Property createProperty(VM&, ParserArena&, double, int, PropertyNode::Type type, SuperBinding, ClassElementTag)
+    {
+        return Property(type);
+    }
+    Property createProperty(int, int, PropertyNode::Type type, SuperBinding, ClassElementTag)
+    {
+        return Property(type);
+    }
+    Property createProperty(const Identifier*, int, int, PropertyNode::Type type, SuperBinding, ClassElementTag)
     {
         return Property(type);
     }
@@ -291,26 +287,20 @@ public:
     void appendExportSpecifier(ExportSpecifierList, ExportSpecifier) { }
 
     int appendConstDecl(const JSTokenLocation&, int, const Identifier*, int) { return StatementResult; }
-    Property createGetterOrSetterProperty(const JSTokenLocation&, PropertyNode::Type type, bool strict, const Identifier* name, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
-    {
-        ASSERT(name);
-        if (!strict)
-            return Property(type);
-        return Property(name, type);
-    }
-    Property createGetterOrSetterProperty(const JSTokenLocation&, PropertyNode::Type type, bool, int, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
+    Property createGetterOrSetterProperty(const JSTokenLocation&, PropertyNode::Type type, const Identifier*, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
     {
         return Property(type);
     }
-    Property createGetterOrSetterProperty(VM& vm, ParserArena& parserArena, const JSTokenLocation&, PropertyNode::Type type, bool strict, double name, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
+    Property createGetterOrSetterProperty(const JSTokenLocation&, PropertyNode::Type type, int, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
     {
-        if (!strict)
-            return Property(type);
-        return Property(&parserArena.identifierArena().makeNumericIdentifier(vm, name), type);
+        return Property(type);
+    }
+    Property createGetterOrSetterProperty(VM&, ParserArena&, const JSTokenLocation&, PropertyNode::Type type, double, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
+    {
+        return Property(type);
     }
 
     void appendStatement(int, int) { }
-    int combineCommaNodes(const JSTokenLocation&, int, int) { return CommaExpr; }
     int evalCount() const { return 0; }
     void appendBinaryExpressionInfo(int& operandStackDepth, int expr, int, int, int, bool)
     {
@@ -339,8 +329,8 @@ public:
 
     void assignmentStackAppend(int& assignmentStackDepth, int, int, int, int, Operator) { assignmentStackDepth = 1; }
     int createAssignment(const JSTokenLocation&, int& assignmentStackDepth, int, int, int, int) { assignmentStackDepth = 0; return AssignmentExpr; }
-    const Identifier* getName(const Property& property) const { return property.name; }
     PropertyNode::Type getType(const Property& property) const { return property.type; }
+    bool isUnderscoreProtoSetter(const Property& property) const { return property.isUnderscoreProtoSetter; }
     bool isResolve(ExpressionType expr) const { return expr == ResolveExpr || expr == ResolveEvalExpr; }
     ExpressionType createDestructuringAssignment(const JSTokenLocation&, int, ExpressionType)
     {
@@ -447,6 +437,7 @@ public:
     void propagateArgumentsUse() { }
 
 private:
+    VM& m_vm;
     int m_topBinaryExpr;
     int m_topUnaryToken;
 };

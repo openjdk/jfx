@@ -28,7 +28,7 @@
     Conditional=WEB_AUDIO,
     EnabledBySetting=WebAudio&PrefixedWebAudio,
     JSGenerateToJSObject,
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
 ] interface WebKitOscillatorNode : AudioScheduledSourceNode {
     attribute OscillatorType type;
 
@@ -43,5 +43,5 @@
     readonly attribute AudioParam frequency; // in Hertz
     readonly attribute AudioParam detune; // in Cents
 
-    [ImplementedAs=setWebKitPeriodicWave] void setPeriodicWave(PeriodicWave? wave);
+    [ImplementedAs=setWebKitPeriodicWave] undefined setPeriodicWave(PeriodicWave? wave);
 };

@@ -228,7 +228,7 @@ void HTMLDocumentParser::runScriptsForPausedTreeBuilder()
 
             document()->eventLoop().performMicrotaskCheckpoint();
 
-            CustomElementReactionStack reactionStack(document()->execState());
+            CustomElementReactionStack reactionStack(document()->globalObject());
             auto& elementInterface = constructionData->elementInterface.get();
             auto newElement = elementInterface.constructElementWithFallback(*document(), constructionData->name);
             m_treeBuilder->didCreateCustomOrFallbackElement(WTFMove(newElement), *constructionData);
@@ -326,7 +326,7 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
     // function should be holding a RefPtr to this to ensure we weren't deleted.
     ASSERT(refCount() >= 1);
 
-    if (isStopped())
+    if (isStopped() || isParsingFragment())
         return;
 
     if (shouldResume)
@@ -515,6 +515,11 @@ bool HTMLDocumentParser::shouldAssociateConsoleMessagesWithTextPosition() const
 
 bool HTMLDocumentParser::isWaitingForScripts() const
 {
+    if (isParsingFragment()) {
+        // HTMLTreeBuilder may have a parser blocking script element but we ignore them during fragment parsing.
+        ASSERT(!m_scriptRunner || !m_scriptRunner->hasParserBlockingScript());
+        return false;
+    }
     // When the TreeBuilder encounters a </script> tag, it returns to the HTMLDocumentParser
     // where the script is transfered from the treebuilder to the script runner.
     // The script runner will hold the script until its loaded and run. During

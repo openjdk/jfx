@@ -55,13 +55,13 @@ const double ForceAtForceClick = 2;
         PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type,
                            int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp, double force, SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
             : PlatformEvent(type, shiftKey, ctrlKey, altKey, metaKey, timestamp)
+            , m_button(button)
+            , m_syntheticClickType(syntheticClickType)
             , m_position(position)
             , m_globalPosition(globalPosition)
-            , m_button(button)
-            , m_clickCount(clickCount)
             , m_force(force)
-            , m_syntheticClickType(syntheticClickType)
             , m_pointerId(pointerId)
+            , m_clickCount(clickCount)
         {
         }
 
@@ -80,6 +80,7 @@ const double ForceAtForceClick = 2;
         double force() const { return m_force; }
         SyntheticClickType syntheticClickType() const { return m_syntheticClickType; }
         PointerID pointerId() const { return m_pointerId; }
+        const String& pointerType() const { return m_pointerType; }
 
 #if PLATFORM(MAC)
         int eventNumber() const { return m_eventNumber; }
@@ -93,19 +94,20 @@ const double ForceAtForceClick = 2;
 #endif
 
     protected:
+        MouseButton m_button { NoButton };
+        SyntheticClickType m_syntheticClickType { NoTap };
+
         IntPoint m_position;
         IntPoint m_globalPosition;
 #if ENABLE(POINTER_LOCK)
         IntPoint m_movementDelta;
 #endif
-        MouseButton m_button { NoButton };
-        unsigned short m_buttons { 0 };
+        double m_force { 0 };
+        PointerID m_pointerId { mousePointerID };
+        String m_pointerType { "mouse"_s };
         int m_clickCount { 0 };
         unsigned m_modifierFlags { 0 };
-        double m_force { 0 };
-        SyntheticClickType m_syntheticClickType { NoTap };
-        PointerID m_pointerId { mousePointerID };
-
+        unsigned short m_buttons { 0 };
 #if PLATFORM(MAC)
         int m_eventNumber { 0 };
         int m_menuTypeForEvent { 0 };

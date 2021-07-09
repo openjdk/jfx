@@ -31,6 +31,8 @@
 #include "config.h"
 #include "GridPosition.h"
 
+#include <wtf/text/TextStream.h>
+
 namespace WebCore {
 
 Optional<int> GridPosition::gMaxPositionForTesting;
@@ -101,6 +103,21 @@ bool GridPosition::operator==(const GridPosition& other) const
 void GridPosition::setMaxPositionForTesting(unsigned maxPosition)
 {
     gMaxPositionForTesting = static_cast<int>(maxPosition);
+}
+
+TextStream& operator<<(TextStream& ts, const GridPosition& o)
+{
+    switch (o.type()) {
+    case AutoPosition:
+        return ts << "auto";
+    case ExplicitPosition:
+        return ts << o.namedGridLine() << " " << o.integerPosition();
+    case SpanPosition:
+        return ts << "span" << " " << o.namedGridLine() << " " << o.integerPosition();
+    case NamedGridAreaPosition:
+        return ts << o.namedGridLine();
+    }
+    return ts;
 }
 
 } // namespace WebCore

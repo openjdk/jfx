@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2014 Igalia S.L.
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,70 +32,32 @@
 
 #include "Document.h"
 #include "FrameSelection.h"
+#include "Highlight.h"
+#include "Logging.h"
 #include "Position.h"
 #include "Range.h"
 #include "RenderLayer.h"
-#include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderObject.h"
 #include "RenderView.h"
 #include "VisibleSelection.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-namespace { // See bug #177808.
+namespace {
 
-struct SelectionData {
+struct SelectionContext {
+
     using RendererMap = HashMap<RenderObject*, std::unique_ptr<RenderSelectionInfo>>;
     using RenderBlockMap = HashMap<const RenderBlock*, std::unique_ptr<RenderBlockSelectionInfo>>;
 
-    Optional<unsigned> startOffset;
-    Optional<unsigned> endOffset;
+    unsigned startOffset;
+    unsigned endOffset;
     RendererMap renderers;
     RenderBlockMap blocks;
 };
 
-class SelectionIterator {
-public:
-    SelectionIterator(RenderObject* start)
-        : m_current(start)
-    {
-        checkForSpanner();
-    }
-
-    RenderObject* current() const
-    {
-        return m_current;
-    }
-
-    RenderObject* next()
-    {
-        RenderObject* currentSpan = m_spannerStack.isEmpty() ? nullptr : m_spannerStack.last()->spanner();
-        m_current = m_current->nextInPreOrder(currentSpan);
-        checkForSpanner();
-        if (!m_current && currentSpan) {
-            RenderObject* placeholder = m_spannerStack.last();
-            m_spannerStack.removeLast();
-            m_current = placeholder->nextInPreOrder();
-            checkForSpanner();
-        }
-        return m_current;
-    }
-
-private:
-    void checkForSpanner()
-    {
-        if (!is<RenderMultiColumnSpannerPlaceholder>(m_current))
-            return;
-        auto& placeholder = downcast<RenderMultiColumnSpannerPlaceholder>(*m_current);
-        m_spannerStack.append(&placeholder);
-        m_current = placeholder.spanner();
-    }
-
-    RenderObject* m_current { nullptr };
-    Vector<RenderMultiColumnSpannerPlaceholder*> m_spannerStack;
-};
-
-} // anonymous namespace
+}
 
 static RenderObject* rendererAfterOffset(const RenderObject& renderer, unsigned offset)
 {
@@ -104,11 +65,11 @@ static RenderObject* rendererAfterOffset(const RenderObject& renderer, unsigned 
     return child ? child : renderer.nextInPreOrderAfterChildren();
 }
 
-static bool isValidRendererForSelection(const RenderObject& renderer, const SelectionRangeData::Context& selection)
+static bool isValidRendererForSelection(const RenderObject& renderer, const RenderRange& selection)
 {
     return (renderer.canBeSelectionLeaf() || &renderer == selection.start() || &renderer == selection.end())
-        && renderer.selectionState() != RenderObject::SelectionNone
-        && renderer.containingBlock();
+    && renderer.selectionState() != RenderObject::HighlightState::None
+    && renderer.containingBlock();
 }
 
 static RenderBlock* containingBlockBelowView(const RenderObject& renderer)
@@ -117,17 +78,17 @@ static RenderBlock* containingBlockBelowView(const RenderObject& renderer)
     return is<RenderView>(containingBlock) ? nullptr : containingBlock;
 }
 
-static SelectionData collect(const SelectionRangeData::Context& selection, bool repaintDifference)
+static SelectionContext collectSelectionData(const RenderRange& selection, bool repaintDifference)
 {
-    SelectionData oldSelectionData { selection.startOffset(), selection.endOffset(), { }, { } };
+    SelectionContext oldSelectionData { selection.startOffset(), selection.endOffset(), { }, { } };
     // Blocks contain selected objects and fill gaps between them, either on the left, right, or in between lines and blocks.
     // In order to get the repaint rect right, we have to examine left, middle, and right rects individually, since otherwise
     // the union of those rects might remain the same even when changes have occurred.
     auto* start = selection.start();
     RenderObject* stop = nullptr;
     if (selection.end())
-        stop = rendererAfterOffset(*selection.end(), selection.endOffset().value());
-    SelectionIterator selectionIterator(start);
+        stop = rendererAfterOffset(*selection.end(), selection.endOffset());
+    RenderRangeIterator selectionIterator(start);
     while (start && start != stop) {
         if (isValidRendererForSelection(*start, selection)) {
             // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
@@ -154,52 +115,13 @@ SelectionRangeData::SelectionRangeData(RenderView& view)
 {
 }
 
-void SelectionRangeData::setContext(const Context& context)
-{
-    ASSERT(context.start() && context.end());
-    m_selectionContext = context;
-}
-
-RenderObject::SelectionState SelectionRangeData::selectionStateForRenderer(RenderObject& renderer)
-{
-    // FIXME: we shouldln't have to check that a renderer is a descendant of the render node
-    // from the range. This is likely because we aren't using VisiblePositions yet.
-    // Planned fix in a followup: <rdar://problem/58095923>
-    // https://bugs.webkit.org/show_bug.cgi?id=205529
-
-    if (&renderer == m_selectionContext.start()) {
-        if (m_selectionContext.start() && m_selectionContext.end() && m_selectionContext.start() == m_selectionContext.end())
-            return RenderObject::SelectionBoth;
-        if (m_selectionContext.start())
-            return RenderObject::SelectionStart;
-    }
-    if (&renderer == m_selectionContext.end())
-        return RenderObject::SelectionEnd;
-
-    RenderObject* selectionEnd = nullptr;
-    auto* selectionDataEnd = m_selectionContext.end();
-    if (selectionDataEnd)
-        selectionEnd = rendererAfterOffset(*selectionDataEnd, m_selectionContext.endOffset().value());
-    SelectionIterator selectionIterator(m_selectionContext.start());
-    for (auto* currentRenderer = m_selectionContext.start(); currentRenderer && currentRenderer != m_selectionContext.end(); currentRenderer = selectionIterator.next()) {
-        if (currentRenderer == m_selectionContext.start() || currentRenderer == m_selectionContext.end())
-            continue;
-        if (!currentRenderer->canBeSelectionLeaf())
-            continue;
-        if (&renderer == currentRenderer)
-            return RenderObject::SelectionInside;
-    }
-    return RenderObject::SelectionNone;
-
-}
-
-void SelectionRangeData::set(const Context& selection, RepaintMode blockRepaintMode)
+void SelectionRangeData::set(const RenderRange& selection, RepaintMode blockRepaintMode)
 {
     if ((selection.start() && !selection.end()) || (selection.end() && !selection.start()))
         return;
     // Just return if the selection hasn't changed.
     auto isCaret = m_renderView.frame().selection().isCaret();
-    if (selection == m_selectionContext && m_selectionWasCaret == isCaret)
+    if (selection == m_renderRange && m_selectionWasCaret == isCaret)
         return;
 #if ENABLE(SERVICE_CONTROLS)
     // Clear the current rects and create a notifier for the new rects we are about to gather.
@@ -220,13 +142,13 @@ void SelectionRangeData::repaint() const
 {
     HashSet<RenderBlock*> processedBlocks;
     RenderObject* end = nullptr;
-    if (m_selectionContext.end())
-        end = rendererAfterOffset(*m_selectionContext.end(), m_selectionContext.endOffset().value());
-    SelectionIterator selectionIterator(m_selectionContext.start());
-    for (auto* renderer = selectionIterator.current(); renderer && renderer != end; renderer = selectionIterator.next()) {
-        if (!renderer->canBeSelectionLeaf() && renderer != m_selectionContext.start() && renderer != m_selectionContext.end())
+    if (m_renderRange.end())
+        end = rendererAfterOffset(*m_renderRange.end(), m_renderRange.endOffset());
+    RenderRangeIterator highlightIterator(m_renderRange.start());
+    for (auto* renderer = highlightIterator.current(); renderer && renderer != end; renderer = highlightIterator.next()) {
+        if (!renderer->canBeSelectionLeaf() && renderer != m_renderRange.start() && renderer != m_renderRange.end())
             continue;
-        if (renderer->selectionState() == RenderObject::SelectionNone)
+        if (renderer->selectionState() == RenderObject::HighlightState::None)
             continue;
         RenderSelectionInfo(*renderer, true).repaint();
         // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
@@ -240,23 +162,30 @@ void SelectionRangeData::repaint() const
 
 IntRect SelectionRangeData::collectBounds(ClipToVisibleContent clipToVisibleContent) const
 {
-    SelectionData::RendererMap renderers;
-    auto* start = m_selectionContext.start();
+    LOG_WITH_STREAM(Selection, stream << "SelectionData::collectBounds (clip to visible " << (clipToVisibleContent == ClipToVisibleContent::Yes ? "yes" : "no"));
+
+    SelectionContext::RendererMap renderers;
+    auto* start = m_renderRange.start();
     RenderObject* stop = nullptr;
-    if (m_selectionContext.end())
-        stop = rendererAfterOffset(*m_selectionContext.end(), m_selectionContext.endOffset().value());
-    SelectionIterator selectionIterator(start);
+    if (m_renderRange.end())
+        stop = rendererAfterOffset(*m_renderRange.end(), m_renderRange.endOffset());
+
+    RenderRangeIterator selectionIterator(start);
     while (start && start != stop) {
-        if ((start->canBeSelectionLeaf() || start == m_selectionContext.start() || start == m_selectionContext.end())
-            && start->selectionState() != RenderObject::SelectionNone) {
+        if ((start->canBeSelectionLeaf() || start == m_renderRange.start() || start == m_renderRange.end())
+            && start->selectionState() != RenderObject::HighlightState::None) {
             // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
             renderers.set(start, makeUnique<RenderSelectionInfo>(*start, clipToVisibleContent == ClipToVisibleContent::Yes));
+            LOG_WITH_STREAM(Selection, stream << " added start " << *start << " with rect " << renderers.get(start)->rect());
+
             auto* block = start->containingBlock();
             while (block && !is<RenderView>(*block)) {
+                LOG_WITH_STREAM(Scrolling, stream << " added block " << *block);
                 std::unique_ptr<RenderSelectionInfo>& blockInfo = renderers.add(block, nullptr).iterator->value;
                 if (blockInfo)
                     break;
                 blockInfo = makeUnique<RenderSelectionInfo>(*block, clipToVisibleContent == ClipToVisibleContent::Yes);
+                LOG_WITH_STREAM(Selection, stream << " added containing block " << *block << " with rect " << blockInfo->rect());
                 block = block->containingBlock();
             }
         }
@@ -268,44 +197,51 @@ IntRect SelectionRangeData::collectBounds(ClipToVisibleContent clipToVisibleCont
     for (auto& info : renderers.values()) {
         // RenderSelectionInfo::rect() is in the coordinates of the repaintContainer, so map to page coordinates.
         LayoutRect currentRect = info->rect();
+        if (currentRect.isEmpty())
+            continue;
+
         if (auto* repaintContainer = info->repaintContainer()) {
-            FloatQuad absQuad = repaintContainer->localToAbsoluteQuad(FloatRect(currentRect));
+            FloatRect localRect = currentRect;
+            FloatQuad absQuad = repaintContainer->localToAbsoluteQuad(localRect);
             currentRect = absQuad.enclosingBoundingBox();
+            LOG_WITH_STREAM(Selection, stream << " rect " << localRect << " mapped to " << currentRect << " in container " << *repaintContainer);
         }
         selectionRect.unite(currentRect);
     }
+
+    LOG_WITH_STREAM(Selection, stream << " final rect " << selectionRect);
     return snappedIntRect(selectionRect);
 }
 
-void SelectionRangeData::apply(const Context& newSelection, RepaintMode blockRepaintMode)
+void SelectionRangeData::apply(const RenderRange& newSelection, RepaintMode blockRepaintMode)
 {
-    auto oldSelectionData = collect(m_selectionContext, blockRepaintMode == RepaintMode::NewXOROld);
+    auto oldSelectionData = collectSelectionData(m_renderRange, blockRepaintMode == RepaintMode::NewXOROld);
     // Remove current selection.
     for (auto* renderer : oldSelectionData.renderers.keys())
-        renderer->setSelectionStateIfNeeded(RenderObject::SelectionNone);
-    m_selectionContext = newSelection;
-    auto* selectionStart = m_selectionContext.start();
+        renderer->setSelectionStateIfNeeded(RenderObject::HighlightState::None);
+    m_renderRange = newSelection;
+    auto* selectionStart = m_renderRange.start();
     // Update the selection status of all objects between selectionStart and selectionEnd
-    if (selectionStart && selectionStart == m_selectionContext.end())
-        selectionStart->setSelectionStateIfNeeded(RenderObject::SelectionBoth);
+    if (selectionStart && selectionStart == m_renderRange.end())
+        selectionStart->setSelectionStateIfNeeded(RenderObject::HighlightState::Both);
     else {
         if (selectionStart)
-            selectionStart->setSelectionStateIfNeeded(RenderObject::SelectionStart);
-        if (auto* end = m_selectionContext.end())
-            end->setSelectionStateIfNeeded(RenderObject::SelectionEnd);
+            selectionStart->setSelectionStateIfNeeded(RenderObject::HighlightState::Start);
+        if (auto* end = m_renderRange.end())
+            end->setSelectionStateIfNeeded(RenderObject::HighlightState::End);
     }
 
     RenderObject* selectionEnd = nullptr;
-    auto* selectionDataEnd = m_selectionContext.end();
+    auto* selectionDataEnd = m_renderRange.end();
     if (selectionDataEnd)
-        selectionEnd = rendererAfterOffset(*selectionDataEnd, m_selectionContext.endOffset().value());
-    SelectionIterator selectionIterator(selectionStart);
+        selectionEnd = rendererAfterOffset(*selectionDataEnd, m_renderRange.endOffset());
+    RenderRangeIterator selectionIterator(selectionStart);
     for (auto* currentRenderer = selectionStart; currentRenderer && currentRenderer != selectionEnd; currentRenderer = selectionIterator.next()) {
-        if (currentRenderer == selectionStart || currentRenderer == m_selectionContext.end())
+        if (currentRenderer == selectionStart || currentRenderer == m_renderRange.end())
             continue;
         if (!currentRenderer->canBeSelectionLeaf())
             continue;
-        currentRenderer->setSelectionStateIfNeeded(RenderObject::SelectionInside);
+        currentRenderer->setSelectionStateIfNeeded(RenderObject::HighlightState::Inside);
     }
 
     if (blockRepaintMode != RepaintMode::Nothing)
@@ -313,11 +249,11 @@ void SelectionRangeData::apply(const Context& newSelection, RepaintMode blockRep
 
     // Now that the selection state has been updated for the new objects, walk them again and
     // put them in the new objects list.
-    SelectionData::RendererMap newSelectedRenderers;
-    SelectionData::RenderBlockMap newSelectedBlocks;
-    selectionIterator = SelectionIterator(selectionStart);
+    SelectionContext::RendererMap newSelectedRenderers;
+    SelectionContext::RenderBlockMap newSelectedBlocks;
+    selectionIterator = RenderRangeIterator(selectionStart);
     for (auto* currentRenderer = selectionStart; currentRenderer && currentRenderer != selectionEnd; currentRenderer = selectionIterator.next()) {
-        if (isValidRendererForSelection(*currentRenderer, m_selectionContext)) {
+        if (isValidRendererForSelection(*currentRenderer, m_renderRange)) {
             std::unique_ptr<RenderSelectionInfo> selectionInfo = makeUnique<RenderSelectionInfo>(*currentRenderer, true);
 #if ENABLE(SERVICE_CONTROLS)
             for (auto& rect : selectionInfo->collectedSelectionRects())
@@ -349,8 +285,8 @@ void SelectionRangeData::apply(const Context& newSelection, RepaintMode blockRep
         auto* newInfo = newSelectedRenderers.get(renderer);
         auto* oldInfo = selectedRendererInfo.value.get();
         if (!newInfo || oldInfo->rect() != newInfo->rect() || oldInfo->state() != newInfo->state()
-            || (m_selectionContext.start() == renderer && oldSelectionData.startOffset != m_selectionContext.startOffset())
-            || (m_selectionContext.end() == renderer && oldSelectionData.endOffset != m_selectionContext.endOffset())) {
+            || (m_renderRange.start() == renderer && oldSelectionData.startOffset != m_renderRange.startOffset())
+            || (m_renderRange.end() == renderer && oldSelectionData.endOffset != m_renderRange.endOffset())) {
             oldInfo->repaint();
             if (newInfo) {
                 newInfo->repaint();

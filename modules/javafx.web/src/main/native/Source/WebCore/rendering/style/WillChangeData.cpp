@@ -66,6 +66,9 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
 {
     switch (property) {
     case CSSPropertyPerspective:
+    case CSSPropertyScale:
+    case CSSPropertyRotate:
+    case CSSPropertyTranslate:
     case CSSPropertyTransform:
     case CSSPropertyTransformStyle:
     case CSSPropertyWebkitTransformStyle:
@@ -117,6 +120,9 @@ static bool propertyTriggersCompositingOnBoxesOnly(CSSPropertyID property)
     // Similarly, we don't want -webkit-overflow-scrolling-touch to
     // always composite if there's no scrollable overflow.
     switch (property) {
+    case CSSPropertyScale:
+    case CSSPropertyRotate:
+    case CSSPropertyTranslate:
     case CSSPropertyTransform:
         return true;
     default:

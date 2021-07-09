@@ -149,6 +149,16 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
             else
                 isTop = false;
 
+            if (value & SpecBigInt64Array)
+                strOut.print("BigInt64Array");
+            else
+                isTop = false;
+
+            if (value & SpecBigUint64Array)
+                strOut.print("BigUint64Array");
+            else
+                isTop = false;
+
             if (value & SpecFunction)
                 strOut.print("Function");
             else
@@ -359,6 +369,10 @@ static const char* speculationToAbbreviatedString(SpeculatedType prediction)
         return "<Float32array>";
     if (isFloat64ArraySpeculation(prediction))
         return "<Float64array>";
+    if (isBigInt64ArraySpeculation(prediction))
+        return "<BigInt64array>";
+    if (isBigUint64ArraySpeculation(prediction))
+        return "<BigUint64array>";
     if (isDirectArgumentsSpeculation(prediction))
         return "<DirectArguments>";
     if (isScopedArgumentsSpeculation(prediction))
@@ -424,6 +438,10 @@ SpeculatedType speculationFromTypedArrayType(TypedArrayType type)
         return SpecFloat32Array;
     case TypeFloat64:
         return SpecFloat64Array;
+    case TypeBigInt64:
+        return SpecBigInt64Array;
+    case TypeBigUint64:
+        return SpecBigUint64Array;
     case NotTypedArray:
     case TypeDataView:
         break;
@@ -548,17 +566,45 @@ SpeculatedType speculationFromStructure(Structure* structure)
     return filteredResult;
 }
 
+ALWAYS_INLINE static bool isSanePointer(const void* pointer)
+{
+    // FIXME: rdar://69036888: remove this when no longer needed.
+#if CPU(ADDRESS64)
+    uintptr_t pointerAsInt = bitwise_cast<uintptr_t>(pointer);
+    uintptr_t canonicalPointerBits = pointerAsInt << (64 - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH));
+    uintptr_t nonCanonicalPointerBits = pointerAsInt >> OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
+    return !nonCanonicalPointerBits && canonicalPointerBits;
+#else
+    UNUSED_PARAM(pointer);
+    return true;
+#endif
+}
+
 SpeculatedType speculationFromCell(JSCell* cell)
 {
+    if (UNLIKELY(!isSanePointer(cell))) {
+        ASSERT_NOT_REACHED();
+        return SpecNone;
+    }
     if (cell->isString()) {
         JSString* string = jsCast<JSString*>(cell);
         if (const StringImpl* impl = string->tryGetValueImpl()) {
+            if (UNLIKELY(!isSanePointer(impl))) {
+                ASSERT_NOT_REACHED();
+                return SpecNone;
+            }
             if (impl->isAtom())
                 return SpecStringIdent;
         }
         return SpecString;
     }
-    return speculationFromStructure(cell->structure());
+    // FIXME: rdar://69036888: undo this when no longer needed.
+    auto* structure = cell->vm().tryGetStructure(cell->structureID());
+    if (UNLIKELY(!isSanePointer(structure))) {
+        ASSERT_NOT_REACHED();
+        return SpecNone;
+    }
+    return speculationFromStructure(structure);
 }
 
 SpeculatedType speculationFromValue(JSValue value)
@@ -628,6 +674,12 @@ TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType type)
 
     if (isFloat64ArraySpeculation(type))
         return TypeFloat64;
+
+    if (isBigInt64ArraySpeculation(type))
+        return TypeBigInt64;
+
+    if (isBigUint64ArraySpeculation(type))
+        return TypeBigUint64;
 
     return NotTypedArray;
 }
@@ -874,6 +926,10 @@ SpeculatedType speculationFromString(const char* speculation)
         return SpecFloat32Array;
     if (!strncmp(speculation, "SpecFloat64Array", strlen("SpecFloat64Array")))
         return SpecFloat64Array;
+    if (!strncmp(speculation, "SpecBigInt64Array", strlen("SpecBigInt64Array")))
+        return SpecBigInt64Array;
+    if (!strncmp(speculation, "SpecBigUint64Array", strlen("SpecBigUint64Array")))
+        return SpecBigUint64Array;
     if (!strncmp(speculation, "SpecTypedArrayView", strlen("SpecTypedArrayView")))
         return SpecTypedArrayView;
     if (!strncmp(speculation, "SpecDirectArguments", strlen("SpecDirectArguments")))

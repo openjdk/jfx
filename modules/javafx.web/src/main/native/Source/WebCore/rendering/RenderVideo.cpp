@@ -65,8 +65,15 @@ RenderVideo::~RenderVideo()
 void RenderVideo::willBeDestroyed()
 {
     visibleInViewportStateChanged();
+
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    auto player = videoElement().player();
+    if (player && videoElement().webkitPresentationMode() != HTMLVideoElement::VideoPresentationMode::PictureInPicture)
+        player->setVisible(false);
+#else
     if (auto player = videoElement().player())
         player->setVisible(false);
+#endif
 
     RenderMedia::willBeDestroyed();
 }
@@ -179,6 +186,11 @@ bool RenderVideo::shouldDisplayVideo() const
     return !videoElement().shouldDisplayPosterImage();
 }
 
+bool RenderVideo::failedToLoadPosterImage() const
+{
+    return imageResource().errorOccurred();
+}
+
 void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     auto mediaPlayer = videoElement().player();
@@ -219,7 +231,7 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
         paintIntoRect(paintInfo, rect);
     else if (!videoElement().isFullscreen() || !mediaPlayer->supportsAcceleratedRendering()) {
         if (paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers))
-            mediaPlayer->paintCurrentFrameInContext(context, rect);
+            context.paintFrameForMedia(*mediaPlayer, rect);
         else
             mediaPlayer->paint(context, rect);
     }

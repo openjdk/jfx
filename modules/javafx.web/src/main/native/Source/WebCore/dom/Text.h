@@ -57,8 +57,6 @@ public:
 
     String debugDescription() const final;
 
-    void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength) final;
-
 protected:
     Text(Document& document, const String& data, ConstructionType type)
         : CharacterData(document, data, type)
@@ -70,12 +68,9 @@ private:
     NodeType nodeType() const override;
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
     bool childTypeAllowed(NodeType) const override;
+    void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges) final;
 
     virtual Ref<Text> virtualCreate(const String&);
-
-#if ENABLE(TREE_DEBUGGING)
-    void formatForDebugger(char* buffer, unsigned length) const override;
-#endif
 };
 
 } // namespace WebCore

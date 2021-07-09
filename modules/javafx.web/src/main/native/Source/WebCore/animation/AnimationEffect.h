@@ -61,7 +61,7 @@ public:
     ExceptionOr<void> bindingsUpdateTiming(Optional<OptionalEffectTiming>);
     ExceptionOr<void> updateTiming(Optional<OptionalEffectTiming>);
 
-    virtual void apply(RenderStyle&, Optional<Seconds> = WTF::nullopt) = 0;
+    virtual void apply(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, Optional<Seconds> = WTF::nullopt) = 0;
     virtual void invalidate() = 0;
     virtual void animationDidTick() = 0;
     virtual void animationDidPlay() = 0;
@@ -102,10 +102,12 @@ public:
 
     void updateStaticTimingProperties();
 
-    virtual Optional<double> progressUntilNextStep(double) const;
+    virtual Seconds timeToNextTick() const { return Seconds::infinity(); }
 
 protected:
     explicit AnimationEffect();
+
+    virtual Optional<double> progressUntilNextStep(double) const;
 
 private:
     enum class ComputedDirection : uint8_t { Forwards, Reverse };

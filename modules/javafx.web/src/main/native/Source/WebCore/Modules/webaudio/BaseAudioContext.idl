@@ -26,8 +26,10 @@
 [
     ActiveDOMObject,
     Conditional=WEB_AUDIO,
+    CustomToJSObject,
     EnabledBySetting=WebAudio&ModernUnprefixedWebAudio,
     ExportMacro=WEBCORE_EXPORT,
+    Exposed=Window
 ] interface BaseAudioContext : EventTarget {
     // All rendered audio ultimately connects to destination, which represents the audio hardware.
     readonly attribute AudioDestinationNode destination;
@@ -40,6 +42,8 @@
 
     // All panning is relative to this listener.
     readonly attribute AudioListener listener;
+
+    [SameObject, SecureContext, EnabledBySetting=AudioWorklet] readonly attribute AudioWorklet audioWorklet;
 
     readonly attribute AudioContextState state;
     attribute EventHandler onstatechange;
@@ -64,6 +68,9 @@
     [MayThrowException] ScriptProcessorNode createScriptProcessor(optional unsigned long bufferSize = 0, optional unsigned long numberOfInputChannels = 2, optional unsigned long numberOfOutputChannels = 2);
     [MayThrowException] OscillatorNode createOscillator();
     [MayThrowException] PeriodicWave createPeriodicWave(sequence<float> real, sequence<float> imag, optional PeriodicWaveOptions options);
+    [MayThrowException] ConstantSourceNode createConstantSource();
+    [MayThrowException] StereoPannerNode createStereoPanner();
+    [MayThrowException, CallWith=ScriptExecutionContext] IIRFilterNode createIIRFilter(sequence<double> feedforward, sequence<double> feedback);
 
     // Channel splitting and merging
     [MayThrowException] ChannelSplitterNode createChannelSplitter(optional unsigned long numberOfOutputs = 6);

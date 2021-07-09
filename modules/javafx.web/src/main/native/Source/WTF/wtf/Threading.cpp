@@ -64,11 +64,17 @@ static Optional<size_t> stackSize(ThreadType threadType)
 
 #if defined(DEFAULT_THREAD_STACK_SIZE_IN_KB) && DEFAULT_THREAD_STACK_SIZE_IN_KB > 0
     return DEFAULT_THREAD_STACK_SIZE_IN_KB * 1024;
+#elif OS(LINUX) && !defined(__BIONIC__) && !defined(__GLIBC__)
+    // on libcs other than glibc and bionic (e.g. musl) we are either unsure how big
+    // the default thread stack is, or we know it's too small - pick a robust default
+    return 1 * MB;
 #else
     // Use the platform's default stack size
     return WTF::nullopt;
 #endif
 }
+
+std::atomic<uint32_t> Thread::s_uid { 0 };
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
@@ -93,7 +99,11 @@ public:
 
 HashSet<Thread*>& Thread::allThreads(const LockHolder&)
 {
-    static NeverDestroyed<HashSet<Thread*>> allThreads;
+    static LazyNeverDestroyed<HashSet<Thread*>> allThreads;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        allThreads.construct();
+    });
     return allThreads;
 }
 
@@ -140,7 +150,11 @@ void Thread::initializeInThread()
 #if USE(WEB_THREAD)
     // On iOS, one AtomStringTable is shared between the main UI thread and the WebThread.
     if (isWebThread() || isUIThread()) {
-        static NeverDestroyed<AtomStringTable> sharedStringTable;
+        static LazyNeverDestroyed<AtomStringTable> sharedStringTable;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            sharedStringTable.construct();
+        });
         m_currentAtomStringTable = &sharedStringTable.get();
     }
 #endif
@@ -177,7 +191,7 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     function();
 }
 
-Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType)
+Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos)
 {
     WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
@@ -190,7 +204,7 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, Thre
     context->ref();
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr(), stackSize(threadType));
+        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos);
         RELEASE_ASSERT(success);
         context->stage = NewThreadContext::Stage::EstablishedHandle;
 

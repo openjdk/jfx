@@ -30,6 +30,7 @@
 
 #include "ExceptionOr.h"
 #include "IntSize.h"
+#include <JavaScriptCore/TypedArrayInlines.h>
 #include <JavaScriptCore/Uint8ClampedArray.h>
 
 namespace WebCore {
@@ -50,8 +51,8 @@ public:
     Ref<ImageData> deepClone() const;
 
 private:
-    explicit ImageData(const IntSize&);
     ImageData(const IntSize&, Ref<Uint8ClampedArray>&&);
+    static Checked<unsigned, RecordOverflow> dataSize(const IntSize&);
 
     IntSize m_size;
     Ref<Uint8ClampedArray> m_data;

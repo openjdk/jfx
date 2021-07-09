@@ -31,10 +31,51 @@ namespace JSC {
 #define InvalidPrototypeChain (std::numeric_limits<size_t>::max())
 
 NEVER_INLINE JSValue jsAddSlowCase(JSGlobalObject*, JSValue, JSValue);
-JSValue jsTypeStringForValue(JSGlobalObject*, JSValue);
-JSValue jsTypeStringForValue(VM&, JSGlobalObject*, JSValue);
-bool jsIsObjectTypeOrNull(JSGlobalObject*, JSValue);
+JSString* jsTypeStringForValueWithConcurrency(VM&, JSGlobalObject*, JSValue, Concurrency);
 size_t normalizePrototypeChain(JSGlobalObject*, JSCell*, bool& sawPolyProto);
+
+template<Concurrency concurrency>
+ALWAYS_INLINE TriState jsTypeofIsObjectWithConcurrency(JSGlobalObject* globalObject, JSValue value)
+{
+    VM& vm = globalObject->vm();
+    if (!value.isObject())
+        return triState(value.isNull());
+    JSObject* object = asObject(value);
+    if (object->structure(vm)->masqueradesAsUndefined(globalObject))
+        return TriState::False;
+    return invert(object->isCallableWithConcurrency<concurrency>(vm));
+}
+
+template<Concurrency concurrency>
+ALWAYS_INLINE TriState jsTypeofIsFunctionWithConcurrency(JSGlobalObject* globalObject, JSValue value)
+{
+    VM& vm = globalObject->vm();
+    if (!value.isObject())
+        return TriState::False;
+    JSObject* object = asObject(value);
+    if (object->structure(vm)->masqueradesAsUndefined(globalObject))
+        return TriState::False;
+    return object->isCallableWithConcurrency<concurrency>(vm);
+}
+
+inline JSString* jsTypeStringForValue(JSGlobalObject* globalObject, JSValue value)
+{
+    return jsTypeStringForValueWithConcurrency(getVM(globalObject), globalObject, value, Concurrency::MainThread);
+}
+
+ALWAYS_INLINE bool jsTypeofIsObject(JSGlobalObject* globalObject, JSValue value)
+{
+    auto result = jsTypeofIsObjectWithConcurrency<Concurrency::MainThread>(globalObject, value);
+    ASSERT(result != TriState::Indeterminate);
+    return result == TriState::True;
+}
+
+ALWAYS_INLINE bool jsTypeofIsFunction(JSGlobalObject* globalObject, JSValue value)
+{
+    auto result = jsTypeofIsFunctionWithConcurrency<Concurrency::MainThread>(globalObject, value);
+    ASSERT(result != TriState::Indeterminate);
+    return result == TriState::True;
+}
 
 ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, const String& u1, JSString* s2)
 {
@@ -607,7 +648,7 @@ ALWAYS_INLINE JSValue jsDiv(JSGlobalObject* globalObject, JSValue v1, JSValue v2
 ALWAYS_INLINE JSValue jsRemainder(JSGlobalObject* globalObject, JSValue v1, JSValue v2)
 {
     auto doubleOp = [] (double left, double right) -> double {
-        return jsMod(left, right);
+        return Math::fmodDouble(left, right);
     };
 
     auto bigIntOp = [] (JSGlobalObject* globalObject, auto left, auto right) {

@@ -46,7 +46,7 @@ namespace WebCore {
 
 static GraphicsContext& scratchContext()
 {
-    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated);
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated);
     static GraphicsContext &context = img->context();
     return context;
 }

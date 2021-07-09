@@ -43,7 +43,7 @@ public:
 
     // AudioNode
     void process(size_t framesToProcess) override;
-    void reset() override;
+    void processOnlyAudioParams(size_t framesToProcess) final;
     void initialize() override;
     void uninitialize() override;
 
@@ -67,6 +67,7 @@ protected:
 private:
     double tailTime() const override;
     double latencyTime() const override;
+    bool requiresTailProcessing() const final;
 
     std::unique_ptr<DynamicsCompressor> m_dynamicsCompressor;
     Ref<AudioParam> m_threshold;

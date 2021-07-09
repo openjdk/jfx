@@ -27,20 +27,15 @@
 
 #if ENABLE(WEBGPU)
 
+#include "GPUPlatformTypes.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
-
-OBJC_PROTOCOL(MTLSamplerState);
 
 namespace WebCore {
 
 class GPUDevice;
 
 struct GPUSamplerDescriptor;
-
-using PlatformSampler = MTLSamplerState;
-using PlatformSamplerSmartPtr = RetainPtr<MTLSamplerState>;
 
 class GPUSampler : public RefCounted<GPUSampler> {
 public:

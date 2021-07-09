@@ -46,6 +46,7 @@
 #include "LegacySchemeRegistry.h"
 #include "LoadTiming.h"
 #include "LoaderStrategy.h"
+#include "MixedContentChecker.h"
 #include "Performance.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
@@ -266,6 +267,19 @@ void DocumentThreadableLoader::cancel()
     }
     clearResource();
     m_client = nullptr;
+}
+
+void DocumentThreadableLoader::computeIsDone()
+{
+    if (!m_async || m_preflightChecker || !m_resource) {
+        if (m_client)
+            m_client->notifyIsDone(m_async && !m_preflightChecker && !m_resource);
+        return;
+    }
+    platformStrategies()->loaderStrategy()->isResourceLoadFinished(*m_resource, [this, weakThis = makeWeakPtr(*this)](bool isDone) {
+        if (weakThis && m_client)
+            m_client->notifyIsDone(isDone);
+    });
 }
 
 void DocumentThreadableLoader::setDefersLoading(bool value)
@@ -548,8 +562,7 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
 
         request.setAllowCookies(m_options.storedCredentialsPolicy == StoredCredentialsPolicy::Use);
         CachedResourceRequest newRequest(WTFMove(request), options);
-        if (RuntimeEnabledFeatures::sharedFeatures().resourceTimingEnabled())
-            newRequest.setInitiator(m_options.initiator);
+        newRequest.setInitiator(m_options.initiator);
         newRequest.setOrigin(securityOrigin());
 
         ASSERT(!m_resource);
@@ -578,10 +591,10 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
     ResourceError error;
     ResourceResponse response;
     unsigned long identifier = std::numeric_limits<unsigned long>::max();
-    if (m_document.frame()) {
-        auto& frameLoader = m_document.frame()->loader();
-        if (!frameLoader.mixedContentChecker().canRunInsecureContent(m_document.securityOrigin(), requestURL))
+    if (auto* frame = m_document.frame()) {
+        if (!MixedContentChecker::canRunInsecureContent(*frame, m_document.securityOrigin(), requestURL))
             return;
+        auto& frameLoader = frame->loader();
         identifier = frameLoader.loadResourceSynchronously(request, m_options.clientCredentialPolicy, m_options, *m_originalHeaders, error, response, data);
     }
 
@@ -639,20 +652,18 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
     if (data)
         didReceiveData(identifier, data->data(), data->size());
 
-    if (RuntimeEnabledFeatures::sharedFeatures().resourceTimingEnabled()) {
-        const auto* timing = response.deprecatedNetworkLoadMetricsOrNull();
-        Optional<NetworkLoadMetrics> empty;
-        if (!timing) {
-            empty.emplace();
-            timing = &empty.value();
-        }
-        auto resourceTiming = ResourceTiming::fromSynchronousLoad(requestURL, m_options.initiator, loadTiming, *timing, response, securityOrigin());
-        if (options().initiatorContext == InitiatorContext::Worker)
-            finishedTimingForWorkerLoad(resourceTiming);
-        else {
-            if (auto* window = document().domWindow())
-                window->performance().addResourceTiming(WTFMove(resourceTiming));
-        }
+    const auto* timing = response.deprecatedNetworkLoadMetricsOrNull();
+    Optional<NetworkLoadMetrics> empty;
+    if (!timing) {
+        empty.emplace();
+        timing = &empty.value();
+    }
+    auto resourceTiming = ResourceTiming::fromSynchronousLoad(requestURL, m_options.initiator, loadTiming, *timing, response, securityOrigin());
+    if (options().initiatorContext == InitiatorContext::Worker)
+        finishedTimingForWorkerLoad(resourceTiming);
+    else {
+        if (auto* window = document().domWindow())
+            window->performance().addResourceTiming(WTFMove(resourceTiming));
     }
 
     didFinishLoading(identifier);

@@ -34,6 +34,7 @@
 #include <wtf/Vector.h>
 #include <wtf/text/ASCIIFastPath.h>
 #include <wtf/text/ConversionMode.h>
+#include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringCommon.h>
 #include <wtf/text/StringHasher.h>
 #include <wtf/text/UTF8ConversionError.h>
@@ -196,6 +197,7 @@ private:
     static_assert(s_flagCount <= StringHasher::flagCount, "StringHasher reserves enough bits for StringImpl flags");
     static constexpr const unsigned s_flagStringKindCount = 4;
 
+    static constexpr const unsigned s_hashZeroValue = 0;
     static constexpr const unsigned s_hashFlagStringKindIsAtom = 1u << (s_flagStringKindCount);
     static constexpr const unsigned s_hashFlagStringKindIsSymbol = 1u << (s_flagStringKindCount + 1);
     static constexpr const unsigned s_hashMaskStringKind = s_hashFlagStringKindIsAtom | s_hashFlagStringKindIsSymbol;
@@ -422,7 +424,7 @@ public:
     Ref<StringImpl> simplifyWhiteSpace(CodeUnitMatchFunction);
 
     Ref<StringImpl> stripLeadingAndTrailingCharacters(CodeUnitMatchFunction);
-    Ref<StringImpl> removeCharacters(CodeUnitMatchFunction);
+    template<typename Predicate> Ref<StringImpl> removeCharacters(const Predicate&);
 
     bool isAllASCII() const;
     bool isAllLatin1() const;
@@ -514,7 +516,7 @@ private:
     template<CaseConvertType, typename CharacterType> static Ref<StringImpl> convertASCIICase(StringImpl&, const CharacterType*, unsigned);
 
     template<class CodeUnitPredicate> Ref<StringImpl> stripMatchedCharacters(CodeUnitPredicate);
-    template<typename CharacterType> ALWAYS_INLINE Ref<StringImpl> removeCharacters(const CharacterType* characters, CodeUnitMatchFunction);
+    template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImpl> removeCharactersImpl(const CharacterType* characters, const Predicate&);
     template<typename CharacterType, class CodeUnitPredicate> Ref<StringImpl> simplifyMatchedCharactersToSpace(CodeUnitPredicate);
     template<typename CharacterType> static Ref<StringImpl> constructInternal(StringImpl&, unsigned);
     template<typename CharacterType> static Ref<StringImpl> createUninitializedInternal(unsigned, CharacterType*&);
@@ -873,7 +875,7 @@ inline StringImpl::StringImpl(unsigned length, Force8Bit)
 }
 
 inline StringImpl::StringImpl(unsigned length)
-    : StringImplShape(s_refCountIncrement, length, tailPointer<UChar>(), StringNormal | BufferInternal)
+    : StringImplShape(s_refCountIncrement, length, tailPointer<UChar>(), s_hashZeroValue | StringNormal | BufferInternal)
 {
     ASSERT(m_data16);
     ASSERT(m_length);
@@ -900,7 +902,7 @@ inline StringImpl::StringImpl(MallocPtr<LChar, Malloc> characters, unsigned leng
 }
 
 inline StringImpl::StringImpl(const UChar* characters, unsigned length, ConstructWithoutCopyingTag)
-    : StringImplShape(s_refCountIncrement, length, characters, StringNormal | BufferInternal)
+    : StringImplShape(s_refCountIncrement, length, characters, s_hashZeroValue | StringNormal | BufferInternal)
 {
     ASSERT(m_data16);
     ASSERT(m_length);
@@ -919,7 +921,7 @@ inline StringImpl::StringImpl(const LChar* characters, unsigned length, Construc
 
 template<typename Malloc>
 inline StringImpl::StringImpl(MallocPtr<UChar, Malloc> characters, unsigned length)
-    : StringImplShape(s_refCountIncrement, length, static_cast<const UChar*>(nullptr), StringNormal | BufferOwned)
+    : StringImplShape(s_refCountIncrement, length, static_cast<const UChar*>(nullptr), s_hashZeroValue | StringNormal | BufferOwned)
 {
     if constexpr (std::is_same_v<Malloc, StringImplMalloc>)
         m_data16 = characters.leakPtr();
@@ -949,7 +951,7 @@ inline StringImpl::StringImpl(const LChar* characters, unsigned length, Ref<Stri
 }
 
 inline StringImpl::StringImpl(const UChar* characters, unsigned length, Ref<StringImpl>&& base)
-    : StringImplShape(s_refCountIncrement, length, characters, StringNormal | BufferSubstring)
+    : StringImplShape(s_refCountIncrement, length, characters, s_hashZeroValue | StringNormal | BufferSubstring)
 {
     ASSERT(!is8Bit());
     ASSERT(m_data16);
@@ -1153,7 +1155,7 @@ inline StringImpl::StringImpl(CreateSymbolTag, const LChar* characters, unsigned
 }
 
 inline StringImpl::StringImpl(CreateSymbolTag, const UChar* characters, unsigned length)
-    : StringImplShape(s_refCountIncrement, length, characters, StringSymbol | BufferSubstring)
+    : StringImplShape(s_refCountIncrement, length, characters, s_hashZeroValue | StringSymbol | BufferSubstring)
 {
     ASSERT(!is8Bit());
     ASSERT(m_data16);
@@ -1279,6 +1281,44 @@ template<unsigned length> inline bool equalLettersIgnoringASCIICase(const String
 template<unsigned length> inline bool equalLettersIgnoringASCIICase(const StringImpl* string, const char (&lowercaseLetters)[length])
 {
     return string && equalLettersIgnoringASCIICase(*string, lowercaseLetters);
+}
+
+template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImpl> StringImpl::removeCharactersImpl(const CharacterType* characters, const Predicate& findMatch)
+{
+    auto* from = characters;
+    auto* fromEnd = from + m_length;
+
+    // Assume the common case will not remove any characters
+    while (from != fromEnd && !findMatch(*from))
+        ++from;
+    if (from == fromEnd)
+        return *this;
+
+    StringBuffer<CharacterType> data(m_length);
+    auto* to = data.characters();
+    unsigned outc = from - characters;
+
+    if (outc)
+        copyCharacters(to, characters, outc);
+
+    do {
+        while (from != fromEnd && findMatch(*from))
+            ++from;
+        while (from != fromEnd && !findMatch(*from))
+            to[outc++] = *from++;
+    } while (from != fromEnd);
+
+    data.shrink(outc);
+
+    return adopt(WTFMove(data));
+}
+
+template<typename Predicate>
+inline Ref<StringImpl> StringImpl::removeCharacters(const Predicate& findMatch)
+{
+    if (is8Bit())
+        return removeCharactersImpl(characters8(), findMatch);
+    return removeCharactersImpl(characters16(), findMatch);
 }
 
 } // namespace WTF

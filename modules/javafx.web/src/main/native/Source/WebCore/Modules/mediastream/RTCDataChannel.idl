@@ -27,6 +27,7 @@
     ActiveDOMObject,
     Conditional=WEB_RTC,
     EnabledAtRuntime=PeerConnection,
+    Exposed=Window
 ] interface RTCDataChannel : EventTarget {
     // FIXME: Add support for priority attribute.
 
@@ -43,12 +44,12 @@
 
     attribute DOMString binaryType;
 
-    [MayThrowException] void send(ArrayBuffer data);
-    [MayThrowException] void send(ArrayBufferView data);
-    [MayThrowException] void send(Blob data);
-    [MayThrowException] void send(USVString data);
+    [MayThrowException] undefined send(ArrayBuffer data);
+    [MayThrowException] undefined send(ArrayBufferView data);
+    [MayThrowException] undefined send(Blob data);
+    [MayThrowException] undefined send(USVString data);
 
-    void close();
+    undefined close();
 
     attribute EventHandler onopen;
     attribute EventHandler onerror;

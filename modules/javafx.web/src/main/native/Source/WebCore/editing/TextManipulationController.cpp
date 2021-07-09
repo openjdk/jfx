@@ -31,6 +31,7 @@
 #include "Editing.h"
 #include "ElementAncestorIterator.h"
 #include "EventLoop.h"
+#include "FrameView.h"
 #include "HTMLBRElement.h"
 #include "HTMLElement.h"
 #include "HTMLInputElement.h"
@@ -40,6 +41,7 @@
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "PseudoElement.h"
+#include "RenderBox.h"
 #include "ScriptDisallowedScope.h"
 #include "Text.h"
 #include "TextIterator.h"
@@ -297,6 +299,12 @@ static Optional<TextManipulationController::ManipulationTokenInfo> tokenInfo(Nod
         result.tagName = element->tagName();
         if (element->hasAttributeWithoutSynchronization(HTMLNames::roleAttr))
             result.roleAttribute = element->attributeWithoutSynchronization(HTMLNames::roleAttr);
+        if (auto frame = makeRefPtr(node->document().frame()); frame && frame->view() && element->renderer()) {
+            // FIXME: This doesn't account for overflow clip.
+            auto elementRect = element->renderer()->absoluteAnchorRect();
+            auto visibleContentRect = frame->view()->visibleContentRect();
+            result.isVisible = visibleContentRect.intersects(enclosingIntRect(elementRect));
+        }
     }
     return result;
 }
@@ -558,17 +566,20 @@ void TextManipulationController::didCreateRendererForTextNode(Text& text)
 
 void TextManipulationController::scheduleObservationUpdate()
 {
-    // An update is already scheduled.
-    if (!m_textNodesWithNewRenderer.isEmpty() || !m_manipulatedTextsWithNewContent.isEmpty() || !m_elementsWithNewRenderer.computesEmpty())
+    if (m_didScheduleObservationUpdate)
         return;
 
     if (!m_document)
         return;
 
+    m_didScheduleObservationUpdate = true;
+
     m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, [weakThis = makeWeakPtr(*this)] {
         auto* controller = weakThis.get();
         if (!controller)
             return;
+
+        controller->m_didScheduleObservationUpdate = false;
 
         HashSet<Ref<Node>> nodesToObserve;
         for (auto& weakElement : controller->m_elementsWithNewRenderer)
@@ -592,17 +603,23 @@ void TextManipulationController::scheduleObservationUpdate()
 
         RefPtr<Node> commonAncestor;
         for (auto& node : nodesToObserve) {
+            if (!node->isConnected())
+                continue;
+
+            if (auto host = makeRefPtr(node->shadowHost()); is<HTMLInputElement>(host.get()) && downcast<HTMLInputElement>(*host).lastChangeWasUserEdit())
+                continue;
+
             if (!commonAncestor)
                 commonAncestor = is<ContainerNode>(node.get()) ? node.ptr() : node->parentNode();
             else if (!node->isDescendantOf(commonAncestor.get()))
-                commonAncestor = commonInclusiveAncestor(*commonAncestor, node.get());
+                commonAncestor = commonInclusiveAncestor<ComposedTree>(*commonAncestor, node.get());
         }
 
         auto start = firstPositionInOrBeforeNode(commonAncestor.get());
         auto end = lastPositionInOrAfterNode(commonAncestor.get());
         controller->observeParagraphs(start, end);
 
-        if (controller->m_items.isEmpty()) {
+        if (controller->m_items.isEmpty() && commonAncestor) {
             controller->m_manipulatedNodes.add(commonAncestor.get());
             return;
         }
@@ -630,6 +647,9 @@ void TextManipulationController::addItem(ManipulationItemData&& itemData)
 
 void TextManipulationController::flushPendingItemsForCallback()
 {
+    if (m_pendingItemsForCallback.isEmpty())
+        return;
+
     m_callback(*m_document, m_pendingItemsForCallback);
     m_pendingItemsForCallback.clear();
 }
@@ -817,10 +837,13 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
         if (!commonAncestor)
             commonAncestor = parentNode;
         else if (!parentNode->isDescendantOf(commonAncestor.get())) {
-            commonAncestor = commonInclusiveAncestor(*commonAncestor, *parentNode);
+            commonAncestor = commonInclusiveAncestor<ComposedTree>(*commonAncestor, *parentNode);
             ASSERT(commonAncestor);
         }
     }
+
+    if (!firstContentNode)
+        return ManipulationFailureType::ContentChanged;
 
     while (lastChildOfCommonAncestorInRange && lastChildOfCommonAncestorInRange->parentNode() != commonAncestor)
         lastChildOfCommonAncestorInRange = lastChildOfCommonAncestorInRange->parentNode();
@@ -829,8 +852,20 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
         nodesToRemove.remove(*node);
 
     HashSet<Ref<Node>> reusedOriginalNodes;
-    Vector<NodeEntry> lastTopDownPath;
     Vector<NodeInsertion> insertions;
+    auto startTopDownPath = getPath(commonAncestor.get(), firstContentNode.get());
+    while (!startTopDownPath.isEmpty()) {
+        auto lastNode = startTopDownPath.last();
+        ASSERT(is<ContainerNode>(lastNode.get()));
+        if (!downcast<ContainerNode>(lastNode.get()).hasOneChild())
+            break;
+        nodesToRemove.add(startTopDownPath.takeLast());
+    }
+    auto lastTopDownPath = startTopDownPath.map([&](auto node) -> NodeEntry {
+        reusedOriginalNodes.add(node.copyRef());
+        return { node, node };
+    });
+
     for (size_t index = 0; index < replacementTokens.size(); ++index) {
         auto& replacementToken = replacementTokens[index];
         auto it = tokenExchangeMap.find(replacementToken.identifier);

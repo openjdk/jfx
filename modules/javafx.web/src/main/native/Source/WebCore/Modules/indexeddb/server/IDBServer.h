@@ -101,6 +101,7 @@ public:
 
     std::unique_ptr<IDBBackingStore> createBackingStore(const IDBDatabaseIdentifier&);
 
+    WEBCORE_EXPORT HashSet<SecurityOriginData> getOrigins() const;
     WEBCORE_EXPORT void closeAndDeleteDatabasesModifiedSince(WallTime);
     WEBCORE_EXPORT void closeAndDeleteDatabasesForOrigins(const Vector<SecurityOriginData>&);
     void closeDatabasesForOrigins(const Vector<SecurityOriginData>&, Function<bool(const SecurityOriginData&, const ClientOrigin&)>&&);
@@ -115,8 +116,6 @@ public:
 
 private:
     UniqueIDBDatabase& getOrCreateUniqueIDBDatabase(const IDBDatabaseIdentifier&);
-
-    String databaseDirectoryPathIsolatedCopy() const { return m_databaseDirectoryPath.isolatedCopy(); }
 
     void upgradeFilesIfNecessary();
     void removeDatabasesModifiedSinceForVersion(WallTime, const String&);

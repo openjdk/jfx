@@ -38,7 +38,6 @@ public:
     static RuleSet* defaultPrintStyle;
     static unsigned defaultStyleVersion;
 
-    static StyleSheetContents* simpleDefaultStyleSheet;
     static StyleSheetContents* defaultStyleSheet;
     static StyleSheetContents* quirksStyleSheet;
     static StyleSheetContents* dialogStyleSheet;
@@ -47,37 +46,22 @@ public:
     static StyleSheetContents* mediaControlsStyleSheet;
     static StyleSheetContents* fullscreenStyleSheet;
     static StyleSheetContents* plugInsStyleSheet;
-    static StyleSheetContents* imageControlsStyleSheet;
 #if ENABLE(DATALIST_ELEMENT)
     static StyleSheetContents* dataListStyleSheet;
 #endif
 #if ENABLE(INPUT_TYPE_COLOR)
     static StyleSheetContents* colorInputStyleSheet;
 #endif
-#if ENABLE(INPUT_TYPE_DATE)
-    static StyleSheetContents* dateInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-    static StyleSheetContents* dateTimeLocalInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_MONTH)
-    static StyleSheetContents* monthInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_TIME)
-    static StyleSheetContents* timeInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_WEEK)
-    static StyleSheetContents* weekInputStyleSheet;
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+    static StyleSheetContents* formControlsIOSStyleSheet;
 #endif
 
     static StyleSheetContents* mediaQueryStyleSheet;
 
-    static void initDefaultStyle(const Element*);
+    static void initDefaultStyleSheet();
     static void ensureDefaultStyleSheetsForElement(const Element&);
-    static void loadFullDefaultStyle();
 
 private:
-    static void loadSimpleDefaultStyle();
     static void addToDefaultStyle(StyleSheetContents&);
 };
 

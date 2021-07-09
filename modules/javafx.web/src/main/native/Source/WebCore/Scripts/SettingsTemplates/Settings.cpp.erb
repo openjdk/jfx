@@ -1,7 +1,7 @@
 /*
  * THIS FILE WAS AUTOMATICALLY GENERATED, DO NOT EDIT.
  *
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,32 @@
 
 #include "InspectorInstrumentation.h"
 #include "Page.h"
-#include "SettingsDefaultValues.h"
+
+// Default values.
+
+<%- for @setting in @allSettingsSet.settings do -%>
+<%-   if @setting.condition -%>
+#if <%= @setting.condition %>
+<%-   end -%>
+<%-   if @setting.defaultValues.size() == 1 -%>
+#define SETTING_DEFAULT_VALUE_FOR_<%= @setting.name %> <%= @setting.defaultValues['default'] %>
+<%-   else -%>
+<%-     @setting.defaultValues.each_with_index do |(key, value), index| -%>
+<%-       if index == 0 -%>
+#if <%= key %>
+<%-       elsif index != @setting.defaultValues.size() - 1 -%>
+#elif <%= key %>
+<%-       else -%>
+#else
+<%-       end -%>
+#define SETTING_DEFAULT_VALUE_FOR_<%= @setting.name %> <%= value %>
+<%-     end -%>
+#endif
+<%-   end -%>
+<%-   if @setting.condition -%>
+#endif
+<%-   end -%>
+<%- end -%>
 
 namespace WebCore {
 
@@ -41,101 +66,132 @@ Ref<Settings> Settings::create(Page* page)
 
 Settings::Settings(Page* page)
     : SettingsBase(page)
-<%- for @setting in @unconditionalNonBoolSetting do -%>
-    , m_<%= @setting.name %>(<%= @setting.initial %>)
-<%- end -%>
-<%- for @conditional in @conditionals do -%>
-<%- if @conditional.nonBoolSettings.length != 0 -%>
-#if ENABLE(<%= @conditional.condition %>)
-<%- for @setting in @conditional.nonBoolSettings -%>
-    , m_<%= @setting.name %>(<%= @setting.initial %>)
-<%- end -%>
-#endif
-<%- end -%>
-<%- end -%>
-<%- for @setting in @unconditionalBoolSetting do -%>
-    , m_<%= @setting.name %>(<%= @setting.initial %>)
-<%- end -%>
-<%- for @conditional in @conditionals do -%>
-<%- if @conditional.boolSettings.length != 0 -%>
-#if ENABLE(<%= @conditional.condition %>)
-<%- for @setting in @conditional.boolSettings -%>
-    , m_<%= @setting.name %>(<%= @setting.initial %>)
-<%- end -%>
-#endif
-<%- end -%>
-<%- end -%>
 {
+    m_values.initialize();
+
+    m_page = nullptr; // Page is not yet fully initialized when constructing Settings, so keeping m_page null over initializeDefaultFontFamilies() call.
+    initializeDefaultFontFamilies();
+    m_page = page;
+}
+
+void Settings::Values::initialize()
+{
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.nonBoolSettingsNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.nonBoolSettingsNeedingImplementation -%>
+    <%= @setting.name %> = SETTING_DEFAULT_VALUE_FOR_<%= @setting.name %>;
+<%- end -%>
+<%- if @condition.condition -%>
+#endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.boolSettingsNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.boolSettingsNeedingImplementation -%>
+    <%= @setting.name %> = SETTING_DEFAULT_VALUE_FOR_<%= @setting.name %>;
+<%- end -%>
+<%- if @condition.condition -%>
+#endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
+}
+
+Settings::Values Settings::Values::isolatedCopy() const
+{
+    return {
+<%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
+        crossThreadCopy(<%= @setting.name %>InspectorOverride),
+<%- end -%>
+        crossThreadCopy(fontGenericFamilies),
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.nonBoolSettingsNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.nonBoolSettingsNeedingImplementation -%>
+        crossThreadCopy(<%= @setting.name %>),
+<%- end -%>
+<%- if @condition.condition -%>
+#endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.boolSettingsNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.boolSettingsNeedingImplementation -%>
+        crossThreadCopy(<%= @setting.name %>),
+<%- end -%>
+<%- if @condition.condition -%>
+#endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
+    };
 }
 
 Settings::~Settings()
 {
 }
 
-<%- for @setting in @unconditionalSettingWithComplexGetters do -%>
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.settingsWithComplexGettersNeedingImplementation.length != 0 or @condition.settingsWithComplexSettersNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.settingsWithComplexGettersNeedingImplementation do -%>
 <%= @setting.parameterType %> Settings::<%= @setting.getterFunctionName %>() const
 {
 <%- if @setting.hasInspectorOverride? -%>
-    if (UNLIKELY(m_<%= @setting.name %>InspectorOverride)) {
+    if (UNLIKELY(m_values.<%= @setting.name %>InspectorOverride)) {
         ASSERT(InspectorInstrumentation::hasFrontends());
-        return m_<%= @setting.name %>InspectorOverride.value();
+        return m_values.<%= @setting.name %>InspectorOverride.value();
     }
 <%- end -%>
-    return m_<%= @setting.name %>;
+    return m_values.<%= @setting.name %>;
 }
-
 <%- end -%>
-<%- for @setting in @unconditionalSettingWithComplexSetters do -%>
+
+<%- for @setting in @condition.settingsWithComplexSettersNeedingImplementation -%>
 void Settings::<%= @setting.setterFunctionName %>(<%= @setting.parameterType %> <%= @setting.name %>)
 {
-    if (m_<%= @setting.name %> == <%= @setting.name %>)
+    if (m_values.<%= @setting.name %> == <%= @setting.name %>)
         return;
-    m_<%= @setting.name %> = <%= @setting.name %>;
-    <%= @setting.onChange %>();
-}
-
-<%- end -%>
-<%- for @conditional in @conditionals do -%>
-<%- if @conditional.settingsWithComplexGetters.length != 0 or @conditional.settingsWithComplexSetters.length != 0-%>
-#if ENABLE(<%= @conditional.condition %>)
-<%- for @setting in @conditional.settingsWithComplexGetters do -%>
-<%= @setting.parameterType %> Settings::<%= @setting.getterFunctionName %>() const
-{
-<%- if @setting.hasInspectorOverride? -%>
-    if (UNLIKELY(m_<%= @setting.name %>InspectorOverride)) {
-        ASSERT(InspectorInstrumentation::hasFrontends());
-        return m_<%= @setting.name %>InspectorOverride.value();
-    }
-<%- end -%>
-    return m_<%= @setting.name %>;
-}
-<%- end -%>
-<%- for @setting in @conditional.settingsWithComplexSetters -%>
-void Settings::<%= @setting.setterFunctionName %>(<%= @setting.parameterType %> <%= @setting.name %>)
-{
-    if (m_<%= @setting.name %> == <%= @setting.name %>)
-        return;
-    m_<%= @setting.name %> = <%= @setting.name %>;
+    m_values.<%= @setting.name %> = <%= @setting.name %>;
     <%= @setting.onChange %>();
 }
 <%- end -%>
+<%- if @condition.condition -%>
 #endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
 
-<%- end -%>
-<%- end -%>
-<%- for @setting in @inspectorOverrideSettings do -%>
+<%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
 <%- if @setting.hasComplexSetter? -%>
 void Settings::<%= @setting.setterFunctionName %>InspectorOverride(Optional<<%= @setting.parameterType %>> <%= @setting.name %>InspectorOverride)
 {
-    if (m_<%= @setting.name %>InspectorOverride == <%= @setting.name %>InspectorOverride)
+    if (m_values.<%= @setting.name %>InspectorOverride == <%= @setting.name %>InspectorOverride)
         return;
-    m_<%= @setting.name %>InspectorOverride = <%= @setting.name %>InspectorOverride;
-<%- if @setting.conditional -%>
-#if ENABLE(<%= @setting.conditional %>)
+        m_values.<%= @setting.name %>InspectorOverride = <%= @setting.name %>InspectorOverride;
+<%- if @setting.condition -%>
+#if <%= @setting.condition %>
 <%- end -%>
     <%= @setting.onChange %>();
-<%- if @setting.conditional -%>
+<%- if @setting.condition -%>
+<%- if @condition.condition -%>
 #endif
+<%- end -%>
 <%- end -%>
 }
 

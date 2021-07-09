@@ -63,10 +63,10 @@ private:
         imageObserver->imageFrameAvailable(*m_image, m_image->isAnimating() ? ImageAnimatingState::Yes : ImageAnimatingState::No, &r);
     }
 
-    bool scheduleTimedRenderingUpdate() final
+    bool scheduleRenderingUpdate() final
     {
         if (m_image && m_image->imageObserver())
-            m_image->imageObserver()->scheduleTimedRenderingUpdate(*m_image);
+            m_image->imageObserver()->scheduleRenderingUpdate(*m_image);
         return true;
     }
 

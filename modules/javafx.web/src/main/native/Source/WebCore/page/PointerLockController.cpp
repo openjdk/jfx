@@ -103,7 +103,7 @@ void PointerLockController::requestPointerUnlockAndForceCursorVisible()
     m_forceCursorVisibleUponUnlock = true;
 }
 
-void PointerLockController::elementRemoved(Element& element)
+void PointerLockController::elementWasRemoved(Element& element)
 {
     if (m_element == &element) {
         m_documentOfRemovedElementWhileWaitingForUnlock = makeWeakPtr(m_element->document());
@@ -193,7 +193,8 @@ void PointerLockController::dispatchLockedWheelEvent(const PlatformWheelEvent& e
     if (!m_element || !m_element->document().frame())
         return;
 
-    m_element->dispatchWheelEvent(event);
+    OptionSet<EventHandling> defaultHandling;
+    m_element->dispatchWheelEvent(event, defaultHandling);
 }
 
 void PointerLockController::clearElement()

@@ -62,10 +62,10 @@ private:
     // m_curve represents the non-linear shaping curve.
     RefPtr<Float32Array> m_curve;
 
-    OverSampleType m_oversample;
+    OverSampleType m_oversample { OverSampleNone };
 
     // This synchronizes process() with setCurve().
-    mutable Lock m_processMutex;
+    mutable Lock m_processLock;
 };
 
 } // namespace WebCore

@@ -25,10 +25,16 @@
 
 #pragma once
 
+#include "DisplayListItemBuffer.h"
+#include "DisplayListItemType.h"
 #include "FloatRect.h"
+#include "Font.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include <wtf/FastMalloc.h>
+#include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -38,119 +44,6 @@ class TextStream;
 namespace WebCore {
 
 namespace DisplayList {
-
-enum class ItemType : uint8_t {
-    Save,
-    Restore,
-    Translate,
-    Rotate,
-    Scale,
-    ConcatenateCTM,
-    SetCTM,
-    SetState,
-    SetLineCap,
-    SetLineDash,
-    SetLineJoin,
-    SetMiterLimit,
-    ClearShadow,
-    Clip,
-    ClipOut,
-    ClipOutToPath,
-    ClipPath,
-    DrawGlyphs,
-    DrawImage,
-    DrawTiledImage,
-    DrawTiledScaledImage,
-#if USE(CG) || USE(CAIRO) || USE(DIRECT2D)
-    DrawNativeImage,
-#endif
-    DrawPattern,
-    DrawRect,
-    DrawLine,
-    DrawLinesForText,
-    DrawDotsForDocumentMarker,
-    DrawEllipse,
-    DrawPath,
-    DrawFocusRingPath,
-    DrawFocusRingRects,
-    FillRect,
-    FillRectWithColor,
-    FillRectWithGradient,
-    FillCompositedRect,
-    FillRoundedRect,
-    FillRectWithRoundedHole,
-    FillPath,
-    FillEllipse,
-    PutImageData,
-    StrokeRect,
-    StrokePath,
-    StrokeEllipse,
-    ClearRect,
-    BeginTransparencyLayer,
-    EndTransparencyLayer,
-#if USE(CG)
-    ApplyStrokePattern, // FIXME: should not be a recorded item.
-    ApplyFillPattern, // FIXME: should not be a recorded item.
-#endif
-    ApplyDeviceScaleFactor,
-};
-
-class Item : public RefCounted<Item> {
-public:
-    Item() = delete;
-
-    WEBCORE_EXPORT Item(ItemType);
-    WEBCORE_EXPORT virtual ~Item();
-
-    ItemType type() const
-    {
-        return m_type;
-    }
-
-    virtual void apply(GraphicsContext&) const = 0;
-
-    static constexpr bool isDisplayListItem = true;
-
-    virtual bool isDrawingItem() const { return false; }
-
-    // A state item is one preserved by Save/Restore.
-    bool isStateItem() const
-    {
-        return isStateItemType(m_type);
-    }
-
-    static bool isStateItemType(ItemType itemType)
-    {
-        switch (itemType) {
-        case ItemType::Translate:
-        case ItemType::Rotate:
-        case ItemType::Scale:
-        case ItemType::ConcatenateCTM:
-        case ItemType::SetCTM:
-        case ItemType::SetState:
-        case ItemType::SetLineCap:
-        case ItemType::SetLineDash:
-        case ItemType::SetLineJoin:
-        case ItemType::SetMiterLimit:
-        case ItemType::ClearShadow:
-            return true;
-        default:
-            return false;
-        }
-        return false;
-    }
-
-#if !defined(NDEBUG) || !LOG_DISABLED
-    WTF::CString description() const;
-#endif
-    static size_t sizeInBytes(const Item&);
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<Ref<Item>> decode(Decoder&);
-
-private:
-    ItemType m_type;
-};
 
 enum AsTextFlag {
     None                            = 0,
@@ -164,86 +57,152 @@ class DisplayList {
     friend class Recorder;
     friend class Replayer;
 public:
-    DisplayList() = default;
-    DisplayList(DisplayList&&) = default;
+    WEBCORE_EXPORT DisplayList();
+    WEBCORE_EXPORT DisplayList(DisplayList&&);
+    WEBCORE_EXPORT DisplayList(ItemBufferHandles&&);
 
-    DisplayList& operator=(DisplayList&&) = default;
+    WEBCORE_EXPORT ~DisplayList();
+
+    WEBCORE_EXPORT DisplayList& operator=(DisplayList&&);
 
     void dump(WTF::TextStream&) const;
 
-    const Vector<Ref<Item>>& list() const { return m_list; }
-    Item& itemAt(size_t index)
-    {
-        ASSERT(index < m_list.size());
-        return m_list[index].get();
-    }
-
     WEBCORE_EXPORT void clear();
-
-    size_t itemCount() const { return m_list.size(); }
-    size_t sizeInBytes() const;
+    WEBCORE_EXPORT bool isEmpty() const;
+    WEBCORE_EXPORT size_t sizeInBytes() const;
 
     String asText(AsTextFlags) const;
+
+    const ImageBufferHashMap& imageBuffers() const { return m_imageBuffers; }
+    const NativeImageHashMap& nativeImages() const { return m_nativeImages; }
+    const FontRenderingResourceMap& fonts() const { return m_fonts; }
+
+    WEBCORE_EXPORT void setItemBufferClient(ItemBufferReadingClient*);
+    WEBCORE_EXPORT void setItemBufferClient(ItemBufferWritingClient*);
+    WEBCORE_EXPORT void prepareToAppend(ItemBufferHandle&&);
 
 #if !defined(NDEBUG) || !LOG_DISABLED
     WTF::CString description() const;
     WEBCORE_EXPORT void dump() const;
 #endif
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<DisplayList> decode(Decoder&);
+    WEBCORE_EXPORT void forEachItemBuffer(Function<void(const ItemBufferHandle&)>&&) const;
 
+    template<typename T, class... Args> void append(Args&&... args);
+    void append(ItemHandle);
+
+    bool tracksDrawingItemExtents() const { return m_tracksDrawingItemExtents; }
+    WEBCORE_EXPORT void setTracksDrawingItemExtents(bool);
+
+    class iterator {
+    public:
+        enum class ImmediatelyMoveToEnd { No, Yes };
+        iterator(const DisplayList& displayList, ImmediatelyMoveToEnd immediatelyMoveToEnd = ImmediatelyMoveToEnd::No)
+            : m_displayList(displayList)
+        {
+            if (immediatelyMoveToEnd == ImmediatelyMoveToEnd::Yes)
+                moveToEnd();
+            else {
+                moveCursorToStartOfCurrentBuffer();
+                updateCurrentItem();
+            }
+        }
+
+        ~iterator()
+        {
+            clearCurrentItem();
+        }
+
+        bool operator==(const iterator& other) { return &m_displayList == &other.m_displayList && m_cursor == other.m_cursor; }
+        bool operator!=(const iterator& other) { return !(*this == other); }
+        void operator++() { advance(); }
+
+        struct Value {
+            Optional<ItemHandle> item;
+            Optional<FloatRect> extent;
+            size_t itemSizeInBuffer { 0 };
+        };
+
+        Value operator*() const
+        {
+            return {
+                m_isValid ? makeOptional(ItemHandle { m_currentBufferForItem }) : WTF::nullopt,
+                m_currentExtent,
+                m_currentItemSizeInBuffer,
+            };
+        }
+
+    private:
+        static constexpr size_t sizeOfFixedBufferForCurrentItem = 256;
+
+        WEBCORE_EXPORT void moveCursorToStartOfCurrentBuffer();
+        WEBCORE_EXPORT void moveToEnd();
+        WEBCORE_EXPORT void clearCurrentItem();
+        WEBCORE_EXPORT void updateCurrentItem();
+        WEBCORE_EXPORT void advance();
+        bool atEnd() const;
+
+        const DisplayList& m_displayList;
+        uint8_t* m_cursor { nullptr };
+        size_t m_readOnlyBufferIndex { 0 };
+        size_t m_drawingItemIndex { 0 };
+        uint8_t* m_currentEndOfBuffer { nullptr };
+
+        uint8_t m_fixedBufferForCurrentItem[sizeOfFixedBufferForCurrentItem] { 0 };
+        uint8_t* m_currentBufferForItem { nullptr };
+        Optional<FloatRect> m_currentExtent;
+        size_t m_currentItemSizeInBuffer { 0 };
+        bool m_isValid { true };
+    };
+
+    iterator begin() const { return { *this }; }
+    iterator end() const { return { *this, iterator::ImmediatelyMoveToEnd::Yes }; }
 
 private:
-    Item& append(Ref<Item>&& item)
+    ItemBuffer* itemBufferIfExists() const { return m_items.get(); }
+    WEBCORE_EXPORT ItemBuffer& itemBuffer();
+
+    void addDrawingItemExtent(Optional<FloatRect>&& extent)
     {
-        m_list.append(WTFMove(item));
-        return m_list.last().get();
+        ASSERT(m_tracksDrawingItemExtents);
+        m_drawingItemExtents.append(WTFMove(extent));
     }
 
-    // Less efficient append, only used for tracking replay.
-    void appendItem(Item& item)
+    void cacheImageBuffer(WebCore::ImageBuffer& imageBuffer)
     {
-        m_list.append(item);
+        m_imageBuffers.ensure(imageBuffer.renderingResourceIdentifier(), [&]() {
+            return makeRef(imageBuffer);
+        });
     }
 
-    static bool shouldDumpForFlags(AsTextFlags, const Item&);
+    void cacheNativeImage(NativeImage& image)
+    {
+        m_nativeImages.ensure(image.renderingResourceIdentifier(), [&]() {
+            return makeRef(image);
+        });
+    }
 
-    Vector<Ref<Item>>& list() { return m_list; }
+    void cacheFont(Font& font)
+    {
+        m_fonts.ensure(font.renderingResourceIdentifier(), [&]() {
+            return makeRef(font);
+        });
+    }
 
-    Vector<Ref<Item>> m_list;
+    static bool shouldDumpForFlags(AsTextFlags, ItemHandle);
+
+    ImageBufferHashMap m_imageBuffers;
+    NativeImageHashMap m_nativeImages;
+    FontRenderingResourceMap m_fonts;
+    std::unique_ptr<ItemBuffer> m_items;
+    Vector<Optional<FloatRect>> m_drawingItemExtents;
+    bool m_tracksDrawingItemExtents { true };
 };
 
-
-template<class Encoder>
-void DisplayList::encode(Encoder& encoder) const
+template<typename T, class... Args>
+void DisplayList::append(Args&&... args)
 {
-    encoder << static_cast<uint64_t>(m_list.size());
-
-    for (auto& item : m_list)
-        encoder << item.get();
-}
-
-template<class Decoder>
-Optional<DisplayList> DisplayList::decode(Decoder& decoder)
-{
-    Optional<uint64_t> itemCount;
-    decoder >> itemCount;
-    if (!itemCount)
-        return WTF::nullopt;
-
-    DisplayList displayList;
-
-    for (uint64_t i = 0; i < *itemCount; i++) {
-        auto item = Item::decode(decoder);
-        // FIXME: Once we can decode all types, failing to decode an item should turn into a decode failure.
-        // For now, we just have to ignore it.
-        if (!item)
-            continue;
-        displayList.append(WTFMove(*item));
-    }
-
-    return displayList;
+    itemBuffer().append<T>(std::forward<Args>(args)...);
 }
 
 } // DisplayList

@@ -139,10 +139,11 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,  const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    if (!nativeImageForCurrentFrame(&ctxt))
+    auto tileImage = preTransformedNativeImageForCurrentFrame(options.orientation() == ImageOrientation::FromImage);
+    if (!tileImage)
         return;
 
-    ctxt.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);
+    ctxt.drawPattern(*tileImage, size(), destRect, tileRect, patternTransform, phase, spacing, options);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
@@ -335,8 +336,8 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
 void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     intrinsicRatio = size();
-    intrinsicWidth = Length(intrinsicRatio.width(), Fixed);
-    intrinsicHeight = Length(intrinsicRatio.height(), Fixed);
+    intrinsicWidth = Length(intrinsicRatio.width(), LengthType::Fixed);
+    intrinsicHeight = Length(intrinsicRatio.height(), LengthType::Fixed);
 }
 
 void Image::startAnimationAsynchronously()

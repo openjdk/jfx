@@ -24,9 +24,10 @@
 
 [
     Conditional=WEB_AUDIO&MEDIA_STREAM,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    Exposed=Window
 ] interface MediaStreamAudioSourceNode : AudioNode {
-    [MayThrowException, EnabledBySetting=ModernUnprefixedWebAudio] constructor (AudioContext context, MediaStreamAudioSourceOptions options);
+    [EnabledBySetting=ModernUnprefixedWebAudio] constructor (AudioContext context, MediaStreamAudioSourceOptions options);
 
     readonly attribute MediaStream mediaStream;
 };

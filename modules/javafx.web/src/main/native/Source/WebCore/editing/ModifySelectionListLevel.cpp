@@ -54,12 +54,12 @@ static bool getStartEndListChildren(const VisibleSelection& selection, Node*& st
 
     // start must be in a list child
     Node* startListChild = enclosingListChild(selection.start().anchorNode());
-    if (!startListChild)
+    if (!startListChild || !startListChild->renderer())
         return false;
 
     // end must be in a list child
     Node* endListChild = selection.isRange() ? enclosingListChild(selection.end().anchorNode()) : startListChild;
-    if (!endListChild)
+    if (!endListChild || !endListChild->renderer())
         return false;
 
     // For a range selection we want the following behavior:
@@ -80,7 +80,7 @@ static bool getStartEndListChildren(const VisibleSelection& selection, Node*& st
     // if the selection ends on a list item with a sublist, include the entire sublist
     if (endListChild->renderer()->isListItem()) {
         RenderObject* r = endListChild->renderer()->nextSibling();
-        if (r && isListHTMLElement(r->node()))
+        if (r && isListHTMLElement(r->node()) && r->node()->parentNode() == startListChild->parentNode())
             endListChild = r->node();
     }
 

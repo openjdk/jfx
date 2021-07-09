@@ -23,20 +23,18 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    NoInterfaceObject,
-    Exposed=(Window,Worker)
-] interface CanvasTransform {
+// https://html.spec.whatwg.org/multipage/canvas.html#canvastransform
+interface mixin CanvasTransform {
     // FIXME: All the unrestricted float parameters below should be unrestricted doubles.
 
     // transformations (default transform is the identity matrix)
-    void scale(unrestricted float x, unrestricted float y);
-    void rotate(unrestricted float angle);
-    void translate(unrestricted float x, unrestricted float y);
-    void transform(unrestricted float a, unrestricted float b, unrestricted float c, unrestricted float d, unrestricted float e, unrestricted float f);
+    undefined scale(unrestricted float x, unrestricted float y);
+    undefined rotate(unrestricted float angle);
+    undefined translate(unrestricted float x, unrestricted float y);
+    undefined transform(unrestricted float a, unrestricted float b, unrestricted float c, unrestricted float d, unrestricted float e, unrestricted float f);
 
     [NewObject] DOMMatrix getTransform();
-    void setTransform(unrestricted float a, unrestricted float b, unrestricted float c, unrestricted float d, unrestricted float e, unrestricted float f);
-    [MayThrowException] void setTransform(optional DOMMatrix2DInit transform);
-    void resetTransform();
+    undefined setTransform(unrestricted float a, unrestricted float b, unrestricted float c, unrestricted float d, unrestricted float e, unrestricted float f);
+    [MayThrowException] undefined setTransform(optional DOMMatrix2DInit transform);
+    undefined resetTransform();
 };

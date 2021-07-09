@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FetchOptions.h"
+#include "LoadSchedulingMode.h"
 #include "PageIdentifier.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
@@ -69,6 +70,9 @@ public:
     virtual void suspendPendingRequests() = 0;
     virtual void resumePendingRequests() = 0;
 
+    virtual void setResourceLoadSchedulingMode(Page&, LoadSchedulingMode);
+    virtual void prioritizeResourceLoads(const Vector<SubresourceLoader*>&);
+
     virtual bool usePingLoad() const { return true; }
     using PingLoadCompletionHandler = WTF::Function<void(const ResourceError&, const ResourceResponse&)>;
     virtual void startPingLoad(Frame&, ResourceRequest&, const HTTPHeaderMap& originalRequestHeaders, const FetchOptions&, ContentSecurityPolicyImposition, PingLoadCompletionHandler&& = { }) = 0;
@@ -87,6 +91,8 @@ public:
     virtual ResourceResponse responseFromResourceLoadIdentifier(uint64_t resourceLoadIdentifier);
     virtual Vector<NetworkTransactionInformation> intermediateLoadInformationFromResourceLoadIdentifier(uint64_t resourceLoadIdentifier);
     virtual NetworkLoadMetrics networkMetricsFromResourceLoadIdentifier(uint64_t resourceLoadIdentifier);
+
+    virtual void isResourceLoadFinished(CachedResource&, CompletionHandler<void(bool)>&& callback) = 0;
 
     // Used for testing only.
     virtual Vector<uint64_t> ongoingLoads() const { return { }; }

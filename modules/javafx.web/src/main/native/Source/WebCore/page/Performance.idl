@@ -37,28 +37,8 @@ typedef double DOMHighResTimeStamp;
     Exposed=(Window,Worker),
     GenerateIsReachable=ImplScriptExecutionContext,
 ] interface Performance : EventTarget {
-
     DOMHighResTimeStamp now();
-
-    // https://w3c.github.io/navigation-timing/
-    readonly attribute PerformanceNavigation navigation;
-    readonly attribute PerformanceTiming timing;
-
-    // https://w3c.github.io/performance-timeline/
-    [EnabledAtRuntime=PerformanceTimeline] PerformanceEntryList getEntries();
-    [EnabledAtRuntime=PerformanceTimeline] PerformanceEntryList getEntriesByType(DOMString entryType);
-    [EnabledAtRuntime=PerformanceTimeline] PerformanceEntryList getEntriesByName(DOMString name, optional DOMString entryType);
-
-    // https://w3c.github.io/resource-timing/
-    [EnabledAtRuntime=ResourceTiming] void clearResourceTimings();
-    [EnabledAtRuntime=ResourceTiming] void setResourceTimingBufferSize(unsigned long maxSize);
-    [EnabledAtRuntime=ResourceTiming] attribute EventHandler onresourcetimingbufferfull;
-
-    // https://w3c.github.io/user-timing/
-    [EnabledAtRuntime=UserTiming, MayThrowException] void mark(DOMString markName);
-    [EnabledAtRuntime=UserTiming] void clearMarks(optional DOMString markName);
-    [EnabledAtRuntime=UserTiming, MayThrowException] void measure(DOMString measureName, optional DOMString startMark, optional DOMString endMark);
-    [EnabledAtRuntime=UserTiming] void clearMeasures(optional DOMString measureName);
+    // FIXME: Implement 'timeOrigin' - https://webkit.org/b/174862
+    // readonly attribute DOMHighResTimeStamp timeOrigin;
+    [Default] object toJSON();
 };
-
-typedef sequence<PerformanceEntry> PerformanceEntryList;

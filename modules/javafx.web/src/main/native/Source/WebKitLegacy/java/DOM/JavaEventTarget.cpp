@@ -25,7 +25,7 @@
 
 #undef IMPL
 
-
+#include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/DOMException.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>

@@ -23,11 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGAElement : SVGGraphicsElement {
+[
+    Exposed=Window
+] interface SVGAElement : SVGGraphicsElement {
     readonly attribute SVGAnimatedString target;
 
     [Reflect] attribute DOMString rel;
     [SameObject, PutForwards=value] readonly attribute DOMTokenList relList;
 };
 
-SVGAElement implements SVGURIReference;
+SVGAElement includes SVGURIReference;

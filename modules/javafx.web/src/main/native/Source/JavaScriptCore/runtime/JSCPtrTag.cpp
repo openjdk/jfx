@@ -28,15 +28,23 @@
 
 #include "JSCConfig.h"
 
+#if ENABLE(JIT_CAGE)
+#include <machine/cpu_capabilities.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#endif
+
 namespace JSC {
 
-#if CPU(ARM64E)
+#if CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
 
 static const char* tagForPtr(const void* ptr)
 {
-#define RETURN_NAME_IF_TAG_MATCHES(tag) \
-    if (ptr == WTF::tagCodePtrImpl<WTF::PtrTagAction::NoAssert>(removeCodePtrTag(ptr), JSC::tag)) \
-        return #tag;
+#define RETURN_NAME_IF_TAG_MATCHES(tag, calleeType, callerType) \
+    if (callerType != PtrTagCallerType::JIT || calleeType != PtrTagCalleeType::Native) { \
+        if (ptr == WTF::tagCodePtrImpl<WTF::PtrTagAction::NoAssert, JSC::tag>(removeCodePtrTag(ptr))) \
+            return #tag; \
+    }
     FOR_EACH_JSC_PTRTAG(RETURN_NAME_IF_TAG_MATCHES)
 #undef RETURN_NAME_IF_TAG_MATCHES
     return nullptr; // Matching tag not found.
@@ -44,7 +52,7 @@ static const char* tagForPtr(const void* ptr)
 
 static const char* ptrTagName(PtrTag tag)
 {
-#define RETURN_PTRTAG_NAME(_tagName) case _tagName: return #_tagName;
+#define RETURN_PTRTAG_NAME(_tagName, calleeType, callerType) case _tagName: return #_tagName;
     switch (static_cast<unsigned>(tag)) {
         FOR_EACH_JSC_PTRTAG(RETURN_PTRTAG_NAME)
     }
@@ -59,6 +67,34 @@ void initializePtrTagLookup()
     WTF::registerPtrTagLookup(&lookup);
 }
 
-#endif // CPU(ARM64E)
+#endif // CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
+
+#if CPU(ARM64E)
+
+PtrTagCallerType callerType(PtrTag tag)
+{
+#define RETURN_PTRTAG_TYPE(_tagName, calleeType, callerType) case _tagName: return callerType;
+    switch (tag) {
+        FOR_EACH_JSC_PTRTAG(RETURN_PTRTAG_TYPE)
+    default:
+        return PtrTagCallerType::Native;
+    }
+#undef RETURN_PTRTAG_TYPE
+    return PtrTagCallerType::Native;
+}
+
+PtrTagCalleeType calleeType(PtrTag tag)
+{
+#define RETURN_PTRTAG_TYPE(_tagName, calleeType, callerType) case _tagName: return calleeType;
+    switch (tag) {
+        FOR_EACH_JSC_PTRTAG(RETURN_PTRTAG_TYPE)
+    default:
+        return PtrTagCalleeType::Native;
+    }
+#undef RETURN_PTRTAG_TYPE
+    return PtrTagCalleeType::Native;
+}
+
+#endif
 
 } // namespace JSC

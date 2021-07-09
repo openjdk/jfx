@@ -112,7 +112,7 @@ public:
     virtual bool haveLoadedRequiredResources();
 
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
-    bool removeEventListener(const AtomString& eventType, EventListener&, const ListenerOptions&) override;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) override;
 
     bool hasTagName(const SVGQualifiedName& name) const { return hasLocalName(name.localName()); }
 
@@ -131,7 +131,6 @@ public:
 
     void synchronizeAttribute(const QualifiedName&);
     void synchronizeAllAttributes();
-    static void synchronizeAllAnimatedSVGAttribute(SVGElement&);
 
     void commitPropertyChange(SVGProperty*) override;
     void commitPropertyChange(SVGAnimatedProperty&);

@@ -55,34 +55,6 @@ class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
 
-    enum ChangedProperty {
-        ScrollableAreaSize = NumStateNodeBits,
-        TotalContentsSize,
-        ReachableContentsSize,
-        ScrollPosition,
-        ScrollOrigin,
-        ScrollableAreaParams,
-#if ENABLE(SCROLLING_THREAD)
-        ReasonsForSynchronousScrolling,
-#endif
-        RequestedScrollPosition,
-#if ENABLE(CSS_SCROLL_SNAP)
-        HorizontalSnapOffsets,
-        VerticalSnapOffsets,
-        HorizontalSnapOffsetRanges,
-        VerticalSnapOffsetRanges,
-        CurrentHorizontalSnapOffsetIndex,
-        CurrentVerticalSnapOffsetIndex,
-#endif
-        IsMonitoringWheelEvents,
-        ScrollContainerLayer,
-        ScrolledContentsLayer,
-        HorizontalScrollbarLayer,
-        VerticalScrollbarLayer,
-        PainterForScrollbar,
-        NumScrollingStateNodeBits // This must remain at the last position.
-    };
-
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
     WEBCORE_EXPORT void setScrollableAreaSize(const FloatSize&);
 
@@ -99,17 +71,8 @@ public:
     WEBCORE_EXPORT void setScrollOrigin(const IntPoint&);
 
 #if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsets(const Vector<float>&);
-
-    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
-    WEBCORE_EXPORT void setVerticalSnapOffsets(const Vector<float>&);
-
-    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
-
-    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setVerticalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
+    const ScrollSnapOffsetsInfo<float>& snapOffsetsInfo() const { return m_snapOffsetsInfo; }
+    WEBCORE_EXPORT void setSnapOffsetsInfo(const ScrollSnapOffsetsInfo<float>& newOffsetsInfo);
 
     unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
     WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(unsigned);
@@ -156,8 +119,7 @@ protected:
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
-    void setPropertyChangedBitsAfterReattach() override;
-
+    OptionSet<Property> applicableProperties() const override;
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
 private:

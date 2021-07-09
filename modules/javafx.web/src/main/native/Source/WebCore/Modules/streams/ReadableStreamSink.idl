@@ -25,10 +25,10 @@
 
 
 [
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     SkipVTableValidation
 ] interface ReadableStreamSink {
-    void enqueue(BufferSource chunk);
-    void close();
-    void error(DOMString message);
+    undefined enqueue(BufferSource chunk);
+    undefined close();
+    undefined error(DOMString message);
 };

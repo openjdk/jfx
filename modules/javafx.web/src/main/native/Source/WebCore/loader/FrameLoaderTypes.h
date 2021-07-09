@@ -35,12 +35,12 @@
 
 namespace WebCore {
 
-enum FrameState {
-    FrameStateProvisional,
+enum class FrameState : uint8_t {
+    Provisional,
     // This state indicates we are ready to commit to a page,
     // which means the view will transition to use the new data source.
-    FrameStateCommittedPage,
-    FrameStateComplete
+    CommittedPage,
+    Complete
 };
 
 enum class PolicyAction : uint8_t {
@@ -134,7 +134,7 @@ enum class NavigationType : uint8_t {
 
 enum class ShouldOpenExternalURLsPolicy : uint8_t {
     ShouldNotAllow,
-    ShouldAllowExternalSchemes,
+    ShouldAllowExternalSchemesButNotAppLinks,
     ShouldAllow,
 };
 
@@ -143,9 +143,9 @@ enum class InitiatedByMainFrame : uint8_t {
     Unknown,
 };
 
-enum ClearProvisionalItemPolicy {
-    ShouldClearProvisionalItem,
-    ShouldNotClearProvisionalItem
+enum class ClearProvisionalItem : bool {
+    Yes,
+    No
 };
 
 enum class StopLoadingPolicy {
@@ -160,10 +160,10 @@ enum class ObjectContentType : uint8_t {
     PlugIn,
 };
 
-enum UnloadEventPolicy {
-    UnloadEventPolicyNone,
-    UnloadEventPolicyUnloadOnly,
-    UnloadEventPolicyUnloadAndPageHide
+enum class UnloadEventPolicy {
+    None,
+    UnloadOnly,
+    UnloadAndPageHide
 };
 
 // Passed to FrameLoader::urlSelected() and ScriptController::executeIfJavaScriptURL()
@@ -279,7 +279,7 @@ template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
     using values = EnumValues<
         WebCore::ShouldOpenExternalURLsPolicy,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
-        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
     >;
 };

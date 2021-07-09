@@ -27,12 +27,12 @@
  */
 
 [
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     SkipVTableValidation
 ] interface ReadableStreamSource {
-    [Custom] Promise<void> start(ReadableStreamDefaultController controller);
-    [Custom] Promise<void> pull(ReadableStreamDefaultController controller);
-    void cancel(any reason);
+    [Custom] Promise<undefined> start(ReadableStreamDefaultController controller);
+    [Custom] Promise<undefined> pull(ReadableStreamDefaultController controller);
+    undefined cancel(any reason);
 
     // Place holder to keep the controller linked to the source.
     [CachedAttribute, CustomGetter] readonly attribute any controller;

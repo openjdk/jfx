@@ -173,6 +173,11 @@ static webrtc::PeerConnectionInterface::RTCConfiguration configurationFromMediaE
     return rtcConfiguration;
 }
 
+void LibWebRTCPeerConnectionBackend::restartIce()
+{
+    m_endpoint->restartIce();
+}
+
 bool LibWebRTCPeerConnectionBackend::setConfiguration(MediaEndpointConfiguration&& configuration)
 {
     auto* page = downcast<Document>(*m_peerConnection.scriptExecutionContext()).page();
@@ -215,7 +220,7 @@ void LibWebRTCPeerConnectionBackend::getStats(RTCRtpReceiver& receiver, Ref<Defe
     m_endpoint->getStats(*rtcReceiver, WTFMove(promise));
 }
 
-void LibWebRTCPeerConnectionBackend::doSetLocalDescription(RTCSessionDescription& description)
+void LibWebRTCPeerConnectionBackend::doSetLocalDescription(const RTCSessionDescription* description)
 {
     m_endpoint->doSetLocalDescription(description);
     if (!m_isLocalDescriptionSet) {
@@ -228,7 +233,7 @@ void LibWebRTCPeerConnectionBackend::doSetLocalDescription(RTCSessionDescription
     }
 }
 
-void LibWebRTCPeerConnectionBackend::doSetRemoteDescription(RTCSessionDescription& description)
+void LibWebRTCPeerConnectionBackend::doSetRemoteDescription(const RTCSessionDescription& description)
 {
     m_endpoint->doSetRemoteDescription(description);
     if (!m_isRemoteDescriptionSet) {
@@ -365,13 +370,14 @@ ExceptionOr<Ref<RTCRtpSender>> LibWebRTCPeerConnectionBackend::addTrack(MediaStr
     if (auto sender = findExistingSender(m_peerConnection.currentTransceivers(), *senderBackend)) {
         backendFromRTPSender(*sender).takeSource(*senderBackend);
         sender->setTrack(makeRef(track));
-        sender->setMediaStreamIds(WTFMove(mediaStreamIds));
+        sender->setMediaStreamIds(mediaStreamIds);
         return sender.releaseNonNull();
     }
 
     auto transceiverBackend = m_endpoint->transceiverBackendFromSender(*senderBackend);
 
-    auto sender = RTCRtpSender::create(*this, makeRef(track), WTFMove(mediaStreamIds), WTFMove(senderBackend));
+    auto sender = RTCRtpSender::create(m_peerConnection, makeRef(track), WTFMove(senderBackend));
+    sender->setMediaStreamIds(mediaStreamIds);
     auto receiver = createReceiver(transceiverBackend->createReceiverBackend());
     auto transceiver = RTCRtpTransceiver::create(sender.copyRef(), WTFMove(receiver), WTFMove(transceiverBackend));
     m_peerConnection.addInternalTransceiver(WTFMove(transceiver));
@@ -381,13 +387,14 @@ ExceptionOr<Ref<RTCRtpSender>> LibWebRTCPeerConnectionBackend::addTrack(MediaStr
 template<typename T>
 ExceptionOr<Ref<RTCRtpTransceiver>> LibWebRTCPeerConnectionBackend::addTransceiverFromTrackOrKind(T&& trackOrKind, const RTCRtpTransceiverInit& init)
 {
-    auto backends = m_endpoint->addTransceiver(trackOrKind, init);
-    if (!backends)
-        return Exception { InvalidAccessError, "Unable to add transceiver"_s };
+    auto result = m_endpoint->addTransceiver(trackOrKind, init);
+    if (result.hasException())
+        return result.releaseException();
 
-    auto sender = RTCRtpSender::create(*this, WTFMove(trackOrKind), Vector<String> { }, WTFMove(backends->senderBackend));
-    auto receiver = createReceiver(WTFMove(backends->receiverBackend));
-    auto transceiver = RTCRtpTransceiver::create(WTFMove(sender), WTFMove(receiver), WTFMove(backends->transceiverBackend));
+    auto backends = result.releaseReturnValue();
+    auto sender = RTCRtpSender::create(m_peerConnection, WTFMove(trackOrKind), WTFMove(backends.senderBackend));
+    auto receiver = createReceiver(WTFMove(backends.receiverBackend));
+    auto transceiver = RTCRtpTransceiver::create(WTFMove(sender), WTFMove(receiver), WTFMove(backends.transceiverBackend));
     m_peerConnection.addInternalTransceiver(transceiver.copyRef());
     return transceiver;
 }
@@ -423,7 +430,7 @@ RTCRtpTransceiver* LibWebRTCPeerConnectionBackend::existingTransceiver(WTF::Func
 
 RTCRtpTransceiver& LibWebRTCPeerConnectionBackend::newRemoteTransceiver(std::unique_ptr<LibWebRTCRtpTransceiverBackend>&& transceiverBackend, RealtimeMediaSource::Type type)
 {
-    auto sender = RTCRtpSender::create(*this, type == RealtimeMediaSource::Type::Audio ? "audio"_s : "video"_s, Vector<String> { }, transceiverBackend->createSenderBackend(*this, nullptr));
+    auto sender = RTCRtpSender::create(m_peerConnection, type == RealtimeMediaSource::Type::Audio ? "audio"_s : "video"_s, transceiverBackend->createSenderBackend(*this, nullptr));
     auto receiver = createReceiver(transceiverBackend->createReceiverBackend());
     auto transceiver = RTCRtpTransceiver::create(WTFMove(sender), WTFMove(receiver), WTFMove(transceiverBackend));
     m_peerConnection.addInternalTransceiver(transceiver.copyRef());

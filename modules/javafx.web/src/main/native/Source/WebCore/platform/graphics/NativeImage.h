@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  * Copyright (C) 2012 Company 100 Inc.
  *
@@ -27,56 +27,53 @@
 
 #pragma once
 
-#include "ImagePaintingOptions.h"
-
-#if USE(CG)
-#include <wtf/RetainPtr.h>
-typedef struct CGImage* CGImageRef;
-#elif USE(CAIRO)
-#include "RefPtrCairo.h"
-#elif USE(WINGDI)
-#include "SharedBitmap.h"
-#elif PLATFORM(JAVA)
-#include "RQRef.h"
-#endif
-
-#if USE(DIRECT2D)
-#include "COMPtr.h"
-#include <d2d1.h>
-#include <wincodec.h>
-#endif
+#include "Color.h"
+#include "IntSize.h"
+#include "PlatformImage.h"
+#include "RenderingResourceIdentifier.h"
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
+#include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class Color;
-class FloatRect;
-class IntSize;
-class GraphicsContext;
-
-#if USE(CG)
-typedef RetainPtr<CGImageRef> NativeImagePtr;
-#elif USE(DIRECT2D)
-typedef COMPtr<ID2D1Bitmap> NativeImagePtr;
-#elif USE(CAIRO)
-typedef RefPtr<cairo_surface_t> NativeImagePtr;
-#elif USE(WINGDI)
-typedef RefPtr<SharedBitmap> NativeImagePtr;
-#elif PLATFORM(JAVA)
-typedef RefPtr<RQRef> NativeImagePtr;
-#endif
-
-WEBCORE_EXPORT IntSize nativeImageSize(const NativeImagePtr&);
-bool nativeImageHasAlpha(const NativeImagePtr&);
-Color nativeImageSinglePixelSolidColor(const NativeImagePtr&);
-
-void drawNativeImage(const NativeImagePtr&, GraphicsContext&, const FloatRect&, const FloatRect&, const IntSize&, const ImagePaintingOptions&);
-WEBCORE_EXPORT void drawNativeImage(const NativeImagePtr&, GraphicsContext&, float scaleFactor, const IntPoint& destination, const IntRect& source);
-
-void clearNativeImageSubimages(const NativeImagePtr&);
-
-class NativeImageHandle {
+class NativeImage : public RefCounted<NativeImage>, public CanMakeWeakPtr<NativeImage> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    NativeImagePtr image;
+    class Observer {
+    public:
+        virtual ~Observer() = default;
+        virtual void releaseNativeImage(RenderingResourceIdentifier) = 0;
+    protected:
+        Observer() = default;
+    };
+
+    static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
+
+    WEBCORE_EXPORT ~NativeImage();
+
+    const PlatformImagePtr& platformImage() const { return m_platformImage; }
+    RenderingResourceIdentifier renderingResourceIdentifier() const { return m_renderingResourceIdentifier; }
+
+    WEBCORE_EXPORT IntSize size() const;
+    bool hasAlpha() const;
+    Color singlePixelSolidColor() const;
+
+    void addObserver(Observer& observer) { m_observers.add(&observer); }
+    void removeObserver(Observer& observer) { m_observers.remove(&observer); }
+
+    void clearSubimages();
+
+private:
+    NativeImage(PlatformImagePtr&&);
+    NativeImage(PlatformImagePtr&&, RenderingResourceIdentifier);
+
+    PlatformImagePtr m_platformImage;
+    HashSet<Observer*> m_observers;
+    RenderingResourceIdentifier m_renderingResourceIdentifier;
 };
 
-}
+using NativeImageHashMap = HashMap<RenderingResourceIdentifier, Ref<NativeImage>>;
+
+} // namespace WebCore

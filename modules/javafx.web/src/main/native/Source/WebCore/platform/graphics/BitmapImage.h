@@ -55,7 +55,11 @@ class Timer;
 
 class BitmapImage final : public Image {
 public:
-    static Ref<BitmapImage> create(NativeImagePtr&& nativeImage, ImageObserver* observer = nullptr)
+    static Ref<BitmapImage> create(PlatformImagePtr&& platformImage, ImageObserver* observer = nullptr)
+    {
+        return adoptRef(*new BitmapImage(NativeImage::create(WTFMove(platformImage)), observer));
+    }
+    static Ref<BitmapImage> create(RefPtr<NativeImage>&& nativeImage, ImageObserver* observer = nullptr)
     {
         return adoptRef(*new BitmapImage(WTFMove(nativeImage), observer));
     }
@@ -83,6 +87,7 @@ public:
     RepetitionCount repetitionCount() const { return m_source->repetitionCount(); }
     String uti() const override { return m_source->uti(); }
     String filenameExtension() const override { return m_source->filenameExtension(); }
+    String accessibilityDescription() const override { return m_source->accessibilityDescription(); }
     Optional<IntPoint> hotSpot() const override { return m_source->hotSpot(); }
 
     // FloatSize due to override.
@@ -140,23 +145,23 @@ public:
 #endif
 #endif
 
-    WEBCORE_EXPORT NativeImagePtr nativeImage(const GraphicsContext* = nullptr) override;
-    NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
-    NativeImagePtr nativeImageForCurrentFrameRespectingOrientation(const GraphicsContext* = nullptr) override;
+    WEBCORE_EXPORT RefPtr<NativeImage> nativeImage(const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool respectOrientation, const GraphicsContext* = nullptr) override;
 #if USE(CG)
-    NativeImagePtr nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) override;
-    Vector<NativeImagePtr> framesNativeImages();
+    RefPtr<NativeImage> nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) override;
+    Vector<Ref<NativeImage>> framesNativeImages();
 #endif
 
     void imageFrameAvailableAtIndex(size_t);
     void decode(Function<void()>&&);
 
 private:
-    WEBCORE_EXPORT BitmapImage(NativeImagePtr&&, ImageObserver* = nullptr);
+    WEBCORE_EXPORT BitmapImage(RefPtr<NativeImage>&&, ImageObserver* = nullptr);
     WEBCORE_EXPORT BitmapImage(ImageObserver* = nullptr);
 
-    NativeImagePtr frameImageAtIndex(size_t index) { return m_source->frameImageAtIndex(index); }
-    NativeImagePtr frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default, const GraphicsContext* = nullptr);
+    RefPtr<NativeImage> frameImageAtIndex(size_t index) { return m_source->frameImageAtIndex(index); }
+    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default, const GraphicsContext* = nullptr);
 
     // Called to invalidate cached data. When |destroyAll| is true, we wipe out
     // the entire frame buffer cache and tell the image source to destroy
@@ -169,6 +174,9 @@ private:
     // If the image is large enough, calls destroyDecodedData() and passes
     // |destroyAll| along.
     void destroyDecodedDataIfNecessary(bool destroyAll = true);
+
+    FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::FromImage) const final { return m_source->sourceSize(orientation); }
+    bool hasDensityCorrectedSize() const override { return m_source->hasDensityCorrectedSize(); }
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) override;
@@ -200,7 +208,7 @@ private:
 #endif
 
 #if PLATFORM(COCOA)
-    RetainPtr<CFDataRef> tiffRepresentation(const Vector<NativeImagePtr>&);
+    RetainPtr<CFDataRef> tiffRepresentation(const Vector<Ref<NativeImage>>&);
 #endif
 
     void clearTimer();
@@ -228,7 +236,7 @@ private:
 
     bool m_animationFinished { false };
 
-    // The default value of m_allowSubsampling should be the same as defaultImageSubsamplingEnabled in Settings.cpp
+    // The default value of m_allowSubsampling should be the same as default value of the ImageSubsamplingEnabled setting.
 #if PLATFORM(IOS_FAMILY)
     bool m_allowSubsampling { true };
 #else

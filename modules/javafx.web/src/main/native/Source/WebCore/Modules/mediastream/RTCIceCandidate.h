@@ -33,35 +33,64 @@
 #if ENABLE(WEB_RTC)
 
 #include "ExceptionOr.h"
+#include "RTCIceCandidateType.h"
+#include "RTCIceComponent.h"
+#include "RTCIceProtocol.h"
+#include "RTCIceTcpCandidateType.h"
 #include "ScriptWrappable.h"
 
 namespace WebCore {
 
+struct RTCIceCandidateInit;
+
 class RTCIceCandidate final : public RefCounted<RTCIceCandidate>, public ScriptWrappable {
     WTF_MAKE_ISO_ALLOCATED(RTCIceCandidate);
 public:
-    struct Init {
-        String candidate;
-        String sdpMid;
-        Optional<unsigned short> sdpMLineIndex;
-    };
-
-    static ExceptionOr<Ref<RTCIceCandidate>> create(const Init&);
+    static ExceptionOr<Ref<RTCIceCandidate>> create(const RTCIceCandidateInit&);
     static Ref<RTCIceCandidate> create(const String& candidate, const String& sdpMid, Optional<unsigned short> sdpMLineIndex);
 
     const String& candidate() const { return m_candidate; }
     const String& sdpMid() const { return m_sdpMid; }
     Optional<unsigned short> sdpMLineIndex() const { return m_sdpMLineIndex; }
 
-    void setCandidate(String&& candidate) { m_candidate = WTFMove(candidate); }
+    struct Fields {
+        String foundation;
+        Optional<RTCIceComponent> component;
+        Optional<unsigned> priority;
+        String address;
+        Optional<RTCIceProtocol> protocol;
+        Optional<unsigned short> port;
+        Optional<RTCIceCandidateType> type;
+        Optional<RTCIceTcpCandidateType> tcpType;
+        String relatedAddress;
+        Optional<unsigned short> relatedPort;
+        String usernameFragment;
+    };
+
+    String foundation() const { return m_fields.foundation; }
+    Optional<RTCIceComponent> component() const { return m_fields.component; }
+    Optional<unsigned> priority() const { return m_fields.priority; }
+    String address() const { return m_fields.address; }
+    Optional<RTCIceProtocol> protocol() const { return m_fields.protocol; }
+    Optional<unsigned short> port() const { return m_fields.port; }
+    Optional<RTCIceCandidateType> type() const { return m_fields.type; }
+    Optional<RTCIceTcpCandidateType> tcpType() const { return m_fields.tcpType; }
+    String relatedAddress() const { return m_fields.relatedAddress; }
+    Optional<unsigned short> relatedPort() const { return m_fields.relatedPort; }
+    String usernameFragment() const { return m_fields.usernameFragment; }
+
+    RTCIceCandidateInit toJSON() const;
 
 private:
-    RTCIceCandidate(const String& candidate, const String& sdpMid, Optional<unsigned short> sdpMLineIndex);
+    RTCIceCandidate(const String& candidate, const String& sdpMid, Optional<unsigned short> sdpMLineIndex, Fields&&);
 
     String m_candidate;
     String m_sdpMid;
     Optional<unsigned short> m_sdpMLineIndex;
+    Fields m_fields;
 };
+
+Optional<RTCIceCandidate::Fields> parseIceCandidateSDP(const String&);
 
 } // namespace WebCore
 

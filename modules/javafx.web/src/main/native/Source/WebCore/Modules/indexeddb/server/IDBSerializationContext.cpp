@@ -79,7 +79,7 @@ void IDBSerializationContext::initializeVM()
     ASSERT(!m_globalObject);
     m_vm = JSC::VM::create();
     m_vm->heap.acquireAccess();
-    JSVMClientData::initNormalWorld(m_vm.get());
+    JSVMClientData::initNormalWorld(m_vm.get(), WorkerThreadType::Worklet);
 
     JSC::JSLockHolder locker(m_vm.get());
     m_globalObject.set(*m_vm, JSIDBSerializationGlobalObject::create(*m_vm, JSIDBSerializationGlobalObject::createStructure(*m_vm, JSC::jsNull()), normalWorld(*m_vm)));
@@ -91,7 +91,7 @@ JSC::VM& IDBSerializationContext::vm()
     return *m_vm;
 }
 
-JSC::JSGlobalObject& IDBSerializationContext::execState()
+JSC::JSGlobalObject& IDBSerializationContext::globalObject()
 {
     initializeVM();
     return *m_globalObject.get();

@@ -454,22 +454,22 @@ private:
             consume();
             ParseState state = saveState();
             if (!inCharacterClass && tryConsume('<')) {
-                auto groupName = tryConsumeGroupName();
+                    auto groupName = tryConsumeGroupName();
                 if (hasError(m_errorCode))
                     break;
 
-                if (groupName) {
-                    if (m_captureGroupNames.contains(groupName.value())) {
-                        delegate.atomNamedBackReference(groupName.value());
-                        break;
-                    }
+                    if (groupName) {
+                        if (m_captureGroupNames.contains(groupName.value())) {
+                            delegate.atomNamedBackReference(groupName.value());
+                            break;
+                        }
 
-                if (m_isNamedForwardReferenceAllowed) {
-                    m_forwardReferenceNames.add(groupName.value());
-                        delegate.atomNamedForwardReference(groupName.value());
-                        break;
+                    if (m_isNamedForwardReferenceAllowed) {
+                        m_forwardReferenceNames.add(groupName.value());
+                            delegate.atomNamedForwardReference(groupName.value());
+                            break;
+                        }
                     }
-                }
             }
 
             restoreState(state);
@@ -860,7 +860,7 @@ private:
         if (m_size > MAX_PATTERN_SIZE)
             return ErrorCode::PatternTooLarge;
 
-        parseTokens();
+            parseTokens();
 
         if (!hasError(m_errorCode)) {
             ASSERT(atEndOfPattern());

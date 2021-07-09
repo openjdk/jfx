@@ -64,8 +64,6 @@ public:
     static Ref<WebSocketChannel> create(Document& document, WebSocketChannelClient& client, SocketProvider& provider) { return adoptRef(*new WebSocketChannel(document, client, provider)); }
     virtual ~WebSocketChannel();
 
-    bool isWebSocketChannel() const final { return true; }
-
     bool send(const char* data, int length);
 
     // ThreadableWebSocketChannel functions.
@@ -116,11 +114,11 @@ public:
     void didFinishLoading() override;
     void didFail(ExceptionCode errorCode) override;
 
-    unsigned identifier() const { return m_identifier; }
-    bool hasCreatedHandshake() { return !!m_handshake; }
-    ResourceRequest clientHandshakeRequest(Function<String(const URL&)>&& cookieRequestHeaderFieldValue);
-    const ResourceResponse& serverHandshakeResponse() const;
-    WebSocketHandshake::Mode handshakeMode() const;
+    unsigned long progressIdentifier() const final { return m_progressIdentifier; }
+    bool hasCreatedHandshake() const final { return !!m_handshake; }
+    bool isConnected() const final { return m_handshake->mode() == WebSocketHandshake::Mode::Connected; }
+    ResourceRequest clientHandshakeRequest(const CookieGetter&) const final;
+    const ResourceResponse& serverHandshakeResponse() const final;
 
     using RefCounted<WebSocketChannel>::ref;
     using RefCounted<WebSocketChannel>::deref;
@@ -211,7 +209,7 @@ private:
     bool m_shouldDiscardReceivedData { false };
     unsigned m_unhandledBufferedAmount { 0 };
 
-    unsigned m_identifier { 0 }; // m_identifier == 0 means that we could not obtain a valid identifier.
+    unsigned m_progressIdentifier { 0 }; // m_progressIdentifier == 0 means that we could not obtain a progress identifier.
 
     // Private members only for hybi-10 protocol.
     bool m_hasContinuousFrame { false };
@@ -232,7 +230,3 @@ private:
 };
 
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebSocketChannel)
-    static bool isType(const WebCore::ThreadableWebSocketChannel& threadableWebSocketChannel) { return threadableWebSocketChannel.isWebSocketChannel(); }
-SPECIALIZE_TYPE_TRAITS_END()

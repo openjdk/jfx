@@ -30,8 +30,9 @@ typedef double DOMHighResTimeStamp;
 [
     Conditional=INTERSECTION_OBSERVER,
     ImplementationLacksVTable,
-    EnabledAtRuntime=IntersectionObserver,
+    EnabledBySetting=IntersectionObserver,
     JSCustomMarkFunction,
+    Exposed=Window
 ] interface IntersectionObserverEntry {
     constructor(IntersectionObserverEntryInit intersectionObserverEntryInit);
 

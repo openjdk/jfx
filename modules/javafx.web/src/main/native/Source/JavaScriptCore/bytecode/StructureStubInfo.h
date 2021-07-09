@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,8 @@ enum class AccessType : int8_t {
     DeleteByID,
     DeleteByVal,
     GetPrivateName,
+    CheckPrivateBrand,
+    SetPrivateBrand,
 };
 
 enum class CacheType : int8_t {
@@ -75,7 +77,7 @@ class StructureStubInfo {
     WTF_MAKE_NONCOPYABLE(StructureStubInfo);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    StructureStubInfo(AccessType);
+    StructureStubInfo(AccessType, CodeOrigin);
     ~StructureStubInfo();
 
     void initGetByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* baseObjectStructure, PropertyOffset, CacheableIdentifier);
@@ -91,14 +93,14 @@ public:
     void deref();
     void aboutToDie();
 
-    void visitAggregate(SlotVisitor&);
+    DECLARE_VISIT_AGGREGATE;
 
     // Check if the stub has weak references that are dead. If it does, then it resets itself,
     // either entirely or just enough to ensure that those dead pointers don't get used anymore.
     void visitWeakReferences(const ConcurrentJSLockerBase&, CodeBlock*);
 
     // This returns true if it has marked everything that it will ever mark.
-    bool propagateTransitions(SlotVisitor&);
+    template<typename Visitor> bool propagateTransitions(Visitor&);
 
     StubInfoSummary summary(VM&) const;
 
@@ -352,6 +354,7 @@ public:
         GPRReg thisGPR;
         GPRReg prototypeGPR;
         GPRReg propertyGPR;
+        GPRReg brandGPR;
     } regs;
 #if USE(JSVALUE32_64)
     GPRReg valueTagGPR;
@@ -361,6 +364,7 @@ public:
     union {
         GPRReg thisTagGPR;
         GPRReg propertyTagGPR;
+        GPRReg brandTagGPR;
     } v;
 #endif
 
@@ -404,6 +408,8 @@ inline auto appropriateOptimizingGetByIdFunction(AccessType type) -> decltype(&o
         return operationTryGetByIdOptimize;
     case AccessType::GetByIdDirect:
         return operationGetByIdDirectOptimize;
+    case AccessType::GetPrivateName:
+        return operationGetPrivateNameByIdOptimize;
     case AccessType::GetByIdWithThis:
     default:
         ASSERT_NOT_REACHED();
@@ -420,6 +426,8 @@ inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&oper
         return operationTryGetByIdGeneric;
     case AccessType::GetByIdDirect:
         return operationGetByIdDirectGeneric;
+    case AccessType::GetPrivateName:
+        return operationGetPrivateNameByIdGeneric;
     case AccessType::GetByIdWithThis:
     default:
         ASSERT_NOT_REACHED();

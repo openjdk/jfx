@@ -32,12 +32,17 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xcomposite.h>
 #if PLATFORM(GTK)
+#include <X11/Xutil.h>
 #include <X11/extensions/Xdamage.h>
 #endif
 
 #if USE(EGL)
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#endif
+
+#if USE(GLX)
+#include <GL/glx.h>
 #endif
 
 namespace WebCore {
@@ -122,6 +127,26 @@ bool PlatformDisplayX11::supportsXDamage(Optional<int>& damageEventBase, Optiona
     damageEventBase = m_damageEventBase;
     damageErrorBase = m_damageErrorBase;
     return m_supportsXDamage.value();
+}
+
+bool PlatformDisplayX11::supportsGLX(Optional<int>& glxErrorBase) const
+{
+#if USE(GLX)
+    if (!m_supportsGLX) {
+        m_supportsGLX = false;
+        if (m_display) {
+            int eventBase, errorBase;
+            m_supportsGLX = glXQueryExtension(m_display, &errorBase, &eventBase);
+            if (m_supportsGLX.value())
+                m_glxErrorBase = errorBase;
+        }
+    }
+
+    glxErrorBase = m_glxErrorBase;
+    return m_supportsGLX.value();
+#else
+    return false;
+#endif
 }
 
 void* PlatformDisplayX11::visual() const

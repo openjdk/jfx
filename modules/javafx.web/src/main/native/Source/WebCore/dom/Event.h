@@ -70,7 +70,8 @@ public:
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*);
+    void setCurrentTarget(EventTarget*, Optional<bool> isInShadowTree = WTF::nullopt);
+    bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
     void setEventPhase(PhaseType phase) { m_eventPhase = phase; }
@@ -144,7 +145,7 @@ public:
     bool isBeingDispatched() const { return eventPhase(); }
 
     virtual EventTarget* relatedTarget() const { return nullptr; }
-    virtual void setRelatedTarget(EventTarget&) { }
+    virtual void setRelatedTarget(EventTarget*) { }
 
 protected:
     explicit Event(IsTrusted = IsTrusted::No);
@@ -171,6 +172,7 @@ private:
     unsigned m_isDefaultEventHandlerIgnored : 1;
     unsigned m_isTrusted : 1;
     unsigned m_isExecutingPassiveEventListener : 1;
+    unsigned m_currentTargetIsInShadowTree : 1;
 
     unsigned m_eventPhase : 2;
 

@@ -33,7 +33,10 @@ using namespace JSC;
 using namespace Bindings;
 using namespace HTMLNames;
 
-// JavaScript access to plug-in-exported properties for JSHTMLAppletElement, JSHTMLEmbedElement and JSHTMLObjectElement.
+// JavaScript access to plug-in-exported properties for JSHTMLEmbedElement and JSHTMLObjectElement.
+
+static JSC_DECLARE_HOST_FUNCTION(callPlugin);
+static JSC_DECLARE_CUSTOM_GETTER(pluginElementPropertyGetter);
 
 Instance* pluginInstance(HTMLElement& element)
 {
@@ -94,7 +97,7 @@ JSObject* pluginScriptObject(JSGlobalObject* lexicalGlobalObject, JSHTMLElement*
     return instance->createRuntimeObject(lexicalGlobalObject);
 }
 
-static EncodedJSValue pluginElementPropertyGetter(JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName propertyName)
+JSC_DEFINE_CUSTOM_GETTER(pluginElementPropertyGetter, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName propertyName))
 {
     VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -146,7 +149,7 @@ bool pluginElementCustomPut(JSHTMLElement* element, JSGlobalObject* lexicalGloba
     return true;
 }
 
-static EncodedJSValue JSC_HOST_CALL callPlugin(JSGlobalObject* lexicalGlobalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(callPlugin, (JSGlobalObject* lexicalGlobalObject, CallFrame* callFrame))
 {
     JSHTMLElement* element = jsCast<JSHTMLElement*>(callFrame->jsCallee());
 

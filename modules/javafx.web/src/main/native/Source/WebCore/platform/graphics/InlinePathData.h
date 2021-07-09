@@ -42,13 +42,19 @@ struct LineData {
 };
 
 struct ArcData {
-    FloatPoint offset;
+    enum class Type : uint8_t {
+        ArcOnly,
+        LineAndArc,
+        ClosedLineAndArc
+    };
+
+    FloatPoint start;
     FloatPoint center;
     float radius { 0 };
     float startAngle { 0 };
     float endAngle { 0 };
     bool clockwise { false };
-    bool hasOffset { false };
+    Type type { Type::ArcOnly };
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<ArcData> decode(Decoder&);
@@ -113,19 +119,19 @@ template<class Decoder> Optional<LineData> LineData::decode(Decoder& decoder)
 
 template<class Encoder> void ArcData::encode(Encoder& encoder) const
 {
-    encoder << offset;
+    encoder << start;
     encoder << center;
     encoder << radius;
     encoder << startAngle;
     encoder << endAngle;
     encoder << clockwise;
-    encoder << hasOffset;
+    encoder << type;
 }
 
 template<class Decoder> Optional<ArcData> ArcData::decode(Decoder& decoder)
 {
     ArcData data;
-    if (!decoder.decode(data.offset))
+    if (!decoder.decode(data.start))
         return WTF::nullopt;
 
     if (!decoder.decode(data.center))
@@ -143,7 +149,7 @@ template<class Decoder> Optional<ArcData> ArcData::decode(Decoder& decoder)
     if (!decoder.decode(data.clockwise))
         return WTF::nullopt;
 
-    if (!decoder.decode(data.hasOffset))
+    if (!decoder.decode(data.type))
         return WTF::nullopt;
 
     return data;
@@ -200,5 +206,18 @@ template<class Decoder> Optional<BezierCurveData> BezierCurveData::decode(Decode
 using InlinePathData = Variant<Monostate, MoveData, LineData, ArcData, QuadCurveData, BezierCurveData>;
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ArcData::Type> {
+    using values = EnumValues<
+        WebCore::ArcData::Type,
+        WebCore::ArcData::Type::ArcOnly,
+        WebCore::ArcData::Type::LineAndArc,
+        WebCore::ArcData::Type::ClosedLineAndArc
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(INLINE_PATH_DATA)

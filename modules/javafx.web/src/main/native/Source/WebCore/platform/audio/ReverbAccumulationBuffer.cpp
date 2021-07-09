@@ -38,12 +38,8 @@
 
 namespace WebCore {
 
-using namespace VectorMath;
-
 ReverbAccumulationBuffer::ReverbAccumulationBuffer(size_t length)
     : m_buffer(length)
-    , m_readIndex(0)
-    , m_readTimeFrame(0)
 {
 }
 
@@ -100,11 +96,11 @@ int ReverbAccumulationBuffer::accumulate(float* source, size_t numberOfFrames, i
     if (!isSafe)
         return 0;
 
-    vadd(source, 1, destination + writeIndex, 1, destination + writeIndex, 1, numberOfFrames1);
+    VectorMath::add(source, destination + writeIndex, destination + writeIndex, numberOfFrames1);
 
     // Handle wrap-around if necessary
     if (numberOfFrames2 > 0)
-        vadd(source + numberOfFrames1, 1, destination, 1, destination, 1, numberOfFrames2);
+        VectorMath::add(source + numberOfFrames1, destination, destination, numberOfFrames2);
 
     return writeIndex;
 }

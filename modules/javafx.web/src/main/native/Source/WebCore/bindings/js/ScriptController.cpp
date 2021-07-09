@@ -56,6 +56,7 @@
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
+#include "WebCoreJITOperations.h"
 #include "WebCoreJSClientData.h"
 #include "npruntime_impl.h"
 #include "runtime_root.h"
@@ -87,6 +88,7 @@ void ScriptController::initializeMainThread()
 #if !PLATFORM(IOS_FAMILY)
     JSC::initialize();
     WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 #endif
 }
 
@@ -225,7 +227,7 @@ JSC::JSValue ScriptController::linkAndEvaluateModuleScript(LoadableModuleScript&
     return linkAndEvaluateModuleScriptInWorld(moduleScript, mainThreadNormalWorld());
 }
 
-JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, JSModuleRecord& moduleRecord, DOMWrapperWorld& world)
+JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, JSModuleRecord& moduleRecord, DOMWrapperWorld& world, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
 {
     JSLockHolder lock(world.vm());
 
@@ -238,15 +240,15 @@ JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, JSModuleReco
     SetForScope<const URL*> sourceURLScope(m_sourceURL, &sourceURL);
 
     InspectorInstrumentation::willEvaluateScript(m_frame, sourceURL.string(), jsSourceCode.firstLine().oneBasedInt(), jsSourceCode.startColumn().oneBasedInt());
-    auto returnValue = moduleRecord.evaluate(&lexicalGlobalObject);
+    auto returnValue = moduleRecord.evaluate(&lexicalGlobalObject, awaitedValue, resumeMode);
     InspectorInstrumentation::didEvaluateScript(m_frame);
 
     return returnValue;
 }
 
-JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, JSModuleRecord& moduleRecord)
+JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, JSModuleRecord& moduleRecord, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
 {
-    return evaluateModule(sourceURL, moduleRecord, mainThreadNormalWorld());
+    return evaluateModule(sourceURL, moduleRecord, mainThreadNormalWorld(), awaitedValue, resumeMode);
 }
 
 Ref<DOMWrapperWorld> ScriptController::createWorld(const String& name, WorldType type)
@@ -409,7 +411,7 @@ bool ScriptController::canAccessFromCurrentOrigin(Frame* frame, Document& access
     // If the current lexicalGlobalObject is null we should use the accessing document for the security check.
     if (!lexicalGlobalObject) {
         auto* targetDocument = frame ? frame->document() : nullptr;
-        return targetDocument && accessingDocument.securityOrigin().canAccess(targetDocument->securityOrigin());
+        return targetDocument && accessingDocument.securityOrigin().isSameOriginDomain(targetDocument->securityOrigin());
     }
 
     return BindingSecurity::shouldAllowAccessToFrame(lexicalGlobalObject, frame);
@@ -579,6 +581,7 @@ JSC::JSValue ScriptController::executeScriptInWorldIgnoringException(DOMWrapperW
 
 ValueOrException ScriptController::executeScriptInWorld(DOMWrapperWorld& world, RunJavaScriptParameters&& parameters)
 {
+#if ENABLE(APP_BOUND_DOMAINS)
     if (m_frame.loader().client().shouldEnableInAppBrowserPrivacyProtections()) {
         if (auto* document = m_frame.document())
             document->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user script injection for non-app bound domain.");
@@ -586,8 +589,9 @@ ValueOrException ScriptController::executeScriptInWorld(DOMWrapperWorld& world, 
         return makeUnexpected(ExceptionDetails { "Ignoring user script injection for non-app bound domain"_s });
     }
     m_frame.loader().client().notifyPageOfAppBoundBehavior();
+#endif
 
-    UserGestureIndicator gestureIndicator(parameters.forceUserGesture == ForceUserGesture::Yes ? Optional<ProcessingUserGestureState>(ProcessingUserGesture) : WTF::nullopt);
+    UserGestureIndicator gestureIndicator(parameters.forceUserGesture == ForceUserGesture::Yes ? Optional<ProcessingUserGestureState>(ProcessingUserGesture) : WTF::nullopt, m_frame.document());
 
     if (!canExecuteScripts(AboutToExecuteScript) || isPaused())
         return makeUnexpected(ExceptionDetails { "Cannot execute JavaScript in this document"_s });
@@ -808,7 +812,7 @@ void ScriptController::executeJavaScriptURL(const URL& url, RefPtr<SecurityOrigi
 {
     ASSERT(url.protocolIsJavaScript());
 
-    if (requesterSecurityOrigin && !requesterSecurityOrigin->canAccess(m_frame.document()->securityOrigin()))
+    if (requesterSecurityOrigin && !requesterSecurityOrigin->isSameOriginDomain(m_frame.document()->securityOrigin()))
         return;
 
     if (!m_frame.page() || !m_frame.document()->contentSecurityPolicy()->allowJavaScriptURLs(m_frame.document()->url().string(), eventHandlerPosition().m_line))

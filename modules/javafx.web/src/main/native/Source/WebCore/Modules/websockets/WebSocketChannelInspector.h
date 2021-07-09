@@ -46,6 +46,8 @@ public:
     void didSendWebSocketFrame(Document*, const WebSocketFrame&);
     void didReceiveWebSocketFrameError(Document*, const String& errorMessage);
 
+    unsigned long progressIdentifier() const;
+
 private:
     unsigned long m_progressIdentifier { 0 };
 };

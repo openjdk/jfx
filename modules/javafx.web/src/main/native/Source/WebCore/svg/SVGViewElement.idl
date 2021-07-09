@@ -23,8 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGViewElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGViewElement : SVGElement {
 };
 
-SVGViewElement implements SVGFitToViewBox;
-SVGViewElement implements SVGZoomAndPan;
+SVGViewElement includes SVGFitToViewBox;
+SVGViewElement includes SVGZoomAndPan;

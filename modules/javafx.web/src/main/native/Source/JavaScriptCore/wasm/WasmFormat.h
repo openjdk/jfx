@@ -27,7 +27,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "B3Type.h"
 #include "CodeLocation.h"
 #include "Identifier.h"
 #include "MacroAssemblerCodeRef.h"
@@ -38,6 +37,7 @@
 #include "WasmOps.h"
 #include "WasmPageCount.h"
 #include "WasmSignature.h"
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <wtf/Optional.h>
@@ -45,9 +45,7 @@
 
 namespace JSC {
 
-namespace B3 {
 class Compilation;
-}
 
 namespace Wasm {
 
@@ -57,7 +55,7 @@ struct ModuleInformation;
 using BlockSignature = const Signature*;
 
 enum class TableElementType : uint8_t {
-    Anyref,
+    Externref,
     Funcref
 };
 
@@ -69,7 +67,7 @@ inline bool isValueType(Type type)
     case F32:
     case F64:
         return true;
-    case Anyref:
+    case Externref:
     case Funcref:
         return Options::useWebAssemblyReferences();
     default:
@@ -78,11 +76,9 @@ inline bool isValueType(Type type)
     return false;
 }
 
-inline bool isSubtype(Type sub, Type parent)
+inline bool isRefType(Type type)
 {
-    if (sub == parent)
-        return true;
-    return sub == Funcref && parent == Anyref;
+    return type == Externref || type == Funcref;
 }
 
 enum class ExternalKind : uint8_t {
@@ -212,29 +208,67 @@ private:
 
 struct Segment {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    enum class Kind : uint8_t {
+        Active,
+        Passive,
+    };
+
+    Kind kind;
     uint32_t sizeInBytes;
-    I32InitExpr offset;
+    Optional<I32InitExpr> offsetIfActive;
     // Bytes are allocated at the end.
     uint8_t& byte(uint32_t pos)
     {
         ASSERT(pos < sizeInBytes);
         return *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(this) + sizeof(Segment) + pos);
     }
-    static Segment* create(I32InitExpr, uint32_t);
+
     static void destroy(Segment*);
     typedef std::unique_ptr<Segment, decltype(&Segment::destroy)> Ptr;
-    static Ptr adoptPtr(Segment*);
+    static Segment::Ptr create(Optional<I32InitExpr>, uint32_t, Kind);
+
+    bool isActive() const { return kind == Kind::Active; }
+    bool isPassive() const { return kind == Kind::Passive; }
 };
 
 struct Element {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    Element(uint32_t tableIndex, I32InitExpr offset)
-        : tableIndex(tableIndex)
-        , offset(offset)
+
+    // nullFuncIndex represents the case when an element segment (of type funcref)
+    // contains a null element.
+    constexpr static uint32_t nullFuncIndex = UINT32_MAX;
+
+    enum class Kind : uint8_t {
+        Active,
+        Passive,
+        Declared,
+    };
+
+    Element(Element::Kind kind, TableElementType elementType, Optional<uint32_t> tableIndex, Optional<I32InitExpr> initExpr)
+        : kind(kind)
+        , elementType(elementType)
+        , tableIndexIfActive(WTFMove(tableIndex))
+        , offsetIfActive(WTFMove(initExpr))
     { }
 
-    uint32_t tableIndex;
-    I32InitExpr offset;
+    Element(Element::Kind kind, TableElementType elemType)
+        : Element(kind, elemType, WTF::nullopt, WTF::nullopt)
+    { }
+
+    uint32_t length() const { return functionIndices.size(); }
+
+    bool isActive() const { return kind == Kind::Active; }
+    bool isPassive() const { return kind == Kind::Passive; }
+
+    static bool isNullFuncIndex(uint32_t idx) { return idx == nullFuncIndex; }
+
+    Kind kind;
+    TableElementType elementType;
+    Optional<uint32_t> tableIndexIfActive;
+    Optional<I32InitExpr> offsetIfActive;
+
+    // Index may be nullFuncIndex.
     Vector<uint32_t> functionIndices;
 };
 
@@ -261,7 +295,7 @@ public:
     uint32_t initial() const { return m_initial; }
     Optional<uint32_t> maximum() const { return m_maximum; }
     TableElementType type() const { return m_type; }
-    Wasm::Type wasmType() const { return m_type == TableElementType::Funcref ? Type::Funcref : Type::Anyref; }
+    Wasm::Type wasmType() const { return m_type == TableElementType::Funcref ? Type::Funcref : Type::Externref; }
 
 private:
     uint32_t m_initial;
@@ -303,7 +337,7 @@ struct UnlinkedWasmToWasmCall {
 
 struct Entrypoint {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    std::unique_ptr<B3::Compilation> compilation;
+    std::unique_ptr<Compilation> compilation;
     RegisterAtOffsetList calleeSaveRegisters;
 };
 

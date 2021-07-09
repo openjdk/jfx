@@ -171,16 +171,13 @@ void RadioInputType::didDispatchClick(Event& event, const InputElementClickState
         ASSERT(element());
         if (button && button->isRadioButton() && button->form() == element()->form() && button->name() == element()->name())
             button->setChecked(true);
+        else
+            element()->setChecked(false);
     } else if (state.checked != element()->checked())
         fireInputAndChangeEvents();
 
     // The work we did in willDispatchClick was default handling.
     event.setDefaultHandled();
-}
-
-bool RadioInputType::isRadioButton() const
-{
-    return true;
 }
 
 bool RadioInputType::matchesIndeterminatePseudoClass() const

@@ -95,6 +95,7 @@ enum Intrinsic : uint8_t {
     RegExpTestFastIntrinsic,
     RegExpMatchFastIntrinsic,
     ObjectCreateIntrinsic,
+    ObjectGetOwnPropertyNamesIntrinsic,
     ObjectGetPrototypeOfIntrinsic,
     ObjectIsIntrinsic,
     ObjectKeysIntrinsic,
@@ -145,11 +146,11 @@ enum Intrinsic : uint8_t {
     AtomicsExchangeIntrinsic,
     AtomicsIsLockFreeIntrinsic,
     AtomicsLoadIntrinsic,
+    AtomicsNotifyIntrinsic,
     AtomicsOrIntrinsic,
     AtomicsStoreIntrinsic,
     AtomicsSubIntrinsic,
     AtomicsWaitIntrinsic,
-    AtomicsWakeIntrinsic,
     AtomicsXorIntrinsic,
     ParseIntIntrinsic,
 
@@ -191,6 +192,8 @@ enum Intrinsic : uint8_t {
     DataViewSetUint32,
     DataViewSetFloat32,
     DataViewSetFloat64,
+
+    WasmFunctionIntrinsic,
 };
 
 Optional<IterationKind> interationKindForIntrinsic(Intrinsic);

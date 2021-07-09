@@ -46,10 +46,10 @@ types [
     :LLIntCallLinkInfo,
     :ResultType,
     :OperandTypes,
+    :PrivateFieldPutKind,
     :ProfileTypeBytecodeFlag,
     :PropertyOffset,
     :PutByIdFlags,
-    :PutByValFlags,
     :ResolveType,
     :Structure,
     :StructureID,
@@ -328,13 +328,14 @@ op_group :UnaryOp,
         :unsigned,
         :is_empty,
         :typeof_is_undefined,
+        :typeof_is_object,
+        :typeof_is_function,
         :is_undefined_or_null,
         :is_boolean,
         :is_number,
         :is_big_int,
         :is_object,
-        :is_object_or_null,
-        :is_function,
+        :is_callable,
         :is_constructor,
     ],
     args: {
@@ -573,6 +574,42 @@ op :get_private_name,
         property: WriteBarrier[JSCell],
     }
 
+op :put_private_name,
+    args: {
+        base: VirtualRegister,
+        property: VirtualRegister,
+        value: VirtualRegister,
+        putKind: PrivateFieldPutKind,
+    },
+    metadata: {
+        oldStructureID: StructureID,
+        property: WriteBarrier[JSCell],
+        offset: unsigned,
+        newStructureID: StructureID,
+    }
+
+op :set_private_brand,
+    args: {
+        base: VirtualRegister,
+        brand: VirtualRegister,
+    },
+    metadata: {
+        oldStructureID: StructureID,
+        newStructureID: StructureID,
+        brand: WriteBarrier[JSCell],
+    }
+
+op :check_private_brand,
+    args: {
+        base: VirtualRegister,
+        brand: VirtualRegister,
+    },
+    metadata: {
+        structureID: StructureID,
+        brand: WriteBarrier[JSCell],
+    }
+
+
 op :put_by_val,
     args: {
         base: VirtualRegister,
@@ -598,7 +635,7 @@ op :put_by_val_direct,
         base: VirtualRegister,
         property: VirtualRegister,
         value: VirtualRegister,
-        flags: PutByValFlags,
+        ecmaMode: ECMAMode,
     },
     metadata: {
         arrayProfile: ArrayProfile,
@@ -1110,7 +1147,7 @@ op :get_enumerable_length,
         base: VirtualRegister,
     }
 
-op :has_indexed_property,
+op :has_enumerable_indexed_property,
     args: {
         dst: VirtualRegister,
         base: VirtualRegister,
@@ -1120,7 +1157,7 @@ op :has_indexed_property,
         arrayProfile: ArrayProfile,
     }
 
-op :has_structure_property,
+op :has_enumerable_structure_property,
     args: {
         dst: VirtualRegister,
         base: VirtualRegister,
@@ -1144,7 +1181,7 @@ op :in_structure_property,
         enumerator: VirtualRegister,
     }
 
-op :has_generic_property,
+op :has_enumerable_property,
     args: {
         dst: VirtualRegister,
         base: VirtualRegister,
@@ -1260,7 +1297,6 @@ op :iterator_next,
 
 op :yield,
     args: {
-        generator: VirtualRegister,
         yieldPoint: unsigned,
         argument: VirtualRegister,
     }
@@ -1315,7 +1351,6 @@ begin_section :CLoopHelpers,
     macro_name_component: :CLOOP_BYTECODE_HELPER
 
 op :llint_entry
-op :getHostCallReturnValue
 op :llint_return_to_host
 op :llint_vm_entry_to_javascript
 op :llint_vm_entry_to_native
@@ -1389,8 +1424,10 @@ op :llint_internal_function_call_trampoline
 op :llint_internal_function_construct_trampoline
 op :checkpoint_osr_exit_from_inlined_call_trampoline
 op :checkpoint_osr_exit_trampoline
+op :normal_osr_exit_trampoline
 op :fuzzer_return_early_from_loop_hint
-op :handleUncaughtException
+op :llint_get_host_call_return_value
+op :llint_handle_uncaught_exception
 op :op_call_return_location
 op :op_construct_return_location
 op :op_call_varargs_slow_return_location
@@ -1403,6 +1440,40 @@ op :op_iterator_open_return_location
 op :op_iterator_next_return_location
 op :wasm_function_prologue
 op :wasm_function_prologue_no_tls
+
+op :op_call_slow_return_location
+op :op_construct_slow_return_location
+op :op_iterator_open_slow_return_location
+op :op_iterator_next_slow_return_location
+op :op_tail_call_return_location
+op :op_tail_call_slow_return_location
+op :op_tail_call_forward_arguments_slow_return_location
+op :op_tail_call_varargs_slow_return_location
+op :op_call_eval_slow_return_location
+
+op :js_trampoline_op_call
+op :js_trampoline_op_tail_call
+op :js_trampoline_op_construct
+op :js_trampoline_op_iterator_next
+op :js_trampoline_op_iterator_open
+op :js_trampoline_op_call_slow
+op :js_trampoline_op_tail_call_slow
+op :js_trampoline_op_construct_slow
+op :js_trampoline_op_call_varargs_slow
+op :js_trampoline_op_tail_call_varargs_slow
+op :js_trampoline_op_tail_call_forward_arguments_slow
+op :js_trampoline_op_construct_varargs_slow
+op :js_trampoline_op_call_eval_slow
+op :js_trampoline_op_iterator_next_slow
+op :js_trampoline_op_iterator_open_slow
+op :js_trampoline_llint_function_for_call_arity_check_untag
+op :js_trampoline_llint_function_for_call_arity_check_tag
+op :js_trampoline_llint_function_for_construct_arity_check_untag
+op :js_trampoline_llint_function_for_construct_arity_check_tag
+op :wasm_trampoline_wasm_call
+op :wasm_trampoline_wasm_call_no_tls
+op :wasm_trampoline_wasm_call_indirect
+op :wasm_trampoline_wasm_call_indirect_no_tls
 
 end_section :NativeHelpers
 
@@ -1417,6 +1488,13 @@ autogenerate_wasm_opcodes
 # Helpers
 
 op :throw_from_slow_path_trampoline
+op :throw_from_fault_handler_trampoline_fastTLS
+op :throw_from_fault_handler_trampoline_reg_instance
+
+op :call_return_location
+op :call_no_tls_return_location
+op :call_indirect_return_location
+op :call_indirect_no_tls_return_location
 
 # FIXME: Wasm and JS LLInt should share common opcodes
 # https://bugs.webkit.org/show_bug.cgi?id=203656
@@ -1531,6 +1609,20 @@ op :table_set,
         tableIndex: unsigned,
     }
 
+op :table_init,
+    args: {
+        dstOffset: VirtualRegister,
+        srcOffset: VirtualRegister,
+        length: VirtualRegister,
+        elementIndex: unsigned,
+        tableIndex: unsigned,
+    }
+
+op :elem_drop,
+    args: {
+        elementIndex: unsigned,
+    }
+
 op :table_size,
     args: {
         dst: VirtualRegister,
@@ -1551,6 +1643,15 @@ op :table_fill,
         fill: VirtualRegister,
         size: VirtualRegister,
         tableIndex: unsigned,
+    }
+
+op :table_copy,
+    args: {
+        dstOffset: VirtualRegister,
+        srcOffset: VirtualRegister,
+        length: VirtualRegister,
+        dstTableIndex: unsigned,
+        srcTableIndex: unsigned,
     }
 
 op :call,
@@ -1596,6 +1697,33 @@ op :grow_memory,
         delta: VirtualRegister
     }
 
+op :memory_fill,
+    args: {
+        dstAddress: VirtualRegister,
+        targetValue: VirtualRegister,
+        count: VirtualRegister,
+    }
+
+op :memory_copy,
+    args: {
+        dstAddress: VirtualRegister,
+        srcAddress: VirtualRegister,
+        count: VirtualRegister,
+    }
+
+op :memory_init,
+    args: {
+        dstAddress: VirtualRegister,
+        srcAddress: VirtualRegister,
+        length: VirtualRegister,
+        dataSegmentIndex: unsigned,
+    }
+
+op :data_drop,
+    args: {
+        dataSegmentIndex: unsigned,
+    }
+
 op :select,
     args: {
         dst: VirtualRegister,
@@ -1633,6 +1761,69 @@ op_group :Store,
         pointer: VirtualRegister,
         value: VirtualRegister,
         offset: unsigned,
+    }
+
+op_group :AtomicBinaryRMW,
+    [
+        "add",
+        "sub",
+        "and",
+        "or",
+        "xor",
+        "xchg",
+    ].flat_map {|op|
+        [
+            "i64_atomic_rmw_#{op}",
+            "i64_atomic_rmw8_#{op}_u",
+            "i64_atomic_rmw16_#{op}_u",
+            "i64_atomic_rmw32_#{op}_u",
+        ]
+    }.map {|op| op.to_sym },
+    args: {
+        dst: VirtualRegister,
+        pointer: VirtualRegister,
+        offset: unsigned,
+        value: VirtualRegister,
+    }
+
+op_group :AtomicCompareExchange,
+    [
+        :i64_atomic_rmw_cmpxchg,
+        :i64_atomic_rmw8_cmpxchg_u,
+        :i64_atomic_rmw16_cmpxchg_u,
+        :i64_atomic_rmw32_cmpxchg_u,
+    ],
+    args: {
+        dst: VirtualRegister,
+        pointer: VirtualRegister,
+        offset: unsigned,
+        expected: VirtualRegister,
+        value: VirtualRegister,
+    }
+
+op_group :AtomicWait,
+    [
+        :memory_atomic_wait32,
+        :memory_atomic_wait64,
+    ],
+    args: {
+        dst: VirtualRegister,
+        pointer: VirtualRegister,
+        offset: unsigned,
+        value: VirtualRegister,
+        timeout: VirtualRegister,
+    }
+
+op :memory_atomic_notify,
+    args: {
+        dst: VirtualRegister,
+        pointer: VirtualRegister,
+        offset: unsigned,
+        count: VirtualRegister,
+    }
+
+op :atomic_fence,
+    args: {
     }
 
 end_section :Wasm

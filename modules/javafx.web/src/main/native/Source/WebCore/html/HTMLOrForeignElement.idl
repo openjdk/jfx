@@ -26,11 +26,15 @@
 // https://html.spec.whatwg.org/multipage/dom.html#htmlorsvgelement
 // FIXME: update above link when this change has been implemented:
 // https://github.com/whatwg/html/issues/4702
-[
-    NoInterfaceObject,
-] interface HTMLOrForeignElement {
-    readonly attribute DOMStringMap dataset; // FIXME: Should be [SameObject].
+interface mixin HTMLOrForeignElement {
+    [SameObject] readonly attribute DOMStringMap dataset;
+    // FIXME: Implement 'nonce'.
+    // attribute DOMString nonce; // intentionally no [CEReactions]
+
+    // FIXME: Implement 'autofocus'.
+    // [CEReactions] attribute boolean autofocus;
     [CEReactions, ImplementedAs=tabIndexForBindings] attribute long tabIndex;
-    void focus();
-    void blur();
+    // FIMXE: focus() is specified to take an optional FocusOptions. Implement that.
+    undefined focus();
+    undefined blur();
 };

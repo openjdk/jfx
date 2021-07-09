@@ -42,24 +42,10 @@ namespace WebCore {
 using namespace AudioUtilities;
 
 // Metering hits peaks instantly, but releases this fast (in seconds).
-const float meteringReleaseTimeConstant = 0.325f;
-
-const float uninitializedValue = -1;
+constexpr float meteringReleaseTimeConstant = 0.325f;
 
 DynamicsCompressorKernel::DynamicsCompressorKernel(float sampleRate, unsigned numberOfChannels)
     : m_sampleRate(sampleRate)
-    , m_lastPreDelayFrames(DefaultPreDelayFrames)
-    , m_preDelayReadIndex(0)
-    , m_preDelayWriteIndex(DefaultPreDelayFrames)
-    , m_ratio(uninitializedValue)
-    , m_slope(uninitializedValue)
-    , m_linearThreshold(uninitializedValue)
-    , m_dbThreshold(uninitializedValue)
-    , m_dbKnee(uninitializedValue)
-    , m_kneeThreshold(uninitializedValue)
-    , m_kneeThresholdDb(uninitializedValue)
-    , m_ykneeThresholdDb(uninitializedValue)
-    , m_K(uninitializedValue)
 {
     setNumberOfChannels(numberOfChannels);
 
@@ -199,7 +185,7 @@ float DynamicsCompressorKernel::updateStaticCurveParameters(float dbThreshold, f
     return m_K;
 }
 
-void DynamicsCompressorKernel::process(float* sourceChannels[],
+void DynamicsCompressorKernel::process(const float* sourceChannels[],
                                        float* destinationChannels[],
                                        unsigned numberOfChannels,
                                        unsigned framesToProcess,
@@ -470,6 +456,16 @@ void DynamicsCompressorKernel::reset()
     m_preDelayWriteIndex = DefaultPreDelayFrames;
 
     m_maxAttackCompressionDiffDb = -1; // uninitialized state
+}
+
+double DynamicsCompressorKernel::tailTime() const
+{
+    // The reduction value of the compressor is computed from the gain using an exponential filter
+    // with a time constant of |meteringReleaseTimeConstant|. We need to keep he compressor running
+    // for some time after the inputs go away so that the reduction value approaches 0. This is a
+    // tradeoff between how long we keep the node alive and how close we approach the final value.
+    // A value of 5 to 10 times the time constant is a reasonable trade-off.
+    return 5 * meteringReleaseTimeConstant;
 }
 
 } // namespace WebCore

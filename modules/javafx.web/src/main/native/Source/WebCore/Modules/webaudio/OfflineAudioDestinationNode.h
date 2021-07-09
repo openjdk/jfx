@@ -37,9 +37,9 @@ class AudioContext;
 class OfflineAudioDestinationNode final : public AudioDestinationNode {
     WTF_MAKE_ISO_ALLOCATED(OfflineAudioDestinationNode);
 public:
-    static Ref<OfflineAudioDestinationNode> create(BaseAudioContext& context, AudioBuffer* renderTarget)
+    static Ref<OfflineAudioDestinationNode> create(BaseAudioContext& context, unsigned numberOfChannels, float sampleRate, RefPtr<AudioBuffer>&& renderTarget)
     {
-        return adoptRef(*new OfflineAudioDestinationNode(context, renderTarget));
+        return adoptRef(*new OfflineAudioDestinationNode(context, numberOfChannels, sampleRate, WTFMove(renderTarget)));
     }
 
     virtual ~OfflineAudioDestinationNode();
@@ -50,12 +50,20 @@ public:
 
     // AudioDestinationNode
     void enableInput(const String&) override { }
-    ExceptionOr<void> startRendering() override;
-
-    float sampleRate() const final { return m_renderTarget->sampleRate(); }
+    void startRendering(CompletionHandler<void(Optional<Exception>&&)>&&) final;
 
 private:
-    OfflineAudioDestinationNode(BaseAudioContext&, AudioBuffer* renderTarget);
+    OfflineAudioDestinationNode(BaseAudioContext&, unsigned numberOfChannels, float sampleRate, RefPtr<AudioBuffer>&& renderTarget);
+
+    enum class OfflineRenderResult { Failure, Suspended, Complete };
+    OfflineRenderResult offlineRender();
+    void notifyOfflineRenderingSuspended();
+
+    bool requiresTailProcessing() const final { return false; }
+
+    unsigned maxChannelCount() const final;
+
+    unsigned m_numberOfChannels;
 
     // This AudioNode renders into this AudioBuffer.
     RefPtr<AudioBuffer> m_renderTarget;
@@ -65,8 +73,9 @@ private:
 
     // Rendering thread.
     RefPtr<Thread> m_renderThread;
-    bool m_startedRendering;
-    bool offlineRender();
+    size_t m_framesToProcess;
+    size_t m_destinationOffset { 0 };
+    bool m_startedRendering { false };
 };
 
 } // namespace WebCore

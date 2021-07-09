@@ -42,27 +42,28 @@ const PinnedRegisterInfo& PinnedRegisterInfo::get()
         if (!Context::useFastTLS())
             ++numberOfPinnedRegisters;
         GPRReg baseMemoryPointer = GPRInfo::regCS3;
-        GPRReg sizeRegister = GPRInfo::regCS4;
+        GPRReg boundsCheckingSizeRegister = GPRInfo::regCS4;
         GPRReg wasmContextInstancePointer = InvalidGPRReg;
         if (!Context::useFastTLS())
             wasmContextInstancePointer = GPRInfo::regCS0;
 
-        staticPinnedRegisterInfo.construct(sizeRegister, baseMemoryPointer, wasmContextInstancePointer);
+        staticPinnedRegisterInfo.construct(boundsCheckingSizeRegister, baseMemoryPointer, wasmContextInstancePointer);
     });
 
     return staticPinnedRegisterInfo.get();
 }
 
-PinnedRegisterInfo::PinnedRegisterInfo(GPRReg sizeRegister, GPRReg baseMemoryPointer, GPRReg wasmContextInstancePointer)
-    : sizeRegister(sizeRegister)
+PinnedRegisterInfo::PinnedRegisterInfo(GPRReg boundsCheckingSizeRegister, GPRReg baseMemoryPointer, GPRReg wasmContextInstancePointer)
+    : boundsCheckingSizeRegister(boundsCheckingSizeRegister)
     , baseMemoryPointer(baseMemoryPointer)
     , wasmContextInstancePointer(wasmContextInstancePointer)
 {
 }
 
-MemoryInformation::MemoryInformation(PageCount initial, PageCount maximum, bool isImport)
+MemoryInformation::MemoryInformation(PageCount initial, PageCount maximum, bool isShared, bool isImport)
     : m_initial(initial)
     , m_maximum(maximum)
+    , m_isShared(isShared)
     , m_isImport(isImport)
 {
     RELEASE_ASSERT(!!m_initial);

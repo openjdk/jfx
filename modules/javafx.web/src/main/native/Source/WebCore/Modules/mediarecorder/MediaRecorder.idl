@@ -27,33 +27,31 @@ enum RecordingState { "inactive", "recording", "paused" };
 [
     ActiveDOMObject,
     Conditional=MEDIA_STREAM,
-    EnabledAtRuntime=MediaRecorder,
+    EnabledBySetting=MediaRecorder,
     Exposed=Window
 ] interface MediaRecorder : EventTarget {
-    [CallWith=Document, MayThrowException] constructor(MediaStream stream, optional MediaRecorderOptions options);
-
-    // FIXME: Implement commented out methods/attributes.
+    [CallWith=Document] constructor(MediaStream stream, optional MediaRecorderOptions options);
 
     readonly attribute MediaStream stream;
-    // readonly attribute DOMString mimeType;
+    readonly attribute DOMString mimeType;
     readonly attribute RecordingState state;
     attribute EventHandler onstart;
     attribute EventHandler onstop;
     attribute EventHandler ondataavailable;
-    // attribute EventHandler onpause;
-    // attribute EventHandler onresume;
+    attribute EventHandler onpause;
+    attribute EventHandler onresume;
     attribute EventHandler onerror;
-    // readonly attribute unsigned long videoBitsPerSecond;
-    // readonly attribute unsigned long audioBitsPerSecond;
+    readonly attribute unsigned long videoBitsPerSecond;
+    readonly attribute unsigned long audioBitsPerSecond;
     // readonly attribute BitrateMode audioBitrateMode;
 
-    [MayThrowException, ImplementedAs=startRecording] void start(optional unsigned long timeslice);
-    [ImplementedAs=stopRecording] void stop();
-    // void pause();
-    // void resume();
-    void requestData();
+    [MayThrowException, ImplementedAs=startRecording] undefined start(optional unsigned long timeslice);
+    [ImplementedAs=stopRecording] undefined stop();
+    [MayThrowException, ImplementedAs=pauseRecording] undefined pause();
+    [MayThrowException, ImplementedAs=resumeRecording] undefined resume();
+    [MayThrowException] undefined requestData();
 
-    // static boolean isTypeSupported(DOMString type);
+    [CallWith=Document] static boolean isTypeSupported(DOMString type);
 };
 
 dictionary MediaRecorderOptions {

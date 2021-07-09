@@ -52,7 +52,7 @@ public:
         return std::unique_ptr<ImageBackingStore>(new ImageBackingStore(other));
     }
 
-    NativeImagePtr image() const;
+    PlatformImagePtr image() const;
 
     bool setSize(const IntSize& size)
     {
@@ -152,7 +152,7 @@ public:
         if (!a)
             return;
 
-        auto pixel = asSRGBA(Packed::ARGB { *dest });
+        auto pixel = asSRGBA(PackedColor::ARGB { *dest });
 
         if (a >= 255 || !pixel.alpha) {
             setPixel(dest, r, g, b, a);
@@ -169,12 +169,12 @@ public:
         b = fastDivideBy255(b * a + pixel.blue * d);
         a += fastDivideBy255(d * pixel.alpha);
 
-        auto result = SRGBA { r, g, b, a };
+        auto result = SRGBA<uint8_t> { r, g, b, a };
 
         if (!m_premultiplyAlpha)
             result = unpremultiplied(result);
 
-        *dest = Packed::ARGB { result }.value;
+        *dest = PackedColor::ARGB { result }.value;
     }
 
     static bool isOverSize(const IntSize& size)
@@ -226,12 +226,12 @@ private:
         if (m_premultiplyAlpha && !a)
             return 0;
 
-        auto result = SRGBA { r, g, b, a };
+        auto result = SRGBA<uint8_t> { r, g, b, a };
 
         if (m_premultiplyAlpha && a < 255)
             result = premultipliedFlooring(result);
 
-        return Packed::ARGB { result }.value;
+        return PackedColor::ARGB { result }.value;
     }
 
     RefPtr<SharedBuffer::DataSegment> m_pixels;

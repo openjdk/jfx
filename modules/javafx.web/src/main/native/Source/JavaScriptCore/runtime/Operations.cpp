@@ -75,7 +75,7 @@ NEVER_INLINE JSValue jsAddSlowCase(JSGlobalObject* globalObject, JSValue v1, JSV
     RELEASE_AND_RETURN(scope, arithmeticBinaryOp(globalObject, p1, p2, doubleOp, bigIntOp, "Invalid mix of BigInt and other type in addition."_s));
 }
 
-JSValue jsTypeStringForValue(VM& vm, JSGlobalObject* globalObject, JSValue v)
+JSString* jsTypeStringForValueWithConcurrency(VM& vm, JSGlobalObject* globalObject, JSValue v, Concurrency concurrency)
 {
     if (v.isUndefined())
         return vm.smallStrings.undefinedString();
@@ -95,34 +95,22 @@ JSValue jsTypeStringForValue(VM& vm, JSGlobalObject* globalObject, JSValue v)
         // as null when doing comparisons.
         if (object->structure(vm)->masqueradesAsUndefined(globalObject))
             return vm.smallStrings.undefinedString();
-        if (object->isCallable(vm))
+        if (LIKELY(concurrency == Concurrency::MainThread)) {
+            if (object->isCallable(vm))
+                return vm.smallStrings.functionString();
+            return vm.smallStrings.objectString();
+        }
+
+        switch (object->isCallableWithConcurrency<Concurrency::ConcurrentThread>(vm)) {
+        case TriState::True:
             return vm.smallStrings.functionString();
+        case TriState::False:
+            return vm.smallStrings.objectString();
+        case TriState::Indeterminate:
+            return nullptr;
+        }
     }
     return vm.smallStrings.objectString();
-}
-
-JSValue jsTypeStringForValue(JSGlobalObject* globalObject, JSValue v)
-{
-    return jsTypeStringForValue(globalObject->vm(), globalObject, v);
-}
-
-bool jsIsObjectTypeOrNull(JSGlobalObject* globalObject, JSValue v)
-{
-    VM& vm = globalObject->vm();
-    if (!v.isCell())
-        return v.isNull();
-
-    JSType type = v.asCell()->type();
-    if (type == StringType || type == SymbolType || type == HeapBigIntType)
-        return false;
-    if (type >= ObjectType) {
-        if (asObject(v)->structure(vm)->masqueradesAsUndefined(globalObject))
-            return false;
-        JSObject* object = asObject(v);
-        if (object->isCallable(vm))
-            return false;
-    }
-    return true;
 }
 
 size_t normalizePrototypeChain(JSGlobalObject* globalObject, JSCell* base, bool& sawPolyProto)

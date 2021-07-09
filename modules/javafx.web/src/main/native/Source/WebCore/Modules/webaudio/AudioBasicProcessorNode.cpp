@@ -39,11 +39,11 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AudioBasicProcessorNode);
 
-AudioBasicProcessorNode::AudioBasicProcessorNode(BaseAudioContext& context)
-    : AudioNode(context)
+AudioBasicProcessorNode::AudioBasicProcessorNode(BaseAudioContext& context, NodeType type)
+    : AudioNode(context, type)
 {
-    addInput(makeUnique<AudioNodeInput>(this));
-    addOutput(makeUnique<AudioNodeOutput>(this, 1));
+    addInput();
+    addOutput(1);
 
     // The subclass must create m_processor.
 }
@@ -87,17 +87,19 @@ void AudioBasicProcessorNode::process(size_t framesToProcess)
     }
 }
 
+void AudioBasicProcessorNode::processOnlyAudioParams(size_t framesToProcess)
+{
+    if (!isInitialized() || !processor())
+        return;
+
+    processor()->processOnlyAudioParams(framesToProcess);
+}
+
 // Nice optimization in the very common case allowing for "in-place" processing
 void AudioBasicProcessorNode::pullInputs(size_t framesToProcess)
 {
     // Render input stream - suggest to the input to render directly into output bus for in-place processing in process() if possible.
     input(0)->pull(output(0)->bus(), framesToProcess);
-}
-
-void AudioBasicProcessorNode::reset()
-{
-    if (processor())
-        processor()->reset();
 }
 
 // As soon as we know the channel count of our input, we can lazily initialize.
@@ -147,6 +149,11 @@ double AudioBasicProcessorNode::tailTime() const
 double AudioBasicProcessorNode::latencyTime() const
 {
     return m_processor->latencyTime();
+}
+
+bool AudioBasicProcessorNode::requiresTailProcessing() const
+{
+    return m_processor->requiresTailProcessing();
 }
 
 } // namespace WebCore

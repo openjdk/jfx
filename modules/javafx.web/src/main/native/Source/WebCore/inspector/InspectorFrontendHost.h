@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,6 +89,7 @@ public:
     unsigned inspectionLevel() const;
 
     String platform() const;
+    String platformVersionName() const;
     String port() const;
 
     struct DebuggableInfo {
@@ -102,7 +103,7 @@ public:
 
     void copyText(const String& text);
     void killText(const String& text, bool shouldPrependToKillRing, bool shouldStartNewSequence);
-    void openInNewTab(const String& url);
+    void openURLExternally(const String& url);
     bool canSave();
     void save(const String& url, const String& content, bool base64Encoded, bool forceSaveAs);
     void append(const String& url, const String& content);
@@ -133,6 +134,12 @@ public:
 #if ENABLE(INSPECTOR_TELEMETRY)
     bool diagnosticLoggingAvailable();
     void logDiagnosticEvent(const String& eventName, const String& payload);
+#endif
+
+    bool supportsWebExtensions();
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    void didShowExtensionTab(const String& extensionID, const String& extensionTabID);
+    void didHideExtensionTab(const String& extensionID, const String& extensionTabID);
 #endif
 
 private:

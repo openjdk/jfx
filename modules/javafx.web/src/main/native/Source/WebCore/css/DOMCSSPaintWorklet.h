@@ -28,6 +28,7 @@
 #if ENABLE(CSS_PAINTING_API)
 
 #include "Supplementable.h"
+#include "Worklet.h"
 
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -38,12 +39,31 @@ class Document;
 class Worklet;
 class DOMCSSNamespace;
 
+class PaintWorklet final : public Worklet {
+public:
+    static Ref<PaintWorklet> create(Document& document)
+    {
+        auto worklet = adoptRef(*new PaintWorklet(document));
+        worklet->suspendIfNeeded();
+        return worklet;
+    }
+
+    // Worklet.
+    void addModule(const String& moduleURL, WorkletOptions&&, DOMPromiseDeferred<void>&&) final;
+    Vector<Ref<WorkletGlobalScopeProxy>> createGlobalScopes() final;
+
+private:
+    explicit PaintWorklet(Document& document)
+        : Worklet(document)
+    { }
+};
+
 class DOMCSSPaintWorklet final : public Supplement<DOMCSSNamespace> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit DOMCSSPaintWorklet(DOMCSSNamespace&) { }
 
-    static Worklet& ensurePaintWorklet(Document&);
+    static PaintWorklet& ensurePaintWorklet(Document&);
 
 private:
     static DOMCSSPaintWorklet* from(DOMCSSNamespace&);

@@ -36,6 +36,7 @@ class AudioTrackPrivate;
 class InbandTextTrackPrivate;
 class MediaSample;
 class MediaDescription;
+class PlatformTimeRanges;
 class VideoTrackPrivate;
 
 class SourceBufferPrivateClient {
@@ -63,21 +64,38 @@ public:
         };
         Vector<TextTrackInformation> textTracks;
     };
-    virtual void sourceBufferPrivateDidReceiveInitializationSegment(const InitializationSegment&) = 0;
-    virtual void sourceBufferPrivateDidReceiveSample(MediaSample&) = 0;
-    virtual bool sourceBufferPrivateHasAudio() const = 0;
-    virtual bool sourceBufferPrivateHasVideo() const = 0;
-
-    virtual void sourceBufferPrivateReenqueSamples(const AtomString& trackID) = 0;
-    virtual void sourceBufferPrivateDidBecomeReadyForMoreSamples(const AtomString& trackID) = 0;
-
-    virtual MediaTime sourceBufferPrivateFastSeekTimeForMediaTime(const MediaTime&, const MediaTime&, const MediaTime&) = 0;
-
-    enum AppendResult { AppendSucceeded, ReadStreamFailed, ParsingFailed };
+    virtual void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void()>&&) = 0;
+    virtual void sourceBufferPrivateStreamEndedWithDecodeError() = 0;
+    virtual void sourceBufferPrivateAppendError(bool decodeError) = 0;
+    enum class AppendResult : uint8_t {
+        AppendSucceeded,
+        ReadStreamFailed,
+        ParsingFailed
+    };
     virtual void sourceBufferPrivateAppendComplete(AppendResult) = 0;
-    virtual void sourceBufferPrivateDidReceiveRenderingError(int errorCode) = 0;
+    virtual void sourceBufferPrivateDurationChanged(const MediaTime&) = 0;
+    virtual void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) = 0;
+    virtual void sourceBufferPrivateDidParseSample(double frameDuration) = 0;
+    virtual void sourceBufferPrivateDidDropSample() = 0;
+    virtual void sourceBufferPrivateBufferedDirtyChanged(bool) = 0;
+    virtual void sourceBufferPrivateBufferedRangesChanged(const PlatformTimeRanges&) = 0;
+    virtual void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) = 0;
+    virtual void sourceBufferPrivateReportExtraMemoryCost(uint64_t) = 0;
 };
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::SourceBufferPrivateClient::AppendResult> {
+    using values = EnumValues<
+        WebCore::SourceBufferPrivateClient::AppendResult,
+        WebCore::SourceBufferPrivateClient::AppendResult::AppendSucceeded,
+        WebCore::SourceBufferPrivateClient::AppendResult::ReadStreamFailed,
+        WebCore::SourceBufferPrivateClient::AppendResult::ParsingFailed
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(MEDIA_SOURCE)

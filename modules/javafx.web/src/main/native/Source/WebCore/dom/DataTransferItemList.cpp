@@ -26,7 +26,9 @@
 #include "config.h"
 #include "DataTransferItemList.h"
 
+#include "ContextDestructionObserver.h"
 #include "DataTransferItem.h"
+#include "Document.h"
 #include "FileList.h"
 #include "Pasteboard.h"
 #include "RuntimeEnabledFeatures.h"
@@ -37,8 +39,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DataTransferItemList);
 
-DataTransferItemList::DataTransferItemList(DataTransfer& dataTransfer)
-    : m_dataTransfer(dataTransfer)
+DataTransferItemList::DataTransferItemList(Document& document, DataTransfer& dataTransfer)
+    : ContextDestructionObserver(&document)
+    , m_dataTransfer(dataTransfer)
 {
 }
 
@@ -109,7 +112,7 @@ ExceptionOr<void> DataTransferItemList::remove(unsigned index)
     removedItem->clearListAndPutIntoDisabledMode();
     items.remove(index);
     if (removedItem->isFile())
-        m_dataTransfer.updateFileList();
+        m_dataTransfer.updateFileList(scriptExecutionContext());
 
     return { };
 }
@@ -127,7 +130,7 @@ void DataTransferItemList::clear()
     }
 
     if (removedItemContainingFile)
-        m_dataTransfer.updateFileList();
+        m_dataTransfer.updateFileList(scriptExecutionContext());
 }
 
 Vector<Ref<DataTransferItem>>& DataTransferItemList::ensureItems() const
@@ -142,7 +145,7 @@ Vector<Ref<DataTransferItem>>& DataTransferItemList::ensureItems() const
             items.append(DataTransferItem::create(makeWeakPtr(*const_cast<DataTransferItemList*>(this)), lowercasedType));
     }
 
-    for (auto& file : m_dataTransfer.files().files())
+    for (auto& file : m_dataTransfer.files(document()).files())
         items.append(DataTransferItem::create(makeWeakPtr(*const_cast<DataTransferItemList*>(this)), file->type(), file.copyRef()));
 
     m_items = WTFMove(items);
@@ -189,6 +192,11 @@ void DataTransferItemList::didSetStringData(const String& type)
     removeStringItemOfLowercasedType(*m_items, type.convertToASCIILowercase());
 
     m_items->append(DataTransferItem::create(makeWeakPtr(*this), lowercasedType));
+}
+
+Document* DataTransferItemList::document() const
+{
+    return downcast<Document>(scriptExecutionContext());
 }
 
 }

@@ -81,6 +81,7 @@ public:
     virtual float sampleRate() const;
     virtual size_t bufferSize() const;
     virtual size_t numberOfOutputChannels() const;
+    virtual size_t maximumNumberOfOutputChannels() const;
 
     bool tryToSetActive(bool);
 
@@ -96,6 +97,9 @@ public:
 
     void addMutedStateObserver(MutedStateObserver*);
     void removeMutedStateObserver(MutedStateObserver*);
+
+    void audioOutputDeviceChanged();
+    void setIsPlayingToBluetoothOverride(Optional<bool>);
 
     virtual bool isMuted() const;
     virtual void handleMutedStateChange();

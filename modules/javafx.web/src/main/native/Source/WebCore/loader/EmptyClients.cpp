@@ -28,6 +28,7 @@
 #include "config.h"
 #include "EmptyClients.h"
 
+#include "AppHighlight.h"
 #include "ApplicationCacheStorage.h"
 #include "BackForwardClient.h"
 #include "CacheStorageProvider.h"
@@ -41,6 +42,7 @@
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
 #include "DragClient.h"
+#include "DummySpeechRecognitionProvider.h"
 #include "EditorClient.h"
 #include "EmptyFrameLoaderClient.h"
 #include "FileChooser.h"
@@ -204,7 +206,7 @@ private:
     bool shouldEndEditing(const SimpleRange&) final { return false; }
     bool shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction) final { return false; }
     bool shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction) final { return false; }
-    bool shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, EAffinity, bool) final { return false; }
+    bool shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, Affinity, bool) final { return false; }
 
     bool shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&) final { return false; }
     void didApplyStyle() final { }
@@ -362,9 +364,12 @@ class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
     void openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable { completionHandler(false); }); }
     bool showPaymentUI(const URL&, const Vector<URL>&, const ApplePaySessionPaymentRequest&) final { return false; }
     void completeMerchantValidation(const PaymentMerchantSession&) final { }
-    void completeShippingMethodSelection(Optional<ShippingMethodUpdate>&&) final { }
-    void completeShippingContactSelection(Optional<ShippingContactUpdate>&&) final { }
-    void completePaymentMethodSelection(Optional<PaymentMethodUpdate>&&) final { }
+    void completeShippingMethodSelection(Optional<ApplePayShippingMethodUpdate>&&) final { }
+    void completeShippingContactSelection(Optional<ApplePayShippingContactUpdate>&&) final { }
+    void completePaymentMethodSelection(Optional<ApplePayPaymentMethodUpdate>&&) final { }
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    void completePaymentMethodModeChange(Optional<ApplePayPaymentMethodModeUpdate>&&) final { }
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     void completePaymentSession(Optional<PaymentAuthorizationResult>&&) final { }
     void cancelPaymentSession() final { }
     void abortPaymentSession() final { }
@@ -491,6 +496,21 @@ std::unique_ptr<DataListSuggestionPicker> EmptyChromeClient::createDataListSugge
 
 #endif
 
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+
+std::unique_ptr<DateTimeChooser> EmptyChromeClient::createDateTimeChooser(DateTimeChooserClient&)
+{
+    return nullptr;
+}
+
+#endif
+
+#if ENABLE(APP_HIGHLIGHTS)
+void EmptyChromeClient::storeAppHighlight(const AppHighlight&) const
+{
+}
+#endif
+
 void EmptyChromeClient::runOpenPanel(Frame&, FileChooser&)
 {
 }
@@ -527,11 +547,6 @@ RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const String&, HTMLFrameOwnerE
 }
 
 RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool)
-{
-    return nullptr;
-}
-
-RefPtr<Widget> EmptyFrameLoaderClient::createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&, const Vector<String>&, const Vector<String>&)
 {
     return nullptr;
 }
@@ -588,7 +603,7 @@ public:
     EmptyMediaRecorderProvider() = default;
 private:
 #if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
-    std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&) final { return nullptr; }
+    std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&, const MediaRecorderPrivateOptions&) final { return nullptr; }
 #endif
 };
 
@@ -600,10 +615,12 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         SocketProvider::create(),
         LibWebRTCProvider::create(),
         CacheStorageProvider::create(),
+        adoptRef(*new EmptyUserContentProvider),
         adoptRef(*new EmptyBackForwardClient),
         CookieJar::create(adoptRef(*new EmptyStorageSessionProvider)),
         makeUniqueRef<EmptyProgressTrackerClient>(),
         makeUniqueRef<EmptyFrameLoaderClient>(),
+        makeUniqueRef<DummySpeechRecognitionProvider>(),
         makeUniqueRef<EmptyMediaRecorderProvider>()
     };
 
@@ -633,7 +650,6 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
     pageConfiguration.databaseProvider = adoptRef(*new EmptyDatabaseProvider);
     pageConfiguration.pluginInfoProvider = adoptRef(*new EmptyPluginInfoProvider);
     pageConfiguration.storageNamespaceProvider = adoptRef(*new EmptyStorageNamespaceProvider);
-    pageConfiguration.userContentProvider = adoptRef(*new EmptyUserContentProvider);
     pageConfiguration.visitedLinkStore = adoptRef(*new EmptyVisitedLinkStore);
 
     return pageConfiguration;

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2019 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,9 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(RegExpObject);
 
 const ClassInfo RegExpObject::s_info = { "RegExp", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RegExpObject) };
 
+static JSC_DECLARE_CUSTOM_SETTER(regExpObjectSetLastIndexStrict);
+static JSC_DECLARE_CUSTOM_SETTER(regExpObjectSetLastIndexNonStrict);
+
 RegExpObject::RegExpObject(VM& vm, Structure* structure, RegExp* regExp)
     : JSNonFinalObject(vm, structure)
     , m_regExpAndLastIndexIsNotWritableFlag(bitwise_cast<uintptr_t>(regExp)) // lastIndexIsNotWritableFlag is not set.
@@ -43,7 +46,8 @@ void RegExpObject::finishCreation(VM& vm)
     ASSERT(type() == RegExpObjectType);
 }
 
-void RegExpObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void RegExpObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     RegExpObject* thisObject = jsCast<RegExpObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -51,6 +55,8 @@ void RegExpObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.appendUnbarriered(thisObject->regExp());
     visitor.append(thisObject->m_lastIndex);
 }
+
+DEFINE_VISIT_CHILDREN(RegExpObject);
 
 bool RegExpObject::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
@@ -72,28 +78,11 @@ bool RegExpObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Pr
     return Base::deleteProperty(cell, globalObject, propertyName, slot);
 }
 
-void RegExpObject::getOwnNonIndexPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
+void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
-    if (mode.includeDontEnumProperties())
+    if (mode == DontEnumPropertiesMode::Include)
         propertyNames.add(vm.propertyNames->lastIndex);
-    Base::getOwnNonIndexPropertyNames(object, globalObject, propertyNames, mode);
-}
-
-void RegExpObject::getPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
-{
-    VM& vm = globalObject->vm();
-    if (mode.includeDontEnumProperties())
-        propertyNames.add(vm.propertyNames->lastIndex);
-    Base::getPropertyNames(object, globalObject, propertyNames, mode);
-}
-
-void RegExpObject::getGenericPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
-{
-    VM& vm = globalObject->vm();
-    if (mode.includeDontEnumProperties())
-        propertyNames.add(vm.propertyNames->lastIndex);
-    Base::getGenericPropertyNames(object, globalObject, propertyNames, mode);
 }
 
 bool RegExpObject::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
@@ -132,12 +121,12 @@ bool RegExpObject::defineOwnProperty(JSObject* object, JSGlobalObject* globalObj
     RELEASE_AND_RETURN(scope, Base::defineOwnProperty(object, globalObject, propertyName, descriptor, shouldThrow));
 }
 
-static bool regExpObjectSetLastIndexStrict(JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value)
+JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexStrict, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value))
 {
     return jsCast<RegExpObject*>(JSValue::decode(thisValue))->setLastIndex(globalObject, JSValue::decode(value), true);
 }
 
-static bool regExpObjectSetLastIndexNonStrict(JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value)
+JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexNonStrict, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value))
 {
     return jsCast<RegExpObject*>(JSValue::decode(thisValue))->setLastIndex(globalObject, JSValue::decode(value), false);
 }

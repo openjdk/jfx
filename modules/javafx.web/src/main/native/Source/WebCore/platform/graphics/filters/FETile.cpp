@@ -64,7 +64,7 @@ void FETile::platformApplySoftware()
         tileRect.scale(filter.filterResolution().width(), filter.filterResolution().height());
     }
 
-    auto tileImage = SVGRenderingContext::createImageBuffer(tileRect, tileRect, ColorSpace::SRGB, filter().renderingMode());
+    auto tileImage = SVGRenderingContext::createImageBuffer(tileRect, tileRect, DestinationColorSpace::SRGB, filter().renderingMode());
     if (!tileImage)
         return;
 
@@ -72,15 +72,15 @@ void FETile::platformApplySoftware()
     tileImageContext.translate(-inMaxEffectLocation.x(), -inMaxEffectLocation.y());
     tileImageContext.drawImageBuffer(*inBuffer, in->absolutePaintRect().location());
 
-    auto tileImageCopy = ImageBuffer::sinkIntoImage(WTFMove(tileImage));
+    auto tileImageCopy = ImageBuffer::sinkIntoNativeImage(WTFMove(tileImage));
     if (!tileImageCopy)
         return;
 
-    auto pattern = Pattern::create(tileImageCopy.releaseNonNull(), true, true);
-
     AffineTransform patternTransform;
     patternTransform.translate(inMaxEffectLocation - maxEffectLocation);
-    pattern.get().setPatternSpaceTransform(patternTransform);
+
+    auto pattern = Pattern::create(tileImageCopy.releaseNonNull(), { true, true, patternTransform });
+
     GraphicsContext& filterContext = resultImage->context();
     filterContext.setFillPattern(WTFMove(pattern));
     filterContext.fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()));

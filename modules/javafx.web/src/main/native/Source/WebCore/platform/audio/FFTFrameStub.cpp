@@ -29,7 +29,7 @@
 
 #if ENABLE(WEB_AUDIO)
 
-#if !OS(DARWIN) && !USE(WEBAUDIO_GSTREAMER)
+#if !OS(DARWIN) && !USE(GSTREAMER)
 
 #include "FFTFrame.h"
 
@@ -64,11 +64,6 @@ FFTFrame::~FFTFrame()
     ASSERT_NOT_REACHED();
 }
 
-void FFTFrame::multiply(const FFTFrame& frame)
-{
-    ASSERT_NOT_REACHED();
-}
-
 void FFTFrame::doFFT(const float* data)
 {
     ASSERT_NOT_REACHED();
@@ -83,25 +78,8 @@ void FFTFrame::initialize()
 {
 }
 
-void FFTFrame::cleanup()
-{
-    ASSERT_NOT_REACHED();
-}
-
-float* FFTFrame::realData() const
-{
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-float* FFTFrame::imagData() const
-{
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
 } // namespace WebCore
 
-#endif // !OS(DARWIN) && !USE(WEBAUDIO_GSTREAMER)
+#endif // !OS(DARWIN) && !USE(GSTREAMER)
 
 #endif // ENABLE(WEB_AUDIO)

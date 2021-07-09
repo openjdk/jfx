@@ -24,7 +24,6 @@
 
 #pragma once
 
-#include "DateComponents.h"
 #include "FileChooser.h"
 #include "HTMLTextFormControlElement.h"
 #include <memory>
@@ -37,13 +36,12 @@ class DragData;
 class FileList;
 class HTMLDataListElement;
 class HTMLImageLoader;
+class HTMLOptionElement;
 class Icon;
 class InputType;
 class ListAttributeTargetObserver;
 class RadioButtonGroups;
 class StepRange;
-
-struct DateTimeChooserParameters;
 
 struct InputElementClickState {
     bool stateful { false };
@@ -53,6 +51,7 @@ struct InputElementClickState {
 };
 
 enum class AnyStepHandling : bool;
+enum class DateComponentsType : uint8_t;
 
 class HTMLInputElement : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
@@ -87,6 +86,7 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    Optional<double> listOptionValueAsDouble(const HTMLOptionElement&);
 #endif
 
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -130,7 +130,7 @@ public:
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
-    DateComponents::Type dateType() const;
+    DateComponentsType dateType() const;
 
     HTMLElement* containerElement() const;
 
@@ -272,6 +272,7 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT RefPtr<HTMLElement> list() const;
+    WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
     RefPtr<HTMLDataListElement> dataList() const;
     void dataListMayHaveChanged();
 #endif
@@ -291,7 +292,7 @@ public:
 
     void cacheSelectionInResponseToSetValue(int caretOffset) { cacheSelection(caretOffset, caretOffset, SelectionHasNoDirection); }
 
-    Color valueAsColor() const; // Returns transparent color if not type=color.
+    WEBCORE_EXPORT Color valueAsColor() const; // Returns transparent color if not type=color.
     WEBCORE_EXPORT void selectColor(StringView); // Does nothing if not type=color. Simulates user selection of color; intended for testing.
     WEBCORE_EXPORT Vector<Color> suggestedColors() const;
 
@@ -326,10 +327,6 @@ public:
 
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     HTMLImageLoader& ensureImageLoader();
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
-#endif
 
     void capsLockStateMayHaveChanged();
 
@@ -455,7 +452,7 @@ private:
     void addToRadioButtonGroup();
     void removeFromRadioButtonGroup();
 
-    void setDefaultSelectionAfterFocus(SelectionRevealMode);
+    void setDefaultSelectionAfterFocus(SelectionRestorationMode, SelectionRevealMode);
 
     AtomString m_name;
     String m_valueIfDirty;

@@ -92,7 +92,7 @@ Image* CustomPaintCanvas::copiedImage() const
     if (!width() || !height())
         return nullptr;
 
-    m_copiedBuffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, 1, ColorSpace::SRGB, nullptr);
+    m_copiedBuffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB, PixelFormat::BGRA8, nullptr);
     if (!m_copiedBuffer)
         return nullptr;
 
@@ -103,6 +103,11 @@ Image* CustomPaintCanvas::copiedImage() const
 
     m_copiedImage = m_copiedBuffer->copyImage(DontCopyBackingStore, PreserveResolution::Yes);
     return m_copiedImage.get();
+}
+
+void CustomPaintCanvas::clearCopiedImage() const
+{
+    m_copiedImage = nullptr;
 }
 
 GraphicsContext* CustomPaintCanvas::drawingContext() const

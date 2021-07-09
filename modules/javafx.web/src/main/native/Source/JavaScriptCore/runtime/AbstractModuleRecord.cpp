@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "Error.h"
 #include "JSCInlines.h"
+#include "JSInternalFieldObjectImplInlines.h"
 #include "JSMap.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleNamespaceObject.h"
@@ -53,6 +54,11 @@ void AbstractModuleRecord::finishCreation(JSGlobalObject* globalObject, VM& vm)
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
 
+    auto values = initialValues();
+    ASSERT(values.size() == numberOfInternalFields);
+    for (unsigned index = 0; index < values.size(); ++index)
+        Base::internalField(index).set(vm, this, values[index]);
+
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSMap* map = JSMap::create(globalObject, vm, globalObject->mapStructure());
     scope.releaseAssertNoException();
@@ -60,7 +66,8 @@ void AbstractModuleRecord::finishCreation(JSGlobalObject* globalObject, VM& vm)
     putDirect(vm, Identifier::fromString(vm, "dependenciesMap"_s), m_dependenciesMap.get());
 }
 
-void AbstractModuleRecord::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void AbstractModuleRecord::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     AbstractModuleRecord* thisObject = jsCast<AbstractModuleRecord*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -69,6 +76,8 @@ void AbstractModuleRecord::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_moduleNamespaceObject);
     visitor.append(thisObject->m_dependenciesMap);
 }
+
+DEFINE_VISIT_CHILDREN(AbstractModuleRecord);
 
 void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName)
 {
@@ -116,6 +125,11 @@ auto AbstractModuleRecord::ExportEntry::createLocal(const Identifier& exportName
 auto AbstractModuleRecord::ExportEntry::createIndirect(const Identifier& exportName, const Identifier& importName, const Identifier& moduleName) -> ExportEntry
 {
     return ExportEntry { Type::Indirect, exportName, moduleName, importName, Identifier() };
+}
+
+auto AbstractModuleRecord::ExportEntry::createNamespace(const Identifier& exportName, const Identifier& moduleName) -> ExportEntry
+{
+    return ExportEntry { Type::Namespace, exportName, moduleName, Identifier(), Identifier() };
 }
 
 auto AbstractModuleRecord::Resolution::notFound() -> Resolution
@@ -631,6 +645,18 @@ auto AbstractModuleRecord::resolveExportImpl(JSGlobalObject* globalObject, const
                 pendingTasks.append(Task { ResolveQuery(importedModuleRecord, exportEntry.importName), Type::Query });
                 continue;
             }
+
+            case ExportEntry::Type::Namespace: {
+                AbstractModuleRecord* importedModuleRecord = moduleRecord->hostResolveImportedModule(globalObject, exportEntry.moduleName);
+                RETURN_IF_EXCEPTION(scope, Resolution::error());
+
+                Resolution resolution { Resolution::Type::Resolved, importedModuleRecord, vm.propertyNames->starNamespacePrivateName };
+                //  2. A module that has resolved a module namespace binding is always cacheable.
+                cacheResolutionForQuery(query, resolution);
+                if (!mergeToCurrentTop(resolution))
+                    return Resolution::ambiguous();
+                continue;
+            }
             }
             break;
         }
@@ -757,11 +783,38 @@ JSModuleNamespaceObject* AbstractModuleRecord::getModuleNamespace(JSGlobalObject
 
     auto* moduleNamespaceObject = JSModuleNamespaceObject::create(globalObject, globalObject->moduleNamespaceObjectStructure(), this, WTFMove(resolutions));
     RETURN_IF_EXCEPTION(scope, nullptr);
+
+    // Materialize *namespace* slot with module namespace object unless the module environment is not yet materialized, in which case we'll do it in setModuleEnvironment
+    if (m_moduleEnvironment) {
+        bool putResult = false;
+        constexpr bool shouldThrowReadOnlyError = false;
+        constexpr bool ignoreReadOnlyErrors = true;
+        symbolTablePutTouchWatchpointSet(m_moduleEnvironment.get(), globalObject, vm.propertyNames->starNamespacePrivateName, moduleNamespaceObject, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+    }
     m_moduleNamespaceObject.set(vm, this, moduleNamespaceObject);
+
     return moduleNamespaceObject;
 }
 
-void AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue scriptFetcher)
+void AbstractModuleRecord::setModuleEnvironment(JSGlobalObject* globalObject, JSModuleEnvironment* moduleEnvironment)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    ASSERT(!m_moduleEnvironment);
+    // If module namespace object is materialized, we will materialize *namespace* slot too.
+    if (m_moduleNamespaceObject) {
+        bool putResult = false;
+        constexpr bool shouldThrowReadOnlyError = false;
+        constexpr bool ignoreReadOnlyErrors = true;
+        symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, vm.propertyNames->starNamespacePrivateName, m_moduleNamespaceObject.get(), shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
+        RETURN_IF_EXCEPTION(scope, void());
+    }
+    m_moduleEnvironment.set(vm, this, moduleEnvironment);
+}
+
+Synchronousness AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue scriptFetcher)
 {
     VM& vm = globalObject->vm();
     if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(vm, this))
@@ -771,13 +824,14 @@ void AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue scriptFetc
         return wasmModuleRecord->link(globalObject, scriptFetcher, nullptr, Wasm::CreationMode::FromModuleLoader);
 #endif
     RELEASE_ASSERT_NOT_REACHED();
+    return Synchronousness::Sync;
 }
 
-JS_EXPORT_PRIVATE JSValue AbstractModuleRecord::evaluate(JSGlobalObject* globalObject)
+JS_EXPORT_PRIVATE JSValue AbstractModuleRecord::evaluate(JSGlobalObject* globalObject, JSValue sentValue, JSValue resumeMode)
 {
     VM& vm = globalObject->vm();
     if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(vm, this))
-        return jsModuleRecord->evaluate(globalObject);
+        return jsModuleRecord->evaluate(globalObject, sentValue, resumeMode);
 #if ENABLE(WEBASSEMBLY)
     if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(vm, this))
         return wasmModuleRecord->evaluate(globalObject);
@@ -822,6 +876,10 @@ void AbstractModuleRecord::dump()
 
         case ExportEntry::Type::Indirect:
             dataLog("      [Indirect] ", "export(", printableName(exportEntry.exportName), "), import(", printableName(exportEntry.importName), "), module(", printableName(exportEntry.moduleName), ")\n");
+            break;
+
+        case ExportEntry::Type::Namespace:
+            dataLog("      [Namespace] ", "export(", printableName(exportEntry.exportName), "), module(", printableName(exportEntry.moduleName), ")\n");
             break;
         }
     }

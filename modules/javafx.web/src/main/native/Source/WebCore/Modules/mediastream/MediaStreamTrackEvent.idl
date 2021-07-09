@@ -24,11 +24,11 @@
 
 [
     Conditional=MEDIA_STREAM,
+    Exposed=Window
 ] interface MediaStreamTrackEvent : Event {
     constructor(DOMString type, MediaStreamTrackEventInit eventInitDict);
 
-    // FIXME: missing [SameObject]
-    readonly attribute MediaStreamTrack track;
+    [SameObject] readonly attribute MediaStreamTrack track;
 };
 
 dictionary MediaStreamTrackEventInit : EventInit {

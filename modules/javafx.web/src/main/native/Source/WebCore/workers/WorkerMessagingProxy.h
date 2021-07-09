@@ -45,14 +45,15 @@ public:
 
     // Implementation of WorkerLoaderProxy.
     // This method is used in the main thread to post task back to the worker thread.
-    bool postTaskForModeToWorkerGlobalScope(ScriptExecutionContext::Task&&, const String& mode) final;
+    bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode) final;
 
 private:
     // Implementations of WorkerGlobalScopeProxy.
     // (Only use these functions in the worker object thread.)
-    void startWorkerGlobalScope(const URL& scriptURL, const String& name, const String& userAgent, bool isOnline, const String& sourceCode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, MonotonicTime timeOrigin, ReferrerPolicy, JSC::RuntimeFlags) final;
+    void startWorkerGlobalScope(const URL& scriptURL, const String& name, const String& userAgent, bool isOnline, const String& sourceCode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, MonotonicTime timeOrigin, ReferrerPolicy, WorkerType, FetchRequestCredentials, JSC::RuntimeFlags) final;
     void terminateWorkerGlobalScope() final;
     void postMessageToWorkerGlobalScope(MessageWithMessagePorts&&) final;
+    void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&) final;
     bool hasPendingActivity() const final;
     void workerObjectDestroyed() final;
     void notifyNetworkStateChange(bool isOnline) final;
@@ -62,6 +63,7 @@ private:
     // Implementation of WorkerObjectProxy.
     // (Only use these functions in the worker context thread.)
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final;
+    void postTaskToWorkerObject(Function<void(Worker&)>&&) final;
     void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) final;
     void confirmMessageFromWorkerObject(bool hasPendingActivity) final;
     void reportPendingActivity(bool hasPendingActivity) final;
@@ -78,7 +80,7 @@ private:
     // requests and to send callbacks back to WorkerGlobalScope.
     bool isWorkerMessagingProxy() const final { return true; }
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
-    Ref<CacheStorageConnection> createCacheStorageConnection() final;
+    RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
 
     void workerThreadCreated(DedicatedWorkerThread&);
 

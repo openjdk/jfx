@@ -178,7 +178,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone(ScriptExecutionContext& con
 
     // If loading, let's create a stream so that data is teed on both clones.
     if (isLoading() && !m_readableStreamSource) {
-        auto voidOrException = createReadableStream(*context.execState());
+        auto voidOrException = createReadableStream(*context.globalObject());
         if (UNLIKELY(voidOrException.hasException()))
             return voidOrException.releaseException();
     }
@@ -273,7 +273,7 @@ const ResourceResponse& FetchResponse::filteredResponse() const
 void FetchResponse::BodyLoader::didSucceed()
 {
     ASSERT(m_response.hasPendingActivity());
-    m_response.m_body->loadingSucceeded();
+    m_response.m_body->loadingSucceeded(m_response.contentType());
 
     if (m_response.m_readableStreamSource) {
         if (m_response.body().consumer().hasData())
@@ -539,6 +539,25 @@ ResourceResponse FetchResponse::resourceResponse() const
     }
 
     return response;
+}
+
+bool FetchResponse::isCORSSameOrigin() const
+{
+    // https://html.spec.whatwg.org/#cors-same-origin
+    // A response whose type is "basic", "cors", or "default" is CORS-same-origin.
+    switch (type()) {
+    case ResourceResponse::Type::Basic:
+    case ResourceResponse::Type::Cors:
+    case ResourceResponse::Type::Default:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool FetchResponse::hasWasmMIMEType() const
+{
+    return equalLettersIgnoringASCIICase(m_headers->fastGet(HTTPHeaderName::ContentType), "application/wasm");
 }
 
 } // namespace WebCore

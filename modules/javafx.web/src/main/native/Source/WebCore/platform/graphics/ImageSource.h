@@ -52,7 +52,7 @@ public:
         return adoptRef(*new ImageSource(image, alphaOption, gammaAndColorProfileOption));
     }
 
-    static Ref<ImageSource> create(NativeImagePtr&& nativeImage)
+    static Ref<ImageSource> create(RefPtr<NativeImage>&& nativeImage)
     {
         return adoptRef(*new ImageSource(WTFMove(nativeImage)));
     }
@@ -94,11 +94,16 @@ public:
     RepetitionCount repetitionCount();
     String uti();
     String filenameExtension();
+    String accessibilityDescription();
     Optional<IntPoint> hotSpot();
+    Optional<IntSize> densityCorrectedSize(ImageOrientation = ImageOrientation::FromImage);
+    bool hasDensityCorrectedSize() { return densityCorrectedSize().hasValue(); }
+
     ImageOrientation orientation();
 
     // Image metadata which is calculated from the first ImageFrame.
     WEBCORE_EXPORT IntSize size(ImageOrientation = ImageOrientation::FromImage);
+    IntSize sourceSize(ImageOrientation = ImageOrientation::FromImage);
     IntSize sizeRespectingOrientation();
     Color singlePixelSolidColor();
     SubsamplingLevel maximumSubsamplingLevel();
@@ -121,13 +126,13 @@ public:
 #if USE(DIRECT2D)
     void setTargetContext(const GraphicsContext*);
 #endif
-    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default);
-    NativeImagePtr frameImageAtIndex(size_t);
-    NativeImagePtr frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default);
+    RefPtr<NativeImage> createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default);
+    RefPtr<NativeImage> frameImageAtIndex(size_t);
+    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default);
 
 private:
     ImageSource(BitmapImage*, AlphaOption = AlphaOption::Premultiplied, GammaAndColorProfileOption = GammaAndColorProfileOption::Applied);
-    ImageSource(NativeImagePtr&&);
+    ImageSource(RefPtr<NativeImage>&&);
 
     template<typename T, T (ImageDecoder::*functor)() const>
     T metadata(const T& defaultValue, Optional<T>* cachedValue = nullptr);
@@ -148,10 +153,10 @@ private:
     void decodedSizeReset(unsigned decodedSize);
     void encodedDataStatusChanged(EncodedDataStatus);
 
-    void setNativeImage(NativeImagePtr&&);
+    void setNativeImage(RefPtr<NativeImage>&&);
     void cacheMetadataAtIndex(size_t, SubsamplingLevel, DecodingStatus = DecodingStatus::Invalid);
-    void cacheNativeImageAtIndex(NativeImagePtr&&, size_t, SubsamplingLevel, const DecodingOptions&, DecodingStatus = DecodingStatus::Invalid);
-    void cacheNativeImageAtIndexAsync(NativeImagePtr&&, size_t, SubsamplingLevel, const DecodingOptions&, DecodingStatus);
+    void cachePlatformImageAtIndex(PlatformImagePtr&&, size_t, SubsamplingLevel, const DecodingOptions&, DecodingStatus = DecodingStatus::Invalid);
+    void cachePlatformImageAtIndexAsync(PlatformImagePtr&&, size_t, SubsamplingLevel, const DecodingOptions&, DecodingStatus);
 
     struct ImageFrameRequest;
     static const int BufferSize = 8;
@@ -195,11 +200,13 @@ private:
     Optional<RepetitionCount> m_repetitionCount;
     Optional<String> m_uti;
     Optional<String> m_filenameExtension;
+    Optional<String> m_accessibilityDescription;
     Optional<Optional<IntPoint>> m_hotSpot;
 
     // Image metadata which is calculated from the first ImageFrame.
     Optional<IntSize> m_size;
     Optional<ImageOrientation> m_orientation;
+    Optional<Optional<IntSize>> m_densityCorrectedSize;
     Optional<Color> m_singlePixelSolidColor;
     Optional<SubsamplingLevel> m_maximumSubsamplingLevel;
 

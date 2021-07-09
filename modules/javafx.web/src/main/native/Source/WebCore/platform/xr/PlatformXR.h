@@ -18,10 +18,13 @@
  */
 #pragma once
 
+#include "FloatPoint3D.h"
 #include "IntSize.h"
 #include <memory>
+#include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -41,7 +44,22 @@ enum class ReferenceSpaceType {
     Unbounded
 };
 
+enum class Eye {
+    None,
+    Left,
+    Right,
+};
+
 #if ENABLE(WEBXR)
+
+class TrackingAndRenderingClient : public CanMakeWeakPtr<TrackingAndRenderingClient> {
+public:
+    virtual ~TrackingAndRenderingClient() = default;
+
+    virtual void sessionDidEnd() = 0;
+    // FIXME: handle frame update
+    // FIXME: handle visibility changes
+};
 
 class Device : public CanMakeWeakPtr<Device> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -57,7 +75,63 @@ public:
     virtual WebCore::IntSize recommendedResolution(SessionMode) { return { 1, 1 }; }
 
     bool supportsOrientationTracking() const { return m_supportsOrientationTracking; }
+    bool supportsViewportScaling() const { return m_supportsViewportScaling; }
 
+    virtual void initializeTrackingAndRendering(SessionMode) = 0;
+    virtual void shutDownTrackingAndRendering() = 0;
+    void setTrackingAndRenderingClient(WeakPtr<TrackingAndRenderingClient>&& client) { m_trackingAndRenderingClient = WTFMove(client); }
+
+    // If this method returns true, that means the device will notify TrackingAndRenderingClient
+    // when the platform has completed all steps to shut down the XR session.
+    virtual bool supportsSessionShutdownNotification() const { return false; }
+    virtual void initializeReferenceSpace(ReferenceSpaceType) = 0;
+
+    struct FrameData {
+        struct FloatQuaternion {
+            float x { 0.0f };
+            float y { 0.0f };
+            float z { 0.0f };
+            float w { 1.0f };
+        };
+
+        struct Pose {
+            WebCore::FloatPoint3D position;
+            FloatQuaternion orientation;
+        };
+
+        struct Fov {
+            // In radians
+            float up { 0.0f };
+            float down { 0.0f };
+            float left { 0.0f };
+            float right { 0.0f };
+        };
+
+        using Projection = Variant<Fov, std::array<float, 16>, std::nullptr_t>;
+
+        struct View {
+            Pose offset;
+            Projection projection = { nullptr };
+        };
+
+        bool isTrackingValid { false };
+        bool isPositionValid { false };
+        bool isPositionEmulated { false };
+        long predictedDisplayTime { 0 };
+        Pose origin;
+        Optional<Pose> floorTransform;
+        Vector<View> views;
+    };
+
+    struct ViewData {
+        bool active { false };
+        Eye eye { Eye::None };
+    };
+
+    virtual Vector<ViewData> views(SessionMode) const = 0;
+
+    using RequestFrameCallback = Function<void(FrameData&&)>;
+    virtual void requestFrame(RequestFrameCallback&&) = 0;
 protected:
     Device() = default;
 
@@ -68,14 +142,17 @@ protected:
     EnabledFeaturesPerModeMap m_enabledFeaturesMap;
 
     bool m_supportsOrientationTracking { false };
+    bool m_supportsViewportScaling { false };
+    WeakPtr<TrackingAndRenderingClient> m_trackingAndRenderingClient;
 };
 
 class Instance {
 public:
     static Instance& singleton();
 
-    void enumerateImmersiveXRDevices();
-    const Vector<std::unique_ptr<Device>>& immersiveXRDevices() const { return m_immersiveXRDevices; }
+    using DeviceList = Vector<UniqueRef<Device>>;
+    void enumerateImmersiveXRDevices(CompletionHandler<void(const DeviceList&)>&&);
+
 private:
     friend LazyNeverDestroyed<Instance>;
     Instance();
@@ -84,7 +161,7 @@ private:
     struct Impl;
     UniqueRef<Impl> m_impl;
 
-    Vector<std::unique_ptr<Device>> m_immersiveXRDevices;
+    DeviceList m_immersiveXRDevices;
 };
 
 #endif // ENABLE(WEBXR)

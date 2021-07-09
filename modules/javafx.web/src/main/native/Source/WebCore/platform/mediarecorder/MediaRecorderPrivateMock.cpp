@@ -30,6 +30,8 @@
 
 #include "MediaStreamTrackPrivate.h"
 #include "SharedBuffer.h"
+#include "Timer.h"
+#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
@@ -48,14 +50,21 @@ MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 
 MediaRecorderPrivateMock::~MediaRecorderPrivateMock()
 {
-    setAudioSource(nullptr);
-    setVideoSource(nullptr);
 }
 
-void MediaRecorderPrivateMock::stopRecording()
+void MediaRecorderPrivateMock::stopRecording(CompletionHandler<void()>&& completionHandler)
 {
-    setAudioSource(nullptr);
-    setVideoSource(nullptr);
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::pauseRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::resumeRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
 }
 
 void MediaRecorderPrivateMock::videoSampleAvailable(MediaSample&)
@@ -91,10 +100,14 @@ void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
         m_buffer.clear();
         buffer = SharedBuffer::create(WTFMove(value));
     }
-    completionHandler(WTFMove(buffer), mimeType());
+
+    // Delay calling the completion handler a bit to mimick real writer behavior.
+    Timer::schedule(50_ms, [completionHandler = WTFMove(completionHandler), buffer = WTFMove(buffer), mimeType = mimeType(), timeCode = MonotonicTime::now().secondsSinceEpoch().value()]() mutable {
+        completionHandler(WTFMove(buffer), mimeType, timeCode);
+    });
 }
 
-const String& MediaRecorderPrivateMock::mimeType()
+const String& MediaRecorderPrivateMock::mimeType() const
 {
     static NeverDestroyed<const String> textPlainMimeType(MAKE_STATIC_STRING_IMPL("text/plain"));
     return textPlainMimeType;

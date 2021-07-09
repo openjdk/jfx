@@ -46,10 +46,10 @@
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "IndentOutdentCommand.h"
-#include "InsertEditableImageCommand.h"
 #include "InsertListCommand.h"
 #include "InsertNestedListCommand.h"
 #include "Page.h"
+#include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Range.h"
 #include "RenderBox.h"
@@ -57,12 +57,12 @@
 #include "Scrollbar.h"
 #include "Settings.h"
 #include "StyleProperties.h"
+#include "SystemSoundManager.h"
 #include "TypingCommand.h"
 #include "UnlinkCommand.h"
 #include "UserGestureIndicator.h"
 #include "UserTypingGestureIndicator.h"
 #include "markup.h"
-#include <pal/system/Sound.h>
 #include <pal/text/KillRing.h>
 #include <wtf/text/AtomString.h>
 
@@ -228,13 +228,6 @@ static unsigned verticalScrollDistance(Frame& frame)
     return static_cast<unsigned>(Scrollbar::pageStep(height));
 }
 
-static SimpleRange unionRanges(const SimpleRange& a, const SimpleRange& b)
-{
-    auto& start = createLiveRange(a)->compareBoundaryPoints(Range::START_TO_START, createLiveRange(b)).releaseReturnValue() <= 0 ? a : b;
-    auto& end = createLiveRange(a)->compareBoundaryPoints(Range::END_TO_END, createLiveRange(b)).releaseReturnValue() <= 0 ? b : a;
-    return { start.start, end.end };
-}
-
 // Execute command functions
 
 static bool executeBackColor(Frame& frame, Event*, EditorCommandSource source, const String& value)
@@ -353,14 +346,16 @@ static bool executeDeleteToEndOfParagraph(Frame& frame, Event*, EditorCommandSou
 
 static bool executeDeleteToMark(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    auto mark = frame.editor().mark().toNormalizedRange();
+    auto& editor = frame.editor();
     auto& selection = frame.selection();
-    if (mark && frame.editor().selectedRange()) {
-        if (!selection.setSelectedRange(unionRanges(*mark, *frame.editor().selectedRange()), DOWNSTREAM, FrameSelection::ShouldCloseTyping::Yes))
+    auto markRange = editor.mark().toNormalizedRange();
+    auto selectionRange = selection.selection().toNormalizedRange();
+    if (markRange && selectionRange) {
+        if (!selection.setSelectedRange(unionRange(*markRange, *selectionRange), Affinity::Downstream, FrameSelection::ShouldCloseTyping::Yes))
             return false;
     }
-    frame.editor().performDelete();
-    frame.editor().setMark(selection.selection());
+    editor.performDelete();
+    editor.setMark(selection.selection());
     return true;
 }
 
@@ -473,15 +468,9 @@ static bool executeInsertImage(Frame& frame, Event*, EditorCommandSource, const 
 {
     // FIXME: If userInterface is true, we should display a dialog box and let the user choose a local image.
     Ref<HTMLImageElement> image = HTMLImageElement::create(*frame.document());
-    image->setSrc(value);
+    if (!value.isEmpty())
+        image->setSrc(value);
     return executeInsertNode(frame, WTFMove(image));
-}
-
-static bool executeInsertEditableImage(Frame& frame, Event*, EditorCommandSource, const String&)
-{
-    ASSERT(frame.document());
-    InsertEditableImageCommand::create(*frame.document())->apply();
-    return true;
 }
 
 static bool executeInsertLineBreak(Frame& frame, Event* event, EditorCommandSource source, const String&)
@@ -926,7 +915,7 @@ static bool executePasteGlobalSelection(Frame& frame, Event*, EditorCommandSourc
 
     ASSERT_UNUSED(source, source == CommandFromMenuOrKeyBinding);
     UserTypingGestureIndicator typingGestureIndicator(frame);
-    frame.editor().paste(*Pasteboard::createForGlobalSelection());
+    frame.editor().paste(*Pasteboard::createForGlobalSelection(PagePasteboardContext::create(frame.pageID())));
     return true;
 }
 
@@ -1050,13 +1039,15 @@ static bool executeSelectSentence(Frame& frame, Event*, EditorCommandSource, con
 
 static bool executeSelectToMark(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    auto mark = frame.editor().mark().toNormalizedRange();
-    auto selection = frame.editor().selectedRange();
-    if (!mark || !selection) {
-        PAL::systemBeep();
+    auto& editor = frame.editor();
+    auto& selection = frame.selection();
+    auto markRange = editor.mark().toNormalizedRange();
+    auto selectionRange = selection.selection().toNormalizedRange();
+    if (!markRange || !selectionRange) {
+        SystemSoundManager::singleton().systemBeep();
         return false;
     }
-    frame.selection().setSelectedRange(unionRanges(*mark, *selection), DOWNSTREAM, FrameSelection::ShouldCloseTyping::Yes);
+    selection.setSelectedRange(unionRange(*markRange, *selectionRange), Affinity::Downstream, FrameSelection::ShouldCloseTyping::Yes);
     // FIXME: Why do we ignore the return value from setSelectedRange here?
     return true;
 }
@@ -1113,7 +1104,7 @@ static bool executeSwapWithMark(Frame& frame, Event*, EditorCommandSource, const
     const VisibleSelection& mark = frame.editor().mark();
     const VisibleSelection& selection = frame.selection().selection();
     if (mark.isNone() || selection.isNone()) {
-        PAL::systemBeep();
+        SystemSoundManager::singleton().systemBeep();
         return false;
     }
     frame.selection().setSelection(mark);
@@ -1237,7 +1228,7 @@ static bool supportedCopyCut(Frame* frame)
 static bool defaultValueForSupportedPaste(Frame& frame)
 {
     auto& settings = frame.settings();
-    if (settings.javaScriptCanAccessClipboard() && settings.DOMPasteAllowed())
+    if (settings.javaScriptCanAccessClipboard() && settings.domPasteAllowed())
         return true;
 
     return settings.domPasteAccessRequestsEnabled();
@@ -1380,7 +1371,7 @@ static bool enabledInRichlyEditableText(Frame& frame, Event*, EditorCommandSourc
 static bool allowPasteFromDOM(Frame& frame)
 {
     auto& settings = frame.settings();
-    if (settings.javaScriptCanAccessClipboard() && settings.DOMPasteAllowed())
+    if (settings.javaScriptCanAccessClipboard() && settings.domPasteAllowed())
         return true;
 
     return settings.domPasteAccessRequestsEnabled() && UserGestureIndicator::processingUserGesture();
@@ -1426,13 +1417,6 @@ static bool enabledTakeFindStringFromSelection(Frame& frame, Event*, EditorComma
 static bool enabledUndo(Frame& frame, Event*, EditorCommandSource)
 {
     return frame.editor().canUndo();
-}
-
-static bool enabledInRichlyEditableTextWithEditableImagesEnabled(Frame& frame, Event* event, EditorCommandSource source)
-{
-    if (!frame.settings().editableImagesEnabled())
-        return false;
-    return enabledInRichlyEditableText(frame, event, source);
 }
 
 // State functions
@@ -1654,7 +1638,6 @@ static const CommandMap& createCommandMap()
         { "IgnoreSpelling", { executeIgnoreSpelling, supportedFromMenuOrKeyBinding, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Indent", { executeIndent, supported, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "InsertBacktab", { executeInsertBacktab, supportedFromMenuOrKeyBinding, enabledInEditableText, stateNone, valueNull, isTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "InsertEditableImage", { executeInsertEditableImage, supported, enabledInRichlyEditableTextWithEditableImagesEnabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "InsertHTML", { executeInsertHTML, supported, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "InsertHorizontalRule", { executeInsertHorizontalRule, supported, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "InsertImage", { executeInsertImage, supported, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },

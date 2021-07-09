@@ -32,7 +32,7 @@ class GraphicsContext;
 
 struct MaskerData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    std::unique_ptr<ImageBuffer> maskImage;
+    RefPtr<ImageBuffer> maskImage;
 };
 
 class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
@@ -58,7 +58,7 @@ private:
 
     const char* renderName() const override { return "RenderSVGResourceMasker"; }
 
-    bool drawContentIntoMaskImage(MaskerData*, ColorSpace, RenderObject*);
+    bool drawContentIntoMaskImage(MaskerData*, DestinationColorSpace, RenderObject*);
     void calculateMaskContentRepaintRect();
 
     FloatRect m_maskContentBoundaries;

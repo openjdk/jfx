@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,7 @@
 #include "JSCInlines.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleNamespaceObject.h"
+#include "LLIntThunks.h"
 #include "LinkBuffer.h"
 #include "ModuleNamespaceAccessCase.h"
 #include "PolymorphicAccess.h"
@@ -132,6 +133,18 @@ std::unique_ptr<AccessCase> AccessCase::createDelete(
     return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, Delete, identifier, offset, newStructure, { }, { }));
 }
 
+std::unique_ptr<AccessCase> AccessCase::createCheckPrivateBrand(VM& vm, JSCell* owner, CacheableIdentifier identifier, Structure* structure)
+{
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, CheckPrivateBrand, identifier, invalidOffset, structure, { }, { }));
+}
+
+std::unique_ptr<AccessCase> AccessCase::createSetPrivateBrand(
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, Structure* oldStructure, Structure* newStructure)
+{
+    RELEASE_ASSERT(oldStructure == newStructure->previousID());
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, SetPrivateBrand, identifier, invalidOffset, newStructure, { }, { }));
+}
+
 AccessCase::~AccessCase()
 {
 }
@@ -191,23 +204,27 @@ Vector<WatchpointSet*, 2> AccessCase::commit(VM& vm)
 
     Vector<WatchpointSet*, 2> result;
     Structure* structure = this->structure();
+    auto append = [&] (auto* set) {
+        ASSERT(set->isStillValid());
+        result.append(set);
+    };
 
     if (m_identifier) {
         if ((structure && structure->needImpurePropertyWatchpoint())
             || m_conditionSet.needImpurePropertyWatchpoint()
             || (m_polyProtoAccessChain && m_polyProtoAccessChain->needImpurePropertyWatchpoint(vm)))
-            result.append(vm.ensureWatchpointSetForImpureProperty(m_identifier.uid()));
+            append(vm.ensureWatchpointSetForImpureProperty(m_identifier.uid()));
     }
 
     if (additionalSet())
-        result.append(additionalSet());
+        append(additionalSet());
 
     if (structure
         && structure->hasRareData()
         && structure->rareData()->hasSharedPolyProtoWatchpoint()
         && structure->rareData()->sharedPolyProtoWatchpoint()->isStillValid()) {
         WatchpointSet* set = structure->rareData()->sharedPolyProtoWatchpoint()->inflate();
-        result.append(set);
+        append(set);
     }
 
     m_state = Committed;
@@ -287,6 +304,8 @@ bool AccessCase::requiresIdentifierNameMatch() const
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
         return true;
     case InstanceOfHit:
     case InstanceOfMiss:
@@ -340,6 +359,8 @@ bool AccessCase::requiresInt32PropertyCheck() const
     case InstanceOfHit:
     case InstanceOfMiss:
     case InstanceOfGeneric:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
         return false;
     case IndexedInt32Load:
     case IndexedDoubleLoad:
@@ -382,6 +403,8 @@ bool AccessCase::needsScratchFPR() const
     case IntrinsicGetter:
     case InHit:
     case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case ArrayLength:
     case StringLength:
     case DirectArgumentsLength:
@@ -469,6 +492,8 @@ void AccessCase::forEachDependentCell(VM& vm, const Functor& functor) const
     case GetGetter:
     case InHit:
     case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case ArrayLength:
     case StringLength:
     case DirectArgumentsLength:
@@ -513,12 +538,13 @@ bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) cons
     case DeleteNonConfigurable:
     case DeleteMiss:
     case Load:
-    case Replace:
     case Miss:
     case GetGetter:
     case IntrinsicGetter:
     case InHit:
     case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case ArrayLength:
     case StringLength:
     case DirectArgumentsLength:
@@ -544,6 +570,9 @@ bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) cons
     case IndexedTypedArrayFloat64Load:
     case IndexedStringLoad:
         doesCalls = false;
+        break;
+    case Replace:
+        doesCalls = viaProxy();
         break;
     }
 
@@ -578,6 +607,9 @@ bool AccessCase::canReplace(const AccessCase& other) const
     // A->canReplace(B) == B->canReplace(A).
 
     if (m_identifier != other.m_identifier)
+        return false;
+
+    if (viaProxy() != other.viaProxy())
         return false;
 
     auto checkPolyProtoAndStructure = [&] {
@@ -664,6 +696,8 @@ bool AccessCase::canReplace(const AccessCase& other) const
     case CustomAccessorSetter:
     case InHit:
     case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
         if (other.type() != type())
             return false;
 
@@ -695,7 +729,7 @@ void AccessCase::dump(PrintStream& out) const
         out.print(comma, "prototype access chain = ");
         m_polyProtoAccessChain->dump(structure(), out);
     } else {
-        if (m_type == Transition || m_type == Delete)
+        if (m_type == Transition || m_type == Delete || m_type == SetPrivateBrand)
             out.print(comma, "structure = ", pointerDump(structure()), " -> ", pointerDump(newStructure()));
         else if (m_structure)
             out.print(comma, "structure = ", pointerDump(m_structure.get()));
@@ -723,7 +757,8 @@ bool AccessCase::visitWeak(VM& vm) const
     return isValid;
 }
 
-bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
+template<typename Visitor>
+bool AccessCase::propagateTransitions(Visitor& visitor) const
 {
     bool result = true;
 
@@ -738,7 +773,7 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
     switch (m_type) {
     case Transition:
     case Delete:
-        if (visitor.vm().heap.isMarked(m_structure->previousID()))
+        if (visitor.isMarked(m_structure->previousID()))
             visitor.appendUnbarriered(m_structure.get());
         else
             result = false;
@@ -750,10 +785,17 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
     return result;
 }
 
-void AccessCase::visitAggregate(SlotVisitor& visitor) const
+template bool AccessCase::propagateTransitions(AbstractSlotVisitor&) const;
+template bool AccessCase::propagateTransitions(SlotVisitor&) const;
+
+
+template<typename Visitor>
+void AccessCase::visitAggregateImpl(Visitor& visitor) const
 {
     m_identifier.visitAggregate(visitor);
 }
+
+DEFINE_VISIT_AGGREGATE_WITH_MODIFIER(AccessCase, const);
 
 void AccessCase::generateWithGuard(
     AccessGenerationState& state, CCallHelpers::JumpList& fallThrough)
@@ -786,6 +828,7 @@ void AccessCase::generateWithGuard(
 
     auto emitDefaultGuard = [&] () {
         if (m_polyProtoAccessChain) {
+            ASSERT(!viaProxy());
             GPRReg baseForAccessGPR = state.scratchGPR;
             jit.move(state.baseGPR, baseForAccessGPR);
             m_polyProtoAccessChain->forEach(vm, structure(), [&] (Structure* structure, bool atEnd) {
@@ -904,11 +947,13 @@ void AccessCase::generateWithGuard(
     }
 
     case ModuleNamespaceLoad: {
+        ASSERT(!viaProxy());
         this->as<ModuleNamespaceAccessCase>().emit(state, fallThrough);
         return;
     }
 
     case IndexedScopedArgumentsLoad: {
+        ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
         GPRReg propertyGPR = state.u.propertyGPR;
 
@@ -974,6 +1019,7 @@ void AccessCase::generateWithGuard(
     }
 
     case IndexedDirectArgumentsLoad: {
+        ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
         GPRReg propertyGPR = state.u.propertyGPR;
         jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
@@ -997,6 +1043,7 @@ void AccessCase::generateWithGuard(
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load: {
+        ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
 
         TypedArrayType type = toTypedArrayType(m_type);
@@ -1087,6 +1134,7 @@ void AccessCase::generateWithGuard(
     }
 
     case IndexedStringLoad: {
+        ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
         GPRReg propertyGPR = state.u.propertyGPR;
 
@@ -1142,6 +1190,7 @@ void AccessCase::generateWithGuard(
     case IndexedDoubleLoad:
     case IndexedContiguousLoad:
     case IndexedArrayStorageLoad: {
+        ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
         GPRReg propertyGPR = state.u.propertyGPR;
 
@@ -1258,6 +1307,7 @@ void AccessCase::generateWithGuard(
         break;
 
     case InstanceOfGeneric: {
+        ASSERT(!viaProxy());
         GPRReg prototypeGPR = state.u.prototypeGPR;
         // Legend: value = `base instanceof prototypeGPR`.
 
@@ -1316,6 +1366,12 @@ void AccessCase::generateWithGuard(
             state.failAndIgnore.append(jit.jump());
         } else
             state.failAndIgnore.append(failAndIgnore);
+        return;
+    }
+
+    case CheckPrivateBrand: {
+        emitDefaultGuard();
+        state.succeed();
         return;
     }
 
@@ -1426,40 +1482,47 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             currStructure->startWatchingPropertyForReplacements(vm, offset());
         }
 
-        GPRReg baseForGetGPR;
-        if (viaProxy()) {
-            ASSERT(m_type != CustomValueSetter || m_type != CustomAccessorSetter); // Because setters need to not trash valueRegsPayloadGPR.
-            if (m_type == Getter || m_type == Setter)
-                baseForGetGPR = scratchGPR;
-            else
-                baseForGetGPR = valueRegsPayloadGPR;
+        bool doesPropertyStorageLoads = m_type == Load
+            || m_type == GetGetter
+            || m_type == Getter
+            || m_type == Setter;
 
-            ASSERT((m_type != Getter && m_type != Setter) || baseForGetGPR != baseGPR);
-            ASSERT(m_type != Setter || baseForGetGPR != valueRegsPayloadGPR);
+        bool takesPropertyOwnerAsCFunctionArgument = m_type == CustomValueGetter || m_type == CustomValueSetter;
 
-            jit.loadPtr(
-                CCallHelpers::Address(baseGPR, JSProxy::targetOffset()),
-                baseForGetGPR);
-        } else
-            baseForGetGPR = baseGPR;
+        GPRReg receiverGPR = baseGPR;
+        GPRReg propertyOwnerGPR;
 
-        GPRReg baseForAccessGPR;
         if (m_polyProtoAccessChain) {
             // This isn't pretty, but we know we got here via generateWithGuard,
             // and it left the baseForAccess inside scratchGPR. We could re-derive the base,
             // but it'd require emitting the same code to load the base twice.
-            baseForAccessGPR = scratchGPR;
-        } else {
-            if (hasAlternateBase()) {
-                jit.move(
-                    CCallHelpers::TrustedImmPtr(alternateBase()), scratchGPR);
-                baseForAccessGPR = scratchGPR;
-            } else
-                baseForAccessGPR = baseForGetGPR;
-        }
+            propertyOwnerGPR = scratchGPR;
+        } else if (hasAlternateBase()) {
+            jit.move(
+                CCallHelpers::TrustedImmPtr(alternateBase()), scratchGPR);
+            propertyOwnerGPR = scratchGPR;
+        } else if (viaProxy() && doesPropertyStorageLoads) {
+            // We only need this when loading an inline or out of line property. For customs accessors,
+            // we can invoke with a receiver value that is a JSProxy. For custom values, we unbox to the
+            // JSProxy's target. For getters/setters, we'll also invoke them with the JSProxy as |this|,
+            // but we need to load the actual GetterSetter cell from the JSProxy's target.
+
+            if (m_type == Getter || m_type == Setter)
+                propertyOwnerGPR = scratchGPR;
+            else
+                propertyOwnerGPR = valueRegsPayloadGPR;
+
+            jit.loadPtr(
+                CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), propertyOwnerGPR);
+        } else if (viaProxy() && takesPropertyOwnerAsCFunctionArgument) {
+            propertyOwnerGPR = scratchGPR;
+            jit.loadPtr(
+                CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), propertyOwnerGPR);
+        } else
+            propertyOwnerGPR = receiverGPR;
 
         GPRReg loadedValueGPR = InvalidGPRReg;
-        if (m_type != CustomValueGetter && m_type != CustomAccessorGetter && m_type != CustomValueSetter && m_type != CustomAccessorSetter) {
+        if (doesPropertyStorageLoads) {
             if (m_type == Load || m_type == GetGetter)
                 loadedValueGPR = valueRegsPayloadGPR;
             else
@@ -1470,10 +1533,10 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
             GPRReg storageGPR;
             if (isInlineOffset(m_offset))
-                storageGPR = baseForAccessGPR;
+                storageGPR = propertyOwnerGPR;
             else {
                 jit.loadPtr(
-                    CCallHelpers::Address(baseForAccessGPR, JSObject::butterflyOffset()),
+                    CCallHelpers::Address(propertyOwnerGPR, JSObject::butterflyOffset()),
                     loadedValueGPR);
                 storageGPR = loadedValueGPR;
             }
@@ -1509,7 +1572,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             }
 
             if (Options::useDOMJIT() && access.domAttribute()->domJIT) {
-                access.emitDOMJITGetter(state, access.domAttribute()->domJIT, baseForGetGPR);
+                access.emitDOMJITGetter(state, access.domAttribute()->domJIT, receiverGPR);
                 return;
             }
         }
@@ -1562,7 +1625,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             state.setSpillStateForJSGetterSetter(spillState);
 
             RELEASE_ASSERT(!access.callLinkInfo());
-            CallLinkInfo* callLinkInfo = state.m_callLinkInfos.add();
+            CallLinkInfo* callLinkInfo = state.m_callLinkInfos.add(stubInfo.codeOrigin);
             access.m_callLinkInfo = callLinkInfo;
 
             // FIXME: If we generated a polymorphic call stub that jumped back to the getter
@@ -1575,7 +1638,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             // https://bugs.webkit.org/show_bug.cgi?id=148914
             callLinkInfo->disallowStubs();
 
-            callLinkInfo->setUpCall(CallLinkInfo::Call, stubInfo.codeOrigin, loadedValueGPR);
+            callLinkInfo->setUpCall(CallLinkInfo::Call, loadedValueGPR);
 
             CCallHelpers::JumpList done;
 
@@ -1684,6 +1747,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             });
         } else {
             ASSERT(m_type == CustomValueGetter || m_type == CustomAccessorGetter || m_type == CustomValueSetter || m_type == CustomAccessorSetter);
+            ASSERT(!doesPropertyStorageLoads); // Or we need an extra register. We rely on propertyOwnerGPR being correct here.
 
             // Need to make room for the C call so any of our stack spillage isn't overwritten. It's
             // hard to track if someone did spillage or not, so we just assume that we always need
@@ -1691,33 +1755,53 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             jit.makeSpaceOnStackForCCall();
 
             // Check if it is a super access
-            GPRReg baseForCustomGetGPR = baseGPR != thisGPR ? thisGPR : baseForGetGPR;
+            GPRReg receiverForCustomGetGPR = baseGPR != thisGPR ? thisGPR : receiverGPR;
 
             // getter: EncodedJSValue (*GetValueFunc)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName);
-            // setter: void (*PutValueFunc)(JSGlobalObject*, EncodedJSValue thisObject, EncodedJSValue value);
-            // Custom values are passed the slotBase (the property holder), custom accessors are passed the thisVaule (reciever).
-            // FIXME: Remove this differences in custom values and custom accessors.
-            // https://bugs.webkit.org/show_bug.cgi?id=158014
-            GPRReg baseForCustom = m_type == CustomValueGetter || m_type == CustomValueSetter ? baseForAccessGPR : baseForCustomGetGPR;
+            // setter: bool (*PutValueFunc)(JSGlobalObject*, EncodedJSValue thisObject, EncodedJSValue value);
+            // Custom values are passed the slotBase (the property holder), custom accessors are passed the thisValue (receiver).
+            GPRReg baseForCustom = takesPropertyOwnerAsCFunctionArgument ? propertyOwnerGPR : receiverForCustomGetGPR;
             // We do not need to keep globalObject alive since the owner CodeBlock (even if JSGlobalObject* is one of CodeBlock that is inlined and held by DFG CodeBlock)
             // must keep it alive.
             if (m_type == CustomValueGetter || m_type == CustomAccessorGetter) {
                 RELEASE_ASSERT(m_identifier);
-                jit.setupArguments<PropertySlot::GetValueFunc>(
-                    CCallHelpers::TrustedImmPtr(globalObject),
-                    CCallHelpers::CellValue(baseForCustom),
-                    CCallHelpers::TrustedImmPtr(uid()));
+                if (Options::useJITCage()) {
+                    jit.setupArguments<PropertySlot::GetValueFuncWithPtr>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        CCallHelpers::TrustedImmPtr(uid()),
+                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.executableAddress()));
+                } else {
+                    jit.setupArguments<PropertySlot::GetValueFunc>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        CCallHelpers::TrustedImmPtr(uid()));
+                }
             } else {
-                jit.setupArguments<PutPropertySlot::PutValueFunc>(
-                    CCallHelpers::TrustedImmPtr(globalObject),
-                    CCallHelpers::CellValue(baseForCustom),
-                    valueRegs);
+                if (Options::useJITCage()) {
+                    jit.setupArguments<PutPropertySlot::PutValueFuncWithPtr>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        valueRegs,
+                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.executableAddress()));
+                } else {
+                    jit.setupArguments<PutPropertySlot::PutValueFunc>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        valueRegs);
+                }
             }
             jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
 
-            operationCall = jit.call(OperationPtrTag);
+            if (Options::useJITCage())
+                operationCall = jit.call(OperationPtrTag);
+            else
+                operationCall = jit.call(CustomAccessorPtrTag);
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(operationCall, this->as<GetterSetterAccessCase>().m_customAccessor);
+                if (Options::useJITCage())
+                    linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryCustomAccessor));
+                else
+                    linkBuffer.link(operationCall, this->as<GetterSetterAccessCase>().m_customAccessor);
             });
 
             if (m_type == CustomValueGetter || m_type == CustomAccessorGetter)
@@ -1739,25 +1823,53 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     }
 
     case Replace: {
+        GPRReg base = baseGPR;
+        if (viaProxy()) {
+            // This aint pretty, but the path that structure checks loads the real base into scratchGPR.
+            base = scratchGPR;
+        }
+
         if (isInlineOffset(m_offset)) {
             jit.storeValue(
                 valueRegs,
                 CCallHelpers::Address(
-                    baseGPR,
+                    base,
                     JSObject::offsetOfInlineStorage() +
                     offsetInInlineStorage(m_offset) * sizeof(JSValue)));
         } else {
-            jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
+            jit.loadPtr(CCallHelpers::Address(base, JSObject::butterflyOffset()), scratchGPR);
             jit.storeValue(
                 valueRegs,
                 CCallHelpers::Address(
                     scratchGPR, offsetInButterfly(m_offset) * sizeof(JSValue)));
         }
+
+        if (viaProxy()) {
+            CCallHelpers::JumpList skipBarrier;
+            skipBarrier.append(jit.branchIfNotCell(valueRegs));
+            if (!isInlineOffset(m_offset))
+                jit.loadPtr(CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), scratchGPR);
+            skipBarrier.append(jit.barrierBranch(vm, scratchGPR, scratchGPR));
+
+            jit.loadPtr(CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), scratchGPR);
+            auto spillState = state.preserveLiveRegistersToStackForCallWithoutExceptions();
+            jit.setupArguments<decltype(operationWriteBarrierSlowPath)>(CCallHelpers::TrustedImmPtr(&vm), scratchGPR);
+            jit.prepareCallOperation(vm);
+            auto operationCall = jit.call(OperationPtrTag);
+            jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(operationWriteBarrierSlowPath));
+            });
+            state.restoreLiveRegistersFromStackForCall(spillState);
+
+            skipBarrier.link(&jit);
+        }
+
         state.succeed();
         return;
     }
 
     case Transition: {
+        ASSERT(!viaProxy());
         // AccessCase::transition() should have returned null if this wasn't true.
         RELEASE_ASSERT(GPRInfo::numberOfRegisters >= 6 || !structure()->outOfLineCapacity() || structure()->outOfLineCapacity() == newStructure()->outOfLineCapacity());
 
@@ -1928,7 +2040,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
         allocator.lock(baseGPR);
         allocator.lock(scratchGPR);
         ASSERT(structure()->transitionWatchpointSetHasBeenInvalidated());
-        ASSERT(newStructure()->isPropertyDeletionTransition());
+        ASSERT(newStructure()->transitionKind() == TransitionKind::PropertyDeletion);
         ASSERT(baseGPR != scratchGPR);
         ASSERT(!valueRegs.uses(baseGPR));
         ASSERT(!valueRegs.uses(scratchGPR));
@@ -1960,6 +2072,19 @@ void AccessCase::generateImpl(AccessGenerationState& state)
         jit.move(MacroAssembler::TrustedImm32(true), valueRegs.payloadGPR());
 
         allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+        return;
+    }
+
+    case SetPrivateBrand: {
+        ASSERT(structure()->transitionWatchpointSetHasBeenInvalidated());
+        ASSERT(newStructure()->transitionKind() == TransitionKind::SetBrand);
+
+        uint32_t structureBits = bitwise_cast<uint32_t>(newStructure()->id());
+        jit.store32(
+            CCallHelpers::TrustedImm32(structureBits),
+            CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
+
         state.succeed();
         return;
     }
@@ -2037,6 +2162,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
     case IndexedStringLoad:
+    case CheckPrivateBrand:
         // These need to be handled by generateWithGuard(), since the guard is part of the
         // algorithm. We can be sure that nobody will call generate() directly for these since they
         // are not guarded by structure checks.

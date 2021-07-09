@@ -26,6 +26,7 @@
 #pragma once
 
 #include "MacroAssemblerCodeRef.h"
+#include "OpcodeSize.h"
 #include "VM.h"
 #include <wtf/Scope.h>
 
@@ -37,7 +38,21 @@ typedef int64_t EncodedJSValue;
 extern "C" {
     EncodedJSValue vmEntryToJavaScript(void*, VM*, ProtoCallFrame*);
     EncodedJSValue vmEntryToNative(void*, VM*, ProtoCallFrame*);
+    EncodedJSValue vmEntryCustomAccessor(CPURegister, CPURegister, CPURegister, CPURegister);
+    EncodedJSValue vmEntryHostFunction(JSGlobalObject*, CallFrame*, void*);
 }
+
+#if CPU(ARM64E)
+extern "C" {
+    void jitCagePtrGateAfter(void);
+    void vmEntryToJavaScriptGateAfter(void);
+
+    void llint_function_for_call_arity_checkUntagGateAfter(void);
+    void llint_function_for_call_arity_checkTagGateAfter(void);
+    void llint_function_for_construct_arity_checkUntagGateAfter(void);
+    void llint_function_for_construct_arity_checkTagGateAfter(void);
+}
+#endif
 
 inline EncodedJSValue vmEntryToWasm(void* code, VM* vm, ProtoCallFrame* frame)
 {
@@ -50,13 +65,44 @@ inline EncodedJSValue vmEntryToWasm(void* code, VM* vm, ProtoCallFrame* frame)
 
 namespace LLInt {
 
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForCallEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForConstructEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForCallArityCheckThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForConstructArityCheckThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> evalEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> programEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> moduleProgramEntryThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> functionForCallEntryThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> functionForConstructEntryThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> functionForCallArityCheckThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> functionForConstructArityCheckThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> evalEntryThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> programEntryThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> moduleProgramEntryThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> getHostCallReturnValueThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> genericReturnPointThunk(OpcodeSize);
+MacroAssemblerCodeRef<JSEntryPtrTag> fuzzerReturnEarlyFromLoopHintThunk();
+
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrowThunk();
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleUncaughtExceptionThunk();
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatchThunk(OpcodeSize);
+
+#if ENABLE(JIT_CAGE)
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> jitCagePtrThunk();
+#endif
+
+#if CPU(ARM64E)
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createJSGateThunk(void*, PtrTag, const char*);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createWasmGateThunk(void*, PtrTag, const char*);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createTailCallGate(PtrTag);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> loopOSREntryGateThunk();
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> entryOSREntryGateThunk();
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> wasmOSREntryGateThunk();
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> exceptionHandlerGateThunk();
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> returnFromLLIntGateThunk();
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> untagGateThunk(void*);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> tagGateThunk(void*);
+#endif
+
+MacroAssemblerCodeRef<JSEntryPtrTag> normalOSRExitTrampolineThunk();
+#if ENABLE(DFG_JIT)
+MacroAssemblerCodeRef<JSEntryPtrTag> checkpointOSRExitTrampolineThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> checkpointOSRExitFromInlinedCallTrampolineThunk();
+MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID, OpcodeSize);
+#endif
 
 #if ENABLE(WEBASSEMBLY)
 MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();

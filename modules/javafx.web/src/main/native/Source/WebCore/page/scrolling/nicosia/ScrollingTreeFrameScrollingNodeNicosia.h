@@ -62,7 +62,7 @@ private:
     void ensureScrollAnimationSmooth();
 #endif
 
-    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&) override;
+    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
 
     void stopScrollAnimations() override;
 
@@ -70,7 +70,7 @@ private:
 
     FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
 
-    void currentScrollPositionChanged(ScrollingLayerPositionAction) override;
+    void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) override;
 
     void repositionScrollingLayers() override;
     void repositionRelatedLayers() override;

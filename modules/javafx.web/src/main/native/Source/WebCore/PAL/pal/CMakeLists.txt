@@ -38,13 +38,9 @@ set(PAL_PRIVATE_INCLUDE_DIRECTORIES
     "${PAL_DIR}/pal/text"
 )
 
-# PAL only uses WebKit::WTF but we need to determine where that is
-# If WTF is statically linked into a shared JavaScriptCore then that should be
-# linked otherwise it can be linked directly
-if (NOT ${WTF_LIBRARY_TYPE} STREQUAL "SHARED" AND ${JavaScriptCore_LIBRARY_TYPE} STREQUAL "SHARED")
-    set(PAL_LIBRARIES WebKit::JavaScriptCore)
-else ()
-    set(PAL_LIBRARIES WebKit::WTF)
+set(PAL_FRAMEWORKS WTF)
+if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND PAL_FRAMEWORKS bmalloc)
 endif ()
 
 set(PAL_INTERFACE_LIBRARIES PAL)
@@ -59,6 +55,5 @@ WEBKIT_COPY_FILES(PAL_CopyHeaders
     FILES ${PAL_PUBLIC_HEADERS}
 )
 
-WEBKIT_WRAP_SOURCELIST(${PAL_SOURCES})
 WEBKIT_FRAMEWORK(PAL)
 WEBKIT_FRAMEWORK_TARGET(PAL)

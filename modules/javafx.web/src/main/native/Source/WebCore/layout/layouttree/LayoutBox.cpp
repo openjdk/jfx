@@ -28,7 +28,7 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayBox.h"
+#include "LayoutBoxGeometry.h"
 #include "LayoutContainerBox.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutPhase.h"
@@ -41,10 +41,10 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Box);
 
-Box::Box(Optional<ElementAttributes> attributes, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
+Box::Box(Optional<ElementAttributes> attributes, RenderStyle&& style, OptionSet<BaseTypeFlag> baseTypeFlags)
     : m_style(WTFMove(style))
     , m_elementAttributes(attributes)
-    , m_baseTypeFlags(baseTypeFlags)
+    , m_baseTypeFlags(baseTypeFlags.toRaw())
     , m_hasRareData(false)
     , m_isAnonymous(false)
 {
@@ -65,7 +65,11 @@ bool Box::establishesFormattingContext() const
 {
     // We need the final tree structure to tell whether a box establishes a certain formatting context.
     ASSERT(!Phase::isInTreeBuilding());
-    return establishesBlockFormattingContext() || establishesInlineFormattingContext() || establishesTableFormattingContext() || establishesIndependentFormattingContext();
+    return establishesBlockFormattingContext()
+        || establishesInlineFormattingContext()
+        || establishesTableFormattingContext()
+        || establishesFlexFormattingContext()
+        || establishesIndependentFormattingContext();
 }
 
 bool Box::establishesBlockFormattingContext() const
@@ -77,20 +81,24 @@ bool Box::establishesBlockFormattingContext() const
     if (isTableWrapperBox())
         return true;
 
+    // A block box that establishes an independent formatting context establishes a new block formatting context for its contents.
+    if (isBlockBox() && establishesIndependentFormattingContext())
+        return true;
+
     // 9.4.1 Block formatting contexts
     // Floats, absolutely positioned elements, block containers (such as inline-blocks, table-cells, and table-captions)
     // that are not block boxes, and block boxes with 'overflow' other than 'visible' (except when that value has been propagated to the viewport)
     // establish new block formatting contexts for their contents.
-    if (isFloatingPositioned() || isAbsolutelyPositioned()) {
+    if (isFloatingPositioned()) {
         // Not all floating or out-of-positioned block level boxes establish BFC.
         // See [9.7 Relationships between 'display', 'position', and 'float'] for details.
         return style().display() == DisplayType::Block;
     }
 
-    if (isBlockContainerBox() && !isBlockLevelBox())
+    if (isBlockContainer() && !isBlockBox())
         return true;
 
-    if (isBlockLevelBox() && !isOverflowVisible())
+    if (isBlockBox() && !isOverflowVisible())
         return true;
 
     return false;
@@ -100,7 +108,7 @@ bool Box::establishesInlineFormattingContext() const
 {
     // 9.4.2 Inline formatting contexts
     // An inline formatting context is established by a block container box that contains no block-level boxes.
-    if (!isBlockContainerBox())
+    if (!isBlockContainer())
         return false;
 
     if (!isContainerBox())
@@ -119,10 +127,15 @@ bool Box::establishesTableFormattingContext() const
     return isTableBox();
 }
 
+bool Box::establishesFlexFormattingContext() const
+{
+    return isFlexBox();
+}
+
 bool Box::establishesIndependentFormattingContext() const
 {
     // FIXME: This is where we would check for 'contain' property.
-    return isAbsolutelyPositioned();
+    return isAbsolutelyPositioned() || isFlexItem();
 }
 
 bool Box::isRelativelyPositioned() const
@@ -195,7 +208,7 @@ const ContainerBox& Box::containingBlock() const
     if (!isPositioned() || isInFlowPositioned()) {
         auto* ancestor = &parent();
         for (; !is<InitialContainingBlock>(*ancestor); ancestor = &ancestor->parent()) {
-            if (ancestor->isBlockContainerBox() || ancestor->establishesFormattingContext())
+            if (ancestor->isContainingBlockForInFlow())
                 return *ancestor;
         }
         return *ancestor;
@@ -204,7 +217,7 @@ const ContainerBox& Box::containingBlock() const
     if (isFixedPositioned()) {
         auto* ancestor = &parent();
         for (; !is<InitialContainingBlock>(*ancestor); ancestor = &ancestor->parent()) {
-            if (ancestor->style().hasTransform())
+            if (ancestor->isContainingBlockForFixedPosition())
                 return *ancestor;
         }
         return *ancestor;
@@ -213,7 +226,7 @@ const ContainerBox& Box::containingBlock() const
     if (isOutOfFlowPositioned()) {
         auto* ancestor = &parent();
         for (; !is<InitialContainingBlock>(*ancestor); ancestor = &ancestor->parent()) {
-            if (ancestor->isPositioned() || ancestor->style().hasTransform())
+            if (ancestor->isContainingBlockForOutOfFlowPosition())
                 return *ancestor;
         }
         return *ancestor;
@@ -282,14 +295,31 @@ bool Box::isBlockLevelBox() const
 {
     // Block level elements generate block level boxes.
     auto display = m_style.display();
-    return display == DisplayType::Block || display == DisplayType::ListItem || display == DisplayType::Table;
+    return display == DisplayType::Block
+        || display == DisplayType::ListItem
+        || display == DisplayType::Table
+        || display == DisplayType::Flex
+        || display == DisplayType::Grid
+        || display == DisplayType::FlowRoot;
+}
+
+bool Box::isBlockBox() const
+{
+    // A block-level box that is also a block container.
+    return isBlockLevelBox() && isBlockContainer();
 }
 
 bool Box::isInlineLevelBox() const
 {
     // Inline level elements generate inline level boxes.
     auto display = m_style.display();
-    return display == DisplayType::Inline || isInlineBlockBox() || isInlineTableBox();
+    return display == DisplayType::Inline
+        || display == DisplayType::InlineBox
+        || display == DisplayType::InlineFlex
+        || display == DisplayType::WebKitInlineFlex
+        || display == DisplayType::InlineGrid
+        || isInlineBlockBox()
+        || isInlineTableBox();
 }
 
 bool Box::isInlineBox() const
@@ -306,10 +336,21 @@ bool Box::isAtomicInlineLevelBox() const
     return isInlineLevelBox() && !isInlineBox();
 }
 
-bool Box::isBlockContainerBox() const
+bool Box::isFlexItem() const
+{
+    // Each in-flow child of a flex container becomes a flex item (https://www.w3.org/TR/css-flexbox-1/#flex-items).
+    return isInFlow() && parent().isFlexBox();
+}
+
+bool Box::isBlockContainer() const
 {
     auto display = m_style.display();
-    return display == DisplayType::Block || display == DisplayType::ListItem || isInlineBlockBox() || isTableCell() || isTableCaption(); // TODO && !replaced element
+    return display == DisplayType::Block
+        || display == DisplayType::FlowRoot
+        || display == DisplayType::ListItem
+        || isInlineBlockBox()
+        || isTableCell()
+        || isTableCaption(); // TODO && !replaced element
 }
 
 const Box* Box::nextInFlowSibling() const
@@ -429,11 +470,11 @@ Optional<LayoutUnit> Box::columnWidth() const
     return rareData().columnWidth;
 }
 
-void Box::setCachedDisplayBoxForLayoutState(LayoutState& layoutState, std::unique_ptr<Display::Box> box) const
+void Box::setCachedGeometryForLayoutState(LayoutState& layoutState, std::unique_ptr<BoxGeometry> geometry) const
 {
     ASSERT(!m_cachedLayoutState);
     m_cachedLayoutState = makeWeakPtr(layoutState);
-    m_cachedDisplayBoxForLayoutState = WTFMove(box);
+    m_cachedGeometryForLayoutState = WTFMove(geometry);
 }
 
 Box::RareDataMap& Box::rareDataMap()

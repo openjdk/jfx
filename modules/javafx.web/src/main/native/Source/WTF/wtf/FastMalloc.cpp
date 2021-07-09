@@ -97,6 +97,16 @@ char* fastStrDup(const char* src)
     return dup;
 }
 
+void* fastMemDup(const void* mem, size_t bytes)
+{
+    if (!mem || !bytes)
+        return nullptr;
+
+    void* result = fastMalloc(bytes);
+    memcpy(result, mem, bytes);
+    return result;
+}
+
 TryMallocReturnValue tryFastZeroedMalloc(size_t n)
 {
     void* result;
@@ -340,7 +350,11 @@ private:
 MallocCallTracker& MallocCallTracker::singleton()
 {
     AvoidRecordingScope avoidRecording;
-    static NeverDestroyed<MallocCallTracker> tracker;
+    static LazyNeverDestroyed<MallocCallTracker> tracker;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        tracker.construct();
+    });
     return tracker;
 }
 

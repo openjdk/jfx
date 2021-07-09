@@ -31,6 +31,7 @@
 #include "RemoteInspectorMessageParser.h"
 #include "RemoteInspectorSocketEndpoint.h"
 #include <wtf/HashMap.h>
+#include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,13 +41,13 @@ class MessageParser;
 
 class JS_EXPORT_PRIVATE RemoteInspectorConnectionClient : public RemoteInspectorSocketEndpoint::Client {
 public:
-    virtual ~RemoteInspectorConnectionClient();
+    ~RemoteInspectorConnectionClient() override;
 
     Optional<ConnectionID> connectInet(const char* serverAddr, uint16_t serverPort);
     Optional<ConnectionID> createClient(PlatformSocketType);
     void send(ConnectionID, const uint8_t* data, size_t);
 
-    void didReceive(ConnectionID, Vector<uint8_t>&&) override;
+    void didReceive(RemoteInspectorSocketEndpoint&, ConnectionID, Vector<uint8_t>&&) final;
 
     struct Event {
         String methodName;
@@ -60,6 +61,8 @@ public:
     virtual HashMap<String, CallHandler>& dispatchMap() = 0;
 
 protected:
+    Optional<Vector<Ref<JSON::Object>>> parseTargetListJSON(const String&);
+
     static Optional<Event> extractEvent(ConnectionID, Vector<uint8_t>&&);
 
     HashMap<ConnectionID, MessageParser> m_parsers;

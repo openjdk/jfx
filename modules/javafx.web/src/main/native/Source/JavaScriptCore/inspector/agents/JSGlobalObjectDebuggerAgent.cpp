@@ -29,7 +29,7 @@
 #include "ConsoleMessage.h"
 #include "InjectedScriptManager.h"
 #include "InspectorConsoleAgent.h"
-#include "JSGlobalObjectScriptDebugServer.h"
+#include "JSGlobalObjectDebugger.h"
 #include "ScriptCallStackFactory.h"
 
 namespace Inspector {
@@ -44,14 +44,14 @@ JSGlobalObjectDebuggerAgent::JSGlobalObjectDebuggerAgent(JSAgentContext& context
 
 JSGlobalObjectDebuggerAgent::~JSGlobalObjectDebuggerAgent() = default;
 
-InjectedScript JSGlobalObjectDebuggerAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
+InjectedScript JSGlobalObjectDebuggerAgent::injectedScriptForEval(Protocol::ErrorString& errorString, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId) {
         errorString = "executionContextId is not supported for JSContexts as there is only one execution context"_s;
         return InjectedScript();
     }
 
-    JSGlobalObject& globalObject = static_cast<JSGlobalObjectScriptDebugServer&>(scriptDebugServer()).globalObject();
+    JSGlobalObject& globalObject = static_cast<JSGlobalObjectDebugger&>(debugger()).globalObject();
     return injectedScriptManager().injectedScriptFor(&globalObject);
 }
 

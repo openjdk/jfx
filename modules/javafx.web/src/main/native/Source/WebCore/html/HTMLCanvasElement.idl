@@ -39,9 +39,11 @@ typedef (
 
 [
     ActiveDOMObject,
+    JSCustomMarkFunction,
     JSGenerateToNativeObject,
     ReportExtraMemoryCost,
     ReportExternalMemoryCost,
+    Exposed=Window
 ] interface HTMLCanvasElement : HTMLElement {
     [CEReactions=NotNeeded, CallTracingCallback=recordCanvasAction] attribute unsigned long width;
     [CEReactions=NotNeeded, CallTracingCallback=recordCanvasAction] attribute unsigned long height;
@@ -49,7 +51,8 @@ typedef (
     [CallWith=GlobalObject, MayThrowException] RenderingContext? getContext(DOMString contextId, any... arguments);
 
     [MayThrowException] DOMString toDataURL(optional DOMString type, optional any quality);
-    [CallWith=ScriptExecutionContext, MayThrowException] void toBlob(BlobCallback callback, optional DOMString type, optional any quality);
+    [CallWith=ScriptExecutionContext, MayThrowException] undefined toBlob(BlobCallback callback, optional DOMString type, optional any quality);
+    [Conditional=OFFSCREEN_CANVAS, CallWith=ScriptExecutionContext, MayThrowException] OffscreenCanvas transferControlToOffscreen();
 
     [Conditional=MEDIA_STREAM, CallWith=Document, MayThrowException, NewObject] MediaStream captureStream(optional double frameRequestRate);
 };

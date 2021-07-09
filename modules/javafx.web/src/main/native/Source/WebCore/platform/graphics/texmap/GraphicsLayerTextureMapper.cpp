@@ -39,7 +39,6 @@ Ref<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, Graphics
 
 GraphicsLayerTextureMapper::GraphicsLayerTextureMapper(Type layerType, GraphicsLayerClient& client)
     : GraphicsLayer(layerType, client)
-    , m_compositedNativeImagePtr(0)
     , m_changeMask(NoChanges)
     , m_needsDisplay(false)
     , m_debugBorderWidth(0)
@@ -272,6 +271,15 @@ void GraphicsLayerTextureMapper::setContentsRect(const FloatRect& value)
     notifyChange(ContentsRectChange);
 }
 
+void GraphicsLayerTextureMapper::setContentsClippingRect(const FloatRoundedRect& rect)
+{
+    if (rect == m_contentsClippingRect)
+        return;
+
+    GraphicsLayer::setContentsClippingRect(rect);
+    notifyChange(ContentsRectChange);
+}
+
 void GraphicsLayerTextureMapper::setContentsToSolidColor(const Color& color)
 {
     if (color == m_solidColor)
@@ -285,22 +293,22 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
 {
     if (image) {
         // Make the decision about whether the image has changed.
-        // This code makes the assumption that pointer equality on a NativeImagePtr is a valid way to tell if the image is changed.
+        // This code makes the assumption that pointer equality on a PlatformImagePtr is a valid way to tell if the image is changed.
         // This assumption is true for the GTK+ port.
-        NativeImagePtr newNativeImagePtr = image->nativeImageForCurrentFrame();
-        if (!newNativeImagePtr)
+        auto newNativeImage = image->nativeImageForCurrentFrame();
+        if (!newNativeImage)
             return;
 
-        if (newNativeImagePtr == m_compositedNativeImagePtr)
+        if (newNativeImage == m_compositedNativeImage)
             return;
 
-        m_compositedNativeImagePtr = newNativeImagePtr;
+        m_compositedNativeImage = newNativeImage;
         if (!m_compositedImage)
             m_compositedImage = TextureMapperTiledBackingStore::create();
         m_compositedImage->setContentsToImage(image);
         m_compositedImage->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
     } else {
-        m_compositedNativeImagePtr = nullptr;
+        m_compositedNativeImage = nullptr;
         m_compositedImage = nullptr;
     }
 
@@ -401,11 +409,33 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
         m_layer.setChildren(rawChildren);
     }
 
-    if (m_changeMask & MaskLayerChange)
-        m_layer.setMaskLayer(&downcast<GraphicsLayerTextureMapper>(maskLayer())->layer());
+    if (m_changeMask & MaskLayerChange) {
+        auto* layer = downcast<GraphicsLayerTextureMapper>(maskLayer());
+        m_layer.setMaskLayer(layer ? &layer->layer() : nullptr);
+    }
 
-    if (m_changeMask & ReplicaLayerChange)
-        m_layer.setReplicaLayer(&downcast<GraphicsLayerTextureMapper>(replicaLayer())->layer());
+    if (m_changeMask & ReplicaLayerChange) {
+        auto* layer = downcast<GraphicsLayerTextureMapper>(replicaLayer());
+        m_layer.setReplicaLayer(layer ? &layer->layer() : nullptr);
+    }
+
+    if (m_changeMask & BackdropLayerChange) {
+        if (needsBackdrop()) {
+            if (!m_backdropLayer) {
+                m_backdropLayer = makeUnique<TextureMapperLayer>();
+                m_backdropLayer->setAnchorPoint(FloatPoint3D());
+                m_backdropLayer->setContentsVisible(true);
+                m_backdropLayer->setMasksToBounds(true);
+            }
+            m_backdropLayer->setFilters(m_backdropFilters);
+            m_backdropLayer->setSize(m_backdropFiltersRect.rect().size());
+            m_backdropLayer->setPosition(m_backdropFiltersRect.rect().location());
+        } else
+            m_backdropLayer = nullptr;
+
+        m_layer.setBackdropLayer(m_backdropLayer.get());
+        m_layer.setBackdropFiltersRect(m_backdropFiltersRect);
+    }
 
     if (m_changeMask & PositionChange)
         m_layer.setPosition(position());
@@ -425,8 +455,10 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
     if (m_changeMask & Preserves3DChange)
         m_layer.setPreserves3D(preserves3D());
 
-    if (m_changeMask & ContentsRectChange)
+    if (m_changeMask & ContentsRectChange) {
         m_layer.setContentsRect(contentsRect());
+        m_layer.setContentsClippingRect(contentsClippingRect());
+    }
 
     if (m_changeMask & MasksToBoundsChange)
         m_layer.setMasksToBounds(masksToBounds());
@@ -475,40 +507,36 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
 
 void GraphicsLayerTextureMapper::flushCompositingState(const FloatRect& rect)
 {
-    if (!m_layer.textureMapper())
-        return;
-
     flushCompositingStateForThisLayerOnly();
+
+    auto now = MonotonicTime::now();
 
     if (maskLayer())
         maskLayer()->flushCompositingState(rect);
-    if (replicaLayer())
+    if (replicaLayer()) {
         replicaLayer()->flushCompositingState(rect);
+        downcast<GraphicsLayerTextureMapper>(replicaLayer())->layer().applyAnimationsRecursively(now);
+    }
+    if (m_backdropLayer)
+        m_backdropLayer->applyAnimationsRecursively(now);
     for (auto& child : children())
         child->flushCompositingState(rect);
 }
 
-void GraphicsLayerTextureMapper::updateBackingStoreIncludingSubLayers()
+void GraphicsLayerTextureMapper::updateBackingStoreIncludingSubLayers(TextureMapper& textureMapper)
 {
-    if (!m_layer.textureMapper())
-        return;
-
-    updateBackingStoreIfNeeded();
+    updateBackingStoreIfNeeded(textureMapper);
 
     if (maskLayer())
-        downcast<GraphicsLayerTextureMapper>(*maskLayer()).updateBackingStoreIfNeeded();
+        downcast<GraphicsLayerTextureMapper>(*maskLayer()).updateBackingStoreIfNeeded(textureMapper);
     if (replicaLayer())
-        downcast<GraphicsLayerTextureMapper>(*replicaLayer()).updateBackingStoreIncludingSubLayers();
+        downcast<GraphicsLayerTextureMapper>(*replicaLayer()).updateBackingStoreIncludingSubLayers(textureMapper);
     for (auto& child : children())
-        downcast<GraphicsLayerTextureMapper>(child.get()).updateBackingStoreIncludingSubLayers();
+        downcast<GraphicsLayerTextureMapper>(child.get()).updateBackingStoreIncludingSubLayers(textureMapper);
 }
 
-void GraphicsLayerTextureMapper::updateBackingStoreIfNeeded()
+void GraphicsLayerTextureMapper::updateBackingStoreIfNeeded(TextureMapper& textureMapper)
 {
-    TextureMapper* textureMapper = m_layer.textureMapper();
-    if (!textureMapper)
-        return;
-
     if (!shouldHaveBackingStore()) {
         ASSERT(!m_backingStore);
         return;
@@ -524,7 +552,7 @@ void GraphicsLayerTextureMapper::updateBackingStoreIfNeeded()
     m_backingStore->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
 
     dirtyRect.scale(pageScaleFactor() * deviceScaleFactor());
-    m_backingStore->updateContents(*textureMapper, this, m_size, dirtyRect);
+    m_backingStore->updateContents(textureMapper, this, m_size, dirtyRect);
 
     m_needsDisplay = false;
     m_needsDisplayRect = IntRect();
@@ -595,9 +623,6 @@ void GraphicsLayerTextureMapper::removeAnimation(const String& animationName)
 
 bool GraphicsLayerTextureMapper::setFilters(const FilterOperations& filters)
 {
-    if (!m_layer.textureMapper())
-        return false;
-
     bool canCompositeFilters = filtersCanBeComposited(filters);
     if (GraphicsLayer::filters() == filters)
         return canCompositeFilters;
@@ -612,6 +637,31 @@ bool GraphicsLayerTextureMapper::setFilters(const FilterOperations& filters)
     }
 
     return canCompositeFilters;
+}
+
+bool GraphicsLayerTextureMapper::setBackdropFilters(const FilterOperations& filters)
+{
+    bool canCompositeFilters = filtersCanBeComposited(filters);
+    if (m_backdropFilters == filters)
+        return canCompositeFilters;
+
+    if (canCompositeFilters)
+        GraphicsLayer::setBackdropFilters(filters);
+    else
+        clearBackdropFilters();
+
+    notifyChange(BackdropLayerChange);
+
+    return canCompositeFilters;
+}
+
+void GraphicsLayerTextureMapper::setBackdropFiltersRect(const FloatRoundedRect& backdropFiltersRect)
+{
+    if (m_backdropFiltersRect == backdropFiltersRect)
+        return;
+
+    GraphicsLayer::setBackdropFiltersRect(backdropFiltersRect);
+    notifyChange(BackdropLayerChange);
 }
 
 }

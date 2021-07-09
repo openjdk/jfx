@@ -30,6 +30,7 @@
 #include "StyleChange.h"
 #include "StyleSharingResolver.h"
 #include "StyleUpdate.h"
+#include "Styleable.h"
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
 
@@ -54,14 +55,14 @@ public:
     std::unique_ptr<Update> resolve();
 
 private:
-    std::unique_ptr<RenderStyle> styleForElement(Element&, const RenderStyle& inheritedStyle);
+    std::unique_ptr<RenderStyle> styleForStyleable(const Styleable&, const RenderStyle& inheritedStyle);
 
     void resolveComposedTree();
 
     ElementUpdates resolveElement(Element&);
 
-    ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, Element&, Change);
-    ElementUpdate resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
+    ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, const Styleable&, Change);
+    Optional<ElementUpdate> resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
 
     struct Scope : RefCounted<Scope> {
         WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope);
@@ -79,7 +80,7 @@ private:
     struct Parent {
         Element* element;
         const RenderStyle& style;
-        Change change { NoChange };
+        Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool didPushScope { false };
 

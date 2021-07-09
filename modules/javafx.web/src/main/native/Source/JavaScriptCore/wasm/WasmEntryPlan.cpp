@@ -41,20 +41,20 @@ namespace WasmEntryPlanInternal {
 static constexpr bool verbose = false;
 }
 
-EntryPlan::EntryPlan(Context* context, Ref<ModuleInformation> info, AsyncWork work, CompletionTask&& task)
+EntryPlan::EntryPlan(Context* context, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
     : Base(context, WTFMove(info), WTFMove(task))
     , m_streamingParser(m_moduleInformation.get(), *this)
     , m_state(State::Validated)
-    , m_asyncWork(work)
+    , m_compilerMode(compilerMode)
 {
 }
 
-EntryPlan::EntryPlan(Context* context, Vector<uint8_t>&& source, AsyncWork work, CompletionTask&& task)
+EntryPlan::EntryPlan(Context* context, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
     : Base(context, WTFMove(task))
     , m_source(WTFMove(source))
     , m_streamingParser(m_moduleInformation.get(), *this)
     , m_state(State::Initial)
-    , m_asyncWork(work)
+    , m_compilerMode(compilerMode)
 {
 }
 
@@ -143,9 +143,9 @@ void EntryPlan::prepare()
     }
 
     for (const auto& element : m_moduleInformation->elements) {
-        for (const uint32_t elementIndex : element.functionIndices) {
-            if (elementIndex >= importFunctionCount)
-                m_exportedFunctionIndices.add(elementIndex - importFunctionCount);
+        for (const uint32_t functionIndex : element.functionIndices) {
+            if (!Element::isNullFuncIndex(functionIndex) && functionIndex >= importFunctionCount)
+                m_exportedFunctionIndices.add(functionIndex - importFunctionCount);
         }
     }
 

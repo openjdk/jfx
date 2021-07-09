@@ -61,11 +61,18 @@ void JSCallbackConstructor::destroy(JSCell* cell)
     static_cast<JSCallbackConstructor*>(cell)->JSCallbackConstructor::~JSCallbackConstructor();
 }
 
+static JSC_DECLARE_HOST_FUNCTION(constructJSCallbackConstructor);
+
+JSC_DEFINE_HOST_FUNCTION(constructJSCallbackConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return APICallbackFunction::constructImpl<JSCallbackConstructor>(globalObject, callFrame);
+}
+
 CallData JSCallbackConstructor::getConstructData(JSCell*)
 {
     CallData constructData;
     constructData.type = CallData::Type::Native;
-    constructData.native.function = APICallbackFunction::construct<JSCallbackConstructor>;
+    constructData.native.function = constructJSCallbackConstructor;
     return constructData;
 }
 

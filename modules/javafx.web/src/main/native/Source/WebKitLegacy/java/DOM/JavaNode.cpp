@@ -27,6 +27,7 @@
 
 #include <wtf/RefPtr.h>
 
+#include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/Document.h>
 #include <WebCore/Element.h>
 #include <WebCore/Event.h>

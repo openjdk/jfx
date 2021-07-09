@@ -40,7 +40,7 @@
     height: var(--fullscreen-controls-bar-height);
 }
 
-/* Volume slider */
+/* Volume controls */
 
 .media-controls.mac.fullscreen:not(.uses-ltr-user-interface-layout-direction) .volume.slider {
     transform: scaleX(-1);

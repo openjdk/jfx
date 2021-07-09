@@ -41,19 +41,16 @@
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/Optional.h>
 
-#if ENABLE(MEDIA_SESSION)
-#include "MediaSessionInterruptionProvider.h"
-#endif
-
 #if ENABLE(VIDEO)
 #include "MediaElementSession.h"
 #endif
 
 namespace WebCore {
 
+class AbstractRange;
 class AnimationTimeline;
+class AudioContext;
 class AudioTrack;
-class BaseAudioContext;
 class CacheStorageConnection;
 class DOMRect;
 class DOMRectList;
@@ -69,6 +66,7 @@ class File;
 class Frame;
 class GCObservation;
 class HTMLAnchorElement;
+class HTMLAttachmentElement;
 class HTMLImageElement;
 class HTMLInputElement;
 class HTMLLinkElement;
@@ -83,7 +81,6 @@ class InternalSettings;
 class InternalsSetLike;
 class Location;
 class MallocStatistics;
-class MediaSession;
 class MediaStream;
 class MediaStreamTrack;
 class MemoryInfo;
@@ -126,8 +123,17 @@ class TextTrackCueGeneric;
 class ServiceWorker;
 #endif
 
+#if ENABLE(WEB_RTC)
+class RTCRtpSFrameTransform;
+#endif
+
 #if ENABLE(WEBXR)
 class WebXRTest;
+#endif
+
+#if ENABLE(MEDIA_SESSION)
+class MediaSession;
+struct MediaSessionActionDetails;
 #endif
 
 template<typename IDLType> class DOMPromiseDeferred;
@@ -232,13 +238,7 @@ public:
     ExceptionOr<bool> animationsAreSuspended() const;
     ExceptionOr<void> suspendAnimations() const;
     ExceptionOr<void> resumeAnimations() const;
-    ExceptionOr<bool> pauseAnimationAtTimeOnElement(const String& animationName, double pauseTime, Element&);
-    ExceptionOr<bool> pauseAnimationAtTimeOnPseudoElement(const String& animationName, double pauseTime, Element&, const String& pseudoId);
     double animationsInterval() const;
-
-    // CSS Transition testing.
-    ExceptionOr<bool> pauseTransitionAtTimeOnElement(const String& propertyName, double pauseTime, Element&);
-    ExceptionOr<bool> pauseTransitionAtTimeOnPseudoElement(const String& property, double pauseTime, Element&, const String& pseudoId);
 
     // Web Animations testing.
     struct AcceleratedAnimation {
@@ -271,6 +271,7 @@ public:
     Ref<DOMRect> boundingBox(Element&);
 
     ExceptionOr<Ref<DOMRectList>> inspectorHighlightRects();
+    ExceptionOr<unsigned> inspectorGridOverlayCount();
 
     ExceptionOr<unsigned> markerCountForNode(Node&, const String&);
     ExceptionOr<RefPtr<Range>> markerRangeForNode(Node&, const String& markerType, unsigned index);
@@ -368,8 +369,11 @@ public:
     void setAutomaticTextReplacementEnabled(bool);
     void setAutomaticSpellingCorrectionEnabled(bool);
 
+    bool isSpellcheckDisabledExceptTextReplacement(const HTMLInputElement&) const;
+
     void handleAcceptedCandidate(const String& candidate, unsigned location, unsigned length);
     void changeSelectionListType();
+    void changeBackToReplacedString(const String& replacedString);
 
     bool isOverwriteModeEnabled();
     void toggleOverwriteModeEnabled();
@@ -451,6 +455,10 @@ public:
     unsigned numberOfIntersectionObservers(const Document&) const;
 #endif
 
+#if ENABLE(RESIZE_OBSERVER)
+    unsigned numberOfResizeObservers(const Document&) const;
+#endif
+
     uint64_t documentIdentifier(const Document&) const;
     bool isDocumentAlive(uint64_t documentIdentifier) const;
 
@@ -512,6 +520,7 @@ public:
     void setFullscreenControlsHidden(bool);
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
+    bool isChangingPresentationMode(HTMLVideoElement&) const;
     void setMockVideoPresentationModeEnabled(bool);
 #endif
 
@@ -589,7 +598,6 @@ public:
 
 #if ENABLE(MEDIA_STREAM)
     void setShouldInterruptAudioOnPageVisibilityChange(bool);
-    void setMediaCaptureRequiresSecureConnection(bool);
     void setCustomPrivateRecorderCreator();
 #endif
 
@@ -602,10 +610,12 @@ public:
     void clearPeerConnectionFactory();
     void applyRotationForOutgoingVideoSources(RTCPeerConnection&);
     void setWebRTCH265Support(bool);
-    void setWebRTCVP9Support(bool);
+    void setWebRTCVP9Support(bool supportVP9Profile0, bool supportVP9Profile2);
+    void setWebRTCVP9VTBSupport(bool);
+    uint64_t sframeCounter(const RTCRtpSFrameTransform&);
+    uint64_t sframeKeyId(const RTCRtpSFrameTransform&);
     void setEnableWebRTCEncryption(bool);
     void setUseDTLS10(bool);
-    void setUseGPUProcessForWebRTC(bool);
 #endif
 
     String getImageSourceURL(Element&);
@@ -621,7 +631,11 @@ public:
     bool elementShouldBufferData(HTMLMediaElement&);
     String elementBufferingPolicy(HTMLMediaElement&);
     double privatePlayerVolume(const HTMLMediaElement&);
+    bool privatePlayerMuted(const HTMLMediaElement&);
+    ExceptionOr<void> setOverridePreferredDynamicRangeMode(HTMLMediaElement&, const String&);
 #endif
+
+    ExceptionOr<void> setIsPlayingToBluetoothOverride(Optional<bool>);
 
     bool isSelectPopupVisible(HTMLSelectElement&);
 
@@ -646,7 +660,8 @@ public:
 
 #if ENABLE(MEDIA_SOURCE)
     WEBCORE_TESTSUPPORT_EXPORT void initializeMockMediaSource();
-    Vector<String> bufferedSamplesForTrackID(SourceBuffer&, const AtomString&);
+    using BufferedSamplesPromise = DOMPromiseDeferred<IDLSequence<IDLDOMString>>;
+    void bufferedSamplesForTrackId(SourceBuffer&, const AtomString&, BufferedSamplesPromise&&);
     Vector<String> enqueuedSamplesForTrackID(SourceBuffer&, const AtomString&);
     double minimumUpcomingPresentationTimeForTrackID(SourceBuffer&, const AtomString&);
     void setShouldGenerateTimestamps(SourceBuffer&, bool);
@@ -667,15 +682,6 @@ public:
     bool elementIsBlockingDisplaySleep(HTMLMediaElement&) const;
 #endif
 
-#if ENABLE(MEDIA_SESSION)
-    void sendMediaSessionStartOfInterruptionNotification(MediaSessionInterruptingCategory);
-    void sendMediaSessionEndOfInterruptionNotification(MediaSessionInterruptingCategory);
-    String mediaSessionCurrentState(MediaSession&) const;
-    double mediaElementPlayerVolume(HTMLMediaElement&) const;
-    enum class MediaControlEvent { PlayPause, NextTrack, PreviousTrack };
-    void sendMediaControlEvent(MediaControlEvent);
-#endif
-
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     void setMockMediaPlaybackTargetPickerEnabled(bool);
     ExceptionOr<void> setMockMediaPlaybackTargetPickerState(const String& deviceName, const String& deviceState);
@@ -683,7 +689,7 @@ public:
 #endif
 
 #if ENABLE(WEB_AUDIO)
-    void setAudioContextRestrictions(const Variant<RefPtr<BaseAudioContext>, RefPtr<WebKitAudioContext>>&, StringView restrictionsString);
+    void setAudioContextRestrictions(const Variant<RefPtr<AudioContext>, RefPtr<WebKitAudioContext>>&, StringView restrictionsString);
     void useMockAudioDestinationCocoa();
 #endif
 
@@ -743,6 +749,7 @@ public:
     enum class UserInterfaceLayoutDirection : uint8_t { LTR, RTL };
     void setUserInterfaceLayoutDirection(UserInterfaceLayoutDirection);
 
+    bool userPrefersContrast() const;
     bool userPrefersReducedMotion() const;
 
     void reportBacktrace();
@@ -913,8 +920,6 @@ public:
 
     bool capsLockIsOn();
 
-    bool supportsVCPEncoder();
-
     using HEVCParameterSet = WebCore::HEVCParameterSet;
     Optional<HEVCParameterSet> parseHEVCCodecParameters(const String& codecString);
 
@@ -1054,6 +1059,31 @@ public:
 
     enum class ContentSizeCategory { L, XXXL };
     void setContentSizeCategory(ContentSizeCategory);
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    struct AttachmentThumbnailInfo {
+        unsigned width { 0 };
+        unsigned height { 0 };
+    };
+
+    ExceptionOr<AttachmentThumbnailInfo> attachmentThumbnailInfo(const HTMLAttachmentElement&);
+#endif
+
+#if ENABLE(MEDIA_SESSION)
+    ExceptionOr<double> currentMediaSessionPosition(const MediaSession&);
+    ExceptionOr<void> sendMediaSessionAction(MediaSession&, const MediaSessionActionDetails&);
+#endif
+
+    enum TreeType : uint8_t { Tree, ShadowIncludingTree, ComposedTree };
+    String treeOrder(Node&, Node&, TreeType);
+    String treeOrderBoundaryPoints(Node& containerA, unsigned offsetA, Node& containerB, unsigned offsetB, TreeType);
+    bool rangeContainsNode(const AbstractRange&, Node&, TreeType);
+    bool rangeContainsRange(const AbstractRange&, const AbstractRange&, TreeType);
+    bool rangeContainsBoundaryPoint(const AbstractRange&, Node&, unsigned offset, TreeType);
+    bool rangeIntersectsNode(const AbstractRange&, Node&, TreeType);
+    bool rangeIntersectsRange(const AbstractRange&, const AbstractRange&, TreeType);
+
+    void systemBeep();
 
 private:
     explicit Internals(Document&);

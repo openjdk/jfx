@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ namespace JSC {
 
 const ClassInfo JSBoundFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSBoundFunction) };
 
-EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionCall(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(boundThisNoArgsFunctionCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSBoundFunction* boundFunction = jsCast<JSBoundFunction*>(callFrame->jsCallee());
 
@@ -60,7 +60,7 @@ EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionCall(JSGlobalObject* globalO
     return JSValue::encode(call(globalObject, targetFunction, callData, boundFunction->boundThis(), args));
 }
 
-EncodedJSValue JSC_HOST_CALL boundFunctionCall(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(boundFunctionCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -87,7 +87,7 @@ EncodedJSValue JSC_HOST_CALL boundFunctionCall(JSGlobalObject* globalObject, Cal
     RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, targetFunction, callData, boundFunction->boundThis(), args)));
 }
 
-EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionConstruct(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(boundThisNoArgsFunctionConstruct, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSBoundFunction* boundFunction = jsCast<JSBoundFunction*>(callFrame->jsCallee());
 
@@ -113,7 +113,7 @@ EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionConstruct(JSGlobalObject* gl
     return JSValue::encode(construct(globalObject, targetFunction, constructData, args, newTarget));
 }
 
-EncodedJSValue JSC_HOST_CALL boundFunctionConstruct(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(boundFunctionConstruct, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -144,12 +144,12 @@ EncodedJSValue JSC_HOST_CALL boundFunctionConstruct(JSGlobalObject* globalObject
     RELEASE_AND_RETURN(scope, JSValue::encode(construct(globalObject, targetFunction, constructData, args, newTarget)));
 }
 
-EncodedJSValue JSC_HOST_CALL isBoundFunction(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(isBoundFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     return JSValue::encode(JSValue(static_cast<bool>(jsDynamicCast<JSBoundFunction*>(globalObject->vm(), callFrame->uncheckedArgument(0)))));
 }
 
-EncodedJSValue JSC_HOST_CALL hasInstanceBoundFunction(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(hasInstanceBoundFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSBoundFunction* boundObject = jsCast<JSBoundFunction*>(callFrame->uncheckedArgument(0));
     JSValue value = callFrame->uncheckedArgument(1);
@@ -189,7 +189,7 @@ inline Structure* getBoundFunctionStructure(VM& vm, JSGlobalObject* globalObject
     return result;
 }
 
-JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, int length, JSString* nameMayBeNull)
+JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, double length, JSString* nameMayBeNull)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -206,7 +206,7 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
     RETURN_IF_EXCEPTION(scope, nullptr);
     JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm.heap)) JSBoundFunction(vm, executable, globalObject, structure, targetFunction, boundThis, boundArgs, nameMayBeNull, length);
 
-    function->finishCreation(vm, executable, length);
+    function->finishCreation(vm);
     return function;
 }
 
@@ -215,7 +215,7 @@ bool JSBoundFunction::customHasInstance(JSObject* object, JSGlobalObject* global
     return jsCast<JSBoundFunction*>(object)->m_targetFunction->hasInstance(globalObject, value);
 }
 
-JSBoundFunction::JSBoundFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, JSString* nameMayBeNull, int length)
+JSBoundFunction::JSBoundFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, JSString* nameMayBeNull, double length)
     : Base(vm, executable, globalObject, structure)
     , m_targetFunction(vm, this, targetFunction)
     , m_boundThis(vm, this, boundThis)
@@ -224,6 +224,7 @@ JSBoundFunction::JSBoundFunction(VM& vm, NativeExecutable* executable, JSGlobalO
     , m_length(length)
 {
     ASSERT(!m_nameMayBeNull || !m_nameMayBeNull->isRope());
+    ASSERT(m_length >= 0);
 }
 
 JSArray* JSBoundFunction::boundArgsCopy(JSGlobalObject* globalObject)
@@ -242,14 +243,14 @@ JSArray* JSBoundFunction::boundArgsCopy(JSGlobalObject* globalObject)
     return result;
 }
 
-void JSBoundFunction::finishCreation(VM& vm, NativeExecutable* executable, int length)
+void JSBoundFunction::finishCreation(VM& vm)
 {
-    String name; // We lazily create our 'name' string property.
-    Base::finishCreation(vm, executable, length, name);
+    Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
 }
 
-void JSBoundFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSBoundFunction::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSBoundFunction* thisObject = jsCast<JSBoundFunction*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -260,5 +261,7 @@ void JSBoundFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_boundArgs);
     visitor.append(thisObject->m_nameMayBeNull);
 }
+
+DEFINE_VISIT_CHILDREN(JSBoundFunction);
 
 } // namespace JSC

@@ -22,6 +22,7 @@
 
 [
     JSGenerateToNativeObject,
+    Exposed=Window
 ] interface SVGElement : Element {
 
     readonly attribute SVGAnimatedString className;
@@ -30,6 +31,7 @@
     readonly attribute SVGElement? viewportElement;
 };
 
-SVGElement implements ElementCSSInlineStyle;
-SVGElement implements GlobalEventHandlers;
-SVGElement implements HTMLOrForeignElement;
+SVGElement includes GlobalEventHandlers;
+SVGElement includes DocumentAndElementEventHandlers;
+SVGElement includes HTMLOrForeignElement;
+SVGElement includes ElementCSSInlineStyle;

@@ -30,10 +30,9 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "JSDOMPromiseDeferred.h"
-#include "Timer.h"
+#include "WebXRFrame.h"
 #include "WebXRInputSourceArray.h"
 #include "WebXRRenderState.h"
-#include "WebXRSpace.h"
 #include "XREnvironmentBlendMode.h"
 #include "XRInteractionMode.h"
 #include "XRReferenceSpaceType.h"
@@ -48,11 +47,12 @@
 namespace WebCore {
 
 class XRFrameRequestCallback;
-class WebXRReferenceSpace;
 class WebXRSystem;
+class WebXRView;
+class WebXRViewerSpace;
 struct XRRenderStateInit;
 
-class WebXRSession final : public RefCounted<WebXRSession>, public EventTargetWithInlineData, public ActiveDOMObject {
+class WebXRSession final : public RefCounted<WebXRSession>, public EventTargetWithInlineData, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
     WTF_MAKE_ISO_ALLOCATED(WebXRSession);
 public:
     using RequestReferenceSpacePromise = DOMPromiseDeferred<IDLInterface<WebXRReferenceSpace>>;
@@ -64,13 +64,16 @@ public:
     using RefCounted<WebXRSession>::ref;
     using RefCounted<WebXRSession>::deref;
 
+    using TrackingAndRenderingClient::weakPtrFactory;
+    using WeakValueType = TrackingAndRenderingClient::WeakValueType;
+
     XREnvironmentBlendMode environmentBlendMode() const;
     XRInteractionMode interactionMode() const;
     XRVisibilityState visibilityState() const;
     const WebXRRenderState& renderState() const;
     const WebXRInputSourceArray& inputSources() const;
 
-    void updateRenderState(const XRRenderStateInit&);
+    ExceptionOr<void> updateRenderState(const XRRenderStateInit&);
     void requestReferenceSpace(XRReferenceSpaceType, RequestReferenceSpacePromise&&);
 
     unsigned requestAnimationFrame(Ref<XRFrameRequestCallback>&&);
@@ -78,14 +81,20 @@ public:
 
     IntSize nativeWebGLFramebufferResolution() const;
     IntSize recommendedWebGLFramebufferResolution() const;
+    bool supportsViewportScaling() const;
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    void end(EndPromise&&);
+    ExceptionOr<void> end(EndPromise&&);
     bool ended() const { return m_ended; }
 
     XRSessionMode mode() const { return m_mode; }
+
+    const Vector<PlatformXR::Device::ViewData>& views() const { return m_views; }
+    const PlatformXR::Device::FrameData& frameData() const { return m_frameData; }
+    const WebXRViewerSpace& viewerReferenceSpace() const { return *m_viewerReferenceSpace; }
+    bool posesCanBeReported(const Document&) const;
 
 private:
     WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&);
@@ -99,31 +108,47 @@ private:
     const char* activeDOMObjectName() const override;
     void stop() override;
 
-    void shutdown();
+    // PlatformXR::TrackingAndRenderingClient
+    void sessionDidEnd() final;
 
-    void animationTimerFired();
-    void scheduleAnimation();
+    enum class InitiatedBySystem : bool { No, Yes };
+    void shutdown(InitiatedBySystem);
+    void didCompleteShutdown();
 
     bool referenceSpaceIsSupported(XRReferenceSpaceType) const;
+
+    bool frameShouldBeRendered() const;
+    void requestFrame();
+    void onFrame(PlatformXR::Device::FrameData&&);
+    void applyPendingRenderState();
 
     XREnvironmentBlendMode m_environmentBlendMode;
     XRInteractionMode m_interactionMode;
     XRVisibilityState m_visibilityState;
-    RefPtr<WebXRInputSourceArray> m_inputSources;
+    Ref<WebXRInputSourceArray> m_inputSources;
     bool m_ended { false };
+    Optional<EndPromise> m_endPromise;
 
     WebXRSystem& m_xrSystem;
     XRSessionMode m_mode;
     WeakPtr<PlatformXR::Device> m_device;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
+    std::unique_ptr<WebXRViewerSpace> m_viewerReferenceSpace;
+    MonotonicTime m_timeOrigin;
 
     unsigned m_nextCallbackId { 1 };
     Vector<Ref<XRFrameRequestCallback>> m_callbacks;
-    Vector<Ref<XRFrameRequestCallback>> m_runningCallbacks;
 
-    Timer m_animationTimer;
-    MonotonicTime m_lastAnimationFrameTimestamp;
+    Vector<PlatformXR::Device::ViewData> m_views;
+    PlatformXR::Device::FrameData m_frameData;
+
+    double m_minimumInlineFOV { 0.0 };
+    double m_maximumInlineFOV { piFloat };
+
+    // In meters.
+    double m_minimumNearClipPlane { 0.1 };
+    double m_maximumFarClipPlane { 1000.0 };
 };
 
 } // namespace WebCore

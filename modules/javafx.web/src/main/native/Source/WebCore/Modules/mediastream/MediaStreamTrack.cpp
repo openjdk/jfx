@@ -49,6 +49,8 @@
 #include "RealtimeMediaSourceCenter.h"
 #include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
+#include "WebAudioSourceProvider.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
@@ -79,6 +81,7 @@ Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, 
 MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStreamTrackPrivate>&& privateTrack)
     : ActiveDOMObject(&context)
     , m_private(WTFMove(privateTrack))
+    , m_muted(m_private->muted())
     , m_isCaptureTrack(m_private->isCaptureTrack())
 {
     ALWAYS_LOG(LOGIDENTIFIER);
@@ -193,6 +196,11 @@ void MediaStreamTrack::setEnabled(bool enabled)
 bool MediaStreamTrack::muted() const
 {
     return m_private->muted();
+}
+
+bool MediaStreamTrack::mutedForBindings() const
+{
+    return m_muted;
 }
 
 auto MediaStreamTrack::readyState() const -> State
@@ -429,6 +437,7 @@ MediaProducer::MediaStateFlags sourceCaptureState(RealtimeMediaSource& source)
         if (source.isProducingData())
             return MediaProducer::HasActiveDisplayCaptureDevice;
         break;
+    case CaptureDevice::DeviceType::Speaker:
     case CaptureDevice::DeviceType::Unknown:
         ASSERT_NOT_REACHED();
     }
@@ -471,7 +480,7 @@ void MediaStreamTrack::updateCaptureAccordingToMutedState(Document& document)
     auto* activeAudioSource = RealtimeMediaSourceCenter::singleton().audioCaptureFactory().activeSource();
     if (activeAudioSource && isSourceCapturingForTrackInDocument(*activeAudioSource, document)) {
         bool pageMuted = page->mutedState() & MediaProducer::AudioAndVideoCaptureIsMuted;
-        activeAudioSource->setMuted(pageMuted || (document.hidden() && RuntimeEnabledFeatures::sharedFeatures().interruptAudioOnPageVisibilityChangeEnabled()));
+        activeAudioSource->setMuted(pageMuted || (document.hidden() && document.settings().interruptAudioOnPageVisibilityChangeEnabled()));
     }
 
     auto* activeVideoSource = RealtimeMediaSourceCenter::singleton().videoCaptureFactory().activeSource();
@@ -503,6 +512,7 @@ void MediaStreamTrack::updateToPageMutedState()
     case CaptureDevice::DeviceType::Window:
         m_private->setMuted(page->mutedState() & MediaProducer::ScreenCaptureIsMuted);
         break;
+    case CaptureDevice::DeviceType::Speaker:
     case CaptureDevice::DeviceType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -529,6 +539,9 @@ void MediaStreamTrack::trackStarted(MediaStreamTrackPrivate&)
 
 void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
 {
+    if (m_isCaptureTrack && m_private->type() == RealtimeMediaSource::Type::Audio)
+        PlatformMediaSessionManager::sharedManager().removeAudioCaptureSource(*this);
+
     // http://w3c.github.io/mediacapture-main/#life-cycle
     // When a MediaStreamTrack track ends for any reason other than the stop() method being invoked, the User Agent must queue a task that runs the following steps:
     // 1. If the track's readyState attribute has the value ended already, then abort these steps.
@@ -559,9 +572,12 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
     if (scriptExecutionContext()->activeDOMObjectsAreStopped() || m_ended)
         return;
 
-    AtomString eventType = muted() ? eventNames().muteEvent : eventNames().unmuteEvent;
-    queueTaskToDispatchEvent(*this, TaskSource::Networking, Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No));
-
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, muted = m_private->muted()] {
+        if (!scriptExecutionContext() || scriptExecutionContext()->activeDOMObjectsAreStopped())
+            return;
+        m_muted = muted;
+        dispatchEvent(Event::create(muted ? eventNames().muteEvent : eventNames().unmuteEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
     configureTrackRendering();
 }
 
@@ -608,9 +624,9 @@ bool MediaStreamTrack::virtualHasPendingActivity() const
     return !m_ended;
 }
 
-AudioSourceProvider* MediaStreamTrack::audioSourceProvider()
+RefPtr<WebAudioSourceProvider> MediaStreamTrack::createAudioSourceProvider()
 {
-    return m_private->audioSourceProvider();
+    return m_private->createAudioSourceProvider();
 }
 
 Document* MediaStreamTrack::document() const

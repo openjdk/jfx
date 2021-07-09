@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -43,22 +43,29 @@ InternalFunction::InternalFunction(VM& vm, Structure* structure, NativeFunction 
     ASSERT(m_functionForConstruct);
 }
 
-void InternalFunction::finishCreation(VM& vm, const String& name, NameAdditionMode nameAdditionMode)
+void InternalFunction::finishCreation(VM& vm, unsigned length, const String& name, PropertyAdditionMode nameAdditionMode)
 {
     Base::finishCreation(vm);
     ASSERT(jsDynamicCast<InternalFunction*>(vm, this));
+    // JSCell::{getCallData,getConstructData} relies on the following conditions.
     ASSERT(methodTable(vm)->getCallData == InternalFunction::info()->methodTable.getCallData);
     ASSERT(methodTable(vm)->getConstructData == InternalFunction::info()->methodTable.getConstructData);
     ASSERT(type() == InternalFunctionType || type() == NullSetterFunctionType);
+
     JSString* nameString = jsString(vm, name);
     m_originalName.set(vm, this, nameString);
-    if (nameAdditionMode == NameAdditionMode::WithStructureTransition)
+    // The enumeration order is length followed by name. So, we make sure to add the properties in that order.
+    if (nameAdditionMode == PropertyAdditionMode::WithStructureTransition) {
+        putDirect(vm, vm.propertyNames->length, jsNumber(length), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
         putDirect(vm, vm.propertyNames->name, nameString, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
-    else
+    } else {
+        putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(length), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
         putDirectWithoutTransition(vm, vm.propertyNames->name, nameString, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+    }
 }
 
-void InternalFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void InternalFunction::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     InternalFunction* thisObject = jsCast<InternalFunction*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -66,6 +73,8 @@ void InternalFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     visitor.append(thisObject->m_originalName);
 }
+
+DEFINE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE, InternalFunction);
 
 const String& InternalFunction::name()
 {
@@ -86,6 +95,7 @@ const String InternalFunction::displayName(VM& vm)
 
 CallData InternalFunction::getCallData(JSCell* cell)
 {
+    // Keep this function OK for invocation from concurrent compilers.
     auto* function = jsCast<InternalFunction*>(cell);
     ASSERT(function->m_functionForCall);
 
@@ -97,6 +107,7 @@ CallData InternalFunction::getCallData(JSCell* cell)
 
 CallData InternalFunction::getConstructData(JSCell* cell)
 {
+    // Keep this function OK for invocation from concurrent compilers.
     CallData constructData;
     auto* function = jsCast<InternalFunction*>(cell);
     if (function->m_functionForConstruct != callHostFunctionAsConstructor) {
@@ -149,6 +160,15 @@ Structure* InternalFunction::createSubclassStructure(JSGlobalObject* globalObjec
     }
 
     return baseClass;
+}
+
+InternalFunction* InternalFunction::createFunctionThatMasqueradesAsUndefined(VM& vm, JSGlobalObject* globalObject, unsigned length, const String& name, NativeFunction nativeFunction)
+{
+    Structure* structure = Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(InternalFunctionType, InternalFunction::StructureFlags | MasqueradesAsUndefined), InternalFunction::info());
+    globalObject->masqueradesAsUndefinedWatchpoint()->fireAll(globalObject->vm(), "Allocated masquerading object");
+    InternalFunction* function = new (NotNull, allocateCell<InternalFunction>(vm.heap)) InternalFunction(vm, structure, nativeFunction);
+    function->finishCreation(vm, length, name, PropertyAdditionMode::WithoutStructureTransition);
+    return function;
 }
 
 // https://tc39.es/ecma262/#sec-getfunctionrealm

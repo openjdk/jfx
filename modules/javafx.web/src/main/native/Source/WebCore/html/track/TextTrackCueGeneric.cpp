@@ -52,16 +52,20 @@ static constexpr int DEFAULTCAPTIONFONTSIZE = 10;
 class TextTrackCueGenericBoxElement final : public VTTCueBox {
     WTF_MAKE_ISO_ALLOCATED_INLINE(TextTrackCueGenericBoxElement);
 public:
-    static Ref<TextTrackCueGenericBoxElement> create(Document& document, TextTrackCueGeneric& cue)
-    {
-        return adoptRef(*new TextTrackCueGenericBoxElement(document, cue));
-    }
+    static Ref<TextTrackCueGenericBoxElement> create(Document&, TextTrackCueGeneric&);
 
     void applyCSSProperties(const IntSize&) override;
 
 private:
     TextTrackCueGenericBoxElement(Document&, VTTCue&);
 };
+
+Ref<TextTrackCueGenericBoxElement> TextTrackCueGenericBoxElement::create(Document& document, TextTrackCueGeneric& cue)
+{
+    auto box = adoptRef(*new TextTrackCueGenericBoxElement(document, cue));
+    box->initialize();
+    return box;
+}
 
 TextTrackCueGenericBoxElement::TextTrackCueGenericBoxElement(Document& document, VTTCue& cue)
     : VTTCueBox(document, cue)
@@ -80,6 +84,7 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
     Ref<HTMLSpanElement> cueElement = cue->element();
 
     double textPosition = cue->calculateComputedTextPosition();
+    double linePosition = cue->calculateComputedLinePosition();
 
     CSSValueID alignment = cue->getCSSAlignment();
     float size = static_cast<float>(cue->getCSSSize());
@@ -88,7 +93,7 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
         setInlineStyleProperty(CSSPropertyMarginBottom, 1.0, CSSUnitType::CSS_PERCENTAGE);
     } else {
         setInlineStyleProperty(CSSPropertyLeft, static_cast<float>(textPosition), CSSUnitType::CSS_PERCENTAGE);
-        setInlineStyleProperty(CSSPropertyTop, static_cast<float>(cue->line()), CSSUnitType::CSS_PERCENTAGE);
+        setInlineStyleProperty(CSSPropertyTop, static_cast<float>(linePosition), CSSUnitType::CSS_PERCENTAGE);
 
         double authorFontSize = videoSize.height() * cue->baseFontSizeRelativeToVideoHeight() / 100.0;
         if (!authorFontSize)
@@ -106,7 +111,7 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
         } else {
             setInlineStyleProperty(CSSPropertyHeight, newCueSize,  CSSUnitType::CSS_PERCENTAGE);
             if ((alignment == CSSValueMiddle || alignment == CSSValueCenter) && multiplier != 1.0)
-                setInlineStyleProperty(CSSPropertyTop, static_cast<double>(cue->line() - (newCueSize - cue->getCSSSize()) / 2), CSSUnitType::CSS_PERCENTAGE);
+                setInlineStyleProperty(CSSPropertyTop, static_cast<double>(linePosition - (newCueSize - cue->getCSSSize()) / 2), CSSUnitType::CSS_PERCENTAGE);
         }
     }
 
@@ -170,7 +175,7 @@ Ref<VTTCueBox> TextTrackCueGeneric::createDisplayTree()
     return TextTrackCueGenericBoxElement::create(ownerDocument(), *this);
 }
 
-ExceptionOr<void> TextTrackCueGeneric::setLine(double line)
+ExceptionOr<void> TextTrackCueGeneric::setLine(const LineAndPositionSetting& line)
 {
     auto result = VTTCue::setLine(line);
     if (!result.hasException())

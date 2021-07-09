@@ -43,7 +43,7 @@ class TiledBacking;
 class TransformationMatrix;
 
 
-#if __WORDSIZE == 64 && PLATFORM(COCOA)
+#if CPU(ADDRESS64) && PLATFORM(COCOA)
 #define USE_OWNING_LAYER_BEAR_TRAP 1
 #define BEAR_TRAP_VALUE 0xEEEEEEEEEEEEEEEE
 #else
@@ -114,6 +114,9 @@ public:
     LayerAncestorClippingStack* ancestorClippingStack() const { return m_ancestorClippingStack.get(); }
     bool updateAncestorClippingStack(Vector<CompositedClipData>&&);
 
+    void ensureOverflowControlsHostLayerAncestorClippingStack(const RenderLayer* compositedAncestor);
+    LayerAncestorClippingStack* overflowControlsHostLayerAncestorClippingStack() const { return m_overflowControlsHostLayerAncestorClippingStack.get(); }
+
     GraphicsLayer* contentsContainmentLayer() const { return m_contentsContainmentLayer.get(); }
 
     GraphicsLayer* foregroundLayer() const { return m_foregroundLayer.get(); }
@@ -181,15 +184,11 @@ public:
     // Notification from the renderer that its content changed.
     void contentChanged(ContentChangeType);
 
-    // Interface to start, finish, suspend and resume animations and transitions
-    bool startTransition(double, CSSPropertyID, const RenderStyle* fromStyle, const RenderStyle* toStyle);
-    void transitionPaused(double timeOffset, CSSPropertyID);
-    void transitionFinished(CSSPropertyID);
-
+    // Interface to start, finish, suspend and resume animations
     bool startAnimation(double timeOffset, const Animation&, const KeyframeList&);
     void animationPaused(double timeOffset, const String& name);
     void animationFinished(const String& name);
-
+    void transformRelatedPropertyDidChange();
     void suspendAnimations(MonotonicTime = MonotonicTime());
     void resumeAnimations();
 
@@ -252,6 +251,8 @@ public:
 
     LayoutSize subpixelOffsetFromRenderer() const { return m_subpixelOffsetFromRenderer; }
 
+    TransformationMatrix transformMatrixForProperty(AnimatedPropertyID) const final;
+
 #if PLATFORM(IOS_FAMILY)
     bool needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack(const GraphicsLayer&) const override;
 #endif
@@ -269,6 +270,8 @@ public:
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
     GraphicsLayer* overflowControlsContainer() const { return m_overflowControlsContainer.get(); }
+
+    void adjustOverflowControlsPositionRelativeToAncestor(const RenderLayer&);
 
     bool canCompositeFilters() const { return m_canCompositeFilters; }
 #if ENABLE(FILTERS_LEVEL_2)
@@ -330,6 +333,15 @@ private:
     LayoutSize contentOffsetInCompositingLayer() const;
     // Result is transform origin in device pixels.
     FloatPoint3D computeTransformOriginForPainting(const LayoutRect& borderBox) const;
+
+    LayoutSize offsetRelativeToRendererOriginForDescendantLayers() const;
+
+    void ensureClippingStackLayers(LayerAncestorClippingStack&);
+    void removeClippingStackLayers(LayerAncestorClippingStack&);
+
+    void updateClippingStackLayerGeometry(LayerAncestorClippingStack&, const RenderLayer* compositedAncestor, LayoutRect& parentGraphicsLayerRect);
+
+    void connectClippingStackLayers(LayerAncestorClippingStack&);
 
     void updateOpacity(const RenderStyle&);
     void updateTransform(const RenderStyle&);
@@ -399,6 +411,7 @@ private:
     Vector<WeakPtr<RenderLayer>> m_backingSharingLayers;
 
     std::unique_ptr<LayerAncestorClippingStack> m_ancestorClippingStack; // Only used if we are clipped by an ancestor which is not a stacking context.
+    std::unique_ptr<LayerAncestorClippingStack> m_overflowControlsHostLayerAncestorClippingStack; // Used when we have an overflow controls host layer which was reparented, and needs clipping by ancestors.
 
     RefPtr<GraphicsLayer> m_contentsContainmentLayer; // Only used if we have a background layer; takes the transform.
     RefPtr<GraphicsLayer> m_graphicsLayer;

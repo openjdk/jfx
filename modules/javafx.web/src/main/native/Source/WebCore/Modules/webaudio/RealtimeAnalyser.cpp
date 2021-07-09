@@ -29,6 +29,7 @@
 #include "RealtimeAnalyser.h"
 
 #include "AudioBus.h"
+#include "AudioNode.h"
 #include "AudioUtilities.h"
 #include "FFTFrame.h"
 #include "VectorMath.h"
@@ -41,36 +42,14 @@
 
 namespace WebCore {
 
-const double RealtimeAnalyser::DefaultSmoothingTimeConstant  = 0.8;
-const double RealtimeAnalyser::DefaultMinDecibels = -100;
-const double RealtimeAnalyser::DefaultMaxDecibels = -30;
-
-const unsigned RealtimeAnalyser::DefaultFFTSize = 2048;
-// All FFT implementations are expected to handle power-of-two sizes MinFFTSize <= size <= MaxFFTSize.
-const unsigned RealtimeAnalyser::MinFFTSize = 32;
-const unsigned RealtimeAnalyser::MaxFFTSize = 32768;
-const unsigned RealtimeAnalyser::InputBufferSize = RealtimeAnalyser::MaxFFTSize * 2;
-
 RealtimeAnalyser::RealtimeAnalyser()
     : m_inputBuffer(InputBufferSize)
-    , m_writeIndex(0)
-    , m_fftSize(DefaultFFTSize)
-    , m_magnitudeBuffer(DefaultFFTSize / 2)
-    , m_smoothingTimeConstant(DefaultSmoothingTimeConstant)
-    , m_minDecibels(DefaultMinDecibels)
-    , m_maxDecibels(DefaultMaxDecibels)
+    , m_downmixBus(AudioBus::create(1, AudioUtilities::renderQuantumSize))
 {
     m_analysisFrame = makeUnique<FFTFrame>(DefaultFFTSize);
 }
 
 RealtimeAnalyser::~RealtimeAnalyser() = default;
-
-void RealtimeAnalyser::reset()
-{
-    m_writeIndex = 0;
-    m_inputBuffer.zero();
-    m_magnitudeBuffer.zero();
-}
 
 bool RealtimeAnalyser::setFftSize(size_t size)
 {
@@ -86,7 +65,7 @@ bool RealtimeAnalyser::setFftSize(size_t size)
     if (m_fftSize != size) {
         m_analysisFrame = makeUnique<FFTFrame>(size);
         // m_magnitudeBuffer has size = fftSize / 2 because it contains floats reduced from complex values in m_analysisFrame.
-        m_magnitudeBuffer.allocate(size / 2);
+        m_magnitudeBuffer.resize(size / 2);
         m_fftSize = size;
     }
 
@@ -107,26 +86,20 @@ void RealtimeAnalyser::writeInput(AudioBus* bus, size_t framesToProcess)
         return;
 
     // Perform real-time analysis
-    const float* source = bus->channel(0)->data();
     float* dest = m_inputBuffer.data() + m_writeIndex;
 
-    // The source has already been sanity checked with isBusGood above.
-    memcpy(dest, source, sizeof(float) * framesToProcess);
-
-    // Sum all channels in one if numberOfChannels > 1.
-    unsigned numberOfChannels = bus->numberOfChannels();
-    if (numberOfChannels > 1) {
-        for (unsigned i = 1; i < numberOfChannels; i++) {
-            source = bus->channel(i)->data();
-            VectorMath::vadd(dest, 1, source, 1, dest, 1, framesToProcess);
-        }
-        const float scale =  1.0 / numberOfChannels;
-        VectorMath::vsmul(dest, 1, &scale, dest, 1, framesToProcess);
-    }
+    // Clear the bus and downmix the input according to the down mixing rules.
+    // Then save the result in the m_inputBuffer at the appropriate place.
+    m_downmixBus->zero();
+    m_downmixBus->sumFrom(*bus);
+    memcpy(dest, m_downmixBus->channel(0)->data(), sizeof(float) * framesToProcess);
 
     m_writeIndex += framesToProcess;
     if (m_writeIndex >= InputBufferSize)
         m_writeIndex = 0;
+
+    // A new render quantum has been processed so we should do the FFT analysis again.
+    m_shouldDoFFTAnalysis = true;
 }
 
 namespace {
@@ -150,9 +123,14 @@ void applyWindow(float* p, size_t n)
 
 } // namespace
 
-void RealtimeAnalyser::doFFTAnalysis()
+void RealtimeAnalyser::doFFTAnalysisIfNecessary()
 {
     ASSERT(isMainThread());
+
+    if (!m_shouldDoFFTAnalysis)
+        return;
+
+    m_shouldDoFFTAnalysis = false;
 
     // Unroll the input buffer into a temporary buffer, where we'll apply an analysis window followed by an FFT.
     size_t fftSize = this->fftSize();
@@ -176,8 +154,8 @@ void RealtimeAnalyser::doFFTAnalysis()
     // Do the analysis.
     m_analysisFrame->doFFT(tempP);
 
-    float* realP = m_analysisFrame->realData();
-    float* imagP = m_analysisFrame->imagData();
+    auto& realP = m_analysisFrame->realData();
+    auto& imagP = m_analysisFrame->imagData();
 
     // Blow away the packed nyquist component.
     imagP[0] = 0;
@@ -204,29 +182,18 @@ void RealtimeAnalyser::getFloatFrequencyData(Float32Array& destinationArray)
 {
     ASSERT(isMainThread());
 
-    doFFTAnalysis();
+    doFFTAnalysisIfNecessary();
 
     // Convert from linear magnitude to floating-point decibels.
-    const double minDecibels = m_minDecibels;
-    unsigned sourceLength = magnitudeBuffer().size();
-    size_t length = std::min(sourceLength, destinationArray.length());
-    if (length > 0) {
-        const float* source = magnitudeBuffer().data();
-        float* destination = destinationArray.data();
-
-        for (size_t i = 0; i < length; ++i) {
-            float linearValue = source[i];
-            double dbMag = !linearValue ? minDecibels : AudioUtilities::linearToDecibels(linearValue);
-            destination[i] = static_cast<float>(dbMag);
-        }
-    }
+    size_t length = std::min<size_t>(magnitudeBuffer().size(), destinationArray.length());
+    VectorMath::linearToDecibels(magnitudeBuffer().data(), destinationArray.data(), length);
 }
 
 void RealtimeAnalyser::getByteFrequencyData(Uint8Array& destinationArray)
 {
     ASSERT(isMainThread());
 
-    doFFTAnalysis();
+    doFFTAnalysisIfNecessary();
 
     // Convert from linear magnitude to unsigned-byte decibels.
     unsigned sourceLength = magnitudeBuffer().size();

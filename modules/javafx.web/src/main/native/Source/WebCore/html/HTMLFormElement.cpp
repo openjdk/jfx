@@ -44,6 +44,7 @@
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
+#include "MixedContentChecker.h"
 #include "NodeRareData.h"
 #include "Page.h"
 #include "RadioNodeList.h"
@@ -65,6 +66,7 @@ using namespace HTMLNames;
 HTMLFormElement::HTMLFormElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
+    addInclusiveAncestorState(AncestorState::Form);
     ASSERT(hasTagName(formTag));
 }
 
@@ -134,6 +136,7 @@ bool HTMLFormElement::rendererIsNeeded(const RenderStyle& style)
 Node::InsertedIntoAncestorResult HTMLFormElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    addInclusiveAncestorState(AncestorState::Form);
     if (insertionType.connectedToDocument)
         document().didAssociateFormControl(*this);
     return InsertedIntoAncestorResult::Done;
@@ -146,15 +149,7 @@ void HTMLFormElement::removedFromAncestor(RemovalType removalType, ContainerNode
     for (auto& associatedElement : associatedElements)
         associatedElement->formOwnerRemovedFromTree(root);
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-}
-
-void HTMLFormElement::handleLocalEvents(Event& event, EventInvokePhase phase)
-{
-    if (event.eventPhase() != Event::CAPTURING_PHASE && is<Node>(event.target()) && event.target() != this && (event.type() == eventNames().submitEvent || event.type() == eventNames().resetEvent)) {
-        event.stopPropagation();
-        return;
-    }
-    HTMLElement::handleLocalEvents(event, phase);
+    addInclusiveAncestorState(AncestorState::Form);
 }
 
 unsigned HTMLFormElement::length() const
@@ -447,7 +442,7 @@ void HTMLFormElement::parseAttribute(const QualifiedName& name, const AtomString
         if (!m_attributes.action().isEmpty()) {
             if (RefPtr<Frame> f = document().frame()) {
                 Frame& topFrame = f->tree().top();
-                topFrame.loader().mixedContentChecker().checkFormForMixedContent(topFrame.document()->securityOrigin(), document().completeURL(m_attributes.action()));
+                MixedContentChecker::checkFormForMixedContent(topFrame, topFrame.document()->securityOrigin(), document().completeURL(m_attributes.action()));
             }
         }
     } else if (name == targetAttr)
@@ -900,8 +895,15 @@ void HTMLFormElement::copyNonAttributePropertiesFromElement(const Element& sourc
     HTMLElement::copyNonAttributePropertiesFromElement(source);
 }
 
-HTMLFormElement* HTMLFormElement::findClosestFormAncestor(const Element& startElement)
+HTMLFormElement* HTMLFormElement::findClosestFormAncestorSlowCase(const Element& startElement)
 {
+    if (UNLIKELY(is<HTMLFormElement>(startElement))) {
+        auto* parentElement = startElement.parentElement();
+        if (!parentElement || !parentElement->inclusiveAncestorStates().contains(AncestorState::Form)) {
+            ASSERT(!ancestorsOfType<HTMLFormElement>(startElement).first());
+            return nullptr;
+        }
+    }
     return const_cast<HTMLFormElement*>(ancestorsOfType<HTMLFormElement>(startElement).first());
 }
 

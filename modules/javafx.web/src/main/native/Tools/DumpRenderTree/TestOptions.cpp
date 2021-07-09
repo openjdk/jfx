@@ -26,145 +26,134 @@
 #include "config.h"
 #include "TestOptions.h"
 
-#include <fstream>
-#include <string>
-#include <wtf/text/WTFString.h>
+#include "TestOptionsGeneratedKeys.h"
 
-static bool parseBooleanTestHeaderValue(const std::string& value)
+namespace WTR {
+
+const std::vector<std::string>& TestOptions::supportedBoolWebPreferenceFeatures()
 {
-    if (value == "true")
-        return true;
-    if (value == "false")
-        return false;
+    // FIXME: Remove this once there is a viable mechanism for reseting WebPreferences between tests,
+    // at which point, we will not need to manually reset every supported preference for each test.
 
-    LOG_ERROR("Found unexpected value '%s' for boolean option. Expected 'true' or 'false'.", value.c_str());
-    return false;
+    static std::vector<std::string> supported = [] {
+        std::vector<std::string> keys;
+        for (const auto& [key, value] : defaults().boolWebPreferenceFeatures)
+            keys.push_back(key);
+        return keys;
+    }();
+    return supported;
 }
 
-static bool pathContains(const std::string& pathOrURL, const char* substring)
+const std::vector<std::string>& TestOptions::supportedUInt32WebPreferenceFeatures()
 {
-    String path(pathOrURL.c_str());
-    return path.contains(substring);
+    // FIXME: Remove this once there is a viable mechanism for reseting WebPreferences between tests,
+    // at which point, we will not need to manually reset every supported preference for each test.
+
+    static std::vector<std::string> supported = [] {
+        std::vector<std::string> keys;
+        for (const auto& [key, value] : defaults().uint32WebPreferenceFeatures)
+            keys.push_back(key);
+        return keys;
+    }();
+    return supported;
 }
 
-static bool shouldDumpJSConsoleLogInStdErr(const std::string& pathOrURL)
+const TestFeatures& TestOptions::defaults()
 {
-    return pathContains(pathOrURL, "localhost:8800/beacon") || pathContains(pathOrURL, "localhost:9443/beacon")
-        || pathContains(pathOrURL, "localhost:8800/cors") || pathContains(pathOrURL, "localhost:9443/cors")
-        || pathContains(pathOrURL, "localhost:8800/fetch") || pathContains(pathOrURL, "localhost:9443/fetch")
-        || pathContains(pathOrURL, "localhost:8800/service-workers") || pathContains(pathOrURL, "localhost:9443/service-workers")
-        || pathContains(pathOrURL, "localhost:8800/xhr") || pathContains(pathOrURL, "localhost:9443/xhr")
-        || pathContains(pathOrURL, "localhost:8800/webrtc") || pathContains(pathOrURL, "localhost:9443/webrtc")
-        || pathContains(pathOrURL, "localhost:8800/websockets") || pathContains(pathOrURL, "localhost:9443/websockets");
-}
-
-TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolutePath)
-{
-    const auto& path = absolutePath.empty() ? pathOrURL : absolutePath;
-    if (path.empty())
-        return;
-
-    dumpJSConsoleLogInStdErr = shouldDumpJSConsoleLogInStdErr(pathOrURL);
-
-    std::string options;
-    std::ifstream testFile(path.data());
-    if (!testFile.good())
-        return;
-    getline(testFile, options);
-    std::string beginString("webkit-test-runner [ ");
-    std::string endString(" ]");
-    size_t beginLocation = options.find(beginString);
-    if (beginLocation == std::string::npos)
-        return;
-    size_t endLocation = options.find(endString, beginLocation);
-    if (endLocation == std::string::npos) {
-        LOG_ERROR("Could not find end of test header in %s", path.c_str());
-        return;
+    static TestFeatures features;
+    if (features.boolWebPreferenceFeatures.empty()) {
+        features.boolWebPreferenceFeatures = {
+            // These are WebPreference values that must always be set as they may
+            // differ from the default set in the WebPreferences*.yaml configuration.
+            { "AcceleratedDrawingEnabled", false },
+            { "AllowCrossOriginSubresourcesToAskForCredentials", false },
+            { "AllowFileAccessFromFileURLs", true },
+            { "AllowTopNavigationToDataURLs", true },
+            { "AllowUniversalAccessFromFileURLs", true },
+            { "AspectRatioOfImgFromWidthAndHeightEnabled", false },
+            { "AspectRatioEnabled", true },
+            { "AsyncClipboardAPIEnabled", false },
+            { "AttachmentElementEnabled", false },
+            { "CSSLogicalEnabled", false },
+            { "CSSOMViewSmoothScrollingEnabled", false },
+            { "ColorFilterEnabled", false },
+            { "ContactPickerAPIEnabled", false },
+            { "CoreMathMLEnabled", false },
+            { "DOMPasteAllowed", true },
+            { "DeveloperExtrasEnabled", true },
+            { "HiddenPageDOMTimerThrottlingEnabled", false },
+            { "InspectorAdditionsEnabled", false },
+            { "IntersectionObserverEnabled", false },
+            { "JavaScriptCanAccessClipboard", true },
+            { "JavaScriptCanOpenWindowsAutomatically", true },
+            { "JavaScriptEnabled", true },
+            { "KeygenElementEnabled", false },
+            { "LayoutFormattingContextIntegrationEnabled", true },
+            { "LineHeightUnitsEnabled", false },
+            { "LoadsImagesAutomatically", true },
+            { "MainContentUserGestureOverrideEnabled", false },
+            { "MenuItemElementEnabled", false },
+            { "ModernMediaControlsEnabled", true },
+            { "NeedsStorageAccessFromFileURLsQuirk", false },
+            { "OverscrollBehaviorEnabled", true },
+            { "PluginsEnabled", true },
+            { "PrivateClickMeasurementEnabled", false },
+            { "RequestIdleCallbackEnabled", false },
+            { "ResizeObserverEnabled", false },
+            { "SelectionAcrossShadowBoundariesEnabled", true },
+            { "ShrinksStandaloneImagesToFit", true },
+            { "SpatialNavigationEnabled", false },
+            { "TabsToLinks", false },
+            { "TelephoneNumberParsingEnabled", false },
+            { "UsesBackForwardCache", false },
+            { "WebGPUEnabled", false },
+            { "XSSAuditorEnabled", false },
+        };
+        features.uint32WebPreferenceFeatures = {
+            { "MinimumFontSize", 0 },
+        };
     }
-    std::string pairString = options.substr(beginLocation + beginString.size(), endLocation - (beginLocation + beginString.size()));
-    size_t pairStart = 0;
-    while (pairStart < pairString.size()) {
-        size_t pairEnd = pairString.find(" ", pairStart);
-        if (pairEnd == std::string::npos)
-            pairEnd = pairString.size();
-        size_t equalsLocation = pairString.find("=", pairStart);
-        if (equalsLocation == std::string::npos) {
-            LOG_ERROR("Malformed option in test header (could not find '=' character) in %s", path.c_str());
-            break;
-        }
-        auto key = pairString.substr(pairStart, equalsLocation - pairStart);
-        auto value = pairString.substr(equalsLocation + 1, pairEnd - (equalsLocation + 1));
-        if (key == "enableAttachmentElement")
-            enableAttachmentElement = parseBooleanTestHeaderValue(value);
-        if (key == "useAcceleratedDrawing")
-            useAcceleratedDrawing = parseBooleanTestHeaderValue(value);
-        else if (key == "enableIntersectionObserver")
-            enableIntersectionObserver = parseBooleanTestHeaderValue(value);
-        else if (key == "useEphemeralSession")
-            useEphemeralSession = parseBooleanTestHeaderValue(value);
-        else if (key == "enableBackForwardCache")
-            enableBackForwardCache = parseBooleanTestHeaderValue(value);
-        else if (key == "enableMenuItemElement")
-            enableMenuItemElement = parseBooleanTestHeaderValue(value);
-        else if (key == "enableKeygenElement")
-            enableKeygenElement = parseBooleanTestHeaderValue(value);
-        else if (key == "enableModernMediaControls")
-            enableModernMediaControls = parseBooleanTestHeaderValue(value);
-        else if (key == "enablePointerLock")
-            enablePointerLock = parseBooleanTestHeaderValue(value);
-        else if (key == "enableDragDestinationActionLoad")
-            enableDragDestinationActionLoad = parseBooleanTestHeaderValue(value);
-        else if (key == "layerBackedWebView")
-            layerBackedWebView = parseBooleanTestHeaderValue(value);
-        else if (key == "enableIsSecureContextAttribute")
-            enableIsSecureContextAttribute = parseBooleanTestHeaderValue(value);
-        else if (key == "enableInspectorAdditions")
-            enableInspectorAdditions = parseBooleanTestHeaderValue(value);
-        else if (key == "dumpJSConsoleLogInStdErr")
-            dumpJSConsoleLogInStdErr = parseBooleanTestHeaderValue(value);
-        else if (key == "allowCrossOriginSubresourcesToAskForCredentials")
-            allowCrossOriginSubresourcesToAskForCredentials = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:WebAnimationsCSSIntegrationEnabled")
-            enableWebAnimationsCSSIntegration = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:selectionAcrossShadowBoundariesEnabled")
-            enableSelectionAcrossShadowBoundaries = parseBooleanTestHeaderValue(value);
-        else if (key == "enableColorFilter")
-            enableColorFilter = parseBooleanTestHeaderValue(value);
-        else if (key == "jscOptions")
-            jscOptions = value;
-        else if (key == "additionalSupportedImageTypes")
-            additionalSupportedImageTypes = value;
-        else if (key == "experimental:WebGPUEnabled")
-            enableWebGPU = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:CSSLogicalEnabled")
-            enableCSSLogical = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:LineHeightUnitsEnabled")
-            enableLineHeightUnits = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:AdClickAttributionEnabled")
-            adClickAttributionEnabled = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:ResizeObserverEnabled")
-            enableResizeObserver = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:CSSOMViewSmoothScrollingEnabled")
-            enableCSSOMViewSmoothScrolling = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:CoreMathMLEnabled")
-            enableCoreMathML = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:RequestIdleCallbackEnabled")
-            enableRequestIdleCallback = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:AsyncClipboardAPIEnabled")
-            enableAsyncClipboardAPI = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:LayoutFormattingContextIntegrationEnabled")
-            layoutFormattingContextIntegrationEnabled = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:AspectRatioOfImgFromWidthAndHeightEnabled")
-            enableAspectRatioOfImgFromWidthAndHeight = parseBooleanTestHeaderValue(value);
-        else if (key == "allowTopNavigationToDataURLs")
-            allowTopNavigationToDataURLs = parseBooleanTestHeaderValue(value);
-        pairStart = pairEnd + 1;
-    }
+    return features;
+}
+
+const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMapping()
+{
+    static const std::unordered_map<std::string, TestHeaderKeyType> map {
+        GENERATED_WEB_PREFERENCE_KEY_TYPE_MAPPINGS
+
+        { "dumpJSConsoleLogInStdErr", TestHeaderKeyType::BoolTestRunner },
+        { "enableDragDestinationActionLoad", TestHeaderKeyType::BoolTestRunner },
+        { "layerBackedWebView", TestHeaderKeyType::BoolTestRunner },
+        { "useEphemeralSession", TestHeaderKeyType::BoolTestRunner },
+
+        { "additionalSupportedImageTypes", TestHeaderKeyType::StringTestRunner },
+        { "jscOptions", TestHeaderKeyType::StringTestRunner },
+    };
+
+    return map;
 }
 
 bool TestOptions::webViewIsCompatibleWithOptions(const TestOptions& other) const
 {
-    return other.layerBackedWebView == layerBackedWebView
-        && other.jscOptions == jscOptions
-        && other.enableWebAnimationsCSSIntegration == enableWebAnimationsCSSIntegration;
+    return m_features == other.m_features;
+}
+
+template<typename T> T featureValue(std::string key, T defaultValue, const std::unordered_map<std::string, T>& map)
+{
+    auto it = map.find(key);
+    if (it != map.end())
+        return it->second;
+    return defaultValue;
+}
+
+bool TestOptions::boolTestRunnerFeatureValue(std::string key, bool defaultValue) const
+{
+    return featureValue(key, defaultValue, m_features.boolTestRunnerFeatures);
+}
+
+std::string TestOptions::stringTestRunnerFeatureValue(std::string key, std::string defaultValue) const
+{
+    return featureValue(key, defaultValue, m_features.stringTestRunnerFeatures);
+}
+
 }

@@ -109,7 +109,10 @@ auto ServiceWorkerContainer::ready() -> ReadyPromise&
         auto& context = *scriptExecutionContext();
         ensureSWClientConnection().whenRegistrationReady(context.topOrigin().data(), context.url(), [this, protectedThis = makeRef(*this)](auto&& registrationData) mutable {
             queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, registrationData = WTFMove(registrationData)]() mutable {
-                auto registration = ServiceWorkerRegistration::getOrCreate(*scriptExecutionContext(), *this, WTFMove(registrationData));
+                auto* context = scriptExecutionContext();
+                if (!context || !m_readyPromise)
+                    return;
+                auto registration = ServiceWorkerRegistration::getOrCreate(*context, *this, WTFMove(registrationData));
                 m_readyPromise->resolve(WTFMove(registration));
             });
         });
@@ -177,10 +180,11 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
         return;
     }
 
-    CONTAINER_RELEASE_LOG_IF_ALLOWED("addRegistration: Registering service worker. Job ID: %" PRIu64, jobData.identifier().jobIdentifier.toUInt64());
+    CONTAINER_RELEASE_LOG_IF_ALLOWED("addRegistration: Registering service worker. jobID=%" PRIu64, jobData.identifier().jobIdentifier.toUInt64());
 
     jobData.clientCreationURL = context->url();
     jobData.topOrigin = context->topOrigin().data();
+    jobData.workerType = options.type;
     jobData.type = ServiceWorkerJobType::Register;
     jobData.registrationOptions = options;
 
@@ -202,7 +206,7 @@ void ServiceWorkerContainer::unregisterRegistration(ServiceWorkerRegistrationIde
     });
 }
 
-void ServiceWorkerContainer::updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&& promise)
+void ServiceWorkerContainer::updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType workerType, RefPtr<DeferredPromise>&& promise)
 {
     ASSERT(!m_isStopped);
 
@@ -218,11 +222,12 @@ void ServiceWorkerContainer::updateRegistration(const URL& scopeURL, const URL& 
     ServiceWorkerJobData jobData(m_swConnection->serverConnectionIdentifier(), contextIdentifier());
     jobData.clientCreationURL = context.url();
     jobData.topOrigin = context.topOrigin().data();
+    jobData.workerType = workerType;
     jobData.type = ServiceWorkerJobType::Update;
     jobData.scopeURL = scopeURL;
     jobData.scriptURL = scriptURL;
 
-    CONTAINER_RELEASE_LOG_IF_ALLOWED("removeRegistration: Updating service worker. Job ID: %" PRIu64, jobData.identifier().jobIdentifier.toUInt64());
+    CONTAINER_RELEASE_LOG_IF_ALLOWED("removeRegistration: Updating service worker. jobID=%" PRIu64, jobData.identifier().jobIdentifier.toUInt64());
 
     scheduleJob(makeUnique<ServiceWorkerJob>(*this, WTFMove(promise), WTFMove(jobData)));
 }
@@ -389,7 +394,7 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
 
         auto registration = ServiceWorkerRegistration::getOrCreate(*scriptExecutionContext(), *this, WTFMove(data));
 
-        CONTAINER_RELEASE_LOG_IF_ALLOWED("jobResolvedWithRegistration: Resolving promise for job %" PRIu64 ". Registration ID: %" PRIu64, jobIdentifier.toUInt64(), registration->identifier().toUInt64());
+        CONTAINER_RELEASE_LOG_IF_ALLOWED("jobResolvedWithRegistration: Resolving promise for job %" PRIu64 ". registrationID=%" PRIu64, jobIdentifier.toUInt64(), registration->identifier().toUInt64());
 
         if (shouldNotifyWhenResolved == ShouldNotifyWhenResolved::Yes) {
             m_ongoingSettledRegistrations.add(++m_lastOngoingSettledRegistrationIdentifier, registration->data().key);

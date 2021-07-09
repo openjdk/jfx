@@ -48,8 +48,8 @@ Structure* IntlLocaleConstructor::createStructure(VM& vm, JSGlobalObject* global
     return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
 }
 
-static EncodedJSValue JSC_HOST_CALL callIntlLocale(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructIntlLocale(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callIntlLocale);
+static JSC_DECLARE_HOST_FUNCTION(constructIntlLocale);
 
 IntlLocaleConstructor::IntlLocaleConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callIntlLocale, constructIntlLocale)
@@ -58,14 +58,13 @@ IntlLocaleConstructor::IntlLocaleConstructor(VM& vm, Structure* structure)
 
 void IntlLocaleConstructor::finishCreation(VM& vm, IntlLocalePrototype* localePrototype)
 {
-    Base::finishCreation(vm, "Locale"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "Locale"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, localePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
     localePrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale
-static EncodedJSValue JSC_HOST_CALL constructIntlLocale(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructIntlLocale, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -89,7 +88,7 @@ static EncodedJSValue JSC_HOST_CALL constructIntlLocale(JSGlobalObject* globalOb
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale
-static EncodedJSValue JSC_HOST_CALL callIntlLocale(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callIntlLocale, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

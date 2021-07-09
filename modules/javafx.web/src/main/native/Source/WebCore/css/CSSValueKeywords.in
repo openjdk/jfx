@@ -259,6 +259,7 @@ windowtext
 -apple-system-purple
 -apple-system-red
 -apple-system-yellow
+-apple-system-app-highlight-background
 #endif
 #if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
 -apple-system-alternate-selected-text
@@ -852,15 +853,11 @@ searchfield-decoration
 searchfield-results-decoration
 searchfield-results-button
 searchfield-cancel-button
-snapshotted-plugin-overlay
 textfield
 relevancy-level-indicator
 continuous-capacity-level-indicator
 discrete-capacity-level-indicator
 rating-level-indicator
-#if defined(ENABLE_SERVICE_CONTROLS) && ENABLE_SERVICE_CONTROLS
-image-controls-button
-#endif
 #if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
 -apple-pay-button
 #endif
@@ -972,6 +969,9 @@ paused
 //
 flat
 preserve-3d
+#if defined(ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D) && ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D
+optimized-3d
+#endif
 
 //
 // CSS_PROP__WEBKIT_TRANSITION_TIMING_FUNCTION
@@ -1139,8 +1139,8 @@ elements
 // -webkit-scroll-snap-type
 mandatory
 proximity
-x
-y
+// x
+// y
 #endif
 
 break
@@ -1264,7 +1264,29 @@ rgb
 rgba
 hsl
 hsla
+hwb
+lab
+lch
 //color
+
+// relative color identifiers
+// from
+r
+g
+b
+h
+s
+l
+// h
+w
+// b
+// l
+a
+// b
+// l
+c
+// h
+// alpha
 
 // transform
 matrix
@@ -1340,10 +1362,6 @@ dense
 // -webkit-column-fill
 balance
 
-// -webkit-aspect-ratio
-from-dimensions
-from-intrinsic
-
 #if defined(ENABLE_CSS_TRAILING_WORD) && ENABLE_CSS_TRAILING_WORD
 // -apple-trailing-word
 -webkit-partially-balanced
@@ -1393,6 +1411,9 @@ pinch-zoom
 // auto
 smooth
 
+// overscroll-behavior
+// contain
+
 // hanging-punctuation
 allow-end
 first
@@ -1402,10 +1423,28 @@ last
 // color-gamut
 p3
 rec2020
+sRGB
 
 // color() function
-sRGB
+a98-rgb
 display-p3
+// lab
+prophoto-rgb
+// rec2020
+// sRGB
+xyz
+
+// color-mix()
+color-mix
+shorter
+longer
+increasing
+decreasing
+specified
+lightness
+chroma
+whiteness
+blackness
 
 // prefers-default-appearance
 prefers
@@ -1414,6 +1453,12 @@ prefers
 // prefers-reduced-motion
 reduce
 no-preference
+
+// prefers-contrast
+forced
+more
+less
+// no-preference
 
 #if defined(ENABLE_DARK_MODE_CSS) && ENABLE_DARK_MODE_CSS
 // prefers-color-scheme
@@ -1451,3 +1496,16 @@ from-font
 // dynamic-range
 standard
 high
+
+// @supports selector()
+// https://drafts.csswg.org/css-conditional-4/#typedef-supports-selector-fn
+selector
+
+// math-style
+// normal
+compact
+
+// rotate
+x
+y
+z

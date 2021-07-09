@@ -32,6 +32,7 @@
 #include "AudioBuffer.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
+#include "AudioUtilities.h"
 #include "Reverb.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -41,41 +42,41 @@
 // it's important not to make this too high.  In this case 8192 is a good value.
 // But, the Reverb object is multi-threaded, so we want this as high as possible without losing too much accuracy.
 // Very large FFTs will have worse phase errors. Given these constraints 32768 is a good compromise.
-const size_t MaxFFTSize = 32768;
+constexpr size_t MaxFFTSize = 32768;
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ConvolverNode);
 
+static unsigned computeNumberOfOutputChannels(unsigned inputChannels, unsigned responseChannels)
+{
+    // The number of output channels for a Convolver must be one or two. And can only be one if
+    // there's a mono source and a mono response buffer.
+    return (inputChannels == 1 && responseChannels == 1) ? 1u : 2u;
+}
+
 ExceptionOr<Ref<ConvolverNode>> ConvolverNode::create(BaseAudioContext& context, ConvolverOptions&& options)
 {
-    if (context.isStopped())
-        return Exception { InvalidStateError };
-
-    context.lazyInitialize();
-
     auto node = adoptRef(*new ConvolverNode(context));
 
     auto result = node->handleAudioNodeOptions(options, { 2, ChannelCountMode::ClampedMax, ChannelInterpretation::Speakers });
     if (result.hasException())
         return result.releaseException();
 
+    node->setNormalize(!options.disableNormalization);
+
     result = node->setBuffer(WTFMove(options.buffer));
     if (result.hasException())
         return result.releaseException();
-
-    node->setNormalize(!options.disableNormalization);
 
     return node;
 }
 
 ConvolverNode::ConvolverNode(BaseAudioContext& context)
-    : AudioNode(context)
+    : AudioNode(context, NodeTypeConvolver)
 {
-    setNodeType(NodeTypeConvolver);
-
-    addInput(makeUnique<AudioNodeInput>(this));
-    addOutput(makeUnique<AudioNodeOutput>(this, 2));
+    addInput();
+    addOutput(1);
 
     initialize();
 }
@@ -91,9 +92,9 @@ void ConvolverNode::process(size_t framesToProcess)
     ASSERT(outputBus);
 
     // Synchronize with possible dynamic changes to the impulse response.
-    std::unique_lock<Lock> lock(m_processMutex, std::try_to_lock);
-    if (!lock.owns_lock()) {
-        // Too bad - the try_lock() failed. We must be in the middle of setting a new impulse response.
+    auto locker = tryHoldLock(m_processLock);
+    if (!locker) {
+        // Too bad - tryHoldLock() failed. We must be in the middle of setting a new impulse response.
         outputBus->zero();
         return;
     }
@@ -109,30 +110,6 @@ void ConvolverNode::process(size_t framesToProcess)
     }
 }
 
-void ConvolverNode::reset()
-{
-    auto locker = holdLock(m_processMutex);
-    if (m_reverb)
-        m_reverb->reset();
-}
-
-void ConvolverNode::initialize()
-{
-    if (isInitialized())
-        return;
-
-    AudioNode::initialize();
-}
-
-void ConvolverNode::uninitialize()
-{
-    if (!isInitialized())
-        return;
-
-    m_reverb = nullptr;
-    AudioNode::uninitialize();
-}
-
 ExceptionOr<void> ConvolverNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
 {
     ASSERT(isMainThread());
@@ -141,17 +118,17 @@ ExceptionOr<void> ConvolverNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
         return { };
 
     if (buffer->sampleRate() != context().sampleRate())
-        return Exception { NotSupportedError };
+        return Exception { NotSupportedError, "Buffer sample rate does not match the context's sample rate"_s };
 
     unsigned numberOfChannels = buffer->numberOfChannels();
     size_t bufferLength = buffer->length();
 
     // The current implementation supports only 1-, 2-, or 4-channel impulse responses, with the
     // 4-channel response being interpreted as true-stereo (see Reverb class).
-    bool isChannelCountGood = (numberOfChannels == 1 || numberOfChannels == 2 || numberOfChannels == 4) && bufferLength;
+    bool isChannelCountGood = (numberOfChannels == 1 || numberOfChannels == 2 || numberOfChannels == 4);
 
     if (!isChannelCountGood)
-        return Exception { NotSupportedError };
+        return Exception { NotSupportedError, "Buffer should have 1, 2 or 4 channels"_s };
 
     // Wrap the AudioBuffer by an AudioBus. It's an efficient pointer set and not a memcpy().
     // This memory is simply used in the Reverb constructor and no reference to it is kept for later use in that class.
@@ -163,13 +140,21 @@ ExceptionOr<void> ConvolverNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
 
     // Create the reverb with the given impulse response.
     bool useBackgroundThreads = !context().isOfflineContext();
-    auto reverb = makeUnique<Reverb>(bufferBus.get(), AudioNode::ProcessingSizeInFrames, MaxFFTSize, 2, useBackgroundThreads, m_normalize);
+    auto reverb = makeUnique<Reverb>(bufferBus.get(), AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
 
     {
+        // The context must be locked since changing the buffer can re-configure the number of channels that are output.
+        BaseAudioContext::AutoLocker contextLocker(context());
+
         // Synchronize with process().
-        auto locker = holdLock(m_processMutex);
+        auto locker = holdLock(m_processLock);
+
         m_reverb = WTFMove(reverb);
         m_buffer = WTFMove(buffer);
+        if (m_buffer) {
+            // This will propagate the channel count to any nodes connected further downstream in the graph.
+            output(0)->setNumberOfChannels(computeNumberOfOutputChannels(input(0)->numberOfChannels(), m_buffer->numberOfChannels()));
+        }
     }
 
     return { };
@@ -191,6 +176,12 @@ double ConvolverNode::latencyTime() const
     return m_reverb ? m_reverb->latencyFrames() / static_cast<double>(sampleRate()) : 0;
 }
 
+bool ConvolverNode::requiresTailProcessing() const
+{
+    // Always return true even if the tail time and latency might both be zero.
+    return true;
+}
+
 ExceptionOr<void> ConvolverNode::setChannelCount(unsigned count)
 {
     if (count > 2)
@@ -203,6 +194,30 @@ ExceptionOr<void> ConvolverNode::setChannelCountMode(ChannelCountMode mode)
     if (mode == ChannelCountMode::Max)
         return Exception { NotSupportedError, "ConvolverNode's channel count mode cannot be 'max'"_s };
     return AudioNode::setChannelCountMode(mode);
+}
+
+void ConvolverNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
+{
+    ASSERT(context().isAudioThread() && context().isGraphOwner());
+
+    if (m_buffer) {
+        unsigned numberOfOutputChannels = computeNumberOfOutputChannels(input->numberOfChannels(), m_buffer->numberOfChannels());
+
+        if (isInitialized() && numberOfOutputChannels != output(0)->numberOfChannels()) {
+            // We're already initialized but the channel count has changed.
+            uninitialize();
+        }
+
+        if (!isInitialized()) {
+            // This will propagate the channel count to any nodes connected further
+            // downstream in the graph.
+            output(0)->setNumberOfChannels(numberOfOutputChannels);
+            initialize();
+        }
+    }
+
+    // Update the input's internal bus if needed.
+    AudioNode::checkNumberOfChannelsForInput(input);
 }
 
 } // namespace WebCore

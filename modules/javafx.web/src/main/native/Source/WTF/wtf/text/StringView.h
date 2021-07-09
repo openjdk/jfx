@@ -79,6 +79,7 @@ public:
     explicit operator bool() const;
     bool isNull() const;
 
+    UChar characterAt(unsigned index) const;
     UChar operator[](unsigned index) const;
 
     class CodeUnits;
@@ -499,12 +500,17 @@ inline StringView StringView::substring(unsigned start, unsigned length) const
     return result;
 }
 
-inline UChar StringView::operator[](unsigned index) const
+inline UChar StringView::characterAt(unsigned index) const
 {
     ASSERT(index < length());
     if (is8Bit())
         return characters8()[index];
     return characters16()[index];
+}
+
+inline UChar StringView::operator[](unsigned index) const
+{
+    return characterAt(index);
 }
 
 inline bool StringView::contains(UChar character) const
@@ -1081,9 +1087,22 @@ inline bool equalIgnoringNullity(StringView a, StringView b)
 
 WTF_EXPORT_PRIVATE int codePointCompare(StringView, StringView);
 
+inline bool hasUnpairedSurrogate(StringView string)
+{
+    // Fast path for 8-bit strings; they can't have any surrogates.
+    if (string.is8Bit())
+        return false;
+    for (auto codePoint : string.codePoints()) {
+        if (U_IS_SURROGATE(codePoint))
+            return true;
+    }
+    return false;
+}
+
 } // namespace WTF
 
 using WTF::append;
 using WTF::equal;
 using WTF::StringView;
 using WTF::StringViewWithUnderlyingString;
+using WTF::hasUnpairedSurrogate;

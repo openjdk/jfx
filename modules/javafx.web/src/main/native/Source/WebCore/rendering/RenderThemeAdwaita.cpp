@@ -79,7 +79,7 @@ static constexpr auto mediaSliderTrackActiveColor = SRGBA<uint8_t> { 252, 252, 2
 #if !PLATFORM(GTK)
 RenderTheme& RenderTheme::singleton()
 {
-    static NeverDestroyed<RenderThemeAdwaita> theme;
+    static MainThreadNeverDestroyed<RenderThemeAdwaita> theme;
     return theme;
 }
 #endif
@@ -192,6 +192,7 @@ bool RenderThemeAdwaita::paintTextField(const RenderObject& renderObject, const 
     Path path;
     path.addRoundedRect(fieldRect, corner);
     fieldRect.inflate(-borderSize);
+    corner.expand(-borderSize, -borderSize);
     path.addRoundedRect(fieldRect, corner);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     if (!isEnabled(renderObject) || isReadOnlyControl(renderObject))
@@ -251,7 +252,7 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
     adjustMenuListStyle(style, element);
 }
 
-LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
+LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style, const Settings&) const
 {
     if (style.appearance() == NoControlPart)
         return { };
@@ -297,17 +298,17 @@ bool RenderThemeAdwaita::paintMenuList(const RenderObject& renderObject, const P
     return false;
 }
 
-bool RenderThemeAdwaita::paintMenuListButtonDecorations(const RenderBox& renderObject, const PaintInfo& paintInfo, const FloatRect& rect)
+void RenderThemeAdwaita::paintMenuListButtonDecorations(const RenderBox& renderObject, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    return paintMenuList(renderObject, paintInfo, rect);
+    paintMenuList(renderObject, paintInfo, rect);
 }
 
-Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(RenderProgress&) const
+Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress&) const
 {
     return progressAnimationFrameRate;
 }
 
-Seconds RenderThemeAdwaita::animationDurationForProgressBar(RenderProgress&) const
+Seconds RenderThemeAdwaita::animationDurationForProgressBar(const RenderProgress&) const
 {
     return progressAnimationFrameRate * progressAnimationFrameCount;
 }
@@ -330,6 +331,7 @@ bool RenderThemeAdwaita::paintProgressBar(const RenderObject& renderObject, cons
     Path path;
     path.addRoundedRect(fieldRect, corner);
     fieldRect.inflate(-1);
+    corner.expand(-1, -1);
     path.addRoundedRect(fieldRect, corner);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     graphicsContext.setFillColor(progressBarBorderColor);
@@ -395,6 +397,7 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
     Path path;
     path.addRoundedRect(fieldRect, corner);
     fieldRect.inflate(-sliderTrackBorderSize);
+    corner.expand(-sliderTrackBorderSize, -sliderTrackBorderSize);
     path.addRoundedRect(fieldRect, corner);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     graphicsContext.setFillColor(sliderTrackBorderColor);
@@ -454,8 +457,8 @@ void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element
     if (part != SliderThumbHorizontalPart && part != SliderThumbVerticalPart)
         return;
 
-    style.setWidth(Length(sliderThumbSize, Fixed));
-    style.setHeight(Length(sliderThumbSize, Fixed));
+    style.setWidth(Length(sliderThumbSize, LengthType::Fixed));
+    style.setHeight(Length(sliderThumbSize, LengthType::Fixed));
 }
 
 bool RenderThemeAdwaita::paintSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& rect)
@@ -598,9 +601,9 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
 {
     // Add a margin to place the button at end of the input field.
     if (style.isLeftToRightDirection())
-        style.setMarginRight(Length(-2, Fixed));
+        style.setMarginRight(Length(-2, LengthType::Fixed));
     else
-        style.setMarginLeft(Length(-2, Fixed));
+        style.setMarginLeft(Length(-2, LengthType::Fixed));
 }
 #endif // ENABLE(DATALIST_ELEMENT)
 

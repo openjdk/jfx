@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -44,9 +44,6 @@ struct MethodTable {
     using DestroyFunctionPtr = void (*)(JSCell*);
     DestroyFunctionPtr METHOD_TABLE_ENTRY(destroy);
 
-    using VisitChildrenFunctionPtr = void (*)(JSCell*, SlotVisitor&);
-    VisitChildrenFunctionPtr METHOD_TABLE_ENTRY(visitChildren);
-
     using GetCallDataFunctionPtr = CallData (*)(JSCell*);
     GetCallDataFunctionPtr METHOD_TABLE_ENTRY(getCallData);
 
@@ -80,20 +77,12 @@ struct MethodTable {
     using DefaultValueFunctionPtr = JSValue (*)(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
     DefaultValueFunctionPtr METHOD_TABLE_ENTRY(defaultValue);
 
-    using GetOwnPropertyNamesFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    using GetOwnPropertyNamesFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
     GetOwnPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getOwnPropertyNames);
-
-    using GetOwnNonIndexPropertyNamesFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
-    GetOwnNonIndexPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getOwnNonIndexPropertyNames);
-
-    using GetPropertyNamesFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
-    GetPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getPropertyNames);
+    GetOwnPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getOwnSpecialPropertyNames);
 
     using GetEnumerableLengthFunctionPtr = uint32_t (*)(JSGlobalObject*, JSObject*);
     GetEnumerableLengthFunctionPtr METHOD_TABLE_ENTRY(getEnumerableLength);
-
-    GetPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getStructurePropertyNames);
-    GetPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getGenericPropertyNames);
 
     using ClassNameFunctionPtr = String (*)(const JSObject*, VM&);
     ClassNameFunctionPtr METHOD_TABLE_ENTRY(className);
@@ -128,8 +117,23 @@ struct MethodTable {
     using EstimatedSizeFunctionPtr = size_t (*)(JSCell*, VM&);
     EstimatedSizeFunctionPtr METHOD_TABLE_ENTRY(estimatedSize);
 
+    using VisitChildrenFunctionPtr = void (*)(JSCell*, SlotVisitor&);
+    VisitChildrenFunctionPtr METHOD_TABLE_ENTRY(visitChildrenWithSlotVisitor);
+
+    using VisitChildrenWithAbstractSlotVisitorPtr = void (*)(JSCell*, AbstractSlotVisitor&);
+    VisitChildrenWithAbstractSlotVisitorPtr METHOD_TABLE_ENTRY(visitChildrenWithAbstractSlotVisitor);
+
+    ALWAYS_INLINE void visitChildren(JSCell* cell, SlotVisitor& visitor) const { visitChildrenWithSlotVisitor(cell, visitor); }
+    ALWAYS_INLINE void visitChildren(JSCell* cell, AbstractSlotVisitor& visitor) const { visitChildrenWithAbstractSlotVisitor(cell, visitor); }
+
     using VisitOutputConstraintsPtr = void (*)(JSCell*, SlotVisitor&);
-    VisitOutputConstraintsPtr METHOD_TABLE_ENTRY(visitOutputConstraints);
+    VisitOutputConstraintsPtr METHOD_TABLE_ENTRY(visitOutputConstraintsWithSlotVisitor);
+
+    using VisitOutputConstraintsWithAbstractSlotVisitorPtr = void (*)(JSCell*, AbstractSlotVisitor&);
+    VisitOutputConstraintsWithAbstractSlotVisitorPtr METHOD_TABLE_ENTRY(visitOutputConstraintsWithAbstractSlotVisitor);
+
+    ALWAYS_INLINE void visitOutputConstraints(JSCell* cell, SlotVisitor& visitor) const { visitOutputConstraintsWithSlotVisitor(cell, visitor); }
+    ALWAYS_INLINE void visitOutputConstraints(JSCell* cell, AbstractSlotVisitor& visitor) const { visitOutputConstraintsWithAbstractSlotVisitor(cell, visitor); }
 };
 
 #define CREATE_MEMBER_CHECKER(member) \
@@ -155,7 +159,6 @@ struct MethodTable {
     JSCastingHelpers::InheritsTraits<ClassName>::typeRange, \
     { \
         &ClassName::destroy, \
-        &ClassName::visitChildren, \
         &ClassName::getCallData, \
         &ClassName::getConstructData, \
         &ClassName::put, \
@@ -168,11 +171,8 @@ struct MethodTable {
         &ClassName::toThis, \
         &ClassName::defaultValue, \
         &ClassName::getOwnPropertyNames, \
-        &ClassName::getOwnNonIndexPropertyNames, \
-        &ClassName::getPropertyNames, \
+        &ClassName::getOwnSpecialPropertyNames, \
         &ClassName::getEnumerableLength, \
-        &ClassName::getStructurePropertyNames, \
-        &ClassName::getGenericPropertyNames, \
         &ClassName::className, \
         &ClassName::toStringName, \
         &ClassName::customHasInstance, \
@@ -184,6 +184,9 @@ struct MethodTable {
         &ClassName::dumpToStream, \
         &ClassName::analyzeHeap, \
         &ClassName::estimatedSize, \
+        &ClassName::visitChildren, \
+        &ClassName::visitChildren, \
+        &ClassName::visitOutputConstraints, \
         &ClassName::visitOutputConstraints, \
     }, \
     ClassName::TypedArrayStorageType, \

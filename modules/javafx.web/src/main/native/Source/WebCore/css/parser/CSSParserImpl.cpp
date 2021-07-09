@@ -550,12 +550,12 @@ RefPtr<StyleRuleMedia> CSSParserImpl::consumeMediaRule(CSSParserTokenRange prelu
     if (m_observerWrapper)
         m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
 
-    return StyleRuleMedia::create(MediaQueryParser::parseMediaQuerySet(prelude, MediaQueryParserContext(m_context)).releaseNonNull(), rules);
+    return StyleRuleMedia::create(MediaQueryParser::parseMediaQuerySet(prelude, MediaQueryParserContext(m_context)).releaseNonNull(), WTFMove(rules));
 }
 
 RefPtr<StyleRuleSupports> CSSParserImpl::consumeSupportsRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    CSSSupportsParser::SupportsResult supported = CSSSupportsParser::supportsCondition(prelude, *this, CSSSupportsParser::ForAtRule);
+    auto supported = CSSSupportsParser::supportsCondition(prelude, *this, CSSSupportsParser::ForAtRule);
     if (supported == CSSSupportsParser::Invalid)
         return nullptr; // Parse error, invalid @supports condition
 
@@ -577,7 +577,7 @@ RefPtr<StyleRuleSupports> CSSParserImpl::consumeSupportsRule(CSSParserTokenRange
     if (m_observerWrapper)
         m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
 
-    return StyleRuleSupports::create(prelude.serialize().stripWhiteSpace(), supported, rules);
+    return StyleRuleSupports::create(prelude.serialize().stripWhiteSpace(), supported, WTFMove(rules));
 }
 
 RefPtr<StyleRuleFontFace> CSSParserImpl::consumeFontFaceRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
@@ -635,7 +635,7 @@ RefPtr<StyleRuleKeyframes> CSSParserImpl::consumeKeyframesRule(bool webkitPrefix
 RefPtr<StyleRulePage> CSSParserImpl::consumePageRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
     CSSSelectorList selectorList = parsePageSelector(prelude, m_styleSheet.get());
-    if (!selectorList.isValid())
+    if (selectorList.isEmpty())
         return nullptr; // Parse error, invalid @page selector
 
     if (m_observerWrapper) {
@@ -698,8 +698,8 @@ static void observeSelectors(CSSParserObserverWrapper& wrapper, CSSParserTokenRa
 
 RefPtr<StyleRule> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    CSSSelectorList selectorList = parseCSSSelector(prelude, m_context, m_styleSheet.get());
-    if (!selectorList.isValid())
+    auto selectorList = parseCSSSelector(prelude, m_context, m_styleSheet.get());
+    if (!selectorList)
         return nullptr; // Parse error, invalid selector list
 
     if (m_observerWrapper)
@@ -713,12 +713,12 @@ RefPtr<StyleRule> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelude, C
         CSSParserTokenRange blockCopy = block;
         blockCopy.consumeWhitespace();
         if (!blockCopy.atEnd()) {
-            return StyleRule::create(createDeferredStyleProperties(block), m_context.hasDocumentSecurityOrigin, WTFMove(selectorList));
+            return StyleRule::create(createDeferredStyleProperties(block), m_context.hasDocumentSecurityOrigin, WTFMove(*selectorList));
         }
     }
 
     consumeDeclarationList(block, StyleRuleType::Style);
-    return StyleRule::create(createStyleProperties(m_parsedProperties, m_context.mode), m_context.hasDocumentSecurityOrigin, WTFMove(selectorList));
+    return StyleRule::create(createStyleProperties(m_parsedProperties, m_context.mode), m_context.hasDocumentSecurityOrigin, WTFMove(*selectorList));
 }
 
 void CSSParserImpl::consumeDeclarationList(CSSParserTokenRange range, StyleRuleType ruleType)
@@ -773,6 +773,40 @@ void CSSParserImpl::consumeDeclarationList(CSSParserTokenRange range, StyleRuleT
     }
 }
 
+bool CSSParserImpl::isPropertyRuntimeDisabled(CSSPropertyID property) const
+{
+    switch (property) {
+    case CSSPropertyAspectRatio:
+        return !m_context.aspectRatioEnabled;
+    case CSSPropertyAppleColorFilter:
+        return !m_context.colorFilterEnabled;
+    case CSSPropertyTranslate:
+    case CSSPropertyRotate:
+    case CSSPropertyScale:
+        return !m_context.individualTransformPropertiesEnabled;
+    case CSSPropertyOverscrollBehavior:
+    case CSSPropertyOverscrollBehaviorX:
+    case CSSPropertyOverscrollBehaviorY:
+        return !m_context.overscrollBehaviorEnabled;
+    case CSSPropertyScrollBehavior:
+        return !m_context.scrollBehaviorEnabled;
+#if ENABLE(TEXT_AUTOSIZING)
+    case CSSPropertyWebkitTextSizeAdjust:
+#if !PLATFORM(IOS_FAMILY)
+        return !m_context.textAutosizingEnabled;
+#endif
+        return false;
+#endif // ENABLE(TEXT_AUTOSIZING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    case CSSPropertyWebkitOverflowScrolling:
+        return !m_context.legacyOverflowScrollingTouchEnabled;
+#endif
+    default:
+        return false;
+    }
+    return false;
+}
+
 void CSSParserImpl::consumeDeclaration(CSSParserTokenRange range, StyleRuleType ruleType)
 {
     CSSParserTokenRange rangeCopy = range; // For inspector callbacks
@@ -782,6 +816,9 @@ void CSSParserImpl::consumeDeclaration(CSSParserTokenRange range, StyleRuleType 
     CSSPropertyID propertyID = token.parseAsCSSPropertyID();
     if (range.consume().type() != ColonToken)
         return; // Parse error
+
+    if (isPropertyRuntimeDisabled(propertyID))
+        propertyID = CSSPropertyInvalid;
 
     bool important = false;
     const CSSParserToken* declarationValueEnd = range.end();

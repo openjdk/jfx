@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,8 @@
 namespace JSC {
 
 template<typename Type>
-void GenericArguments<Type>::visitChildren(JSCell* thisCell, SlotVisitor& visitor)
+template<typename Visitor>
+void GenericArguments<Type>::visitChildrenImpl(JSCell* thisCell, Visitor& visitor)
 {
     Type* thisObject = static_cast<Type*>(thisCell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -40,6 +41,8 @@ void GenericArguments<Type>::visitChildren(JSCell* thisCell, SlotVisitor& visito
     if (thisObject->m_modifiedArgumentsDescriptor)
         visitor.markAuxiliary(thisObject->m_modifiedArgumentsDescriptor.getUnsafe());
 }
+
+DEFINE_VISIT_CHILDREN_WITH_MODIFIER(template<typename Type>, GenericArguments<Type>);
 
 template<typename Type>
 bool GenericArguments<Type>::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName ident, PropertySlot& slot)
@@ -90,7 +93,7 @@ bool GenericArguments<Type>::getOwnPropertySlotByIndex(JSObject* object, JSGloba
 }
 
 template<typename Type>
-void GenericArguments<Type>::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& array, EnumerationMode mode)
+void GenericArguments<Type>::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& array, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     Type* thisObject = jsCast<Type*>(object);
@@ -101,15 +104,15 @@ void GenericArguments<Type>::getOwnPropertyNames(JSObject* object, JSGlobalObjec
                 continue;
             array.add(Identifier::from(vm, i));
         }
+        thisObject->getOwnIndexedPropertyNames(globalObject, array, mode);
     }
 
-    if (mode.includeDontEnumProperties() && !thisObject->overrodeThings()) {
+    if (mode == DontEnumPropertiesMode::Include && !thisObject->overrodeThings()) {
         array.add(vm.propertyNames->length);
         array.add(vm.propertyNames->callee);
-        if (array.includeSymbolProperties())
-            array.add(vm.propertyNames->iteratorSymbol);
+        array.add(vm.propertyNames->iteratorSymbol);
     }
-    Base::getOwnPropertyNames(thisObject, globalObject, array, mode);
+    thisObject->getOwnNonIndexPropertyNames(globalObject, array, mode);
 }
 
 template<typename Type>
@@ -209,6 +212,7 @@ bool GenericArguments<Type>::deletePropertyByIndex(JSCell* cell, JSGlobalObject*
     return deletedProperty;
 }
 
+// https://tc39.es/ecma262/#sec-arguments-exotic-objects-defineownproperty-p-desc
 template<typename Type>
 bool GenericArguments<Type>::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName ident, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
@@ -221,56 +225,47 @@ bool GenericArguments<Type>::defineOwnProperty(JSObject* object, JSGlobalObject*
         || ident == vm.propertyNames->iteratorSymbol) {
         thisObject->overrideThingsIfNecessary(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
-    } else {
-        Optional<uint32_t> optionalIndex = parseIndex(ident);
-        if (optionalIndex) {
-            uint32_t index = optionalIndex.value();
-            if (!descriptor.isAccessorDescriptor() && thisObject->isMappedArgument(optionalIndex.value())) {
-                // If the property is not deleted and we are using a non-accessor descriptor, then
-                // make sure that the aliased argument sees the value.
+    } else if (Optional<uint32_t> optionalIndex = parseIndex(ident)) {
+        uint32_t index = optionalIndex.value();
+        bool isMapped = thisObject->isMappedArgument(index);
+        PropertyDescriptor newDescriptor = descriptor;
+
+        if (isMapped) {
+            if (thisObject->isModifiedArgumentDescriptor(index)) {
+                if (!descriptor.value() && descriptor.writablePresent() && !descriptor.writable())
+                    newDescriptor.setValue(thisObject->getIndexQuickly(index));
+            } else
+                thisObject->putDirectIndex(globalObject, index, thisObject->getIndexQuickly(index));
+
+            scope.assertNoException();
+        }
+
+        bool status = thisObject->defineOwnIndexedProperty(globalObject, index, newDescriptor, shouldThrow);
+        RETURN_IF_EXCEPTION(scope, false);
+        if (!status) {
+            ASSERT(!isMapped || thisObject->isModifiedArgumentDescriptor(index));
+            return false;
+        }
+
+        thisObject->setModifiedArgumentDescriptor(globalObject, index);
+        RETURN_IF_EXCEPTION(scope, false);
+
+        if (isMapped) {
+            if (descriptor.isAccessorDescriptor())
+                thisObject->unmapArgument(globalObject, index);
+            else {
                 if (descriptor.value())
                     thisObject->setIndexQuickly(vm, index, descriptor.value());
-
-                // If the property is not deleted and we are using a non-accessor, writable,
-                // configurable and enumerable descriptor and isn't modified, then we are done.
-                // The argument continues to be aliased.
-                if (descriptor.writable() && descriptor.configurable() && descriptor.enumerable() && !thisObject->isModifiedArgumentDescriptor(index))
-                    return true;
-
-                if (!thisObject->isModifiedArgumentDescriptor(index)) {
-                    // If it is a new entry, we need to put direct to initialize argument[i] descriptor properly
-                    JSValue value = thisObject->getIndexQuickly(index);
-                    ASSERT(value);
-                    object->putDirectMayBeIndex(globalObject, ident, value);
-                    scope.assertNoException();
-
-                    thisObject->setModifiedArgumentDescriptor(globalObject, index);
-                    RETURN_IF_EXCEPTION(scope, false);
-                }
-            }
-
-            if (thisObject->isMappedArgument(index)) {
-                // Just unmap arguments if its descriptor contains {writable: false}.
-                // Check https://tc39.github.io/ecma262/#sec-createunmappedargumentsobject
-                // and https://tc39.github.io/ecma262/#sec-createmappedargumentsobject to verify that all data
-                // property from arguments object are {writable: true, configurable: true, enumerable: true} by default
-                if ((descriptor.writablePresent() && !descriptor.writable()) || descriptor.isAccessorDescriptor()) {
-                    if (!descriptor.isAccessorDescriptor()) {
-                        JSValue value = thisObject->getIndexQuickly(index);
-                        ASSERT(value);
-                        object->putDirectMayBeIndex(globalObject, ident, value);
-                        scope.assertNoException();
-                    }
+                if (descriptor.writablePresent() && !descriptor.writable())
                     thisObject->unmapArgument(globalObject, index);
-                    RETURN_IF_EXCEPTION(scope, false);
-                    thisObject->setModifiedArgumentDescriptor(globalObject, index);
-                    RETURN_IF_EXCEPTION(scope, false);
-                }
             }
+
+            RETURN_IF_EXCEPTION(scope, false);
         }
+
+        return true;
     }
 
-    // Now just let the normal object machinery do its thing.
     RELEASE_AND_RETURN(scope, Base::defineOwnProperty(object, globalObject, ident, descriptor, shouldThrow));
 }
 

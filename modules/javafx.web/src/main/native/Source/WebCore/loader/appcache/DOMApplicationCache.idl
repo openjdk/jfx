@@ -23,10 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
  
+// FIXME: This is specified to be 'SecureContext'.
+// https://html.spec.whatwg.org/multipage/offline.html#application-cache-api
 [
     DoNotCheckConstants,
     GenerateIsReachable=ReachableFromDOMWindow,
     InterfaceName=ApplicationCache,
+    Exposed=Window
 ] interface DOMApplicationCache : EventTarget {
     // update status
     const unsigned short UNCACHED = 0;
@@ -37,9 +40,9 @@
     const unsigned short OBSOLETE = 5;
     readonly attribute unsigned short status;
 
-    [MayThrowException] void update();
-    [MayThrowException] void swapCache();
-    void abort();
+    [MayThrowException] undefined update();
+    [MayThrowException] undefined swapCache();
+    undefined abort();
 
     attribute EventHandler onchecking;
     attribute EventHandler onerror;

@@ -85,15 +85,11 @@ enum ControlPart {
     SearchFieldResultsDecorationPart,
     SearchFieldResultsButtonPart,
     SearchFieldCancelButtonPart,
-    SnapshottedPluginOverlayPart,
     TextFieldPart,
     RelevancyLevelIndicatorPart,
     ContinuousCapacityLevelIndicatorPart,
     DiscreteCapacityLevelIndicatorPart,
     RatingLevelIndicatorPart,
-#if ENABLE(SERVICE_CONTROLS)
-    ImageControlsButtonPart,
-#endif
 #if ENABLE(APPLE_PAY)
     ApplePayButtonPart,
 #endif

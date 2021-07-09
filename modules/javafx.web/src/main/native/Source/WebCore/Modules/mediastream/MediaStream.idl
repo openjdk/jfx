@@ -27,7 +27,8 @@
     Conditional=MEDIA_STREAM,
     ExportToWrappedFunction,
     PrivateIdentifier,
-    PublicIdentifier
+    PublicIdentifier,
+    Exposed=Window
 ] interface MediaStream : EventTarget {
     [CallWith=Document] constructor();
     [CallWith=Document] constructor(MediaStream stream);
@@ -40,8 +41,8 @@
     [PrivateIdentifier, PublicIdentifier] sequence<MediaStreamTrack> getTracks();
     MediaStreamTrack getTrackById(DOMString trackId);
 
-    void addTrack(MediaStreamTrack track);
-    void removeTrack(MediaStreamTrack track);
+    undefined addTrack(MediaStreamTrack track);
+    undefined removeTrack(MediaStreamTrack track);
 
     MediaStream clone();
 

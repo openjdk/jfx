@@ -29,8 +29,8 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "BlockFormattingState.h"
-#include "DisplayBox.h"
 #include "InvalidationState.h"
+#include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
 #include "LayoutInitialContainingBlock.h"
@@ -136,9 +136,9 @@ void TableWrapperBlockFormattingContext::computeBorderAndPaddingForTableBox(cons
     auto collapsedBorder = Edges { { leftBorder, rightBorder }, { topBorder, bottomBorder } };
     grid.setCollapsedBorder(collapsedBorder);
 
-    auto& displayBox = formattingState().displayBox(tableBox);
-    displayBox.setBorder(collapsedBorder / 2);
-    displayBox.setPadding(geometry().computedPadding(tableBox, horizontalConstraints.logicalWidth));
+    auto& boxGeometry = formattingState().boxGeometry(tableBox);
+    boxGeometry.setBorder(collapsedBorder / 2);
+    boxGeometry.setPadding(geometry().computedPadding(tableBox, horizontalConstraints.logicalWidth));
 }
 
 void TableWrapperBlockFormattingContext::computeWidthAndMarginForTableBox(const ContainerBox& tableBox, const HorizontalConstraints& horizontalConstraints)
@@ -205,11 +205,11 @@ void TableWrapperBlockFormattingContext::computeWidthAndMarginForTableBox(const 
             usedWidth = *computedMinWidth;
     }
 
-    auto contentWidthAndMargin = geometry.inFlowWidthAndMargin(tableBox, horizontalConstraints, OverrideHorizontalValues { usedWidth, { } });
+    auto contentWidthAndMargin = geometry.inFlowContentWidthAndMargin(tableBox, horizontalConstraints, OverriddenHorizontalValues { usedWidth, { } });
 
-    auto& displayBox = formattingState().displayBox(tableBox);
-    displayBox.setContentBoxWidth(contentWidthAndMargin.contentWidth);
-    displayBox.setHorizontalMargin({ contentWidthAndMargin.usedMargin.start, contentWidthAndMargin.usedMargin.end });
+    auto& boxGeometry = formattingState().boxGeometry(tableBox);
+    boxGeometry.setContentBoxWidth(contentWidthAndMargin.contentWidth);
+    boxGeometry.setHorizontalMargin({ contentWidthAndMargin.usedMargin.start, contentWidthAndMargin.usedMargin.end });
 }
 
 void TableWrapperBlockFormattingContext::computeHeightAndMarginForTableBox(const ContainerBox& tableBox, const ConstraintsForInFlowContent& constraints)
@@ -217,17 +217,17 @@ void TableWrapperBlockFormattingContext::computeHeightAndMarginForTableBox(const
     ASSERT(tableBox.isTableBox());
     // Table is a special BFC content. Its height is mainly driven by the content. Computed height, min-height and max-height are all
     // already been taken into account during the TFC layout.
-    auto heightAndMargin = geometry().inFlowHeightAndMargin(tableBox, constraints.horizontal, { quirks().overrideTableHeight(tableBox) });
+    auto heightAndMargin = geometry().inFlowContentHeightAndMargin(tableBox, constraints.horizontal, { quirks().overriddenTableHeight(tableBox) });
 
     auto marginCollapse = this->marginCollapse();
     auto verticalMargin = marginCollapse.collapsedVerticalValues(tableBox, heightAndMargin.nonCollapsedMargin);
     // Cache the computed positive and negative margin value pair.
     formattingState().setUsedVerticalMargin(tableBox, verticalMargin);
 
-    auto& displayBox = formattingState().displayBox(tableBox);
-    displayBox.setTop(verticalPositionWithMargin(tableBox, verticalMargin, constraints.vertical));
-    displayBox.setContentBoxHeight(heightAndMargin.contentHeight);
-    displayBox.setVerticalMargin({ marginBefore(verticalMargin), marginAfter(verticalMargin) });
+    auto& boxGeometry = formattingState().boxGeometry(tableBox);
+    boxGeometry.setLogicalTop(verticalPositionWithMargin(tableBox, verticalMargin, constraints.vertical));
+    boxGeometry.setContentBoxHeight(heightAndMargin.contentHeight);
+    boxGeometry.setVerticalMargin({ marginBefore(verticalMargin), marginAfter(verticalMargin) });
     // Adjust the previous sibling's margin bottom now that this box's vertical margin is computed.
     MarginCollapse::updateMarginAfterForPreviousSibling(*this, marginCollapse, tableBox);
 }

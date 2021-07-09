@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,12 @@
 
 #include "AudioTrackPrivate.h"
 #include "ContentType.h"
+#include "Cookie.h"
 #include "GraphicsTypesGL.h"
 #include "LayoutRect.h"
 #include "LegacyCDMSession.h"
 #include "MediaPlayerEnums.h"
+#include "MediaPlayerIdentifier.h"
 #include "NativeImage.h"
 #include "PlatformLayer.h"
 #include "PlatformMediaResourceLoader.h"
@@ -40,13 +42,16 @@
 #include "PlatformScreen.h"
 #include "SecurityOriginHash.h"
 #include "Timer.h"
+#include "VideoPlaybackQualityMetrics.h"
 #include <wtf/URL.h>
 #include "VideoTrackPrivate.h"
 #include <JavaScriptCore/Uint8Array.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/StringHash.h>
 
@@ -57,12 +62,16 @@
 OBJC_CLASS AVPlayer;
 OBJC_CLASS NSArray;
 
+#if USE(AVFOUNDATION)
+typedef struct __CVBuffer* CVPixelBufferRef;
+#endif
+
 namespace WebCore {
 
 class AudioSourceProvider;
 class CDMInstance;
 class CachedResourceLoader;
-class GraphicsContextGLOpenGL;
+class GraphicsContextGL;
 class GraphicsContext;
 class InbandTextTrackPrivate;
 class LegacyCDM;
@@ -77,7 +86,6 @@ class MediaStreamPrivate;
 class PlatformTimeRanges;
 class TextTrackRepresentation;
 
-struct Cookie;
 struct GraphicsDeviceAdapter;
 struct SecurityOriginData;
 
@@ -128,14 +136,6 @@ struct MediaEngineSupportParameters {
 
         return {{ WTFMove(*type), WTFMove(*url), *isMediaSource, *isMediaStream, *typesRequiringHardware }};
     }
-};
-
-struct VideoPlaybackQualityMetrics {
-    uint32_t totalVideoFrames { 0 };
-    uint32_t droppedVideoFrames { 0 };
-    uint32_t corruptedVideoFrames { 0 };
-    double totalFrameDelay { 0 };
-    uint32_t displayCompositedVideoFrames { 0 };
 };
 
 class MediaPlayerClient {
@@ -216,10 +216,11 @@ public:
     virtual void mediaPlayerCurrentPlaybackTargetIsWirelessChanged(bool) { };
 #endif
 
+    virtual void mediaPlayerWillInitializeMediaEngine() { }
+    virtual void mediaPlayerDidInitializeMediaEngine() { }
+
     virtual String mediaPlayerReferrer() const { return String(); }
     virtual String mediaPlayerUserAgent() const { return String(); }
-    virtual void mediaPlayerEnterFullscreen() { }
-    virtual void mediaPlayerExitFullscreen() { }
     virtual bool mediaPlayerIsFullscreen() const { return false; }
     virtual bool mediaPlayerIsFullscreenPermitted() const { return false; }
     virtual bool mediaPlayerIsVideo() const { return false; }
@@ -240,6 +241,8 @@ public:
     virtual void mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate&) { }
     virtual void mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate&) { }
 
+    virtual void mediaPlayerReloadAndResumePlaybackIfNeeded() { }
+
     virtual void textTrackRepresentationBoundsChanged(const IntRect&) { }
 
 #if ENABLE(AVF_CAPTIONS)
@@ -248,7 +251,9 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     virtual String mediaPlayerNetworkInterfaceName() const { return String(); }
-    virtual bool mediaPlayerGetRawCookies(const URL&, Vector<Cookie>&) const { return false; }
+
+    using GetRawCookiesCallback = CompletionHandler<void(Vector<Cookie>&&)>;
+    virtual void mediaPlayerGetRawCookies(const URL&, GetRawCookiesCallback&& completionHandler) const { completionHandler({ }); }
 #endif
 
     virtual String mediaPlayerSourceApplicationIdentifier() const { return emptyString(); }
@@ -273,13 +278,16 @@ public:
 
     virtual SecurityOriginData documentSecurityOrigin() const { return { }; }
 
+    virtual String audioOutputDeviceId() const { return { }; }
+    virtual String audioOutputDeviceIdOverride() const { return { }; }
+
 #if !RELEASE_LOG_DISABLED
     virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
     virtual const Logger& mediaPlayerLogger() = 0;
 #endif
 };
 
-class WEBCORE_EXPORT MediaPlayer : public MediaPlayerEnums, public RefCounted<MediaPlayer> {
+class WEBCORE_EXPORT MediaPlayer : public MediaPlayerEnums, public ThreadSafeRefCounted<MediaPlayer, WTF::DestructionThread::Main> {
     WTF_MAKE_NONCOPYABLE(MediaPlayer); WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<MediaPlayer> create(MediaPlayerClient&);
@@ -306,6 +314,8 @@ public:
     bool requiresImmediateCompositing() const;
     bool doesHaveAttribute(const AtomString&, AtomString* value = nullptr) const;
     PlatformLayer* platformLayer() const;
+
+    void reloadAndResumePlaybackIfNeeded();
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     RetainPtr<PlatformLayer> createVideoFullscreenLayer();
@@ -342,8 +352,8 @@ public:
 #endif
     void cancelLoad();
 
-    bool visible() const;
     void setVisible(bool);
+    void setVisibleForCanvas(bool);
 
     void prepareToPlay();
     void play();
@@ -381,6 +391,7 @@ public:
     MediaTime duration() const;
     MediaTime currentTime() const;
     void seek(const MediaTime&);
+    void seekWhenPossible(const MediaTime&);
     void seekWithTolerance(const MediaTime&, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance);
 
     MediaTime startTime() const;
@@ -394,6 +405,9 @@ public:
 
     bool preservesPitch() const;
     void setPreservesPitch(bool);
+
+    void setPitchCorrectionAlgorithm(PitchCorrectionAlgorithm);
+    PitchCorrectionAlgorithm pitchCorrectionAlgorithm() const { return m_pitchCorrectionAlgorithm; }
 
     std::unique_ptr<PlatformTimeRanges> buffered();
     std::unique_ptr<PlatformTimeRanges> seekable();
@@ -418,7 +432,6 @@ public:
     void setClosedCaptionsVisible(bool closedCaptionsVisible);
 
     void paint(GraphicsContext&, const FloatRect&);
-    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&);
 
     // copyVideoTextureToPlatformTexture() is used to do the GPU-GPU textures copy without a readback to system memory.
     // The first five parameters denote the corresponding GraphicsContext, destination texture, requested level, requested type and the required internalFormat for destination texture.
@@ -428,10 +441,13 @@ public:
     // In the GPU-GPU textures copy, the source texture(Video texture) should have valid target, internalFormat and size, etc.
     // The destination texture may need to be resized to to the dimensions of the source texture or re-defined to the required internalFormat.
     // The current restrictions require that format shoud be RGB or RGBA, type should be UNSIGNED_BYTE and level should be 0. It may be lifted in the future.
+#if !USE(AVFOUNDATION)
+    bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY);
+#else
+    CVPixelBufferRef pixelBufferForCurrentTime();
+#endif
 
-    bool copyVideoTextureToPlatformTexture(GraphicsContextGLOpenGL*, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY);
-
-    NativeImagePtr nativeImageForCurrentTime();
+    RefPtr<NativeImage> nativeImageForCurrentTime();
 
     using MediaPlayerEnums::NetworkState;
     NetworkState networkState();
@@ -555,7 +571,7 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     String mediaPlayerNetworkInterfaceName() const;
-    bool getRawCookies(const URL&, Vector<Cookie>&) const;
+    void getRawCookies(const URL&, MediaPlayerClient::GetRawCookiesCallback&&) const;
 #endif
 
     static void resetMediaEngines();
@@ -626,10 +642,17 @@ public:
     void requestInstallMissingPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback& callback) { client().requestInstallMissingPlugins(details, description, callback); }
 #endif
 
-    const MediaPlayerPrivateInterface* playerPrivate() const { return m_private.get(); }
+    const MediaPlayerPrivateInterface* playerPrivate() const;
+    MediaPlayerPrivateInterface* playerPrivate();
 
     DynamicRangeMode preferredDynamicRangeMode() const { return m_preferredDynamicRangeMode; }
     void setPreferredDynamicRangeMode(DynamicRangeMode);
+
+    String audioOutputDeviceId() const;
+    String audioOutputDeviceIdOverride() const;
+    void audioOutputDeviceChanged();
+
+    MediaPlayerIdentifier identifier() const;
 
 private:
     MediaPlayer(MediaPlayerClient&);
@@ -650,6 +673,7 @@ private:
     ContentType m_contentType;
     String m_keySystem;
     Optional<MediaPlayerEnums::MediaEngineIdentifier> m_activeEngineIdentifier;
+    Optional<MediaTime> m_pendingSeekRequest;
     IntSize m_size;
     Preload m_preload { Preload::Auto };
     double m_volume { 1 };
@@ -661,6 +685,7 @@ private:
     bool m_contentMIMETypeWasInferredFromExtension { false };
     bool m_initializingMediaEngine { false };
     DynamicRangeMode m_preferredDynamicRangeMode { DynamicRangeMode::Standard };
+    PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
 
 #if ENABLE(MEDIA_SOURCE)
     RefPtr<MediaSourcePrivateClient> m_mediaSource;
@@ -704,6 +729,15 @@ public:
     WEBCORE_EXPORT static void setRegisterRemotePlayerCallback(RegisterRemotePlayerCallback&&);
 };
 
+inline String MediaPlayer::audioOutputDeviceId() const
+{
+    return m_client ? m_client->audioOutputDeviceId() : String { };
+}
+
+inline String MediaPlayer::audioOutputDeviceIdOverride() const
+{
+    return m_client ? m_client->audioOutputDeviceIdOverride() : String { };
+}
 
 } // namespace WebCore
 

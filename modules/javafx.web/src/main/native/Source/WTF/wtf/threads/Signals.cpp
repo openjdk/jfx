@@ -155,6 +155,27 @@ static exception_mask_t toMachMask(Signal signal)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+#if CPU(ARM64E) && OS(DARWIN)
+inline ptrauth_generic_signature_t hashThreadState(const thread_state_t source)
+{
+    constexpr size_t threadStatePCPointerIndex = (offsetof(arm_unified_thread_state, ts_64) + offsetof(arm_thread_state64_t, __opaque_pc)) / sizeof(uintptr_t);
+    constexpr size_t threadStateSizeInPointers = sizeof(arm_unified_thread_state) / sizeof(uintptr_t);
+
+    ptrauth_generic_signature_t hash = 0;
+
+    hash = ptrauth_sign_generic_data(hash, mach_thread_self());
+
+    const uintptr_t* srcPtr = reinterpret_cast<const uintptr_t*>(source);
+
+    for (size_t i = 0; i < threadStateSizeInPointers; ++i) {
+        if (i != threadStatePCPointerIndex)
+            hash = ptrauth_sign_generic_data(srcPtr[i], hash);
+    }
+
+    return hash;
+}
+#endif
+
 extern "C" {
 
 // We need to implement stubs for catch_mach_exception_raise and catch_mach_exception_raise_state_identity.
@@ -194,8 +215,11 @@ kern_return_t catch_mach_exception_raise_state(
     Signal signal = fromMachException(exceptionType);
     RELEASE_ASSERT(signal != Signal::Unknown);
 
+#if CPU(ARM64E) && OS(DARWIN)
+    ptrauth_generic_signature_t inStateHash = hashThreadState(inState);
+#endif
+
     memcpy(outState, inState, inStateCount * sizeof(inState[0]));
-    *outStateCount = inStateCount;
 
 #if CPU(X86_64)
     RELEASE_ASSERT(*stateFlavor == x86_THREAD_STATE);
@@ -231,8 +255,14 @@ kern_return_t catch_mach_exception_raise_state(
         didHandle |= handlerResult == SignalAction::Handled;
     });
 
-    if (didHandle)
+    if (didHandle) {
+#if CPU(ARM64E) && OS(DARWIN)
+        RELEASE_ASSERT(inStateHash == hashThreadState(outState));
+#endif
+        *outStateCount = inStateCount;
         return KERN_SUCCESS;
+    }
+
     return KERN_FAILURE;
 }
 
@@ -258,14 +288,13 @@ inline void setExceptionPorts(const AbstractLocker& threadGroupLocker, Thread& t
 
 static ThreadGroup& activeThreads()
 {
+    static LazyNeverDestroyed<std::shared_ptr<ThreadGroup>> activeThreads;
     static std::once_flag initializeKey;
-    static ThreadGroup* activeThreadsPtr = nullptr;
     std::call_once(initializeKey, [&] {
         Config::AssertNotFrozenScope assertScope;
-        static NeverDestroyed<std::shared_ptr<ThreadGroup>> activeThreads { ThreadGroup::create() };
-        activeThreadsPtr = activeThreads.get().get();
+        activeThreads.construct(ThreadGroup::create());
     });
-    return *activeThreadsPtr;
+    return (*activeThreads.get());
 }
 
 void registerThreadForMachExceptionHandling(Thread& thread)
@@ -306,7 +335,8 @@ void addSignalHandler(Signal signal, SignalHandler&& handler)
             auto result = sigfillset(&action.sa_mask);
             RELEASE_ASSERT(!result);
             // Do not block this signal since it is used on non-Darwin systems to suspend and resume threads.
-            result = sigdelset(&action.sa_mask, SigThreadSuspendResume);
+            RELEASE_ASSERT(g_wtfConfig.isThreadSuspendResumeSignalConfigured);
+            result = sigdelset(&action.sa_mask, g_wtfConfig.sigThreadSuspendResume);
             RELEASE_ASSERT(!result);
             action.sa_flags = SA_SIGINFO;
             auto systemSignals = toSystemSignal(signal);

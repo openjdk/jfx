@@ -39,65 +39,91 @@
 #include <wtf/Optional.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace Inspector {
+using ErrorString = String;
+
+template <typename T>
+using ErrorStringOr = Expected<T, ErrorString>;
+}
 
 namespace WebCore {
 
+class FloatPoint;
 class GraphicsContext;
 class InspectorClient;
 class Node;
 class NodeList;
 class Page;
 
-struct HighlightConfig {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    Color content;
-    Color contentOutline;
-    Color padding;
-    Color border;
-    Color margin;
-    bool showInfo;
-    bool usePageCoordinates;
-};
-
-enum class HighlightType {
-    Node, // Provides 4 quads: margin, border, padding, content.
-    NodeList, // Provides a list of nodes.
-    Rects, // Provides a list of quads.
-};
-
-struct Highlight {
-    Highlight() { }
-
-    void setDataFromConfig(const HighlightConfig& highlightConfig)
-    {
-        contentColor = highlightConfig.content;
-        contentOutlineColor = highlightConfig.contentOutline;
-        paddingColor = highlightConfig.padding;
-        borderColor = highlightConfig.border;
-        marginColor = highlightConfig.margin;
-        usePageCoordinates = highlightConfig.usePageCoordinates;
-    }
-
-    Color contentColor;
-    Color contentOutlineColor;
-    Color paddingColor;
-    Color borderColor;
-    Color marginColor;
-
-    HighlightType type {HighlightType::Node};
-    Vector<FloatQuad> quads;
-    bool usePageCoordinates {true};
-
-    using Bounds = FloatRect;
-};
-
 class InspectorOverlay {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorOverlay(Page&, InspectorClient*);
     ~InspectorOverlay();
+
+    struct Highlight {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+        enum class Type {
+            Node, // Provides 4 quads: margin, border, padding, content.
+            NodeList, // Provides a list of nodes.
+            Rects, // Provides a list of quads.
+        };
+
+        struct Config {
+            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            Color content;
+            Color contentOutline;
+            Color padding;
+            Color border;
+            Color margin;
+            bool showInfo;
+            bool usePageCoordinates;
+        };
+
+        void setDataFromConfig(const Config& config)
+        {
+            contentColor = config.content;
+            contentOutlineColor = config.contentOutline;
+            paddingColor = config.padding;
+            borderColor = config.border;
+            marginColor = config.margin;
+            usePageCoordinates = config.usePageCoordinates;
+        }
+
+        Color contentColor;
+        Color contentOutlineColor;
+        Color paddingColor;
+        Color borderColor;
+        Color marginColor;
+
+        Type type {Type::Node};
+        Vector<FloatQuad> quads;
+        bool usePageCoordinates {true};
+
+        using Bounds = FloatRect;
+    };
+
+    struct Grid {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+        struct Config {
+            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+            Color gridColor;
+            bool showLineNames;
+            bool showLineNumbers;
+            bool showExtendedGridLines;
+            bool showTrackSizes;
+            bool showAreaNames;
+        };
+
+        WeakPtr<Node> gridNode;
+        Config config;
+    };
 
     enum class CoordinateSystem {
         View, // Adjusts for the main frame's scroll offset.
@@ -110,9 +136,9 @@ public:
     bool shouldShowOverlay() const;
 
     void hideHighlight();
-    void highlightNodeList(RefPtr<NodeList>&&, const HighlightConfig&);
-    void highlightNode(Node*, const HighlightConfig&);
-    void highlightQuad(std::unique_ptr<FloatQuad>, const HighlightConfig&);
+    void highlightNodeList(RefPtr<NodeList>&&, const Highlight::Config&);
+    void highlightNode(Node*, const Highlight::Config&);
+    void highlightQuad(std::unique_ptr<FloatQuad>, const Highlight::Config&);
 
     void setShowPaintRects(bool);
     void showPaintRect(const FloatRect&);
@@ -121,10 +147,17 @@ public:
     void setShowRulersDuringElementSelection(bool enabled) { m_showRulersDuringElementSelection = enabled; }
 
     Node* highlightedNode() const;
+    unsigned gridOverlayCount() const { return m_activeGridOverlays.size(); }
 
     void didSetSearchingForNode(bool enabled);
 
     void setIndicating(bool indicating);
+
+    // Multiple grid overlays can be active at the same time. These methods
+    // will fail if the node is not a grid or if the node has been GC'd.
+    Inspector::ErrorStringOr<void> setGridOverlayForNode(Node&, const InspectorOverlay::Grid::Config&);
+    Inspector::ErrorStringOr<void> clearGridOverlayForNode(Node&);
+    void clearAllGridOverlays();
 
 private:
     using TimeRectPair = std::pair<MonotonicTime, FloatRect>;
@@ -132,6 +165,14 @@ private:
     struct RulerExclusion {
         Highlight::Bounds bounds;
         Path titlePath;
+    };
+
+    enum class LabelArrowDirection {
+        None,
+        Down,
+        Up,
+        Left,
+        Right,
     };
 
     RulerExclusion drawNodeHighlight(GraphicsContext&, Node&);
@@ -142,20 +183,29 @@ private:
 
     Path drawElementTitle(GraphicsContext&, Node&, const Highlight::Bounds&);
 
+    void drawLayoutHatching(GraphicsContext&, FloatRect, IntPoint);
+    void drawLayoutLabel(GraphicsContext&, String, FloatPoint, LabelArrowDirection, Color backgroundColor = Color::white, float maximumWidth = 0);
+
+    void drawGridOverlay(GraphicsContext&, const InspectorOverlay::Grid&);
+
     void updatePaintRectsTimerFired();
+
+    bool removeGridOverlayForNode(Node&);
 
     Page& m_page;
     InspectorClient* m_client;
 
     RefPtr<Node> m_highlightNode;
     RefPtr<NodeList> m_highlightNodeList;
-    HighlightConfig m_nodeHighlightConfig;
+    Highlight::Config m_nodeHighlightConfig;
 
     std::unique_ptr<FloatQuad> m_highlightQuad;
-    HighlightConfig m_quadHighlightConfig;
+    Highlight::Config m_quadHighlightConfig;
 
     Deque<TimeRectPair> m_paintRects;
     Timer m_paintRectUpdateTimer;
+
+    Vector<InspectorOverlay::Grid> m_activeGridOverlays;
 
     bool m_indicating { false };
     bool m_showPaintRects { false };

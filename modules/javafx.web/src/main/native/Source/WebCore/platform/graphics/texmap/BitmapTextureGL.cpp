@@ -152,7 +152,7 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
 {
     if (!image)
         return;
-    NativeImagePtr frameImage = image->nativeImageForCurrentFrame();
+    auto frameImage = image->nativeImageForCurrentFrame();
     if (!frameImage)
         return;
 
@@ -160,7 +160,7 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
     const char* imageData;
 
 #if USE(CAIRO)
-    cairo_surface_t* surface = frameImage.get();
+    cairo_surface_t* surface = frameImage->platformImage().get();
     imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));
     bytesPerLine = cairo_image_surface_get_stride(surface);
 #elif USE(DIRECT2D)

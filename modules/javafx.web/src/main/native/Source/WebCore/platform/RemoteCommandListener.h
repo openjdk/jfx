@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #ifndef RemoteCommandListener_h
 #define RemoteCommandListener_h
 
+#include "DeferrableTask.h"
 #include "PlatformMediaSession.h"
 
 namespace WebCore {
@@ -34,23 +35,36 @@ class RemoteCommandListenerClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~RemoteCommandListenerClient() = default;
-    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument*) = 0;
-    virtual bool supportsSeeking() const = 0;
+    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
 };
 
-class RemoteCommandListener {
+class WEBCORE_EXPORT RemoteCommandListener {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT static std::unique_ptr<RemoteCommandListener> create(RemoteCommandListenerClient&);
-    RemoteCommandListener(RemoteCommandListenerClient& client) : m_client(client) { }
-    virtual ~RemoteCommandListener() = default;
+    static std::unique_ptr<RemoteCommandListener> create(RemoteCommandListenerClient&);
+    RemoteCommandListener(RemoteCommandListenerClient&);
+    virtual ~RemoteCommandListener();
 
+    using CreationFunction = Function<std::unique_ptr<RemoteCommandListener>(RemoteCommandListenerClient&)>;
+    static void setCreationFunction(CreationFunction&&);
+    static void resetCreationFunction();
+
+    void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
+    void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
     virtual void updateSupportedCommands() { }
+    void scheduleSupportedCommandsUpdate();
+    void setSupportsSeeking(bool);
 
     RemoteCommandListenerClient& client() const { return m_client; }
 
 protected:
     RemoteCommandListenerClient& m_client;
+
+    using RemoteCommandsSet = HashSet<PlatformMediaSession::RemoteControlCommandType, WTF::IntHash<PlatformMediaSession::RemoteControlCommandType>, WTF::StrongEnumHashTraits<PlatformMediaSession::RemoteControlCommandType>>;
+    RemoteCommandsSet m_registeredCommands;
+    bool m_supportsSeeking { false };
+
+    DeferrableTask<Timer> m_updateCommandsTask;
 };
 
 }

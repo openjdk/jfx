@@ -46,9 +46,9 @@ public:
     RenderingUpdateScheduler(Page&);
 
     void adjustRenderingUpdateFrequency();
-    void scheduleTimedRenderingUpdate();
-    void scheduleImmediateRenderingUpdate();
     void scheduleRenderingUpdate();
+
+    void triggerRenderingUpdateForTesting();
 
     void windowScreenDidChange(PlatformDisplayID);
 
@@ -62,10 +62,12 @@ private:
     void startTimer(Seconds);
     void clearScheduled();
 
+    void triggerRenderingUpdate();
+
     Page& m_page;
-    bool m_scheduled { false };
     std::unique_ptr<Timer> m_refreshTimer;
     FramesPerSecond m_preferredFramesPerSecond { FullSpeedFramesPerSecond };
+    bool m_scheduled { false };
 };
 
 }

@@ -135,7 +135,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
             break;
         case JSONLogValue::Type::JSON:
             if (builder.length()) {
-                m_jsonLogValues.append({ JSONLogValue::Type::String, JSON::Value::create(builder.toString())->toJSONString() });
+                m_jsonLogValues.append({ JSONLogValue::Type::String, builder.toString() });
                 builder.resize(0);
             }
 
@@ -145,7 +145,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     }
 
     if (builder.length())
-        m_jsonLogValues.append({ JSONLogValue::Type::String, JSON::Value::create(builder.toString())->toJSONString() });
+        m_jsonLogValues.append({ JSONLogValue::Type::String, builder.toString() });
 
     if (m_jsonLogValues.size())
         m_message = m_jsonLogValues[0].value;
@@ -191,7 +191,8 @@ static Protocol::Console::ChannelSource messageSourceValue(MessageSource source)
     case MessageSource::MediaSource: return Protocol::Console::ChannelSource::MediaSource;
     case MessageSource::WebRTC: return Protocol::Console::ChannelSource::WebRTC;
     case MessageSource::ITPDebug: return Protocol::Console::ChannelSource::ITPDebug;
-    case MessageSource::AdClickAttribution: return Protocol::Console::ChannelSource::AdClickAttribution;
+    case MessageSource::PrivateClickMeasurement: return Protocol::Console::ChannelSource::PrivateClickMeasurement;
+    case MessageSource::PaymentRequest: return Protocol::Console::ChannelSource::PaymentRequest;
     case MessageSource::Other: return Protocol::Console::ChannelSource::Other;
     }
     return Protocol::Console::ChannelSource::Other;
@@ -261,9 +262,11 @@ void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDis
                         ASSERT_NOT_REACHED();
                         return;
                     }
-                    argumentsObject->addItem(WTFMove(inspectorValue));
-                    if (m_arguments->argumentCount() > 1)
-                        argumentsObject->addItem(injectedScript.wrapObject(columns, "console"_s, true));
+                    argumentsObject->addItem(inspectorValue.releaseNonNull());
+                    if (m_arguments->argumentCount() > 1) {
+                        if (auto inspectorObject = injectedScript.wrapObject(columns, "console"_s, true))
+                            argumentsObject->addItem(inspectorObject.releaseNonNull());
+                    }
                 } else {
                     for (unsigned i = 0; i < m_arguments->argumentCount(); ++i) {
                         auto inspectorValue = injectedScript.wrapObject(m_arguments->argumentAt(i), "console"_s, generatePreview);
@@ -271,20 +274,29 @@ void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDis
                             ASSERT_NOT_REACHED();
                             return;
                         }
-                        argumentsObject->addItem(WTFMove(inspectorValue));
+                        argumentsObject->addItem(inspectorValue.releaseNonNull());
                     }
                 }
             }
 
             if (m_jsonLogValues.size()) {
+                JSC::JSLockHolder lock(globalObject()->vm()); // Necessary for safe jsString() instantiation.
                 for (auto& message : m_jsonLogValues) {
                     if (message.value.isEmpty())
                         continue;
-                    auto inspectorValue = injectedScript.wrapJSONString(message.value, "console"_s, generatePreview);
+                    RefPtr<Protocol::Runtime::RemoteObject> inspectorValue;
+                    switch (message.type) {
+                    case JSONLogValue::Type::JSON:
+                        inspectorValue = injectedScript.wrapJSONString(message.value, "console"_s, generatePreview);
+                        break;
+                    case JSONLogValue::Type::String:
+                        inspectorValue = injectedScript.wrapObject(JSC::JSValue(JSC::jsString(globalObject()->vm(), message.value)), "console"_s, generatePreview);
+                        break;
+                    }
                     if (!inspectorValue)
                         continue;
 
-                    argumentsObject->addItem(WTFMove(inspectorValue));
+                    argumentsObject->addItem(inspectorValue.releaseNonNull());
                 }
             }
 
@@ -297,6 +309,17 @@ void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDis
         messageObject->setStackTrace(m_callStack->buildInspectorArray());
 
     consoleFrontendDispatcher.messageAdded(WTFMove(messageObject));
+}
+
+String ConsoleMessage::toString() const
+{
+    if (m_jsonLogValues.isEmpty())
+        return m_message;
+
+    StringBuilder builder;
+    for (auto& message : m_jsonLogValues)
+        builder.append(message.value);
+    return builder.toString();
 }
 
 void ConsoleMessage::updateRepeatCountInConsole(ConsoleFrontendDispatcher& consoleFrontendDispatcher)

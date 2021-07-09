@@ -54,14 +54,21 @@ void CSSProperty::wrapValueInCommaSeparatedList()
 
 static CSSPropertyID resolveToPhysicalProperty(TextDirection direction, WritingMode writingMode, LogicalBoxSide logicalSide, const StylePropertyShorthand& shorthand)
 {
+    RELEASE_ASSERT(shorthand.length() == 4);
     return shorthand.properties()[static_cast<size_t>(mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), logicalSide))];
+}
+
+static CSSPropertyID resolveToPhysicalProperty(TextDirection direction, WritingMode writingMode, LogicalBoxCorner logicalBoxCorner, const StylePropertyShorthand& shorthand)
+{
+    RELEASE_ASSERT(shorthand.length() == 4);
+    return shorthand.properties()[static_cast<size_t>(mapLogicalCornerToPhysicalCorner(makeTextFlow(writingMode, direction), logicalBoxCorner))];
 }
 
 enum LogicalExtent { LogicalWidth, LogicalHeight };
 
-static CSSPropertyID resolveToPhysicalProperty(WritingMode writingMode, LogicalExtent logicalSide, const CSSPropertyID* properties)
+static CSSPropertyID resolveToPhysicalProperty(WritingMode writingMode, LogicalExtent logicalSide, const CSSPropertyID (&properties)[2])
 {
-    if (writingMode == TopToBottomWritingMode || writingMode == BottomToTopWritingMode)
+    if (writingMode == WritingMode::TopToBottom || writingMode == WritingMode::BottomToTop)
         return properties[logicalSide];
     return logicalSide == LogicalWidth ? properties[1] : properties[0];
 }
@@ -156,6 +163,30 @@ CSSPropertyID CSSProperty::resolveDirectionAwareProperty(CSSPropertyID propertyI
         const CSSPropertyID properties[2] = { CSSPropertyMaxWidth, CSSPropertyMaxHeight };
         return resolveToPhysicalProperty(writingMode, LogicalHeight, properties);
     }
+    case CSSPropertyBorderStartStartRadius:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxCorner::StartStart, borderRadiusShorthand());
+    case CSSPropertyBorderStartEndRadius:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxCorner::StartEnd, borderRadiusShorthand());
+    case CSSPropertyBorderEndStartRadius:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxCorner::EndStart, borderRadiusShorthand());
+    case CSSPropertyBorderEndEndRadius:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxCorner::EndEnd, borderRadiusShorthand());
+    case CSSPropertyScrollMarginInlineStart:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::Start, scrollMarginShorthand());
+    case CSSPropertyScrollMarginInlineEnd:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::End, scrollMarginShorthand());
+    case CSSPropertyScrollMarginBlockStart:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::Before, scrollMarginShorthand());
+    case CSSPropertyScrollMarginBlockEnd:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::After, scrollMarginShorthand());
+    case CSSPropertyScrollPaddingInlineStart:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::Start, scrollPaddingShorthand());
+    case CSSPropertyScrollPaddingInlineEnd:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::End, scrollPaddingShorthand());
+    case CSSPropertyScrollPaddingBlockStart:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::Before, scrollPaddingShorthand());
+    case CSSPropertyScrollPaddingBlockEnd:
+        return resolveToPhysicalProperty(direction, writingMode, LogicalBoxSide::After, scrollPaddingShorthand());
     default:
         return propertyID;
     }
@@ -210,6 +241,18 @@ bool CSSProperty::isDirectionAwareProperty(CSSPropertyID propertyID)
     case CSSPropertyMinBlockSize:
     case CSSPropertyMaxInlineSize:
     case CSSPropertyMaxBlockSize:
+    case CSSPropertyBorderStartStartRadius:
+    case CSSPropertyBorderStartEndRadius:
+    case CSSPropertyBorderEndStartRadius:
+    case CSSPropertyBorderEndEndRadius:
+    case CSSPropertyScrollMarginInlineStart:
+    case CSSPropertyScrollMarginInlineEnd:
+    case CSSPropertyScrollMarginBlockStart:
+    case CSSPropertyScrollMarginBlockEnd:
+    case CSSPropertyScrollPaddingInlineStart:
+    case CSSPropertyScrollPaddingInlineEnd:
+    case CSSPropertyScrollPaddingBlockStart:
+    case CSSPropertyScrollPaddingBlockEnd:
         return true;
     default:
         return false;

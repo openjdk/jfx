@@ -79,7 +79,7 @@ public class LocalStorageAccessWithModuleLayer extends Application {
         webview.getEngine().getLoadWorker().stateProperty().addListener(
             (observableValue, oldState, newState) -> {
                 if (newState == State.SUCCEEDED) {
-                    String title = webview.getEngine().getTitle();
+                    String title = (String) webview.getEngine().executeScript("document.title");
                     if ("Executed".equals(title)) {
                         System.exit(ERROR_OK);
                     } else {

@@ -82,24 +82,24 @@ inline bool isVerticalPiece(ImagePiece piece)
     return piece == LeftPiece || piece == RightPiece || piece == MiddlePiece;
 }
 
-inline Optional<PhysicalBoxSide> imagePieceHorizontalSide(ImagePiece piece)
+inline Optional<BoxSide> imagePieceHorizontalSide(ImagePiece piece)
 {
     if (piece == TopLeftPiece || piece == TopPiece || piece == TopRightPiece)
-        return PhysicalBoxSide::Top;
+        return BoxSide::Top;
 
     if (piece == BottomLeftPiece || piece == BottomPiece || piece == BottomRightPiece)
-        return PhysicalBoxSide::Bottom;
+        return BoxSide::Bottom;
 
     return WTF::nullopt;
 }
 
-inline Optional<PhysicalBoxSide> imagePieceVerticalSide(ImagePiece piece)
+inline Optional<BoxSide> imagePieceVerticalSide(ImagePiece piece)
 {
     if (piece == TopLeftPiece || piece == LeftPiece || piece == BottomLeftPiece)
-        return PhysicalBoxSide::Left;
+        return BoxSide::Left;
 
     if (piece == TopRightPiece || piece == RightPiece || piece == BottomRightPiece)
-        return PhysicalBoxSide::Right;
+        return BoxSide::Right;
 
     return WTF::nullopt;
 }
@@ -198,8 +198,8 @@ private:
         NinePieceImageRule horizontalRule { NinePieceImageRule::Stretch };
         NinePieceImageRule verticalRule { NinePieceImageRule::Stretch };
         RefPtr<StyleImage> image;
-        LengthBox imageSlices { { 100, Percent }, { 100, Percent }, { 100, Percent }, { 100, Percent } };
-        LengthBox borderSlices { { 1, Relative }, { 1, Relative }, { 1, Relative }, { 1, Relative } };
+        LengthBox imageSlices { { 100, LengthType::Percent }, { 100, LengthType::Percent }, { 100, LengthType::Percent }, { 100, LengthType::Percent } };
+        LengthBox borderSlices { { 1, LengthType::Relative }, { 1, LengthType::Relative }, { 1, LengthType::Relative }, { 1, LengthType::Relative } };
         LengthBox outset { 0 };
 
     private:

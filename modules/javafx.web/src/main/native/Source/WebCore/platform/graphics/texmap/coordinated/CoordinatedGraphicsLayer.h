@@ -224,7 +224,7 @@ private:
     } m_needsDisplay;
 
     RefPtr<Image> m_compositedImage;
-    NativeImagePtr m_compositedNativeImagePtr;
+    RefPtr<NativeImage> m_compositedNativeImage;
 
     Timer m_animationStartedTimer;
     RunLoop::Timer<CoordinatedGraphicsLayer> m_requestPendingTileCreationTimer;

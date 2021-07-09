@@ -87,6 +87,11 @@ public:
     void setStatusbarText(const String&) override;
     KeyboardUIMode keyboardUIMode() override;
 
+    bool hoverSupportedByPrimaryPointingDevice() const override { return true; }
+    bool hoverSupportedByAnyAvailablePointingDevice() const override { return true; }
+    Optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return PointerCharacteristics::Fine; }
+    OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const override { return PointerCharacteristics::Fine; }
+
     // Methods used by HostWindow.
     //
     void invalidateRootView(const IntRect&) override;
@@ -111,7 +116,7 @@ public:
 
     void setToolTip(const String&);
 
-    void print(Frame&) override;
+    void print(Frame&, const StringWithDirection&) override;
 
     void exceededDatabaseQuota(Frame&, const String& databaseName, DatabaseDetails) override;
 
@@ -154,7 +159,7 @@ public:
     void setNeedsOneShotDrawingSynchronization() override;
     // Sets a flag to specify that the view needs to be updated, so we need
     // to do an eager layout before the drawing.
-    void scheduleRenderingUpdate() override;
+    void triggerRenderingUpdate() override;
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) override;
 
 #if ENABLE(TOUCH_EVENTS)

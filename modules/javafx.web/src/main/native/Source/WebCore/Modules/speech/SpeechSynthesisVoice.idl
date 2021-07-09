@@ -22,9 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
- 
+
+// https://wicg.github.io/speech-api/#speechsynthesisvoice
+// FIXME: This is not specified as "LegacyNoInterfaceObject". It should have an interface object and be Exposed=Window.
 [
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     Conditional=SPEECH_SYNTHESIS
 ] interface SpeechSynthesisVoice {
     readonly attribute DOMString voiceURI;

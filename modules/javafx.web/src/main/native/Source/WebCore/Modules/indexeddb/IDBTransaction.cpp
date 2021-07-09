@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -232,10 +232,14 @@ void IDBTransaction::internalAbort()
 
         auto& info = m_database->info();
         Vector<uint64_t> identifiersToRemove;
+        Vector<std::unique_ptr<IDBObjectStore>> objectStoresToDelete;
         for (auto& iterator : m_deletedObjectStores) {
             if (info.infoForExistingObjectStore(iterator.key)) {
                 auto name = iterator.value->info().name();
-                m_referencedObjectStores.set(name, WTFMove(iterator.value));
+                auto result = m_referencedObjectStores.add(name, nullptr);
+                if (!result.isNewEntry)
+                    objectStoresToDelete.append(std::exchange(result.iterator->value, nullptr));
+                result.iterator->value = std::exchange(iterator.value, nullptr);
                 identifiersToRemove.append(iterator.key);
             }
         }
@@ -245,6 +249,12 @@ void IDBTransaction::internalAbort()
 
         for (auto& objectStore : m_referencedObjectStores.values())
             objectStore->rollbackForVersionChangeAbort();
+
+        for (auto& objectStore : objectStoresToDelete) {
+            objectStore->rollbackForVersionChangeAbort();
+            auto objectStoreIdentifier = objectStore->info().identifier();
+            m_deletedObjectStores.set(objectStoreIdentifier, std::exchange(objectStore, nullptr));
+        }
     }
 
     transitionedToFinishing(IndexedDB::TransactionState::Aborting);
@@ -1445,7 +1455,8 @@ void IDBTransaction::connectionClosedFromServer(const IDBError& error)
     fireOnAbort();
 }
 
-void IDBTransaction::visitReferencedObjectStores(JSC::SlotVisitor& visitor) const
+template<typename Visitor>
+void IDBTransaction::visitReferencedObjectStores(Visitor& visitor) const
 {
     Locker<Lock> locker(m_referencedObjectStoreLock);
     for (auto& objectStore : m_referencedObjectStores.values())
@@ -1453,6 +1464,9 @@ void IDBTransaction::visitReferencedObjectStores(JSC::SlotVisitor& visitor) cons
     for (auto& objectStore : m_deletedObjectStores.values())
         visitor.addOpaqueRoot(objectStore.get());
 }
+
+template void IDBTransaction::visitReferencedObjectStores(JSC::AbstractSlotVisitor&) const;
+template void IDBTransaction::visitReferencedObjectStores(JSC::SlotVisitor&) const;
 
 void IDBTransaction::handlePendingOperations()
 {

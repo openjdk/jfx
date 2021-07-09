@@ -294,7 +294,6 @@ RootInlineBox* ComplexLineLayout::constructLine(BidiRunList<BidiRun>& bidiRuns, 
 {
     ASSERT(bidiRuns.firstRun());
 
-    bool rootHasSelectedChildren = false;
     InlineFlowBox* parentBox = 0;
     int runCount = bidiRuns.runCount() - lineInfo.runsFromLeadingWhitespace();
 
@@ -309,9 +308,6 @@ RootInlineBox* ComplexLineLayout::constructLine(BidiRunList<BidiRun>& bidiRuns, 
 
         InlineBox* box = createInlineBoxForRenderer(&r->renderer(), isOnlyRun);
         r->setBox(box);
-
-        if (!rootHasSelectedChildren && box->renderer().selectionState() != RenderObject::HighlightState::None)
-            rootHasSelectedChildren = true;
 
         // If we have no parent box yet, or if the run is not simply a sibling,
         // then we need to construct inline boxes as necessary to properly enclose the
@@ -342,11 +338,6 @@ RootInlineBox* ComplexLineLayout::constructLine(BidiRunList<BidiRun>& bidiRuns, 
     // We should have a root inline box. It should be unconstructed and
     // be the last continuation of our line list.
     ASSERT(lastRootBox() && !lastRootBox()->isConstructed());
-
-    // Set the m_selectedChildren flag on the root inline box if one of the leaf inline box
-    // from the bidi runs walk above has a selection state.
-    if (rootHasSelectedChildren)
-        lastRootBox()->root().setHasSelectedChildren(true);
 
     // Set bits on our inline flow boxes that indicate which sides should
     // paint borders/margins/padding. This knowledge will ultimately be used when
@@ -590,11 +581,11 @@ void ComplexLineLayout::updateRubyForJustifiedText(RenderRubyRun& rubyRun, BidiR
         totalOpportunitiesInRun += opportunitiesInRun;
     }
 
-    ASSERT(!rubyRun.hasOverrideContentLogicalWidth());
+    ASSERT(!rubyRun.hasOverridingLogicalWidth());
     float newBaseWidth = rubyRun.logicalWidth() + totalExpansion + m_flow.marginStartForChild(rubyRun) + m_flow.marginEndForChild(rubyRun);
     float newRubyRunWidth = rubyRun.logicalWidth() + totalExpansion;
     rubyBase.setInitialOffset((newRubyRunWidth - newBaseWidth) / 2);
-    rubyRun.setOverrideContentLogicalWidth(LayoutUnit(newRubyRunWidth));
+    rubyRun.setOverridingLogicalWidth(LayoutUnit(newRubyRunWidth));
     rubyRun.setNeedsLayout(MarkOnlyThis);
     rootBox.markDirty();
     if (RenderRubyText* rubyText = rubyRun.rubyText()) {
@@ -602,7 +593,7 @@ void ComplexLineLayout::updateRubyForJustifiedText(RenderRubyRun& rubyRun, BidiR
             textRootBox->markDirty();
     }
     rubyRun.layoutBlock(true);
-    rubyRun.clearOverrideContentLogicalWidth();
+    rubyRun.clearOverridingLogicalWidth();
     r.box()->setExpansion(newRubyRunWidth - r.box()->logicalWidth());
 
     totalLogicalWidth += totalExpansion;
@@ -1498,7 +1489,7 @@ void ComplexLineLayout::layoutRunsAndFloatsInRange(LineLayoutState& layoutState,
                         continue;
                     }
 
-                    m_flow.setLogicalHeight(lineBox->lineBottomWithLeading());
+                    m_flow.setLogicalHeight(lineBox->lineBoxBottom());
                 }
 
                 if (paginated) {
@@ -1597,7 +1588,7 @@ void ComplexLineLayout::layoutRunsAndFloatsInRange(LineLayoutState& layoutState,
 
             // We now want to break at this line. Remember for next layout and trigger relayout.
             m_flow.setBreakAtLineToAvoidWidow(lineCountUntil(lineBox));
-            m_flow.markLinesDirtyInBlockRange(lastRootBox()->lineBottomWithLeading(), lineBox->lineBottomWithLeading(), lineBox);
+            m_flow.markLinesDirtyInBlockRange(lastRootBox()->lineBoxBottom(), lineBox->lineBoxBottom(), lineBox);
         }
     }
     m_flow.clearDidBreakAtLineToAvoidWidow();
@@ -1649,7 +1640,7 @@ void ComplexLineLayout::linkToEndLineIfNeeded(LineLayoutState& layoutState)
                     updateFragmentForLine(line);
                 reattachCleanLineFloats(*line, delta, line == firstCleanLine);
             }
-            m_flow.setLogicalHeight(lastRootBox()->lineBottomWithLeading());
+            m_flow.setLogicalHeight(lastRootBox()->lineBoxBottom());
         } else {
             // Delete all the remaining lines.
             deleteLineRange(layoutState, layoutState.endLine());
@@ -1697,8 +1688,6 @@ void ComplexLineLayout::linkToEndLineIfNeeded(LineLayoutState& layoutState)
 
 void ComplexLineLayout::layoutLineBoxes(bool relayoutChildren, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom)
 {
-    ASSERT(!m_flow.simpleLineLayout());
-
     m_flow.setLogicalHeight(m_flow.borderAndPaddingBefore());
 
     // Lay out our hypothetical grid line as though it occurs at the top of the block.
@@ -1836,7 +1825,7 @@ void ComplexLineLayout::checkFloatInCleanLine(RootInlineBox& cleanLine, RenderBo
         : std::max(originalFloatRect.width(), newSize.width());
     floatHeight = std::min(floatHeight, LayoutUnit::max() - floatTop);
     cleanLine.markDirty();
-    m_flow.markLinesDirtyInBlockRange(cleanLine.lineBottomWithLeading(), floatTop + floatHeight, &cleanLine);
+    m_flow.markLinesDirtyInBlockRange(cleanLine.lineBoxBottom(), floatTop + floatHeight, &cleanLine);
     LayoutRect newFloatRect = originalFloatRect;
     newFloatRect.setSize(newSize);
     matchingFloatWithRect.adjustRect(newFloatRect);
@@ -1963,7 +1952,7 @@ RootInlineBox* ComplexLineLayout::determineStartPosition(LineLayoutState& layout
     layoutState.lineInfo().setPreviousLineBrokeCleanly(!lastLine || lastLine->endsWithBreak());
 
     if (lastLine) {
-        m_flow.setLogicalHeight(lastLine->lineBottomWithLeading());
+        m_flow.setLogicalHeight(lastLine->lineBoxBottom());
         InlineIterator iter = InlineIterator(&m_flow, lastLine->lineBreakObj(), lastLine->lineBreakPos());
         resolver.setPosition(iter, numberOfIsolateAncestors(iter));
         resolver.setStatus(lastLine->lineBreakBidiStatus());
@@ -2023,7 +2012,7 @@ void ComplexLineLayout::determineEndPosition(LineLayoutState& layoutState, RootI
     RootInlineBox* previousLine = lastLine->prevRootBox();
     cleanLineStart = InlineIterator(&m_flow, previousLine->lineBreakObj(), previousLine->lineBreakPos());
     cleanLineBidiStatus = previousLine->lineBreakBidiStatus();
-    layoutState.setEndLineLogicalTop(previousLine->lineBottomWithLeading());
+    layoutState.setEndLineLogicalTop(previousLine->lineBoxBottom());
 
     for (RootInlineBox* line = lastLine; line; line = line->nextRootBox()) {
         // Disconnect all line boxes from their render objects while preserving their connections to one another.
@@ -2065,7 +2054,7 @@ bool ComplexLineLayout::checkPaginationAndFloatsAtEndLine(LineLayoutState& layou
     while (RootInlineBox* nextLine = lastLine->nextRootBox())
         lastLine = nextLine;
 
-    LayoutUnit logicalBottom = lastLine->lineBottomWithLeading() + absoluteValue(lineDelta);
+    LayoutUnit logicalBottom = lastLine->lineBoxBottom() + absoluteValue(lineDelta);
 
     const FloatingObjectSet& floatingObjectSet = m_flow.floatingObjects()->set();
     auto end = floatingObjectSet.end();
@@ -2083,7 +2072,7 @@ bool ComplexLineLayout::lineWidthForPaginatedLineChanged(RootInlineBox* rootBox,
     if (!fragmentedFlow)
         return false;
 
-    RenderFragmentContainer* currentFragment = m_flow.fragmentAtBlockOffset(rootBox->lineTopWithLeading() + lineDelta);
+    RenderFragmentContainer* currentFragment = m_flow.fragmentAtBlockOffset(rootBox->lineBoxTop() + lineDelta);
     // Just bail if the fragment didn't change.
     if (rootBox->containingFragment() == currentFragment)
         return false;
@@ -2113,7 +2102,7 @@ bool ComplexLineLayout::matchedEndLine(LineLayoutState& layoutState, const Inlin
             RootInlineBox* result = line->nextRootBox();
             layoutState.setEndLine(result);
             if (result) {
-                layoutState.setEndLineLogicalTop(line->lineBottomWithLeading());
+                layoutState.setEndLineLogicalTop(line->lineBoxBottom());
                 matched = checkPaginationAndFloatsAtEndLine(layoutState);
             }
 
@@ -2128,8 +2117,6 @@ bool ComplexLineLayout::matchedEndLine(LineLayoutState& layoutState, const Inlin
 
 void ComplexLineLayout::addOverflowFromInlineChildren()
 {
-    ASSERT(!m_flow.simpleLineLayout());
-
     LayoutUnit endPadding = m_flow.hasOverflowClip() ? m_flow.paddingEnd() : 0_lu;
     // FIXME: Need to find another way to do this, since scrollbars could show when we don't want them to.
     if (!endPadding)
@@ -2303,7 +2290,7 @@ void ComplexLineLayout::updateFragmentForLine(RootInlineBox* lineBox) const
     if (!m_flow.hasFragmentRangeInFragmentedFlow())
         lineBox->clearContainingFragment();
     else {
-        if (auto containingFragment = m_flow.fragmentAtBlockOffset(lineBox->lineTopWithLeading()))
+        if (auto containingFragment = m_flow.fragmentAtBlockOffset(lineBox->lineBoxTop()))
             lineBox->setContainingFragment(*containingFragment);
         else
             lineBox->clearContainingFragment();

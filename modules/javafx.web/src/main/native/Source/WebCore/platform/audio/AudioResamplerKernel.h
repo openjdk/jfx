@@ -45,18 +45,16 @@ public:
     // getSourcePointer() should be called each time before process() is called.
     // Given a number of frames to process (for subsequent call to process()), it returns a pointer and numberOfSourceFramesNeeded
     // where sample data should be copied. This sample data provides the input to the resampler when process() is called.
-    // framesToProcess must be less than or equal to MaxFramesToProcess.
+    // framesToProcess must be less than or equal to AudioUtilities::renderQuantumSize.
     float* getSourcePointer(size_t framesToProcess, size_t* numberOfSourceFramesNeeded);
 
     // process() resamples framesToProcess frames from the source into destination.
     // Each call to process() must be preceded by a call to getSourcePointer() so that source input may be supplied.
-    // framesToProcess must be less than or equal to MaxFramesToProcess.
+    // framesToProcess must be less than or equal to AudioUtilities::renderQuantumSize.
     void process(float* destination, size_t framesToProcess);
 
     // Resets the processing state.
     void reset();
-
-    static const size_t MaxFramesToProcess;
 
 private:
     double rate() const;
@@ -65,14 +63,14 @@ private:
     AudioFloatArray m_sourceBuffer;
 
     // This is a (floating point) read index on the input stream.
-    double m_virtualReadIndex;
+    double m_virtualReadIndex { 0 };
 
     // We need to have continuity from one call of process() to the next.
     // m_lastValues stores the last two sample values from the last call to process().
     // m_fillIndex represents how many buffered samples we have which can be as many as 2.
     // For the first call to process() (or after reset()) there will be no buffered samples.
     float m_lastValues[2];
-    unsigned m_fillIndex;
+    unsigned m_fillIndex { 0 };
 };
 
 } // namespace WebCore

@@ -145,6 +145,11 @@ enum ContextMenuAction {
     ContextMenuItemTagToggleVideoFullscreen,
     ContextMenuItemTagShareMenu,
     ContextMenuItemTagToggleVideoEnhancedFullscreen,
+#if ENABLE(APP_HIGHLIGHTS)
+    ContextMenuItemTagAddHighlightToCurrentGroup,
+    ContextMenuItemTagAddHighlightToNewGroup,
+#endif
+    ContextMenuItemTagRevealImage,
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000
@@ -204,13 +209,12 @@ WEBCORE_EXPORT bool isValidContextMenuAction(ContextMenuAction);
 namespace WTF {
 
 template<>
-class HasCustomIsValidEnum<WebCore::ContextMenuAction> : public std::true_type { };
-
-template<typename E, typename T, std::enable_if_t<std::is_same_v<E, WebCore::ContextMenuAction>>* = nullptr>
-bool isValidEnum(T action)
-{
-    static_assert(sizeof(T) == sizeof(E), "isValidEnum<WebCore::ContextMenuAction> should only be called with 32-bit types");
-    return WebCore::isValidContextMenuAction(static_cast<E>(action));
+struct EnumTraits<WebCore::ContextMenuAction> {
+    template<typename T>
+    static std::enable_if_t<sizeof(T) == sizeof(WebCore::ContextMenuAction), bool> isValidEnum(T action)
+    {
+        return WebCore::isValidContextMenuAction(static_cast<WebCore::ContextMenuAction>(action));
+    };
 };
 
 template<> struct EnumTraits<WebCore::ContextMenuItemType> {

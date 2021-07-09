@@ -57,17 +57,16 @@ public:
     LibWebRTCPeerConnectionBackend(RTCPeerConnection&, LibWebRTCProvider&);
     ~LibWebRTCPeerConnectionBackend();
 
-    void replaceTrack(RTCRtpSender&, RefPtr<MediaStreamTrack>&&, DOMPromiseDeferred<void>&&);
-
 private:
     void close() final;
     void doCreateOffer(RTCOfferOptions&&) final;
     void doCreateAnswer(RTCAnswerOptions&&) final;
-    void doSetLocalDescription(RTCSessionDescription&) final;
-    void doSetRemoteDescription(RTCSessionDescription&) final;
+    void doSetLocalDescription(const RTCSessionDescription*) final;
+    void doSetRemoteDescription(const RTCSessionDescription&) final;
     void doAddIceCandidate(RTCIceCandidate&) final;
     void doStop() final;
     std::unique_ptr<RTCDataChannelHandler> createDataChannelHandler(const String&, const RTCDataChannelInit&) final;
+    void restartIce() final;
     bool setConfiguration(MediaEndpointConfiguration&&) final;
     void getStats(Ref<DeferredPromise>&&) final;
     void getStats(RTCRtpSender&, Ref<DeferredPromise>&&) final;

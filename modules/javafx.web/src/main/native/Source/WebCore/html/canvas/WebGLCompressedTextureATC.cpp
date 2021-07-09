@@ -30,8 +30,11 @@
 #include "WebGLCompressedTextureATC.h"
 
 #include "ExtensionsGL.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLCompressedTextureATC);
 
 WebGLCompressedTextureATC::WebGLCompressedTextureATC(WebGLRenderingContextBase& context)
     : WebGLExtension(context)

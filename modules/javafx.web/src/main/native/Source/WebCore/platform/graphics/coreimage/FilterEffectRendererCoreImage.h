@@ -37,30 +37,35 @@ OBJC_CLASS CIContext;
 
 namespace WebCore {
 
+class FEColorMatrix;
+class FEComponentTransfer;
+class SourceGraphic;
+
 class FilterEffectRendererCoreImage : public FilterEffectRenderer {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
     static std::unique_ptr<FilterEffectRendererCoreImage> tryCreate(FilterEffect&);
-
+    RetainPtr<CIContext> sharedCIContext();
     void applyEffects(FilterEffect&) final;
     bool hasResult() const final { return m_outputImage; }
     ImageBuffer* output() const final;
     FloatRect destRect(const FilterEffect&) const final;
     void clearResult() final;
-
     FilterEffectRendererCoreImage();
 
 private:
-    CIImage* connectCIFilters(FilterEffect&);
+    RetainPtr<CIImage> connectCIFilters(FilterEffect&);
     void renderToImageBuffer(FilterEffect&) final;
     static bool supportsCoreImageRendering(FilterEffect&);
     static bool canRenderUsingCIFilters(FilterEffect&);
 
-    std::unique_ptr<ImageBuffer> m_outputImageBuffer;
-    HashMap<Ref<FilterEffect>, Vector<RetainPtr<CIFilter>>> m_ciFilterStorageMap;
+    RetainPtr<CIImage> imageForSourceGraphic(SourceGraphic&);
+    RetainPtr<CIImage> imageForFEColorMatrix(const FEColorMatrix&, const Vector<RetainPtr<CIImage>>&);
+    RetainPtr<CIImage> imageForFEComponentTransfer(const FEComponentTransfer&, Vector<RetainPtr<CIImage>>&);
+
+    RefPtr<ImageBuffer> m_outputImageBuffer;
     RetainPtr<CIImage> m_outputImage;
-    RetainPtr<CIContext> m_context;
 };
 
 } // namespace WebCore

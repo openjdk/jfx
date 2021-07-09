@@ -29,8 +29,19 @@
 #include "GenericTypedArrayViewInlines.h"
 #include "JSCInlines.h"
 #include "JSGenericTypedArrayViewInlines.h"
+#include "JSGenericTypedArrayViewConstructorInlines.h"
 
 namespace JSC {
+
+const ASCIILiteral typedArrayBufferHasBeenDetachedErrorMessage { "Underlying ArrayBuffer has been detached from the view"_s };
+
+#define MAKE_CONSTRUCTORS(Class) \
+    JSC_DEFINE_HOST_FUNCTION(call##Class, (JSGlobalObject* globalObject, CallFrame* callFrame)) { \
+        return callGenericTypedArrayViewImpl<JS##Class>(globalObject, callFrame); \
+    } \
+    JSC_DEFINE_HOST_FUNCTION(construct##Class, (JSGlobalObject* globalObject, CallFrame* callFrame)) { \
+        return constructGenericTypedArrayViewImpl<JS##Class>(globalObject, callFrame); \
+    }
 
 #undef MAKE_S_INFO
 #define MAKE_S_INFO(type) \
@@ -38,7 +49,8 @@ namespace JSC {
         #type "Array", &JS##type##Array::Base::s_info, nullptr, nullptr, \
         CREATE_METHOD_TABLE(JS##type##Array) \
     }; \
-    const ClassInfo* get##type##ArrayClassInfo() { return &JS##type##Array::s_info; }
+    const ClassInfo* get##type##ArrayClassInfo() { return &JS##type##Array::s_info; } \
+    MAKE_CONSTRUCTORS(type##Array)
 
 MAKE_S_INFO(Int8);
 MAKE_S_INFO(Int16);
@@ -49,12 +61,10 @@ MAKE_S_INFO(Uint16);
 MAKE_S_INFO(Uint32);
 MAKE_S_INFO(Float32);
 MAKE_S_INFO(Float64);
+MAKE_S_INFO(BigInt64);
+MAKE_S_INFO(BigUint64);
 
-JSUint8Array* createUint8TypedArray(JSGlobalObject* globalObject, Structure* structure, RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
-{
-    return JSUint8Array::create(globalObject, structure, WTFMove(buffer), byteOffset, length);
-}
-
+MAKE_CONSTRUCTORS(DataView);
 
 } // namespace JSC
 

@@ -135,21 +135,6 @@ void ContextMenuController::showContextMenu(Event& event, ContextMenuProvider& p
     showContextMenu(event);
 }
 
-#if ENABLE(SERVICE_CONTROLS)
-
-static Image* imageFromImageElementNode(Node& node)
-{
-    auto* renderer = node.renderer();
-    if (!is<RenderImage>(renderer))
-        return nullptr;
-    auto* image = downcast<RenderImage>(*renderer).cachedImage();
-    if (!image || image->errorOccurred())
-        return nullptr;
-    return image->imageForRenderer(renderer);
-}
-
-#endif
-
 std::unique_ptr<ContextMenu> ContextMenuController::maybeCreateContextMenu(Event& event)
 {
     if (!is<MouseEvent>(event))
@@ -169,16 +154,6 @@ std::unique_ptr<ContextMenu> ContextMenuController::maybeCreateContextMenu(Event
         return nullptr;
 
     m_context = ContextMenuContext(result);
-
-#if ENABLE(SERVICE_CONTROLS)
-    if (node.isImageControlsButtonElement()) {
-        if (auto* image = imageFromImageElementNode(*result.innerNonSharedNode()))
-            m_context.setControlledImage(image);
-
-        // FIXME: If we couldn't get the image then we shouldn't try to show the image controls menu for it.
-        return nullptr;
-    }
-#endif
 
     return makeUnique<ContextMenu>();
 }
@@ -240,7 +215,7 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
 
     switch (action) {
     case ContextMenuItemTagOpenLinkInNewWindow:
-        openNewWindow(m_context.hitTestResult().absoluteLinkURL(), *frame, ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes);
+        openNewWindow(m_context.hitTestResult().absoluteLinkURL(), *frame, ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks);
         break;
     case ContextMenuItemTagDownloadLinkToDisk:
         // FIXME: Some day we should be able to do this from within WebCore. (Bug 117709)
@@ -460,6 +435,14 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
     case ContextMenuItemTagTextDirectionRightToLeft:
         frame->editor().command("MakeTextWritingDirectionRightToLeft").execute();
         break;
+#if ENABLE(APP_HIGHLIGHTS)
+    case ContextMenuItemTagAddHighlightToCurrentGroup:
+        // FIXME: Add Highlight Logic
+        break;
+    case ContextMenuItemTagAddHighlightToNewGroup:
+        // FIXME: Add Highlight Logic
+        break;
+#endif
 #if PLATFORM(COCOA)
     case ContextMenuItemTagSearchInSpotlight:
         m_client.searchWithSpotlight();
@@ -532,7 +515,11 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
             page->inspectorController().inspect(m_context.hitTestResult().innerNonSharedNode());
         break;
     case ContextMenuItemTagDictationAlternative:
-        frame->editor().applyDictationAlternativelternative(title);
+        frame->editor().applyDictationAlternative(title);
+        break;
+    case ContextMenuItemTagRevealImage:
+        // This should be handled at the client layer.
+        ASSERT_NOT_REACHED();
         break;
     default:
         break;
@@ -797,6 +784,10 @@ void ContextMenuController::populate()
     ContextMenuItem SearchSpotlightItem(ActionType, ContextMenuItemTagSearchInSpotlight,
         contextMenuItemTagSearchInSpotlight());
 #endif
+#if ENABLE(APP_HIGHLIGHTS)
+    ContextMenuItem AddHighlightItem(ActionType, ContextMenuItemTagAddHighlightToCurrentGroup, contextMenuItemTagAddHighlightToCurrentGroup());
+    ContextMenuItem AddHighlightToNewGroupItem(ActionType, ContextMenuItemTagAddHighlightToNewGroup, contextMenuItemTagAddHighlightToNewGroup());
+#endif
 #if !PLATFORM(GTK)
     ContextMenuItem SearchWebItem(ActionType, ContextMenuItemTagSearchWeb, contextMenuItemTagSearchWeb());
 #endif
@@ -822,6 +813,9 @@ void ContextMenuController::populate()
     ContextMenuItem DeleteItem(ActionType, ContextMenuItemTagDelete, contextMenuItemTagDelete());
     ContextMenuItem SelectAllItem(ActionType, ContextMenuItemTagSelectAll, contextMenuItemTagSelectAll());
     ContextMenuItem InsertEmojiItem(ActionType, ContextMenuItemTagInsertEmoji, contextMenuItemTagInsertEmoji());
+#endif
+#if ENABLE(IMAGE_EXTRACTION)
+    ContextMenuItem RevealImageItem(ActionType, ContextMenuItemTagRevealImage, contextMenuItemTagRevealImage());
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WIN)
@@ -869,8 +863,13 @@ void ContextMenuController::populate()
 
             appendItem(OpenImageInNewWindowItem, m_contextMenu.get());
             appendItem(DownloadImageItem, m_contextMenu.get());
-            if (imageURL.isLocalFile() || m_context.hitTestResult().image())
+            if (imageURL.isLocalFile() || m_context.hitTestResult().image()) {
                 appendItem(CopyImageItem, m_contextMenu.get());
+
+#if ENABLE(IMAGE_EXTRACTION)
+                appendItem(RevealImageItem, m_contextMenu.get());
+#endif
+            }
 #if PLATFORM(GTK)
             appendItem(CopyImageUrlItem, m_contextMenu.get());
 #endif
@@ -919,6 +918,16 @@ void ContextMenuController::populate()
                 appendItem(CopyItem, m_contextMenu.get());
 #if PLATFORM(COCOA)
                 appendItem(*separatorItem(), m_contextMenu.get());
+
+#if ENABLE(APP_HIGHLIGHTS)
+                if (auto* page = frame->page()) {
+                    if (page->settings().appHighlightsEnabled()) {
+                        appendItem(AddHighlightToNewGroupItem, m_contextMenu.get());
+                        appendItem(AddHighlightItem, m_contextMenu.get());
+                        appendItem(*separatorItem(), m_contextMenu.get());
+                    }
+                }
+#endif
 
                 appendItem(ShareMenuItem, m_contextMenu.get());
                 appendItem(*separatorItem(), m_contextMenu.get());
@@ -1110,8 +1119,8 @@ void ContextMenuController::populate()
             createAndAppendWritingDirectionSubMenu(WritingDirectionMenuItem);
             appendItem(WritingDirectionMenuItem, m_contextMenu.get());
             if (Page* page = frame->page()) {
-                bool includeTextDirectionSubmenu = page->settings().textDirectionSubmenuInclusionBehavior() == TextDirectionSubmenuAlwaysIncluded
-                    || (page->settings().textDirectionSubmenuInclusionBehavior() == TextDirectionSubmenuAutomaticallyIncluded && frame->editor().hasBidiSelection());
+                bool includeTextDirectionSubmenu = page->settings().textDirectionSubmenuInclusionBehavior() == TextDirectionSubmenuInclusionBehavior::AlwaysIncluded
+                    || (page->settings().textDirectionSubmenuInclusionBehavior() == TextDirectionSubmenuInclusionBehavior::AutomaticallyIncluded && frame->editor().hasBidiSelection());
                 if (includeTextDirectionSubmenu) {
                     ContextMenuItem TextDirectionMenuItem(SubmenuType, ContextMenuItemTagTextDirectionMenu, contextMenuItemTagTextDirectionMenu());
                     createAndAppendTextDirectionSubMenu(TextDirectionMenuItem);
@@ -1275,6 +1284,14 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
         case ContextMenuItemTagCheckSpellingWhileTyping:
             shouldCheck = frame->editor().isContinuousSpellCheckingEnabled();
             break;
+#if ENABLE(APP_HIGHLIGHTS)
+        case ContextMenuItemTagAddHighlightToCurrentGroup:
+            shouldEnable = frame->selection().isRange();
+            break;
+        case ContextMenuItemTagAddHighlightToNewGroup:
+            shouldEnable = frame->selection().isRange();
+            break;
+#endif
 #if PLATFORM(COCOA)
         case ContextMenuItemTagSubstitutionsMenu:
         case ContextMenuItemTagTransformationsMenu:
@@ -1294,6 +1311,7 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
             break;
         case ContextMenuItemTagCorrectSpellingAutomatically:
             shouldCheck = frame->editor().isAutomaticSpellingCorrectionEnabled();
+            shouldEnable = frame->editor().canEnableAutomaticSpellingCorrection();
             break;
         case ContextMenuItemTagSmartCopyPaste:
             shouldCheck = frame->editor().smartInsertDeleteEnabled();
@@ -1444,6 +1462,8 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
             shouldEnable = m_context.hitTestResult().mediaHasAudio();
             shouldCheck = shouldEnable &&  m_context.hitTestResult().mediaMuted();
             break;
+        case ContextMenuItemTagRevealImage:
+            break;
     }
 
     item.setChecked(shouldCheck);
@@ -1462,17 +1482,6 @@ void ContextMenuController::showContextMenuAt(Frame& frame, const IntPoint& clic
     bool handled = frame.eventHandler().sendContextMenuEvent(mouseEvent);
     if (handled)
         m_client.showContextMenu();
-}
-
-#endif
-
-#if ENABLE(SERVICE_CONTROLS)
-
-void ContextMenuController::showImageControlsMenu(Event& event)
-{
-    clearContextMenu();
-    handleContextMenuEvent(event);
-    m_client.showContextMenu();
 }
 
 #endif

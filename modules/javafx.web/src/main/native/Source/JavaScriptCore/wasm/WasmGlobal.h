@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "SlotVisitorMacros.h"
 #include "WasmFormat.h"
 #include "WasmLimits.h"
 #include "WriteBarrier.h"
@@ -43,7 +44,7 @@ class Global final : public ThreadSafeRefCounted<Global> {
 public:
     union Value {
         uint64_t m_primitive;
-        WriteBarrierBase<Unknown> m_anyref;
+        WriteBarrierBase<Unknown> m_externref;
         Value* m_pointer;
     };
 
@@ -54,10 +55,10 @@ public:
 
     Wasm::Type type() const { return m_type; }
     Wasm::GlobalInformation::Mutability mutability() const { return m_mutability; }
-    JSValue get() const;
+    JSValue get(JSGlobalObject*) const;
     uint64_t getPrimitive() const { return m_value.m_primitive; }
     void set(JSGlobalObject*, JSValue);
-    void visitAggregate(SlotVisitor&);
+    DECLARE_VISIT_AGGREGATE;
 
     template<typename T> T* owner() const { return reinterpret_cast<T*>(m_owner); }
     void setOwner(JSObject* owner)

@@ -55,17 +55,16 @@ private:
 
     double tailTime() const final;
     double latencyTime() const final;
+    bool requiresTailProcessing() const final;
 
     void process(size_t framesToProcess) final;
-    void reset() final;
-    void initialize() final;
-    void uninitialize() final;
+    void checkNumberOfChannelsForInput(AudioNodeInput*) final;
 
     std::unique_ptr<Reverb> m_reverb;
     RefPtr<AudioBuffer> m_buffer;
 
     // This synchronizes dynamic changes to the convolution impulse response with process().
-    mutable Lock m_processMutex;
+    mutable Lock m_processLock;
 
     // Normalize the impulse response or not.
     bool m_normalize { true };

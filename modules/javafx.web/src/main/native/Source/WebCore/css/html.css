@@ -302,6 +302,16 @@ li {
     text-align: -webkit-match-parent;
 }
 
+/* FIXME: this should also match ::before::marker and ::after::marker but we don't support
+   this yet. When we do, we can remove the code specific to ::before and ::after in
+   RenderListItem::computeMarkerStyle(), see bugs.webkit.org/b/218897. */
+::marker {
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+    white-space: pre;
+    text-transform: none;
+}
+
 ul ul, ol ul {
     list-style-type: circle;
 }
@@ -393,10 +403,8 @@ input[type="hidden"] {
 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 textarea,
-input[type="range"],
 #endif
-input,
-input:matches([type="password"], [type="search"]) {
+input {
     -webkit-appearance: textfield;
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: text;
@@ -420,8 +428,7 @@ input:matches([type="password"], [type="search"]) {
 
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
 @media (prefers-dark-interface) {
-    input,
-    input:matches([type="password"], [type="search"]) {
+    input {
         background-color: transparent;
     }
 }
@@ -475,6 +482,25 @@ input[type="search"]::-webkit-search-results-button {
     flex: none;
 }
 
+#if defined(ENABLE_DATE_AND_TIME_INPUT_TYPES) && ENABLE_DATE_AND_TIME_INPUT_TYPES
+input:matches([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]) {
+    -webkit-appearance: textfield;
+    align-items: center;
+    display: -webkit-inline-flex;
+    overflow: hidden;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    -webkit-appearance: menulist-button;
+#else
+    -webkit-appearance: textfield;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+    /* FIXME: Font features should be defined in a @font-feature-values rule, so that the feature setting is only applied to the system font. */
+    /* "ss03" enables the raised colon separator on the system font. */
+    font-feature-settings: "ss03";
+#endif
+}
+#endif
+
 input::-webkit-date-and-time-value {
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     margin-right: 18px;
@@ -482,6 +508,68 @@ input::-webkit-date-and-time-value {
     margin: 1px 24px 1px 4px;
     white-space: pre;
 #endif
+}
+
+/* FIXME: Styling inner elements of the date control should be specific to input[type="date"]. */
+
+input::-webkit-datetime-edit {
+    display: inline-block;
+    overflow: hidden;
+    padding: 1px;
+}
+
+input::-webkit-datetime-edit-fields-wrapper {
+    display: inline-block;
+    white-space: pre;
+}
+
+input::-webkit-datetime-edit-year-field,
+input::-webkit-datetime-edit-month-field,
+input::-webkit-datetime-edit-day-field,
+input::-webkit-datetime-edit-hour-field,
+input::-webkit-datetime-edit-minute-field,
+input::-webkit-datetime-edit-second-field,
+input::-webkit-datetime-edit-millisecond-field,
+input::-webkit-datetime-edit-meridiem-field {
+    display: inline-block;
+    font: inherit !important;
+    padding: 1px;
+    text-align: center;
+}
+
+input::-webkit-datetime-edit-year-field:focus,
+input::-webkit-datetime-edit-month-field:focus,
+input::-webkit-datetime-edit-day-field:focus,
+input::-webkit-datetime-edit-hour-field:focus,
+input::-webkit-datetime-edit-minute-field:focus,
+input::-webkit-datetime-edit-second-field:focus,
+input::-webkit-datetime-edit-millisecond-field:focus,
+input::-webkit-datetime-edit-meridiem-field:focus {
+#if defined(WTF_PLATFORM_COCOA) && WTF_PLATFORM_COCOA
+    background-color: -apple-system-control-accent;
+    border-radius: 3px;
+    color: white;
+#else
+    background-color: highlight;
+    color: highlighttext;
+#endif
+    outline: none;
+}
+
+input[disabled]::-webkit-datetime-edit-year-field,
+input[disabled]::-webkit-datetime-edit-month-field,
+input[disabled]::-webkit-datetime-edit-day-field,
+input[disabled]::-webkit-datetime-edit-hour-field,
+input[disabled]::-webkit-datetime-edit-minute-field,
+input[disabled]::-webkit-datetime-edit-second-field,
+input[disabled]::-webkit-datetime-edit-millisecond-field,
+input[disabled]::-webkit-datetime-edit-meridiem-field,
+input[disabled]::-webkit-datetime-edit-text {
+    color: GrayText;
+}
+
+input::-webkit-datetime-edit-text {
+    display: inline;
 }
 
 input::-webkit-inner-spin-button {
@@ -703,14 +791,14 @@ input:matches([type="button"], [type="submit"], [type="reset"]) {
     white-space: pre;
 }
 
-input[type="file"]::-webkit-file-upload-button {
+input[type="file"]::file-selector-button {
     -webkit-appearance: push-button;
     white-space: nowrap;
     margin: 0;
     font-size: inherit;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]), input[type="file"]::-webkit-file-upload-button, button {
+input:matches([type="button"], [type="submit"], [type="reset"]), input[type="file"]::file-selector-button, button {
     align-items: flex-start;
     text-align: center;
     cursor: default;
@@ -729,7 +817,7 @@ input:matches([type="button"], [type="submit"], [type="reset"]), input[type="fil
     box-sizing: border-box;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::-webkit-file-upload-button:active, button:active {
+input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::file-selector-button:active, button:active {
     color: ActiveButtonText;
 }
 
@@ -746,6 +834,7 @@ input[type="range"]::-webkit-slider-container, input[type="range"]::-webkit-medi
     box-sizing: border-box;
     display: flex;
     align-contents: center;
+    min-width: 0;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
@@ -782,19 +871,19 @@ input[readonly], textarea[readonly] {
 #endif
 
 input:matches([type="button"], [type="submit"], [type="reset"]):disabled,
-input[type="file"]:disabled::-webkit-file-upload-button, button:disabled,
+input[type="file"]:disabled::file-selector-button, button:disabled,
 select:disabled, keygen:disabled, optgroup:disabled, option:disabled,
 select[disabled]>option {
     color: GrayText;
 }
 
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::-webkit-file-upload-button, button:active {
+input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::file-selector-button, button:active {
     border-style: inset;
 }
 
 input:matches([type="button"], [type="submit"], [type="reset"]):active:disabled,
-input[type="file"]:active:disabled::-webkit-file-upload-button, button:active:disabled {
+input[type="file"]:active:disabled::file-selector-button, button:active:disabled {
     border-style: outset;
 }
 #endif
@@ -918,7 +1007,7 @@ select {
 }
 
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-select:matches([size], [multiple]), select[size][multiple] {
+select:is([size], [multiple]), select[size][multiple] {
     -webkit-appearance: listbox;
     align-items: flex-start;
     border: 1px inset gray;
@@ -926,7 +1015,7 @@ select:matches([size], [multiple]), select[size][multiple] {
     white-space: initial;
 }
 
-select:matches([size="0"], [size="1"]) {
+select:is([size=""], [size="0"], [size="1"]) {
     -webkit-appearance: menulist;
     align-items: center;
     border: 1px solid;
@@ -1010,7 +1099,6 @@ output {
     height: 16px;
 }
 
-#if defined(ENABLE_METER_ELEMENT) && ENABLE_METER_ELEMENT
 /* meter */
 
 meter {
@@ -1021,8 +1109,6 @@ meter {
     width: 5em;
     vertical-align: -0.2em;
 }
-
-#endif
 
 /* progress */
 
@@ -1134,7 +1220,7 @@ input:focus, textarea:focus, keygen:focus, select:focus {
 #endif
 
 input:matches([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
-input[type="file"]:focus::-webkit-file-upload-button {
+input[type="file"]:focus::file-selector-button {
     outline-offset: 0;
 }
 

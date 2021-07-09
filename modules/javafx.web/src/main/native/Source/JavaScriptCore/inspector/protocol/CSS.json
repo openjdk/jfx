@@ -231,6 +231,39 @@
                 { "name": "type", "type": "string", "enum": ["media-rule", "media-import-rule", "media-link-node", "media-style-node", "supports-rule"], "description": "Source of the media query: \"media-rule\" if specified by a @media rule, \"media-import-rule\" if specified by an @import rule, \"media-link-node\" if specified by a \"media\" attribute in a linked style sheet's LINK tag, \"media-style-node\" if specified by a \"media\" attribute in an inline style sheet's STYLE tag, \"supports-rule\" if specified by an @supports rule, ." },
                 { "name": "sourceURL", "type": "string", "optional": true, "description": "URL of the document containing the CSS grouping." }
             ]
+        },
+        {
+            "id": "Font",
+            "type": "object",
+            "description": "A representation of WebCore::Font. Conceptually this is backed by either a font file on disk or from the network.",
+            "properties": [
+                { "name": "displayName", "type": "string", "description": "The display name defined by the font." },
+                { "name": "variationAxes", "type": "array", "items": { "$ref": "FontVariationAxis" }, "description": "The variation axes defined by the font." }
+            ]
+        },
+        {
+            "id": "FontVariationAxis",
+            "type": "object",
+            "description": "A single variation axis associated with a Font.",
+            "properties": [
+                { "name": "name", "type": "string", "optional": true, "description": "The name, generally human-readable, of the variation axis. Some axes may not provide a human-readable name distiguishable from the tag. This field is ommited when there is no name, or the name matches the tag exactly." },
+                { "name": "tag", "type": "string", "description": "The four character tag for the variation axis." },
+                { "name": "minimumValue", "type": "number", "description": "The minimum value that will affect the axis." },
+                { "name": "maximumValue", "type": "number", "description": "The maximum value that will affect the axis." },
+                { "name": "defaultValue", "type": "number", "description": "The value that is used for the axis when it is not otherwise controlled." }
+            ]
+        },
+        {
+            "id": "LayoutContextType",
+            "type": "string",
+            "enum": ["grid"],
+            "description": "The layout context type of a node."
+        },
+        {
+            "id": "LayoutContextTypeChangedMode",
+            "type": "string",
+            "enum": ["observed", "all"],
+            "description": "The mode for how layout context type changes are handled (default: <code>Observed</code>). <code>Observed</code> limits handling to those nodes already known to the frontend by other means (generally, this means the node is a visible item in the Elements tab). <code>All</code> informs the frontend of all layout context type changes and all nodes with a known layout context are sent to the frontend."
         }
     ],
     "commands": [
@@ -275,6 +308,16 @@
             ],
             "returns": [
                 { "name": "computedStyle", "type": "array", "items": { "$ref": "CSSComputedStyleProperty" }, "description": "Computed style for the specified DOM node." }
+            ]
+        },
+        {
+            "name": "getFontDataForNode",
+            "description": "Returns the primary font of the computed font cascade for a DOM node identified by <code>nodeId</code>.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "DOM.NodeId" }
+            ],
+            "returns": [
+                { "name": "primaryFont", "$ref": "Font", "description": "Computed primary font for the specified DOM node." }
             ]
         },
         {
@@ -381,6 +424,13 @@
                 { "name": "nodeId", "$ref": "DOM.NodeId", "description": "The element id for which to force the pseudo state." },
                 { "name": "forcedPseudoClasses", "type": "array", "items": { "type": "string", "enum": ["active", "focus", "hover", "visited"] }, "description": "Element pseudo classes to force when computing the element's style." }
             ]
+        },
+        {
+            "name": "setLayoutContextTypeChangedMode",
+            "description": "Change how layout context type changes are handled for nodes. When the new mode would observe nodes the frontend has not yet recieved, those nodes will be sent to the frontend immediately.",
+            "parameters": [
+                { "name": "mode", "$ref": "LayoutContextTypeChangedMode", "description": "The mode for how layout context type changes are handled." }
+            ]
         }
     ],
     "events": [
@@ -409,6 +459,14 @@
             "targetTypes": ["page"],
             "parameters": [
                 { "name": "styleSheetId", "$ref": "StyleSheetId", "description": "Identifier of the removed stylesheet." }
+            ]
+        },
+        {
+            "name": "nodeLayoutContextTypeChanged",
+            "description": "Called when a node's layout context type has changed.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Identifier of the node whose layout context type changed." },
+                { "name": "layoutContextType", "$ref": "LayoutContextType", "optional": true, "description": "The new layout context type of the node. When not provided, the <code>LayoutContextType</code> of the node is not a context for which Web Inspector has specific functionality." }
             ]
         }
     ]

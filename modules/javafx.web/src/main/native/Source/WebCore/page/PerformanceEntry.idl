@@ -34,12 +34,11 @@ typedef double DOMHighResTimeStamp;
 
 [
     CustomToJSObject,
-    EnabledAtRuntime=PerformanceTimeline,
     Exposed=(Window,Worker),
 ] interface PerformanceEntry {
     readonly attribute DOMString name;
     readonly attribute DOMString entryType;
     readonly attribute DOMHighResTimeStamp startTime;
     readonly attribute DOMHighResTimeStamp duration;
-    serializer = { attribute };
+    [Default] object toJSON();
 };

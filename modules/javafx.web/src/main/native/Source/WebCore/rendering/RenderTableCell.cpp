@@ -53,7 +53,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCell);
 
 struct SameSizeAsRenderTableCell : public RenderBlockFlow {
     unsigned bitfields;
-    LayoutUnit paddings[2];
+    LayoutUnit padding[2];
 };
 
 COMPILE_ASSERT(sizeof(RenderTableCell) == sizeof(SameSizeAsRenderTableCell), RenderTableCell_should_stay_small);
@@ -176,8 +176,8 @@ Length RenderTableCell::logicalWidthFromColumns(RenderTableCol* firstColForThisC
     // Column widths specified on <col> apply to the border box of the cell, see bug 8126.
     // FIXME: Why is border/padding ignored in the negative width case?
     if (colWidthSum > 0)
-        return Length(std::max<LayoutUnit>(0, colWidthSum - borderAndPaddingLogicalWidth()), Fixed);
-    return Length(colWidthSum, Fixed);
+        return Length(std::max<LayoutUnit>(0, colWidthSum - borderAndPaddingLogicalWidth()), LengthType::Fixed);
+    return Length(colWidthSum, LengthType::Fixed);
 }
 
 void RenderTableCell::computePreferredLogicalWidths()
@@ -293,7 +293,7 @@ LayoutUnit RenderTableCell::paddingTop() const
     LayoutUnit result = computedCSSPaddingTop();
     if (!isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == TopToBottomWritingMode ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
+    return result + (style().writingMode() == WritingMode::TopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
 }
 
 LayoutUnit RenderTableCell::paddingBottom() const
@@ -301,7 +301,7 @@ LayoutUnit RenderTableCell::paddingBottom() const
     LayoutUnit result = computedCSSPaddingBottom();
     if (!isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == TopToBottomWritingMode ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
+    return result + (style().writingMode() == WritingMode::TopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
 }
 
 LayoutUnit RenderTableCell::paddingLeft() const
@@ -309,7 +309,7 @@ LayoutUnit RenderTableCell::paddingLeft() const
     LayoutUnit result = computedCSSPaddingLeft();
     if (isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == LeftToRightWritingMode ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
+    return result + (style().writingMode() == WritingMode::LeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
 }
 
 LayoutUnit RenderTableCell::paddingRight() const
@@ -317,7 +317,7 @@ LayoutUnit RenderTableCell::paddingRight() const
     LayoutUnit result = computedCSSPaddingRight();
     if (isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == LeftToRightWritingMode ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
+    return result + (style().writingMode() == WritingMode::LeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
 }
 
 LayoutUnit RenderTableCell::paddingBefore() const
@@ -330,10 +330,10 @@ LayoutUnit RenderTableCell::paddingAfter() const
     return computedCSSPaddingAfter() + intrinsicPaddingAfter();
 }
 
-void RenderTableCell::setOverrideContentLogicalHeightFromRowHeight(LayoutUnit rowHeight)
+void RenderTableCell::setOverridingLogicalHeightFromRowHeight(LayoutUnit rowHeight)
 {
     clearIntrinsicPadding();
-    setOverrideContentLogicalHeight(std::max<LayoutUnit>(0, rowHeight - borderAndPaddingLogicalHeight()));
+    setOverridingLogicalHeight(rowHeight);
 }
 
 LayoutSize RenderTableCell::offsetFromContainer(RenderElement& container, const LayoutPoint& point, bool* offsetDependsOnPoint) const
@@ -1251,10 +1251,10 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
     // We never paint diagonals at the joins.  We simply let the border with the highest
     // precedence paint on top of borders with lower precedence.
     CollapsedBorders borders;
-    borders.addBorder(topVal, BSTop, renderTop, borderRect.x(), borderRect.y(), borderRect.maxX(), borderRect.y() + topWidth, topStyle);
-    borders.addBorder(bottomVal, BSBottom, renderBottom, borderRect.x(), borderRect.maxY() - bottomWidth, borderRect.maxX(), borderRect.maxY(), bottomStyle);
-    borders.addBorder(leftVal, BSLeft, renderLeft, borderRect.x(), borderRect.y(), borderRect.x() + leftWidth, borderRect.maxY(), leftStyle);
-    borders.addBorder(rightVal, BSRight, renderRight, borderRect.maxX() - rightWidth, borderRect.y(), borderRect.maxX(), borderRect.maxY(), rightStyle);
+    borders.addBorder(topVal, BoxSide::Top, renderTop, borderRect.x(), borderRect.y(), borderRect.maxX(), borderRect.y() + topWidth, topStyle);
+    borders.addBorder(bottomVal, BoxSide::Bottom, renderBottom, borderRect.x(), borderRect.maxY() - bottomWidth, borderRect.maxX(), borderRect.maxY(), bottomStyle);
+    borders.addBorder(leftVal, BoxSide::Left, renderLeft, borderRect.x(), borderRect.y(), borderRect.x() + leftWidth, borderRect.maxY(), leftStyle);
+    borders.addBorder(rightVal, BoxSide::Right, renderRight, borderRect.maxX() - rightWidth, borderRect.y(), borderRect.maxX(), borderRect.maxY(), rightStyle);
 
     bool antialias = shouldAntialiasLines(graphicsContext);
 

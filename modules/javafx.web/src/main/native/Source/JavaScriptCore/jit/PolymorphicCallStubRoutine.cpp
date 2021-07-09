@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ PolymorphicCallNode::~PolymorphicCallNode()
 void PolymorphicCallNode::unlink(VM& vm)
 {
     if (m_callLinkInfo) {
-        dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", m_callLinkInfo->callReturnLocation(), ", ", m_callLinkInfo->codeOrigin());
+        dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", m_callLinkInfo->callReturnLocation(), ", bc#", m_callLinkInfo->codeOrigin().bytecodeIndex());
         m_callLinkInfo->unlink(vm);
     }
 
@@ -135,10 +135,20 @@ bool PolymorphicCallStubRoutine::visitWeak(VM& vm)
     return isStillLive;
 }
 
-void PolymorphicCallStubRoutine::markRequiredObjectsInternal(SlotVisitor& visitor)
+template<typename Visitor>
+ALWAYS_INLINE void PolymorphicCallStubRoutine::markRequiredObjectsInternalImpl(Visitor& visitor)
 {
     for (auto& variant : m_variants)
         visitor.append(variant);
+}
+
+void PolymorphicCallStubRoutine::markRequiredObjectsInternal(AbstractSlotVisitor& visitor)
+{
+    markRequiredObjectsInternalImpl(visitor);
+}
+void PolymorphicCallStubRoutine::markRequiredObjectsInternal(SlotVisitor& visitor)
+{
+    markRequiredObjectsInternalImpl(visitor);
 }
 
 } // namespace JSC

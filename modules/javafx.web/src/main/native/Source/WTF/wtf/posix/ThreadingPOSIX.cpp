@@ -38,6 +38,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadingPrimitives.h>
+#include <wtf/WTFConfig.h>
 #include <wtf/WordLock.h>
 
 #if OS(LINUX)
@@ -158,11 +159,11 @@ void Thread::signalHandlerSuspendResume(int, siginfo_t*, void* ucontext)
     // http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_11
     globalSemaphoreForSuspendResume->post();
 
-    // Reaching here, SigThreadSuspendResume is blocked in this handler (this is configured by sigaction's sa_mask).
-    // So before calling sigsuspend, SigThreadSuspendResume to this thread is deferred. This ensures that the handler is not executed recursively.
+    // Reaching here, sigThreadSuspendResume is blocked in this handler (this is configured by sigaction's sa_mask).
+    // So before calling sigsuspend, sigThreadSuspendResume to this thread is deferred. This ensures that the handler is not executed recursively.
     sigset_t blockedSignalSet;
     sigfillset(&blockedSignalSet);
-    sigdelset(&blockedSignalSet, SigThreadSuspendResume);
+    sigdelset(&blockedSignalSet, g_wtfConfig.sigThreadSuspendResume);
     sigsuspend(&blockedSignalSet);
 
     thread->m_platformRegisters = nullptr;
@@ -175,19 +176,45 @@ void Thread::signalHandlerSuspendResume(int, siginfo_t*, void* ucontext)
 
 void Thread::initializePlatformThreading()
 {
+    if (!g_wtfConfig.isUserSpecifiedThreadSuspendResumeSignalConfigured) {
+        g_wtfConfig.sigThreadSuspendResume = SIGUSR1;
+        if (const char* string = getenv("JSC_SIGNAL_FOR_GC")) {
+            int32_t value = 0;
+            if (sscanf(string, "%d", &value) == 1)
+                g_wtfConfig.sigThreadSuspendResume = value;
+        }
+    }
+    g_wtfConfig.isThreadSuspendResumeSignalConfigured = true;
+
 #if !OS(DARWIN)
     globalSemaphoreForSuspendResume.construct(0);
 
     // Signal handlers are process global configuration.
-    // Intentionally block SigThreadSuspendResume in the handler.
-    // SigThreadSuspendResume will be allowed in the handler by sigsuspend.
-    struct sigaction action;
-    sigemptyset(&action.sa_mask);
-    sigaddset(&action.sa_mask, SigThreadSuspendResume);
+    // Intentionally block sigThreadSuspendResume in the handler.
+    // sigThreadSuspendResume will be allowed in the handler by sigsuspend.
+    auto attemptToSetSignal = [](int signal) -> bool {
+        struct sigaction action;
+        sigemptyset(&action.sa_mask);
+        sigaddset(&action.sa_mask, signal);
 
-    action.sa_sigaction = &signalHandlerSuspendResume;
-    action.sa_flags = SA_RESTART | SA_SIGINFO;
-    sigaction(SigThreadSuspendResume, &action, 0);
+        action.sa_sigaction = &signalHandlerSuspendResume;
+        action.sa_flags = SA_RESTART | SA_SIGINFO;
+
+        // Theoretically, this can have race conditions but currently, there is no way to deal with it,
+        // plus, we do not expect that this initialization is executed concurrently with the other
+        // initialization which also installs specific signals. If this is the problem, applications should
+        // change how to initialize things.
+        struct sigaction oldAction;
+        if (sigaction(signal, nullptr, &oldAction))
+            return false;
+        // It has signal already.
+        if (oldAction.sa_handler != SIG_DFL || bitwise_cast<void*>(oldAction.sa_sigaction) != bitwise_cast<void*>(SIG_DFL))
+            WTFLogAlways("Overriding existing handler for signal %d. Set JSC_SIGNAL_FOR_GC if you want WebKit to use a different signal", signal);
+        return !sigaction(signal, &action, 0);
+    };
+
+    bool signalIsInstalled = attemptToSetSignal(g_wtfConfig.sigThreadSuspendResume);
+    RELEASE_ASSERT(signalIsInstalled);
 #endif
 }
 
@@ -201,9 +228,10 @@ ThreadIdentifier Thread::currentID()
 void Thread::initializeCurrentThreadEvenIfNonWTFCreated()
 {
 #if !OS(DARWIN)
+    RELEASE_ASSERT(g_wtfConfig.isThreadSuspendResumeSignalConfigured);
     sigset_t mask;
     sigemptyset(&mask);
-    sigaddset(&mask, SigThreadSuspendResume);
+    sigaddset(&mask, g_wtfConfig.sigThreadSuspendResume);
     pthread_sigmask(SIG_UNBLOCK, &mask, 0);
 #endif
 }
@@ -214,13 +242,33 @@ static void* wtfThreadEntryPoint(void* context)
     return nullptr;
 }
 
-bool Thread::establishHandle(NewThreadContext* context, Optional<size_t> stackSize)
+#if HAVE(QOS_CLASSES)
+dispatch_qos_class_t Thread::dispatchQOSClass(QOS qos)
+{
+    switch (qos) {
+    case QOS::UserInteractive:
+        return adjustedQOSClass(QOS_CLASS_USER_INTERACTIVE);
+    case QOS::UserInitiated:
+        return adjustedQOSClass(QOS_CLASS_USER_INITIATED);
+    case QOS::Default:
+        return adjustedQOSClass(QOS_CLASS_DEFAULT);
+    case QOS::Utility:
+        return adjustedQOSClass(QOS_CLASS_UTILITY);
+    case QOS::Background:
+        return adjustedQOSClass(QOS_CLASS_BACKGROUND);
+    }
+}
+#endif
+
+bool Thread::establishHandle(NewThreadContext* context, Optional<size_t> stackSize, QOS qos)
 {
     pthread_t threadHandle;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 #if HAVE(QOS_CLASSES)
-    pthread_attr_set_qos_class_np(&attr, adjustedQOSClass(QOS_CLASS_USER_INITIATED), 0);
+    pthread_attr_set_qos_class_np(&attr, dispatchQOSClass(qos), 0);
+#else
+    UNUSED_PARAM(qos);
 #endif
     if (stackSize)
         pthread_attr_setstacksize(&attr, stackSize.value());
@@ -303,6 +351,7 @@ void Thread::detach()
 Thread& Thread::initializeCurrentTLS()
 {
     // Not a WTF-created thread, Thread is not established yet.
+    WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
     thread->establishPlatformSpecificHandle(pthread_self());
     thread->initializeInThread();
@@ -342,13 +391,11 @@ auto Thread::suspend() -> Expected<void, PlatformSuspendError>
     return { };
 #else
     if (!m_suspendCount) {
-        // Ideally, we would like to use pthread_sigqueue. It allows us to pass the argument to the signal handler.
-        // But it can be used in a few platforms, like Linux.
-        // Instead, we use Thread* stored in a global variable to pass it to the signal handler.
         targetThread.store(this);
 
         while (true) {
-            int result = pthread_kill(m_handle, SigThreadSuspendResume);
+            // We must use pthread_kill to avoid queue-overflow problem with real-time signals.
+            int result = pthread_kill(m_handle, g_wtfConfig.sigThreadSuspendResume);
             if (result)
                 return makeUnexpected(result);
             globalSemaphoreForSuspendResume->wait();
@@ -372,15 +419,16 @@ void Thread::resume()
     thread_resume(m_platformThread);
 #else
     if (m_suspendCount == 1) {
-        // When allowing SigThreadSuspendResume interrupt in the signal handler by sigsuspend and SigThreadSuspendResume is actually issued,
+        // When allowing sigThreadSuspendResume interrupt in the signal handler by sigsuspend and SigThreadSuspendResume is actually issued,
         // the signal handler itself will be called once again.
         // There are several ways to distinguish the handler invocation for suspend and resume.
         // 1. Use different signal numbers. And check the signal number in the handler.
-        // 2. Use some arguments to distinguish suspend and resume in the handler. If pthread_sigqueue can be used, we can take this.
+        // 2. Use some arguments to distinguish suspend and resume in the handler.
         // 3. Use thread's flag.
         // In this implementaiton, we take (3). m_suspendCount is used to distinguish it.
+        // Note that we must use pthread_kill to avoid queue-overflow problem with real-time signals.
         targetThread.store(this);
-        if (pthread_kill(m_handle, SigThreadSuspendResume) == ESRCH)
+        if (pthread_kill(m_handle, g_wtfConfig.sigThreadSuspendResume) == ESRCH)
             return;
         globalSemaphoreForSuspendResume->wait();
     }

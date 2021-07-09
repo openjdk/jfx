@@ -42,8 +42,8 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSONObject);
 
-EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL JSONProtoFuncStringify(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(JSONProtoFuncParse);
+static JSC_DECLARE_HOST_FUNCTION(JSONProtoFuncStringify);
 
 }
 
@@ -500,7 +500,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
                 m_propertyNames = stringifier.m_arrayReplacerPropertyNames.data();
             else {
                 PropertyNameArray objectPropertyNames(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-                m_object->methodTable(vm)->getOwnPropertyNames(m_object, globalObject, objectPropertyNames, EnumerationMode());
+                m_object->methodTable(vm)->getOwnPropertyNames(m_object, globalObject, objectPropertyNames, DontEnumPropertiesMode::Exclude);
                 RETURN_IF_EXCEPTION(scope, false);
                 m_propertyNames = objectPropertyNames.releaseData();
             }
@@ -719,7 +719,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 markedStack.appendWithCrashOnOverflow(object);
                 indexStack.append(0);
                 propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
-                object->methodTable(vm)->getOwnPropertyNames(object, m_globalObject, propertyStack.last(), EnumerationMode());
+                object->methodTable(vm)->getOwnPropertyNames(object, m_globalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
                 RETURN_IF_EXCEPTION(scope, { });
             }
             objectStartVisitMember:
@@ -792,7 +792,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
 }
 
 // ECMA-262 v5 15.12.2
-EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(JSONProtoFuncParse, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -834,7 +834,7 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(JSGlobalObject* globalObject, Ca
 }
 
 // ECMA-262 v5 15.12.3
-EncodedJSValue JSC_HOST_CALL JSONProtoFuncStringify(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(JSONProtoFuncStringify, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

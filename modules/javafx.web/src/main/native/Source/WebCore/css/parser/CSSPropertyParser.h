@@ -23,6 +23,7 @@
 #pragma once
 
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserHelpers.h"
 #include "StyleRule.h"
 #include <wtf/text/StringView.h>
 
@@ -111,6 +112,8 @@ private:
 
     bool consumeTransformOrigin(bool important);
     bool consumePerspectiveOrigin(bool important);
+
+    bool consumeOverscrollBehaviorShorthand(bool important);
 
 private:
     // Inputs:

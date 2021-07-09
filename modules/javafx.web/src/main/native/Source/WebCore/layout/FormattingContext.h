@@ -35,15 +35,12 @@
 
 namespace WebCore {
 
-namespace Display {
-class Box;
-}
 class LayoutSize;
 struct Length;
 
 namespace Layout {
 
-class Box;
+class BoxGeometry;
 class ReplacedBox;
 struct ComputedHorizontalMargin;
 struct ComputedVerticalMargin;
@@ -55,8 +52,8 @@ class FormattingState;
 struct HorizontalGeometry;
 class InvalidationState;
 class LayoutState;
-struct OverrideHorizontalValues;
-struct OverrideVerticalValues;
+struct OverriddenHorizontalValues;
+struct OverriddenVerticalValues;
 struct VerticalGeometry;
 
 class FormattingContext {
@@ -74,7 +71,7 @@ public:
     struct ConstraintsForOutOfFlowContent {
         HorizontalConstraints horizontal;
         VerticalConstraints vertical;
-        // Borders and paddings are resolved against the containing block's content box as if the box was an in-flow box.
+        // Borders and padding are resolved against the containing block's content box as if the box was an in-flow box.
         LayoutUnit borderAndPaddingConstraints;
     };
     void layoutOutOfFlowContent(InvalidationState&, const ConstraintsForOutOfFlowContent&);
@@ -90,29 +87,31 @@ public:
         LayoutUnit maximum;
     };
     virtual IntrinsicWidthConstraints computedIntrinsicWidthConstraints() = 0;
+    virtual LayoutUnit usedContentHeight() const = 0;
 
     bool isBlockFormattingContext() const { return root().establishesBlockFormattingContext(); }
     bool isInlineFormattingContext() const { return root().establishesInlineFormattingContext(); }
     bool isTableFormattingContext() const { return root().establishesTableFormattingContext(); }
     bool isTableWrapperBlockFormattingContext() const { return isBlockFormattingContext() && root().isTableWrapperBox(); }
+    bool isFlexFormattingContext() const { return root().establishesFlexFormattingContext(); }
 
     enum class EscapeReason {
-        NeedsGeometryFromEstablishedFormattingContext,
+        TableQuirkNeedsGeometryFromEstablishedFormattingContext,
         OutOfFlowBoxNeedsInFlowGeometry,
-        FloatBoxNeedsToBeInAbsoluteCoordinates,
+        FloatBoxIsAlwaysRelativeToFloatStateRoot,
         FindFixedHeightAncestorQuirk,
-        DocumentBoxStrechesToViewportQuirk,
-        BodyStrechesToViewportQuirk,
-        StrokeOverflowNeedsViewportGeometry,
+        DocumentBoxStretchesToViewportQuirk,
+        BodyStretchesToViewportQuirk,
         TableNeedsAccessToTableWrapper
     };
-    const Display::Box& geometryForBox(const Box&, Optional<EscapeReason> = WTF::nullopt) const;
+    const BoxGeometry& geometryForBox(const Box&, Optional<EscapeReason> = WTF::nullopt) const;
+    const ContainerBox& root() const { return *m_root; }
+
+    LayoutState& layoutState() const;
 
 protected:
     using LayoutQueue = Vector<const Box*>;
 
-    const ContainerBox& root() const { return *m_root; }
-    LayoutState& layoutState() const;
     const FormattingState& formattingState() const { return m_formattingState; }
     FormattingState& formattingState() { return m_formattingState; }
 
@@ -125,18 +124,18 @@ protected:
     // This class implements generic positioning and sizing.
     class Geometry {
     public:
-        VerticalGeometry outOfFlowVerticalGeometry(const Box&, const HorizontalConstraints&, const VerticalConstraints&, const OverrideVerticalValues&) const;
-        HorizontalGeometry outOfFlowHorizontalGeometry(const Box&, const HorizontalConstraints&, const VerticalConstraints&, const OverrideHorizontalValues&);
+        VerticalGeometry outOfFlowVerticalGeometry(const Box&, const HorizontalConstraints&, const VerticalConstraints&, const OverriddenVerticalValues&) const;
+        HorizontalGeometry outOfFlowHorizontalGeometry(const Box&, const HorizontalConstraints&, const VerticalConstraints&, const OverriddenHorizontalValues&);
 
-        ContentHeightAndMargin floatingHeightAndMargin(const Box&, const HorizontalConstraints&, const OverrideVerticalValues&) const;
-        ContentWidthAndMargin floatingWidthAndMargin(const Box&, const HorizontalConstraints&, const OverrideHorizontalValues&);
+        ContentHeightAndMargin floatingContentHeightAndMargin(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
+        ContentWidthAndMargin floatingContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&);
 
-        ContentHeightAndMargin inlineReplacedHeightAndMargin(const ReplacedBox&, const HorizontalConstraints&, Optional<VerticalConstraints>, const OverrideVerticalValues&) const;
-        ContentWidthAndMargin inlineReplacedWidthAndMargin(const ReplacedBox&, const HorizontalConstraints&, Optional<VerticalConstraints>, const OverrideHorizontalValues&);
+        ContentHeightAndMargin inlineReplacedContentHeightAndMargin(const ReplacedBox&, const HorizontalConstraints&, Optional<VerticalConstraints>, const OverriddenVerticalValues&) const;
+        ContentWidthAndMargin inlineReplacedContentWidthAndMargin(const ReplacedBox&, const HorizontalConstraints&, Optional<VerticalConstraints>, const OverriddenHorizontalValues&);
 
         LayoutSize inFlowPositionedPositionOffset(const Box&, const HorizontalConstraints&) const;
 
-        ContentHeightAndMargin complicatedCases(const Box&, const HorizontalConstraints&, const OverrideVerticalValues&) const;
+        ContentHeightAndMargin complicatedCases(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
         LayoutUnit shrinkToFitWidth(const Box&, LayoutUnit availableWidth);
 
         Edges computedBorder(const Box&) const;
@@ -156,7 +155,7 @@ protected:
 
         FormattingContext::IntrinsicWidthConstraints constrainByMinMaxWidth(const Box&, IntrinsicWidthConstraints) const;
 
-        LayoutUnit contentHeightForFormattingContextRoot(const Box&) const;
+        LayoutUnit contentHeightForFormattingContextRoot(const ContainerBox&) const;
 
         ConstraintsForOutOfFlowContent constraintsForOutOfFlowContent(const ContainerBox&);
         ConstraintsForInFlowContent constraintsForInFlowContent(const ContainerBox&, Optional<EscapeReason> = WTF::nullopt);
@@ -173,16 +172,16 @@ protected:
         const FormattingContext& formattingContext() const { return m_formattingContext; }
 
     private:
-        VerticalGeometry outOfFlowReplacedVerticalGeometry(const ReplacedBox&, const HorizontalConstraints&, const VerticalConstraints&, const OverrideVerticalValues&) const;
-        HorizontalGeometry outOfFlowReplacedHorizontalGeometry(const ReplacedBox&, const HorizontalConstraints&, const VerticalConstraints&, const OverrideHorizontalValues&);
+        VerticalGeometry outOfFlowReplacedVerticalGeometry(const ReplacedBox&, const HorizontalConstraints&, const VerticalConstraints&, const OverriddenVerticalValues&) const;
+        HorizontalGeometry outOfFlowReplacedHorizontalGeometry(const ReplacedBox&, const HorizontalConstraints&, const VerticalConstraints&, const OverriddenHorizontalValues&);
 
-        VerticalGeometry outOfFlowNonReplacedVerticalGeometry(const Box&, const HorizontalConstraints&, const VerticalConstraints&, const OverrideVerticalValues&) const;
-        HorizontalGeometry outOfFlowNonReplacedHorizontalGeometry(const Box&, const HorizontalConstraints&, const OverrideHorizontalValues&);
+        VerticalGeometry outOfFlowNonReplacedVerticalGeometry(const ContainerBox&, const HorizontalConstraints&, const VerticalConstraints&, const OverriddenVerticalValues&) const;
+        HorizontalGeometry outOfFlowNonReplacedHorizontalGeometry(const ContainerBox&, const HorizontalConstraints&, const OverriddenHorizontalValues&);
 
-        ContentHeightAndMargin floatingReplacedHeightAndMargin(const ReplacedBox&, const HorizontalConstraints&, const OverrideVerticalValues&) const;
-        ContentWidthAndMargin floatingReplacedWidthAndMargin(const ReplacedBox&, const HorizontalConstraints&, const OverrideHorizontalValues&);
+        ContentHeightAndMargin floatingReplacedContentHeightAndMargin(const ReplacedBox&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
+        ContentWidthAndMargin floatingReplacedContentWidthAndMargin(const ReplacedBox&, const HorizontalConstraints&, const OverriddenHorizontalValues&);
 
-        ContentWidthAndMargin floatingNonReplacedWidthAndMargin(const Box&, const HorizontalConstraints&, const OverrideHorizontalValues&);
+        ContentWidthAndMargin floatingNonReplacedContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&);
 
         LayoutUnit staticVerticalPositionForOutOfFlowPositioned(const Box&, const VerticalConstraints&) const;
         LayoutUnit staticHorizontalPositionForOutOfFlowPositioned(const Box&, const HorizontalConstraints&) const;

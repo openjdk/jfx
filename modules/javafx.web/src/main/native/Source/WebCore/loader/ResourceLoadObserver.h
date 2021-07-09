@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ResourceLoadStatistics.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -38,6 +39,9 @@ class ResourceResponse;
 class ResourceLoadObserver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    using TopFrameDomain = WebCore::RegistrableDomain;
+    using SubResourceDomain = WebCore::RegistrableDomain;
+
     // https://fetch.spec.whatwg.org/#request-destination-script-like
     enum class FetchDestinationIsScriptLike : bool { Yes, No };
 
@@ -58,12 +62,14 @@ public:
     virtual void logSubresourceLoadingForTesting(const RegistrableDomain& /* firstPartyDomain */, const RegistrableDomain& /* thirdPartyDomain */, bool /* shouldScheduleNotification */) { }
 
     virtual String statisticsForURL(const URL&) { return { }; }
-    virtual void updateCentralStatisticsStore() { }
+    virtual void updateCentralStatisticsStore(CompletionHandler<void()>&& completionHandler) { completionHandler(); }
     virtual void clearState() { }
 
     virtual bool hasStatistics() const { return false; }
 
     virtual void setDomainsWithUserInteraction(HashSet<RegistrableDomain>&&) { }
+    virtual void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain>&&, CompletionHandler<void()>&& completionHandler) { completionHandler(); }
+    virtual bool hasCrossPageStorageAccess(const SubResourceDomain&, const TopFrameDomain&) const { return false; }
     virtual bool hasHadUserInteraction(const RegistrableDomain&) const { return false; }
 };
 

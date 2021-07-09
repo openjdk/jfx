@@ -85,15 +85,11 @@ TextStream& operator<<(TextStream& ts, ControlPart controlPart)
     case SearchFieldResultsDecorationPart: ts << "search-field-results-decoration-part"; break;
     case SearchFieldResultsButtonPart: ts << "search-field-results-button-part"; break;
     case SearchFieldCancelButtonPart: ts << "search-field-cancel-button-part"; break;
-    case SnapshottedPluginOverlayPart: ts << "snapshotted-plugin-overlay-part"; break;
     case TextFieldPart: ts << "text-field-part"; break;
     case RelevancyLevelIndicatorPart: ts << "relevancy-level-indicator-part"; break;
     case ContinuousCapacityLevelIndicatorPart: ts << "continuous-capacity-level-indicator-part"; break;
     case DiscreteCapacityLevelIndicatorPart: ts << "discrete-capacity-level-indicator-part"; break;
     case RatingLevelIndicatorPart: ts << "rating-level-indicator-part"; break;
-#if ENABLE(SERVICE_CONTROLS)
-    case ImageControlsButtonPart: ts << "image-controls-button-part"; break;
-#endif
 #if ENABLE(APPLE_PAY)
     case ApplePayButtonPart: ts << "apple-pay-button-part"; break;
 #endif

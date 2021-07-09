@@ -53,16 +53,16 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
         if (!parsedValue || parsedValue->isCalculated())
             return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
         if (parsedValue->isPercentage())
-            margins.append(Length(parsedValue->doubleValue(), Percent));
+            margins.append(Length(parsedValue->doubleValue(), LengthType::Percent));
         else if (parsedValue->isPx())
-            margins.append(Length(parsedValue->intValue(), Fixed));
+            margins.append(Length(parsedValue->intValue(), LengthType::Fixed));
         else
             return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
     }
     switch (margins.size()) {
     case 0:
         for (unsigned i = 0; i < 4; ++i)
-            margins.append(Length(0, Fixed));
+            margins.append(Length(0, LengthType::Fixed));
         break;
     case 1:
         for (unsigned i = 0; i < 3; ++i)
@@ -150,15 +150,14 @@ IntersectionObserver::~IntersectionObserver()
 String IntersectionObserver::rootMargin() const
 {
     StringBuilder stringBuilder;
-    PhysicalBoxSide sides[4] = { PhysicalBoxSide::Top, PhysicalBoxSide::Right, PhysicalBoxSide::Bottom, PhysicalBoxSide::Left };
-    for (auto side : sides) {
+    for (auto side : allBoxSides) {
         auto& length = m_rootMargin.at(side);
         stringBuilder.appendNumber(length.intValue());
-        if (length.type() == Percent)
+        if (length.isPercent())
             stringBuilder.append('%');
         else
             stringBuilder.appendLiteral("px");
-        if (side != PhysicalBoxSide::Left)
+        if (side != BoxSide::Left)
             stringBuilder.append(' ');
     }
     return stringBuilder.toString();

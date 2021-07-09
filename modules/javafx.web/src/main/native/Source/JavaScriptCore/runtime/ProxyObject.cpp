@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,9 @@ namespace JSC {
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ProxyObject);
 
 const ClassInfo ProxyObject::s_info = { "ProxyObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProxyObject) };
+
+static JSC_DECLARE_HOST_FUNCTION(performProxyCall);
+static JSC_DECLARE_HOST_FUNCTION(performProxyConstruct);
 
 ProxyObject::ProxyObject(VM& vm, Structure* structure)
     : Base(vm, structure)
@@ -161,6 +164,26 @@ bool ProxyObject::performGet(JSGlobalObject* globalObject, PropertyName property
     return true;
 }
 
+// https://tc39.es/ecma262/#sec-completepropertydescriptor
+static void completePropertyDescriptor(PropertyDescriptor& desc)
+{
+    if (desc.isAccessorDescriptor()) {
+        if (!desc.getter())
+            desc.setGetter(jsUndefined());
+        if (!desc.setter())
+            desc.setSetter(jsUndefined());
+    } else {
+        if (!desc.value())
+            desc.setValue(jsUndefined());
+        if (!desc.writablePresent())
+            desc.setWritable(false);
+    }
+    if (!desc.enumerablePresent())
+        desc.setEnumerable(false);
+    if (!desc.configurablePresent())
+        desc.setConfigurable(false);
+}
+
 bool ProxyObject::performInternalMethodGetOwnProperty(JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
     NO_TAIL_CALLS();
@@ -231,6 +254,7 @@ bool ProxyObject::performInternalMethodGetOwnProperty(JSGlobalObject* globalObje
     PropertyDescriptor trapResultAsDescriptor;
     toPropertyDescriptor(globalObject, trapResult, trapResultAsDescriptor);
     RETURN_IF_EXCEPTION(scope, false);
+    completePropertyDescriptor(trapResultAsDescriptor);
     bool throwException = false;
     bool valid = validateAndApplyPropertyDescriptor(globalObject, nullptr, propertyName, isExtensible,
         trapResultAsDescriptor, isTargetPropertyDescriptorDefined, targetPropertyDescriptor, throwException);
@@ -470,7 +494,7 @@ bool ProxyObject::putByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigne
     return thisObject->putByIndexCommon(globalObject, thisObject, propertyName, value, shouldThrow);
 }
 
-static EncodedJSValue JSC_HOST_CALL performProxyCall(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(performProxyCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     NO_TAIL_CALLS();
 
@@ -517,7 +541,7 @@ CallData ProxyObject::getCallData(JSCell* cell)
     return callData;
 }
 
-static EncodedJSValue JSC_HOST_CALL performProxyConstruct(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(performProxyConstruct, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     NO_TAIL_CALLS();
 
@@ -887,10 +911,9 @@ void ProxyObject::performGetOwnPropertyNames(JSGlobalObject* globalObject, Prope
     JSValue ownKeysMethod = handler->getMethod(globalObject, callData, makeIdentifier(vm, "ownKeys"), "'ownKeys' property of a Proxy's handler should be callable"_s);
     RETURN_IF_EXCEPTION(scope, void());
     JSObject* target = this->target();
-    EnumerationMode enumerationMode(DontEnumPropertiesMode::Include);
     if (ownKeysMethod.isUndefined()) {
         scope.release();
-        target->methodTable(vm)->getOwnPropertyNames(target, globalObject, propertyNames, enumerationMode);
+        target->methodTable(vm)->getOwnPropertyNames(target, globalObject, propertyNames, DontEnumPropertiesMode::Include);
         return;
     }
 
@@ -943,7 +966,7 @@ void ProxyObject::performGetOwnPropertyNames(JSGlobalObject* globalObject, Prope
     RETURN_IF_EXCEPTION(scope, void());
 
     PropertyNameArray targetKeys(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
-    target->methodTable(vm)->getOwnPropertyNames(target, globalObject, targetKeys, enumerationMode);
+    target->methodTable(vm)->getOwnPropertyNames(target, globalObject, targetKeys, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, void());
     Vector<UniquedStringImpl*> targetConfigurableKeys;
     Vector<UniquedStringImpl*> targetNonConfigurableKeys;
@@ -1010,35 +1033,13 @@ void ProxyObject::performGetOwnEnumerablePropertyNames(JSGlobalObject* globalObj
     }
 }
 
-void ProxyObject::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNameArray, EnumerationMode enumerationMode)
+void ProxyObject::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNameArray, DontEnumPropertiesMode mode)
 {
     ProxyObject* thisObject = jsCast<ProxyObject*>(object);
-    if (enumerationMode.includeDontEnumProperties())
+    if (mode == DontEnumPropertiesMode::Include)
         thisObject->performGetOwnPropertyNames(globalObject, propertyNameArray);
     else
         thisObject->performGetOwnEnumerablePropertyNames(globalObject, propertyNameArray);
-}
-
-void ProxyObject::getPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNameArray, EnumerationMode enumerationMode)
-{
-    NO_TAIL_CALLS();
-    JSObject::getPropertyNames(object, globalObject, propertyNameArray, enumerationMode);
-}
-
-void ProxyObject::getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-void ProxyObject::getStructurePropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    // We should always go down the getOwnPropertyNames path.
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-void ProxyObject::getGenericPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 bool ProxyObject::performSetPrototype(JSGlobalObject* globalObject, JSValue prototype, bool shouldThrowIfCantSet)
@@ -1178,7 +1179,8 @@ bool ProxyObject::isRevoked() const
     return handler().isNull();
 }
 
-void ProxyObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ProxyObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     ProxyObject* thisObject = jsCast<ProxyObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -1187,5 +1189,7 @@ void ProxyObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_target);
     visitor.append(thisObject->m_handler);
 }
+
+DEFINE_VISIT_CHILDREN(ProxyObject);
 
 } // namespace JSC

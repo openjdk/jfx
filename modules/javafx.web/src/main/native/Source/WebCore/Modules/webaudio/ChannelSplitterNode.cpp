@@ -39,11 +39,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ChannelSplitterNode);
 
 ExceptionOr<Ref<ChannelSplitterNode>> ChannelSplitterNode::create(BaseAudioContext& context, const ChannelSplitterOptions& options)
 {
-    if (context.isStopped())
-        return Exception { InvalidStateError };
-
-    context.lazyInitialize();
-
     if (options.numberOfOutputs > AudioContext::maxNumberOfChannels() || !options.numberOfOutputs)
         return Exception { IndexSizeError, "Number of outputs is not in the allowed range"_s };
 
@@ -57,15 +52,13 @@ ExceptionOr<Ref<ChannelSplitterNode>> ChannelSplitterNode::create(BaseAudioConte
 }
 
 ChannelSplitterNode::ChannelSplitterNode(BaseAudioContext& context, unsigned numberOfOutputs)
-    : AudioNode(context)
+    : AudioNode(context, NodeTypeChannelSplitter)
 {
-    setNodeType(NodeTypeChannelSplitter);
-
-    addInput(makeUnique<AudioNodeInput>(this));
+    addInput();
 
     // Create a fixed number of outputs (able to handle the maximum number of channels fed to an input).
     for (unsigned i = 0; i < numberOfOutputs; ++i)
-        addOutput(makeUnique<AudioNodeOutput>(this, 1));
+        addOutput(1);
 
     initialize();
 }
@@ -91,10 +84,6 @@ void ChannelSplitterNode::process(size_t framesToProcess)
             destination->zero();
         }
     }
-}
-
-void ChannelSplitterNode::reset()
-{
 }
 
 ExceptionOr<void> ChannelSplitterNode::setChannelCount(unsigned channelCount)

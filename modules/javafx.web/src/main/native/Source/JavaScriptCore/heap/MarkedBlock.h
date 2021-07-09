@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -151,9 +151,6 @@ public:
 
         void shrink();
 
-        void visitWeakSet(SlotVisitor&);
-        void reapWeakSet();
-
         // While allocating from a free list, MarkedBlock temporarily has bogus
         // cell liveness data. To restore accurate cell liveness data, call one
         // of these functions:
@@ -203,6 +200,7 @@ public:
 
         void* start() const { return &m_block->atoms()[0]; }
         void* end() const { return &m_block->atoms()[m_endAtom]; }
+        void* atomAt(size_t i) const { return &m_block->atoms()[i]; }
         bool contains(void* p) const { return start() <= p && p < end(); }
 
         void dumpState(PrintStream&);
@@ -252,6 +250,8 @@ public:
         Footer(VM&, Handle&);
         ~Footer();
 
+        static ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(Footer, m_vm); }
+
     private:
         friend class LLIntOffsetsExtractor;
         friend class MarkedBlock;
@@ -296,6 +296,7 @@ public:
 
         Bitmap<atomsPerBlock> m_marks;
         Bitmap<atomsPerBlock> m_newlyAllocated;
+        void* m_verifierMemo { nullptr };
     };
 
 private:
@@ -385,7 +386,11 @@ public:
         *bitwise_cast<volatile uint8_t*>(&footer());
     }
 
+    void setVerifierMemo(void*);
+    template<typename T> T verifierMemo() const;
+
     static constexpr size_t offsetOfFooter = endAtom * atomSize;
+    static_assert(offsetOfFooter + sizeof(Footer) <= blockSize);
 
 private:
     MarkedBlock(VM&, Handle&);
@@ -494,16 +499,6 @@ inline WeakSet& MarkedBlock::weakSet()
 inline void MarkedBlock::Handle::shrink()
 {
     m_weakSet.shrink();
-}
-
-inline void MarkedBlock::Handle::visitWeakSet(SlotVisitor& visitor)
-{
-    return m_weakSet.visit(visitor);
-}
-
-inline void MarkedBlock::Handle::reapWeakSet()
-{
-    m_weakSet.reap();
 }
 
 inline size_t MarkedBlock::Handle::cellSize()
@@ -669,6 +664,17 @@ inline void MarkedBlock::noteMarked()
     footer().m_biasedMarkCount = biasedMarkCount;
     if (UNLIKELY(!biasedMarkCount))
         noteMarkedSlow();
+}
+
+inline void MarkedBlock::setVerifierMemo(void* p)
+{
+    footer().m_verifierMemo = p;
+}
+
+template<typename T>
+T MarkedBlock::verifierMemo() const
+{
+    return bitwise_cast<T>(footer().m_verifierMemo);
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,7 @@ class LLIntOffsetsExtractor;
 
 // Typed array views have different modes depending on how big they are and
 // whether the user has done anything that requires a separate backing
-// buffer or the DOM-specified neutering capabilities.
+// buffer or the DOM-specified detaching capabilities.
 enum TypedArrayMode : uint32_t {
     // Legend:
     // B: JSArrayBufferView::m_butterfly pointer
@@ -172,7 +172,7 @@ protected:
 
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 public:
     TypedArrayMode mode() const { return m_mode; }
@@ -185,8 +185,8 @@ public:
     JSArrayBuffer* possiblySharedJSBuffer(JSGlobalObject* globalObject);
     RefPtr<ArrayBufferView> unsharedImpl();
     JS_EXPORT_PRIVATE RefPtr<ArrayBufferView> possiblySharedImpl();
-    bool isNeutered() { return hasArrayBuffer() && !hasVector(); }
-    void neuter();
+    bool isDetached() { return hasArrayBuffer() && !hasVector(); }
+    void detach();
 
     bool hasVector() const { return !!m_vector; }
     void* vector() const { return m_vector.getMayBeNull(length()); }
@@ -195,6 +195,7 @@ public:
     inline Optional<unsigned> byteOffsetConcurrently();
 
     unsigned length() const { return m_length; }
+    unsigned byteLength() const;
 
     DECLARE_EXPORT_INFO;
 
@@ -203,6 +204,7 @@ public:
     static ptrdiff_t offsetOfMode() { return OBJECT_OFFSETOF(JSArrayBufferView, m_mode); }
 
     static RefPtr<ArrayBufferView> toWrapped(VM&, JSValue);
+    static RefPtr<ArrayBufferView> toWrappedAllowShared(VM&, JSValue);
 
 private:
     enum Requester { Mutator, ConcurrentThread };
@@ -221,6 +223,8 @@ protected:
     uint32_t m_length;
     TypedArrayMode m_mode;
 };
+
+JSArrayBufferView* validateTypedArray(JSGlobalObject*, JSValue);
 
 } // namespace JSC
 

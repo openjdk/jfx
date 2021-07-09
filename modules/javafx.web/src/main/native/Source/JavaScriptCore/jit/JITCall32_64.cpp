@@ -52,7 +52,7 @@ namespace JSC {
 template<typename Op>
 void JIT::emitPutCallResult(const Op& bytecode)
 {
-    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock), JSValueRegs(regT1, regT0));
     emitStore(destinationFor(bytecode, m_bytecodeIndex.checkpoint()).virtualRegister(), regT1, regT0);
 }
 
@@ -251,8 +251,8 @@ void JIT::compileCallEvalSlowCase(const Instruction* instruction, Vector<SlowCas
     linkAllSlowCases(iter);
 
     auto bytecode = instruction->as<OpCallEval>();
-    CallLinkInfo* info = m_codeBlock->addCallLinkInfo();
-    info->setUpCall(CallLinkInfo::Call, CodeOrigin(m_bytecodeIndex), regT0);
+    CallLinkInfo* info = m_codeBlock->addCallLinkInfo(CodeOrigin(m_bytecodeIndex));
+    info->setUpCall(CallLinkInfo::Call, regT0);
 
     int registerOffset = -bytecode.m_argv;
     VirtualRegister callee = bytecode.m_callee;
@@ -260,7 +260,7 @@ void JIT::compileCallEvalSlowCase(const Instruction* instruction, Vector<SlowCas
     addPtr(TrustedImm32(registerOffset * sizeof(Register) + sizeof(CallerFrameAndPC)), callFrameRegister, stackPointerRegister);
 
     emitLoad(callee, regT1, regT0);
-    emitDumbVirtualCall(vm(), m_codeBlock->globalObject(), info);
+    emitVirtualCall(vm(), m_codeBlock->globalObject(), info);
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, stackPointerRegister);
     checkStackPointerAlignment();
 
@@ -290,7 +290,7 @@ void JIT::compileOpCall(const Instruction* instruction, unsigned callLinkInfoInd
     */
     CallLinkInfo* info = nullptr;
     if (opcodeID != op_call_eval)
-        info = m_codeBlock->addCallLinkInfo();
+        info = m_codeBlock->addCallLinkInfo(CodeOrigin(m_bytecodeIndex));
     compileSetupFrame(bytecode, info);
     // SP holds newCallFrame + sizeof(CallerFrameAndPC), with ArgumentCount initialized.
 
@@ -316,7 +316,7 @@ void JIT::compileOpCall(const Instruction* instruction, unsigned callLinkInfoInd
     addSlowCase(slowCase);
 
     ASSERT(m_callCompilationInfo.size() == callLinkInfoIndex);
-    info->setUpCall(CallLinkInfo::callTypeFor(opcodeID), CodeOrigin(m_bytecodeIndex), regT0);
+    info->setUpCall(CallLinkInfo::callTypeFor(opcodeID), regT0);
     m_callCompilationInfo.append(CallCompilationInfo());
     m_callCompilationInfo[callLinkInfoIndex].hotPathBegin = addressOfLinkedFunctionCheck;
     m_callCompilationInfo[callLinkInfoIndex].callLinkInfo = info;
@@ -324,11 +324,11 @@ void JIT::compileOpCall(const Instruction* instruction, unsigned callLinkInfoInd
     checkStackPointerAlignment();
     if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs || opcodeID == op_tail_call_forward_arguments) {
         prepareForTailCallSlow();
-        m_callCompilationInfo[callLinkInfoIndex].hotPathOther = emitNakedTailCall();
+        m_callCompilationInfo[callLinkInfoIndex].hotPathOther = emitNakedNearTailCall();
         return;
     }
 
-    m_callCompilationInfo[callLinkInfoIndex].hotPathOther = emitNakedCall();
+    m_callCompilationInfo[callLinkInfoIndex].hotPathOther = emitNakedNearCall();
 
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, stackPointerRegister);
     checkStackPointerAlignment();
@@ -355,7 +355,7 @@ void JIT::compileOpCallSlowCase(const Instruction* instruction, Vector<SlowCaseE
     if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs || opcodeID == op_tail_call_forward_arguments)
         emitRestoreCalleeSaves();
 
-    m_callCompilationInfo[callLinkInfoIndex].callReturnLocation = emitNakedCall(m_vm->getCTIStub(linkCallThunkGenerator).retaggedCode<NoPtrTag>());
+    m_callCompilationInfo[callLinkInfoIndex].callReturnLocation = emitNakedNearCall(m_vm->getCTIStub(linkCallThunkGenerator).retaggedCode<NoPtrTag>());
 
     if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs) {
         abortWithReason(JITDidReturnFromTailCall);
@@ -402,6 +402,8 @@ void JIT::emit_op_iterator_open(const Instruction* instruction)
     GPRReg tagNextGPR = tagIteratorGPR;
     GPRReg payloadNextGPR = payloadIteratorGPR;
 
+    JSValueRegs nextRegs = JSValueRegs(tagNextGPR, payloadNextGPR);
+
     JITGetByIdGenerator gen(
         m_codeBlock,
         CodeOrigin(m_bytecodeIndex),
@@ -409,15 +411,15 @@ void JIT::emit_op_iterator_open(const Instruction* instruction)
         RegisterSet::stubUnavailableRegisters(),
         CacheableIdentifier::createFromImmortalIdentifier(ident->impl()),
         JSValueRegs(tagIteratorGPR, payloadIteratorGPR),
-        JSValueRegs(tagNextGPR, payloadNextGPR),
+        nextRegs,
         AccessType::GetById);
 
     gen.generateFastPath(*this);
     addSlowCase(gen.slowPathJump());
     m_getByIds.append(gen);
 
-    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
-    emitPutVirtualRegister(bytecode.m_next, JSValueRegs(tagNextGPR, payloadNextGPR));
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock), nextRegs);
+    emitPutVirtualRegister(bytecode.m_next, nextRegs);
 
     fastCase.link(this);
 }
@@ -497,6 +499,8 @@ void JIT::emit_op_iterator_next(const Instruction* instruction)
     GPRReg payloadDoneGPR = regT4;
 
     {
+        JSValueRegs doneRegs = JSValueRegs(tagDoneGPR, payloadDoneGPR);
+
         GPRReg tagIterResultGPR = regT3;
         GPRReg payloadIterResultGPR = regT2;
 
@@ -516,18 +520,19 @@ void JIT::emit_op_iterator_next(const Instruction* instruction)
             preservedRegs,
             CacheableIdentifier::createFromImmortalIdentifier(vm().propertyNames->done.impl()),
             JSValueRegs(tagIterResultGPR, payloadIterResultGPR),
-            JSValueRegs(tagDoneGPR, payloadDoneGPR),
+            doneRegs,
             AccessType::GetById);
         gen.generateFastPath(*this);
         addSlowCase(gen.slowPathJump());
         m_getByIds.append(gen);
 
-        emitValueProfilingSite(metadata);
-        emitPutVirtualRegister(bytecode.m_done, JSValueRegs(tagDoneGPR, payloadDoneGPR));
+        emitValueProfilingSite(metadata, doneRegs);
+        emitPutVirtualRegister(bytecode.m_done, doneRegs);
         advanceToNextCheckpoint();
     }
 
     {
+        JSValueRegs resultRegs = JSValueRegs(tagValueGPR, payloadValueGPR);
         GPRReg tagIterResultGPR = regT1;
         GPRReg payloadIterResultGPR = regT0;
 
@@ -543,14 +548,14 @@ void JIT::emit_op_iterator_next(const Instruction* instruction)
             RegisterSet::stubUnavailableRegisters(),
             CacheableIdentifier::createFromImmortalIdentifier(vm().propertyNames->value.impl()),
             JSValueRegs(tagIterResultGPR, payloadIterResultGPR),
-            JSValueRegs(tagValueGPR, payloadValueGPR),
+            resultRegs,
             AccessType::GetById);
         gen.generateFastPath(*this);
         addSlowCase(gen.slowPathJump());
         m_getByIds.append(gen);
 
-        emitValueProfilingSite(metadata);
-        emitPutVirtualRegister(bytecode.m_value, JSValueRegs(tagValueGPR, payloadValueGPR));
+        emitValueProfilingSite(metadata, resultRegs);
+        emitPutVirtualRegister(bytecode.m_value, resultRegs);
 
         iterationDone.link(this);
     }

@@ -18,12 +18,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface HTMLAnchorElement : HTMLElement {
-    [CEReactions=NotNeeded, EnabledAtRuntime=AdClickAttribution, Reflect] attribute DOMString adcampaignid;
-    [CEReactions=NotNeeded, EnabledAtRuntime=AdClickAttribution, Reflect] attribute DOMString addestination;
+[
+    Exposed=Window
+] interface HTMLAnchorElement : HTMLElement {
+    [CEReactions=NotNeeded, EnabledBySetting=PrivateClickMeasurement, Reflect] attribute DOMString attributionsourceid;
+    [CEReactions=NotNeeded, EnabledBySetting=PrivateClickMeasurement, Reflect] attribute DOMString attributeon;
+    [CEReactions=NotNeeded, EnabledBySetting=PrivateClickMeasurementFraudPrevention, Reflect] attribute DOMString attributionsourcenonce;
     [CEReactions=NotNeeded, Reflect] attribute DOMString charset;
     [CEReactions=NotNeeded, Reflect] attribute DOMString coords;
-    [CEReactions=NotNeeded, Conditional=DOWNLOAD_ATTRIBUTE, EnabledAtRuntime=DownloadAttribute, Reflect] attribute DOMString download;
+    [CEReactions=NotNeeded, Conditional=DOWNLOAD_ATTRIBUTE, EnabledBySetting=DownloadAttribute, Reflect] attribute DOMString download;
     [CEReactions=NotNeeded, Reflect] attribute DOMString hreflang;
     [CEReactions=NotNeeded, Reflect] attribute DOMString name;
     [CEReactions=NotNeeded, Reflect] attribute USVString ping;
@@ -37,7 +40,7 @@ interface HTMLAnchorElement : HTMLElement {
 
     [PutForwards=value] readonly attribute DOMTokenList relList;
 
-    [EnabledAtRuntime=ReferrerPolicyAttribute, ImplementedAs=referrerPolicyForBindings, CEReactions=NotNeeded] attribute DOMString referrerPolicy;
+    [EnabledBySetting=ReferrerPolicyAttribute, ImplementedAs=referrerPolicyForBindings, CEReactions=NotNeeded] attribute DOMString referrerPolicy;
 };
 
-HTMLAnchorElement implements HTMLHyperlinkElementUtils;
+HTMLAnchorElement includes HTMLHyperlinkElementUtils;

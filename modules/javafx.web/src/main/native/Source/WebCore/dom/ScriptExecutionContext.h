@@ -31,6 +31,7 @@
 #include "DOMTimer.h"
 #include "SecurityContext.h"
 #include "ServiceWorkerTypes.h"
+#include "Settings.h"
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
 #include <wtf/CrossThreadTask.h>
@@ -44,6 +45,7 @@ class CallFrame;
 class Exception;
 class JSPromise;
 class VM;
+enum class ScriptExecutionStatus;
 }
 
 namespace Inspector {
@@ -102,6 +104,8 @@ public:
 
     virtual ReferrerPolicy referrerPolicy() const = 0;
 
+    virtual const Settings::Values& settingsValues() const = 0;
+
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
 
@@ -135,6 +139,8 @@ public:
 
     bool activeDOMObjectsAreSuspended() const { return m_activeDOMObjectsAreSuspended; }
     bool activeDOMObjectsAreStopped() const { return m_activeDOMObjectsAreStopped; }
+
+    JSC::ScriptExecutionStatus jscScriptExecutionStatus() const;
 
     // Called from the constructor and destructors of ActiveDOMObject.
     void didCreateActiveDOMObject(ActiveDOMObject&);
@@ -208,7 +214,7 @@ public:
     void removeTimeout(int timeoutId) { m_timeouts.remove(timeoutId); }
     DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
 
-    WEBCORE_EXPORT JSC::VM& vm();
+    virtual JSC::VM& vm() = 0;
 
     void adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval);
     virtual Seconds minimumDOMTimerInterval() const;
@@ -239,7 +245,7 @@ public:
         return ensureRejectedPromiseTrackerSlow();
     }
 
-    WEBCORE_EXPORT JSC::JSGlobalObject* execState();
+    WEBCORE_EXPORT JSC::JSGlobalObject* globalObject();
 
     WEBCORE_EXPORT String domainForCachePartition() const;
     void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }

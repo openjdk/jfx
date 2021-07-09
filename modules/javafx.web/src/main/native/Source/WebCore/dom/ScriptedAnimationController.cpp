@@ -79,7 +79,12 @@ Seconds ScriptedAnimationController::interval() const
 
 Seconds ScriptedAnimationController::preferredScriptedAnimationInterval() const
 {
-    return preferredFrameInterval(m_throttlingReasons);
+    Optional<FramesPerSecond> preferredFPS;
+    if (auto* page = this->page()) {
+        if (!page->settings().forcePageRenderingUpdatesAt60FPSEnabled())
+            preferredFPS = page->displayNominalFramesPerSecond();
+    }
+    return preferredFrameInterval(m_throttlingReasons, preferredFPS);
 }
 
 OptionSet<ThrottlingReason> ScriptedAnimationController::throttlingReasons() const
@@ -98,7 +103,7 @@ bool ScriptedAnimationController::isThrottledRelativeToPage() const
 
 bool ScriptedAnimationController::shouldRescheduleRequestAnimationFrame(ReducedResolutionSeconds timestamp) const
 {
-    return isThrottledRelativeToPage() && (timestamp - m_lastAnimationFrameTimestamp < preferredScriptedAnimationInterval());
+    return timestamp <= m_lastAnimationFrameTimestamp || (isThrottledRelativeToPage() && (timestamp - m_lastAnimationFrameTimestamp < preferredScriptedAnimationInterval()));
 }
 
 ScriptedAnimationController::CallbackId ScriptedAnimationController::registerCallback(Ref<RequestAnimationFrameCallback>&& callback)
@@ -181,7 +186,7 @@ void ScriptedAnimationController::scheduleAnimation()
         return;
 
     if (auto* page = this->page())
-        page->renderingUpdateScheduler().scheduleTimedRenderingUpdate();
+        page->scheduleRenderingUpdate(RenderingUpdateStep::AnimationFrameCallbacks);
 }
 
 }

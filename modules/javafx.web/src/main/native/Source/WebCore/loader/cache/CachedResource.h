@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "CachePolicy.h"
 #include "CacheValidation.h"
 #include "FrameLoaderTypes.h"
 #include "ResourceError.h"
@@ -54,6 +53,8 @@ class SharedBuffer;
 class SubresourceLoader;
 class TextResourceDecoder;
 
+enum class CachePolicy : uint8_t;
+
 // A resource that is held in the cache. Classes who want to use this object should derive
 // from CachedResourceClient, to get the function calls in case the requested data has arrived.
 // This class also does the actual communication with the loader to obtain the resource from the network.
@@ -70,10 +71,11 @@ public:
         CSSStyleSheet,
         Script,
         FontResource,
-#if ENABLE(SVG_FONTS)
         SVGFontResource,
-#endif
         MediaResource,
+#if ENABLE(MODEL_ELEMENT)
+        ModelResource,
+#endif
         RawResource,
         Icon,
         Beacon,
@@ -179,7 +181,7 @@ public:
 
     bool isImage() const { return type() == Type::ImageResource; }
     // FIXME: CachedRawResource could be a main resource, an audio/video resource, or a raw XHR/icon resource.
-    bool isMainOrMediaOrIconOrRawResource() const { return type() == Type::MainResource || type() == Type::MediaResource || type() == Type::Icon || type() == Type::RawResource || type() == Type::Beacon || type() == Type::Ping; }
+    bool isMainOrMediaOrIconOrRawResource() const;
 
     // Whether this request should impact request counting and delay window.onload.
     bool ignoreForRequestCount() const
@@ -406,6 +408,19 @@ private:
     CachedResourceClient& m_client;
     Timer m_timer;
 };
+
+inline bool CachedResource::isMainOrMediaOrIconOrRawResource() const
+{
+    return type() == Type::MainResource
+        || type() == Type::MediaResource
+#if ENABLE(MODEL_ELEMENT)
+        || type() == Type::ModelResource
+#endif
+        || type() == Type::Icon
+        || type() == Type::RawResource
+        || type() == Type::Beacon
+        || type() == Type::Ping;
+}
 
 } // namespace WebCore
 

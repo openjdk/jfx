@@ -28,11 +28,12 @@
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU,
     ImplementationLacksVTable,
-    InterfaceName=GPUQueue
+    InterfaceName=GPUQueue,
+    Exposed=Window
 ] interface WebGPUQueue {
-    void submit(sequence<WebGPUCommandBuffer> buffers);
+    undefined submit(sequence<WebGPUCommandBuffer> buffers);
 
     // FIXME: Unimplemented.
-    // void signal(WebGPUFence fence, u64 signalValue);
-    // void wait(WebGPUFence fence, u64 valueToWait);
+    // undefined signal(WebGPUFence fence, u64 signalValue);
+    // undefined wait(WebGPUFence fence, u64 valueToWait);
 };

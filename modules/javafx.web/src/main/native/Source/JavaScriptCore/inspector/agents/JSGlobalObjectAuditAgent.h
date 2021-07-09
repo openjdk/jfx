@@ -41,7 +41,7 @@ public:
     ~JSGlobalObjectAuditAgent() final;
 
 private:
-    InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) final;
+    InjectedScript injectedScriptForEval(Protocol::ErrorString&, Optional<Protocol::Runtime::ExecutionContextId>&&) final;
 
     JSC::JSGlobalObject& m_globalObject;
 };

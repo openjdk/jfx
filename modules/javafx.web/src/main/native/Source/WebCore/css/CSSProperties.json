@@ -109,6 +109,11 @@
         "",
         "* high-priority:",
         "Whether the property needs to be applied before non-high-priority properties",
+        "in CSS cascading order. High priority properties must not accept <length>",
+        "values. All font-properties must be high-priority.",
+        "",
+        "* sink-priority:",
+        "Whether the property needs to be applied at the end of its priority bucket",
         "in CSS cascading order.",
         "",
         "* related-property:",
@@ -1221,7 +1226,6 @@
         },
         "border-block": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-block-start-color",
                     "border-block-start-style",
@@ -1238,7 +1242,6 @@
         },
         "border-block-color": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-block-start-color",
                     "border-block-end-color"
@@ -1379,7 +1382,6 @@
         },
         "border-block-style": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-block-start-style",
                     "border-block-end-style"
@@ -1392,7 +1394,6 @@
         },
         "border-block-width": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-block-start-width",
                     "border-block-end-width"
@@ -1512,6 +1513,24 @@
                 "url": "https://www.w3.org/TR/css3-background/#the-border-color"
             }
         },
+        "border-end-end-radius": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-logical-props",
+                "url": "https://drafts.csswg.org/css-logical-1/#border-radius-properties"
+            }
+        },
+        "border-end-start-radius": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-logical-props",
+                "url": "https://drafts.csswg.org/css-logical-1/#border-radius-properties"
+            }
+        },
         "border-image": {
             "codegen-properties": {
                 "longhands": [
@@ -1574,7 +1593,6 @@
         },
         "border-inline": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-inline-start-color",
                     "border-inline-start-style",
@@ -1591,7 +1609,6 @@
         },
         "border-inline-color": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-inline-start-color",
                     "border-inline-end-color"
@@ -1732,7 +1749,6 @@
         },
         "border-inline-style": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-inline-start-style",
                     "border-inline-end-style"
@@ -1745,7 +1761,6 @@
         },
         "border-inline-width": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "border-inline-start-width",
                     "border-inline-end-width"
@@ -1889,6 +1904,24 @@
             "specification": {
                 "category": "css-22",
                 "url": "https://www.w3.org/TR/CSS22/tables.html#separated-borders"
+            }
+        },
+        "border-start-end-radius": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-logical-props",
+                "url": "https://drafts.csswg.org/css-logical-1/#border-radius-properties"
+            }
+        },
+        "border-start-start-radius": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-logical-props",
+                "url": "https://drafts.csswg.org/css-logical-1/#border-radius-properties"
             }
         },
         "border-style": {
@@ -2583,7 +2616,6 @@
         },
         "inset": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "top",
                     "right",
@@ -2598,7 +2630,6 @@
         },
         "inset-block": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "inset-block-start",
                     "inset-block-end"
@@ -2611,7 +2642,6 @@
         },
         "inset-block-end": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "skip-builder": true
             },
             "specification": {
@@ -2621,7 +2651,6 @@
         },
         "inset-block-start": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "skip-builder": true
             },
             "specification": {
@@ -2631,7 +2660,6 @@
         },
         "inset-inline": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "inset-inline-start",
                     "inset-inline-end"
@@ -2644,7 +2672,6 @@
         },
         "inset-inline-end": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "skip-builder": true
             },
             "specification": {
@@ -2654,7 +2681,6 @@
         },
         "inset-inline-start": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "skip-builder": true
             },
             "specification": {
@@ -2686,6 +2712,10 @@
         "letter-spacing": {
             "inherited": true,
             "codegen-properties": {
+                "custom": "All",
+                "font-property": true,
+                "high-priority": true,
+                "sink-priority": true,
                 "converter": "Spacing"
             },
             "specification": {
@@ -2837,6 +2867,9 @@
                 "katakana-iroha",
                 "none"
             ],
+            "codegen-properties": {
+                "custom": "All"
+            },
             "specification": {
                 "category": "css-lists",
                 "url": "https://www.w3.org/TR/css-lists-3/#propdef-list-style-type"
@@ -2858,7 +2891,6 @@
         },
         "margin-block": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "margin-block-start",
                     "margin-block-end"
@@ -2905,7 +2937,6 @@
         },
         "margin-inline": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "margin-inline-start",
                     "margin-inline-end"
@@ -3042,6 +3073,16 @@
             "specification": {
                 "category": "css-masking",
                 "url": "https://drafts.fxtf.org/css-masking-1/#propdef-mask-type"
+            }
+        },
+        "math-style": {
+            "values": [
+                "normal",
+                "compact"
+            ],
+            "specification": {
+                "category": "css-fonts",
+                "url": "https://mathml-refresh.github.io/mathml-core/#dfn-math-style"
             }
         },
         "max-block-size": {
@@ -3289,6 +3330,53 @@
                 "url": "https://www.w3.org/TR/css-overflow-3/#propdef-overflow-y"
             }
         },
+        "overscroll-behavior": {
+            "codegen-properties": {
+                "longhands": [
+                    "overscroll-behavior-x",
+                    "overscroll-behavior-y"
+                ],
+                "settings-flag": "overscrollBehavior"
+            },
+            "status": {
+                "status": "in development"
+            },
+            "specification": {
+                "url": "https://drafts.csswg.org/css-overscroll-1/#propdef-overscroll-behavior"
+            }
+        },
+        "overscroll-behavior-x": {
+            "values": [
+                "contain",
+                "none",
+                "auto"
+            ],
+            "codegen-properties": {
+                "settings-flag": "overscrollBehavior"
+            },
+            "status": {
+                "status": "in development"
+            },
+            "specification": {
+                "url": "https://drafts.csswg.org/css-overscroll-1/#propdef-overscroll-behavior-x"
+            }
+        },
+        "overscroll-behavior-y": {
+            "values": [
+                "contain",
+                "none",
+                "auto"
+            ],
+            "codegen-properties": {
+                "settings-flag": "overscrollBehavior"
+            },
+            "status": {
+                "status": "in development"
+            },
+            "specification": {
+                "url": "https://drafts.csswg.org/css-overscroll-1/#propdef-overscroll-behavior-y"
+            }
+        },
         "padding": {
             "codegen-properties": {
                 "longhands": [
@@ -3305,7 +3393,6 @@
         },
         "padding-block": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "padding-block-start",
                     "padding-block-end"
@@ -3352,7 +3439,6 @@
         },
         "padding-inline": {
             "codegen-properties": {
-                "runtime-flag": "cssLogical",
                 "longhands": [
                     "padding-inline-start",
                     "padding-inline-end"
@@ -3800,7 +3886,7 @@
                 "-webkit-center",
                 {
                     "value": "-webkit-match-parent",
-                    "ur": "https://www.w3.org/TR/css-text-3/#text-align"
+                    "url": "https://www.w3.org/TR/css-text-3/#text-align"
                 },
                 {
                     "value": "start",
@@ -4452,7 +4538,6 @@
                 "continuous-capacity-level-indicator",
                 "discrete-capacity-level-indicator",
                 "rating-level-indicator",
-                "image-controls-button",
                 "-apple-pay-button",
                 "textarea",
                 "attachment",
@@ -4469,13 +4554,17 @@
                 "url": "https://www.w3.org/TR/css-ui-4/#propdef-appearance"
             }
         },
-        "-webkit-aspect-ratio": {
-            "inherited": true,
+        "aspect-ratio": {
             "codegen-properties": {
-                "custom": "All"
+                "custom": "All",
+                "settings-flag": "aspectRatio"
             },
             "status": {
                 "status": "experimental"
+            },
+            "specification": {
+                "category": "css-sizing",
+                "url": "https://drafts.csswg.org/css-sizing-4/#aspect-ratio"
             }
         },
         "-webkit-backface-visibility": {
@@ -6454,7 +6543,11 @@
         "transform-style": {
             "values": [
                 "flat",
-                "preserve-3d"
+                "preserve-3d",
+                {
+                    "value": "optimized-3d",
+                    "status": "internal"
+                }
             ],
             "codegen-properties": {
                 "name-for-methods": "TransformStyle3D"
@@ -6467,11 +6560,46 @@
         "-webkit-transform-style": {
             "values": [
                 "flat",
-                "preserve-3d"
+                "preserve-3d",
+                {
+                    "value": "optimized-3d",
+                    "status": "internal"
+                }
             ],
             "codegen-properties": {
                 "name-for-methods": "TransformStyle3D",
                 "comment": "Keeping -webkit-transform-style around is how we'll detect legacy content. At that point, we'll have to add a custom builder and a new TransformStyle3D type. FIXME: this never happened."
+            }
+        },
+        "translate": {
+            "codegen-properties": {
+                "settings-flag": "cssIndividualTransformProperties",
+                "converter": "Translate"
+            },
+            "specification": {
+                "category": "css-transforms",
+                "url": "https://drafts.csswg.org/css-transforms-2/#propdef-translate"
+            }
+        },
+        "scale": {
+            "codegen-properties": {
+                "settings-flag": "cssIndividualTransformProperties",
+                "converter": "Scale"
+            },
+            "specification": {
+                "category": "css-transforms",
+                "url": "https://drafts.csswg.org/css-transforms-2/#propdef-scale"
+
+            }
+        },
+        "rotate": {
+            "codegen-properties": {
+                "settings-flag": "cssIndividualTransformProperties",
+                "converter": "Rotate"
+            },
+            "specification": {
+                "category": "css-transforms",
+                "url": "https://drafts.csswg.org/css-transforms-2/#propdef-rotate"
             }
         },
         "-webkit-user-drag": {
@@ -6521,9 +6649,137 @@
                 "url": "https://drafts.csswg.org/cssom-view/#propdef-scroll-behavior"
             }
         },
+        "scroll-margin": {
+            "codegen-properties": {
+                "longhands": [
+                    "scroll-margin-top",
+                    "scroll-margin-right",
+                    "scroll-margin-bottom",
+                    "scroll-margin-left"
+                ],
+                "aliases": [
+                    "scroll-snap-margin"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin"
+            }
+        },
+        "scroll-margin-bottom": {
+            "codegen-properties": {
+                "initial": "initialScrollMargin",
+                "converter": "Length",
+                "aliases": [
+                    "scroll-snap-margin-bottom"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin"
+            }
+        },
+        "scroll-margin-left": {
+            "codegen-properties": {
+                "initial": "initialScrollMargin",
+                "converter": "Length",
+                "aliases": [
+                    "scroll-snap-margin-left"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin"
+            }
+        },
+        "scroll-margin-right": {
+            "codegen-properties": {
+                "initial": "initialScrollMargin",
+                "converter": "Length",
+                "aliases": [
+                    "scroll-snap-margin-right"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin"
+            }
+        },
+        "scroll-margin-top": {
+            "codegen-properties": {
+                "initial": "initialScrollMargin",
+                "converter": "Length",
+                "aliases": [
+                    "scroll-snap-margin-top"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin"
+            }
+        },
+        "scroll-margin-inline-start": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin-inline-start"
+            }
+        },
+        "scroll-margin-block-start": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin-block-start"
+            }
+        },
+        "scroll-margin-inline-end": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin-inline-end"
+            }
+        },
+        "scroll-margin-block-end": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin-block-end"
+            }
+        },
+        "scroll-margin-block": {
+            "codegen-properties": {
+                "longhands": [
+                    "scroll-margin-block-start",
+                    "scroll-margin-block-end"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin-block"
+            }
+        },
+        "scroll-margin-inline": {
+            "codegen-properties": {
+                "longhands": [
+                    "scroll-margin-inline-start",
+                    "scroll-margin-inline-end"
+                ]
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-margin-inline"
+            }
+        },
         "scroll-padding": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
                 "longhands": [
                     "scroll-padding-top",
                     "scroll-padding-right",
@@ -6538,9 +6794,8 @@
         },
         "scroll-padding-bottom": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
                 "initial": "initialScrollPadding",
-                "converter": "Length"
+                "converter": "LengthOrAuto"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6549,9 +6804,8 @@
         },
         "scroll-padding-left": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
                 "initial": "initialScrollPadding",
-                "converter": "Length"
+                "converter": "LengthOrAuto"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6560,9 +6814,8 @@
         },
         "scroll-padding-right": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
                 "initial": "initialScrollPadding",
-                "converter": "Length"
+                "converter": "LengthOrAuto"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6571,9 +6824,8 @@
         },
         "scroll-padding-top": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
                 "initial": "initialScrollPadding",
-                "converter": "Length"
+                "converter": "LengthOrAuto"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6582,11 +6834,7 @@
         },
         "scroll-padding-inline-start": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "skip-codegen": true
-            },
-            "status": {
-                "status": "not implemented"
+                "skip-builder": true
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6595,11 +6843,7 @@
         },
         "scroll-padding-block-start": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "skip-codegen": true
-            },
-            "status": {
-                "status": "not implemented"
+                "skip-builder": true
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6608,11 +6852,7 @@
         },
         "scroll-padding-inline-end": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "skip-codegen": true
-            },
-            "status": {
-                "status": "not implemented"
+                "skip-builder": true
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6621,11 +6861,7 @@
         },
         "scroll-padding-block-end": {
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "skip-codegen": true
-            },
-            "status": {
-                "status": "not implemented"
+                "skip-builder": true
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6637,12 +6873,7 @@
                 "longhands": [
                     "scroll-padding-block-start",
                     "scroll-padding-block-end"
-                ],
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "skip-codegen": true
-            },
-            "status": {
-                "status": "not implemented"
+                ]
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6654,12 +6885,7 @@
                 "longhands": [
                     "scroll-padding-inline-start",
                     "scroll-padding-inline-end"
-                ],
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "skip-codegen": true
-            },
-            "status": {
-                "status": "not implemented"
+                ]
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6670,65 +6896,6 @@
             "codegen-properties": {
                 "converter": "ScrollSnapAlign",
                 "enable-if": "ENABLE_CSS_SCROLL_SNAP"
-            },
-            "specification": {
-                "category": "css-scroll-snap",
-                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-padding"
-            }
-        },
-        "scroll-snap-margin": {
-            "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "longhands": [
-                    "scroll-snap-margin-top",
-                    "scroll-snap-margin-right",
-                    "scroll-snap-margin-bottom",
-                    "scroll-snap-margin-left"
-                ]
-            },
-            "specification": {
-                "category": "css-scroll-snap",
-                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-padding"
-            }
-        },
-        "scroll-snap-margin-bottom": {
-            "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "initial": "initialScrollSnapMargin",
-                "converter": "Length"
-            },
-            "specification": {
-                "category": "css-scroll-snap",
-                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-padding"
-            }
-        },
-        "scroll-snap-margin-left": {
-            "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "initial": "initialScrollSnapMargin",
-                "converter": "Length"
-            },
-            "specification": {
-                "category": "css-scroll-snap",
-                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-padding"
-            }
-        },
-        "scroll-snap-margin-right": {
-            "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "initial": "initialScrollSnapMargin",
-                "converter": "Length"
-            },
-            "specification": {
-                "category": "css-scroll-snap",
-                "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-padding"
-            }
-        },
-        "scroll-snap-margin-top": {
-            "codegen-properties": {
-                "enable-if": "ENABLE_CSS_SCROLL_SNAP",
-                "initial": "initialScrollSnapMargin",
-                "converter": "Length"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -6829,6 +6996,16 @@
             "specification": {
                 "category": "css-scroll-snap",
                 "url": "https://www.w3.org/TR/css-scroll-snap-1/#propdef-scroll-snap-margin-inline-end"
+            }
+        },
+        "scroll-snap-stop": {
+            "codegen-properties": {
+                "converter": "ScrollSnapStop",
+                "enable-if": "ENABLE_CSS_SCROLL_SNAP"
+            },
+            "specification": {
+                "category": "css-scroll-snap",
+                "url": "https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-snap-stop"
             }
         },
         "shape-outside": {
@@ -7139,6 +7316,11 @@
             "shortname": "CSS Shapes",
             "longname": "CSS Shapes Module",
             "url": "https://www.w3.org/TR/css-shapes/"
+        },
+        "css-sizing": {
+            "shortname": "CSS Box Sizing",
+            "longname": "CSS Box Sizing Module Level 4",
+            "url": "https://drafts.csswg.org/css-sizing-4/"
         },
         "css-speech": {
             "shortname": "CSS Speech",

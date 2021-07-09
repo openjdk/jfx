@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,12 @@
 
 namespace JSC {
 
-EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionCall(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL boundFunctionCall(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionConstruct(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL boundFunctionConstruct(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL isBoundFunction(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL hasInstanceBoundFunction(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(boundThisNoArgsFunctionCall);
+JSC_DECLARE_HOST_FUNCTION(boundFunctionCall);
+JSC_DECLARE_HOST_FUNCTION(boundThisNoArgsFunctionConstruct);
+JSC_DECLARE_HOST_FUNCTION(boundFunctionConstruct);
+JSC_DECLARE_HOST_FUNCTION(isBoundFunction);
+JSC_DECLARE_HOST_FUNCTION(hasInstanceBoundFunction);
 
 class JSBoundFunction final : public JSFunction {
 public:
@@ -48,7 +48,7 @@ public:
         return vm.boundFunctionSpace<mode>();
     }
 
-    static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, int, JSString* nameMayBeNull);
+    static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, double length, JSString* nameMayBeNull);
 
     static bool customHasInstance(JSObject*, JSGlobalObject*, JSValue);
 
@@ -66,7 +66,7 @@ public:
         return m_nameMayBeNull->tryGetValue(allocationAllowed);
     }
 
-    int32_t length(VM&) { return m_length; }
+    double length(VM&) { return m_length; }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -81,21 +81,21 @@ public:
     DECLARE_INFO;
 
 private:
-    JSBoundFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, JSString* nameMayBeNull, int length);
+    JSBoundFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, JSString* nameMayBeNull, double length);
 
-    void finishCreation(VM&, NativeExecutable*, int length);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    void finishCreation(VM&);
+    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSObject> m_targetFunction;
     WriteBarrier<Unknown> m_boundThis;
     WriteBarrier<JSImmutableButterfly> m_boundArgs;
     WriteBarrier<JSString> m_nameMayBeNull;
-    int m_length;
+    double m_length;
 };
 
-EncodedJSValue JSC_HOST_CALL boundFunctionCall(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL boundFunctionConstruct(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionCall(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionConstruct(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(boundFunctionCall);
+JSC_DECLARE_HOST_FUNCTION(boundFunctionConstruct);
+JSC_DECLARE_HOST_FUNCTION(boundThisNoArgsFunctionCall);
+JSC_DECLARE_HOST_FUNCTION(boundThisNoArgsFunctionConstruct);
 
 } // namespace JSC

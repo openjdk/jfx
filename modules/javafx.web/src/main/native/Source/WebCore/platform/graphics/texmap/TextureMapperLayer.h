@@ -49,9 +49,6 @@ public:
 
     const Vector<TextureMapperLayer*>& children() const { return m_children; }
 
-    TextureMapper* textureMapper() const { return rootLayer().m_textureMapper; }
-    void setTextureMapper(TextureMapper* texmap) { m_textureMapper = texmap; }
-
 #if !USE(COORDINATED_GRAPHICS)
     void setChildren(const Vector<GraphicsLayer*>&);
 #endif
@@ -103,7 +100,7 @@ public:
     bool syncAnimations(MonotonicTime);
     bool descendantsOrSelfHaveRunningAnimations() const;
 
-    void paint();
+    void paint(TextureMapper&);
 
     void addChild(TextureMapperLayer*);
 
@@ -126,7 +123,8 @@ private:
 
     enum class ComputeOverlapRegionMode : uint8_t {
         Intersection,
-        Union
+        Union,
+        Mask
     };
     struct ComputeOverlapRegionData {
         ComputeOverlapRegionMode mode;
@@ -136,14 +134,14 @@ private:
     };
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
-    void paintRecursive(const TextureMapperPaintOptions&);
-    void paintUsingOverlapRegions(const TextureMapperPaintOptions&);
+    void paintRecursive(TextureMapperPaintOptions&);
+    void paintUsingOverlapRegions(TextureMapperPaintOptions&);
     void paintIntoSurface(TextureMapperPaintOptions&);
-    void paintWithIntermediateSurface(const TextureMapperPaintOptions&, const IntRect&);
-    void paintSelf(const TextureMapperPaintOptions&);
-    void paintSelfAndChildren(const TextureMapperPaintOptions&);
-    void paintSelfAndChildrenWithReplica(const TextureMapperPaintOptions&);
-    void applyMask(const TextureMapperPaintOptions&);
+    void paintWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelf(TextureMapperPaintOptions&);
+    void paintSelfAndChildren(TextureMapperPaintOptions&);
+    void paintSelfAndChildrenWithReplica(TextureMapperPaintOptions&);
+    void applyMask(TextureMapperPaintOptions&);
 
     bool isVisible() const;
 
@@ -214,7 +212,6 @@ private:
     };
 
     State m_state;
-    TextureMapper* m_textureMapper { nullptr };
     Nicosia::Animations m_animations;
     uint32_t m_id { 0 };
 #if USE(COORDINATED_GRAPHICS)

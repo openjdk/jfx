@@ -33,12 +33,14 @@
 #include <Timer.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
 #include <webrtc/api/jsep.h>
 #include <webrtc/api/peer_connection_interface.h>
 #include <webrtc/pc/peer_connection_factory.h>
 #include <webrtc/pc/rtc_stats_collector.h>
 
+ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
 
 #include <wtf/LoggerHelper.h>
@@ -75,11 +77,12 @@ public:
     static Ref<LibWebRTCMediaEndpoint> create(LibWebRTCPeerConnectionBackend& peerConnection, LibWebRTCProvider& client) { return adoptRef(*new LibWebRTCMediaEndpoint(peerConnection, client)); }
     virtual ~LibWebRTCMediaEndpoint() = default;
 
+    void restartIce();
     bool setConfiguration(LibWebRTCProvider&, webrtc::PeerConnectionInterface::RTCConfiguration&&);
 
     webrtc::PeerConnectionInterface& backend() const { ASSERT(m_backend); return *m_backend.get(); }
-    void doSetLocalDescription(RTCSessionDescription&);
-    void doSetRemoteDescription(RTCSessionDescription&);
+    void doSetLocalDescription(const RTCSessionDescription*);
+    void doSetRemoteDescription(const RTCSessionDescription&);
     void doCreateOffer(const RTCOfferOptions&);
     void doCreateAnswer();
     void getStats(Ref<DeferredPromise>&&);
@@ -107,8 +110,8 @@ public:
         std::unique_ptr<LibWebRTCRtpReceiverBackend> receiverBackend;
         std::unique_ptr<LibWebRTCRtpTransceiverBackend> transceiverBackend;
     };
-    Optional<Backends> addTransceiver(const String& trackKind, const RTCRtpTransceiverInit&);
-    Optional<Backends> addTransceiver(MediaStreamTrack&, const RTCRtpTransceiverInit&);
+    ExceptionOr<Backends> addTransceiver(const String& trackKind, const RTCRtpTransceiverInit&);
+    ExceptionOr<Backends> addTransceiver(MediaStreamTrack&, const RTCRtpTransceiverInit&);
     std::unique_ptr<LibWebRTCRtpTransceiverBackend> transceiverBackendFromSender(LibWebRTCRtpSenderBackend&);
 
     void setSenderSourceFromTrack(LibWebRTCRtpSenderBackend&, MediaStreamTrack&);
@@ -144,7 +147,7 @@ private:
     void addPendingTrackEvent(Ref<RTCRtpReceiver>&&, MediaStreamTrack&, const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&, RefPtr<RTCRtpTransceiver>&&);
 
     template<typename T>
-    Optional<Backends> createTransceiverBackends(T&&, const RTCRtpTransceiverInit&, LibWebRTCRtpSenderBackend::Source&&);
+    ExceptionOr<Backends> createTransceiverBackends(T&&, const RTCRtpTransceiverInit&, LibWebRTCRtpSenderBackend::Source&&);
 
     void OnStatsDelivered(const rtc::scoped_refptr<const webrtc::RTCStatsReport>&) final;
     void gatherStatsForLogging();

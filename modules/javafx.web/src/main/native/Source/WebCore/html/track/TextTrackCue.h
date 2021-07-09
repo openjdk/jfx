@@ -46,15 +46,14 @@ class TextTrackCue;
 class TextTrackCueBox : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCueBox);
 public:
-    static Ref<TextTrackCueBox> create(Document& document, TextTrackCue& cue)
-    {
-        return adoptRef(*new TextTrackCueBox(document, cue));
-    }
+    static Ref<TextTrackCueBox> create(Document&, TextTrackCue&);
 
     TextTrackCue* getCue() const;
     virtual void applyCSSProperties(const IntSize&) { }
 
 protected:
+    void initialize();
+
     TextTrackCueBox(Document&, TextTrackCue&);
     ~TextTrackCueBox() { }
 
@@ -63,7 +62,7 @@ private:
     WeakPtr<TextTrackCue> m_cue;
 };
 
-class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public CanMakeWeakPtr<TextTrackCue> {
+class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static const AtomString& cueShadowPseudoId();

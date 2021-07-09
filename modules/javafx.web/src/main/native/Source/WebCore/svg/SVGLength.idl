@@ -20,7 +20,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface SVGLength { 
+[
+    Exposed=Window
+] interface SVGLength {
     // Length Unit Types
     const unsigned short SVG_LENGTHTYPE_UNKNOWN = 0;
     const unsigned short SVG_LENGTHTYPE_NUMBER = 1;
@@ -40,6 +42,6 @@ interface SVGLength {
     attribute unrestricted float valueInSpecifiedUnits;
     attribute DOMString valueAsString;
 
-    [MayThrowException] void newValueSpecifiedUnits(unsigned short unitType, unrestricted float valueInSpecifiedUnits);
-    [MayThrowException] void convertToSpecifiedUnits(unsigned short unitType);
+    [MayThrowException] undefined newValueSpecifiedUnits(unsigned short unitType, unrestricted float valueInSpecifiedUnits);
+    [MayThrowException] undefined convertToSpecifiedUnits(unsigned short unitType);
 };

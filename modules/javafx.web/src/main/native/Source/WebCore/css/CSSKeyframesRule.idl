@@ -26,13 +26,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-interface CSSKeyframesRule : CSSRule {
+[
+    Exposed=Window
+] interface CSSKeyframesRule : CSSRule {
     attribute DOMString name;
     readonly attribute CSSRuleList cssRules;
     
-    void insertRule(DOMString rule);
-    void appendRule(DOMString rule);
-    void deleteRule(DOMString key);
+    undefined insertRule(DOMString rule);
+    undefined appendRule(DOMString rule);
+    undefined deleteRule(DOMString key);
     CSSKeyframeRule? findRule(DOMString key);
 
     getter CSSKeyframeRule (unsigned long index);

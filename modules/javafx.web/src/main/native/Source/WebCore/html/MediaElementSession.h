@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,11 @@ enum class MediaSessionMainContentPurpose {
     Autoplay
 };
 
+enum class MediaPlaybackOperation {
+    All,
+    Pause
+};
+
 enum class MediaPlaybackDenialReason {
     UserGestureRequired,
     FullscreenRequired,
@@ -71,7 +76,8 @@ public:
     void isVisibleInViewportChanged();
     void inActiveDocumentChanged();
 
-    SuccessOr<MediaPlaybackDenialReason> playbackPermitted() const;
+    // FIXME: <http://webkit.org/b/220939>
+    SuccessOr<MediaPlaybackDenialReason> playbackPermitted(MediaPlaybackOperation = MediaPlaybackOperation::All) const;
     bool autoplayPermitted() const;
     bool dataLoadingPermitted() const;
     MediaPlayer::BufferingPolicy preferredBufferingPolicy() const;
@@ -168,6 +174,10 @@ public:
     const char* logClassName() const final { return "MediaElementSession"; }
 #endif
 
+#if ENABLE(MEDIA_SESSION)
+    void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument&) final;
+#endif
+
 private:
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -189,7 +199,7 @@ private:
     void clientDataBufferingTimerFired();
     void updateClientDataBuffering();
 
-    void addedMediaUsageManagerSessionIfNecessary();
+    void addMediaUsageManagerSessionIfNecessary();
 
     HTMLMediaElement& m_element;
     BehaviorRestrictions m_restrictions;
@@ -221,6 +231,10 @@ private:
 
 #if ENABLE(MEDIA_USAGE)
     bool m_haveAddedMediaUsageManagerSession { false };
+#endif
+
+#if ENABLE(MEDIA_SESSION)
+    bool m_isScrubbing { false };
 #endif
 };
 

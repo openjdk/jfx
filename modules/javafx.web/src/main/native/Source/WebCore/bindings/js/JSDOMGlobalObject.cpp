@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,13 @@
 
 #include "DOMWindow.h"
 #include "Document.h"
+#include "FetchResponse.h"
+#include "JSAbortAlgorithm.h"
+#include "JSAbortSignal.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSDOMWindow.h"
 #include "JSEventListener.h"
+#include "JSFetchResponse.h"
 #include "JSIDBSerializationGlobalObject.h"
 #include "JSMediaStream.h"
 #include "JSMediaStreamTrack.h"
@@ -43,20 +47,26 @@
 #include "JSWorkletGlobalScope.h"
 #include "RejectedPromiseTracker.h"
 #include "RuntimeEnabledFeatures.h"
+#include "ScriptModuleLoader.h"
 #include "StructuredClone.h"
 #include "WebCoreJSClientData.h"
 #include "WorkerGlobalScope.h"
+#include "WorkletGlobalScope.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/CodeBlock.h>
 #include <JavaScriptCore/JSInternalPromise.h>
 #include <JavaScriptCore/StructureInlines.h>
+#include <JavaScriptCore/WasmStreamingCompiler.h>
 
 namespace WebCore {
 using namespace JSC;
 
-EncodedJSValue JSC_HOST_CALL makeThisTypeErrorForBuiltins(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL makeGetterTypeErrorForBuiltins(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL isReadableByteStreamAPIEnabled(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(makeThisTypeErrorForBuiltins);
+JSC_DECLARE_HOST_FUNCTION(makeGetterTypeErrorForBuiltins);
+JSC_DECLARE_HOST_FUNCTION(makeDOMExceptionForBuiltins);
+JSC_DECLARE_HOST_FUNCTION(isReadableByteStreamAPIEnabled);
+JSC_DECLARE_HOST_FUNCTION(isWritableStreamAPIEnabled);
+JSC_DECLARE_HOST_FUNCTION(whenSignalAborted);
 
 const ClassInfo JSDOMGlobalObject::s_info = { "DOMGlobalObject", &JSGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMGlobalObject) };
 
@@ -75,7 +85,7 @@ void JSDOMGlobalObject::destroy(JSCell* cell)
     static_cast<JSDOMGlobalObject*>(cell)->JSDOMGlobalObject::~JSDOMGlobalObject();
 }
 
-EncodedJSValue JSC_HOST_CALL makeThisTypeErrorForBuiltins(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(makeThisTypeErrorForBuiltins, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT(callFrame);
     ASSERT(callFrame->argumentCount() == 2);
@@ -89,7 +99,7 @@ EncodedJSValue JSC_HOST_CALL makeThisTypeErrorForBuiltins(JSGlobalObject* global
     return JSValue::encode(createTypeError(globalObject, makeThisTypeErrorMessage(interfaceName.utf8().data(), functionName.utf8().data())));
 }
 
-EncodedJSValue JSC_HOST_CALL makeGetterTypeErrorForBuiltins(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(makeGetterTypeErrorForBuiltins, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT(callFrame);
     ASSERT(callFrame->argumentCount() == 2);
@@ -106,9 +116,55 @@ EncodedJSValue JSC_HOST_CALL makeGetterTypeErrorForBuiltins(JSGlobalObject* glob
     return JSValue::encode(error);
 }
 
-EncodedJSValue JSC_HOST_CALL isReadableByteStreamAPIEnabled(JSGlobalObject*, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(makeDOMExceptionForBuiltins, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame);
+    ASSERT(callFrame->argumentCount() == 2);
+
+    auto& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    auto codeValue = callFrame->uncheckedArgument(0).getString(globalObject);
+    scope.assertNoException();
+
+    auto message = callFrame->uncheckedArgument(1).getString(globalObject);
+    scope.assertNoException();
+
+    ExceptionCode code { TypeError };
+    if (codeValue == "AbortError")
+        code = AbortError;
+    auto value = createDOMException(globalObject, code, message);
+
+    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(vm, scope.exception()));
+
+    return JSValue::encode(value);
+}
+
+JSC_DEFINE_HOST_FUNCTION(isReadableByteStreamAPIEnabled, (JSGlobalObject*, CallFrame*))
 {
     return JSValue::encode(jsBoolean(RuntimeEnabledFeatures::sharedFeatures().readableByteStreamAPIEnabled()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(isWritableStreamAPIEnabled, (JSGlobalObject*, CallFrame*))
+{
+    return JSValue::encode(jsBoolean(RuntimeEnabledFeatures::sharedFeatures().writableStreamAPIEnabled()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(whenSignalAborted, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame);
+    ASSERT(callFrame->argumentCount() == 2);
+
+    auto& vm = globalObject->vm();
+    auto* abortSignal = jsDynamicCast<JSAbortSignal*>(vm, callFrame->uncheckedArgument(0));
+    if (UNLIKELY(!abortSignal))
+        return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
+
+    auto* jsDOMGlobalObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
+    Ref<AbortAlgorithm> abortAlgorithm = JSAbortAlgorithm::create(callFrame->uncheckedArgument(1).getObject(), jsDOMGlobalObject);
+
+    bool result = AbortSignal::whenSignalAborted(abortSignal->wrapped(), WTFMove(abortAlgorithm));
+    return JSValue::encode(result ? JSValue(JSC::JSValue::JSTrue) : JSValue(JSC::JSValue::JSFalse));
 }
 
 void JSDOMGlobalObject::addBuiltinGlobals(VM& vm)
@@ -121,6 +177,10 @@ void JSDOMGlobalObject::addBuiltinGlobals(VM& vm)
             JSFunction::create(vm, this, 2, String(), makeThisTypeErrorForBuiltins), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().makeGetterTypeErrorPrivateName(),
             JSFunction::create(vm, this, 2, String(), makeGetterTypeErrorForBuiltins), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
+        JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().makeDOMExceptionPrivateName(),
+            JSFunction::create(vm, this, 2, String(), makeDOMExceptionForBuiltins), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
+        JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().whenSignalAbortedPrivateName(),
+            JSFunction::create(vm, this, 2, String(), whenSignalAborted), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().cloneArrayBufferPrivateName(),
             JSFunction::create(vm, this, 3, String(), cloneArrayBuffer), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().structuredCloneArrayBufferPrivateName(),
@@ -135,6 +195,7 @@ void JSDOMGlobalObject::addBuiltinGlobals(VM& vm)
         JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().streamWaitingPrivateName(), jsNumber(5), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().streamWritablePrivateName(), jsNumber(6), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().readableByteStreamAPIEnabledPrivateName(), JSFunction::create(vm, this, 0, String(), isReadableByteStreamAPIEnabled), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
+        JSDOMGlobalObject::GlobalPropertyInfo(clientData.builtinNames().writableStreamAPIEnabledPrivateName(), JSFunction::create(vm, this, 0, String(), isWritableStreamAPIEnabled), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
     };
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
 }
@@ -167,10 +228,8 @@ ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
         return nullptr;
     if (inherits<JSWorkerGlobalScopeBase>(vm()))
         return jsCast<const JSWorkerGlobalScopeBase*>(this)->scriptExecutionContext();
-#if ENABLE(CSS_PAINTING_API)
     if (inherits<JSWorkletGlobalScopeBase>(vm()))
         return jsCast<const JSWorkletGlobalScopeBase*>(this)->scriptExecutionContext();
-#endif
 #if ENABLE(INDEXED_DATABASE)
     if (inherits<JSIDBSerializationGlobalObject>(vm()))
         return jsCast<const JSIDBSerializationGlobalObject*>(this)->scriptExecutionContext();
@@ -180,7 +239,8 @@ ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
     return nullptr;
 }
 
-void JSDOMGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSDOMGlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSDOMGlobalObject* thisObject = jsCast<JSDOMGlobalObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -202,15 +262,7 @@ void JSDOMGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     thisObject->m_builtinInternalFunctions.visit(visitor);
 }
 
-void JSDOMGlobalObject::setCurrentEvent(Event* currentEvent)
-{
-    m_currentEvent = currentEvent;
-}
-
-Event* JSDOMGlobalObject::currentEvent() const
-{
-    return m_currentEvent;
-}
+DEFINE_VISIT_CHILDREN(JSDOMGlobalObject);
 
 void JSDOMGlobalObject::promiseRejectionTracker(JSGlobalObject* jsGlobalObject, JSPromise* promise, JSPromiseRejectionOperation operation)
 {
@@ -237,6 +289,214 @@ void JSDOMGlobalObject::promiseRejectionTracker(JSGlobalObject* jsGlobalObject, 
 void JSDOMGlobalObject::reportUncaughtExceptionAtEventLoop(JSGlobalObject* jsGlobalObject, JSC::Exception* exception)
 {
     reportException(jsGlobalObject, exception);
+}
+
+void JSDOMGlobalObject::clearDOMGuardedObjects()
+{
+    auto guardedObjectsCopy = m_guardedObjects;
+    for (auto& guarded : guardedObjectsCopy)
+        guarded->clear();
+}
+
+#if ENABLE(WEBASSEMBLY)
+// https://webassembly.github.io/spec/web-api/index.html#compile-a-potential-webassembly-response
+static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* globalObject, JSC::JSValue source, JSC::Wasm::CompilerMode compilerMode, JSC::JSObject* importObject)
+{
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    auto deferred = DeferredPromise::create(*jsCast<JSDOMGlobalObject*>(globalObject), DeferredPromise::Mode::RetainPromiseOnResolve);
+
+    auto inputResponse = JSFetchResponse::toWrapped(vm, source);
+    if (!inputResponse) {
+        deferred->reject(TypeError, "first argument must be an Response or Promise for Response"_s);
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    if (auto exception = inputResponse->loadingException()) {
+        deferred->reject(*exception);
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    // 4. If response is not CORS-same-origin, reject returnValue with a TypeError and abort these substeps.
+    // If response is opaque, content-type becomes "".
+    if (!inputResponse->isCORSSameOrigin()) {
+        deferred->reject(TypeError, "Response is not CORS-same-origin"_s);
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    // 3. If mimeType is not `application/wasm`, reject returnValue with a TypeError and abort these substeps.
+    if (!inputResponse->hasWasmMIMEType()) {
+        deferred->reject(TypeError, "Unexpected response MIME type. Expected 'application/wasm'"_s);
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    // 5. If response’s status is not an ok status, reject returnValue with a TypeError and abort these substeps.
+    if (!inputResponse->ok()) {
+        deferred->reject(TypeError, "Response has not returned OK status"_s);
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    // https://fetch.spec.whatwg.org/#concept-body-consume-body
+    if (inputResponse->isDisturbedOrLocked()) {
+        deferred->reject(TypeError, "Response is disturbed or locked"_s);
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    // FIXME: for efficiency, we should load blobs directly instead of going through the readableStream path.
+    if (inputResponse->isBlobBody()) {
+        auto streamOrException = inputResponse->readableStream(*globalObject);
+        if (UNLIKELY(streamOrException.hasException())) {
+            deferred->reject(streamOrException.releaseException());
+            return jsCast<JSC::JSPromise*>(deferred->promise());
+        }
+    }
+
+    auto compiler = JSC::Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, jsCast<JSC::JSPromise*>(deferred->promise()), importObject);
+
+    if (inputResponse->isBodyReceivedByChunk()) {
+        inputResponse->consumeBodyReceivedByChunk([globalObject, compiler = WTFMove(compiler)](auto&& result) mutable {
+            VM& vm = globalObject->vm();
+            JSLockHolder lock(vm);
+
+            if (result.hasException()) {
+                auto exception = result.exception();
+                if (exception.code() == ExistingExceptionError) {
+                    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+                    EXCEPTION_ASSERT(scope.exception());
+
+                    auto error = scope.exception()->value();
+                    scope.clearException();
+
+                    compiler->fail(globalObject, error);
+                    return;
+                }
+
+                auto scope = DECLARE_THROW_SCOPE(vm);
+                auto error = createDOMException(*globalObject, WTFMove(exception));
+                if (UNLIKELY(scope.exception())) {
+                    ASSERT(isTerminatedExecutionException(vm, scope.exception()));
+                    compiler->cancel();
+                    return;
+                }
+
+                compiler->fail(globalObject, error);
+                return;
+            }
+
+            if (auto chunk = result.returnValue())
+                compiler->addBytes(chunk->data, chunk->size);
+            else
+                compiler->finalize(globalObject);
+        });
+        return jsCast<JSC::JSPromise*>(deferred->promise());
+    }
+
+    auto body = inputResponse->consumeBody();
+    WTF::switchOn(body, [&](Ref<FormData>& formData) {
+        if (auto buffer = formData->asSharedBuffer()) {
+            compiler->addBytes(reinterpret_cast<const uint8_t*>(buffer->data()), buffer->size());
+            compiler->finalize(globalObject);
+            return;
+        }
+        // FIXME: Support FormData loading.
+        // https://bugs.webkit.org/show_bug.cgi?id=221248
+        compiler->fail(globalObject, createDOMException(*globalObject, Exception { NotSupportedError, "Not implemented"_s  }));
+    }, [&](Ref<SharedBuffer>& buffer) {
+        compiler->addBytes(reinterpret_cast<const uint8_t*>(buffer->data()), buffer->size());
+        compiler->finalize(globalObject);
+    }, [&](std::nullptr_t&) {
+        compiler->finalize(globalObject);
+    });
+
+    return jsCast<JSC::JSPromise*>(deferred->promise());
+}
+
+JSC::JSPromise* JSDOMGlobalObject::compileStreaming(JSC::JSGlobalObject* globalObject, JSC::JSValue source)
+{
+    ASSERT(source);
+    return handleResponseOnStreamingAction(globalObject, source, JSC::Wasm::CompilerMode::Validation, nullptr);
+}
+
+JSC::JSPromise* JSDOMGlobalObject::instantiateStreaming(JSC::JSGlobalObject* globalObject, JSC::JSValue source, JSC::JSObject* importObject)
+{
+    ASSERT(source);
+    return handleResponseOnStreamingAction(globalObject, source, JSC::Wasm::CompilerMode::FullCompile, importObject);
+}
+#endif
+
+static ScriptModuleLoader* scriptModuleLoader(JSDOMGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    if (globalObject->inherits<JSDOMWindowBase>(vm)) {
+        if (auto document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().document())
+            return &document->moduleLoader();
+        return nullptr;
+    }
+    if (globalObject->inherits<JSRemoteDOMWindowBase>(vm))
+        return nullptr;
+    if (globalObject->inherits<JSWorkerGlobalScopeBase>(vm))
+        return &jsCast<const JSWorkerGlobalScopeBase*>(globalObject)->wrapped().moduleLoader();
+    if (globalObject->inherits<JSWorkletGlobalScopeBase>(vm))
+        return &jsCast<const JSWorkletGlobalScopeBase*>(globalObject)->wrapped().moduleLoader();
+#if ENABLE(INDEXED_DATABASE)
+    if (globalObject->inherits<JSIDBSerializationGlobalObject>(vm))
+        return nullptr;
+#endif
+    dataLog("Unexpected global object: ", JSValue(globalObject), "\n");
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+JSC::Identifier JSDOMGlobalObject::moduleLoaderResolve(JSC::JSGlobalObject* globalObject, JSC::JSModuleLoader* moduleLoader, JSC::JSValue moduleName, JSC::JSValue importerModuleKey, JSC::JSValue scriptFetcher)
+{
+    JSDOMGlobalObject* thisObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
+    if (auto* loader = scriptModuleLoader(thisObject))
+        return loader->resolve(globalObject, moduleLoader, moduleName, importerModuleKey, scriptFetcher);
+    return { };
+}
+
+JSC::JSInternalPromise* JSDOMGlobalObject::moduleLoaderFetch(JSC::JSGlobalObject* globalObject, JSC::JSModuleLoader* moduleLoader, JSC::JSValue moduleKey, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSDOMGlobalObject* thisObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
+    if (auto* loader = scriptModuleLoader(thisObject))
+        RELEASE_AND_RETURN(scope, loader->fetch(globalObject, moduleLoader, moduleKey, parameters, scriptFetcher));
+    JSC::JSInternalPromise* promise = JSC::JSInternalPromise::create(vm, globalObject->internalPromiseStructure());
+    scope.release();
+    promise->reject(globalObject, jsUndefined());
+    return promise;
+}
+
+JSC::JSValue JSDOMGlobalObject::moduleLoaderEvaluate(JSC::JSGlobalObject* globalObject, JSC::JSModuleLoader* moduleLoader, JSC::JSValue moduleKey, JSC::JSValue moduleRecord, JSC::JSValue scriptFetcher, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
+{
+    JSDOMGlobalObject* thisObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
+    if (auto* loader = scriptModuleLoader(thisObject))
+        return loader->evaluate(globalObject, moduleLoader, moduleKey, moduleRecord, scriptFetcher, awaitedValue, resumeMode);
+    return JSC::jsUndefined();
+}
+
+JSC::JSInternalPromise* JSDOMGlobalObject::moduleLoaderImportModule(JSC::JSGlobalObject* globalObject, JSC::JSModuleLoader* moduleLoader, JSC::JSString* moduleName, JSC::JSValue parameters, const JSC::SourceOrigin& sourceOrigin)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSDOMGlobalObject* thisObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
+    if (auto* loader = scriptModuleLoader(thisObject))
+        RELEASE_AND_RETURN(scope, loader->importModule(globalObject, moduleLoader, moduleName, parameters, sourceOrigin));
+    JSC::JSInternalPromise* promise = JSC::JSInternalPromise::create(vm, globalObject->internalPromiseStructure());
+    scope.release();
+    promise->reject(globalObject, jsUndefined());
+    return promise;
+}
+
+JSC::JSObject* JSDOMGlobalObject::moduleLoaderCreateImportMetaProperties(JSC::JSGlobalObject* globalObject, JSC::JSModuleLoader* moduleLoader, JSC::JSValue moduleKey, JSC::JSModuleRecord* moduleRecord, JSC::JSValue scriptFetcher)
+{
+    JSDOMGlobalObject* thisObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
+    if (auto* loader = scriptModuleLoader(thisObject))
+        return loader->createImportMetaProperties(globalObject, moduleLoader, moduleKey, moduleRecord, scriptFetcher);
+    return constructEmptyObject(globalObject->vm(), globalObject->nullPrototypeObjectStructure());
 }
 
 JSDOMGlobalObject& callerGlobalObject(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
@@ -286,8 +546,8 @@ JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext& context, DOMWrapp
     if (is<Document>(context))
         return toJSDOMWindow(downcast<Document>(context).frame(), world);
 
-    if (is<WorkerGlobalScope>(context))
-        return downcast<WorkerGlobalScope>(context).script()->workerGlobalScopeWrapper();
+    if (is<WorkerOrWorkletGlobalScope>(context))
+        return downcast<WorkerOrWorkletGlobalScope>(context).script()->globalScopeWrapper();
 
     ASSERT_NOT_REACHED();
     return nullptr;

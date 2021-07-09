@@ -27,6 +27,10 @@
 
 #include "RenderStyleConstants.h"
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class StyleContentAlignmentData {
@@ -63,5 +67,7 @@ private:
     unsigned m_distribution : 3; // ContentDistribution
     unsigned m_overflow : 2; // OverflowAlignment
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleContentAlignmentData&);
 
 } // namespace WebCore

@@ -66,7 +66,7 @@ static void enqueueUpgradeInShadowIncludingTreeOrder(ContainerNode& node, JSCust
     }
 }
 
-void CustomElementRegistry::addElementDefinition(Ref<JSCustomElementInterface>&& elementInterface)
+RefPtr<DeferredPromise> CustomElementRegistry::addElementDefinition(Ref<JSCustomElementInterface>&& elementInterface)
 {
     AtomString localName = elementInterface->name().localName();
     ASSERT(!m_nameMap.contains(localName));
@@ -76,8 +76,7 @@ void CustomElementRegistry::addElementDefinition(Ref<JSCustomElementInterface>&&
     if (auto* document = m_window.document())
         enqueueUpgradeInShadowIncludingTreeOrder(*document, elementInterface.get());
 
-    if (auto promise = m_promiseMap.take(localName))
-        promise.value()->resolve();
+    return m_promiseMap.take(localName);
 }
 
 JSCustomElementInterface* CustomElementRegistry::findInterface(const Element& element) const
@@ -118,7 +117,7 @@ static void upgradeElementsInShadowIncludingDescendants(ContainerNode& root)
 {
     for (auto& element : descendantsOfType<Element>(root)) {
         if (element.isCustomElementUpgradeCandidate())
-            CustomElementReactionQueue::enqueueElementUpgradeIfDefined(element);
+            CustomElementReactionQueue::tryToUpgradeElement(element);
         if (auto* shadowRoot = element.shadowRoot())
             upgradeElementsInShadowIncludingDescendants(*shadowRoot);
     }
@@ -130,7 +129,7 @@ void CustomElementRegistry::upgrade(Node& root)
         return;
 
     if (is<Element>(root) && downcast<Element>(root).isCustomElementUpgradeCandidate())
-        CustomElementReactionQueue::enqueueElementUpgradeIfDefined(downcast<Element>(root));
+        CustomElementReactionQueue::tryToUpgradeElement(downcast<Element>(root));
 
     upgradeElementsInShadowIncludingDescendants(downcast<ContainerNode>(root));
 }

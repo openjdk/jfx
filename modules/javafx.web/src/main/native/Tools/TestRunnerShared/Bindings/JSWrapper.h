@@ -25,8 +25,8 @@
 
 #pragma once
 
+#include "JSBasics.h"
 #include "JSWrappable.h"
-#include <JavaScriptCore/JSRetainPtr.h>
 
 namespace WTR {
 
@@ -47,8 +47,12 @@ inline JSValueRef toJS(JSContextRef context, JSWrappable* impl)
 
 inline void setProperty(JSContextRef context, JSObjectRef object, const char* propertyName, JSWrappable* value, JSPropertyAttributes attributes, JSValueRef* exception)
 {
-    auto propertyNameString = adopt(JSStringCreateWithUTF8CString(propertyName));
-    JSObjectSetProperty(context, object, propertyNameString.get(), JSWrapper::wrap(context, value), attributes, exception);
+    JSObjectSetProperty(context, object, createJSString(propertyName).get(), JSWrapper::wrap(context, value), attributes, exception);
+}
+
+inline void setGlobalObjectProperty(JSContextRef context, const char* propertyName, JSWrappable* value)
+{
+    setGlobalObjectProperty(context, propertyName, JSWrapper::wrap(context, value));
 }
 
 } // namespace WTR

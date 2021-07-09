@@ -39,20 +39,25 @@ class DOMWrapperWorld;
 class Document;
 class Frame;
 class Page;
+class UserGestureEmulationScope;
 
 class PageDebuggerAgent final : public WebDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(PageDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     PageDebuggerAgent(PageAgentContext&);
-    ~PageDebuggerAgent() override;
-    bool enabled() const final;
+    ~PageDebuggerAgent();
+    bool enabled() const;
 
     // DebuggerBackendDispatcherHandler
-    void evaluateOnCallFrame(ErrorString&, const String& callFrameId, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex) override;
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, Optional<bool> /* wasThrown */, Optional<int> /* savedResultIndex */>> evaluateOnCallFrame(const Inspector::Protocol::Debugger::CallFrameId&, const String& expression, const String& objectGroup, Optional<bool>&& includeCommandLineAPI, Optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, Optional<bool>&& returnByValue, Optional<bool>&& generatePreview, Optional<bool>&& saveResult, Optional<bool>&& emulateUserGesture);
 
-    // ScriptDebugListener
-    void breakpointActionLog(JSC::JSGlobalObject*, const String&) override;
+    // JSC::Debugger::Client
+    void debuggerWillEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+    void debuggerDidEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+
+    // JSC::Debugger::Observer
+    void breakpointActionLog(JSC::JSGlobalObject*, const String& data);
 
     // InspectorInstrumentation
     void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
@@ -64,17 +69,18 @@ public:
     void didCancelAnimationFrame(int callbackId);
 
 private:
-    void enable() override;
-    void disable(bool isBeingDestroyed) override;
+    void internalEnable();
+    void internalDisable(bool isBeingDestroyed);
 
-    String sourceMapURLForScript(const Script&) override;
+    String sourceMapURLForScript(const JSC::Debugger::Script&);
 
-    void muteConsole() override;
-    void unmuteConsole() override;
+    void muteConsole();
+    void unmuteConsole();
 
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, Optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
 
     Page& m_inspectedPage;
+    Vector<UniqueRef<UserGestureEmulationScope>> m_breakpointActionUserGestureEmulationScopeStack;
 };
 
 } // namespace WebCore

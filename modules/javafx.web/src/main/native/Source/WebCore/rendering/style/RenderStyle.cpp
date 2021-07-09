@@ -165,7 +165,7 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_inheritedFlags.pointerEvents = static_cast<unsigned>(initialPointerEvents());
     m_inheritedFlags.insideLink = static_cast<unsigned>(InsideLink::NotInside);
     m_inheritedFlags.insideDefaultButton = false;
-    m_inheritedFlags.writingMode = initialWritingMode();
+    m_inheritedFlags.writingMode = static_cast<unsigned>(initialWritingMode());
 #if ENABLE(TEXT_AUTOSIZING)
     m_inheritedFlags.autosizeStatus = 0;
 #endif
@@ -692,6 +692,11 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
         }
     }
 
+    if (!arePointingToEqualData(first.scale, second.scale)
+        || !arePointingToEqualData(first.rotate, second.rotate)
+        || !arePointingToEqualData(first.translate, second.translate))
+        changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::Transform);
+
     if (first.grid != second.grid
         || first.gridItem != second.gridItem)
         return true;
@@ -1115,12 +1120,14 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<Styl
     if (!requiresPainting(*this) && !requiresPainting(other))
         return false;
 
+    bool currentColorDiffers = m_inheritedData->color != other.m_inheritedData->color;
+
     if (m_inheritedFlags.visibility != other.m_inheritedFlags.visibility
         || m_inheritedFlags.printColorAdjust != other.m_inheritedFlags.printColorAdjust
         || m_inheritedFlags.insideLink != other.m_inheritedFlags.insideLink
         || m_inheritedFlags.insideDefaultButton != other.m_inheritedFlags.insideDefaultButton
         || m_surroundData->border != other.m_surroundData->border
-        || !m_backgroundData->isEquivalentForPainting(*other.m_backgroundData))
+        || !m_backgroundData->isEquivalentForPainting(*other.m_backgroundData, currentColorDiffers))
         return true;
 
     if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()
@@ -1160,6 +1167,9 @@ bool RenderStyle::changeRequiresRepaintIfTextOrBorderOrOutline(const RenderStyle
 
 bool RenderStyle::changeRequiresRecompositeLayer(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>&) const
 {
+    if (m_inheritedFlags.pointerEvents != other.m_inheritedFlags.pointerEvents)
+        return true;
+
     if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()) {
         if (m_rareNonInheritedData->transformStyle3D != other.m_rareNonInheritedData->transformStyle3D
             || m_rareNonInheritedData->backfaceVisibility != other.m_rareNonInheritedData->backfaceVisibility
@@ -1267,6 +1277,21 @@ void RenderStyle::setWillChange(RefPtr<WillChangeData>&& willChangeData)
     m_rareNonInheritedData.access().willChange = WTFMove(willChangeData);
 }
 
+void RenderStyle::setScale(RefPtr<ScaleTransformOperation>&& t)
+{
+    m_rareNonInheritedData.access().scale = WTFMove(t);
+}
+
+void RenderStyle::setRotate(RefPtr<RotateTransformOperation>&& t)
+{
+    m_rareNonInheritedData.access().rotate = WTFMove(t);
+}
+
+void RenderStyle::setTranslate(RefPtr<TranslateTransformOperation>&& t)
+{
+    m_rareNonInheritedData.access().translate = WTFMove(t);
+}
+
 void RenderStyle::clearCursorList()
 {
     if (m_rareInheritedData->cursorData)
@@ -1357,33 +1382,16 @@ void RenderStyle::setHasAttrContent()
     SET_VAR(m_rareNonInheritedData, hasAttrContent, true);
 }
 
-static inline bool requireTransformOrigin(const Vector<RefPtr<TransformOperation>>& transformOperations, RenderStyle::ApplyTransformOrigin applyOrigin)
+void RenderStyle::applyTransform(TransformationMatrix& transform, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
-    // The transform-origin property brackets the transform with translate operations.
-    // When the only transform is a translation, the transform-origin is irrelevant.
+    // https://www.w3.org/TR/css-transforms-2/#ctm
+    // The transformation matrix is computed from the transform, transform-origin, translate, rotate, scale, and offset properties as follows:
+    // 1. Start with the identity matrix.
 
-    if (applyOrigin != RenderStyle::IncludeTransformOrigin)
-        return false;
+    auto& transformOperations = m_rareNonInheritedData->transform->operations;
+    bool applyTransformOrigin = options.contains(RenderStyle::TransformOperationOption::TransformOrigin) && ((m_rareNonInheritedData->rotate && !m_rareNonInheritedData->rotate->isIdentity()) || (m_rareNonInheritedData->scale && !m_rareNonInheritedData->scale->isIdentity()) || transformOperations.affectedByTransformOrigin());
 
-    for (auto& operation : transformOperations) {
-        // FIXME: Use affectedByTransformOrigin().
-        auto type = operation->type();
-        if (type != TransformOperation::TRANSLATE
-            && type != TransformOperation::TRANSLATE_3D
-            && type != TransformOperation::TRANSLATE_X
-            && type != TransformOperation::TRANSLATE_Y
-            && type != TransformOperation::TRANSLATE_Z)
-            return true;
-    }
-
-    return false;
-}
-
-void RenderStyle::applyTransform(TransformationMatrix& transform, const FloatRect& boundingBox, ApplyTransformOrigin applyOrigin) const
-{
-    auto& operations = m_rareNonInheritedData->transform->operations.operations();
-    bool applyTransformOrigin = requireTransformOrigin(operations, applyOrigin);
-
+    // 2. Translate by the computed X, Y, and Z values of transform-origin.
     FloatPoint3D originTranslate;
     if (applyTransformOrigin) {
         originTranslate.setXY(boundingBox.location() + floatPointForLengthPoint(transformOriginXY(), boundingBox.size()));
@@ -1391,9 +1399,31 @@ void RenderStyle::applyTransform(TransformationMatrix& transform, const FloatRec
         transform.translate3d(originTranslate.x(), originTranslate.y(), originTranslate.z());
     }
 
-    for (auto& operation : operations)
+    // 3. Translate by the computed X, Y, and Z values of translate.
+    if (options.contains(RenderStyle::TransformOperationOption::Translate)) {
+        if (TransformOperation* translate = m_rareNonInheritedData->translate.get())
+            translate->apply(transform, boundingBox.size());
+    }
+
+    // 4. Rotate by the computed <angle> about the specified axis of rotate.
+    if (options.contains(RenderStyle::TransformOperationOption::Rotate)) {
+        if (TransformOperation* rotate = m_rareNonInheritedData->rotate.get())
+            rotate->apply(transform, boundingBox.size());
+    }
+
+    // 5. Scale by the computed X, Y, and Z values of scale.
+    if (options.contains(RenderStyle::TransformOperationOption::Scale)) {
+        if (TransformOperation* scale = m_rareNonInheritedData->scale.get())
+            scale->apply(transform, boundingBox.size());
+    }
+
+    // 6. Translate and rotate by the transform specified by offset. (FIXME: we don't support the offset property)
+
+    // 7. Multiply by each of the transform functions in transform from left to right.
+    for (auto& operation : transformOperations.operations())
         operation->apply(transform, boundingBox.size());
 
+    // 8. Translate by the negated computed X, Y and Z values of transform-origin.
     if (applyTransformOrigin)
         transform.translate3d(-originTranslate.x(), -originTranslate.y(), -originTranslate.z());
 }
@@ -1405,8 +1435,8 @@ void RenderStyle::setPageScaleTransform(float scale)
     TransformOperations transform;
     transform.operations().append(ScaleTransformOperation::create(scale, scale, ScaleTransformOperation::SCALE));
     setTransform(transform);
-    setTransformOriginX(Length(0, Fixed));
-    setTransformOriginY(Length(0, Fixed));
+    setTransformOriginX(Length(0, LengthType::Fixed));
+    setTransformOriginY(Length(0, LengthType::Fixed));
 }
 
 void RenderStyle::setTextShadow(std::unique_ptr<ShadowData> shadowData, bool add)
@@ -1795,16 +1825,16 @@ void RenderStyle::setWordSpacing(Length&& value)
 {
     float fontWordSpacing;
     switch (value.type()) {
-    case Auto:
+    case LengthType::Auto:
         fontWordSpacing = 0;
         break;
-    case Percent:
+    case LengthType::Percent:
         fontWordSpacing = value.percent() * fontCascade().spaceWidth() / 100;
         break;
-    case Fixed:
+    case LengthType::Fixed:
         fontWordSpacing = value.value();
         break;
-    case Calculated:
+    case LengthType::Calculated:
         fontWordSpacing = value.nonNanCalculatedValue(maxValueForCssLength);
         break;
     default:
@@ -1816,7 +1846,21 @@ void RenderStyle::setWordSpacing(Length&& value)
     m_rareInheritedData.access().wordSpacing = WTFMove(value);
 }
 
-void RenderStyle::setLetterSpacing(float v) { m_inheritedData.access().fontCascade.setLetterSpacing(v); }
+void RenderStyle::setLetterSpacing(float letterSpacing)
+{
+    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto description = fontDescription();
+    description.setShouldDisableLigaturesForSpacing(letterSpacing);
+    setFontDescription(WTFMove(description));
+    fontCascade().update(currentFontSelector);
+
+    setLetterSpacingWithoutUpdatingFontDescription(letterSpacing);
+}
+
+void RenderStyle::setLetterSpacingWithoutUpdatingFontDescription(float letterSpacing)
+{
+    m_inheritedData.access().fontCascade.setLetterSpacing(letterSpacing);
+}
 
 void RenderStyle::setFontSize(float size)
 {
@@ -1838,7 +1882,6 @@ void RenderStyle::setFontSize(float size)
     fontCascade().update(currentFontSelector);
 }
 
-#if ENABLE(VARIATION_FONTS)
 void RenderStyle::setFontVariationSettings(FontVariationSettings settings)
 {
     FontSelector* currentFontSelector = fontCascade().fontSelector();
@@ -1848,7 +1891,6 @@ void RenderStyle::setFontVariationSettings(FontVariationSettings settings)
     setFontDescription(WTFMove(description));
     fontCascade().update(currentFontSelector);
 }
-#endif
 
 void RenderStyle::setFontWeight(FontSelectionValue value)
 {
@@ -1880,12 +1922,12 @@ void RenderStyle::setFontItalic(Optional<FontSelectionValue> value)
     fontCascade().update(currentFontSelector);
 }
 
-void RenderStyle::getShadowExtent(const ShadowData* shadow, LayoutUnit& top, LayoutUnit& right, LayoutUnit& bottom, LayoutUnit& left) const
+LayoutBoxExtent RenderStyle::shadowExtent(const ShadowData* shadow)
 {
-    top = 0;
-    right = 0;
-    bottom = 0;
-    left = 0;
+    LayoutUnit top;
+    LayoutUnit right;
+    LayoutUnit bottom;
+    LayoutUnit left;
 
     for ( ; shadow; shadow = shadow->next()) {
         if (shadow->style() == ShadowStyle::Inset)
@@ -1897,9 +1939,11 @@ void RenderStyle::getShadowExtent(const ShadowData* shadow, LayoutUnit& top, Lay
         bottom = std::max<LayoutUnit>(bottom, shadow->y() + extentAndSpread);
         left = std::min<LayoutUnit>(left, shadow->x() - extentAndSpread);
     }
+
+    return { top, right, bottom, left };
 }
 
-LayoutBoxExtent RenderStyle::getShadowInsetExtent(const ShadowData* shadow) const
+LayoutBoxExtent RenderStyle::shadowInsetExtent(const ShadowData* shadow)
 {
     LayoutUnit top;
     LayoutUnit right;
@@ -1917,10 +1961,10 @@ LayoutBoxExtent RenderStyle::getShadowInsetExtent(const ShadowData* shadow) cons
         left = std::max<LayoutUnit>(left, shadow->x() + extentAndSpread);
     }
 
-    return LayoutBoxExtent(WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left));
+    return { top, right, bottom, left };
 }
 
-void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit &left, LayoutUnit &right) const
+void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit &left, LayoutUnit &right)
 {
     left = 0;
     right = 0;
@@ -1935,7 +1979,7 @@ void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit
     }
 }
 
-void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &top, LayoutUnit &bottom) const
+void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &top, LayoutUnit &bottom)
 {
     top = 0;
     bottom = 0;
@@ -2091,13 +2135,13 @@ Color RenderStyle::colorByApplyingColorFilter(const Color& color) const
 const BorderValue& RenderStyle::borderBefore() const
 {
     switch (writingMode()) {
-    case TopToBottomWritingMode:
+    case WritingMode::TopToBottom:
         return borderTop();
-    case BottomToTopWritingMode:
+    case WritingMode::BottomToTop:
         return borderBottom();
-    case LeftToRightWritingMode:
+    case WritingMode::LeftToRight:
         return borderLeft();
-    case RightToLeftWritingMode:
+    case WritingMode::RightToLeft:
         return borderRight();
     }
     ASSERT_NOT_REACHED();
@@ -2107,13 +2151,13 @@ const BorderValue& RenderStyle::borderBefore() const
 const BorderValue& RenderStyle::borderAfter() const
 {
     switch (writingMode()) {
-    case TopToBottomWritingMode:
+    case WritingMode::TopToBottom:
         return borderBottom();
-    case BottomToTopWritingMode:
+    case WritingMode::BottomToTop:
         return borderTop();
-    case LeftToRightWritingMode:
+    case WritingMode::LeftToRight:
         return borderRight();
-    case RightToLeftWritingMode:
+    case WritingMode::RightToLeft:
         return borderLeft();
     }
     ASSERT_NOT_REACHED();
@@ -2137,13 +2181,13 @@ const BorderValue& RenderStyle::borderEnd() const
 float RenderStyle::borderBeforeWidth() const
 {
     switch (writingMode()) {
-    case TopToBottomWritingMode:
+    case WritingMode::TopToBottom:
         return borderTopWidth();
-    case BottomToTopWritingMode:
+    case WritingMode::BottomToTop:
         return borderBottomWidth();
-    case LeftToRightWritingMode:
+    case WritingMode::LeftToRight:
         return borderLeftWidth();
-    case RightToLeftWritingMode:
+    case WritingMode::RightToLeft:
         return borderRightWidth();
     }
     ASSERT_NOT_REACHED();
@@ -2153,13 +2197,13 @@ float RenderStyle::borderBeforeWidth() const
 float RenderStyle::borderAfterWidth() const
 {
     switch (writingMode()) {
-    case TopToBottomWritingMode:
+    case WritingMode::TopToBottom:
         return borderBottomWidth();
-    case BottomToTopWritingMode:
+    case WritingMode::BottomToTop:
         return borderTopWidth();
-    case LeftToRightWritingMode:
+    case WritingMode::LeftToRight:
         return borderRightWidth();
-    case RightToLeftWritingMode:
+    case WritingMode::RightToLeft:
         return borderLeftWidth();
     }
     ASSERT_NOT_REACHED();
@@ -2329,36 +2373,78 @@ void RenderStyle::setColumnStylesFromPaginationMode(const Pagination::Mode& pagi
     }
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-
-ScrollSnapType RenderStyle::initialScrollSnapType()
+void RenderStyle::deduplicateInheritedCustomProperties(const RenderStyle& other)
 {
-    return { };
+    auto& properties = const_cast<DataRef<StyleCustomPropertyData>&>(m_rareInheritedData->customProperties);
+    auto& otherProperties = other.m_rareInheritedData->customProperties;
+    if (properties.ptr() != otherProperties.ptr() && *properties == *otherProperties)
+        properties = otherProperties;
 }
 
-ScrollSnapAlign RenderStyle::initialScrollSnapAlign()
+void RenderStyle::setInheritedCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value)
 {
-    return { };
+    auto* existingValue = m_rareInheritedData->customProperties->values.get(name);
+    if (existingValue && existingValue->equals(value.get()))
+        return;
+    m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
 }
 
-const StyleScrollSnapArea& RenderStyle::scrollSnapArea() const
+void RenderStyle::setNonInheritedCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value)
 {
-    return *m_rareNonInheritedData->scrollSnapArea;
+    auto* existingValue = m_rareNonInheritedData->customProperties->values.get(name);
+    if (existingValue && existingValue->equals(value.get()))
+        return;
+    m_rareNonInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
 }
 
-const StyleScrollSnapPort& RenderStyle::scrollSnapPort() const
+const LengthBox& RenderStyle::scrollMargin() const
 {
-    return *m_rareNonInheritedData->scrollSnapPort;
+    return m_rareNonInheritedData->scrollMargin;
 }
 
-const ScrollSnapType& RenderStyle::scrollSnapType() const
+const Length& RenderStyle::scrollMarginTop() const
 {
-    return m_rareNonInheritedData->scrollSnapPort->type;
+    return scrollMargin().top();
+}
+
+const Length& RenderStyle::scrollMarginBottom() const
+{
+    return scrollMargin().bottom();
+}
+
+const Length& RenderStyle::scrollMarginLeft() const
+{
+    return scrollMargin().left();
+}
+
+const Length& RenderStyle::scrollMarginRight() const
+{
+    return scrollMargin().right();
+}
+
+void RenderStyle::setScrollMarginTop(Length&& length)
+{
+    SET_VAR(m_rareNonInheritedData, scrollMargin.top(), WTFMove(length));
+}
+
+void RenderStyle::setScrollMarginBottom(Length&& length)
+{
+    SET_VAR(m_rareNonInheritedData, scrollMargin.bottom(), WTFMove(length));
+}
+
+void RenderStyle::setScrollMarginLeft(Length&& length)
+{
+    SET_VAR(m_rareNonInheritedData, scrollMargin.left(), WTFMove(length));
+}
+
+void RenderStyle::setScrollMarginRight(Length&& length)
+{
+    SET_VAR(m_rareNonInheritedData, scrollMargin.right(), WTFMove(length));
 }
 
 const LengthBox& RenderStyle::scrollPadding() const
 {
-    return m_rareNonInheritedData->scrollSnapPort->scrollPadding;
+    return m_rareNonInheritedData->scrollPadding;
 }
 
 const Length& RenderStyle::scrollPaddingTop() const
@@ -2381,86 +2467,77 @@ const Length& RenderStyle::scrollPaddingRight() const
     return scrollPadding().right();
 }
 
-const ScrollSnapAlign& RenderStyle::scrollSnapAlign() const
-{
-    return m_rareNonInheritedData->scrollSnapArea->alignment;
-}
-
-const LengthBox& RenderStyle::scrollSnapMargin() const
-{
-    return m_rareNonInheritedData->scrollSnapArea->scrollSnapMargin;
-}
-
-const Length& RenderStyle::scrollSnapMarginTop() const
-{
-    return scrollSnapMargin().top();
-}
-
-const Length& RenderStyle::scrollSnapMarginBottom() const
-{
-    return scrollSnapMargin().bottom();
-}
-
-const Length& RenderStyle::scrollSnapMarginLeft() const
-{
-    return scrollSnapMargin().left();
-}
-
-const Length& RenderStyle::scrollSnapMarginRight() const
-{
-    return scrollSnapMargin().right();
-}
-
-void RenderStyle::setScrollSnapType(const ScrollSnapType& type)
-{
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapPort, type, type);
-}
-
 void RenderStyle::setScrollPaddingTop(Length&& length)
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapPort, scrollPadding.top(), WTFMove(length));
+    SET_VAR(m_rareNonInheritedData, scrollPadding.top(), WTFMove(length));
 }
 
 void RenderStyle::setScrollPaddingBottom(Length&& length)
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapPort, scrollPadding.bottom(), WTFMove(length));
+    SET_VAR(m_rareNonInheritedData, scrollPadding.bottom(), WTFMove(length));
 }
 
 void RenderStyle::setScrollPaddingLeft(Length&& length)
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapPort, scrollPadding.left(), WTFMove(length));
+    SET_VAR(m_rareNonInheritedData, scrollPadding.left(), WTFMove(length));
 }
 
 void RenderStyle::setScrollPaddingRight(Length&& length)
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapPort, scrollPadding.right(), WTFMove(length));
+    SET_VAR(m_rareNonInheritedData, scrollPadding.right(), WTFMove(length));
+}
+#if ENABLE(CSS_SCROLL_SNAP)
+
+ScrollSnapType RenderStyle::initialScrollSnapType()
+{
+    return { };
+}
+
+ScrollSnapAlign RenderStyle::initialScrollSnapAlign()
+{
+    return { };
+}
+
+ScrollSnapStop RenderStyle::initialScrollSnapStop()
+{
+    return ScrollSnapStop::Normal;
+}
+
+const ScrollSnapType RenderStyle::scrollSnapType() const
+{
+    return m_rareNonInheritedData->scrollSnapType;
+}
+
+const ScrollSnapAlign& RenderStyle::scrollSnapAlign() const
+{
+    return m_rareNonInheritedData->scrollSnapAlign;
+}
+
+ScrollSnapStop RenderStyle::scrollSnapStop() const
+{
+    return m_rareNonInheritedData->scrollSnapStop;
+}
+
+void RenderStyle::setScrollSnapType(const ScrollSnapType type)
+{
+    SET_VAR(m_rareNonInheritedData, scrollSnapType, type);
 }
 
 void RenderStyle::setScrollSnapAlign(const ScrollSnapAlign& alignment)
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapArea, alignment, alignment);
+    SET_VAR(m_rareNonInheritedData, scrollSnapAlign, alignment);
 }
 
-void RenderStyle::setScrollSnapMarginTop(Length&& length)
+void RenderStyle::setScrollSnapStop(const ScrollSnapStop stop)
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapArea, scrollSnapMargin.top(), WTFMove(length));
+    SET_VAR(m_rareNonInheritedData, scrollSnapStop, stop);
 }
 
-void RenderStyle::setScrollSnapMarginBottom(Length&& length)
+bool RenderStyle::hasSnapPosition() const
 {
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapArea, scrollSnapMargin.bottom(), WTFMove(length));
+    const ScrollSnapAlign& alignment = this->scrollSnapAlign();
+    return alignment.x != ScrollSnapAxisAlignType::None || alignment.y != ScrollSnapAxisAlignType::None;
 }
-
-void RenderStyle::setScrollSnapMarginLeft(Length&& length)
-{
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapArea, scrollSnapMargin.left(), WTFMove(length));
-}
-
-void RenderStyle::setScrollSnapMarginRight(Length&& length)
-{
-    SET_NESTED_VAR(m_rareNonInheritedData, scrollSnapArea, scrollSnapMargin.right(), WTFMove(length));
-}
-
 #endif
 
 bool RenderStyle::hasReferenceFilterOnly() const

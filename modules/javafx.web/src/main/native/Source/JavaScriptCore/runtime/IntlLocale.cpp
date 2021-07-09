@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +27,7 @@
 #include "config.h"
 #include "IntlLocale.h"
 
-#include "IntlObject.h"
+#include "IntlObjectInlines.h"
 #include "JSCInlines.h"
 #include <unicode/uloc.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
@@ -58,7 +59,8 @@ void IntlLocale::finishCreation(VM& vm)
     ASSERT(inherits(vm, info()));
 }
 
-void IntlLocale::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void IntlLocale::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<IntlLocale*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -66,9 +68,11 @@ void IntlLocale::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
 }
 
+DEFINE_VISIT_CHILDREN(IntlLocale);
+
 class LocaleIDBuilder final {
 public:
-    bool initialize(const CString&);
+    bool initialize(const String&);
     CString toCanonical();
 
     void overrideLanguageScriptRegion(StringView language, StringView script, StringView region);
@@ -78,9 +82,12 @@ private:
     Vector<char, 32> m_buffer;
 };
 
-bool LocaleIDBuilder::initialize(const CString& tag)
+bool LocaleIDBuilder::initialize(const String& tag)
 {
-    m_buffer = localeIDBufferForLanguageTag(tag);
+    if (!isStructurallyValidLanguageTag(tag))
+        return false;
+    ASSERT(tag.isAllASCII());
+    m_buffer = localeIDBufferForLanguageTag(tag.ascii());
     return m_buffer.size();
 }
 
@@ -88,11 +95,12 @@ CString LocaleIDBuilder::toCanonical()
 {
     ASSERT(m_buffer.size());
 
-    Vector<char, 32> result;
-    auto status = callBufferProducingFunction(uloc_canonicalize, m_buffer.data(), result);
+    Vector<char, 32> buffer;
+    auto status = callBufferProducingFunction(uloc_canonicalize, m_buffer.data(), buffer);
     if (U_FAILURE(status))
         return CString();
 
+    auto result = canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer));
     return CString(result.data(), result.size());
 }
 
@@ -186,9 +194,15 @@ String IntlLocale::keywordValue(ASCIILiteral key, bool isBoolean) const
         uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.data(), bufferLength + 1, &status);
     }
     ASSERT(U_SUCCESS(status));
-
-    const char* value = !isBoolean ? uloc_toUnicodeLocaleType(key.characters(), buffer.data()) : buffer.data();
-    return value ? String(value) : emptyString();
+    if (isBoolean)
+        return String(buffer.data());
+    const char* value = uloc_toUnicodeLocaleType(key.characters(), buffer.data());
+    if (!value)
+        return nullString();
+    String result(value);
+    if (result == "true"_s)
+        return emptyString();
+    return result;
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale
@@ -209,14 +223,11 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, const String& ta
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue options = optionsValue;
-    if (!optionsValue.isUndefined()) {
-        options = optionsValue.toObject(globalObject);
-        RETURN_IF_EXCEPTION(scope, void());
-    }
+    Optional<JSObject&> options = intlCoerceOptionsToObject(globalObject, optionsValue);
+    RETURN_IF_EXCEPTION(scope, void());
 
     LocaleIDBuilder localeID;
-    if (!localeID.initialize(tag.utf8())) {
+    if (!localeID.initialize(tag)) {
         throwRangeError(globalObject, scope, "invalid language tag"_s);
         return;
     }
@@ -401,41 +412,41 @@ const String& IntlLocale::region()
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.calendar
 const String& IntlLocale::calendar()
 {
-    if (m_calendar.isNull())
+    if (!m_calendar)
         m_calendar = keywordValue("calendar"_s);
-    return m_calendar;
+    return m_calendar.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.caseFirst
 const String& IntlLocale::caseFirst()
 {
-    if (m_caseFirst.isNull())
+    if (!m_caseFirst)
         m_caseFirst = keywordValue("colcasefirst"_s);
-    return m_caseFirst;
+    return m_caseFirst.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.collation
 const String& IntlLocale::collation()
 {
-    if (m_collation.isNull())
+    if (!m_collation)
         m_collation = keywordValue("collation"_s);
-    return m_collation;
+    return m_collation.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.hourCycle
 const String& IntlLocale::hourCycle()
 {
-    if (m_hourCycle.isNull())
+    if (!m_hourCycle)
         m_hourCycle = keywordValue("hours"_s);
-    return m_hourCycle;
+    return m_hourCycle.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.numberingSystem
 const String& IntlLocale::numberingSystem()
 {
-    if (m_numberingSystem.isNull())
+    if (!m_numberingSystem)
         m_numberingSystem = keywordValue("numbers"_s);
-    return m_numberingSystem;
+    return m_numberingSystem.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.numeric
@@ -443,7 +454,7 @@ TriState IntlLocale::numeric()
 {
     constexpr bool isBoolean = true;
     if (m_numeric == TriState::Indeterminate)
-        m_numeric = triState(keywordValue("colnumeric"_s, isBoolean) == "yes");
+        m_numeric = triState(keywordValue("colnumeric"_s, isBoolean) == "yes"_s);
     return m_numeric;
 }
 

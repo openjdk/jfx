@@ -199,6 +199,8 @@ private:
             case FilterCallLinkStatus:
             case FilterInByIdStatus:
             case FilterDeleteByStatus:
+            case FilterCheckPrivateBrandStatus:
+            case FilterSetPrivateBrandStatus:
                 break;
 
             case GetByOffset: {
@@ -264,7 +266,6 @@ private:
             // what gets read on OSR exit.
             switch (node->op()) {
             case MovHint:
-            case ZombieHint:
             case KillStack:
                 if (argumentsInvolveStackSlot(candidate, node->unlinkedOperand())) {
                     if (verbose)
@@ -403,6 +404,8 @@ private:
             case FilterCallLinkStatus:
             case FilterInByIdStatus:
             case FilterDeleteByStatus:
+            case FilterCheckPrivateBrandStatus:
+            case FilterSetPrivateBrandStatus:
                 if (node->child1().node() == candidate)
                     node->remove(m_graph);
                 break;

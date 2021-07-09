@@ -235,9 +235,7 @@ bool isValidCSSSelector(const String& selector)
     QualifiedName::init();
     CSSParserContext context(HTMLQuirksMode);
     CSSParser parser(context);
-    CSSSelectorList selectorList;
-    parser.parseSelector(selector, selectorList);
-    return selectorList.isValid();
+    return !!parser.parseSelector(selector);
 }
 
 static Expected<Optional<Action>, std::error_code> loadAction(JSGlobalObject& lexicalGlobalObject, const JSObject& ruleObject)
@@ -326,7 +324,7 @@ static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(
     Vector<ContentExtensionRule> ruleList;
 
     unsigned length = topLevelArray->length();
-    const unsigned maxRuleCount = 50000;
+    const unsigned maxRuleCount = 150000;
     if (length > maxRuleCount)
         return makeUnexpected(ContentExtensionError::JSONTooManyRules);
     for (unsigned i = 0; i < length; ++i) {

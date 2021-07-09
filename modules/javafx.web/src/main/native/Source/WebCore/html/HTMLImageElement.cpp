@@ -28,7 +28,6 @@
 #include "CachedImage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "EditableImageReference.h"
 #include "Editor.h"
 #include "ElementIterator.h"
 #include "EventNames.h"
@@ -61,10 +60,6 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(SERVICE_CONTROLS)
-#include "ImageControlsRootElement.h"
-#endif
-
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLImageElement);
@@ -78,7 +73,6 @@ HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& docum
     , m_formSetByParser(makeWeakPtr(form))
     , m_compositeOperator(CompositeOperator::SourceOver)
     , m_imageDevicePixelRatio(1.0f)
-    , m_experimentalImageMenuEnabled(false)
 {
     ASSERT(hasTagName(imgTag));
     setHasCustomStyleResolveCallbacks();
@@ -103,7 +97,7 @@ HTMLImageElement::~HTMLImageElement()
     setPictureElement(nullptr);
 }
 
-Ref<HTMLImageElement> HTMLImageElement::createForJSConstructor(Document& document, Optional<unsigned> width, Optional<unsigned> height)
+Ref<HTMLImageElement> HTMLImageElement::createForLegacyFactoryFunction(Document& document, Optional<unsigned> width, Optional<unsigned> height)
 {
     auto image = adoptRef(*new HTMLImageElement(imgTag, document));
     if (width)
@@ -251,7 +245,7 @@ void HTMLImageElement::attributeChanged(const QualifiedName& name, const AtomStr
 {
     HTMLElement::attributeChanged(name, oldValue, newValue, reason);
 
-    if (name == referrerpolicyAttr && RuntimeEnabledFeatures::sharedFeatures().referrerPolicyAttributeEnabled()) {
+    if (name == referrerpolicyAttr && document().settings().referrerPolicyAttributeEnabled()) {
         auto oldReferrerPolicy = parseReferrerPolicy(oldValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
         auto newReferrerPolicy = parseReferrerPolicy(newValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
         if (oldReferrerPolicy != newReferrerPolicy)
@@ -282,14 +276,7 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomStrin
         BlendMode blendOp = BlendMode::Normal;
         if (!parseCompositeAndBlendOperator(value, m_compositeOperator, blendOp))
             m_compositeOperator = CompositeOperator::SourceOver;
-#if ENABLE(SERVICE_CONTROLS)
-    } else if (name == webkitimagemenuAttr) {
-        m_experimentalImageMenuEnabled = !value.isNull();
-        updateImageControls();
-#endif
-    } else if (name == x_apple_editable_imageAttr)
-        updateEditableImage();
-    else if (name == loadingAttr) {
+    } else if (name == loadingAttr) {
         // No action needed for eager to lazy transition.
         if (!hasLazyLoadableAttributeValue(value))
             loadDeferredImage();
@@ -345,20 +332,6 @@ bool HTMLImageElement::canStartSelection() const
     return false;
 }
 
-bool HTMLImageElement::supportsFocus() const
-{
-    if (hasEditableImageAttribute())
-        return true;
-    return HTMLElement::supportsFocus();
-}
-
-bool HTMLImageElement::isFocusable() const
-{
-    if (hasEditableImageAttribute())
-        return true;
-    return HTMLElement::isFocusable();
-}
-
 bool HTMLImageElement::isInteractiveContent() const
 {
     return hasAttributeWithoutSynchronization(usemapAttr);
@@ -370,10 +343,6 @@ void HTMLImageElement::didAttachRenderers()
         return;
     if (m_imageLoader->hasPendingBeforeLoadEvent())
         return;
-
-#if ENABLE(SERVICE_CONTROLS)
-    updateImageControls();
-#endif
 
     auto& renderImage = downcast<RenderImage>(*renderer());
     RenderImageResource& renderImageResource = renderImage.imageResource();
@@ -399,19 +368,16 @@ Node::InsertedIntoAncestorResult HTMLImageElement::insertedIntoAncestor(Insertio
         m_form = nullptr;
     }
 
+    // Insert needs to complete first, before we start updating the loader. Loader dispatches events which could result
+    // in callbacks back to this node.
+    Node::InsertedIntoAncestorResult insertNotificationRequest = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+
     if (!m_form) {
         if (auto* newForm = HTMLFormElement::findClosestFormAncestor(*this)) {
             m_form = makeWeakPtr(newForm);
             newForm->registerImgElement(this);
         }
     }
-
-    // Insert needs to complete first, before we start updating the loader. Loader dispatches events which could result
-    // in callbacks back to this node.
-    Node::InsertedIntoAncestorResult insertNotificationRequest = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-
-    if (insertionType.connectedToDocument && hasEditableImageAttribute())
-        insertNotificationRequest = InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 
     if (insertionType.treeScopeChanged && !m_parsedUsemap.isNull())
         treeScope().addImageElementByUsemap(*m_parsedUsemap.impl(), *this);
@@ -437,12 +403,6 @@ Node::InsertedIntoAncestorResult HTMLImageElement::insertedIntoAncestor(Insertio
     return insertNotificationRequest;
 }
 
-void HTMLImageElement::didFinishInsertingNode()
-{
-    if (hasEditableImageAttribute())
-        updateEditableImage();
-}
-
 void HTMLImageElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (m_form)
@@ -456,67 +416,8 @@ void HTMLImageElement::removedFromAncestor(RemovalType removalType, ContainerNod
         m_imageLoader->updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
     }
 
-    if (removalType.disconnectedFromDocument)
-        updateEditableImage();
-
     m_form = nullptr;
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-}
-
-bool HTMLImageElement::hasEditableImageAttribute() const
-{
-    if (!document().settings().editableImagesEnabled())
-        return false;
-    return hasAttributeWithoutSynchronization(x_apple_editable_imageAttr);
-}
-
-GraphicsLayer::EmbeddedViewID HTMLImageElement::editableImageViewID() const
-{
-    if (!m_editableImage)
-        return 0;
-    return m_editableImage->embeddedViewID();
-}
-
-void HTMLImageElement::updateEditableImage()
-{
-    if (!document().settings().editableImagesEnabled())
-        return;
-
-    auto* page = document().page();
-    if (!page)
-        return;
-
-    bool hasEditableAttribute = hasEditableImageAttribute();
-    bool isCurrentlyEditable = !!m_editableImage;
-    bool shouldBeEditable = isConnected() && hasEditableAttribute;
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-    // Create the inner attachment for editable images, or non-editable
-    // images that were cloned from editable image sources.
-    if (!attachmentElement() && (shouldBeEditable || !m_pendingClonedAttachmentID.isEmpty())) {
-        auto attachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, document());
-        if (!m_pendingClonedAttachmentID.isEmpty())
-            attachment->setUniqueIdentifier(WTFMove(m_pendingClonedAttachmentID));
-        else
-            attachment->ensureUniqueIdentifier();
-        setAttachmentElement(WTFMove(attachment));
-    }
-#endif
-
-    if (shouldBeEditable == isCurrentlyEditable)
-        return;
-
-    if (!hasEditableAttribute) {
-        m_editableImage = nullptr;
-        return;
-    }
-
-    if (!m_editableImage)
-        m_editableImage = EditableImageReference::create(document());
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-    m_editableImage->associateWithAttachment(attachmentElement()->uniqueIdentifier());
-#endif
 }
 
 HTMLPictureElement* HTMLImageElement::pictureElement() const
@@ -766,6 +667,16 @@ String HTMLImageElement::crossOrigin() const
     return parseCORSSettingsAttribute(attributeWithoutSynchronization(crossoriginAttr));
 }
 
+bool HTMLImageElement::allowsOrientationOverride() const
+{
+    auto* cachedImage = this->cachedImage();
+    if (!cachedImage)
+        return true;
+
+    auto image = cachedImage->image();
+    return !image || image->sourceURL().protocolIsData() || cachedImage->isCORSSameOrigin();
+}
+
 #if ENABLE(ATTACHMENT_ELEMENT)
 
 void HTMLImageElement::setAttachmentElement(Ref<HTMLAttachmentElement>&& attachment)
@@ -798,76 +709,6 @@ const String& HTMLImageElement::attachmentIdentifier() const
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)
 
-#if ENABLE(SERVICE_CONTROLS)
-void HTMLImageElement::updateImageControls()
-{
-    // If this image element is inside a shadow tree then it is part of an image control.
-    if (isInShadowTree())
-        return;
-
-    if (!document().settings().imageControlsEnabled())
-        return;
-
-    bool hasControls = hasImageControls();
-    if (!m_experimentalImageMenuEnabled && hasControls)
-        destroyImageControls();
-    else if (m_experimentalImageMenuEnabled && !hasControls)
-        tryCreateImageControls();
-}
-
-void HTMLImageElement::tryCreateImageControls()
-{
-    ASSERT(m_experimentalImageMenuEnabled);
-    ASSERT(!hasImageControls());
-
-    auto imageControls = ImageControlsRootElement::tryCreate(document());
-    if (!imageControls)
-        return;
-
-    ensureUserAgentShadowRoot().appendChild(*imageControls);
-
-    auto* renderObject = renderer();
-    if (!renderObject)
-        return;
-
-    downcast<RenderImage>(*renderObject).setHasShadowControls(true);
-}
-
-void HTMLImageElement::destroyImageControls()
-{
-    auto shadowRoot = userAgentShadowRoot();
-    if (!shadowRoot)
-        return;
-
-    if (RefPtr<Node> node = shadowRoot->firstChild()) {
-        ASSERT_WITH_SECURITY_IMPLICATION(node->isImageControlsRootElement());
-        shadowRoot->removeChild(*node);
-    }
-
-    auto* renderObject = renderer();
-    if (!renderObject)
-        return;
-
-    downcast<RenderImage>(*renderObject).setHasShadowControls(false);
-}
-
-bool HTMLImageElement::hasImageControls() const
-{
-    if (auto shadowRoot = userAgentShadowRoot()) {
-        RefPtr<Node> node = shadowRoot->firstChild();
-        ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isImageControlsRootElement());
-        return node;
-    }
-
-    return false;
-}
-
-bool HTMLImageElement::childShouldCreateRenderer(const Node& child) const
-{
-    return hasShadowRootParent(child) && HTMLElement::childShouldCreateRenderer(child);
-}
-#endif // ENABLE(SERVICE_CONTROLS)
-
 #if PLATFORM(IOS_FAMILY)
 // FIXME: We should find a better place for the touch callout logic. See rdar://problem/48937767.
 bool HTMLImageElement::willRespondToMouseClickEvents()
@@ -882,7 +723,7 @@ bool HTMLImageElement::willRespondToMouseClickEvents()
 #if USE(SYSTEM_PREVIEW)
 bool HTMLImageElement::isSystemPreviewImage() const
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
+    if (!document().settings().systemPreviewEnabled())
         return false;
 
     auto* parent = parentElement();
@@ -899,19 +740,10 @@ void HTMLImageElement::copyNonAttributePropertiesFromElement(const Element& sour
     auto& sourceImage = static_cast<const HTMLImageElement&>(source);
 #if ENABLE(ATTACHMENT_ELEMENT)
     m_pendingClonedAttachmentID = !sourceImage.m_pendingClonedAttachmentID.isEmpty() ? sourceImage.m_pendingClonedAttachmentID : sourceImage.attachmentIdentifier();
+#else
+    UNUSED_PARAM(sourceImage);
 #endif
-    m_editableImage = sourceImage.m_editableImage;
     Element::copyNonAttributePropertiesFromElement(source);
-}
-
-void HTMLImageElement::defaultEventHandler(Event& event)
-{
-    if (hasEditableImageAttribute() && event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
-        focus();
-        event.setDefaultHandled();
-        return;
-    }
-    HTMLElement::defaultEventHandler(event);
 }
 
 CachedImage* HTMLImageElement::cachedImage() const
@@ -954,7 +786,7 @@ bool HTMLImageElement::isDeferred() const
 
 bool HTMLImageElement::isLazyLoadable() const
 {
-    if (document().frame() && !document().frame()->script().canExecuteScripts(NotAboutToExecuteScript))
+    if (!document().frame() || !document().frame()->script().canExecuteScripts(NotAboutToExecuteScript))
         return false;
     return hasLazyLoadableAttributeValue(attributeWithoutSynchronization(HTMLNames::loadingAttr));
 }
@@ -971,7 +803,7 @@ String HTMLImageElement::referrerPolicyForBindings() const
 
 ReferrerPolicy HTMLImageElement::referrerPolicy() const
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().referrerPolicyAttributeEnabled())
+    if (document().settings().referrerPolicyAttributeEnabled())
         return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
     return ReferrerPolicy::EmptyString;
 }

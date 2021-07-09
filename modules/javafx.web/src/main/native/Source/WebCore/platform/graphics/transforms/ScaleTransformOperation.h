@@ -50,20 +50,22 @@ public:
     double y() const { return m_y; }
     double z() const { return m_z; }
 
-private:
-    bool isIdentity() const override { return m_x == 1 &&  m_y == 1 &&  m_z == 1; }
-    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
+    bool operator==(const TransformOperation&) const final;
+
+    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) final;
+
+    bool isIdentity() const final { return m_x == 1 &&  m_y == 1 &&  m_z == 1; }
+
     bool isRepresentableIn2D() const final { return m_z == 1; }
 
-    bool operator==(const TransformOperation&) const override;
+private:
+    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
     bool apply(TransformationMatrix& transform, const FloatSize&) const override
     {
         transform.scale3d(m_x, m_y, m_z);
         return false;
     }
-
-    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
 
     void dump(WTF::TextStream&) const final;
 

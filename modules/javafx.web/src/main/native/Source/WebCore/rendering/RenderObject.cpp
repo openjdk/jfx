@@ -29,6 +29,7 @@
 
 #include "AXObjectCache.h"
 #include "Editing.h"
+#include "ElementAncestorIterator.h"
 #include "FloatQuad.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -40,6 +41,7 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableElement.h"
 #include "HitTestResult.h"
+#include "LayoutIntegrationLineLayout.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "Page.h"
 #include "PseudoElement.h"
@@ -52,6 +54,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
+#include "RenderLineBreak.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderRuby.h"
 #include "RenderSVGBlock.h"
@@ -452,15 +455,21 @@ RenderBoxModelObject& RenderObject::enclosingBoxModelObject() const
 
 const RenderBox* RenderObject::enclosingScrollableContainerForSnapping() const
 {
-    auto& renderBox = enclosingBox();
-    if (auto* scrollableContainer = renderBox.findEnclosingScrollableContainer()) {
-        // The scrollable container for snapping cannot be the node itself.
-        if (scrollableContainer != this)
-            return scrollableContainer;
-        if (renderBox.parentBox())
-            return renderBox.parentBox()->findEnclosingScrollableContainer();
+    // Walk up the container chain to find the scrollable container that contains
+    // this RenderObject. The important thing here is that `container()` respects
+    // the containing block chain for positioned elements. This is important because
+    // scrollable overflow does not establish a new containing block for children.
+    for (auto* candidate = container(); candidate; candidate = candidate->container()) {
+        // Currently the RenderView can look like it has scrollable overflow, but we never
+        // want to return this as our container. Instead we should use the root element.
+        if (candidate->isRenderView())
+            break;
+        if (candidate->hasOverflowClip())
+            return downcast<RenderBox>(candidate);
     }
-    return nullptr;
+
+    // If we reach the root, then the root element is the scrolling container.
+    return document().documentElement() ? document().documentElement()->renderBox() : nullptr;
 }
 
 RenderBlock* RenderObject::firstLineBlock() const
@@ -680,7 +689,7 @@ void RenderObject::addPDFURLRect(PaintInfo& paintInfo, const LayoutPoint& paintO
         }
     }
 
-    paintInfo.context().setURLForRect(node->document().completeURL(href), urlRect);
+    paintInfo.context().setURLForRect(element.document().completeURL(href), urlRect);
 
 }
 
@@ -999,7 +1008,7 @@ Optional<FloatRect> RenderObject::computeFloatVisibleRectInContainer(const Float
 static void outputRenderTreeLegend(TextStream& stream)
 {
     stream.nextLine();
-    stream << "(B)lock/(I)nline/I(N)line-block, (A)bsolute/Fi(X)ed/(R)elative/Stic(K)y, (F)loating, (O)verflow clip, Anon(Y)mous, (G)enerated, has(L)ayer, (C)omposited, (+)Dirty style, (+)Dirty layout";
+    stream << "(B)lock/(I)nline/I(N)line-block, (A)bsolute/Fi(X)ed/(R)elative/Stic(K)y, (F)loating, (O)verflow clip, Anon(Y)mous, (G)enerated, has(L)ayer, hasLayer(S)crollableArea, (C)omposited, (+)Dirty style, (+)Dirty layout";
     stream.nextLine();
 }
 
@@ -1113,10 +1122,14 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
     else
         stream << "-";
 
-    if (hasLayer())
+    if (hasLayer()) {
         stream << "L";
-    else
-        stream << "-";
+        if (downcast<RenderLayerModelObject>(*this).layer()->scrollableArea())
+            stream << "S";
+        else
+            stream << "-";
+    } else
+        stream << "--";
 
     if (isComposited())
         stream << "C";
@@ -1223,6 +1236,10 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
 void RenderObject::outputRenderSubTreeAndMark(TextStream& stream, const RenderObject* markedObject, int depth) const
 {
     outputRenderObject(stream, markedObject == this, depth);
+
+    if (is<RenderBlockFlow>(*this))
+        downcast<RenderBlockFlow>(*this).outputFloatingObjects(stream, depth + 1);
+
     if (is<RenderBlockFlow>(*this))
         downcast<RenderBlockFlow>(*this).outputLineTreeAndMark(stream, nullptr, depth + 1);
 
@@ -1398,14 +1415,6 @@ LayoutSize RenderObject::offsetFromAncestorContainer(RenderElement& container) c
     return offset;
 }
 
-LayoutRect RenderObject::localCaretRect(InlineBox*, unsigned, LayoutUnit* extraWidthToEndOfLine)
-{
-    if (extraWidthToEndOfLine)
-        *extraWidthToEndOfLine = 0;
-
-    return LayoutRect();
-}
-
 bool RenderObject::isRooted() const
 {
     return isDescendantOf(&view());
@@ -1471,6 +1480,11 @@ void RenderObject::willBeDestroyed()
 
 void RenderObject::insertedIntoTree()
 {
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (auto* container = LayoutIntegration::LineLayout::blockContainer(*this))
+        container->invalidateLineLayoutPath();
+#endif
+
     // FIXME: We should ASSERT(isRooted()) here but generated content makes some out-of-order insertion.
     if (!isFloating() && parent()->childrenInline())
         parent()->dirtyLinesFromChangedChild(*this);
@@ -1478,6 +1492,11 @@ void RenderObject::insertedIntoTree()
 
 void RenderObject::willBeRemovedFromTree()
 {
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (auto* container = LayoutIntegration::LineLayout::blockContainer(*this))
+        container->invalidateLineLayoutPath();
+#endif
+
     // FIXME: We should ASSERT(isRooted()) but we have some out-of-order removals which would need to be fixed first.
     // Update cached boundaries in SVG renderers, if a child is removed.
     parent()->setNeedsBoundariesUpdate();
@@ -1514,7 +1533,7 @@ Position RenderObject::positionForPoint(const LayoutPoint& point)
 
 VisiblePosition RenderObject::positionForPoint(const LayoutPoint&, const RenderFragmentContainer*)
 {
-    return createVisiblePosition(caretMinOffset(), DOWNSTREAM);
+    return createVisiblePosition(caretMinOffset(), Affinity::Downstream);
 }
 
 bool RenderObject::isComposited() const
@@ -1663,13 +1682,13 @@ RenderBoxModelObject* RenderObject::offsetParent() const
     return is<RenderBoxModelObject>(current) ? downcast<RenderBoxModelObject>(current) : nullptr;
 }
 
-VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affinity) const
+VisiblePosition RenderObject::createVisiblePosition(int offset, Affinity affinity) const
 {
     // If this is a non-anonymous renderer in an editable area, then it's simple.
     if (Node* node = nonPseudoNode()) {
         if (!node->hasEditableStyle()) {
             // If it can be found, we prefer a visually equivalent position that is editable.
-            Position position = createLegacyEditingPosition(node, offset);
+            Position position = makeDeprecatedLegacyPosition(node, offset);
             Position candidate = position.downstream(CanCrossEditingBoundary);
             if (candidate.deprecatedNode()->hasEditableStyle())
                 return VisiblePosition(candidate, affinity);
@@ -1678,7 +1697,7 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
                 return VisiblePosition(candidate, affinity);
         }
         // FIXME: Eliminate legacy editing positions
-        return VisiblePosition(createLegacyEditingPosition(node, offset), affinity);
+        return VisiblePosition(makeDeprecatedLegacyPosition(node, offset), affinity);
     }
 
     // We don't want to cross the boundary between editable and non-editable
@@ -1693,7 +1712,7 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
         const RenderObject* renderer = child;
         while ((renderer = renderer->nextInPreOrder(parent))) {
             if (Node* node = renderer->nonPseudoNode())
-                return VisiblePosition(firstPositionInOrBeforeNode(node), DOWNSTREAM);
+                return firstPositionInOrBeforeNode(node);
         }
 
         // Find non-anonymous content before.
@@ -1702,12 +1721,12 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
             if (renderer == parent)
                 break;
             if (Node* node = renderer->nonPseudoNode())
-                return VisiblePosition(lastPositionInOrAfterNode(node), DOWNSTREAM);
+                return lastPositionInOrAfterNode(node);
         }
 
         // Use the parent itself unless it too is anonymous.
         if (Element* element = parent->nonPseudoElement())
-            return VisiblePosition(firstPositionInOrBeforeNode(element), DOWNSTREAM);
+            return firstPositionInOrBeforeNode(element);
 
         // Repeat at the next level up.
         child = parent;
@@ -1723,7 +1742,7 @@ VisiblePosition RenderObject::createVisiblePosition(const Position& position) co
         return VisiblePosition(position);
 
     ASSERT(!node());
-    return createVisiblePosition(0, DOWNSTREAM);
+    return createVisiblePosition(0, Affinity::Downstream);
 }
 
 CursorDirective RenderObject::getCursor(const LayoutPoint&, Cursor&) const
@@ -1739,6 +1758,18 @@ bool RenderObject::useDarkAppearance() const
 OptionSet<StyleColor::Options> RenderObject::styleColorOptions() const
 {
     return document().styleColorOptions(&style());
+}
+
+void RenderObject::setSelectionState(HighlightState state)
+{
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (state != HighlightState::None) {
+        if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
+            lineLayout->flow().ensureLineBoxes();
+    }
+#endif
+
+    m_bitfields.setSelectionState(state);
 }
 
 bool RenderObject::canUpdateSelectionOnRootLineBoxes()
@@ -1824,7 +1855,7 @@ void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const Box
 
     enum Operation { Darken, Lighten };
 
-    Operation operation = (side == BSTop || side == BSLeft) == (style == BorderStyle::Inset) ? Darken : Lighten;
+    Operation operation = (side == BoxSide::Top || side == BoxSide::Left) == (style == BorderStyle::Inset) ? Darken : Lighten;
 
     // Here we will darken the border decoration color when needed. This will yield a similar behavior as in FF.
     if (operation == Darken) {
@@ -1900,35 +1931,150 @@ bool RenderObject::hasNonEmptyVisibleRectRespectingParentFrames() const
     return false;
 }
 
-Vector<FloatQuad> RenderObject::absoluteTextQuads(const SimpleRange& range, bool useSelectionHeight)
+Vector<FloatQuad> RenderObject::absoluteTextQuads(const SimpleRange& range, OptionSet<RenderObject::BoundingRectBehavior> behavior)
 {
     Vector<FloatQuad> quads;
     for (auto& node : intersectingNodes(range)) {
         auto renderer = node.renderer();
         if (renderer && renderer->isBR())
-            renderer->absoluteQuads(quads);
+            downcast<RenderLineBreak>(*renderer).absoluteQuads(quads);
         else if (is<RenderText>(renderer)) {
             auto offsetRange = characterDataOffsetRange(range, downcast<CharacterData>(node));
-            quads.appendVector(downcast<RenderText>(*renderer).absoluteQuadsForRange(offsetRange.start, offsetRange.end, useSelectionHeight));
+            quads.appendVector(downcast<RenderText>(*renderer).absoluteQuadsForRange(offsetRange.start, offsetRange.end, behavior.contains(BoundingRectBehavior::UseSelectionHeight)));
         }
     }
     return quads;
 }
 
-Vector<IntRect> RenderObject::absoluteTextRects(const SimpleRange& range, bool useSelectionHeight)
+static Vector<FloatRect> absoluteRectsForRangeInText(const SimpleRange& range, Text& node, OptionSet<RenderObject::BoundingRectBehavior> behavior)
 {
+    auto renderer = node.renderer();
+    if (!renderer)
+        return { };
+
+    auto offsetRange = characterDataOffsetRange(range, node);
+    auto textQuads = renderer->absoluteQuadsForRange(offsetRange.start, offsetRange.end, behavior.contains(RenderObject::BoundingRectBehavior::UseSelectionHeight), behavior.contains(RenderObject::BoundingRectBehavior::IgnoreEmptyTextSelections));
+
+    if (behavior.contains(RenderObject::BoundingRectBehavior::RespectClipping)) {
+        auto absoluteClippedOverflowRect = renderer->absoluteClippedOverflowRect();
+        Vector<FloatRect> clippedRects;
+        clippedRects.reserveInitialCapacity(textQuads.size());
+        for (auto& quad : textQuads) {
+            auto clippedRect = intersection(quad.boundingBox(), absoluteClippedOverflowRect);
+            if (!clippedRect.isEmpty())
+                clippedRects.uncheckedAppend(clippedRect);
+        }
+        return clippedRects;
+    }
+
+    return boundingBoxes(textQuads);
+}
+
+// FIXME: This should return Vector<FloatRect> like the other similar functions.
+// FIXME: Find a way to share with absoluteTextQuads rather than repeating so much of the logic from that function.
+Vector<IntRect> RenderObject::absoluteTextRects(const SimpleRange& range, OptionSet<BoundingRectBehavior> behavior)
+{
+    ASSERT(!behavior.contains(BoundingRectBehavior::UseVisibleBounds));
+    ASSERT(!behavior.contains(BoundingRectBehavior::IgnoreTinyRects));
     Vector<IntRect> rects;
     for (auto& node : intersectingNodes(range)) {
         auto renderer = node.renderer();
         if (renderer && renderer->isBR())
-            renderer->absoluteRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
-        else if (is<RenderText>(renderer)) {
-            auto offsetRange = characterDataOffsetRange(range, downcast<CharacterData>(node));
-            for (auto& quad : downcast<RenderText>(*renderer).absoluteQuadsForRange(offsetRange.start, offsetRange.end, useSelectionHeight))
-                rects.append(quad.enclosingBoundingBox());
+            downcast<RenderLineBreak>(*renderer).absoluteRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
+        else if (is<Text>(node)) {
+            for (auto& rect : absoluteRectsForRangeInText(range, downcast<Text>(node), behavior))
+                rects.append(enclosingIntRect(rect));
         }
     }
     return rects;
+}
+
+static RefPtr<Node> nodeBefore(const BoundaryPoint& point)
+{
+    if (point.offset) {
+        if (auto node = point.container->traverseToChildAt(point.offset - 1))
+            return node;
+    }
+    return point.container.ptr();
+}
+
+enum class CoordinateSpace { Client, Absolute };
+
+static Vector<FloatRect> borderAndTextRects(const SimpleRange& range, CoordinateSpace space, OptionSet<RenderObject::BoundingRectBehavior> behavior)
+{
+    Vector<FloatRect> rects;
+
+    range.start.document().updateLayoutIgnorePendingStylesheets();
+
+    bool useVisibleBounds = behavior.contains(RenderObject::BoundingRectBehavior::UseVisibleBounds);
+
+    HashSet<Element*> selectedElementsSet;
+    for (auto& node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
+        if (is<Element>(node))
+            selectedElementsSet.add(&downcast<Element>(node));
+    }
+
+    // Don't include elements at the end of the range that are only partially selected.
+    // FIXME: What about the start of the range? The asymmetry here does not make sense. Seems likely this logic is not quite right in other respects, too.
+    if (auto lastNode = nodeBefore(range.end)) {
+        for (auto& ancestor : ancestorsOfType<Element>(*lastNode))
+            selectedElementsSet.remove(&ancestor);
+    }
+
+    constexpr OptionSet<RenderObject::VisibleRectContextOption> visibleRectOptions = {
+        RenderObject::VisibleRectContextOption::UseEdgeInclusiveIntersection,
+        RenderObject::VisibleRectContextOption::ApplyCompositedClips,
+        RenderObject::VisibleRectContextOption::ApplyCompositedContainerScrolls
+    };
+
+    for (auto& node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
+        if (is<Element>(node) && selectedElementsSet.contains(&downcast<Element>(node)) && (useVisibleBounds || !node.parentElement() || !selectedElementsSet.contains(node.parentElement()))) {
+            if (auto renderer = downcast<Element>(node).renderBoxModelObject()) {
+                if (useVisibleBounds) {
+                    auto localBounds = renderer->borderBoundingBox();
+                    auto rootClippedBounds = renderer->computeVisibleRectInContainer(localBounds, &renderer->view(), { false, false, visibleRectOptions });
+                    if (!rootClippedBounds)
+                        continue;
+                    auto snappedBounds = snapRectToDevicePixels(*rootClippedBounds, node.document().deviceScaleFactor());
+                    if (space == CoordinateSpace::Client)
+                        node.document().convertAbsoluteToClientRect(snappedBounds, renderer->style());
+                    rects.append(snappedBounds);
+                    continue;
+                }
+
+                Vector<FloatQuad> elementQuads;
+                renderer->absoluteQuads(elementQuads);
+                if (space == CoordinateSpace::Client)
+                    node.document().convertAbsoluteToClientQuads(elementQuads, renderer->style());
+                rects.appendVector(boundingBoxes(elementQuads));
+            }
+        } else if (is<Text>(node)) {
+            if (auto renderer = downcast<Text>(node).renderer()) {
+                auto clippedRects = absoluteRectsForRangeInText(range, downcast<Text>(node), behavior);
+                if (space == CoordinateSpace::Client)
+                    node.document().convertAbsoluteToClientRects(clippedRects, renderer->style());
+                rects.appendVector(clippedRects);
+            }
+        }
+    }
+
+    if (behavior.contains(RenderObject::BoundingRectBehavior::IgnoreTinyRects)) {
+        rects.removeAllMatching([&] (const FloatRect& rect) -> bool {
+            return rect.area() <= 1;
+        });
+    }
+
+    return rects;
+}
+
+Vector<FloatRect> RenderObject::absoluteBorderAndTextRects(const SimpleRange& range, OptionSet<BoundingRectBehavior> behavior)
+{
+    return borderAndTextRects(range, CoordinateSpace::Absolute, behavior);
+}
+
+Vector<FloatRect> RenderObject::clientBorderAndTextRects(const SimpleRange& range)
+{
+    return borderAndTextRects(range, CoordinateSpace::Client, { });
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -1987,7 +2133,7 @@ auto RenderObject::collectSelectionRectsInternal(const SimpleRange& range) -> Se
     Vector<SelectionRect> newRects;
     bool hasFlippedWritingMode = range.start.container->renderer() && range.start.container->renderer()->style().isFlippedBlocksWritingMode();
     bool containsDifferentWritingModes = false;
-    for (auto& node : intersectingNodes(range)) {
+    for (auto& node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
         auto renderer = node.renderer();
         // Only ask leaf render objects for their line box rects.
         if (renderer && !renderer->firstChildSlow() && renderer->style().userSelect() != UserSelect::None) {
@@ -2019,7 +2165,7 @@ auto RenderObject::collectSelectionRectsInternal(const SimpleRange& range) -> Se
     // The range could span nodes with different writing modes.
     // If this is the case, we use the writing mode of the common ancestor.
     if (containsDifferentWritingModes) {
-        if (auto ancestor = commonInclusiveAncestor(range))
+        if (auto ancestor = commonInclusiveAncestor<ComposedTree>(range))
             hasFlippedWritingMode = ancestor->renderer()->style().isFlippedBlocksWritingMode();
     }
 
@@ -2031,7 +2177,7 @@ auto RenderObject::collectSelectionRectsInternal(const SimpleRange& range) -> Se
         // Only set the line break bit if the end of the range actually
         // extends all the way to include the <br>. VisiblePosition helps to
         // figure this out.
-        if (is<HTMLBRElement>(VisiblePosition(createLegacyEditingPosition(range.end)).deepEquivalent().firstNode()))
+        if (is<HTMLBRElement>(VisiblePosition(makeContainerOffsetPosition(range.end)).deepEquivalent().firstNode()))
             rects.last().setIsLineBreak(true);
     }
 

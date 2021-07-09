@@ -107,6 +107,9 @@ bool AccessibilityScrollView::isFocused() const
 
 void AccessibilityScrollView::setFocused(bool focused)
 {
+    // Call the base class setFocused to ensure the view is focused and active.
+    AccessibilityObject::setFocused(focused);
+
     if (AccessibilityObject* webArea = webAreaObject())
         webArea->setFocused(focused);
 }

@@ -43,6 +43,7 @@ class MediaControls extends LayoutNode
         this.fullscreenButton = new FullscreenButton(this);
         this.muteButton = new MuteButton(this);
         this.tracksButton = new TracksButton(this);
+        this.overflowButton = new OverflowButton(this);
 
         this.statusLabel = new StatusLabel(this);
         this.timeControl = new TimeControl(this);
@@ -118,6 +119,8 @@ class MediaControls extends LayoutNode
     {
         this.needsLayout = this.usesLTRUserInterfaceLayoutDirection !== flag;
         this.element.classList.toggle("uses-ltr-user-interface-layout-direction", flag);
+
+        this.muteButton.usesLTRUserInterfaceLayoutDirection = this.usesLTRUserInterfaceLayoutDirection;
     }
 
     get scaleFactor()

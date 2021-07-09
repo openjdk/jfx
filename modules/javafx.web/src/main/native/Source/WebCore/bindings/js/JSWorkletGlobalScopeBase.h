@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
 #include "JSEventTarget.h"
@@ -49,7 +47,6 @@ public:
     DECLARE_INFO;
 
     WorkletGlobalScope& wrapped() const { return *m_wrapped; }
-    JSC::JSProxy* proxy() const { ASSERT(m_proxy); return m_proxy.get(); }
     ScriptExecutionContext* scriptExecutionContext() const;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -63,19 +60,17 @@ public:
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
+    static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
     static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
-
-    void clearDOMGuardedObjects();
 
 protected:
     JSWorkletGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkletGlobalScope>&&);
     void finishCreation(JSC::VM&, JSC::JSProxy*);
 
-    static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     RefPtr<WorkletGlobalScope> m_wrapped;
-    JSC::WriteBarrier<JSC::JSProxy> m_proxy;
 };
 
 // Returns a JSWorkletGlobalScope or jsNull()
@@ -88,5 +83,3 @@ inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WorkletGlobal
 JSWorkletGlobalScope* toJSWorkletGlobalScope(JSC::VM&, JSC::JSValue);
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_PAINTING_API)

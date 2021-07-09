@@ -35,10 +35,11 @@ namespace DisplayList {
 class DrawingContext {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT DrawingContext(const FloatSize& logicalSize, Recorder::Observer* = nullptr);
+    WEBCORE_EXPORT DrawingContext(const FloatSize& logicalSize, const AffineTransform& initialCTM = { }, Recorder::Delegate* = nullptr);
 
     GraphicsContext& context() const { return const_cast<DrawingContext&>(*this).m_context; }
     WEBCORE_EXPORT Recorder& recorder();
+    DisplayList takeDisplayList() { return std::exchange(m_displayList, { }); }
     DisplayList& displayList() { return m_displayList; }
     const DisplayList& displayList() const { return m_displayList; }
     const DisplayList* replayedDisplayList() const { return m_replayedDisplayList.get(); }

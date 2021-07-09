@@ -49,10 +49,12 @@
 #include "Page.h"
 #include "PlatformKeyboardEvent.h"
 #include "RenderLayer.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "RuntimeEnabledFeatures.h"
 #include "ScriptDisallowedScope.h"
+#include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextControlInnerElements.h"
 #include "TextEvent.h"
@@ -70,8 +72,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-TextFieldInputType::TextFieldInputType(HTMLInputElement& element)
-    : InputType(element)
+TextFieldInputType::TextFieldInputType(Type type, HTMLInputElement& element)
+    : InputType(type, element)
 {
 }
 
@@ -98,11 +100,6 @@ bool TextFieldInputType::isMouseFocusable() const
 {
     ASSERT(element());
     return element()->isTextFormControlFocusable();
-}
-
-bool TextFieldInputType::isTextField() const
-{
-    return true;
 }
 
 bool TextFieldInputType::isEmptyValue() const
@@ -253,9 +250,11 @@ void TextFieldInputType::elementDidBlur()
     if (!innerLayer)
         return;
 
+    auto* innerLayerScrollable = innerLayer->ensureLayerScrollableArea();
+
     bool isLeftToRightDirection = downcast<RenderTextControlSingleLine>(*renderer).style().isLeftToRightDirection();
-    ScrollOffset scrollOffset(isLeftToRightDirection ? 0 : innerLayer->scrollWidth(), 0);
-    innerLayer->scrollToOffset(scrollOffset);
+    ScrollOffset scrollOffset(isLeftToRightDirection ? 0 : innerLayerScrollable->scrollWidth(), 0);
+    innerLayerScrollable->scrollToOffset(scrollOffset);
 
 #if ENABLE(DATALIST_ELEMENT)
     closeSuggestions();
@@ -315,7 +314,7 @@ bool TextFieldInputType::shouldHaveCapsLockIndicator() const
     return RenderTheme::singleton().shouldHaveCapsLockIndicator(*element());
 }
 
-void TextFieldInputType::createShadowSubtree()
+void TextFieldInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source source, bool isInnerTextElementEditable)
 {
     ASSERT(element());
     ASSERT(element()->shadowRoot());
@@ -331,10 +330,10 @@ void TextFieldInputType::createShadowSubtree()
     bool shouldHaveCapsLockIndicator = this->shouldHaveCapsLockIndicator();
     bool createsContainer = shouldHaveSpinButton || shouldHaveCapsLockIndicator || needsContainer();
 
-    m_innerText = TextControlInnerTextElement::create(document);
+    m_innerText = TextControlInnerTextElement::create(document, isInnerTextElementEditable);
 
     if (!createsContainer) {
-        element()->userAgentShadowRoot()->appendChild(*m_innerText);
+        element()->userAgentShadowRoot()->appendChild(source, *m_innerText);
         updatePlaceholderText();
         return;
     }
@@ -344,7 +343,7 @@ void TextFieldInputType::createShadowSubtree()
 
     if (shouldHaveSpinButton) {
         m_innerSpinButton = SpinButtonElement::create(document, *this);
-        m_container->appendChild(*m_innerSpinButton);
+        m_container->appendChild(source, *m_innerSpinButton);
     }
 
     if (shouldHaveCapsLockIndicator) {
@@ -355,7 +354,7 @@ void TextFieldInputType::createShadowSubtree()
         bool shouldDrawCapsLockIndicator = this->shouldDrawCapsLockIndicator();
         m_capsLockIndicator->setInlineStyleProperty(CSSPropertyDisplay, shouldDrawCapsLockIndicator ? CSSValueBlock : CSSValueNone, true);
 
-        m_container->appendChild(*m_capsLockIndicator);
+        m_container->appendChild(source, *m_capsLockIndicator);
     }
     updateAutoFillButton();
 }
@@ -464,10 +463,14 @@ void TextFieldInputType::createDataListDropdownIndicator()
     m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
 }
 
-bool TextFieldInputType::shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited()
+bool TextFieldInputType::shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() const
 {
 #if PLATFORM(IOS_FAMILY)
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+    return !element()->document().settings().iOSFormControlRefreshEnabled();
+#else
     return true;
+#endif
 #else
     return false;
 #endif
@@ -858,8 +861,15 @@ HTMLElement* TextFieldInputType::dataListButtonElement() const
 
 void TextFieldInputType::dataListButtonElementWasClicked()
 {
-    if (element()->list())
+    Ref<HTMLInputElement> input(*element());
+    if (input->list()) {
+        m_isFocusingWithDataListDropdown = true;
+        unsigned max = visibleValue().length();
+        input->setSelectionRange(max, max);
+        m_isFocusingWithDataListDropdown = false;
+
         displaySuggestions(DataListSuggestionActivationType::IndicatorClicked);
+    }
 }
 
 IntRect TextFieldInputType::elementRectInRootViewCoordinates() const
@@ -946,6 +956,11 @@ void TextFieldInputType::closeSuggestions()
 bool TextFieldInputType::isPresentingAttachedView() const
 {
     return !!m_suggestionPicker;
+}
+
+bool TextFieldInputType::isFocusingWithDataListDropdown() const
+{
+    return m_isFocusingWithDataListDropdown;
 }
 
 #endif

@@ -366,9 +366,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStat
     case WebCore::VisibilityState::Visible:
         visibility = "visible";
         break;
-    case WebCore::VisibilityState::Prerender:
-        visibility = "prerender";
-        break;
     }
     return JavaReturn<String>(env, String(visibility));
 }

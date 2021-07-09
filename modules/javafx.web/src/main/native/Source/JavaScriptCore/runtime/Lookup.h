@@ -238,17 +238,18 @@ inline bool getStaticPropertySlotFromTable(VM& vm, const ClassInfo* classInfo, c
     }
 
     if (entry->attributes() & PropertyAttribute::DOMJITAttribute) {
+        ASSERT_WITH_MESSAGE(entry->attributes() & PropertyAttribute::ReadOnly, "DOMJITAttribute supports readonly attributes currently.");
         const DOMJIT::GetterSetter* domJIT = entry->domJIT();
-        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), domJIT->getter(), DOMAttributeAnnotation { classInfo, domJIT });
+        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), domJIT->getter(), nullptr, DOMAttributeAnnotation { classInfo, domJIT });
         return true;
     }
 
     if (entry->attributes() & PropertyAttribute::DOMAttribute) {
-        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), DOMAttributeAnnotation { classInfo, nullptr });
+        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), entry->propertyPutter(), DOMAttributeAnnotation { classInfo, nullptr });
         return true;
     }
 
-    slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter());
+    slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), entry->propertyPutter());
     return true;
 }
 
@@ -275,6 +276,7 @@ inline bool putEntry(JSGlobalObject* globalObject, const ClassInfo*, const HashT
         if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
             // If this is a function or lazy property put then we just do the put because
             // logically the object already had the property, so this is just a replace.
+            // FIXME: thisValue may be an object with non-extensible structure we must throw for.
             if (JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue))
                 thisObject->putDirect(vm, propertyName, value);
             return true;
@@ -288,16 +290,23 @@ inline bool putEntry(JSGlobalObject* globalObject, const ClassInfo*, const HashT
     if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
         ASSERT_WITH_MESSAGE(!(entry->attributes() & PropertyAttribute::DOMJITAttribute), "DOMJITAttribute supports readonly attributes currently.");
         bool isAccessor = entry->attributes() & PropertyAttribute::CustomAccessor;
-        JSValue updateThisValue = entry->attributes() & PropertyAttribute::CustomAccessor ? slot.thisValue() : JSValue(base);
+        // FIXME: We should only be caching these if we're not an uncacheable dictionary:
+        // https://bugs.webkit.org/show_bug.cgi?id=215347
         // We need to make sure that we decide to cache this property before we potentially execute aribitrary JS.
         if (isAccessor)
             slot.setCustomAccessor(base, entry->propertyPutter());
         else
             slot.setCustomValue(base, entry->propertyPutter());
 
-        bool result = callCustomSetter(globalObject, entry->propertyPutter(), isAccessor, updateThisValue, value);
+        auto result = callCustomSetter(globalObject, entry->propertyPutter(), isAccessor, base, slot.thisValue(), value);
         RETURN_IF_EXCEPTION(scope, false);
-        return result;
+        if (result != TriState::Indeterminate)
+            return result == TriState::True;
+
+        // FIXME: thisValue may be an object with non-extensible structure we must throw for.
+        if (JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue))
+            thisObject->putDirect(vm, propertyName, value);
+        return true;
     }
 
     return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
@@ -405,7 +414,7 @@ inline void reifyStaticProperties(VM& vm, const ClassInfo* classInfo, const Hash
     }
 }
 
-template<RawNativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetter(JSGlobalObject* globalObject, EncodedJSValue, PropertyName propertyName)
+template<RawNativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetterImpl(JSGlobalObject* globalObject, PropertyName propertyName)
 {
     return JSValue::encode(JSFunction::create(globalObject->vm(), globalObject, length, propertyName.publicName(), nativeFunction));
 }

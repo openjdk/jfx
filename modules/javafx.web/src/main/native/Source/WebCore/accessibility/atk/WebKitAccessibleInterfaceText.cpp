@@ -399,13 +399,8 @@ static void getSelectionOffsetsForObject(AccessibilityObject* coreObject, Visibl
     Position lastValidPosition = lastPositionInOrAfterNode(node->lastDescendant());
 
     // Find the proper range for the selection that falls inside the object.
-    Position nodeRangeStart = selection.start();
-    if (comparePositions(nodeRangeStart, firstValidPosition) < 0)
-        nodeRangeStart = firstValidPosition;
-
-    Position nodeRangeEnd = selection.end();
-    if (comparePositions(nodeRangeEnd, lastValidPosition) > 0)
-        nodeRangeEnd = lastValidPosition;
+    auto nodeRangeStart = std::max(selection.start(), firstValidPosition);
+    auto nodeRangeEnd = std::min(selection.end(), lastValidPosition);
 
     // Calculate position of the selected range inside the object.
     Position parentFirstPosition = firstPositionInOrBeforeNode(node);
@@ -418,9 +413,9 @@ static void getSelectionOffsetsForObject(AccessibilityObject* coreObject, Visibl
     int rangeLength = characterCount(nodeRange, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
 
     // Special cases that are only relevant when working with *_END boundaries.
-    if (selection.affinity() == UPSTREAM) {
-        VisiblePosition visibleStart(nodeRangeStart, UPSTREAM);
-        VisiblePosition visibleEnd(nodeRangeEnd, UPSTREAM);
+    if (selection.affinity() == Affinity::Upstream) {
+        VisiblePosition visibleStart(nodeRangeStart, Affinity::Upstream);
+        VisiblePosition visibleEnd(nodeRangeEnd, Affinity::Upstream);
 
         // We need to adjust offsets when finding wrapped lines so the position at the end
         // of the line is properly taking into account when calculating the offsets.
@@ -448,7 +443,7 @@ static gchar* webkitAccessibleTextGetText(AtkText* text, gint startOffset, gint 
 
 #if ENABLE(INPUT_TYPE_COLOR)
     if (coreObject->roleValue() == AccessibilityRole::ColorWell) {
-        auto color = convertToComponentFloats(coreObject->colorValue());
+        auto color = convertColor<SRGBA<float>>(coreObject->colorValue());
         return g_strdup_printf("rgb %7.5f %7.5f %7.5f 1", color.red, color.green, color.blue);
     }
 #endif
@@ -601,7 +596,7 @@ static VisibleSelection wordAtPositionForAtkBoundary(const AccessibilityObject* 
     // We mark the selection as 'upstream' so we can use that information later,
     // when finding the actual offsets in getSelectionOffsetsForObject().
     if (boundaryType == ATK_TEXT_BOUNDARY_WORD_END)
-        selectedWord.setAffinity(UPSTREAM);
+        selectedWord.setAffinity(Affinity::Upstream);
 
     return selectedWord;
 }
@@ -703,12 +698,13 @@ static bool isWhiteSpaceBetweenSentences(const VisiblePosition& position)
     if (!deprecatedIsEditingWhitespace(position.characterAfter()))
         return false;
 
-    VisiblePosition startOfWhiteSpace = startOfWord(position, RightWordIfOnBoundary);
-    VisiblePosition endOfWhiteSpace = endOfWord(startOfWhiteSpace, RightWordIfOnBoundary);
-    if (!isSentenceBoundary(startOfWhiteSpace) && !isSentenceBoundary(endOfWhiteSpace))
+    auto start = startOfWord(position, RightWordIfOnBoundary);
+    auto end = endOfWord(start, RightWordIfOnBoundary);
+    if (!isSentenceBoundary(start) && !isSentenceBoundary(end))
         return false;
 
-    return comparePositions(startOfWhiteSpace, position) <= 0 && comparePositions(endOfWhiteSpace, position) >= 0;
+    auto range = makeSimpleRange(start, end);
+    return range && contains<ComposedTree>(*range, makeBoundaryPoint(position));
 }
 
 static VisibleSelection sentenceAtPositionForAtkBoundary(const AccessibilityObject*, const VisiblePosition& position, AtkTextBoundary boundaryType)
@@ -756,7 +752,7 @@ static VisibleSelection sentenceAtPositionForAtkBoundary(const AccessibilityObje
     // We mark the selection as 'upstream' so we can use that information later,
     // when finding the actual offsets in getSelectionOffsetsForObject().
     if (boundaryType == ATK_TEXT_BOUNDARY_SENTENCE_END)
-        selectedSentence.setAffinity(UPSTREAM);
+        selectedSentence.setAffinity(Affinity::Upstream);
 
     return selectedSentence;
 }
@@ -828,7 +824,7 @@ static VisibleSelection lineAtPositionForAtkBoundary(const AccessibilityObject* 
         // In addition to checking that we are not at the end of a block, we need
         // to check that endPosition has not UPSTREAM affinity, since that would
         // cause trouble inside of text controls (we would be advancing too much).
-        if (!isEndOfBlock(endPosition) && endPosition.affinity() != UPSTREAM)
+        if (!isEndOfBlock(endPosition) && endPosition.affinity() != Affinity::Upstream)
             endPosition = endPosition.next();
         break;
 
@@ -848,7 +844,7 @@ static VisibleSelection lineAtPositionForAtkBoundary(const AccessibilityObject* 
     // We mark the selection as 'upstream' so we can use that information later,
     // when finding the actual offsets in getSelectionOffsetsForObject().
     if (boundaryType == ATK_TEXT_BOUNDARY_LINE_END)
-        selectedLine.setAffinity(UPSTREAM);
+        selectedLine.setAffinity(Affinity::Upstream);
 
     return selectedLine;
 }

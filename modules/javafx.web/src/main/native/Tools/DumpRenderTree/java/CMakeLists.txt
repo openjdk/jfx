@@ -6,63 +6,70 @@ set(WebKitTestRunner_UISCRIPTCONTEXT_DIR "${TOOLS_DIR}/TestRunnerShared/UIScript
 file(MAKE_DIRECTORY ${DumpRenderTree_DERIVED_SOURCES_DIR})
 
 set(DumpRenderTree_SOURCES
-    ${WebKitTestRunner_SHARED_DIR}/Bindings/JSWrapper.cpp
-
-    ${WebKitTestRunner_UISCRIPTCONTEXT_DIR}/UIScriptContext.cpp
-    ${WebKitTestRunner_UISCRIPTCONTEXT_DIR}/UIScriptControllerShared.cpp
-
     ../CyclicRedundancyCheck.cpp
-    ../DumpRenderTreeCommon.cpp
     ../GCController.cpp
     ../TestRunner.cpp
-    ../UIScriptController.cpp
     ../WorkQueue.cpp
     DumpRenderTree.cpp
     EventSender.cpp
-    TestRunnerJava.cpp
     GCControllerJava.cpp
     JavaEnv.cpp
+    TestRunnerJava.cpp
+    UIScriptControllerJava.cpp
     WorkQueueItemJava.cpp
 )
 
 set(DumpRenderTree_LIBRARIES
     WebKitLegacy
+    TestRunnerShared
     ${JAVA_JVM_LIBRARY}
     ${ICU_I18N_LIBRARIES}
     ${ICU_LIBRARIES}
 )
 
 set(DumpRenderTree_PRIVATE_INCLUDE_DIRECTORIES
+    ${CMAKE_BINARY_DIR}
     ${DumpRenderTree_DERIVED_SOURCES_DIR}
     ${DumpRenderTree_DIR}
+    ${WebKitTestRunner_SHARED_DIR}
     ${WebKitTestRunner_SHARED_DIR}/Bindings
     ${WebKitTestRunner_UISCRIPTCONTEXT_DIR}
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/Source
-    ${WEBCORE_DIR}/testing/js
-    ${FORWARDING_HEADERS_DIR}
-    ${FORWARDING_HEADERS_DIR}/WebCore
 )
 
 list(APPEND DumpRenderTree_PRIVATE_INCLUDE_DIRECTORIES
+    ${PAL_FRAMEWORK_HEADERS_DIR}
+    ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
+    ${WebKitLegacy_FRAMEWORK_HEADERS_DIR}
     ${JAVA_INCLUDE_PATH}
     ${JAVA_INCLUDE_PATH2}
-    ${PAL_FRAMEWORK_HEADERS_DIR}
-    ${WebKitLegacy_FRAMEWORK_HEADERS_DIR}
+    ${CMAKE_SOURCE_DIR}/Source
+    ${WEBCORE_DIR}/testing/js
 )
 
-set(DumpRenderTree_IDL_FILES
-    "${WebKitTestRunner_UISCRIPTCONTEXT_DIR}/Bindings/UIScriptController.idl"
+set(DumpRenderTree_WEB_PREFERENCES_TEMPLATES
+    ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp.erb
+    ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedKeys.h.erb
 )
 
-GENERATE_BINDINGS(DumpRenderTreeBindings
-    OUTPUT_SOURCE DumpRenderTree_SOURCES
-    INPUT_FILES ${DumpRenderTree_IDL_FILES}
-    BASE_DIR ${DumpRenderTree_BINDINGS_DIR}
-    IDL_INCLUDES ../Bindings
-    FEATURES ${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}
-    DESTINATION ${DumpRenderTree_DERIVED_SOURCES_DIR}
-    GENERATOR DumpRenderTree)
+set(DumpRenderTree_WEB_PREFERENCES
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml
+)
+
+set_source_files_properties(${DumpRenderTree_WEB_PREFERENCES} PROPERTIES GENERATED TRUE)
+
+add_custom_command(
+    OUTPUT ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedKeys.h
+    DEPENDS ${DumpRenderTree_WEB_PREFERENCES_TEMPLATES} ${DumpRenderTree_WEB_PREFERENCES} WTF_CopyPreferences
+    COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/GeneratePreferences.rb --frontend WebKitLegacy --base ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml --debug ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml --internal ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml --outputDir "${DumpRenderTree_DERIVED_SOURCES_DIR}" --template ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp.erb --template ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedKeys.h.erb
+    VERBATIM)
+
+list(APPEND DumpRenderTree_SOURCES
+    ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp
+    ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedKeys.h
+)
 
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
@@ -70,7 +77,7 @@ include_directories(${DumpRenderTree_PRIVATE_INCLUDE_DIRECTORIES})
 
 add_library(DumpRenderTreeJava SHARED ${DumpRenderTree_SOURCES})
 add_definitions(-DWEBCORE_EXPORT=WTF_IMPORT_DECLARATION -DWEBCORE_TESTSUPPORT_EXPORT=WTF_IMPORT_DECLARATION)
-add_dependencies(DumpRenderTreeJava DumpRenderTreeBindings)
+add_dependencies(DumpRenderTreeJava TestRunnerSharedBindings)
 
 set_target_properties(DumpRenderTreeJava PROPERTIES OUTPUT_NAME "DumpRenderTreeJava")
 target_link_libraries(DumpRenderTreeJava ${DumpRenderTree_LIBRARIES})

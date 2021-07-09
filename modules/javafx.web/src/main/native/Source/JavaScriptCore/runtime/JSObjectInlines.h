@@ -24,6 +24,7 @@
 #pragma once
 
 #include "AuxiliaryBarrierInlines.h"
+#include "BrandedStructure.h"
 #include "ButterflyInlines.h"
 #include "Error.h"
 #include "JSFunction.h"
@@ -137,6 +138,8 @@ ALWAYS_INLINE bool JSObject::getPropertySlot(JSGlobalObject* globalObject, unsig
             return false;
         if (object->type() == ProxyObjectType && slot.internalMethodType() == PropertySlot::InternalMethodType::HasProperty)
             return false;
+        if (isTypedArrayType(object->type()) && propertyName >= jsCast<JSArrayBufferView*>(object)->length())
+            return false;
         JSValue prototype;
         if (LIKELY(!structure->typeInfo().overridesGetPrototype() || slot.internalMethodType() == PropertySlot::InternalMethodType::VMInquiry))
             prototype = object->getPrototypeDirect(vm);
@@ -179,6 +182,8 @@ ALWAYS_INLINE bool JSObject::getNonIndexPropertySlot(JSGlobalObject* globalObjec
             if (UNLIKELY(slot.isVMInquiry() && slot.isTaintedByOpaqueObject()))
                 return false;
             if (object->type() == ProxyObjectType && slot.internalMethodType() == PropertySlot::InternalMethodType::HasProperty)
+                return false;
+            if (isTypedArrayType(object->type()) && isCanonicalNumericIndexString(propertyName))
                 return false;
         }
         JSValue prototype;
@@ -364,6 +369,10 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
         return true;
     }
 
+    // We want the structure transition watchpoint to fire after this object has switched structure.
+    // This allows adaptive watchpoints to observe if the new structure is the one we want.
+    DeferredStructureTransitionWatchpointFire deferredWatchpointFire(vm, structure);
+
     unsigned currentAttributes;
     offset = structure->get(vm, propertyName, currentAttributes);
     if (offset != invalidOffset) {
@@ -376,7 +385,7 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
         // FIXME: Check attributes against PropertyAttribute::CustomAccessorOrValue. Changing GetterSetter should work w/o transition.
         // https://bugs.webkit.org/show_bug.cgi?id=214342
         if (mode == PutModeDefineOwnProperty && (attributes != currentAttributes || (attributes & PropertyAttribute::AccessorOrCustomAccessorOrValue)))
-            setStructure(vm, Structure::attributeChangeTransition(vm, structure, propertyName, attributes));
+            setStructure(vm, Structure::attributeChangeTransition(vm, structure, propertyName, attributes, &deferredWatchpointFire));
         else
             slot.setExistingProperty(this, offset);
 
@@ -385,11 +394,6 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
 
     if ((mode == PutModePut) && !isStructureExtensible(vm))
         return false;
-
-    // We want the structure transition watchpoint to fire after this object has switched
-    // structure. This allows adaptive watchpoints to observe if the new structure is the one
-    // we want.
-    DeferredStructureTransitionWatchpointFire deferredWatchpointFire(vm, structure);
 
     newStructure = Structure::addNewPropertyTransition(
         vm, structure, propertyName, attributes, offset, slot.context(), &deferredWatchpointFire);
@@ -575,6 +579,8 @@ inline JSValue JSObject::get(JSGlobalObject* globalObject, uint64_t propertyName
 
 JSObject* createInvalidPrivateNameError(JSGlobalObject*);
 JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
+JSObject* createReinstallPrivateMethodError(JSGlobalObject*);
+JSObject* createPrivateMethodAccessError(JSGlobalObject*);
 
 ALWAYS_INLINE bool JSObject::getPrivateFieldSlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
@@ -618,7 +624,7 @@ inline bool JSObject::getPrivateField(JSGlobalObject* globalObject, PropertyName
     RELEASE_AND_RETURN(scope, true);
 }
 
-inline void JSObject::putPrivateField(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& putSlot)
+inline void JSObject::setPrivateField(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& putSlot)
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -646,6 +652,63 @@ inline void JSObject::definePrivateField(JSGlobalObject* globalObject, PropertyN
 
     scope.release();
     putDirect(vm, propertyName, value, putSlot);
+}
+
+ALWAYS_INLINE void JSObject::getNonReifiedStaticPropertyNames(VM& vm, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+{
+    if (staticPropertiesReified(vm))
+        return;
+
+    // Add properties from the static hashtables of properties
+    for (const ClassInfo* info = classInfo(vm); info; info = info->parentClass) {
+        const HashTable* table = info->staticPropHashTable;
+        if (!table)
+            continue;
+
+        for (auto iter = table->begin(); iter != table->end(); ++iter) {
+            if (mode == DontEnumPropertiesMode::Include || !(iter->attributes() & PropertyAttribute::DontEnum))
+                propertyNames.add(Identifier::fromString(vm, iter.key()));
+        }
+    }
+}
+
+inline bool JSObject::checkPrivateBrand(JSGlobalObject* globalObject, JSValue brand)
+{
+    ASSERT(brand.isSymbol());
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Structure* structure = this->structure(vm);
+    if (!structure->isBrandedStructure() || !jsCast<BrandedStructure*>(structure)->checkBrand(asSymbol(brand))) {
+        throwException(globalObject, scope, createPrivateMethodAccessError(globalObject));
+        RELEASE_AND_RETURN(scope, false);
+    }
+    EXCEPTION_ASSERT(!scope.exception());
+
+    return true;
+}
+
+inline void JSObject::setPrivateBrand(JSGlobalObject* globalObject, JSValue brand)
+{
+    ASSERT(brand.isSymbol());
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Structure* structure = this->structure(vm);
+    if (structure->isBrandedStructure() && jsCast<BrandedStructure*>(structure)->checkBrand(asSymbol(brand))) {
+        throwException(globalObject, scope, createReinstallPrivateMethodError(globalObject));
+        RELEASE_AND_RETURN(scope, void());
+    }
+    EXCEPTION_ASSERT(!scope.exception());
+
+    scope.release();
+
+    DeferredStructureTransitionWatchpointFire deferredWatchpointFire(vm, structure);
+
+    Structure* newStructure = Structure::setBrandTransition(vm, structure, asSymbol(brand), &deferredWatchpointFire);
+    ASSERT(newStructure->isBrandedStructure());
+    ASSERT(newStructure->outOfLineCapacity() || !this->structure(vm)->outOfLineCapacity());
+    this->setStructure(vm, newStructure);
 }
 
 } // namespace JSC

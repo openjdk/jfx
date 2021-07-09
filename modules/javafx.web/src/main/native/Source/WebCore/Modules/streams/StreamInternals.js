@@ -26,8 +26,18 @@
 
 // @internal
 
+function markPromiseAsHandled(promise)
+{
+    "use strict";
+
+    @assert(@isPromise(promise));
+    @putPromiseInternalField(promise, @promiseFieldFlags, @getPromiseInternalField(promise, @promiseFieldFlags) | @promiseFlagsIsHandled);
+}
+
 function shieldingPromiseResolve(result)
 {
+    "use strict";
+
     const promise = @Promise.@resolve(result);
     if (promise.@then === @undefined)
         promise.@then = @Promise.prototype.@then;
@@ -133,7 +143,7 @@ function enqueueValueWithSize(queue, value, size)
     size = @toNumber(size);
     if (!@isFinite(size) || size < 0)
         @throwRangeError("size has an incorrect value");
-    queue.content.@push({ value: value, size: size });
+    @arrayPush(queue.content, { value, size });
     queue.size += size;
 }
 
@@ -144,4 +154,43 @@ function peekQueueValue(queue)
     @assert(queue.content.length > 0);
 
     return queue.content[0].value;
+}
+
+function resetQueue(queue)
+{
+    "use strict";
+
+    @assert("content" in queue);
+    @assert("size" in queue);
+    queue.content = [];
+    queue.size = 0;
+}
+
+function extractSizeAlgorithm(strategy)
+{
+    if (!("size" in strategy))
+        return () => 1;
+    const sizeAlgorithm = strategy["size"];
+    if (typeof sizeAlgorithm !== "function")
+        @throwTypeError("strategy.size must be a function");
+
+    return (chunk) => { return sizeAlgorithm(chunk); };
+}
+
+function extractHighWaterMark(strategy, defaultHWM)
+{
+    if (!("highWaterMark" in strategy))
+        return defaultHWM;
+    const highWaterMark = strategy["highWaterMark"];
+    if (@isNaN(highWaterMark) || highWaterMark < 0)
+        @throwRangeError("highWaterMark value is negative or not a number");
+
+    return highWaterMark;
+}
+
+function createFulfilledPromise(value)
+{
+    const promise = @newPromise();
+    @fulfillPromise(promise, value);
+    return promise;
 }

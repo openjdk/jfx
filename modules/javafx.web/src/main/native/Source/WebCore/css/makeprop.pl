@@ -67,6 +67,7 @@ my %settingsFlags;
 my $numPredefinedProperties = 2;
 my %nameIsInherited;
 my %nameIsHighPriority;
+my %namePriorityShouldSink;
 my %propertiesWithStyleBuilderOptions;
 my %styleBuilderOptions = (
     "animatable" => 1, # Defined in Source/WebCore/style/StyleBuilderConverter.h
@@ -241,6 +242,8 @@ sub addProperty($$)
                     next;
                 } elsif ($codegenOptionName eq "high-priority") {
                     $nameIsHighPriority{$name} = 1;
+                } elsif ($codegenOptionName eq "sink-priority") {
+                    $namePriorityShouldSink{$name} = 1;
                 } elsif ($codegenOptionName eq "related-property") {
                     $relatedProperty{$name} = $codegenProperties->{"related-property"}
                 } elsif ($codegenOptionName eq "aliases") {
@@ -277,6 +280,12 @@ sub sortByDescendingPriorityAndName
     }
     if (!!$nameIsHighPriority{$a} > !!$nameIsHighPriority{$b}) {
         return -1;
+    }
+    if (!!$namePriorityShouldSink{$a} < !!$namePriorityShouldSink{$b}) {
+        return -1;
+    }
+    if (!!$namePriorityShouldSink{$a} > !!$namePriorityShouldSink{$b}) {
+        return 1;
     }
     # Sort names without leading '-' to the front
     if (substr($a, 0, 1) eq "-" && substr($b, 0, 1) ne "-") {
@@ -377,20 +386,32 @@ print GPERF << "EOF";
     }
 }
 
+EOF
+
+if (%runtimeFlags) {
+  print GPERF << "EOF";
 bool isEnabledCSSProperty(const CSSPropertyID id)
 {
     switch (id) {
 EOF
-
-foreach my $name (keys %runtimeFlags) {
-  print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
-  print GPERF "        return RuntimeEnabledFeatures::sharedFeatures()." . $runtimeFlags{$name} . "Enabled();\n";
-}
-
-print GPERF << "EOF";
+  foreach my $name (keys %runtimeFlags) {
+    print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+    print GPERF "        return RuntimeEnabledFeatures::sharedFeatures()." . $runtimeFlags{$name} . "Enabled();\n";
+  }
+  print GPERF << "EOF";
     default:
         return true;
     }
+EOF
+} else {
+  print GPERF << "EOF";
+bool isEnabledCSSProperty(const CSSPropertyID)
+{
+    return true;
+EOF
+}
+
+print GPERF << "EOF";
 }
 
 bool isCSSPropertyEnabledBySettings(const CSSPropertyID id, const Settings* settings)
@@ -925,7 +946,7 @@ sub generateFillLayerPropertyInheritValueSetter {
   $setterContent .= $indent . "FillLayer* previousChild = nullptr;\n";
   $setterContent .= $indent . "for (auto* parent = &builderState.parentStyle()." . getLayersFunction($name) . "(); parent && parent->" . $testFunction . "(); parent = parent->next()) {\n";
   $setterContent .= $indent . "    if (!child) {\n";
-  $setterContent .= $indent . "        previousChild->setNext(makeUnique<FillLayer>(" . getFillLayerType($name) . "));\n";
+  $setterContent .= $indent . "        previousChild->setNext(FillLayer::create(" . getFillLayerType($name) . "));\n";
   $setterContent .= $indent . "        child = previousChild->next();\n";
   $setterContent .= $indent . "    }\n";
   $setterContent .= $indent . "    child->" . $setter . "(parent->" . $getter . "());\n";
@@ -951,7 +972,7 @@ sub generateFillLayerPropertyValueSetter {
   $setterContent .= $indent . "    // Walk each value and put it into a layer, creating new layers as needed.\n";
   $setterContent .= $indent . "    for (auto& item : downcast<CSSValueList>(value)) {\n";
   $setterContent .= $indent . "        if (!child) {\n";
-  $setterContent .= $indent . "            previousChild->setNext(makeUnique<FillLayer>(" . getFillLayerType($name) . "));\n";
+  $setterContent .= $indent . "            previousChild->setNext(FillLayer::create(" . getFillLayerType($name) . "));\n";
   $setterContent .= $indent . "            child = previousChild->next();\n";
   $setterContent .= $indent . "        }\n";
   $setterContent .= $indent . "        builderState.styleMap()." . getFillLayerMapfunction($name) . "(" . $CSSPropertyId . ", *child, item);\n";

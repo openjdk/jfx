@@ -48,9 +48,10 @@ private:
     bool allowsHorizontalStretching(const PlatformWheelEvent&) const override { return false; }
     bool allowsVerticalStretching(const PlatformWheelEvent&) const override { return false; }
     IntSize stretchAmount() const override { return IntSize(); }
-    bool pinnedInDirection(const FloatSize&) const override { return false; }
-    bool canScrollHorizontally() const override { return false; }
-    bool canScrollVertically() const override { return false; }
+    bool isPinnedForScrollDelta(const FloatSize&) const override { return false; }
+    RectEdges<bool> edgePinnedState() const override { return { }; }
+    bool allowsHorizontalScrolling() const override { return false; }
+    bool allowsVerticalScrolling() const override { return false; }
     bool shouldRubberBandInDirection(ScrollDirection) const override { return false; }
     void immediateScrollBy(const FloatSize&) override { }
     void immediateScrollByWithoutContentEdgeConstraints(const FloatSize&) override { }

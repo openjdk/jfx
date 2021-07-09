@@ -28,8 +28,8 @@
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsInteger(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsSafeInteger(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(numberConstructorFuncIsInteger);
+static JSC_DECLARE_HOST_FUNCTION(numberConstructorFuncIsSafeInteger);
 
 } // namespace JSC
 
@@ -49,8 +49,8 @@ const ClassInfo NumberConstructor::s_info = { "Function", &InternalFunction::s_i
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL callNumberConstructor(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callNumberConstructor);
+static JSC_DECLARE_HOST_FUNCTION(constructNumberConstructor);
 
 NumberConstructor::NumberConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure, callNumberConstructor, constructNumberConstructor)
@@ -59,13 +59,12 @@ NumberConstructor::NumberConstructor(VM& vm, Structure* structure)
 
 void NumberConstructor::finishCreation(VM& vm, NumberPrototype* numberPrototype)
 {
-    Base::finishCreation(vm, vm.propertyNames->Number.string(), NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, vm.propertyNames->Number.string(), PropertyAdditionMode::WithoutStructureTransition);
     ASSERT(inherits(vm, info()));
 
     JSGlobalObject* globalObject = numberPrototype->globalObject(vm);
 
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, numberPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "EPSILON"), jsDoubleNumber(std::numeric_limits<double>::epsilon()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "MAX_VALUE"), jsDoubleNumber(1.7976931348623157E+308), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
@@ -83,7 +82,7 @@ void NumberConstructor::finishCreation(VM& vm, NumberPrototype* numberPrototype)
 }
 
 // ECMA 15.7.1
-static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructNumberConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -113,7 +112,7 @@ static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(JSGlobalObject* g
 }
 
 // ECMA 15.7.2
-static EncodedJSValue JSC_HOST_CALL callNumberConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(callNumberConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -128,13 +127,13 @@ static EncodedJSValue JSC_HOST_CALL callNumberConstructor(JSGlobalObject* global
 }
 
 // ECMA-262 20.1.2.3
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsInteger(JSGlobalObject*, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberConstructorFuncIsInteger, (JSGlobalObject*, CallFrame* callFrame))
 {
     return JSValue::encode(jsBoolean(NumberConstructor::isIntegerImpl(callFrame->argument(0))));
 }
 
 // ECMA-262 20.1.2.5
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsSafeInteger(JSGlobalObject*, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberConstructorFuncIsSafeInteger, (JSGlobalObject*, CallFrame* callFrame))
 {
     JSValue argument = callFrame->argument(0);
     if (argument.isInt32())

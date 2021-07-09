@@ -48,6 +48,42 @@ typedef struct _cairo_device cairo_device_t;
 
 typedef void* PlatformGraphicsContextGL;
 
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
+#if defined(Above)
+#undef Above
+#endif
+#if defined(Below)
+#undef Below
+#endif
+#if defined(Success)
+#undef Success
+#endif
+#if defined(False)
+#undef False
+#endif
+#if defined(True)
+#undef True
+#endif
+#if defined(Bool)
+#undef Bool
+#endif
+#if defined(Always)
+#undef Always
+#endif
+#if defined(Status)
+#undef Status
+#endif
+#if defined(Continue)
+#undef Continue
+#endif
+#if defined(Region)
+#undef Region
+#endif
+
 namespace WebCore {
 
 class IntSize;
@@ -74,11 +110,7 @@ public:
 
     virtual bool isEGLContext() const = 0;
 
-#if USE(CAIRO)
-    virtual cairo_device_t* cairoDevice() = 0;
-#endif
-
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL)
     virtual PlatformGraphicsContextGL platformContext() = 0;
 #endif
 

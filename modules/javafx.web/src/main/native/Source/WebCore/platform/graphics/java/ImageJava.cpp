@@ -51,8 +51,8 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
         return;
     }
 
-    NativeImagePtr currFrame = nativeImageForCurrentFrame();
-    if (!currFrame) {
+    auto nativeImage = nativeImageForCurrentFrame();
+    if (!nativeImage) {
         return;
     }
 
@@ -61,7 +61,7 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
 
     gc.platformContext()->rq().freeSpace(72)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
-    << currFrame
+    << nativeImage->platformImage()->getImage()
     << dstRect.x() << dstRect.y()
     << dstRect.width() << dstRect.height()
     << srcRect.x() << srcRect.y()

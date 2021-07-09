@@ -136,13 +136,13 @@ void CanvasBase::removeObserver(CanvasObserver& observer)
 
 void CanvasBase::notifyObserversCanvasChanged(const FloatRect& rect)
 {
-    for (auto& observer : copyToVector(m_observers))
+    for (auto& observer : m_observers)
         observer->canvasChanged(*this, rect);
 }
 
 void CanvasBase::notifyObserversCanvasResized()
 {
-    for (auto& observer : copyToVector(m_observers))
+    for (auto& observer : m_observers)
         observer->canvasResized(*this);
 }
 
@@ -182,17 +182,17 @@ bool CanvasBase::callTracingActive() const
     return context && context->callTracingActive();
 }
 
-std::unique_ptr<ImageBuffer> CanvasBase::setImageBuffer(std::unique_ptr<ImageBuffer>&& buffer) const
+RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) const
 {
-    std::unique_ptr<ImageBuffer> returnBuffer;
+    RefPtr<ImageBuffer> returnBuffer;
     {
         auto locker = holdLock(m_imageBufferAssignmentLock);
         m_contextStateSaver = nullptr;
         returnBuffer = std::exchange(m_imageBuffer, WTFMove(buffer));
     }
 
-    if (m_imageBuffer && m_size != m_imageBuffer->backendSize())
-        m_size = m_imageBuffer->backendSize();
+    if (m_imageBuffer && m_size != m_imageBuffer->logicalSize())
+        m_size = m_imageBuffer->logicalSize();
 
     size_t previousMemoryCost = m_imageBufferCost;
     m_imageBufferCost = memoryCost();

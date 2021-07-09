@@ -41,7 +41,6 @@ bool clobbersExitState(Graph& graph, Node* node)
     switch (node->op()) {
     case InitializeEntrypointArguments:
     case MovHint:
-    case ZombieHint:
     case PutHint:
     case KillStack:
         return true;
@@ -85,6 +84,8 @@ bool clobbersExitState(Graph& graph, Node* node)
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
     case TryGetById:
         // These do clobber memory, but nothing that is observable. It may be nice to separate the
         // heaps into those that are observable and those that aren't, but we don't do that right now.

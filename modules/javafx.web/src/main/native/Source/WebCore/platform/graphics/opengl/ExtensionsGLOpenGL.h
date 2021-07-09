@@ -27,10 +27,11 @@
 
 #include "ExtensionsGLOpenGLCommon.h"
 
-#include "GraphicsContextGLOpenGL.h"
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
+
+class GraphicsContextGLOpenGL;
 
 class ExtensionsGLOpenGL : public ExtensionsGLOpenGLCommon {
     WTF_MAKE_FAST_ALLOCATED;
@@ -40,28 +41,22 @@ public:
     virtual ~ExtensionsGLOpenGL();
 
     // ExtensionsGL methods.
-    void blitFramebuffer(long srcX0, long srcY0, long srcX1, long srcY1, long dstX0, long dstY0, long dstX1, long dstY1, unsigned long mask, unsigned long filter) override;
-    void renderbufferStorageMultisample(unsigned long target, unsigned long samples, unsigned long internalformat, unsigned long width, unsigned long height) override;
-
     PlatformGLObject createVertexArrayOES() override;
     void deleteVertexArrayOES(PlatformGLObject) override;
     GCGLboolean isVertexArrayOES(PlatformGLObject) override;
     void bindVertexArrayOES(PlatformGLObject) override;
-    void insertEventMarkerEXT(const String&) override;
-    void pushGroupMarkerEXT(const String&) override;
-    void popGroupMarkerEXT(void) override;
-    void drawBuffersEXT(GCGLsizei, const GCGLenum*) override;
+    void drawBuffersEXT(GCGLSpan<const GCGLenum>) override;
 
-    void drawArraysInstanced(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) override;
-    void drawElementsInstanced(GCGLenum mode, GCGLsizei count, GCGLenum type, long long offset, GCGLsizei primcount) override;
-    void vertexAttribDivisor(GCGLuint index, GCGLuint divisor) override;
+    void drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) override;
+    void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount) override;
+    void vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor) override;
 
 protected:
     bool supportsExtension(const WTF::String&) override;
     String getExtensions() override;
 
 private:
-#if PLATFORM(GTK) || PLATFORM(WIN) || (PLATFORM(COCOA) && USE(OPENGL_ES))
+#if PLATFORM(GTK) || PLATFORM(WIN)
     bool isVertexArrayObjectSupported();
 #endif
 };

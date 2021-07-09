@@ -37,7 +37,7 @@ namespace WebCore {
 const int kRenderBufferSize = 128;
 
 MockAudioDestinationCocoa::MockAudioDestinationCocoa(AudioIOCallback& callback, float sampleRate)
-    : AudioDestinationCocoa(callback, sampleRate)
+    : AudioDestinationCocoa(callback, 2, sampleRate)
     , m_workQueue(WorkQueue::create("MockAudioDestinationCocoa Render Queue"))
     , m_timer(RunLoop::current(), this, &MockAudioDestinationCocoa::tick)
 {
@@ -45,32 +45,34 @@ MockAudioDestinationCocoa::MockAudioDestinationCocoa(AudioIOCallback& callback, 
 
 MockAudioDestinationCocoa::~MockAudioDestinationCocoa() = default;
 
-void MockAudioDestinationCocoa::start()
+void MockAudioDestinationCocoa::startRendering(CompletionHandler<void(bool)>&& completionHandler)
 {
     m_timer.startRepeating(Seconds { m_numberOfFramesToProcess / sampleRate() });
     setIsPlaying(true);
+
+    callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable {
+        completionHandler(true);
+    });
 }
 
-void MockAudioDestinationCocoa::stop()
+void MockAudioDestinationCocoa::stopRendering(CompletionHandler<void(bool)>&& completionHandler)
 {
     m_timer.stop();
     setIsPlaying(false);
 
-    BinarySemaphore semaphore;
-    m_workQueue->dispatch([&semaphore] {
-        semaphore.signal();
+    callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable {
+        completionHandler(true);
     });
-    semaphore.wait();
 }
 
 void MockAudioDestinationCocoa::tick()
 {
-    m_workQueue->dispatch([this, sampleRate = sampleRate(), numberOfFramesToProcess = m_numberOfFramesToProcess] {
+    m_workQueue->dispatch([this, protectedThis = makeRef(*this), sampleRate = sampleRate(), numberOfFramesToProcess = m_numberOfFramesToProcess] {
         AudioStreamBasicDescription streamFormat;
-        setAudioStreamBasicDescription(streamFormat, sampleRate);
+        getAudioStreamBasicDescription(streamFormat);
 
         WebAudioBufferList webAudioBufferList { streamFormat, numberOfFramesToProcess };
-        AudioDestinationCocoa::inputProc(this, 0, 0, 0, numberOfFramesToProcess, webAudioBufferList.list());
+        render(0., 0, numberOfFramesToProcess, webAudioBufferList.list());
     });
 }
 

@@ -149,7 +149,7 @@ void CodeBlockBytecodeDumper<Block>::dumpConstants()
                 sourceCodeRepresentationDescription = "";
                 break;
             case SourceCodeRepresentation::LinkTimeConstant:
-                sourceCodeRepresentationDescription = ": in source as linke-time-constant";
+                sourceCodeRepresentationDescription = ": in source as link-time-constant";
                 break;
             }
             this->m_out.printf("   k%u = %s%s\n", static_cast<unsigned>(i), toCString(constant.get()).data(), sourceCodeRepresentationDescription);
@@ -388,7 +388,7 @@ CString BytecodeDumper::formatConstant(Type type, uint64_t constant) const
     case Type::F64:
         return toCString(bitwise_cast<double>(constant));
         break;
-    case Type::Anyref:
+    case Type::Externref:
     case Type::Funcref:
         if (JSValue::decode(constant) == jsNull())
             return "null";

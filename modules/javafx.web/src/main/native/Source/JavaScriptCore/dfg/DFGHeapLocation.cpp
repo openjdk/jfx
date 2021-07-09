@@ -62,12 +62,16 @@ void printInternal(PrintStream& out, LocationKind kind)
         out.print("InvalidationPointLoc");
         return;
 
-    case IsObjectOrNullLoc:
-        out.print("IsObjectOrNullLoc");
+    case TypeOfIsObjectLoc:
+        out.print("TypeOfIsObjectLoc");
         return;
 
-    case IsFunctionLoc:
-        out.print("IsFunctionLoc");
+    case TypeOfIsFunctionLoc:
+        out.print("TypeOfIsFunctionLoc");
+        return;
+
+    case IsCallableLoc:
+        out.print("IsCallableLoc");
         return;
 
     case IsConstructorLoc:
@@ -138,8 +142,20 @@ void printInternal(PrintStream& out, LocationKind kind)
         out.print("IndexedPropertyDoubleSaneChainLoc");
         return;
 
+    case IndexedPropertyDoubleOutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyDoubleOutOfBoundsSaneChainLoc");
+        return;
+
+    case IndexedPropertyDoubleOrOtherOutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyDoubleOrOtherOutOfBoundsSaneChainLoc");
+        return;
+
     case IndexedPropertyInt32Loc:
         out.print("IndexedPropertyInt32Loc");
+        return;
+
+    case IndexedPropertyInt32OutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyInt32OutOfBoundsSaneChainLoc");
         return;
 
     case IndexedPropertyInt52Loc:
@@ -148,6 +164,10 @@ void printInternal(PrintStream& out, LocationKind kind)
 
     case IndexedPropertyJSLoc:
         out.print("IndexedPropertyJSLoc");
+        return;
+
+    case IndexedPropertyJSOutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyJSOutOfBoundsSaneChainLoc");
         return;
 
     case IndexedPropertyStorageLoc:

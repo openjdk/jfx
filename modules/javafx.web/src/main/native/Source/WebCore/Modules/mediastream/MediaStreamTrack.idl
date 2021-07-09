@@ -32,25 +32,26 @@ enum MediaStreamTrackState { "live", "ended" };
     ExportToWrappedFunction,
     PrivateIdentifier,
     PublicIdentifier,
+    Exposed=Window
 ] interface MediaStreamTrack : EventTarget {
     readonly attribute DOMString kind;
     readonly attribute DOMString id;
     readonly attribute DOMString label;
     attribute boolean enabled;
     attribute DOMString contentHint;
-    readonly attribute boolean muted;
+    [ImplementedAs=mutedForBindings] readonly attribute boolean muted;
     attribute EventHandler onmute;
     attribute EventHandler onunmute;
     readonly attribute MediaStreamTrackState readyState;
     attribute EventHandler onended;
 
     MediaStreamTrack clone();
-    [ImplementedAs=stopTrack] void stop();
+    [ImplementedAs=stopTrack] undefined stop();
 
     MediaTrackCapabilities getCapabilities();
     MediaTrackConstraints getConstraints();
     MediaTrackSettings getSettings();
-    Promise<void> applyConstraints(optional MediaTrackConstraints constraints);
+    Promise<undefined> applyConstraints(optional MediaTrackConstraints constraints);
 
     attribute EventHandler onoverconstrained;
 };

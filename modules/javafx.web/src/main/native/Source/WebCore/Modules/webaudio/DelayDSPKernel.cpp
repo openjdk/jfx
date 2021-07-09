@@ -33,13 +33,9 @@
 
 namespace WebCore {
 
-const float SmoothingTimeConstant = 0.020f; // 20ms
-
 DelayDSPKernel::DelayDSPKernel(DelayProcessor* processor)
     : AudioDSPKernel(processor)
-    , m_writeIndex(0)
-    , m_firstTime(true)
-    , m_delayTimes(AudioNode::ProcessingSizeInFrames)
+    , m_delayTimes(AudioUtilities::renderQuantumSize)
 {
     ASSERT(processor && processor->sampleRate() > 0);
     if (!(processor && processor->sampleRate() > 0))
@@ -50,17 +46,12 @@ DelayDSPKernel::DelayDSPKernel(DelayProcessor* processor)
     if (m_maxDelayTime < 0)
         return;
 
-    m_buffer.allocate(bufferLengthForDelay(m_maxDelayTime, processor->sampleRate()));
-    m_buffer.zero();
-
-    m_smoothingRate = AudioUtilities::discreteTimeConstantForSampleRate(SmoothingTimeConstant, processor->sampleRate());
+    m_buffer.resize(bufferLengthForDelay(m_maxDelayTime, processor->sampleRate()));
 }
 
 DelayDSPKernel::DelayDSPKernel(double maxDelayTime, float sampleRate)
     : AudioDSPKernel(sampleRate)
     , m_maxDelayTime(maxDelayTime)
-    , m_writeIndex(0)
-    , m_firstTime(true)
 {
     ASSERT(maxDelayTime > 0.0);
     if (maxDelayTime <= 0.0)
@@ -71,17 +62,14 @@ DelayDSPKernel::DelayDSPKernel(double maxDelayTime, float sampleRate)
     if (!bufferLength)
         return;
 
-    m_buffer.allocate(bufferLength);
-    m_buffer.zero();
-
-    m_smoothingRate = AudioUtilities::discreteTimeConstantForSampleRate(SmoothingTimeConstant, sampleRate);
+    m_buffer.resize(bufferLength);
 }
 
 size_t DelayDSPKernel::bufferLengthForDelay(double maxDelayTime, double sampleRate) const
 {
     // Compute the length of the buffer needed to handle a max delay of |maxDelayTime|. One is
     // added to handle the case where the actual delay equals the maximum delay.
-    return 1 + AudioUtilities::timeToSampleFrame(maxDelayTime, sampleRate);
+    return 1 + AudioUtilities::timeToSampleFrame(maxDelayTime, sampleRate, AudioUtilities::SampleFrameRounding::Up);
 }
 
 void DelayDSPKernel::process(const float* source, float* destination, size_t framesToProcess)
@@ -103,34 +91,23 @@ void DelayDSPKernel::process(const float* source, float* destination, size_t fra
     double maxTime = maxDelayTime();
 
     bool sampleAccurate = delayProcessor() && delayProcessor()->delayTime().hasSampleAccurateValues();
+    bool shouldUseARate = delayProcessor() && delayProcessor()->delayTime().automationRate() == AutomationRate::ARate;
 
-    if (sampleAccurate)
+    if (sampleAccurate && shouldUseARate)
         delayProcessor()->delayTime().calculateSampleAccurateValues(delayTimes, framesToProcess);
     else {
         delayTime = delayProcessor() ? delayProcessor()->delayTime().finalValue() : m_desiredDelayFrames / sampleRate;
-
         // Make sure the delay time is in a valid range.
-        delayTime = std::min(maxTime, delayTime);
-        delayTime = std::max(0.0, delayTime);
-
-        if (m_firstTime) {
-            m_currentDelayTime = delayTime;
-            m_firstTime = false;
-        }
+        delayTime = std::clamp(delayTime, 0.0, maxTime);
     }
 
     for (unsigned i = 0; i < framesToProcess; ++i) {
-        if (sampleAccurate) {
+        if (sampleAccurate && shouldUseARate) {
             delayTime = delayTimes[i];
-            delayTime = std::min(maxTime, delayTime);
-            delayTime = std::max(0.0, delayTime);
-            m_currentDelayTime = delayTime;
-        } else {
-            // Approach desired delay time.
-            m_currentDelayTime += (delayTime - m_currentDelayTime) * m_smoothingRate;
+            delayTime = std::clamp(delayTime, 0.0, maxTime);
         }
 
-        double desiredDelayFrames = m_currentDelayTime * sampleRate;
+        double desiredDelayFrames = delayTime * sampleRate;
 
         double readPosition = m_writeIndex + bufferLength - desiredDelayFrames;
         if (readPosition >= bufferLength)
@@ -154,9 +131,19 @@ void DelayDSPKernel::process(const float* source, float* destination, size_t fra
     }
 }
 
+void DelayDSPKernel::processOnlyAudioParams(size_t framesToProcess)
+{
+    if (!delayProcessor())
+        return;
+
+    float values[AudioUtilities::renderQuantumSize];
+    ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
+
+    delayProcessor()->delayTime().calculateSampleAccurateValues(values, framesToProcess);
+}
+
 void DelayDSPKernel::reset()
 {
-    m_firstTime = true;
     m_buffer.zero();
 }
 
@@ -168,6 +155,16 @@ double DelayDSPKernel::tailTime() const
 double DelayDSPKernel::latencyTime() const
 {
     return 0;
+}
+
+bool DelayDSPKernel::requiresTailProcessing() const
+{
+    // Always return true even if the tail time and latency might both
+    // be zero. This is for simplicity; most interesting delay nodes
+    // have non-zero delay times anyway. And it's ok to return true. It
+    // just means the node lives a little longer than strictly
+    // necessary.
+    return true;
 }
 
 } // namespace WebCore

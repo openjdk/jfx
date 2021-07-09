@@ -28,15 +28,19 @@
 #if USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "RTCIceCandidate.h"
 #include "RTCPeerConnection.h"
 #include "RTCRtpSendParameters.h"
 #include <wtf/text/WTFString.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
 #include <webrtc/api/rtp_parameters.h>
 #include <webrtc/api/rtp_transceiver_interface.h>
+#include <webrtc/pc/webrtc_sdp.h>
 
+ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
@@ -58,6 +62,25 @@ static inline RTCRtpEncodingParameters toRTCEncodingParameters(const webrtc::Rtp
         parameters.scaleResolutionDownBy = *rtcParameters.scale_resolution_down_by;
 
     return parameters;
+}
+
+static inline webrtc::RtpEncodingParameters fromRTCEncodingParameters(const RTCRtpEncodingParameters& parameters)
+{
+    webrtc::RtpEncodingParameters rtcParameters;
+
+    if (parameters.ssrc)
+        rtcParameters.ssrc = parameters.ssrc;
+
+    rtcParameters.active = parameters.active;
+    if (parameters.maxBitrate)
+        rtcParameters.max_bitrate_bps = parameters.maxBitrate;
+    if (parameters.maxFramerate)
+        rtcParameters.max_framerate = parameters.maxFramerate;
+    rtcParameters.rid = parameters.rid.utf8().data();
+    if (parameters.scaleResolutionDownBy)
+        rtcParameters.scale_resolution_down_by = parameters.scaleResolutionDownBy;
+
+    return rtcParameters;
 }
 
 static inline RTCRtpHeaderExtensionParameters toRTCHeaderExtensionParameters(const webrtc::RtpExtension& rtcParameters)
@@ -115,6 +138,10 @@ RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters& rtcParameters)
         parameters.headerExtensions.append(toRTCHeaderExtensionParameters(extension));
     for (auto& codec : rtcParameters.codecs)
         parameters.codecs.append(toRTCCodecParameters(codec));
+
+    parameters.rtcp.reducedSize = rtcParameters.rtcp.reduced_size;
+    if (rtcParameters.rtcp.cname.length())
+        parameters.rtcp.cname = fromStdString(rtcParameters.rtcp.cname);
 
     return parameters;
 }
@@ -182,6 +209,11 @@ void updateRTCRtpSendParameters(const RTCRtpSendParameters& parameters, webrtc::
         rtcParameters.degradation_preference = webrtc::DegradationPreference::BALANCED;
         break;
     }
+
+    if (parameters.rtcp.reducedSize)
+        rtcParameters.rtcp.reduced_size = *parameters.rtcp.reducedSize;
+    if (!parameters.rtcp.cname.isNull())
+        rtcParameters.rtcp.cname = parameters.rtcp.cname.utf8().data();
 }
 
 RTCRtpTransceiverDirection toRTCRtpTransceiverDirection(webrtc::RtpTransceiverDirection rtcDirection)
@@ -223,6 +255,8 @@ webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit& i
     rtcInit.direction = fromRTCRtpTransceiverDirection(init.direction);
     for (auto& stream : init.streams)
         rtcInit.stream_ids.push_back(stream->id().utf8().data());
+    for (auto& encoding : init.sendEncodings)
+        rtcInit.send_encodings.push_back(fromRTCEncodingParameters(encoding));
     return rtcInit;
 }
 
@@ -251,6 +285,73 @@ Exception toException(const webrtc::RTCError& error)
     ASSERT(!error.ok());
 
     return Exception { toExceptionCode(error.type()), error.message() };
+}
+
+static inline RTCIceComponent toRTCIceComponent(int component)
+{
+    return component == cricket::ICE_CANDIDATE_COMPONENT_RTP ? RTCIceComponent::Rtp : RTCIceComponent::Rtcp;
+}
+
+static inline Optional<RTCIceProtocol> toRTCIceProtocol(const std::string& protocol)
+{
+    if (protocol == "")
+        return { };
+    if (protocol == "udp")
+        return RTCIceProtocol::Udp;
+    ASSERT(protocol == "tcp" || protocol == "ssltcp");
+    return RTCIceProtocol::Tcp;
+}
+
+static inline Optional<RTCIceTcpCandidateType> toRTCIceTcpCandidateType(const std::string& type)
+{
+    if (type == "")
+        return { };
+    if (type == "active")
+        return RTCIceTcpCandidateType::Active;
+    if (type == "passive")
+        return RTCIceTcpCandidateType::Passive;
+    ASSERT(type == "so");
+    return RTCIceTcpCandidateType::So;
+}
+
+static inline Optional<RTCIceCandidateType> toRTCIceCandidateType(const std::string& type)
+{
+    if (type == "")
+        return { };
+    if (type == "local")
+        return RTCIceCandidateType::Host;
+    if (type == "stun")
+        return RTCIceCandidateType::Srflx;
+    if (type == "prflx")
+        return RTCIceCandidateType::Prflx;
+    ASSERT(type == "relay");
+    return RTCIceCandidateType::Relay;
+}
+
+Optional<RTCIceCandidate::Fields> parseIceCandidateSDP(const String& sdp)
+{
+    cricket::Candidate candidate;
+    if (!webrtc::ParseCandidate(sdp.utf8().data(), &candidate, nullptr, true))
+        return { };
+
+    RTCIceCandidate::Fields fields;
+    fields.foundation = fromStdString(candidate.foundation());
+    fields.component = toRTCIceComponent(candidate.component());
+    fields.priority = candidate.priority();
+    fields.protocol = toRTCIceProtocol(candidate.protocol());
+    if (!candidate.address().IsNil()) {
+        fields.address = fromStdString(candidate.address().HostAsURIString());
+        fields.port = candidate.address().port();
+    }
+    fields.type = toRTCIceCandidateType(candidate.type());
+    fields.tcpType = toRTCIceTcpCandidateType(candidate.tcptype());
+    if (!candidate.related_address().IsNil()) {
+        fields.relatedAddress = fromStdString(candidate.related_address().HostAsURIString());
+        fields.relatedPort = candidate.related_address().port();
+    }
+
+    fields.usernameFragment = fromStdString(candidate.username());
+    return fields;
 }
 
 } // namespace WebCore

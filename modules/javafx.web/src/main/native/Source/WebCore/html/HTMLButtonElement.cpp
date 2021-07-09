@@ -60,8 +60,12 @@ void HTMLButtonElement::setType(const AtomString& type)
     setAttributeWithoutSynchronization(typeAttr, type);
 }
 
-RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
+RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& position)
 {
+    // https://html.spec.whatwg.org/multipage/rendering.html#button-layout
+    DisplayType display = style.display();
+    if (display == DisplayType::InlineGrid || display == DisplayType::Grid || display == DisplayType::InlineFlex || display == DisplayType::Flex)
+        return HTMLFormControlElement::createElementRenderer(WTFMove(style), position);
     return createRenderer<RenderButton>(*this, WTFMove(style));
 }
 
@@ -113,7 +117,7 @@ void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomStri
         else
             m_type = SUBMIT;
         if (oldType != m_type) {
-            setNeedsWillValidateCheck();
+            updateWillValidateAndValidity();
             if (form() && (oldType == SUBMIT || m_type == SUBMIT))
                 form()->resetDefaultButton();
         }

@@ -34,77 +34,97 @@
 #include "AudioUtilities.h"
 #include "FloatConversion.h"
 #include "Logging.h"
+#include "VectorMath.h"
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
 
-const double AudioParam::DefaultSmoothingConstant = 0.05;
-const double AudioParam::SnapThreshold = 0.001;
-
-AudioParam::AudioParam(BaseAudioContext& context, const String& name, double defaultValue, double minValue, double maxValue, unsigned units)
+AudioParam::AudioParam(BaseAudioContext& context, const String& name, float defaultValue, float minValue, float maxValue, AutomationRate automationRate, AutomationRateMode automationRateMode)
     : AudioSummingJunction(context)
     , m_name(name)
     , m_value(defaultValue)
     , m_defaultValue(defaultValue)
     , m_minValue(minValue)
     , m_maxValue(maxValue)
-    , m_units(units)
+    , m_automationRate(automationRate)
+    , m_automationRateMode(automationRateMode)
     , m_smoothedValue(defaultValue)
-    , m_smoothingConstant(DefaultSmoothingConstant)
 #if !RELEASE_LOG_DISABLED
     , m_logger(context.logger())
     , m_logIdentifier(context.nextAudioParameterLogIdentifier())
 #endif
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "name = ", m_name, ", value = ", m_value, ", default = ", m_defaultValue, ", min = ", m_minValue, ", max = ", m_maxValue, ", units = ", m_units);
+    ALWAYS_LOG(LOGIDENTIFIER, "name = ", m_name, ", value = ", m_value, ", default = ", m_defaultValue, ", min = ", m_minValue, ", max = ", m_maxValue);
 }
 
 float AudioParam::value()
 {
     // Update value for timeline.
     if (context().isAudioThread()) {
-        bool hasValue;
-        float timelineValue = m_timeline.valueForContextTime(context(), narrowPrecisionToFloat(m_value), hasValue);
-
-        if (hasValue)
-            m_value = timelineValue;
+        auto timelineValue = m_timeline.valueForContextTime(context(), m_value, minValue(), maxValue());
+        if (timelineValue)
+            m_value = *timelineValue;
     }
 
-    return narrowPrecisionToFloat(m_value);
+    return m_value;
 }
 
 void AudioParam::setValue(float value)
 {
     DEBUG_LOG(LOGIDENTIFIER, value);
 
-    // Check against JavaScript giving us bogus floating-point values.
-    // Don't ASSERT, since this can happen if somebody writes bad JS.
-    if (!std::isnan(value) && !std::isinf(value))
-        m_value = value;
+    m_value = std::clamp(value, minValue(), maxValue());
+}
+
+float AudioParam::valueForBindings() const
+{
+    ASSERT(isMainThread());
+    return m_value;
+}
+
+ExceptionOr<void> AudioParam::setValueForBindings(float value)
+{
+    ASSERT(isMainThread());
+
+    setValue(value);
+    auto result = setValueAtTime(m_value, context().currentTime());
+    if (result.hasException())
+        return result.releaseException();
+    return { };
+}
+
+ExceptionOr<void> AudioParam::setAutomationRate(AutomationRate automationRate)
+{
+    if (m_automationRateMode == AutomationRateMode::Fixed)
+        return Exception { InvalidStateError, "automationRate cannot be changed for this node" };
+
+    m_automationRate = automationRate;
+    return { };
 }
 
 float AudioParam::smoothedValue()
 {
-    return narrowPrecisionToFloat(m_smoothedValue);
+    return m_smoothedValue;
 }
 
 bool AudioParam::smooth()
 {
     // If values have been explicitly scheduled on the timeline, then use the exact value.
     // Smoothing effectively is performed by the timeline.
-    bool useTimelineValue = false;
-    m_value = m_timeline.valueForContextTime(context(), narrowPrecisionToFloat(m_value), useTimelineValue);
+    auto timelineValue = m_timeline.valueForContextTime(context(), m_value, minValue(), maxValue());
+    if (timelineValue)
+        m_value = *timelineValue;
 
     if (m_smoothedValue == m_value) {
         // Smoothed value has already approached and snapped to value.
         return true;
     }
 
-    if (useTimelineValue)
+    if (timelineValue)
         m_smoothedValue = m_value;
     else {
         // Dezipper - exponential approach.
-        m_smoothedValue += (m_value - m_smoothedValue) * m_smoothingConstant;
+        m_smoothedValue += (m_value - m_smoothedValue) * SmoothingConstant;
 
         // If we get close enough then snap to actual value.
         if (fabs(m_smoothedValue - m_value) < SnapThreshold) // FIXME: the threshold needs to be adjustable depending on range - but this is OK general purpose value.
@@ -119,6 +139,7 @@ ExceptionOr<AudioParam&> AudioParam::setValueAtTime(float value, double startTim
     if (startTime < 0)
         return Exception { RangeError, "startTime must be a positive value"_s };
 
+    startTime = std::max(startTime, context().currentTime());
     auto result = m_timeline.setValueAtTime(value, Seconds { startTime });
     if (result.hasException())
         return result.releaseException();
@@ -130,7 +151,8 @@ ExceptionOr<AudioParam&> AudioParam::linearRampToValueAtTime(float value, double
     if (endTime < 0)
         return Exception { RangeError, "endTime must be a positive value"_s };
 
-    auto result = m_timeline.linearRampToValueAtTime(value, Seconds { endTime });
+    endTime = std::max(endTime, context().currentTime());
+    auto result = m_timeline.linearRampToValueAtTime(value, Seconds { endTime }, m_value, Seconds { context().currentTime() });
     if (result.hasException())
         return result.releaseException();
     return *this;
@@ -143,7 +165,8 @@ ExceptionOr<AudioParam&> AudioParam::exponentialRampToValueAtTime(float value, d
     if (endTime < 0)
         return Exception { RangeError, "endTime must be a positive value"_s };
 
-    auto result = m_timeline.exponentialRampToValueAtTime(value, Seconds { endTime });
+    endTime = std::max(endTime, context().currentTime());
+    auto result = m_timeline.exponentialRampToValueAtTime(value, Seconds { endTime }, m_value, Seconds { context().currentTime() });
     if (result.hasException())
         return result.releaseException();
     return *this;
@@ -156,6 +179,7 @@ ExceptionOr<AudioParam&> AudioParam::setTargetAtTime(float target, double startT
     if (timeConstant < 0)
         return Exception { RangeError, "timeConstant must be a positive value"_s };
 
+    startTime = std::max(startTime, context().currentTime());
     auto result = m_timeline.setTargetAtTime(target, Seconds { startTime }, timeConstant);
     if (result.hasException())
         return result.releaseException();
@@ -171,6 +195,7 @@ ExceptionOr<AudioParam&> AudioParam::setValueCurveAtTime(Vector<float>&& curve, 
     if (duration <= 0)
         return Exception { RangeError, "duration must be a strictly positive value"_s };
 
+    startTime = std::max(startTime, context().currentTime());
     auto result = m_timeline.setValueCurveAtTime(WTFMove(curve), Seconds { startTime }, Seconds { duration });
     if (result.hasException())
         return result.releaseException();
@@ -184,6 +209,26 @@ ExceptionOr<AudioParam&> AudioParam::cancelScheduledValues(double cancelTime)
 
     m_timeline.cancelScheduledValues(Seconds { cancelTime });
     return *this;
+}
+
+ExceptionOr<AudioParam&> AudioParam::cancelAndHoldAtTime(double cancelTime)
+{
+    if (cancelTime < 0)
+        return Exception { RangeError, "cancelTime must be a positive value"_s };
+
+    auto result = m_timeline.cancelAndHoldAtTime(Seconds { cancelTime });
+    if (result.hasException())
+        return result.releaseException();
+
+    return *this;
+}
+
+bool AudioParam::hasSampleAccurateValues() const
+{
+    if (numberOfRenderingConnections())
+        return true;
+
+    return m_timeline.hasValues(context().currentSampleFrame(), context().sampleRate());
 }
 
 float AudioParam::finalValue()
@@ -200,7 +245,7 @@ void AudioParam::calculateSampleAccurateValues(float* values, unsigned numberOfV
     if (!isSafe)
         return;
 
-    calculateFinalValues(values, numberOfValues, true);
+    calculateFinalValues(values, numberOfValues, automationRate() == AutomationRate::ARate);
 }
 
 void AudioParam::calculateFinalValues(float* values, unsigned numberOfValues, bool sampleAccurate)
@@ -217,42 +262,54 @@ void AudioParam::calculateFinalValues(float* values, unsigned numberOfValues, bo
         calculateTimelineValues(values, numberOfValues);
     } else {
         // Calculate control-rate (k-rate) intrinsic value.
-        bool hasValue;
-        float timelineValue = m_timeline.valueForContextTime(context(), narrowPrecisionToFloat(m_value), hasValue);
+        auto timelineValue = m_timeline.valueForContextTime(context(), m_value, minValue(), maxValue());
 
-        if (hasValue)
-            m_value = timelineValue;
-
-        values[0] = narrowPrecisionToFloat(m_value);
+        if (timelineValue)
+            m_value = *timelineValue;
+        std::fill_n(values, numberOfValues, m_value);
     }
+
+    if (!numberOfRenderingConnections())
+        return;
 
     // Now sum all of the audio-rate connections together (unity-gain summing junction).
     // Note that connections would normally be mono, but we mix down to mono if necessary.
     auto summingBus = AudioBus::create(1, numberOfValues, false);
-    summingBus->setChannelMemory(0, values, numberOfValues);
+
+    // If we're not sample accurate, we only need one value, so make the summing
+    // bus have length 1. When the connections are added in, only the first
+    // value will be added. Which is exactly what we want.
+    summingBus->setChannelMemory(0, values, sampleAccurate ? numberOfValues : 1);
 
     for (auto& output : m_renderingOutputs) {
         ASSERT(output);
 
         // Render audio from this output.
-        AudioBus* connectionBus = output->pull(0, AudioNode::ProcessingSizeInFrames);
+        AudioBus* connectionBus = output->pull(0, AudioUtilities::renderQuantumSize);
 
         // Sum, with unity-gain.
         summingBus->sumFrom(*connectionBus);
     }
+
+    // If we're not sample accurate, duplicate the first element of |values| to all of the elements.
+    if (!sampleAccurate)
+        std::fill_n(values + 1, numberOfValues - 1, values[0]);
+
+    // Clamp values based on range allowed by AudioParam's min and max values.
+    VectorMath::clamp(values, minValue(), maxValue(), values, numberOfValues);
 }
 
 void AudioParam::calculateTimelineValues(float* values, unsigned numberOfValues)
 {
     // Calculate values for this render quantum.
-    // Normally numberOfValues will equal AudioNode::ProcessingSizeInFrames (the render quantum size).
+    // Normally numberOfValues will equal AudioUtilities::renderQuantumSize (the render quantum size).
     double sampleRate = context().sampleRate();
-    Seconds startTime = Seconds { context().currentTime() };
-    Seconds endTime = startTime + Seconds { numberOfValues / sampleRate };
+    size_t startFrame = context().currentSampleFrame();
+    size_t endFrame = startFrame + numberOfValues;
 
     // Note we're running control rate at the sample-rate.
     // Pass in the current value as default value.
-    m_value = m_timeline.valuesForTimeRange(startTime, endTime, narrowPrecisionToFloat(m_value), values, numberOfValues, sampleRate, sampleRate);
+    m_value = m_timeline.valuesForFrameRange(startFrame, endFrame, m_value, minValue(), maxValue(), values, numberOfValues, sampleRate, sampleRate);
 }
 
 void AudioParam::connect(AudioNodeOutput* output)
@@ -263,13 +320,11 @@ void AudioParam::connect(AudioNodeOutput* output)
     if (!output)
         return;
 
-    if (!m_outputs.add(output).isNewEntry)
+    if (!addOutput(*output))
         return;
 
     INFO_LOG(LOGIDENTIFIER, output->node()->nodeType());
-
     output->addParam(this);
-    changedOutputs();
 }
 
 void AudioParam::disconnect(AudioNodeOutput* output)
@@ -282,10 +337,8 @@ void AudioParam::disconnect(AudioNodeOutput* output)
 
     INFO_LOG(LOGIDENTIFIER, output->node()->nodeType());
 
-    if (m_outputs.remove(output)) {
-        changedOutputs();
+    if (removeOutput((*output)))
         output->removeParam(this);
-    }
 }
 
 #if !RELEASE_LOG_DISABLED

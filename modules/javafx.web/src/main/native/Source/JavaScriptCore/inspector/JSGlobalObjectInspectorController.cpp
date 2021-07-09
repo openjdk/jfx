@@ -62,7 +62,7 @@ JSGlobalObjectInspectorController::JSGlobalObjectInspectorController(JSGlobalObj
     : m_globalObject(globalObject)
     , m_injectedScriptManager(makeUnique<InjectedScriptManager>(*this, InjectedScriptHost::create()))
     , m_executionStopwatch(Stopwatch::create())
-    , m_scriptDebugServer(globalObject)
+    , m_debugger(globalObject)
     , m_frontendRouter(FrontendRouter::create())
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
 {
@@ -115,9 +115,6 @@ void JSGlobalObjectInspectorController::connectFrontend(FrontendChannel& fronten
     m_agents.didCreateFrontendAndBackend(nullptr, nullptr);
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-    if (m_globalObject.inspectorDebuggable().type() == Inspector::RemoteControllableTarget::Type::JavaScript)
-        ensureInspectorAgent().activateExtraDomains(m_agents.extraDomains());
-
     if (m_augmentingClient)
         m_augmentingClient->inspectorConnected();
 #endif
@@ -234,9 +231,8 @@ void JSGlobalObjectInspectorController::frontendInitialized()
     if (m_pauseAfterInitialization) {
         m_pauseAfterInitialization = false;
 
-        ErrorString ignored;
-        ensureDebuggerAgent().enable(ignored);
-        ensureDebuggerAgent().pause(ignored);
+        ensureDebuggerAgent().enable();
+        ensureDebuggerAgent().pause();
     }
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -250,9 +246,9 @@ Stopwatch& JSGlobalObjectInspectorController::executionStopwatch() const
     return m_executionStopwatch;
 }
 
-JSGlobalObjectScriptDebugServer& JSGlobalObjectInspectorController::scriptDebugServer()
+JSGlobalObjectDebugger& JSGlobalObjectInspectorController::debugger()
 {
-    return m_scriptDebugServer;
+    return m_debugger;
 }
 
 VM& JSGlobalObjectInspectorController::vm()
@@ -261,17 +257,12 @@ VM& JSGlobalObjectInspectorController::vm()
 }
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-void JSGlobalObjectInspectorController::appendExtraAgent(std::unique_ptr<InspectorAgentBase> agent)
+void JSGlobalObjectInspectorController::registerAlternateAgent(std::unique_ptr<InspectorAgentBase> agent)
 {
-    String domainName = agent->domainName();
-
     // FIXME: change this to notify agents which frontend has connected (by id).
     agent->didCreateFrontendAndBackend(nullptr, nullptr);
 
-    m_agents.appendExtraAgent(WTFMove(agent));
-
-    if (m_globalObject.inspectorDebuggable().type() == Inspector::RemoteControllableTarget::Type::JavaScript)
-        ensureInspectorAgent().activateExtraDomain(domainName);
+    m_agents.append(WTFMove(agent));
 }
 #endif
 

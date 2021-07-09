@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,15 @@
 #include "WebGLContextGroup.h"
 #include "WebGLRenderingContextBase.h"
 #include "WebGLShader.h"
+#include <JavaScriptCore/SlotVisitor.h>
+#include <JavaScriptCore/SlotVisitorInlines.h>
 #include <wtf/Lock.h>
+#include <wtf/Locker.h>
 #include <wtf/NeverDestroyed.h>
+
+#if !USE(ANGLE)
+#include "GraphicsContextGLOpenGL.h"
+#endif
 
 namespace WebCore {
 
@@ -73,13 +80,16 @@ WebGLProgram::~WebGLProgram()
 {
     InspectorInstrumentation::willDestroyWebGLProgram(*this);
 
-    deleteObject(0);
-
     {
         LockHolder lock(instancesMutex());
         ASSERT(instances(lock).contains(this));
         instances(lock).remove(this);
     }
+
+    if (!hasGroupOrContext())
+        return;
+
+    runDestructor();
 }
 
 void WebGLProgram::contextDestroyed()
@@ -89,15 +99,15 @@ void WebGLProgram::contextDestroyed()
     ContextDestructionObserver::contextDestroyed();
 }
 
-void WebGLProgram::deleteObjectImpl(GraphicsContextGLOpenGL* context3d, PlatformGLObject obj)
+void WebGLProgram::deleteObjectImpl(const AbstractLocker& locker, GraphicsContextGL* context3d, PlatformGLObject obj)
 {
     context3d->deleteProgram(obj);
     if (m_vertexShader) {
-        m_vertexShader->onDetached(context3d);
+        m_vertexShader->onDetached(locker, context3d);
         m_vertexShader = nullptr;
     }
     if (m_fragmentShader) {
-        m_fragmentShader->onDetached(context3d);
+        m_fragmentShader->onDetached(locker, context3d);
         m_fragmentShader = nullptr;
     }
 }
@@ -156,7 +166,7 @@ WebGLShader* WebGLProgram::getAttachedShader(GCGLenum type)
     }
 }
 
-bool WebGLProgram::attachShader(WebGLShader* shader)
+bool WebGLProgram::attachShader(const AbstractLocker&, WebGLShader* shader)
 {
     if (!shader || !shader->object())
         return false;
@@ -176,7 +186,7 @@ bool WebGLProgram::attachShader(WebGLShader* shader)
     }
 }
 
-bool WebGLProgram::detachShader(WebGLShader* shader)
+bool WebGLProgram::detachShader(const AbstractLocker&, WebGLShader* shader)
 {
     if (!shader || !shader->object())
         return false;
@@ -196,16 +206,25 @@ bool WebGLProgram::detachShader(WebGLShader* shader)
     }
 }
 
-void WebGLProgram::cacheActiveAttribLocations(GraphicsContextGLOpenGL* context3d)
+void WebGLProgram::addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor& visitor)
+{
+    visitor.addOpaqueRoot(m_vertexShader.get());
+    visitor.addOpaqueRoot(m_fragmentShader.get());
+}
+
+void WebGLProgram::cacheActiveAttribLocations(GraphicsContextGL* context3d)
 {
     m_activeAttribLocations.clear();
 
-    GCGLint numAttribs = 0;
-    context3d->getProgramiv(object(), GraphicsContextGL::ACTIVE_ATTRIBUTES, &numAttribs);
+    GCGLint numAttribs = context3d->getProgrami(object(), GraphicsContextGL::ACTIVE_ATTRIBUTES);
     m_activeAttribLocations.resize(static_cast<size_t>(numAttribs));
     for (int i = 0; i < numAttribs; ++i) {
         GraphicsContextGL::ActiveInfo info;
-        context3d->getActiveAttribImpl(object(), i, info);
+#if USE(ANGLE)
+        context3d->getActiveAttrib(object(), i, info);
+#else
+        static_cast<GraphicsContextGLOpenGL*>(context3d)->getActiveAttribImpl(object(), i, info);
+#endif
         m_activeAttribLocations[i] = context3d->getAttribLocation(object(), info.name);
     }
 }
@@ -218,11 +237,10 @@ void WebGLProgram::cacheInfoIfNeeded()
     if (!object())
         return;
 
-    GraphicsContextGLOpenGL* context = getAGraphicsContextGL();
+    GraphicsContextGL* context = getAGraphicsContextGL();
     if (!context)
         return;
-    GCGLint linkStatus = 0;
-    context->getProgramiv(object(), GraphicsContextGL::LINK_STATUS, &linkStatus);
+    GCGLint linkStatus = context->getProgrami(object(), GraphicsContextGL::LINK_STATUS);
     m_linkStatus = linkStatus;
     if (m_linkStatus) {
         cacheActiveAttribLocations(context);

@@ -79,7 +79,7 @@ class JS_EXPORT_PRIVATE RemoteInspector final
 #endif
 {
 public:
-    class Client {
+    class JS_EXPORT_PRIVATE Client {
     public:
         struct Capabilities {
             bool remoteAutomationAllowed : 1;
@@ -89,7 +89,7 @@ public:
 
         struct SessionCapabilities {
             bool acceptInsecureCertificates { false };
-#if USE(GLIB)
+#if USE(GLIB) || USE(INSPECTOR_SOCKET_SERVER)
             Vector<std::pair<String, String>> certificates;
             struct Proxy {
                 String type;
@@ -112,6 +112,10 @@ public:
         virtual String browserName() const { return { }; }
         virtual String browserVersion() const { return { }; }
         virtual void requestAutomationSession(const String& sessionIdentifier, const SessionCapabilities&) = 0;
+        virtual void requestedDebuggablesToWakeUp() { };
+#if USE(INSPECTOR_SOCKET_SERVER)
+        virtual void closeAutomationSession() = 0;
+#endif
     };
 
 #if PLATFORM(COCOA)
@@ -160,7 +164,7 @@ public:
     void sendMessageToTarget(TargetID, const char* message);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
-    void requestAutomationSession(const String& sessionID, const Client::SessionCapabilities&);
+    void requestAutomationSession(String&& sessionID, const Client::SessionCapabilities&);
 
     bool isConnected() const { return !!m_clientConnection; }
     void connect(ConnectionID);
@@ -215,6 +219,7 @@ private:
     void receivedDataMessage(NSDictionary *userInfo);
     void receivedDidCloseMessage(NSDictionary *userInfo);
     void receivedGetListingMessage(NSDictionary *userInfo);
+    void receivedWakeUpDebuggables(NSDictionary *userInfo);
     void receivedIndicateMessage(NSDictionary *userInfo);
     void receivedProxyApplicationSetupMessage(NSDictionary *userInfo);
     void receivedConnectionDiedMessage(NSDictionary *userInfo);
@@ -224,7 +229,7 @@ private:
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
     HashMap<String, CallHandler>& dispatchMap() final;
-    void didClose(ConnectionID) final;
+    void didClose(RemoteInspectorSocketEndpoint&, ConnectionID) final;
 
     void sendWebInspectorEvent(const String&);
 

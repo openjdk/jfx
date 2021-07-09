@@ -36,11 +36,7 @@ namespace WebCore {
 
 struct SameSizeAsFontCascadeDescription {
     Vector<void*> vector;
-#if ENABLE(VARIATION_FONTS)
     Vector<void*> vector2;
-#else
-    char c;
-#endif
     AtomString string;
     AtomString string2;
     int16_t fontSelectionRequest[3];
@@ -62,20 +58,6 @@ FontCascadeDescription::FontCascadeDescription()
     , m_isSpecifiedFont(false)
 {
 }
-
-#if !USE(PLATFORM_SYSTEM_FALLBACK_LIST)
-
-unsigned FontCascadeDescription::effectiveFamilyCount() const
-{
-    return familyCount();
-}
-
-FontFamilySpecification FontCascadeDescription::effectiveFamilyAt(unsigned i) const
-{
-    return familyAt(i);
-}
-
-#endif
 
 FontSelectionValue FontCascadeDescription::lighterWeight(FontSelectionValue weight)
 {

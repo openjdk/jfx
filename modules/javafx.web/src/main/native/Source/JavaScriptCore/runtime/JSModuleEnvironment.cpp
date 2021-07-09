@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +65,8 @@ void JSModuleEnvironment::finishCreation(VM& vm, JSValue initialValue, AbstractM
     this->moduleRecordSlot().set(vm, this, moduleRecord);
 }
 
-void JSModuleEnvironment::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSModuleEnvironment::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -73,6 +74,8 @@ void JSModuleEnvironment::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.appendValues(thisObject->variables(), thisObject->symbolTable()->scopeSize());
     visitor.append(thisObject->moduleRecordSlot());
 }
+
+DEFINE_VISIT_CHILDREN(JSModuleEnvironment);
 
 bool JSModuleEnvironment::getOwnPropertySlot(JSObject* cell, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
@@ -96,7 +99,7 @@ bool JSModuleEnvironment::getOwnPropertySlot(JSObject* cell, JSGlobalObject* glo
     return Base::getOwnPropertySlot(thisObject, globalObject, propertyName, slot);
 }
 
-void JSModuleEnvironment::getOwnNonIndexPropertyNames(JSObject* cell, JSGlobalObject* globalObject, PropertyNameArray& propertyNamesArray, EnumerationMode mode)
+void JSModuleEnvironment::getOwnSpecialPropertyNames(JSObject* cell, JSGlobalObject*, PropertyNameArray& propertyNamesArray, DontEnumPropertiesMode)
 {
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     if (propertyNamesArray.includeStringProperties()) {
@@ -106,7 +109,6 @@ void JSModuleEnvironment::getOwnNonIndexPropertyNames(JSObject* cell, JSGlobalOb
                 propertyNamesArray.add(importEntry.localName);
         }
     }
-    return Base::getOwnNonIndexPropertyNames(thisObject, globalObject, propertyNamesArray, mode);
 }
 
 bool JSModuleEnvironment::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)

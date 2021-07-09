@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2016 Apple Inc. All rights reserved.
+* Copyright (C) 2016-2020 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -24,6 +24,13 @@
 */
 
 [
+    JSGenerateToJSObject
+] dictionary TextEncoderEncodeIntoResult {
+    unsigned long long read;
+    unsigned long long written;
+};
+
+[
     Exposed=(Window,Worker),
     ImplementationLacksVTable
 ] interface TextEncoder {
@@ -31,6 +38,6 @@
 
     readonly attribute DOMString encoding;
 
-    // FIXME: This should have [NewObject]
-    Uint8Array encode(optional USVString input = "");
+    [NewObject] Uint8Array encode(optional USVString input = "");
+    TextEncoderEncodeIntoResult encodeInto(USVString source, [AllowShared] Uint8Array destination);
 };

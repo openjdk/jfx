@@ -176,6 +176,10 @@ public:
         m_impl = nullptr;
     }
 
+#if ASSERT_ENABLED
+    bool isInitialized() const { return m_impl; }
+#endif
+
 private:
     template<typename, typename> friend class WeakHashSet;
 
@@ -200,7 +204,12 @@ protected:
     CanMakeWeakPtr()
     {
         if (initializationMode == WeakPtrFactoryInitialization::Eager)
-            m_weakPtrFactory.initializeIfNeeded(static_cast<T&>(*this));
+            initializeWeakPtrFactory();
+    }
+
+    void initializeWeakPtrFactory()
+    {
+        m_weakPtrFactory.initializeIfNeeded(static_cast<T&>(*this));
     }
 
 private:

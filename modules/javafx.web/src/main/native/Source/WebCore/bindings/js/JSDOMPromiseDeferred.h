@@ -70,6 +70,18 @@ public:
         resolve(*lexicalGlobalObject, toJS<IDLType>(*lexicalGlobalObject, *globalObject(), std::forward<typename IDLType::ParameterType>(value)));
     }
 
+    void resolveWithJSValue(JSC::JSValue resolution)
+    {
+        if (shouldIgnoreRequestToFulfill())
+            return;
+
+        ASSERT(deferred());
+        ASSERT(globalObject());
+        JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
+        JSC::JSLockHolder locker(lexicalGlobalObject);
+        resolve(*lexicalGlobalObject, resolution);
+    }
+
     void resolve()
     {
         if (shouldIgnoreRequestToFulfill())
@@ -164,7 +176,7 @@ private:
     {
     }
 
-    bool shouldIgnoreRequestToFulfill() const { return isEmpty() || activeDOMObjectAreStopped(); }
+    bool shouldIgnoreRequestToFulfill() const { return isEmpty(); }
 
     JSC::JSPromise* deferred() const { return guarded(); }
 
@@ -302,7 +314,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = callerGlobalObject(lexicalGlobalObject, callFrame);
+    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(vm, &lexicalGlobalObject);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 
@@ -321,7 +333,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = callerGlobalObject(lexicalGlobalObject, callFrame);
+    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(vm, &lexicalGlobalObject);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 

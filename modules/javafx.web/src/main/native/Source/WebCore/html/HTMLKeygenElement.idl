@@ -28,8 +28,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[EnabledAtRuntime=KeygenElement]
-interface HTMLKeygenElement : HTMLElement {
+[
+    EnabledAtRuntime=KeygenElement,
+    Exposed=Window
+] interface HTMLKeygenElement : HTMLElement {
     [Reflect] attribute boolean autofocus;
     [Reflect] attribute DOMString challenge;
     [Reflect] attribute boolean disabled;
@@ -43,8 +45,8 @@ interface HTMLKeygenElement : HTMLElement {
     readonly attribute ValidityState validity;
     readonly attribute DOMString validationMessage;
     boolean checkValidity();
-    [EnabledAtRuntime=InteractiveFormValidation] boolean reportValidity();
-    void setCustomValidity(DOMString error);
+    [EnabledBySetting=InteractiveFormValidation] boolean reportValidity();
+    undefined setCustomValidity(DOMString error);
 
     readonly attribute NodeList labels;
 };

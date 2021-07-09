@@ -1,4 +1,4 @@
-# Copyright (C) 2016 Apple Inc. All rights reserved.
+# Copyright (C) 2016-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -290,6 +290,12 @@ EOF
                     push(@arguments, "context");
                 }
 
+                if (!@specifiedArguments) {
+                    push(@contents, "    UNUSED_VARIABLE(argumentCount);\n");
+                    push(@contents, "    UNUSED_VARIABLE(arguments);\n");
+                }
+                push(@contents, "    UNUSED_VARIABLE(exception);\n");
+
                 foreach my $i (0..$#specifiedArguments) {
                     my $argument = $specifiedArguments[$i];
 
@@ -303,7 +309,7 @@ EOF
                 $functionCall = "impl->" . $operation->name . "(" . join(", ", @arguments) . ")";
             }
             
-            push(@contents, "    ${functionCall};\n\n") if $operation->type->name eq "void";
+            push(@contents, "    ${functionCall};\n\n") if $operation->type->name eq "undefined";
             push(@contents, "    return " . $self->_returnExpression($operation->type, $functionCall) . ";\n}\n");
         }
     }
@@ -320,6 +326,7 @@ EOF
 
 JSValueRef ${className}::${getterName}(JSContextRef context, JSObjectRef object, JSStringRef, JSValueRef* exception)
 {
+    UNUSED_VARIABLE(exception);
     ${implementationClassName}* impl = to${implementationClassName}(context, object);
     if (!impl)
         return JSValueMakeUndefined(context);
@@ -333,6 +340,7 @@ EOF
 
 bool ${className}::@{[$self->_setterName($attribute)]}(JSContextRef context, JSObjectRef object, JSStringRef, JSValueRef value, JSValueRef* exception)
 {
+    UNUSED_VARIABLE(exception);
     ${implementationClassName}* impl = to${implementationClassName}(context, object);
     if (!impl)
         return false;
@@ -431,10 +439,10 @@ sub _platformTypeConstructor
 {
     my ($self, $type, $argumentName) = @_;
 
-    return "JSValueToNullableBoolean(context, $argumentName)" if $type->name eq "boolean" && $type->isNullable;
+    return "toOptionalBool(context, $argumentName)" if $type->name eq "boolean" && $type->isNullable;
     return "JSValueToBoolean(context, $argumentName)" if $type->name eq "boolean";
     return "$argumentName" if $type->name eq "object";
-    return "adopt(JSValueToStringCopy(context, $argumentName, nullptr))" if $$self{codeGenerator}->IsStringType($type);
+    return "createJSString(context, $argumentName)" if $$self{codeGenerator}->IsStringType($type);
     return "JSValueToNumber(context, $argumentName, nullptr)" if $$self{codeGenerator}->IsPrimitiveType($type);
     return "to" . _implementationClassName($type) . "(context, $argumentName)";
 }
@@ -471,12 +479,12 @@ sub _returnExpression
 {
     my ($self, $returnType, $expression) = @_;
 
-    return "JSValueMakeUndefined(context)" if $returnType->name eq "void";
-    return "JSValueMakeBooleanOrNull(context, ${expression})" if $returnType->name eq "boolean" && $returnType->isNullable;
+    return "JSValueMakeUndefined(context)" if $returnType->name eq "undefined";
+    return "makeValue(context, ${expression})" if $returnType->name eq "boolean" && $returnType->isNullable;
     return "JSValueMakeBoolean(context, ${expression})" if $returnType->name eq "boolean";
     return "${expression}" if $returnType->name eq "object";
     return "JSValueMakeNumber(context, ${expression})" if $$self{codeGenerator}->IsPrimitiveType($returnType);
-    return "JSValueMakeStringOrNull(context, ${expression}.get())" if $$self{codeGenerator}->IsStringType($returnType);
+    return "makeValue(context, ${expression}.get())" if $$self{codeGenerator}->IsStringType($returnType);
     return "toJS(context, WTF::getPtr(${expression}))";
 }
 

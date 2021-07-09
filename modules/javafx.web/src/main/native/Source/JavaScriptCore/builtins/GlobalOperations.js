@@ -27,14 +27,14 @@
 // @internal
 
 @globalPrivate
-function toInteger(target)
+function toIntegerOrInfinity(target)
 {
     "use strict";
 
     var numberValue = +target;
 
-    // isNaN(numberValue)
-    if (numberValue !== numberValue)
+    // isNaN(numberValue) or 0
+    if (numberValue !== numberValue || !numberValue)
         return 0;
     return @trunc(numberValue);
 }
@@ -44,7 +44,7 @@ function toLength(target)
 {
     "use strict";
 
-    var length = @toInteger(target);
+    var length = @toIntegerOrInfinity(target);
     // originally Math.min(Math.max(length, 0), maxSafeInteger));
     return +(length > 0 ? (length < @MAX_SAFE_INTEGER ? length : @MAX_SAFE_INTEGER) : 0);
 }
@@ -74,56 +74,4 @@ function speciesConstructor(obj, defaultConstructor)
     if (@isConstructor(constructor))
         return constructor;
     @throwTypeError("|this|.constructor[Symbol.species] is not a constructor");
-}
-
-@globalPrivate
-function copyDataProperties(target, source, excludedSet)
-{
-    "use strict";
-
-    if (!@isObject(target))
-        @throwTypeError("target needs to be an object");
-
-    if (@isUndefinedOrNull(source))
-        return target;
-
-    var from = @toObject(source);
-    var keys = @ownKeys(from);
-    var keysLength = keys.length;
-    for (var i = 0; i < keysLength; i++) {
-        var nextKey = keys[i];
-        if (!excludedSet.@has(nextKey)) {
-            if (@propertyIsEnumerable(from, nextKey)) {
-                var propValue = from[nextKey];
-                @defineEnumerableWritableConfigurableDataProperty(target, nextKey, propValue);
-            }
-        }
-    }
-
-    return target;
-}
-
-@globalPrivate
-function copyDataPropertiesNoExclusions(target, source)
-{
-    "use strict";
-
-    if (!@isObject(target))
-        @throwTypeError("target needs to be an object");
-
-    if (@isUndefinedOrNull(source))
-        return target;
-
-    var from = @toObject(source);
-    var keys = @ownKeys(from);
-    var keysLength = keys.length;
-    for (var i = 0; i < keysLength; i++) {
-        var nextKey = keys[i];
-        if (@propertyIsEnumerable(from, nextKey)) {
-            var propValue = from[nextKey];
-            @defineEnumerableWritableConfigurableDataProperty(target, nextKey, propValue);
-        }
-    }
-
-    return target;
 }

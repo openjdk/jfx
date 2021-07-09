@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGFEDiffuseLightingElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGFEDiffuseLightingElement : SVGElement {
     readonly attribute SVGAnimatedString in1;
     readonly attribute SVGAnimatedNumber surfaceScale;
     readonly attribute SVGAnimatedNumber diffuseConstant;
@@ -31,4 +33,4 @@ interface SVGFEDiffuseLightingElement : SVGElement {
     readonly attribute SVGAnimatedNumber kernelUnitLengthY;
 };
 
-SVGFEDiffuseLightingElement implements SVGFilterPrimitiveStandardAttributes;
+SVGFEDiffuseLightingElement includes SVGFilterPrimitiveStandardAttributes;

@@ -27,15 +27,20 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayInlineContent.h"
 #include "FormattingState.h"
 #include "InlineItem.h"
+#include "InlineLineBox.h"
+#include "InlineLineGeometry.h"
+#include "InlineLineRun.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
 using InlineItems = Vector<InlineItem>;
+using InlineLines = Vector<InlineLineGeometry, 10>;
+using InlineLineBoxes = Vector<LineBox, 10>;
+using InlineLineRuns = Vector<LineRun>;
 
 // InlineFormattingState holds the state for a particular inline formatting context tree.
 class InlineFormattingState : public FormattingState {
@@ -48,32 +53,51 @@ public:
     const InlineItems& inlineItems() const { return m_inlineItems; }
     void addInlineItem(InlineItem&& inlineItem) { m_inlineItems.append(WTFMove(inlineItem)); }
 
-    const Display::InlineContent* displayInlineContent() const { return m_displayInlineContent.get(); }
-    Display::InlineContent& ensureDisplayInlineContent();
+    const InlineLines& lines() const { return m_lines; }
+    InlineLines& lines() { return m_lines; }
+    void addLine(const InlineLineGeometry& line) { m_lines.append(line); }
 
-    void clearDisplayInlineContent() { m_displayInlineContent = nullptr; }
-    void shrinkDisplayInlineContent();
+    const InlineLineBoxes& lineBoxes() const { return m_lineBoxes; }
+    void addLineBox(LineBox&& lineBox) { m_lineBoxes.append(WTFMove(lineBox)); }
+
+    const InlineLineRuns& lineRuns() const { return m_lineRuns; }
+    InlineLineRuns& lineRuns() { return m_lineRuns; }
+    void addLineRun(LineRun&& run) { m_lineRuns.append(WTFMove(run)); }
+
+    void setClearGapAfterLastLine(InlineLayoutUnit verticalGap);
+    InlineLayoutUnit clearGapAfterLastLine() const { return m_clearGapAfterLastLine; }
+
+    void clearLineAndRuns();
+    void shrinkToFit();
 
 private:
     // Cacheable input to line layout.
     InlineItems m_inlineItems;
-
-    RefPtr<Display::InlineContent> m_displayInlineContent;
+    InlineLines m_lines;
+    InlineLineBoxes m_lineBoxes;
+    InlineLineRuns m_lineRuns;
+    InlineLayoutUnit m_clearGapAfterLastLine { 0 };
 };
 
-inline Display::InlineContent& InlineFormattingState::ensureDisplayInlineContent()
+inline void InlineFormattingState::setClearGapAfterLastLine(InlineLayoutUnit verticalGap)
 {
-    if (!m_displayInlineContent)
-        m_displayInlineContent = adoptRef(*new Display::InlineContent);
-    return *m_displayInlineContent;
+    ASSERT(verticalGap >= 0);
+    m_clearGapAfterLastLine = verticalGap;
 }
 
-inline void InlineFormattingState::shrinkDisplayInlineContent()
+inline void InlineFormattingState::clearLineAndRuns()
 {
-    if (!m_displayInlineContent)
-        return;
-    m_displayInlineContent->runs.shrinkToFit();
-    m_displayInlineContent->lineBoxes.shrinkToFit();
+    m_lines.clear();
+    m_lineBoxes.clear();
+    m_lineRuns.clear();
+    m_clearGapAfterLastLine = { };
+}
+
+inline void InlineFormattingState::shrinkToFit()
+{
+    m_lines.shrinkToFit();
+    m_lineBoxes.shrinkToFit();
+    m_lineRuns.shrinkToFit();
 }
 
 }

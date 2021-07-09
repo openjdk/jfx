@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,18 +35,20 @@
 
 namespace JSC { namespace Wasm {
 
-JSValue Global::get() const
+JSValue Global::get(JSGlobalObject* globalObject) const
 {
     switch (m_type) {
     case Wasm::Type::I32:
         return jsNumber(bitwise_cast<int32_t>(static_cast<uint32_t>(m_value.m_primitive)));
+    case Wasm::Type::I64:
+        return JSBigInt::makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(m_value.m_primitive));
     case Wasm::Type::F32:
         return jsNumber(purifyNaN(static_cast<double>(bitwise_cast<float>(static_cast<uint32_t>(m_value.m_primitive)))));
     case Wasm::Type::F64:
         return jsNumber(purifyNaN(bitwise_cast<double>(m_value.m_primitive)));
-    case Wasm::Anyref:
+    case Wasm::Externref:
     case Wasm::Funcref:
-        return m_value.m_anyref.get();
+        return m_value.m_externref.get();
     default:
         return jsUndefined();
     }
@@ -64,6 +66,12 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
         m_value.m_primitive = static_cast<uint64_t>(static_cast<uint32_t>(value));
         break;
     }
+    case Wasm::Type::I64: {
+        int64_t value = argument.toBigInt64(globalObject);
+        RETURN_IF_EXCEPTION(throwScope, void());
+        m_value.m_primitive = static_cast<uint64_t>(value);
+        break;
+    }
     case Wasm::Type::F32: {
         float value = argument.toFloat(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
@@ -76,9 +84,9 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
         m_value.m_primitive = bitwise_cast<uint64_t>(value);
         break;
     }
-    case Wasm::Anyref: {
+    case Wasm::Externref: {
         RELEASE_ASSERT(m_owner);
-        m_value.m_anyref.set(m_owner->vm(), m_owner, argument);
+        m_value.m_externref.set(m_owner->vm(), m_owner, argument);
         break;
     }
     case Wasm::Funcref: {
@@ -87,7 +95,7 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
             throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"));
             return;
         }
-        m_value.m_anyref.set(m_owner->vm(), m_owner, argument);
+        m_value.m_externref.set(m_owner->vm(), m_owner, argument);
         break;
     }
     default:
@@ -95,19 +103,22 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
     }
 }
 
-void Global::visitAggregate(SlotVisitor& visitor)
+template<typename Visitor>
+void Global::visitAggregateImpl(Visitor& visitor)
 {
     switch (m_type) {
-    case Wasm::Type::Anyref:
+    case Wasm::Type::Externref:
     case Wasm::Type::Funcref: {
         RELEASE_ASSERT(m_owner);
-        visitor.append(m_value.m_anyref);
+        visitor.append(m_value.m_externref);
         break;
     }
     default:
         break;
     }
 }
+
+DEFINE_VISIT_AGGREGATE(Global);
 
 } } // namespace JSC::Global
 

@@ -100,11 +100,11 @@ bool JSRemoteDOMWindow::deletePropertyByIndex(JSCell*, JSGlobalObject* lexicalGl
     return false;
 }
 
-void JSRemoteDOMWindow::getOwnPropertyNames(JSObject*, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSRemoteDOMWindow::getOwnPropertyNames(JSObject*, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     // FIXME: Add scoped children indexes.
 
-    if (mode.includeDontEnumProperties())
+    if (mode == DontEnumPropertiesMode::Include)
         addCrossOriginOwnPropertyNames<CrossOriginObject::Window>(*lexicalGlobalObject, propertyNames);
 }
 
@@ -122,16 +122,9 @@ JSValue JSRemoteDOMWindow::getPrototype(JSObject*, JSGlobalObject*)
     return jsNull();
 }
 
-bool JSRemoteDOMWindow::preventExtensions(JSObject*, JSGlobalObject* lexicalGlobalObject)
+bool JSRemoteDOMWindow::preventExtensions(JSObject*, JSGlobalObject*)
 {
-    auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject->vm());
-    throwTypeError(lexicalGlobalObject, scope, "Cannot prevent extensions on this object"_s);
     return false;
-}
-
-String JSRemoteDOMWindow::toStringName(const JSObject*, JSGlobalObject*)
-{
-    return "Object"_s;
 }
 
 } // namepace WebCore

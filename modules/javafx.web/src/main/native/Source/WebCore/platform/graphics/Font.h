@@ -1,7 +1,7 @@
 /*
  * This file is part of the internal font implementation.
  *
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -34,6 +34,7 @@
 #if ENABLE(OPENTYPE_VERTICAL)
 #include "OpenTypeVerticalData.h"
 #endif
+#include "RenderingResourceIdentifier.h"
 #include <wtf/BitVector.h>
 #include <wtf/Hasher.h>
 #include <wtf/Optional.h>
@@ -41,6 +42,7 @@
 
 #if PLATFORM(COCOA)
 #include <CoreFoundation/CoreFoundation.h>
+#include <pal/cf/OTSVGTable.h>
 #include <wtf/RetainPtr.h>
 #endif
 
@@ -64,6 +66,11 @@ enum FontVariant { AutoVariant, NormalVariant, SmallCapsVariant, EmphasisMarkVar
 enum Pitch { UnknownPitch, FixedPitch, VariablePitch };
 enum class IsForPlatformFont : uint8_t { No, Yes };
 
+#if USE(CORE_TEXT)
+bool fontHasTable(CTFontRef, unsigned tableTag);
+bool fontHasEitherTable(CTFontRef, unsigned tableTag1, unsigned tableTag2);
+#endif
+
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
 class Font : public RefCounted<Font> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Font);
@@ -85,10 +92,12 @@ public:
         Yes,
         No
     };
-    static Ref<Font> create(const FontPlatformData& platformData, Origin origin = Origin::Local, Interstitial interstitial = Interstitial::No, Visibility visibility = Visibility::Visible, OrientationFallback orientationFallback = OrientationFallback::No)
+    static Ref<Font> create(const FontPlatformData& platformData, Origin origin = Origin::Local, Interstitial interstitial = Interstitial::No,
+        Visibility visibility = Visibility::Visible, OrientationFallback orientationFallback = OrientationFallback::No, Optional<RenderingResourceIdentifier> identifier = WTF::nullopt)
     {
-        return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback));
+        return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback, identifier));
     }
+    WEBCORE_EXPORT static Ref<Font> create(Ref<SharedBuffer>&& fontFaceData, Font::Origin, float fontSize, bool syntheticBold, bool syntheticItalic);
 
     WEBCORE_EXPORT ~Font();
 
@@ -99,6 +108,8 @@ public:
 #if ENABLE(OPENTYPE_VERTICAL)
     const OpenTypeVerticalData* verticalData() const { return m_verticalData.get(); }
 #endif
+
+    WEBCORE_EXPORT RenderingResourceIdentifier renderingResourceIdentifier() const;
 
     const Font* smallCapsFont(const FontDescription&) const;
     const Font& noSynthesizableFeaturesFont() const;
@@ -209,6 +220,9 @@ public:
     bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
     void applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
 
+    // Returns nullopt if none of the glyphs are OT-SVG glyphs.
+    Optional<BitVector> findOTSVGGlyphs(const GlyphBufferGlyph*, unsigned count) const;
+
 #if PLATFORM(WIN)
     SCRIPT_FONTPROPERTIES* scriptFontProperties() const;
     SCRIPT_CACHE* scriptCache() const { return &m_scriptCache; }
@@ -217,11 +231,8 @@ public:
     static float ascentConsideringMacAscentHack(const WCHAR*, float ascent, float descent);
 #endif
 
-    SharedBuffer* fontFaceData() const { return m_fontFaceData.get(); }
-    void setFontFaceData(RefPtr<SharedBuffer>&&);
-
 private:
-    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback);
+    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, Optional<RenderingResourceIdentifier>);
 
     void platformInit();
     void platformGlyphInit();
@@ -264,6 +275,8 @@ private:
     RefPtr<OpenTypeVerticalData> m_verticalData;
 #endif
 
+    mutable Optional<RenderingResourceIdentifier> m_renderingResourceIdentifier;
+
     struct DerivedFonts {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
     public:
@@ -284,14 +297,13 @@ private:
     mutable Optional<BitVector> m_glyphsSupportedByAllSmallCaps;
     mutable Optional<BitVector> m_glyphsSupportedByPetiteCaps;
     mutable Optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
+    mutable Optional<PAL::OTSVGTable> m_otSVGTable;
 #endif
 
 #if PLATFORM(WIN)
     mutable SCRIPT_CACHE m_scriptCache;
     mutable SCRIPT_FONTPROPERTIES* m_scriptFontProperties;
 #endif
-
-    RefPtr<SharedBuffer> m_fontFaceData;
 
     Glyph m_spaceGlyph { 0 };
     Glyph m_zeroGlyph { 0 };
@@ -321,14 +333,8 @@ private:
 #if PLATFORM(IOS_FAMILY)
     unsigned m_shouldNotBeUsedForArabic : 1;
 #endif
-};
 
-class FontHandle {
-public:
-    FontHandle() = default;
-    WEBCORE_EXPORT FontHandle(Ref<SharedBuffer>&& fontFaceData, Font::Origin, float fontSize, bool syntheticBold, bool syntheticItalic);
-
-    RefPtr<Font> font;
+    // Adding any non-derived information to Font needs a parallel change in WebCoreArgumentCoders.cpp.
 };
 
 #if PLATFORM(IOS_FAMILY)
@@ -382,6 +388,41 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph) const
     return width;
 }
 
+using FontRenderingResourceMap = HashMap<RenderingResourceIdentifier, Ref<Font>>;
+
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::Font::Origin> {
+    using values = EnumValues<
+        WebCore::Font::Origin,
+        WebCore::Font::Origin::Remote,
+        WebCore::Font::Origin::Local
+    >;
+};
+template<> struct EnumTraits<WebCore::Font::Interstitial> {
+    using values = EnumValues<
+        WebCore::Font::Interstitial,
+        WebCore::Font::Interstitial::Yes,
+        WebCore::Font::Interstitial::No
+    >;
+};
+template<> struct EnumTraits<WebCore::Font::Visibility> {
+    using values = EnumValues<
+        WebCore::Font::Visibility,
+        WebCore::Font::Visibility::Visible,
+        WebCore::Font::Visibility::Invisible
+    >;
+};
+template<> struct EnumTraits<WebCore::Font::OrientationFallback> {
+    using values = EnumValues<
+        WebCore::Font::OrientationFallback,
+        WebCore::Font::OrientationFallback::Yes,
+        WebCore::Font::OrientationFallback::No
+    >;
+};
+
+}
 
 #endif // Font_h

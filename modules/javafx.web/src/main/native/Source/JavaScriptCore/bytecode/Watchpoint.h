@@ -114,7 +114,7 @@ class WatchpointSet;
     macro(CodeBlockJettisoning, CodeBlockJettisoningWatchpoint) \
     macro(LLIntPrototypeLoadAdaptiveStructure, LLIntPrototypeLoadAdaptiveStructureWatchpoint) \
     macro(FunctionRareDataAllocationProfileClearing, FunctionRareData::AllocationProfileClearingWatchpoint) \
-    macro(ObjectToStringAdaptiveStructure, ObjectToStringAdaptiveStructureWatchpoint)
+    macro(CachedSpecialPropertyAdaptiveStructure, CachedSpecialPropertyAdaptiveStructureWatchpoint)
 
 #if ENABLE(JIT)
 #define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
@@ -223,6 +223,11 @@ public:
     bool isStillValid() const
     {
         return state() != IsInvalidated;
+    }
+    // Fast way of testing isStillValid(), which only works from the main thread.
+    bool isStillValidOnJSThread() const
+    {
+        return stateOnJSThread() != IsInvalidated;
     }
     // Like isStillValid(), may be called from another thread.
     bool hasBeenInvalidated() const { return !isStillValid(); }

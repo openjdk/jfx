@@ -279,26 +279,26 @@ CSSPrimitiveValue::CSSPrimitiveValue(const Length& length, const RenderStyle& st
     : CSSValue(PrimitiveClass)
 {
     switch (length.type()) {
-    case Auto:
-    case Intrinsic:
-    case MinIntrinsic:
-    case MinContent:
-    case MaxContent:
-    case FillAvailable:
-    case FitContent:
-    case Percent:
+    case LengthType::Auto:
+    case LengthType::Intrinsic:
+    case LengthType::MinIntrinsic:
+    case LengthType::MinContent:
+    case LengthType::MaxContent:
+    case LengthType::FillAvailable:
+    case LengthType::FitContent:
+    case LengthType::Percent:
         init(length);
         return;
-    case Fixed:
+    case LengthType::Fixed:
         setPrimitiveUnitType(CSSUnitType::CSS_PX);
         m_value.num = adjustFloatForAbsoluteZoom(length.value(), style);
         return;
-    case Calculated: {
+    case LengthType::Calculated: {
         init(CSSCalcValue::create(length.calculationValue(), style));
         return;
     }
-    case Relative:
-    case Undefined:
+    case LengthType::Relative:
+    case LengthType::Undefined:
         ASSERT_NOT_REACHED();
         return;
     }
@@ -332,46 +332,46 @@ CSSPrimitiveValue::CSSPrimitiveValue(StaticCSSValueTag, double num, CSSUnitType 
 void CSSPrimitiveValue::init(const Length& length)
 {
     switch (length.type()) {
-    case Auto:
+    case LengthType::Auto:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueAuto;
         return;
-    case WebCore::Fixed:
+    case LengthType::Fixed:
         setPrimitiveUnitType(CSSUnitType::CSS_PX);
         m_value.num = length.value();
         return;
-    case Intrinsic:
+    case LengthType::Intrinsic:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueIntrinsic;
         return;
-    case MinIntrinsic:
+    case LengthType::MinIntrinsic:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueMinIntrinsic;
         return;
-    case MinContent:
+    case LengthType::MinContent:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueMinContent;
         return;
-    case MaxContent:
+    case LengthType::MaxContent:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueMaxContent;
         return;
-    case FillAvailable:
+    case LengthType::FillAvailable:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueWebkitFillAvailable;
         return;
-    case FitContent:
+    case LengthType::FitContent:
         setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
         m_value.valueID = CSSValueFitContent;
         return;
-    case Percent:
+    case LengthType::Percent:
         setPrimitiveUnitType(CSSUnitType::CSS_PERCENTAGE);
         ASSERT(std::isfinite(length.percent()));
         m_value.num = length.percent();
         return;
-    case Calculated:
-    case Relative:
-    case Undefined:
+    case LengthType::Calculated:
+    case LengthType::Relative:
+    case LengthType::Undefined:
         ASSERT_NOT_REACHED();
         return;
     }
@@ -526,19 +526,7 @@ void CSSPrimitiveValue::cleanup()
 
 double CSSPrimitiveValue::computeDegrees() const
 {
-    switch (primitiveType()) {
-    case CSSUnitType::CSS_DEG:
-        return doubleValue();
-    case CSSUnitType::CSS_RAD:
-        return rad2deg(doubleValue());
-    case CSSUnitType::CSS_GRAD:
-        return grad2deg(doubleValue());
-    case CSSUnitType::CSS_TURN:
-        return turn2deg(doubleValue());
-    default:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
+    return computeDegrees(primitiveType(), doubleValue());
 }
 
 template<> int CSSPrimitiveValue::computeLength(const CSSToLengthConversionData& conversionData) const
@@ -553,7 +541,7 @@ template<> unsigned CSSPrimitiveValue::computeLength(const CSSToLengthConversion
 
 template<> Length CSSPrimitiveValue::computeLength(const CSSToLengthConversionData& conversionData) const
 {
-    return Length(clampTo<float>(computeLengthDouble(conversionData), minValueForCssLength, maxValueForCssLength), Fixed);
+    return Length(clampTo<float>(computeLengthDouble(conversionData), minValueForCssLength, maxValueForCssLength), LengthType::Fixed);
 }
 
 template<> short CSSPrimitiveValue::computeLength(const CSSToLengthConversionData& conversionData) const
@@ -767,13 +755,13 @@ double CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSUnitType unit
         factor = cssPixelsPerInch * 12.0 / 72.0; // 1 pc == 12 pt
         break;
     case CSSUnitType::CSS_RAD:
-        factor = 180 / piDouble;
+        factor = degreesPerRadianDouble;
         break;
     case CSSUnitType::CSS_GRAD:
-        factor = 0.9;
+        factor = degreesPerGradientDouble;
         break;
     case CSSUnitType::CSS_TURN:
-        factor = 360;
+        factor = degreesPerTurnDouble;
         break;
     case CSSUnitType::CSS_S:
     case CSSUnitType::CSS_KHZ:

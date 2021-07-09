@@ -31,7 +31,6 @@
 
 #include "B3BasicBlockInlines.h"
 #include "B3CCallValue.h"
-#include "B3Compilation.h"
 #include "B3FrequentedBlock.h"
 #include "B3Procedure.h"
 #include "B3SwitchValue.h"
@@ -47,6 +46,7 @@
 #include "FTLWeight.h"
 #include "FTLWeightedTarget.h"
 #include "HeapCell.h"
+#include "JITCompilation.h"
 #include <wtf/OrderMaker.h>
 #include <wtf/StringPrintStream.h>
 
@@ -181,7 +181,7 @@ public:
 
     LValue doubleUnary(DFG::Arith::UnaryType, LValue);
 
-    LValue doublePow(LValue base, LValue exponent);
+    LValue doubleStdPow(LValue base, LValue exponent);
     LValue doublePowi(LValue base, LValue exponent);
 
     LValue doubleSqrt(LValue);
@@ -395,13 +395,14 @@ public:
     {
         static_assert(!std::is_same<Function, LValue>::value);
         return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), B3::Effects::none(),
-            constIntPtr(tagCFunctionPtr<void*>(function, B3CCallPtrTag)), arg1, args...);
+            constIntPtr(tagCFunctionPtr<void*, OperationPtrTag>(function)), arg1, args...);
     }
 
     // FIXME: Consider enhancing this to allow the client to choose the target PtrTag to use.
     // https://bugs.webkit.org/show_bug.cgi?id=184324
     template<typename FunctionType>
-    LValue operation(FunctionType function) { return constIntPtr(tagCFunctionPtr<void*>(function, B3CCallPtrTag)); }
+    LValue operation(FunctionType function) { return constIntPtr(tagCFunctionPtr<void*, OperationPtrTag>(function)); }
+    LValue operation(FunctionPtr<OperationPtrTag> function) { return constIntPtr(function.executableAddress()); }
 
     void jump(LBasicBlock);
     void branch(LValue condition, LBasicBlock taken, Weight takenWeight, LBasicBlock notTaken, Weight notTakenWeight);

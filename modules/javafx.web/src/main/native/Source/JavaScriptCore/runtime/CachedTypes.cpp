@@ -327,14 +327,14 @@ const void* Decoder::ptrForOffsetFromBase(ptrdiff_t offset)
     return m_cachedBytecode->data() + offset;
 }
 
-CompactVariableMap::Handle Decoder::handleForEnvironment(CompactVariableEnvironment* environment) const
+CompactTDZEnvironmentMap::Handle Decoder::handleForTDZEnvironment(CompactTDZEnvironment* environment) const
 {
     auto it = m_environmentToHandleMap.find(environment);
     RELEASE_ASSERT(it != m_environmentToHandleMap.end());
     return it->value;
 }
 
-void Decoder::setHandleForEnvironment(CompactVariableEnvironment* environment, const CompactVariableMap::Handle& handle)
+void Decoder::setHandleForTDZEnvironment(CompactTDZEnvironment* environment, const CompactTDZEnvironmentMap::Handle& handle)
 {
     auto addResult = m_environmentToHandleMap.add(environment, handle);
     RELEASE_ASSERT(addResult.isNewEntry);
@@ -533,7 +533,7 @@ ptrdiff_t CachedPtrOffsets::offsetOffset()
     return OBJECT_OFFSETOF(CachedPtr<void>, m_offset);
 }
 
-template<typename T, typename Source = SourceType<T>, typename PtrTraits = DumbPtrTraits<Source>>
+template<typename T, typename Source = SourceType<T>, typename PtrTraits = RawPtrTraits<Source>>
 class CachedRefPtr : public CachedObject<RefPtr<Source, PtrTraits>> {
 public:
     void encode(Encoder& encoder, const Source* src)
@@ -554,11 +554,12 @@ public:
             return nullptr;
         if (isNewAllocation) {
             decoder.addFinalizer([=] {
-                derefIfNotNull(decodedPtr);
+                WTF::DefaultRefDerefTraits<Source>::derefIfNotNull(decodedPtr);
             });
         }
-        refIfNotNull(decodedPtr);
-        return adoptRef(decodedPtr);
+        auto result = adoptRef<Source, PtrTraits>(decodedPtr);
+        result->ref();
+        return result;
     }
 
     void decode(Decoder& decoder, RefPtr<Source, PtrTraits>& src) const
@@ -702,14 +703,18 @@ public:
     {
         m_isAtomic = string.isAtom();
         m_isSymbol = string.isSymbol();
+        m_isRegistered = false;
         m_isWellKnownSymbol = false;
+        m_isPrivate = false;
         RefPtr<StringImpl> impl = const_cast<StringImpl*>(&string);
 
         if (m_isSymbol) {
             SymbolImpl* symbol = static_cast<SymbolImpl*>(impl.get());
+            m_isRegistered = symbol->isRegistered();
+            m_isPrivate = symbol->isPrivate();
             if (!symbol->isNullSymbol()) {
                 // We have special handling for well-known symbols.
-                if (!symbol->isPrivate()) {
+                if (!m_isPrivate) {
                     m_isWellKnownSymbol = true;
                     impl = symbol->substring(strlen("Symbol."));
                 }
@@ -742,10 +747,17 @@ public:
                 return AtomStringImpl::add(buffer, m_length).leakRef();
 
             SymbolImpl* symbol;
-            if (m_isWellKnownSymbol)
-                symbol = decoder.vm().propertyNames->builtinNames().lookUpWellKnownSymbol(buffer, m_length);
+            VM& vm = decoder.vm();
+            if (m_isRegistered) {
+                String str(buffer, m_length);
+                if (m_isPrivate)
+                    symbol = static_cast<SymbolImpl*>(&vm.privateSymbolRegistry().symbolForKey(str).leakRef());
+                else
+                    symbol = static_cast<SymbolImpl*>(&vm.symbolRegistry().symbolForKey(str).leakRef());
+            } else if (m_isWellKnownSymbol)
+                symbol = vm.propertyNames->builtinNames().lookUpWellKnownSymbol(buffer, m_length);
             else
-                symbol = decoder.vm().propertyNames->builtinNames().lookUpPrivateName(buffer, m_length);
+                symbol = vm.propertyNames->builtinNames().lookUpPrivateName(buffer, m_length);
             RELEASE_ASSERT(symbol);
             String str = symbol;
             StringImpl* impl = str.releaseImpl().get();
@@ -773,6 +785,8 @@ private:
     bool m_isSymbol : 1;
     bool m_isWellKnownSymbol : 1;
     bool m_isAtomic : 1;
+    bool m_isRegistered : 1;
+    bool m_isPrivate : 1;
     unsigned m_length;
 };
 
@@ -948,25 +962,6 @@ private:
     CachedVector<T> m_entries;
 };
 
-class CachedConstantIdentifierSetEntry : public VariableLengthObject<ConstantIdentifierSetEntry> {
-public:
-    void encode(Encoder& encoder, const ConstantIdentifierSetEntry& entry)
-    {
-        m_constant = entry.second;
-        m_set.encode(encoder, entry.first);
-    }
-
-    void decode(Decoder& decoder, ConstantIdentifierSetEntry& entry) const
-    {
-        entry.second = m_constant;
-        m_set.decode(decoder, entry.first);
-    }
-
-private:
-    unsigned m_constant;
-    CachedHashSet<CachedRefPtr<CachedUniquedStringImpl>, IdentifierRepHash> m_set;
-};
-
 class CachedCodeBlockRareData : public CachedObject<UnlinkedCodeBlock::RareData> {
 public:
     void encode(Encoder& encoder, const UnlinkedCodeBlock::RareData& rareData)
@@ -980,6 +975,7 @@ public:
         m_bitVectors.encode(encoder, rareData.m_bitVectors);
         m_constantIdentifierSets.encode(encoder, rareData.m_constantIdentifierSets);
         m_needsClassFieldInitializer = rareData.m_needsClassFieldInitializer;
+        m_privateBrandRequirement = rareData.m_privateBrandRequirement;
     }
 
     UnlinkedCodeBlock::RareData* decode(Decoder& decoder) const
@@ -994,6 +990,7 @@ public:
         m_bitVectors.decode(decoder, rareData->m_bitVectors);
         m_constantIdentifierSets.decode(decoder, rareData->m_constantIdentifierSets);
         rareData->m_needsClassFieldInitializer = m_needsClassFieldInitializer;
+        rareData->m_privateBrandRequirement = m_privateBrandRequirement;
         return rareData;
     }
 
@@ -1005,9 +1002,12 @@ private:
     CachedHashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> m_typeProfilerInfoMap;
     CachedVector<InstructionStream::Offset> m_opProfileControlFlowBytecodeOffsets;
     CachedVector<CachedBitVector> m_bitVectors;
-    CachedVector<CachedConstantIdentifierSetEntry> m_constantIdentifierSets;
+    CachedVector<CachedHashSet<CachedRefPtr<CachedUniquedStringImpl>, IdentifierRepHash>> m_constantIdentifierSets;
     unsigned m_needsClassFieldInitializer : 1;
+    unsigned m_privateBrandRequirement : 1;
 };
+
+typedef CachedHashMap<CachedRefPtr<CachedUniquedStringImpl, UniquedStringImpl, WTF::PackedPtrTraits<UniquedStringImpl>>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> CachedPrivateNameEnvironment;
 
 class CachedVariableEnvironmentRareData : public CachedObject<VariableEnvironment::RareData> {
 public:
@@ -1022,7 +1022,7 @@ public:
     }
 
 private:
-    CachedHashMap<CachedRefPtr<CachedUniquedStringImpl, UniquedStringImpl, WTF::PackedPtrTraits<UniquedStringImpl>>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> m_privateNames;
+    CachedPrivateNameEnvironment m_privateNames;
 };
 
 class CachedVariableEnvironment : public CachedObject<VariableEnvironment> {
@@ -1050,69 +1050,80 @@ private:
     CachedPtr<CachedVariableEnvironmentRareData> m_rareData;
 };
 
-class CachedCompactVariableEnvironment : public CachedObject<CompactVariableEnvironment> {
+class CachedCompactTDZEnvironment : public CachedObject<CompactTDZEnvironment> {
 public:
-    void encode(Encoder& encoder, const CompactVariableEnvironment& env)
+    void encode(Encoder& encoder, const CompactTDZEnvironment& env)
     {
-        m_variables.encode(encoder, env.m_variables);
-        m_variableMetadata.encode(encoder, env.m_variableMetadata);
+        if (WTF::holds_alternative<CompactTDZEnvironment::Compact>(env.m_variables))
+            m_variables.encode(encoder, WTF::get<CompactTDZEnvironment::Compact>(env.m_variables));
+        else {
+            CompactTDZEnvironment::Compact compact;
+            for (auto& key : WTF::get<CompactTDZEnvironment::Inflated>(env.m_variables))
+                compact.append(key);
+            m_variables.encode(encoder, compact);
+        }
         m_hash = env.m_hash;
-        m_isEverythingCaptured = env.m_isEverythingCaptured;
     }
 
-    void decode(Decoder& decoder, CompactVariableEnvironment& env) const
+    void decode(Decoder& decoder, CompactTDZEnvironment& env) const
     {
-        m_variables.decode(decoder, env.m_variables);
-        m_variableMetadata.decode(decoder, env.m_variableMetadata);
+        {
+            CompactTDZEnvironment::Compact compact;
+            m_variables.decode(decoder, compact);
+            CompactTDZEnvironment::sortCompact(compact);
+            env.m_variables = CompactTDZEnvironment::Variables(WTFMove(compact));
+        }
         env.m_hash = m_hash;
-        env.m_isEverythingCaptured = m_isEverythingCaptured;
     }
 
-    CompactVariableEnvironment* decode(Decoder& decoder) const
+    CompactTDZEnvironment* decode(Decoder& decoder) const
     {
-        CompactVariableEnvironment* env = new CompactVariableEnvironment;
+        CompactTDZEnvironment* env = new CompactTDZEnvironment;
         decode(decoder, *env);
         return env;
     }
 
 private:
     CachedVector<CachedRefPtr<CachedUniquedStringImpl, UniquedStringImpl, WTF::PackedPtrTraits<UniquedStringImpl>>> m_variables;
-    CachedVector<VariableEnvironmentEntry> m_variableMetadata;
     unsigned m_hash;
-    bool m_isEverythingCaptured;
 };
 
-class CachedCompactVariableMapHandle : public CachedObject<CompactVariableMap::Handle> {
+class CachedCompactTDZEnvironmentMapHandle : public CachedObject<CompactTDZEnvironmentMap::Handle> {
 public:
-    void encode(Encoder& encoder, const CompactVariableMap::Handle& handle)
+    void encode(Encoder& encoder, const CompactTDZEnvironmentMap::Handle& handle)
     {
         m_environment.encode(encoder, handle.m_environment);
     }
 
-    CompactVariableMap::Handle decode(Decoder& decoder) const
+    CompactTDZEnvironmentMap::Handle decode(Decoder& decoder) const
     {
         bool isNewAllocation;
-        CompactVariableEnvironment* environment = m_environment.decode(decoder, isNewAllocation);
+        CompactTDZEnvironment* environment = m_environment.decode(decoder, isNewAllocation);
         if (!environment) {
             ASSERT(!isNewAllocation);
-            return CompactVariableMap::Handle();
+            return CompactTDZEnvironmentMap::Handle();
         }
 
         if (!isNewAllocation)
-            return decoder.handleForEnvironment(environment);
+            return decoder.handleForTDZEnvironment(environment);
         bool isNewEntry;
-        CompactVariableMap::Handle handle = decoder.vm().m_compactVariableMap->get(environment, isNewEntry);
+        CompactTDZEnvironmentMap::Handle handle = decoder.vm().m_compactVariableMap->get(environment, isNewEntry);
         if (!isNewEntry) {
             decoder.addFinalizer([=] {
                 delete environment;
             });
         }
-        decoder.setHandleForEnvironment(environment, handle);
+        decoder.setHandleForTDZEnvironment(environment, handle);
         return handle;
     }
 
+    void decode(Decoder& decoder, CompactTDZEnvironmentMap::Handle& handle) const
+    {
+        handle = decode(decoder);
+    }
+
 private:
-    CachedPtr<CachedCompactVariableEnvironment> m_environment;
+    CachedPtr<CachedCompactTDZEnvironment> m_environment;
 };
 
 template<typename T, typename Source = SourceType<T>>
@@ -1188,7 +1199,7 @@ public:
     }
 
 private:
-    CachedHashSet<CachedRefPtr<CachedUniquedStringImpl>, IdentifierRepHash> m_privateNames;
+    CachedPrivateNameEnvironment m_privateNames;
 };
 
 class CachedSymbolTable : public CachedObject<SymbolTable> {
@@ -1739,26 +1750,48 @@ private:
     int m_startColumn;
 };
 
+class CachedTDZEnvironmentLink : public CachedObject<TDZEnvironmentLink> {
+public:
+    void encode(Encoder& encoder, const TDZEnvironmentLink& environment)
+    {
+        m_handle.encode(encoder, environment.m_handle);
+        m_parent.encode(encoder, environment.m_parent);
+    }
+
+    TDZEnvironmentLink* decode(Decoder& decoder) const
+    {
+        CompactTDZEnvironmentMap::Handle handle = m_handle.decode(decoder);
+        RefPtr<TDZEnvironmentLink> parent = m_parent.decode(decoder);
+        return new TDZEnvironmentLink(WTFMove(handle), WTFMove(parent));
+    }
+
+private:
+    CachedCompactTDZEnvironmentMapHandle m_handle;
+    CachedRefPtr<CachedTDZEnvironmentLink> m_parent;
+};
+
 class CachedFunctionExecutableRareData : public CachedObject<UnlinkedFunctionExecutable::RareData> {
 public:
     void encode(Encoder& encoder, const UnlinkedFunctionExecutable::RareData& rareData)
     {
         m_classSource.encode(encoder, rareData.m_classSource);
         m_parentScopeTDZVariables.encode(encoder, rareData.m_parentScopeTDZVariables);
+        m_parentPrivateNameEnvironment.encode(encoder, rareData.m_parentPrivateNameEnvironment);
     }
 
     UnlinkedFunctionExecutable::RareData* decode(Decoder& decoder) const
     {
         UnlinkedFunctionExecutable::RareData* rareData = new UnlinkedFunctionExecutable::RareData { };
         m_classSource.decode(decoder, rareData->m_classSource);
-        auto parentScopeTDZVariables = m_parentScopeTDZVariables.decode(decoder);
-        rareData->m_parentScopeTDZVariables = WTFMove(parentScopeTDZVariables);
+        m_parentScopeTDZVariables.decode(decoder, rareData->m_parentScopeTDZVariables);
+        m_parentPrivateNameEnvironment.decode(decoder, rareData->m_parentPrivateNameEnvironment);
         return rareData;
     }
 
 private:
     CachedSourceCodeWithoutProvider m_classSource;
-    CachedCompactVariableMapHandle m_parentScopeTDZVariables;
+    CachedRefPtr<CachedTDZEnvironmentLink> m_parentScopeTDZVariables;
+    CachedPrivateNameEnvironment m_parentPrivateNameEnvironment;
 };
 
 class CachedFunctionExecutable : public CachedObject<UnlinkedFunctionExecutable> {
@@ -1794,6 +1827,7 @@ public:
     unsigned superBinding() const { return m_superBinding; }
     unsigned derivedContextType() const { return m_derivedContextType; }
     unsigned needsClassFieldInitializer() const { return m_needsClassFieldInitializer; }
+    unsigned privateBrandRequirement() const { return m_privateBrandRequirement; }
 
     Identifier name(Decoder& decoder) const { return m_name.decode(decoder); }
     Identifier ecmaName(Decoder& decoder) const { return m_ecmaName.decode(decoder); }
@@ -1822,7 +1856,8 @@ private:
     unsigned m_parametersStartOffset : 31;
     unsigned m_typeProfilingStartOffset;
     unsigned m_typeProfilingEndOffset;
-    unsigned m_parameterCount;
+    unsigned m_parameterCount:31;
+    unsigned m_privateBrandRequirement : 1;
     SourceParseMode m_sourceParseMode;
     unsigned m_constructorKind : 2;
     unsigned m_functionMode : 2; // FunctionMode
@@ -1879,7 +1914,6 @@ public:
     unsigned isClassContext() const { return m_isClassContext; }
     unsigned constructorKind() const { return m_constructorKind; }
     unsigned derivedContextType() const { return m_derivedContextType; }
-    unsigned needsClassFieldInitializer() const { return m_needsClassFieldInitializer; }
     unsigned evalContextType() const { return m_evalContextType; }
     unsigned hasTailCalls() const { return m_hasTailCalls; }
     unsigned hasCheckpoints() const { return m_hasCheckpoints; }
@@ -1911,7 +1945,6 @@ private:
     unsigned m_isClassContext : 1;
     unsigned m_constructorKind : 2;
     unsigned m_derivedContextType : 2;
-    unsigned m_needsClassFieldInitializer : 1;
     unsigned m_evalContextType : 2;
     unsigned m_hasTailCalls : 1;
     unsigned m_codeType : 2;
@@ -2192,6 +2225,7 @@ ALWAYS_INLINE void CachedFunctionExecutable::encode(Encoder& encoder, const Unli
     m_superBinding = executable.m_superBinding;
     m_derivedContextType = executable.m_derivedContextType;
     m_needsClassFieldInitializer = executable.m_needsClassFieldInitializer;
+    m_privateBrandRequirement = executable.m_privateBrandRequirement;
 
     m_rareData.encode(encoder, executable.m_rareData.get());
 
@@ -2233,6 +2267,7 @@ ALWAYS_INLINE UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(Decoder& de
     , m_typeProfilingStartOffset(cachedExecutable.typeProfilingStartOffset())
     , m_typeProfilingEndOffset(cachedExecutable.typeProfilingEndOffset())
     , m_parameterCount(cachedExecutable.parameterCount())
+    , m_privateBrandRequirement(cachedExecutable.privateBrandRequirement())
     , m_features(cachedExecutable.features())
     , m_sourceParseMode(cachedExecutable.sourceParseMode())
     , m_constructorKind(cachedExecutable.constructorKind())

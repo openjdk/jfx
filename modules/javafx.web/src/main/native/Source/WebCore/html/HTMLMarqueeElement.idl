@@ -19,9 +19,10 @@
 
 [
     ActiveDOMObject,
+    Exposed=Window
 ] interface HTMLMarqueeElement : HTMLElement {
-    void start();
-    void stop();
+    undefined start();
+    undefined stop();
     
     [CEReactions=NotNeeded, Reflect] attribute DOMString behavior;
     [CEReactions=NotNeeded, Reflect] attribute DOMString bgColor;
