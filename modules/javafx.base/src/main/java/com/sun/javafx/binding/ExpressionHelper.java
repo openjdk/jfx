@@ -25,11 +25,13 @@
 
 package com.sun.javafx.binding;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-
-import java.util.Arrays;
 
 /**
  * A convenience class for creating implementations of {@link javafx.beans.value.ObservableValue}.
@@ -188,86 +190,55 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
     private static class Generic<T> extends ExpressionHelper<T> {
 
-        private InvalidationListener[] invalidationListeners;
-        private ChangeListener<? super T>[] changeListeners;
-        private int invalidationSize;
-        private int changeSize;
-        private boolean locked;
+        private Map<InvalidationListener, Integer> invalidationListeners = new LinkedHashMap<>();
+        private Map<ChangeListener<? super T>, Integer> changeListeners = new LinkedHashMap<>();
         private T currentValue;
+        private int weakChangeListenerGcCount = 2;
+        private int weakInvalidationListenerGcCount = 2;
 
         private Generic(ObservableValue<T> observable, InvalidationListener listener0, InvalidationListener listener1) {
             super(observable);
-            this.invalidationListeners = new InvalidationListener[] {listener0, listener1};
-            this.invalidationSize = 2;
+            this.invalidationListeners.put(listener0, 1);
+            // use merge here in case listener1 == listener0
+            this.invalidationListeners.merge(listener1, 1, Integer::sum);
         }
 
         private Generic(ObservableValue<T> observable, ChangeListener<? super T> listener0, ChangeListener<? super T> listener1) {
             super(observable);
-            this.changeListeners = new ChangeListener[] {listener0, listener1};
-            this.changeSize = 2;
+            this.changeListeners.put(listener0, 1);
+            // use merge here in case listener1 == listener0
+            this.changeListeners.merge(listener1, 1, Integer::sum);
             this.currentValue = observable.getValue();
         }
 
         private Generic(ObservableValue<T> observable, InvalidationListener invalidationListener, ChangeListener<? super T> changeListener) {
             super(observable);
-            this.invalidationListeners = new InvalidationListener[] {invalidationListener};
-            this.invalidationSize = 1;
-            this.changeListeners = new ChangeListener[] {changeListener};
-            this.changeSize = 1;
+            this.invalidationListeners.put(invalidationListener, 1);
+            this.changeListeners.put(changeListener, 1);
             this.currentValue = observable.getValue();
         }
 
         @Override
         protected Generic<T> addListener(InvalidationListener listener) {
-            if (invalidationListeners == null) {
-                invalidationListeners = new InvalidationListener[] {listener};
-                invalidationSize = 1;
-            } else {
-                final int oldCapacity = invalidationListeners.length;
-                if (locked) {
-                    final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
-                    invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
-                } else if (invalidationSize == oldCapacity) {
-                    invalidationSize = trim(invalidationSize, invalidationListeners);
-                    if (invalidationSize == oldCapacity) {
-                        final int newCapacity = (oldCapacity * 3)/2 + 1;
-                        invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
-                    }
+            if (invalidationListeners.size() == weakInvalidationListenerGcCount) {
+                removeWeakListeners(invalidationListeners);
+                if (invalidationListeners.size() == weakInvalidationListenerGcCount) {
+                    weakInvalidationListenerGcCount = (weakInvalidationListenerGcCount * 3)/2 + 1;
                 }
-                invalidationListeners[invalidationSize++] = listener;
             }
+            invalidationListeners.merge(listener, 1, Integer::sum);
             return this;
         }
 
         @Override
         protected ExpressionHelper<T> removeListener(InvalidationListener listener) {
-            if (invalidationListeners != null) {
-                for (int index = 0; index < invalidationSize; index++) {
-                    if (listener.equals(invalidationListeners[index])) {
-                        if (invalidationSize == 1) {
-                            if (changeSize == 1) {
-                                return new SingleChange<T>(observable, changeListeners[0]);
-                            }
-                            invalidationListeners = null;
-                            invalidationSize = 0;
-                        } else if ((invalidationSize == 2) && (changeSize == 0)) {
-                            return new SingleInvalidation<T>(observable, invalidationListeners[1-index]);
-                        } else {
-                            final int numMoved = invalidationSize - index - 1;
-                            final InvalidationListener[] oldListeners = invalidationListeners;
-                            if (locked) {
-                                invalidationListeners = new InvalidationListener[invalidationListeners.length];
-                                System.arraycopy(oldListeners, 0, invalidationListeners, 0, index);
-                            }
-                            if (numMoved > 0) {
-                                System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
-                            }
-                            invalidationSize--;
-                            if (!locked) {
-                                invalidationListeners[invalidationSize] = null; // Let gc do its work
-                            }
-                        }
-                        break;
+            if (invalidationListeners.containsKey(listener)) {
+                if (invalidationListeners.merge(listener, -1, Integer::sum) == 0) {
+                    invalidationListeners.remove(listener);
+                    if (invalidationListeners.isEmpty() && changeListeners.size() == 1) {
+                        return new SingleChange<T>(observable, changeListeners.keySet().iterator().next());
+                    } else if ((invalidationListeners.size() == 1) && changeListeners.isEmpty()) {
+                        return new SingleInvalidation<T>(observable, invalidationListeners.keySet().iterator().next());
                     }
                 }
             }
@@ -276,24 +247,14 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> addListener(ChangeListener<? super T> listener) {
-            if (changeListeners == null) {
-                changeListeners = new ChangeListener[] {listener};
-                changeSize = 1;
-            } else {
-                final int oldCapacity = changeListeners.length;
-                if (locked) {
-                    final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
-                    changeListeners = Arrays.copyOf(changeListeners, newCapacity);
-                } else if (changeSize == oldCapacity) {
-                    changeSize = trim(changeSize, changeListeners);
-                    if (changeSize == oldCapacity) {
-                        final int newCapacity = (oldCapacity * 3)/2 + 1;
-                        changeListeners = Arrays.copyOf(changeListeners, newCapacity);
-                    }
+            if (changeListeners.size() == weakChangeListenerGcCount) {
+                removeWeakListeners(changeListeners);
+                if (changeListeners.size() == weakChangeListenerGcCount) {
+                    weakChangeListenerGcCount = (weakChangeListenerGcCount * 3)/2 + 1;
                 }
-                changeListeners[changeSize++] = listener;
             }
-            if (changeSize == 1) {
+            changeListeners.merge(listener, 1, Integer::sum);
+            if (changeListeners.size() == 1) {
                 currentValue = observable.getValue();
             }
             return this;
@@ -301,33 +262,13 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(ChangeListener<? super T> listener) {
-            if (changeListeners != null) {
-                for (int index = 0; index < changeSize; index++) {
-                    if (listener.equals(changeListeners[index])) {
-                        if (changeSize == 1) {
-                            if (invalidationSize == 1) {
-                                return new SingleInvalidation<T>(observable, invalidationListeners[0]);
-                            }
-                            changeListeners = null;
-                            changeSize = 0;
-                        } else if ((changeSize == 2) && (invalidationSize == 0)) {
-                            return new SingleChange<T>(observable, changeListeners[1-index]);
-                        } else {
-                            final int numMoved = changeSize - index - 1;
-                            final ChangeListener<? super T>[] oldListeners = changeListeners;
-                            if (locked) {
-                                changeListeners = new ChangeListener[changeListeners.length];
-                                System.arraycopy(oldListeners, 0, changeListeners, 0, index);
-                            }
-                            if (numMoved > 0) {
-                                System.arraycopy(oldListeners, index+1, changeListeners, index, numMoved);
-                            }
-                            changeSize--;
-                            if (!locked) {
-                                changeListeners[changeSize] = null; // Let gc do its work
-                            }
-                        }
-                        break;
+            if (changeListeners.containsKey(listener)) {
+                if (changeListeners.merge(listener, -1, Integer::sum) == 0) {
+                    changeListeners.remove(listener);
+                    if (changeListeners.isEmpty() && invalidationListeners.size() == 1) {
+                        return new SingleInvalidation<T>(observable, invalidationListeners.keySet().iterator().next());
+                    } else if ((changeListeners.size() == 1) && invalidationListeners.isEmpty()) {
+                        return new SingleChange<T>(observable, changeListeners.keySet().iterator().next());
                     }
                 }
             }
@@ -336,38 +277,47 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent() {
-            final InvalidationListener[] curInvalidationList = invalidationListeners;
-            final int curInvalidationSize = invalidationSize;
-            final ChangeListener<? super T>[] curChangeList = changeListeners;
-            final int curChangeSize = changeSize;
+            // Take a copy of listeners to ensure adding and removing listeners
+            // while the observers are being notified is safe
+            final Map<InvalidationListener, Integer> curInvalidationList = new LinkedHashMap<>(invalidationListeners);
+            final Map<ChangeListener<? super T>, Integer> curChangeList = new LinkedHashMap<>(changeListeners);
 
+            curInvalidationList.entrySet().forEach(entry -> fireInvalidationListeners(entry));
+
+            if (!curChangeList.isEmpty()) {
+                final T oldValue = currentValue;
+                currentValue = observable.getValue();
+                final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
+                if (changed) {
+                    curChangeList.entrySet().forEach(entry -> fireChangeListeners(oldValue, entry));
+                }
+            }
+        }
+
+        private void fireInvalidationListeners(Entry<InvalidationListener, Integer> entry) {
+            final InvalidationListener listener = entry.getKey();
+            final int registrationCount = entry.getValue();
             try {
-                locked = true;
-                for (int i = 0; i < curInvalidationSize; i++) {
-                    try {
-                        curInvalidationList[i].invalidated(observable);
-                    } catch (Exception e) {
-                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                    }
+                for (int i = 0; i < registrationCount; i++) {
+                    listener.invalidated(observable);
                 }
-                if (curChangeSize > 0) {
-                    final T oldValue = currentValue;
-                    currentValue = observable.getValue();
-                    final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
-                    if (changed) {
-                        for (int i = 0; i < curChangeSize; i++) {
-                            try {
-                                curChangeList[i].changed(observable, oldValue, currentValue);
-                            } catch (Exception e) {
-                                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                            }
-                        }
-                    }
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(
+                    Thread.currentThread(), e);
+            }
+        }
+
+        private void fireChangeListeners(final T oldValue, Entry<ChangeListener<? super T>, Integer> entry) {
+            final ChangeListener<? super T> listener = entry.getKey();
+            final int registrationCount = entry.getValue();
+            try {
+                for (int i  = 0; i < registrationCount; i++) {
+                    listener.changed(observable, oldValue, currentValue);
                 }
-            } finally {
-                locked = false;
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(
+                    Thread.currentThread(), e);
             }
         }
     }
-
 }

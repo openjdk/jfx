@@ -25,7 +25,9 @@
 
 package com.sun.javafx.binding;
 
+import java.util.Map;
 import java.util.function.Predicate;
+
 import javafx.beans.WeakListener;
 
 public class ExpressionHelperBase {
@@ -53,6 +55,13 @@ public class ExpressionHelperBase {
         }
 
         return size;
+    }
+
+    protected static void removeWeakListeners(final Map<?, Integer> listeners) {
+        Predicate<Object> p = t -> t instanceof WeakListener &&
+                ((WeakListener)t).wasGarbageCollected();
+
+        listeners.entrySet().removeIf(e -> p.test(e.getKey()));
     }
 
 }
