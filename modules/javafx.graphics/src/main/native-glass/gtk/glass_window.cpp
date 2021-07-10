@@ -1433,9 +1433,10 @@ void WindowContextTop::set_modal(bool modal, WindowContext* parent) {
         if (parent) {
             gtk_window_set_transient_for(GTK_WINDOW(gtk_widget), parent->get_gtk_window());
         } else {
-            gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), modal ? TRUE : FALSE);
+            gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
         }
     }
+
     gtk_window_set_modal(GTK_WINDOW(gtk_widget), modal ? TRUE : FALSE);
 }
 
