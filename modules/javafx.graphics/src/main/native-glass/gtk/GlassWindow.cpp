@@ -54,6 +54,10 @@ static WindowType glass_mask_to_window_type(jint mask) {
     return NORMAL;
 }
 
+static bool glass_mask_to_is_modal(jint mask) {
+    return mask & com_sun_glass_ui_gtk_GtkWindow_MODAL;
+}
+
 static GdkWMFunction glass_mask_to_wm_function(jint mask) {
     int func = GDK_FUNC_RESIZE | GDK_FUNC_MOVE;
 
@@ -89,7 +93,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
             screen,
             glass_mask_to_window_frame_type(mask),
             glass_mask_to_window_type(mask),
-            glass_mask_to_wm_function(mask)
+            glass_mask_to_wm_function(mask),
+            glass_mask_to_is_modal(mask)
             );
 
     return PTR_TO_JLONG(ctx);

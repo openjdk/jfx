@@ -706,7 +706,7 @@ WindowFrameExtents WindowContextTop::utility_extents = {28, 1, 1, 1};
 
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
-        WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf) :
+        WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf, bool _modal) :
             WindowContextBase(),
             screen(_screen),
             frame_type(_frame_type),
@@ -719,6 +719,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             location_assigned(false),
             size_assigned(false),
             on_top(false),
+            modal(_modal),
             requested_bounds()
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
@@ -735,6 +736,10 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         if (on_top_inherited()) {
             gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
         }
+    }
+
+    if (modal) {
+        set_modal(modal, owner);
     }
 
     if (type == UTILITY) {
@@ -1425,11 +1430,13 @@ void WindowContextTop::restack(bool restack) {
 
 void WindowContextTop::set_modal(bool modal, WindowContext* parent) {
     if (modal) {
-        //gtk_window_set_type_hint(GTK_WINDOW(gtk_widget), GDK_WINDOW_TYPE_HINT_DIALOG);
         if (parent) {
             gtk_window_set_transient_for(GTK_WINDOW(gtk_widget), parent->get_gtk_window());
+        } else {
+            gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
         }
     }
+
     gtk_window_set_modal(GTK_WINDOW(gtk_widget), modal ? TRUE : FALSE);
 }
 
@@ -1864,7 +1871,7 @@ void WindowContextChild::enter_fullscreen() {
     }
 
     full_screen_window = new WindowContextTop(jwindow, NULL, 0L, UNTITLED,
-                                                NORMAL, (GdkWMFunction) 0);
+                                                NORMAL, (GdkWMFunction) 0, false);
     int x, y, w, h;
     gdk_window_get_origin(gdk_window, &x, &y);
 #ifdef GLASS_GTK3
