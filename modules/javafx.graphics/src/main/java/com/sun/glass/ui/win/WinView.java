@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.events.ViewEvent;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
@@ -96,10 +95,10 @@ final class WinView extends View {
     protected void notifyResize(int width, int height) {
         super.notifyResize(width, height);
 
-        // After resizing, do a move notification to force a view relocation.
+        // After resizing, do a move notification to force the view relocation.
         // When moving to a screen with different DPI settings, its location needs
         // to be recalculated.
-        notifyView(ViewEvent.MOVE);
+        updateLocation();
     }
 }
 
