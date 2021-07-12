@@ -672,6 +672,17 @@ public class ListCellTest {
         assertTrue(called[0]);
     }
 
+    @Test public void editCellDoesNotFireEventWhileAlreadyEditing() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(2);
+        cell.startEdit();
+        List<EditEvent<?>> events = new ArrayList<>();
+        list.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must not fire event while editing", 0, events.size());
+    }
+
     // commitEdit()
     @Test public void commitWhenListIsNullIsOK() {
         cell.updateIndex(1);
