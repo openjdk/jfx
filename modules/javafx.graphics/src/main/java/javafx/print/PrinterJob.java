@@ -209,8 +209,20 @@ public final class PrinterJob {
     }
 
     /**
-     * Property representing the
-     * <code>Printer</code> for this job.
+     * Property representing the {@code Printer} for this job.
+     * When setting a printer which does not support the current job settings,
+     * (for example if DUPLEX printing is requested but the new printer
+     * does not support this), then the values are reset to the default
+     * for the new printer, or in some cases a similar value. For example
+     * this might mean REVERSE_LANDSCAPE is updated to LANDSCAPE, however
+     * this implementation optimisation is allowed, but not required.
+     * <p>
+     * The above applies whether the printer is changed by directly calling
+     * this method, or as a side-effect of user interaction with a print
+     * dialog.
+     * <p>
+     * Setting a null value for printer will install the default printer.
+     * Setting the current printer has no effect.
      * @return the <code>Printer</code> for this job
      */
     public final ObjectProperty<Printer> printerProperty() {
@@ -224,24 +236,7 @@ public final class PrinterJob {
         return printerProperty().get();
     }
 
-    /**
-     * Change the printer for this job.
-     * If the new printer does not support the current job settings,
-     * (for example if DUPLEX printing is requested but the new printer
-     * does not support this), then the values are reset to the default
-     * for the new printer, or in some cases a similar value. For example
-     * this might mean REVERSE_LANDSCAPE is updated to LANDSCAPE, however
-     * this implementation optimisation is allowed, but not required.
-     * <p>
-     * The above applies whether the printer is changed by directly calling
-     * this method, or as a side-effect of user interaction with a print
-     * dialog.
-     * <p>
-     * Setting a null value for printer will install the default printer.
-     * Setting the current printer has no effect.
-     * @param printer to be used for this print job.
-     */
-    public synchronized void setPrinter(Printer printer) {
+    public synchronized final void setPrinter(Printer printer) {
          printerProperty().set(printer);
     }
 

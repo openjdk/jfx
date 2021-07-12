@@ -965,7 +965,6 @@ public final class JobSettings {
      * cannot distinguish the printer's interpretation of these values
      * and it is safest to stick to selecting a standard value that
      * matches the requirement.
-     * <p>
      * @return an instance of <code>PrintQuality</code>
      */
     public final ObjectProperty<PrintQuality> printQualityProperty() {
@@ -1046,7 +1045,6 @@ public final class JobSettings {
      * cannot distinguish the printer's interpretation of these values
      * and it is safest to stick to selecting a standard value that
      * matches the requirement.
-     * <p>
      * @return an instance of <code>PrintResolution</code>
      */
     public final ObjectProperty<PrintResolution> printResolutionProperty() {
