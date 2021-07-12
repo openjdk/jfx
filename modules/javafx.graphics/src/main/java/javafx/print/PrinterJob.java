@@ -220,11 +220,7 @@ public final class PrinterJob {
         return printer;
     }
 
-    /**
-     * Gets the printer currently associated with this job.
-     * @return printer for the job.
-     */
-    public synchronized Printer getPrinter() {
+    public synchronized final Printer getPrinter() {
         return printerProperty().get();
     }
 
@@ -489,15 +485,11 @@ public final class PrinterJob {
      * <code>JobStatus</code>
      * @return the current <code>JobStatus</code>
      */
-    public ReadOnlyObjectProperty<JobStatus> jobStatusProperty() {
+    public final ReadOnlyObjectProperty<JobStatus> jobStatusProperty() {
         return jobStatus.getReadOnlyProperty();
     }
 
-    /**
-     * Obtain the current status of the job.
-     * @return the current <code>JobStatus</code>
-     */
-    public JobStatus getJobStatus() {
+    public final JobStatus getJobStatus() {
         return jobStatus.get();
     }
 
