@@ -529,6 +529,28 @@ public class TableCellTest {
         assertEquals("item must be gc'ed", null, itemRef.get());
     }
 
+    @Test
+    public void testEditStartFiresEvent() {
+        setupForEditing();
+        cell.updateIndex(1);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must fire", 1, events.size());
+    }
+    
+    @Test
+    public void testEditStartDoesNotFireEventWhileEditing() {
+        setupForEditing();
+        cell.updateIndex(1);
+        cell.startEdit();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must not fire while editing", 0, events.size());
+    }
+
+
     /**
      * Test that cell.cancelEdit can switch table editing off
      * even if a subclass violates its contract.
