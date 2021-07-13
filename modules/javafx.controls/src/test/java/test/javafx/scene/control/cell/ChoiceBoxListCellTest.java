@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -242,7 +242,6 @@ public class ChoiceBoxListCellTest {
         assertNull(cell.getGraphic());
     }
 
-    @Test(expected = NullPointerException.class)
     public void test_startEdit_cellEditableIsTrue_listViewIsNull_isEmpty() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         cell.setEditable(true);
@@ -292,14 +291,6 @@ public class ChoiceBoxListCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isNotEmpty() {
-        ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_listViewEditableIsTrue_isNotEmpty() {

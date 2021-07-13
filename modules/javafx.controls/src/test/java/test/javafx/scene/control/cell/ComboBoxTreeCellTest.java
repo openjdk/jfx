@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -243,13 +243,6 @@ public class ComboBoxTreeCellTest {
         assertNull(cell.getGraphic());
     }
 
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_treeViewIsNull_isEmpty() {
-        ComboBoxTreeCell<Object> cell = new ComboBoxTreeCell<>();
-        cell.setEditable(true);
-        cell.startEdit();
-    }
-
     @Test public void test_startEdit_treeViewEditableIsTrue_isEmpty() {
         TreeView treeView = new TreeView();
         treeView.setEditable(true);
@@ -293,14 +286,6 @@ public class ComboBoxTreeCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_treeViewIsNull_isNotEmpty() {
-        ComboBoxTreeCell<Object> cell = new ComboBoxTreeCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_treeViewEditableIsTrue_isNotEmpty() {

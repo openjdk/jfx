@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -325,7 +325,8 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTreeView().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -344,18 +345,14 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
         comboBox.getSelectionModel().select(treeItem.getValue());
 
-        super.startEdit();
+        setText(null);
 
-        if (isEditing()) {
-            setText(null);
-
-            Node graphic = CellUtils.getGraphic(treeItem);
-            if (graphic != null) {
-                hbox.getChildren().setAll(graphic, comboBox);
-                setGraphic(hbox);
-            } else {
-                setGraphic(comboBox);
-            }
+        Node graphic = CellUtils.getGraphic(treeItem);
+        if (graphic != null) {
+            hbox.getChildren().setAll(graphic, comboBox);
+            setGraphic(hbox);
+        } else {
+            setGraphic(comboBox);
         }
     }
 

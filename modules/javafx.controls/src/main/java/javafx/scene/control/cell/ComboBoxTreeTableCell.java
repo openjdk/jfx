@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,7 +339,8 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTreeTableView().isEditable() || ! getTableColumn().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -350,7 +351,6 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
         comboBox.getSelectionModel().select(getItem());
 
-        super.startEdit();
         setText(null);
         setGraphic(comboBox);
     }
