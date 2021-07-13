@@ -200,22 +200,22 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     // --- TableColumn
     /**
-     * The TreeTableColumn instance that backs this TreeTableCell.
+     * The {code TreeTableColumn} instance that backs this {@code TreeTableCell}.
      */
-    private ReadOnlyObjectWrapper<TreeTableColumn<S,T>> treeTableColumn =
-            new ReadOnlyObjectWrapper<TreeTableColumn<S,T>>(this, "treeTableColumn") {
+    private ReadOnlyObjectWrapper<TreeTableColumn<S,T>> tableColumn =
+            new ReadOnlyObjectWrapper<TreeTableColumn<S,T>>(this, "tableColumn") {
         @Override protected void invalidated() {
             updateColumnIndex();
         }
     };
-    public final ReadOnlyObjectProperty<TreeTableColumn<S,T>> tableColumnProperty() { return treeTableColumn.getReadOnlyProperty(); }
-    private void setTableColumn(TreeTableColumn<S,T> value) { treeTableColumn.set(value); }
-    public final TreeTableColumn<S,T> getTableColumn() { return treeTableColumn.get(); }
+    public final ReadOnlyObjectProperty<TreeTableColumn<S,T>> tableColumnProperty() { return tableColumn.getReadOnlyProperty(); }
+    private void setTableColumn(TreeTableColumn<S,T> value) { tableColumn.set(value); }
+    public final TreeTableColumn<S,T> getTableColumn() { return tableColumn.get(); }
 
 
     // --- TableView
     /**
-     * The TreeTableView associated with this TreeTableCell.
+     * The {@code TreeTableView} associated with this {@code TreeTableCell}.
      */
     private ReadOnlyObjectWrapper<TreeTableView<S>> treeTableView;
     private void setTreeTableView(TreeTableView<S> value) {
@@ -284,14 +284,24 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     // --- TableRow
     /**
-     * The TreeTableRow that this TreeTableCell currently finds itself placed within.
+     * The {@code TreeTableRow} that this {@code TreeTableCell} currently finds itself placed within.
      */
-    private ReadOnlyObjectWrapper<TreeTableRow<S>> treeTableRow =
-            new ReadOnlyObjectWrapper<TreeTableRow<S>>(this, "treeTableRow");
-    private void setTreeTableRow(TreeTableRow<S> value) { treeTableRow.set(value); }
-    public final TreeTableRow<S> getTreeTableRow() { return treeTableRow.get(); }
-    public final ReadOnlyObjectProperty<TreeTableRow<S>> tableRowProperty() { return treeTableRow;  }
+    private ReadOnlyObjectWrapper<TreeTableRow<S>> tableRow =
+            new ReadOnlyObjectWrapper<TreeTableRow<S>>(this, "tableRow");
+    private void setTableRow(TreeTableRow<S> value) { tableRow.set(value); }
+    public final TreeTableRow<S> getTableRow() { return tableRow.get(); }
+    public final ReadOnlyObjectProperty<TreeTableRow<S>> tableRowProperty() {
+        return tableRow.getReadOnlyProperty();
+    }
 
+    // The following method was misnamed and is deprecated in favor of the
+    // correctly named method.
+    /**
+     * @deprecated Use {@link getTableRow} instead.
+     * @return the {@code TreeTableRow}
+     */
+    @Deprecated(since = "17")
+    public final TreeTableRow<S> getTreeTableRow() { return getTableRow(); }
 
 
     /***************************************************************************
@@ -309,7 +319,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
         final TreeTableView<S> table = getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
-        final TreeTableRow<S> row = getTreeTableRow();
+        final TreeTableRow<S> row = getTableRow();
         if (!isEditable() ||
                 (table != null && !table.isEditable()) ||
                 (column != null && !column.isEditable()) ||
@@ -427,7 +437,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // out, as it is valid for an empty TableCell to be selected, as long
         // as the parent TableRow is not empty (see RT-15529).
         /*if (selected && isEmpty()) return;*/
-        if (getTreeTableRow() == null || getTreeTableRow().isEmpty()) return;
+        if (getTableRow() == null || getTableRow().isEmpty()) return;
         setSelected(selected);
     }
 
@@ -620,7 +630,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         final boolean isEmpty = isEmpty();
         final T oldValue = getItem();
 
-        final TreeTableRow<S> tableRow = getTreeTableRow();
+        final TreeTableRow<S> tableRow = getTableRow();
         final S rowItem = tableRow == null ? null : tableRow.getItem();
 
         final boolean indexExceedsItemCount = index >= itemCount;
@@ -723,7 +733,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * @param treeTableRow the TreeTableRow associated with this TreeTableCell
      */
     public final void updateTreeTableRow(TreeTableRow<S> treeTableRow) {
-        this.setTreeTableRow(treeTableRow);
+        this.setTableRow(treeTableRow);
     }
 
     /**
@@ -810,7 +820,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         switch (attribute) {
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();
+            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
