@@ -91,5 +91,14 @@ final class WinView extends View {
     @Override native protected boolean _enterFullscreen(long ptr, boolean animate, boolean keepRatio, boolean hideCursor);
     @Override native protected void _exitFullscreen(long ptr, boolean animate);
 
+    @Override
+    protected void notifyResize(int width, int height) {
+        super.notifyResize(width, height);
+
+        // After resizing, do a move notification to force the view relocation.
+        // When moving to a screen with different DPI settings, its location needs
+        // to be recalculated.
+        updateLocation();
+    }
 }
 
