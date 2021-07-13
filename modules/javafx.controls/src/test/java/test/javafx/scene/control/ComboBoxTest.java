@@ -285,6 +285,69 @@ public class ComboBoxTest {
         assertNull(comboBox.getSelectionModel());
     }
 
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getButtonCell().getText());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnLayout() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+
+        comboBox.setValue(items.get(1));
+        comboBox.setSelectionModel(null);
+
+        comboBox.layout();
+
+        assertEquals(items.get(1), comboBox.getButtonCell().getText());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnEditableChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+        comboBox.setEditable(false);
+
+        assertNull(comboBox.getValue());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getValue());
+    }
+
     @Test public void selectionModelCanBeBound() {
         SingleSelectionModel<String> sm = ComboBoxShim.<String>get_ComboBoxSelectionModel(comboBox);
         ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);

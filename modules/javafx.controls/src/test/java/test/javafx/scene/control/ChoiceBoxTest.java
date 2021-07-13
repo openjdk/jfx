@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.Separator;
+import org.junit.After;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
@@ -56,8 +57,6 @@ import javafx.scene.control.SelectionModelShim;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -70,8 +69,20 @@ public class ChoiceBoxTest {
     private Stage stage;
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
         tk = (StubToolkit)Toolkit.getToolkit();
+    }
+
+    @After public void cleanUp() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     protected void startApp(Parent root) {
@@ -152,6 +163,19 @@ public class ChoiceBoxTest {
     @Test public void selectionModelCanBeNull() {
         box.setSelectionModel(null);
         assertNull(box.getSelectionModel());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        box.setSkin(new ChoiceBoxSkin<>(box));
+        box.setItems(items);
+        box.setSelectionModel(null);
+
+        box.setValue(items.get(1));
+
+        String text = ChoiceBoxSkinNodesShim.getChoiceBoxSelectedText((ChoiceBoxSkin<?>) box.getSkin());
+        assertEquals(items.get(1), text);
     }
 
     @Test public void selectionModelCanBeBound() {
