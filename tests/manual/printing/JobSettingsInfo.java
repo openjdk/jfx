@@ -23,23 +23,26 @@
  * questions.
  */
 
-import java.io.File;
+import javafx.print.Printer;
+import javafx.print.PrinterJob;
+import javafx.print.JobSettings;
+import javafx.print.Collation;
+import javafx.print.PageLayout;
+import javafx.print.PageOrientation;
+import javafx.print.PageRange;
+import javafx.print.Paper;
+import javafx.print.PaperSource;
+import javafx.print.PrintColor;
+import javafx.print.PrintQuality;
+import javafx.print.PrintResolution;
+import javafx.print.PrintSides;
 
-import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.print.*;
 
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
