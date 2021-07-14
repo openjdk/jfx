@@ -38,11 +38,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(AnalyserNode);
 
 ExceptionOr<Ref<AnalyserNode>> AnalyserNode::create(BaseAudioContext& context, const AnalyserOptions& options)
 {
-    if (context.isStopped())
-        return Exception { InvalidStateError };
-
-    context.lazyInitialize();
-
     auto analyser = adoptRef(*new AnalyserNode(context));
 
     auto result = analyser->handleAudioNodeOptions(options, { 2, ChannelCountMode::Max, ChannelInterpretation::Speakers });
@@ -65,10 +60,9 @@ ExceptionOr<Ref<AnalyserNode>> AnalyserNode::create(BaseAudioContext& context, c
 }
 
 AnalyserNode::AnalyserNode(BaseAudioContext& context)
-    : AudioBasicInspectorNode(context)
+    : AudioBasicInspectorNode(context, NodeTypeAnalyser)
 {
-    setNodeType(NodeTypeAnalyser);
-    addOutput(makeUnique<AudioNodeOutput>(this, 2));
+    addOutput(1);
 
     initialize();
 }
@@ -82,25 +76,26 @@ void AnalyserNode::process(size_t framesToProcess)
 {
     AudioBus* outputBus = output(0)->bus();
 
-    if (!isInitialized() || !input(0)->isConnected()) {
+    if (!isInitialized()) {
         outputBus->zero();
         return;
     }
 
     AudioBus* inputBus = input(0)->bus();
 
-    // Give the analyser the audio which is passing through this AudioNode.
+    // Give the analyser the audio which is passing through this AudioNode. This must always
+    // be done so that the state of the Analyser reflects the current input.
     m_analyser.writeInput(inputBus, framesToProcess);
+
+    if (!input(0)->isConnected()) {
+        outputBus->zero();
+        return;
+    }
 
     // For in-place processing, our override of pullInputs() will just pass the audio data through unchanged if the channel count matches from input to output
     // (resulting in inputBus == outputBus). Otherwise, do an up-mix to stereo.
     if (inputBus != outputBus)
         outputBus->copyFrom(*inputBus);
-}
-
-void AnalyserNode::reset()
-{
-    m_analyser.reset();
 }
 
 ExceptionOr<void> AnalyserNode::setFftSize(unsigned size)
@@ -141,10 +136,58 @@ ExceptionOr<void> AnalyserNode::setMaxDecibels(double k)
 ExceptionOr<void> AnalyserNode::setSmoothingTimeConstant(double k)
 {
     if (k < 0 || k > 1)
-        return Exception { IndexSizeError };
+        return Exception { IndexSizeError, "Smoothing time constant needs to be between 0 and 1."_s };
 
     m_analyser.setSmoothingTimeConstant(k);
     return { };
+}
+
+bool AnalyserNode::requiresTailProcessing() const
+{
+    // Tail time is always non-zero so tail processing is required.
+    return true;
+}
+
+void AnalyserNode::updatePullStatus()
+{
+    ASSERT(context().isGraphOwner());
+
+    if (output(0)->isConnected()) {
+        // When an AudioBasicInspectorNode is connected to a downstream node, it
+        // will get pulled by the downstream node, thus remove it from the context's
+        // automatic pull list.
+        if (m_needAutomaticPull) {
+            context().removeAutomaticPullNode(*this);
+            m_needAutomaticPull = false;
+        }
+    } else {
+        unsigned numberOfInputConnections = input(0)->numberOfRenderingConnections();
+        // When an AnalyserNode is not connected to any downstream node
+        // while still connected from upstream node(s), add it to the context's
+        // automatic pull list.
+        //
+        // But don't remove the AnalyserNode if there are no inputs
+        // connected to the node. The node needs to be pulled so that the
+        // internal state is updated with the correct input signal (of
+        // zeroes).
+        if (numberOfInputConnections && !m_needAutomaticPull) {
+            context().addAutomaticPullNode(*this);
+            m_needAutomaticPull = true;
+        }
+    }
+}
+
+bool AnalyserNode::propagatesSilence() const
+{
+    // An AnalyserNode does actually propogate silence, but to get the
+    // time and FFT data updated correctly, process() needs to be
+    // called even if all the inputs are silent.
+    return false;
+}
+
+double AnalyserNode::tailTime() const
+{
+    return RealtimeAnalyser::MaxFFTSize / static_cast<double>(context().sampleRate());
 }
 
 } // namespace WebCore

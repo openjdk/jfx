@@ -3392,6 +3392,12 @@ public:
         m_assembler.br(target);
     }
 
+    void farJump(TrustedImmPtr target, PtrTag)
+    {
+        move(target, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.br(dataTempRegister);
+    }
+
     void farJump(Address address, PtrTag)
     {
         loadPtr(address, getCachedDataTempRegisterIDAndInvalidate());
@@ -3689,7 +3695,7 @@ public:
 
     // Miscellaneous operations:
 
-    void breakpoint(uint16_t imm = 0)
+    void breakpoint(uint16_t imm = 0xc471)
     {
         m_assembler.brk(imm);
     }

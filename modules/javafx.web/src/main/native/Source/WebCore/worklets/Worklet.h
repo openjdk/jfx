@@ -25,26 +25,47 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
+#include "ContextDestructionObserver.h"
 #include "ExceptionOr.h"
+#include "JSDOMPromiseDeferred.h"
 #include "ScriptWrappable.h"
+#include "WorkletOptions.h"
+#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
-
-#if ENABLE(CSS_PAINTING_API)
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class Document;
 
-class Worklet final : public RefCounted<Worklet>, public ScriptWrappable {
+class Document;
+class WorkletGlobalScopeProxy;
+class WorkletPendingTasks;
+
+class Worklet : public RefCounted<Worklet>, public ScriptWrappable, public CanMakeWeakPtr<Worklet>, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(Worklet);
 public:
-    static Ref<Worklet> create();
+    virtual ~Worklet();
 
-    ExceptionOr<void> addModule(Document&, const String& moduleURL);
+    virtual void addModule(const String& moduleURL, WorkletOptions&&, DOMPromiseDeferred<void>&&);
+
+    void finishPendingTasks(WorkletPendingTasks&);
+    Document* document();
+
+    const Vector<Ref<WorkletGlobalScopeProxy>>& proxies() const { return m_proxies; }
+    const String& identifier() const { return m_identifier; }
+
+protected:
+    explicit Worklet(Document&);
 
 private:
-    Worklet();
+    virtual Vector<Ref<WorkletGlobalScopeProxy>> createGlobalScopes() = 0;
+
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+
+    String m_identifier;
+    Vector<Ref<WorkletGlobalScopeProxy>> m_proxies;
+    HashSet<RefPtr<WorkletPendingTasks>> m_pendingTasksSet;
 };
 
 } // namespace WebCore
-
-#endif

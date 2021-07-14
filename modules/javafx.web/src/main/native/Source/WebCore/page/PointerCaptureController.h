@@ -46,7 +46,7 @@ class PointerCaptureController {
 public:
     explicit PointerCaptureController(Page&);
 
-    Element* pointerCaptureElement(Document*, PointerID);
+    Element* pointerCaptureElement(Document*, PointerID) const;
     ExceptionOr<void> setPointerCapture(Element*, PointerID);
     ExceptionOr<void> releasePointerCapture(Element*, PointerID);
     bool hasPointerCapture(Element*, PointerID);
@@ -55,15 +55,15 @@ public:
     void pointerLockWasApplied();
     void elementWasRemoved(Element&);
 
-    RefPtr<PointerEvent> pointerEventForMouseEvent(const MouseEvent&);
+    RefPtr<PointerEvent> pointerEventForMouseEvent(const MouseEvent&, PointerID, const String& pointerType);
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     void dispatchEventForTouchAtIndex(EventTarget&, const PlatformTouchEvent&, unsigned, bool isPrimary, WindowProxy&);
 #endif
 
     WEBCORE_EXPORT void touchWithIdentifierWasRemoved(PointerID);
-    bool hasCancelledPointerEventForIdentifier(PointerID);
-    bool preventsCompatibilityMouseEventsForIdentifier(PointerID);
+    bool hasCancelledPointerEventForIdentifier(PointerID) const;
+    bool preventsCompatibilityMouseEventsForIdentifier(PointerID) const;
     void dispatchEvent(PointerEvent&, EventTarget*);
     WEBCORE_EXPORT void cancelPointer(PointerID, const IntPoint&);
     void processPendingPointerCapture(PointerID);
@@ -75,6 +75,13 @@ private:
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
         RefPtr<Element> previousTarget;
 #endif
+        bool hasAnyElement() const {
+            return pendingTargetOverride || targetOverride
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
+                || previousTarget
+#endif
+                ;
+        }
         String pointerType;
         bool cancelled { false };
         bool isPrimary { false };
@@ -87,12 +94,15 @@ private:
     void pointerEventWillBeDispatched(const PointerEvent&, EventTarget*);
     void pointerEventWasDispatched(const PointerEvent&);
 
+    void updateHaveAnyCapturingElement();
+
     Page& m_page;
     // While PointerID is defined as int32_t, we use int64_t here so that we may use a value outside of the int32_t range to have safe
     // empty and removed values, allowing any int32_t to be provided through the API for lookup in this hashmap.
     using PointerIdToCapturingDataMap = HashMap<int64_t, CapturingData, WTF::IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>>;
     PointerIdToCapturingDataMap m_activePointerIdsToCapturingData;
     bool m_processingPendingPointerCapture { false };
+    bool m_haveAnyCapturingElement { false };
 };
 
 } // namespace WebCore

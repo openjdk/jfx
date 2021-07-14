@@ -29,26 +29,26 @@
 
 namespace WebCore {
 
-class WorkerGlobalScope;
+class WorkerOrWorkletGlobalScope;
 
 class WorkerDebuggerAgent final : public WebDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(WorkerDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WorkerDebuggerAgent(WorkerAgentContext&);
-    ~WorkerDebuggerAgent() override;
+    ~WorkerDebuggerAgent();
 
-    // ScriptDebugListener
-    void breakpointActionLog(JSC::JSGlobalObject*, const String&) override;
+    // JSC::Debugger::Observer
+    void breakpointActionLog(JSC::JSGlobalObject*, const String& data);
 
 private:
     // We don't need to mute console for workers.
-    void muteConsole() override { }
-    void unmuteConsole() override { }
+    void muteConsole() { }
+    void unmuteConsole() { }
 
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, Optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
 
-    WorkerGlobalScope& m_workerGlobalScope;
+    WorkerOrWorkletGlobalScope& m_globalScope;
 };
 
 } // namespace WebCore

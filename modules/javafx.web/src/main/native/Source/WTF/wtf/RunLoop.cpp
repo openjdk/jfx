@@ -46,6 +46,11 @@ public:
     {
     }
 
+    ~Holder()
+    {
+        m_runLoop->threadWillExit();
+    }
+
     RunLoop& runLoop() { return m_runLoop; }
 
 private:
@@ -60,7 +65,11 @@ void RunLoop::initializeMain()
 
 RunLoop& RunLoop::current()
 {
-    static NeverDestroyed<ThreadSpecific<Holder>> runLoopHolder;
+    static LazyNeverDestroyed<ThreadSpecific<Holder>> runLoopHolder;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        runLoopHolder.construct();
+    });
     return runLoopHolder.get()->runLoop();
 }
 
@@ -178,6 +187,15 @@ void RunLoop::suspendFunctionDispatchForCurrentCycle()
     m_isFunctionDispatchSuspended = true;
     // Wake up (even if there is nothing to do) to disable suspension.
     wakeUp();
+}
+
+void RunLoop::threadWillExit()
+{
+    m_currentIteration.clear();
+    {
+        auto locker = holdLock(m_nextIterationLock);
+        m_nextIteration.clear();
+    }
 }
 
 #if PLATFORM(JAVA)

@@ -21,8 +21,6 @@
 #include "config.h"
 #include "HTMLMeterElement.h"
 
-#if ENABLE(METER_ELEMENT)
-
 #include "Attribute.h"
 #include "ElementIterator.h"
 #include "HTMLDivElement.h"
@@ -60,7 +58,7 @@ Ref<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Doc
 
 RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    if (!RenderTheme::singleton().supportsMeter(style.appearance()))
+    if (!RenderTheme::singleton().supportsMeter(style.appearance(), *this))
         return RenderElement::createFor(*this, WTFMove(style));
 
     return createRenderer<RenderMeter>(*this, WTFMove(style));
@@ -252,4 +250,3 @@ void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 }
 
 } // namespace
-#endif

@@ -74,7 +74,13 @@ class RenderView;
 class RenderWidget;
 class ScrollingCoordinator;
 
-enum class FrameFlattening;
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+namespace Display {
+class View;
+}
+#endif
+
+enum class FrameFlattening : uint8_t;
 
 Pagination::Mode paginationModeForRenderStyle(const RenderStyle&);
 
@@ -95,11 +101,14 @@ public:
     WEBCORE_EXPORT void invalidateRect(const IntRect&) final;
     void setFrameRect(const IntRect&) final;
 
-    bool scheduleAnimation() final;
-
     Frame& frame() const { return m_frame; }
 
     WEBCORE_EXPORT RenderView* renderView() const;
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    Display::View* existingDisplayView() const;
+    Display::View& displayView();
+#endif
 
     int mapFromLayoutToCSSUnits(LayoutUnit) const;
     LayoutUnit mapFromCSSToLayoutUnits(int) const;
@@ -138,7 +147,6 @@ public:
     WEBCORE_EXPORT void setCustomFixedPositionLayoutRect(const IntRect&);
     bool updateFixedPositionLayoutRect();
 
-    IntSize customSizeForResizeEvent() const { return m_customSizeForResizeEvent; }
     WEBCORE_EXPORT void setCustomSizeForResizeEvent(IntSize);
 
     WEBCORE_EXPORT void setScrollVelocity(const VelocityData&);
@@ -159,7 +167,7 @@ public:
 
     WEBCORE_EXPORT TiledBacking* tiledBacking() const;
 
-    ScrollingNodeID scrollingNodeID() const override;
+    WEBCORE_EXPORT ScrollingNodeID scrollingNodeID() const override;
     ScrollableArea* scrollableAreaForScrollingNodeID(ScrollingNodeID) const;
     bool usesAsyncScrolling() const final;
 
@@ -231,7 +239,7 @@ public:
 #if USE(COORDINATED_GRAPHICS)
     WEBCORE_EXPORT void setFixedVisibleContentRect(const IntRect&) final;
 #endif
-    WEBCORE_EXPORT void setScrollPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped, AnimatedScroll = AnimatedScroll::No) final;
+    WEBCORE_EXPORT void setScrollPosition(const ScrollPosition&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic()) final;
     void restoreScrollbar();
     void scheduleScrollToFocusedElement(SelectionRevealMode);
     void scrollToFocusedElementImmediatelyIfNeeded();
@@ -405,6 +413,7 @@ public:
     void incrementVisuallyNonEmptyCharacterCount(const String&);
     void incrementVisuallyNonEmptyPixelCount(const IntSize&);
     bool isVisuallyNonEmpty() const { return m_contentQualifiesAsVisuallyNonEmpty; }
+    bool hasContenfulDescendants() const;
     void checkAndDispatchDidReachVisuallyNonEmptyState();
 
     WEBCORE_EXPORT void enableFixedWidthAutoSizeMode(bool enable, const IntSize& minSize);
@@ -556,9 +565,9 @@ public:
     // This function exists for ports that need to handle wheel events manually.
     // On Mac WebKit1 the underlying NSScrollView just does the scrolling, but on most other platforms
     // we need this function in order to do the scroll ourselves.
-    bool wheelEvent(const PlatformWheelEvent&);
+    bool handleWheelEventForScrolling(const PlatformWheelEvent&, Optional<WheelScrollGestureState>) final;
 
-    WEBCORE_EXPORT void setScrollingPerformanceLoggingEnabled(bool);
+    WEBCORE_EXPORT void setScrollingPerformanceTestingEnabled(bool);
 
     // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
     // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
@@ -659,16 +668,21 @@ public:
     void invalidateControlTints() { traverseForPaintInvalidation(GraphicsContext::PaintInvalidationReasons::InvalidatingControlTints); }
     void invalidateImagesWithAsyncDecodes() { traverseForPaintInvalidation(GraphicsContext::PaintInvalidationReasons::InvalidatingImagesWithAsyncDecodes); }
 
+    void invalidateScrollbarsForAllScrollableAreas();
+
     GraphicsLayer* layerForHorizontalScrollbar() const final;
     GraphicsLayer* layerForVerticalScrollbar() const final;
 
     void renderLayerDidScroll(const RenderLayer&);
 
-    WEBCORE_EXPORT void scrollToOffsetWithAnimation(const ScrollOffset&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT void scrollToPositionWithAnimation(const ScrollPosition&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped);
 
     bool inUpdateEmbeddedObjects() const { return m_inUpdateEmbeddedObjects; }
 
     String debugDescription() const final;
+
+    // ScrollView
+    void updateScrollbarSteps() override;
 
 private:
     explicit FrameView(Frame&);
@@ -769,7 +783,7 @@ private:
     void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation) final;
 
     IntSize sizeForResizeEvent() const;
-    void sendResizeEventIfNeeded();
+    void scheduleResizeEventIfNeeded();
 
     RefPtr<Element> rootElementForCustomScrollbarPartStyle(PseudoId) const;
 
@@ -837,10 +851,17 @@ private:
 
     void didFinishProhibitingScrollingWhenChangingContentSize() final;
 
+    // ScrollableArea.
+    float pageScaleFactor() const override;
+
     static MonotonicTime sCurrentPaintTimeStamp; // used for detecting decoded resource thrash in the cache
 
     const Ref<Frame> m_frame;
     FrameViewLayoutContext m_layoutContext;
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    std::unique_ptr<Display::View> m_displayView;
+#endif
 
     HashSet<Widget*> m_widgetsInRenderTree;
     std::unique_ptr<ListHashSet<RenderEmbeddedObject*>> m_embeddedObjectsToUpdate;
@@ -890,10 +911,9 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     bool m_useCustomFixedPositionLayoutRect { false };
-    bool m_useCustomSizeForResizeEvent { false };
 
     IntRect m_customFixedPositionLayoutRect;
-    IntSize m_customSizeForResizeEvent;
+    Optional<IntSize> m_customSizeForResizeEvent;
 #endif
 
     Optional<OverrideViewportSize> m_overrideViewportSize;

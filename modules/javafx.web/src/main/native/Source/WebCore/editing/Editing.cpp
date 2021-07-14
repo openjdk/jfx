@@ -79,45 +79,6 @@ bool isAtomicNode(const Node* node)
     return node && (!node->hasChildNodes() || editingIgnoresContent(*node));
 }
 
-// Compare two positions, taking into account the possibility that one or both
-// could be inside a shadow tree. Only works for non-null values.
-int comparePositions(const Position& a, const Position& b)
-{
-    TreeScope* commonScope = commonTreeScope(a.containerNode(), b.containerNode());
-
-    if (!commonScope)
-        return 0;
-
-    Node* nodeA = commonScope->ancestorNodeInThisScope(a.containerNode());
-    ASSERT(nodeA);
-    bool hasDescendentA = nodeA != a.containerNode();
-    int offsetA = hasDescendentA ? 0 : a.computeOffsetInContainerNode();
-
-    Node* nodeB = commonScope->ancestorNodeInThisScope(b.containerNode());
-    ASSERT(nodeB);
-    bool hasDescendentB = nodeB != b.containerNode();
-    int offsetB = hasDescendentB ? 0 : b.computeOffsetInContainerNode();
-
-    int bias = 0;
-    if (nodeA == nodeB) {
-        if (hasDescendentA)
-            bias = -1;
-        else if (hasDescendentB)
-            bias = 1;
-    }
-
-    auto comparisonResult = Range::compareBoundaryPoints(nodeA, offsetA, nodeB, offsetB);
-    if (comparisonResult.hasException())
-        return bias;
-    auto result = comparisonResult.releaseReturnValue();
-    return result ? result : bias;
-}
-
-int comparePositions(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return comparePositions(a.deepEquivalent(), b.deepEquivalent());
-}
-
 ContainerNode* highestEditableRoot(const Position& position, EditableType editableType)
 {
     ContainerNode* highestEditableRoot = editableRootForPosition(position, editableType);
@@ -291,7 +252,7 @@ Position firstEditablePositionAfterPositionInRoot(const Position& position, Cont
         return { };
 
     // position falls before highestRoot.
-    if (comparePositions(position, firstPositionInNode(highestRoot)) == -1 && highestRoot->hasEditableStyle())
+    if (position < firstPositionInNode(highestRoot) && highestRoot->hasEditableStyle())
         return firstPositionInNode(highestRoot);
 
     Position candidate = position;
@@ -319,7 +280,7 @@ Position lastEditablePositionBeforePositionInRoot(const Position& position, Cont
         return { };
 
     // When position falls after highestRoot, the result is easy to compute.
-    if (comparePositions(position, lastPositionInNode(highestRoot)) == 1)
+    if (position > lastPositionInNode(highestRoot))
         return lastPositionInNode(highestRoot);
 
     Position candidate = position;
@@ -472,8 +433,8 @@ static HTMLElement* firstInSpecialElement(const Position& position)
     for (Node* node = position.deprecatedNode(); node && node->rootEditableElement() == rootEditableElement; node = node->parentNode()) {
         if (!isSpecialHTMLElement(node))
             continue;
-        VisiblePosition vPos(position, DOWNSTREAM);
-        VisiblePosition firstInElement(firstPositionInOrBeforeNode(node), DOWNSTREAM);
+        VisiblePosition vPos(position);
+        VisiblePosition firstInElement(firstPositionInOrBeforeNode(node));
         if ((isRenderedTable(node) && vPos == firstInElement.next()) || vPos == firstInElement)
             return &downcast<HTMLElement>(*node);
     }
@@ -486,8 +447,8 @@ static HTMLElement* lastInSpecialElement(const Position& position)
     for (Node* node = position.deprecatedNode(); node && node->rootEditableElement() == rootEditableElement; node = node->parentNode()) {
         if (!isSpecialHTMLElement(node))
             continue;
-        VisiblePosition vPos(position, DOWNSTREAM);
-        VisiblePosition lastInElement(lastPositionInOrAfterNode(node), DOWNSTREAM);
+        VisiblePosition vPos(position);
+        VisiblePosition lastInElement(lastPositionInOrAfterNode(node));
         if ((isRenderedTable(node) && vPos == lastInElement.previous()) || vPos == lastInElement)
             return &downcast<HTMLElement>(*node);
     }
@@ -548,7 +509,7 @@ Element* isLastPositionBeforeTable(const VisiblePosition& position)
 VisiblePosition visiblePositionBeforeNode(Node& node)
 {
     if (node.hasChildNodes())
-        return VisiblePosition(firstPositionInOrBeforeNode(&node), DOWNSTREAM);
+        return VisiblePosition(firstPositionInOrBeforeNode(&node));
     ASSERT(node.parentNode());
     ASSERT(!node.parentNode()->isShadowRoot());
     return positionInParentBeforeNode(&node);
@@ -558,7 +519,7 @@ VisiblePosition visiblePositionBeforeNode(Node& node)
 VisiblePosition visiblePositionAfterNode(Node& node)
 {
     if (node.hasChildNodes())
-        return VisiblePosition(lastPositionInOrAfterNode(&node), DOWNSTREAM);
+        return VisiblePosition(lastPositionInOrAfterNode(&node));
     ASSERT(node.parentNode());
     ASSERT(!node.parentNode()->isShadowRoot());
     return positionInParentAfterNode(&node);
@@ -1130,26 +1091,27 @@ VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
 {
     if (!scope)
         return { };
-    return { createLegacyEditingPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, TextIteratorEmitsCharactersBetweenAllVisiblePositions)) };
+    return { makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, TextIteratorEmitsCharactersBetweenAllVisiblePositions)) };
 }
 
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int index)
 {
     if (index <= 0)
-        return { firstPositionInOrBeforeNode(&node), DOWNSTREAM };
+        return { firstPositionInOrBeforeNode(&node) };
 
     auto range = makeRangeSelectingNodeContents(node);
     CharacterIterator it(range);
-    it.advance(index - 1);
+    if (!it.atEnd())
+        it.advance(index - 1);
 
     if (!it.atEnd() && it.text().length() == 1 && it.text()[0] == '\n') {
         // FIXME: workaround for collapsed range (where only start position is correct) emitted for some emitted newlines.
         it.advance(1);
         if (!it.atEnd())
-            return { createLegacyEditingPosition(it.range().start) };
+            return { makeDeprecatedLegacyPosition(it.range().start) };
     }
 
-    return { createLegacyEditingPosition((it.atEnd() ? range : it.range()).end), UPSTREAM };
+    return { makeDeprecatedLegacyPosition((it.atEnd() ? range : it.range()).end), Affinity::Upstream };
 }
 
 // Determines whether two positions are visibly next to each other (first then second)
@@ -1163,20 +1125,18 @@ static bool isVisiblyAdjacent(const Position& first, const Position& second)
 // Call this function to determine whether a node is visibly fit inside selectedRange
 bool isNodeVisiblyContainedWithin(Node& node, const SimpleRange& range)
 {
-    // If the node is inside the range, then it surely is contained within.
-    auto comparisonResult = createLiveRange(range)->compareNode(node);
-    if (!comparisonResult.hasException() && comparisonResult.releaseReturnValue() == Range::NODE_INSIDE)
+    if (contains<ComposedTree>(range, node))
         return true;
 
-    auto startPosition = createLegacyEditingPosition(range.start);
-    auto endPosition = createLegacyEditingPosition(range.end);
+    auto startPosition = makeDeprecatedLegacyPosition(range.start);
+    auto endPosition = makeDeprecatedLegacyPosition(range.end);
 
     bool startIsVisuallySame = visiblePositionBeforeNode(node) == startPosition;
-    if (startIsVisuallySame && comparePositions(positionInParentAfterNode(&node), endPosition) < 0)
+    if (startIsVisuallySame && positionInParentAfterNode(&node) < endPosition)
         return true;
 
     bool endIsVisuallySame = visiblePositionAfterNode(node) == endPosition;
-    if (endIsVisuallySame && comparePositions(startPosition, positionInParentBeforeNode(&node)) < 0)
+    if (endIsVisuallySame && startPosition < positionInParentBeforeNode(&node))
         return true;
 
     return startIsVisuallySame && endIsVisuallySame;
@@ -1284,13 +1244,8 @@ LayoutRect localCaretRectInRendererForCaretPainting(const VisiblePosition& caret
 {
     if (caretPosition.isNull())
         return LayoutRect();
-
     ASSERT(caretPosition.deepEquivalent().deprecatedNode()->renderer());
-
-    // First compute a rect local to the renderer at the selection start.
-    RenderObject* renderer;
-    LayoutRect localRect = caretPosition.localCaretRect(renderer);
-
+    auto [localRect, renderer] = caretPosition.localCaretRect();
     return localCaretRectInRendererForRect(localRect, caretPosition.deepEquivalent().deprecatedNode(), renderer, caretPainter);
 }
 

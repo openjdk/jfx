@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <functional>
 #include <wtf/Condition.h>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
@@ -81,7 +82,7 @@ public:
     WTF_EXPORT_PRIVATE static bool isMain();
     ~RunLoop() final;
 
-    WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&);
+    WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) final;
     WTF_EXPORT_PRIVATE void dispatchAfter(Seconds, Function<void()>&&);
 #if USE(COCOA_EVENT_LOOP)
     WTF_EXPORT_PRIVATE static void dispatch(const SchedulePairHashSet&, Function<void()>&&);
@@ -98,6 +99,8 @@ public:
 
     enum class CycleResult { Continue, Stop };
     WTF_EXPORT_PRIVATE CycleResult static cycle(RunLoopMode = DefaultRunLoopMode);
+
+    WTF_EXPORT_PRIVATE void threadWillExit();
 
 #if USE(GLIB_EVENT_LOOP)
     WTF_EXPORT_PRIVATE GMainContext* mainContext() const { return m_mainContext.get(); }
@@ -172,18 +175,20 @@ public:
 
         Timer(RunLoop& runLoop, TimerFiredClass* o, TimerFiredFunction f)
             : TimerBase(runLoop)
-            , m_function(f)
-            , m_object(o)
+            , m_function(std::bind(f, o))
+        {
+        }
+
+        Timer(RunLoop& runLoop, Function<void ()>&& function)
+            : TimerBase(runLoop)
+            , m_function(WTFMove(function))
         {
         }
 
     private:
-        void fired() override { (m_object->*m_function)(); }
+        void fired() override { m_function(); }
 
-        // This order should be maintained due to MSVC bug.
-        // http://computer-programming-forum.com/7-vc.net/6fbc30265f860ad1.htm
-        TimerFiredFunction m_function;
-        TimerFiredClass* m_object;
+        Function<void()> m_function;
     };
 
 private:

@@ -44,10 +44,6 @@ public:
 
     virtual ~ScrollingStateStickyNode();
 
-    enum {
-        ViewportConstraints = NumStateNodeBits
-    };
-
     WEBCORE_EXPORT void updateConstraints(const StickyPositionViewportConstraints&);
     const StickyPositionViewportConstraints& viewportConstraints() const { return m_constraints; }
 
@@ -55,12 +51,11 @@ private:
     ScrollingStateStickyNode(ScrollingStateTree&, ScrollingNodeID);
     ScrollingStateStickyNode(const ScrollingStateStickyNode&, ScrollingStateTree&);
 
-    void setPropertyChangedBitsAfterReattach() override;
-
     FloatPoint computeLayerPosition(const LayoutRect& viewportRect) const;
-    void reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction) override;
+    void reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction) final;
 
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const final;
+    OptionSet<ScrollingStateNode::Property> applicableProperties() const final;
 
     StickyPositionViewportConstraints m_constraints;
 };

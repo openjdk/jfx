@@ -124,8 +124,9 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
 
     // Attention! [jimage] can be the instance of WCImage or WCImageFrame class.
     // The nature of raster is too different to make a conversion inside the native code.
-    jobject jimage = dragImage.get() && dragImage.get()->javaImage()
-                  ? jobject(*(dragImage.get()->javaImage())) : nullptr;
+    jobject jimage = (dragImage.get() && dragImage.get()->javaImage()
+        && dragImage.get()->javaImage()->platformImage()->getImage()) ?
+        jobject(*(dragImage.get()->javaImage()->platformImage()->getImage())) : nullptr;
 
     bool isImageSource = dragSourceAction && (*dragSourceAction == DragSourceAction::Image);
 

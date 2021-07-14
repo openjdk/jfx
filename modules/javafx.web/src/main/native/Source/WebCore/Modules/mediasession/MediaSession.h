@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,103 +10,92 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "MediaRemoteControls.h"
-#include "MediaSessionMetadata.h"
-#include <wtf/Function.h>
-#include <wtf/HashSet.h>
+#include "JSMediaPositionState.h"
+#include "JSMediaSessionAction.h"
+#include "JSMediaSessionPlaybackState.h"
+#include "MediaPositionState.h"
+#include "MediaSessionAction.h"
+#include "MediaSessionActionHandler.h"
+#include "MediaSessionPlaybackState.h"
+#include <wtf/Logger.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/Optional.h>
+#include <wtf/UniqueRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class Document;
-class HTMLMediaElement;
+class MediaMetadata;
+class Navigator;
 
-class MediaSession final : public RefCounted<MediaSession> {
+class MediaSession : public RefCounted<MediaSession>, public CanMakeWeakPtr<MediaSession> {
 public:
-    enum class Kind { Content, Transient, TransientSolo, Ambient };
-    enum class State { Idle, Active, Interrupted };
-
-    struct Metadata {
-        String title;
-        String artist;
-        String album;
-        String artwork;
-    };
-
-    static Ref<MediaSession> create(Document& document, Kind kind)
-    {
-        return adoptRef(*new MediaSession(document, kind));
-    }
-
+    static Ref<MediaSession> create(Navigator&);
     ~MediaSession();
 
-    Kind kind() const { return m_kind; }
-    MediaRemoteControls* controls();
+    MediaMetadata* metadata() const { return m_metadata.get(); };
+    void setMetadata(RefPtr<MediaMetadata>&&);
 
-    WEBCORE_EXPORT State currentState() const { return m_currentState; }
-    bool hasActiveMediaElements() const;
+    MediaSessionPlaybackState playbackState() const { return m_playbackState; };
+    void setPlaybackState(MediaSessionPlaybackState);
 
-    void setMetadata(const Optional<Metadata>&);
+    void setActionHandler(MediaSessionAction, RefPtr<MediaSessionActionHandler>&&);
+    ExceptionOr<void> setPositionState(Optional<MediaPositionState>&&);
+    WEBCORE_EXPORT Optional<double> currentPosition() const;
 
-    void deactivate();
+    void metadataUpdated();
 
-    // Runs the media session invocation algorithm and returns true on success.
-    bool invoke();
-
-    void handleDuckInterruption();
-    void handleIndefinitePauseInterruption();
-    void handlePauseInterruption();
-    void handleUnduckInterruption();
-    void handleUnpauseInterruption();
-
-    void togglePlayback();
-    void skipToNextTrack();
-    void skipToPreviousTrack();
-
-    void controlIsEnabledDidChange();
+    void actionHandlersUpdated();
+    bool hasActionHandler(MediaSessionAction) const;
+    WEBCORE_EXPORT RefPtr<MediaSessionActionHandler> handlerForAction(MediaSessionAction) const;
+    bool hasActiveActionHandlers() const { return !m_actionHandlers.isEmpty(); }
 
 private:
-    friend class HTMLMediaElement;
+    explicit MediaSession(Navigator&);
 
-    MediaSession(Document&, Kind);
+    const Logger& logger() const { return *m_logger.get(); }
+    const void* logIdentifier() const { return m_logIdentifier; }
 
-    void addMediaElement(HTMLMediaElement&);
-    void removeMediaElement(HTMLMediaElement&);
-
-    void safelyIterateActiveMediaElements(const WTF::Function<void(HTMLMediaElement*)>&);
-    void changeActiveMediaElements(const WTF::Function<void(void)>&);
-    void addActiveMediaElement(HTMLMediaElement&);
-    bool isMediaElementActive(HTMLMediaElement&);
-
-    void releaseInternal();
-
-    State m_currentState { State::Idle };
-    HashSet<HTMLMediaElement*> m_participatingElements;
-    HashSet<HTMLMediaElement*> m_activeParticipatingElements;
-    HashSet<HTMLMediaElement*>* m_iteratedActiveParticipatingElements { nullptr };
-
-    Document& m_document;
-    const Kind m_kind;
-    RefPtr<MediaRemoteControls> m_controls;
-    MediaSessionMetadata m_metadata;
+    WeakPtr<Navigator> m_navigator;
+    RefPtr<MediaMetadata> m_metadata;
+    MediaSessionPlaybackState m_playbackState { MediaSessionPlaybackState::None };
+    Optional<MediaPositionState> m_positionState;
+    Optional<double> m_lastReportedPosition;
+    MonotonicTime m_timeAtLastPositionUpdate;
+    HashMap<MediaSessionAction, RefPtr<MediaSessionActionHandler>, WTF::IntHash<MediaSessionAction>, WTF::StrongEnumHashTraits<MediaSessionAction>> m_actionHandlers;
+    RefPtr<const Logger> m_logger;
+    const void* m_logIdentifier;
 };
 
-} // namespace WebCore
+}
 
-#endif /* ENABLE(MEDIA_SESSION) */
+namespace WTF {
+
+template<> struct LogArgument<WebCore::MediaSessionPlaybackState> {
+    static String toString(WebCore::MediaSessionPlaybackState state) { return convertEnumerationToString(state); }
+};
+
+template<> struct LogArgument<WebCore::MediaSessionAction> {
+    static String toString(WebCore::MediaSessionAction action) { return convertEnumerationToString(action); }
+};
+
+}
+
+#endif // ENABLE(MEDIA_SESSION)

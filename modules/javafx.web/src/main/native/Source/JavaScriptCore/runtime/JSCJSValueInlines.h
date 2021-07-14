@@ -79,6 +79,17 @@ inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* error
     RELEASE_AND_RETURN(scope, JSC::toInt32(d));
 }
 
+// https://tc39.es/ecma262/#sec-tointegerorinfinity
+inline double JSValue::toIntegerOrInfinity(JSGlobalObject* globalObject) const
+{
+    if (isInt32())
+        return asInt32();
+    double d = toNumber(globalObject);
+    if (std::isnan(d) || !d)
+        return 0.0;
+    return trunc(d);
+}
+
 inline bool JSValue::isUInt32() const
 {
     return isInt32() && asInt32() >= 0;
@@ -809,46 +820,6 @@ inline PreferredPrimitiveType toPreferredPrimitiveType(JSGlobalObject* globalObj
     return NoPreference;
 }
 
-inline bool JSValue::getPrimitiveNumber(JSGlobalObject* globalObject, double& number, JSValue& value)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (isInt32()) {
-        number = asInt32();
-        value = *this;
-        return true;
-    }
-    if (isDouble()) {
-        number = asDouble();
-        value = *this;
-        return true;
-    }
-    if (isCell())
-        return asCell()->getPrimitiveNumber(globalObject, number, value);
-    if (isTrue()) {
-        number = 1.0;
-        value = *this;
-        return true;
-    }
-    if (isFalse() || isNull()) {
-        number = 0.0;
-        value = *this;
-        return true;
-    }
-    if (isUndefined()) {
-        number = PNaN;
-        value = *this;
-        return true;
-    }
-
-    ASSERT(isBigInt32());
-    throwTypeError(globalObject, scope, "Conversion from 'BigInt' to 'number' is not allowed."_s);
-    number = 0.0;
-    value = *this;
-    return true;
-}
-
 ALWAYS_INLINE double JSValue::toNumber(JSGlobalObject* globalObject) const
 {
     if (isInt32())
@@ -920,9 +891,25 @@ inline bool JSValue::isCallable(VM& vm) const
     return isCell() && asCell()->isCallable(vm);
 }
 
+template<Concurrency concurrency>
+inline TriState JSValue::isCallableWithConcurrency(VM& vm) const
+{
+    if (!isCell())
+        return TriState::False;
+    return asCell()->isCallableWithConcurrency<concurrency>(vm);
+}
+
 inline bool JSValue::isConstructor(VM& vm) const
 {
     return isCell() && asCell()->isConstructor(vm);
+}
+
+template<Concurrency concurrency>
+inline TriState JSValue::isConstructorWithConcurrency(VM& vm) const
+{
+    if (!isCell())
+        return TriState::False;
+    return asCell()->isConstructorWithConcurrency<concurrency>(vm);
 }
 
 // this method is here to be after the inline declaration of JSCell::inherits
@@ -1089,18 +1076,11 @@ ALWAYS_INLINE JSValue JSValue::getPrototype(JSGlobalObject* globalObject) const
     return synthesizePrototype(globalObject);
 }
 
-inline Structure* JSValue::structureOrNull() const
+inline Structure* JSValue::structureOrNull(VM& vm) const
 {
     if (isCell())
-        return asCell()->structure();
+        return asCell()->structure(vm);
     return nullptr;
-}
-
-inline JSValue JSValue::structureOrUndefined() const
-{
-    if (isCell())
-        return JSValue(asCell()->structure());
-    return jsUndefined();
 }
 
 // ECMA 11.9.3

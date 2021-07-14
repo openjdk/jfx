@@ -82,10 +82,10 @@ public:
     void clearResultsRecursive();
 
     ImageBuffer* imageBufferResult();
-    RefPtr<Uint8ClampedArray> unmultipliedResult(const IntRect&, Optional<ColorSpace> = WTF::nullopt);
-    RefPtr<Uint8ClampedArray> premultipliedResult(const IntRect&, Optional<ColorSpace> = WTF::nullopt);
-    void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<ColorSpace> = WTF::nullopt);
-    void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<ColorSpace> = WTF::nullopt);
+    RefPtr<Uint8ClampedArray> unmultipliedResult(const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
+    RefPtr<Uint8ClampedArray> premultipliedResult(const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
+    void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
+    void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
     FilterEffectVector& inputEffects() { return m_inputEffects; }
     FilterEffect* inputEffect(unsigned) const;
     unsigned numberOfEffectInputs() const { return m_inputEffects.size(); }
@@ -155,7 +155,7 @@ public:
 
     FloatPoint mapPointFromUserSpaceToBuffer(FloatPoint) const;
 
-    Type filterEffectClassType() { return m_filterEffectClassType; }
+    Type filterEffectClassType() const { return m_filterEffectClassType; }
 
     Filter& filter() { return m_filter; }
     const Filter& filter() const { return m_filter; }
@@ -163,13 +163,21 @@ public:
     bool clipsToBounds() const { return m_clipsToBounds; }
     void setClipsToBounds(bool value) { m_clipsToBounds = value; }
 
-    ColorSpace operatingColorSpace() const { return m_operatingColorSpace; }
-    virtual void setOperatingColorSpace(ColorSpace colorSpace) { m_operatingColorSpace = colorSpace; }
-    ColorSpace resultColorSpace() const { return m_resultColorSpace; }
-    virtual void setResultColorSpace(ColorSpace colorSpace) { m_resultColorSpace = colorSpace; }
+    DestinationColorSpace operatingColorSpace() const { return m_operatingColorSpace; }
+    virtual void setOperatingColorSpace(DestinationColorSpace colorSpace) { m_operatingColorSpace = colorSpace; }
+    DestinationColorSpace resultColorSpace() const { return m_resultColorSpace; }
+    virtual void setResultColorSpace(DestinationColorSpace colorSpace) { m_resultColorSpace = colorSpace; }
 
     virtual void transformResultColorSpace(FilterEffect* in, const int) { in->transformResultColorSpace(m_operatingColorSpace); }
-    void transformResultColorSpace(ColorSpace);
+    void transformResultColorSpace(DestinationColorSpace);
+
+    static Vector<float> normalizedFloats(const Vector<float>& values)
+    {
+        Vector<float> normalizedValues(values.size());
+        for (size_t i = 0; i < values.size(); ++i)
+            normalizedValues[i] = normalizedFloat(values[i]);
+        return normalizedValues;
+    }
 
 protected:
     FilterEffect(Filter&, Type);
@@ -189,29 +197,21 @@ protected:
 
     void clipAbsolutePaintRect();
 
-    static Vector<float> normalizedFloats(const Vector<float>& values)
-    {
-        Vector<float> normalizedValues(values.size());
-        for (size_t i = 0; i < values.size(); ++i)
-            normalizedValues[i] = normalizedFloat(values[i]);
-        return normalizedValues;
-    }
-
 private:
     virtual void platformApplySoftware() = 0;
 
     void copyImageBytes(const Uint8ClampedArray& source, Uint8ClampedArray& destination, const IntRect&) const;
-    void copyConvertedImageBufferToDestination(Uint8ClampedArray&, ColorSpace, AlphaPremultiplication, const IntRect&);
-    void copyConvertedImageDataToDestination(Uint8ClampedArray&, ImageData&, ColorSpace, AlphaPremultiplication, const IntRect&);
-    bool requiresImageDataColorSpaceConversion(Optional<ColorSpace>);
-    RefPtr<ImageData> convertImageDataToColorSpace(ColorSpace, ImageData&, AlphaPremultiplication);
-    RefPtr<ImageData> convertImageBufferToColorSpace(ColorSpace, ImageBuffer&, const IntRect&, AlphaPremultiplication);
+    void copyConvertedImageBufferToDestination(Uint8ClampedArray&, DestinationColorSpace, AlphaPremultiplication, const IntRect&);
+    void copyConvertedImageDataToDestination(Uint8ClampedArray&, ImageData&, DestinationColorSpace, AlphaPremultiplication, const IntRect&);
+    bool requiresImageDataColorSpaceConversion(Optional<DestinationColorSpace>);
+    RefPtr<ImageData> convertImageDataToColorSpace(DestinationColorSpace, ImageData&, AlphaPremultiplication);
+    RefPtr<ImageData> convertImageBufferToColorSpace(DestinationColorSpace, ImageBuffer&, const IntRect&, AlphaPremultiplication);
 
 
     Filter& m_filter;
     FilterEffectVector m_inputEffects;
 
-    std::unique_ptr<ImageBuffer> m_imageBufferResult;
+    RefPtr<ImageBuffer> m_imageBufferResult;
     RefPtr<ImageData> m_unmultipliedImageResult;
     RefPtr<ImageData> m_premultipliedImageResult;
 
@@ -241,8 +241,8 @@ private:
     // Should the effect clip to its primitive region, or expand to use the combined region of its inputs.
     bool m_clipsToBounds { true };
 
-    ColorSpace m_operatingColorSpace { ColorSpace::LinearRGB };
-    ColorSpace m_resultColorSpace { ColorSpace::SRGB };
+    DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::LinearSRGB };
+    DestinationColorSpace m_resultColorSpace { DestinationColorSpace::SRGB };
 
     const Type m_filterEffectClassType;
 };

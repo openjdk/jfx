@@ -24,9 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-    NoInterfaceObject,
-] interface SVGFitToViewBox {
-    readonly attribute SVGAnimatedRect viewBox;
-    readonly attribute SVGAnimatedPreserveAspectRatio preserveAspectRatio;
+// https://svgwg.org/svg2-draft/types.html#InterfaceSVGFitToViewBox
+interface mixin SVGFitToViewBox {
+    [SameObject] readonly attribute SVGAnimatedRect viewBox;
+    [SameObject] readonly attribute SVGAnimatedPreserveAspectRatio preserveAspectRatio;
 };

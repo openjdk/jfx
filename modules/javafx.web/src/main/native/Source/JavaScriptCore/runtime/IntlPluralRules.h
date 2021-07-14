@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +26,10 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include "IntlNumberFormat.h"
 #include <unicode/unum.h>
 #include <unicode/upluralrules.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace JSC {
 
@@ -55,6 +57,9 @@ public:
 
     DECLARE_INFO;
 
+    template<typename IntlType>
+    friend void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, Optional<JSObject&>, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
+
     void initializePluralRules(JSGlobalObject*, JSValue locales, JSValue options);
     JSValue select(JSGlobalObject*, double value) const;
     JSObject* resolvedOptions(JSGlobalObject*) const;
@@ -62,18 +67,14 @@ public:
 private:
     IntlPluralRules(VM&, Structure*);
     void finishCreation(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
 
     enum class Type : bool { Cardinal, Ordinal };
 
-    struct UPluralRulesDeleter {
-        void operator()(UPluralRules*) const;
-    };
-    struct UNumberFormatDeleter {
-        void operator()(UNumberFormat*) const;
-    };
+    using UPluralRulesDeleter = ICUDeleter<uplrules_close>;
+    using UNumberFormatDeleter = ICUDeleter<unum_close>;
 
     std::unique_ptr<UPluralRules, UPluralRulesDeleter> m_pluralRules;
     std::unique_ptr<UNumberFormat, UNumberFormatDeleter> m_numberFormat;
@@ -82,8 +83,9 @@ private:
     unsigned m_minimumIntegerDigits { 1 };
     unsigned m_minimumFractionDigits { 0 };
     unsigned m_maximumFractionDigits { 3 };
-    Optional<unsigned> m_minimumSignificantDigits;
-    Optional<unsigned> m_maximumSignificantDigits;
+    unsigned m_minimumSignificantDigits { 0 };
+    unsigned m_maximumSignificantDigits { 0 };
+    IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };
     Type m_type { Type::Cardinal };
 };
 

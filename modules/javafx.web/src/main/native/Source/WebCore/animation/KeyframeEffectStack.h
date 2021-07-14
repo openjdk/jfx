@@ -27,12 +27,14 @@
 
 #include "AnimationList.h"
 #include "CSSPropertyNames.h"
+#include "WebAnimationTypes.h"
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class KeyframeEffect;
+class RenderStyle;
 
 class KeyframeEffectStack {
     WTF_MAKE_FAST_ALLOCATED;
@@ -48,6 +50,10 @@ public:
     void setCSSAnimationList(RefPtr<const AnimationList>&&);
     bool isCurrentlyAffectingProperty(CSSPropertyID) const;
     bool requiresPseudoElement() const;
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle& previousLastStyleChangeEventStyle, const RenderStyle* parentElementStyle);
+    bool hasEffectWithImplicitKeyframes() const;
+
+    void stopAcceleratingTransformRelatedProperties(UseAcceleratedAction);
 
 private:
     void ensureEffectsAreSorted();

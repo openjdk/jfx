@@ -29,6 +29,7 @@
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
+#include "Styleable.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
@@ -44,12 +45,11 @@ class AnimationEffect;
 class AnimationEventBase;
 class AnimationTimeline;
 class Document;
-class Element;
 class RenderStyle;
 
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
-class WebAnimation : public RefCounted<WebAnimation>, public CanMakeWeakPtr<WebAnimation>, public EventTargetWithInlineData, public ActiveDOMObject {
+class WebAnimation : public RefCounted<WebAnimation>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(WebAnimation);
 public:
     static Ref<WebAnimation> create(Document&, AnimationEffect*);
@@ -121,14 +121,12 @@ public:
     bool needsTick() const;
     virtual void tick();
     WEBCORE_EXPORT Seconds timeToNextTick() const;
-    virtual void resolve(RenderStyle&, Optional<Seconds> = WTF::nullopt);
-    void effectTargetDidChange(Element* previousTarget, Element* newTarget);
+    virtual void resolve(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, Optional<Seconds> = WTF::nullopt);
+    void effectTargetDidChange(const Optional<const Styleable>& previousTarget, const Optional<const Styleable>& newTarget);
     void acceleratedStateDidChange();
-    void applyPendingAcceleratedActions();
     void willChangeRenderer();
 
     bool isRunningAccelerated() const;
-    bool isCompletelyAccelerated() const;
     bool isRelevant() const { return m_isRelevant; }
     void updateRelevance();
     void effectTimingDidChange();

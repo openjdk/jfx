@@ -56,7 +56,11 @@ class TracksSupport extends MediaControllerSupport
 
     buttonWasPressed(control)
     {
-        this.mediaController.controls.showTracksPanel();
+        if (this.mediaController.showMediaControlsContextMenu(control))
+            return;
+
+        if (this.mediaController.layoutTraits & LayoutTraits.macOS)
+            this.mediaController.controls.showTracksPanel();
     }
 
     tracksPanelNumberOfSections()
@@ -130,7 +134,7 @@ class TracksSupport extends MediaControllerSupport
 
     syncControl()
     {
-        this.control.enabled = (this.mediaController.layoutTraits & LayoutTraits.macOS) && (this._canPickAudioTracks() || this._canPickTextTracks());
+        this.control.enabled = (this.mediaController.layoutTraits & LayoutTraits.macOS || this.mediaController.canShowMediaControlsContextMenu) && (this._canPickAudioTracks() || this._canPickTextTracks());
     }
 
     // Private

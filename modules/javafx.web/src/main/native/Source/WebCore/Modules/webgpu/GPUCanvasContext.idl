@@ -39,7 +39,9 @@ typedef unsigned long GPUTextureUsageFlags;
 [
     ActiveDOMObject,
     Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU
+    EnabledAtRuntime=WebGPU,
+    GenerateIsReachable=ImplCanvasBase,
+    Exposed=Window
 ] interface GPUCanvasContext {
     // back-reference to the canvas
     readonly attribute HTMLCanvasElement canvas;

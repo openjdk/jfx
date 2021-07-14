@@ -36,7 +36,7 @@ private:
     SourceGraphic(Filter& filter)
         : FilterEffect(filter, Type::SourceGraphic)
     {
-        setOperatingColorSpace(ColorSpace::SRGB);
+        setOperatingColorSpace(DestinationColorSpace::SRGB);
     }
 
     const char* filterName() const final { return "SourceGraphic"; }
@@ -49,5 +49,10 @@ private:
 };
 
 } //namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SourceGraphic)
+    static bool isType(const WebCore::FilterEffect& effect) { return effect.filterEffectClassType() == WebCore::FilterEffect::Type::SourceGraphic; }
+SPECIALIZE_TYPE_TRAITS_END()
+
 
 #endif // SourceGraphic_h

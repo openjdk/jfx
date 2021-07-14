@@ -28,9 +28,10 @@
 
 [
     Conditional=ENCRYPTED_MEDIA,
-    EnabledAtRuntime=EncryptedMediaAPI,
+    EnabledBySetting=EncryptedMediaAPI,
     DisabledByQuirk=hasBrokenEncryptedMediaAPISupport,
     ImplementationLacksVTable,
+    Exposed=Window
 ] interface MediaKeySystemAccess {
     readonly attribute DOMString keySystem;
     MediaKeySystemConfiguration getConfiguration();

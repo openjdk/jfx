@@ -87,9 +87,7 @@ bool BlockFormattingContext::MarginCollapse::hasClearance(const Box& layoutBox) 
         return false;
     // FIXME: precomputedVerticalPositionForFormattingRoot logic ends up calling into this function when the layoutBox (first inflow child) has
     // not been laid out.
-    if (!layoutState().hasDisplayBox(layoutBox))
-        return false;
-    return formattingContext().geometryForBox(layoutBox).hasClearance();
+    return formattingContext().formattingState().hasClearance(layoutBox);
 }
 
 bool BlockFormattingContext::MarginCollapse::marginBeforeCollapsesWithParentMarginAfter(const Box& layoutBox) const
@@ -406,11 +404,11 @@ bool BlockFormattingContext::MarginCollapse::marginsCollapseThrough(const Box& l
                 return false;
 
             auto isConsideredEmpty = [&] {
-                auto& formattingState = layoutState.establishedInlineFormattingState(containerBox);
-                if (auto* inlineContent = formattingState.displayInlineContent(); inlineContent && !inlineContent->lineBoxes.isEmpty())
-                            return false;
+                auto& inlineFormattingState = layoutState.establishedInlineFormattingState(containerBox);
+                if (!inlineFormattingState.lines().isEmpty())
+                    return false;
                 // Any float box in this formatting context prevents collapsing through.
-                auto& floats = formattingState.floatingState().floats();
+                auto& floats = inlineFormattingState.floatingState().floats();
                 for (auto& floatItem : floats) {
                     if (floatItem.isInFormattingContextOf(containerBox))
                         return false;
@@ -513,12 +511,12 @@ void BlockFormattingContext::MarginCollapse::updateMarginAfterForPreviousSibling
 
 UsedVerticalMargin::PositiveAndNegativePair::Values BlockFormattingContext::MarginCollapse::positiveNegativeValues(const Box& layoutBox, MarginType marginType) const
 {
-    auto& blockFormattingState = downcast<BlockFormattingState>(layoutState().formattingStateForBox(layoutBox));
+    auto& formattingState = formattingContext().formattingState();
     // By the time we get here in BFC layout to gather positive and negative margin values for either a previous sibling or a child box,
     // we mush have computed and cached those values.
-    ASSERT(blockFormattingState.hasUsedVerticalMargin(layoutBox));
-    auto positiveAndNegativeVerticalMargin = blockFormattingState.usedVerticalMargin(layoutBox).positiveAndNegativeValues;
-        return marginType == MarginType::Before ? positiveAndNegativeVerticalMargin.before : positiveAndNegativeVerticalMargin.after;
+    ASSERT(formattingState.hasUsedVerticalMargin(layoutBox));
+    auto positiveAndNegativeVerticalMargin = formattingState.usedVerticalMargin(layoutBox).positiveAndNegativeValues;
+    return marginType == MarginType::Before ? positiveAndNegativeVerticalMargin.before : positiveAndNegativeVerticalMargin.after;
 }
 
 UsedVerticalMargin::PositiveAndNegativePair::Values BlockFormattingContext::MarginCollapse::positiveNegativeMarginBefore(const Box& layoutBox, UsedVerticalMargin::NonCollapsedValues nonCollapsedValues) const
