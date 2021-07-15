@@ -2695,9 +2695,9 @@ static bool isSiblingSubsequent(const Node& siblingA, const Node& siblingB)
     return false;
 }
 
+#if PLATFORM(JAVA)
 // VS 2017 has buggy support for compile-time inline constants, so they
 // are defined here as runtime constants
-#if PLATFORM(JAVA)
 const PartialOrdering PartialOrdering::less(Type::Less);
 const PartialOrdering PartialOrdering::equivalent(Type::Equivalent);
 const PartialOrdering PartialOrdering::greater(Type::Greater);
