@@ -223,7 +223,7 @@ public final class PrinterJob {
      * <p>
      * Setting a null value for printer will install the default printer.
      * Setting the current printer has no effect.
-     * @return the <code>Printer</code> for this job
+     * @return the {@code Printer} for this job
      */
     public final ObjectProperty<Printer> printerProperty() {
         /* The PrinterJob constructor always creates this property,
