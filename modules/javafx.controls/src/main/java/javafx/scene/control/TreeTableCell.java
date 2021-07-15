@@ -200,7 +200,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     // --- TableColumn
     /**
-     * The {code TreeTableColumn} instance that backs this {@code TreeTableCell}.
+     * The {@code TreeTableColumn} instance that backs this {@code TreeTableCell}.
      */
     private ReadOnlyObjectWrapper<TreeTableColumn<S,T>> tableColumn =
             new ReadOnlyObjectWrapper<TreeTableColumn<S,T>>(this, "tableColumn") {
