@@ -151,7 +151,7 @@ public class TreeTableCellTest {
 
     @Test public void treeItemIsNullWhenIndexIsOutOfRange() {
         cell.updateIndex(50);
-        cell.updateTreeTableRow(row);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
         assertNull(cell.getTableRow().getTreeItem());
     }
@@ -506,7 +506,7 @@ public class TreeTableCellTest {
 
     @Test public void checkTableRowProperty() {
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableRow(row);
+        cell.updateTableRow(row);
         assertSame(row, cell.getTableRow());
         assertSame(row, cell.tableRowProperty().get());
         assertFalse(cell.tableRowProperty() instanceof ObjectProperty);
@@ -515,7 +515,7 @@ public class TreeTableCellTest {
     @Test public void checkTableColumnProperty() {
         TreeTableColumn<String, String> column = new TreeTableColumn<>();
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableColumn(column);
+        cell.updateTableColumn(column);
         assertSame(column, cell.getTableColumn());
         assertSame(column, cell.tableColumnProperty().get());
         assertFalse(cell.tableColumnProperty() instanceof ObjectProperty);
@@ -533,7 +533,7 @@ public class TreeTableCellTest {
         TreeTableColumn col = new TreeTableColumn("TEST");
         col.setCellValueFactory(param -> null);
         tree.getColumns().add(col);
-        cell.updateTreeTableColumn(col);
+        cell.updateTableColumn(col);
         cell.updateTreeTableView(tree);
 
         // set index to 0, which results in the cell value factory returning
@@ -688,8 +688,8 @@ public class TreeTableCellTest {
         treeTableColumn.setEditable(true);
         tree.getColumns().add(treeTableColumn);
 
-        cell.updateTreeTableColumn(treeTableColumn);
-        cell.updateTreeTableRow(row);
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
 
         cell.updateIndex(0);
@@ -713,8 +713,8 @@ public class TreeTableCellTest {
         treeTableColumn.setEditable(true);
         tree.getColumns().add(treeTableColumn);
 
-        cell.updateTreeTableColumn(treeTableColumn);
-        cell.updateTreeTableRow(row);
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
 
         cell.updateIndex(0);
@@ -738,8 +738,8 @@ public class TreeTableCellTest {
         treeTableColumn.setEditable(false);
         tree.getColumns().add(treeTableColumn);
 
-        cell.updateTreeTableColumn(treeTableColumn);
-        cell.updateTreeTableRow(row);
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
 
         cell.updateIndex(0);
@@ -759,7 +759,7 @@ public class TreeTableCellTest {
         editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(""));
 
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableColumn(editingColumn);
+        cell.updateTableColumn(editingColumn);
     }
 
     @Test
@@ -893,7 +893,7 @@ public class TreeTableCellTest {
         editingColumn.setCellValueFactory(param -> null);
         tree.getColumns().add(editingColumn);
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableColumn(editingColumn);
+        cell.updateTableColumn(editingColumn);
         // test editing: first round
         // switch cell off editing by table api
         int editingIndex = 1;

@@ -712,39 +712,42 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      **************************************************************************/
 
     /**
-     * Updates the TreeTableView associated with this TreeTableCell. This is typically
-     * only done once when the TreeTableCell is first added to the TreeTableView.
-     *
+     * Updates the {@code TreeTableView} associated with this {@code TreeTableCell}.
+     * This is typically only done once when the {@code TreeTableCell} is first
+     * added to the {@code TreeTableView}.
+     * <p>
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param tv the TreeTableView associated with this TreeTableCell
+     * @param tv the {@code TreeTableView} associated with this {@code TreeTableCell}
      */
     public final void updateTreeTableView(TreeTableView<S> tv) {
         setTreeTableView(tv);
     }
 
     /**
-     * Updates the TreeTableRow associated with this TreeTableCell.
-     *
+     * Updates the {@code TreeTableRow} associated with this {@code TreeTableCell}.
+     * <p>
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param treeTableRow the TreeTableRow associated with this TreeTableCell
+     * @param row the {@code TreeTableRow} associated with this {@code TreeTableCell}
+     * @since 17
      */
-    public final void updateTreeTableRow(TreeTableRow<S> treeTableRow) {
-        this.setTableRow(treeTableRow);
+    public final void updateTableRow(TreeTableRow<S> row) {
+        this.setTableRow(row);
     }
 
     /**
-     * Updates the TreeTableColumn associated with this TreeTableCell.
-     *
+     * Updates the {@code TreeTableColumn} associated with this {@code TreeTableCell}.
+     * <p>
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param col the TreeTableColumn associated with this TreeTableCell
+     * @param column the {@code TreeTableColumn} associated with this {@code TreeTableCell}
+     * @since 17
      */
-    public final void updateTreeTableColumn(TreeTableColumn<S,T> col) {
+    public final void updateTableColumn(TreeTableColumn<S,T> column) {
         // remove style class of existing tree table column, if it is non-null
         TreeTableColumn<S,T> oldCol = getTableColumn();
         if (oldCol != null) {
@@ -764,20 +767,39 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             }
         }
 
-        setTableColumn(col);
+        setTableColumn(column);
 
-        if (col != null) {
-            getStyleClass().addAll(col.getStyleClass());
-            col.getStyleClass().addListener(weakColumnStyleClassListener);
+        if (column != null) {
+            getStyleClass().addAll(column.getStyleClass());
+            column.getStyleClass().addListener(weakColumnStyleClassListener);
 
-            col.idProperty().addListener(weakColumnIdListener);
-            col.styleProperty().addListener(weakColumnStyleListener);
+            column.idProperty().addListener(weakColumnIdListener);
+            column.styleProperty().addListener(weakColumnStyleListener);
 
-            possiblySetId(col.getId());
-            possiblySetStyle(col.getStyle());
+            possiblySetId(column.getId());
+            possiblySetStyle(column.getStyle());
         }
     }
 
+    // The following methods were misnamed and are deprecated in favor of the
+    // correctly named methods.
+    /**
+     * @deprecated Use {@link updateTableRow} instead.
+     * @param row the {@code TreeTableRow}
+     */
+    @Deprecated(since = "17")
+    public final void updateTreeTableRow(TreeTableRow<S> row) {
+        updateTableRow(row);
+    }
+
+    /**
+     * @deprecated Use {@link updateTableColumn} instead.
+     * @param column the {@code TreeTableColumn}
+     */
+    @Deprecated(since = "17")
+    public final void updateTreeTableColumn(TreeTableColumn<S,T> column) {
+        updateTableColumn(column);
+    }
 
 
     /***************************************************************************
