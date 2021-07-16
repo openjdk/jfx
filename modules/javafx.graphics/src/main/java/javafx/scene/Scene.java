@@ -842,12 +842,7 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
 
-    // FIXME: make this method package-scope in the next release
-    /**
-     * @deprecated This method was exposed erroneously and will be removed in a future version.
-     */
-    @Deprecated(forRemoval = true, since = "17")
-    public void disposePeer() {
+    void disposePeer() {
         if (peer == null) {
             // This is fine, the window is either not shown yet and there is no
             // need in disposing scene peer, or is hidden and disposePeer()
@@ -2140,13 +2135,7 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT);
     }
 
-    // FIXME: make this method package-scope in the next release
-    /**
-     * @deprecated This method was exposed erroneously and will be removed in a future version.
-     * @param e undocumented method parameter
-     */
-    @Deprecated(forRemoval = true, since = "17")
-    public void processKeyEvent(KeyEvent e) {
+    void processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
                 dndGesture = null;
@@ -2232,13 +2221,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    // FIXME: make this method package-scope in the next release
-    /**
-     * @deprecated This method was exposed erroneously and will be removed in a future version.
-     * @param enable undocumented method parameter
-     */
-    @Deprecated(forRemoval = true, since = "17")
-    public void enableInputMethodEvents(boolean enable) {
+    void enableInputMethodEvents(boolean enable) {
        if (peer != null) {
            peer.enableInputMethodEvents(enable);
        }
