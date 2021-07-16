@@ -538,7 +538,7 @@ public class TableCellTest {
         cell.startEdit();
         assertEquals("startEdit must fire", 1, events.size());
     }
-    
+
     @Test
     public void testEditStartDoesNotFireEventWhileEditing() {
         setupForEditing();
