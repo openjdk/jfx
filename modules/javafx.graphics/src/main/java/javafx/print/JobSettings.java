@@ -439,25 +439,21 @@ public final class JobSettings {
                     throw new
                         RuntimeException("Jobname property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                    return get();
+                }
             };
         }
         return jobName;
     }
 
-    /**
-     * Get the name of a job.
-     * @return a string representing the name of a job
-     */
-    public String getJobName() {
+    public final String getJobName() {
         return jobNameProperty().get();
     }
 
-
-    /**
-     * Set the name of a job.
-     * @param name string representing the name of a job
-     */
-    public void setJobName(String name) {
+    public final void setJobName(String name) {
         jobNameProperty().set(name);
     }
     ///////////////////////  END JOBNAME /////////////////////
@@ -544,12 +540,11 @@ public final class JobSettings {
         return outputFile;
     }
 
-    public String getOutputFile() {
+    public final String getOutputFile() {
         return outputFileProperty().get();
     }
 
-
-    public void setOutputFile(String filePath) {
+    public final void setOutputFile(String filePath) {
         outputFileProperty().set(filePath);
     }
     ///////////////////////  END OUTPUTFILE /////////////////////
@@ -599,23 +594,20 @@ public final class JobSettings {
                     throw new
                         RuntimeException("Copies property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return "" + get();
+                }
             };
         }
         return copies;
     }
 
-    /**
-     * Get the number of copies to print.
-     * @return number of copies to print
-     */
-    public int getCopies() {
+    public final int getCopies() {
          return copiesProperty().get();
     }
 
-    /**
-     * Set the number of copies to print.
-     * @param nCopies number of copies to print
-     */
     public final void setCopies(int nCopies) {
         copiesProperty().set(nCopies);
     }
@@ -694,17 +686,31 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PageRanges property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                      PageRange[] ranges = (PageRange[])get();
+                      if (ranges == null || ranges.length == 0) {
+                          return "null";
+                      }
+                      String s = "";
+                      int len = ranges.length;
+                      for (int r=0; r<len; r++) {
+                          s += ranges[r];
+                          if ((r+1) < len) {
+                              s += ", ";
+                          } else {
+                              s += ".";
+                          }
+                      }
+                      return s;
+                }
             };
         }
         return pageRanges;
     }
 
-    /**
-     * The range of pages to print. null always means all pages.
-     * See {@link pageRangesProperty} for more details.
-     * @return null or an array as specified above
-     */
-    public PageRange[] getPageRanges() {
+    public final PageRange[] getPageRanges() {
         return (PageRange[])(pageRangesProperty().get());
     }
 
@@ -717,7 +723,7 @@ public final class JobSettings {
      * See {@link pageRangesProperty} for more details.
      * @param pages null or a varargs array as specified above
      */
-    public void setPageRanges(PageRange... pages) {
+    public final void setPageRanges(PageRange... pages) {
         pageRangesProperty().set((PageRange[])pages);
     }
 
@@ -769,28 +775,21 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PrintSides property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return  get().toString();
+                }
             };
         }
         return sides;
     }
 
-    /**
-     * If a printer supports it, then a job may be printed on
-     * both sides of the media (paper), ie duplex printing.
-     * This method returns the selected setting.
-     * @return the duplex (side) setting.
-     */
-    public PrintSides getPrintSides() {
+    public final PrintSides getPrintSides() {
         return printSidesProperty().get();
     }
 
-    /**
-     * Set the <code>PrintSides</code> property which controls
-     * duplex printing.
-     * A null value is ignored.
-     * @param sides new setting for number of sides.
-     */
-    public void setPrintSides(PrintSides sides) {
+    public final void setPrintSides(PrintSides sides) {
         if (sides == getPrintSides()) {
             return;
         }
@@ -805,6 +804,19 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>Collation</code>.
+     * Collation determines how sheets are sorted when
+     * multiple copies of a document are printed.
+     * As such it is only relevant if 2 or more copies of
+     * a document with 2 more sheets are printed.
+     * A sheet is the physical media, so documents with 2 pages
+     * that are printed N-up, or double-sided may still have only
+     * one sheet.
+     * A collated print job produces documents with sheets
+     * of a document sorted in sequence.
+     * An uncollated job collects together the multiple copies
+     * of the same sheet.
+     * Uncollated (<code>false</code>) is the typical default value.
+     *
      * @return an instance of <code>Collation</code>
      */
     public final ObjectProperty<Collation> collationProperty() {
@@ -845,37 +857,21 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("Collation property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return get().toString();
+                }
             };
         }
         return collation;
     }
 
-    /**
-     * Collation determines how sheets are sorted when
-     * multiple copies of a document are printed.
-     * As such it is only relevant if 2 or more copies of
-     * a document with 2 more sheets are printed.
-     * A sheet is the physical media, so documents with 2 pages
-     * that are printed N-up, or double-sided may still have only
-     * one sheet.
-     * A collated print job produces documents with sheets
-     * of a document sorted in sequence.
-     * An uncollated job collects together the multiple copies
-     * of the same sheet.
-     * Uncollated (<code>false</code>) is the typical default value.
-     *
-     * @return the collation
-     */
-    public Collation getCollation() {
+    public final Collation getCollation() {
         return collationProperty().get();
     }
 
-    /**
-     * Set the <code>Collation</code> property.
-     * A null value is ignored.
-     * @param collation new setting for collation
-     */
-    public void setCollation(Collation collation) {
+    public final void setCollation(Collation collation) {
         if (collation == getCollation()) {
             return;
         }
@@ -890,6 +886,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintColor</code>.
+     * If a null value is set it is ignored.
      * @return an instance of <code>PrintColor</code>
      */
     public final ObjectProperty<PrintColor> printColorProperty() {
@@ -930,22 +927,21 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PrintColor property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return get().toString();
+                }
             };
         }
         return color;
     }
 
-    public PrintColor getPrintColor() {
+    public final PrintColor getPrintColor() {
         return printColorProperty().get();
     }
 
-    /**
-     * Set the <code>PrintColor</code> property.
-     * A null value is ignored.
-     *
-     * @param color new setting for print color.
-     */
-    public void setPrintColor(PrintColor color) {
+    public final void setPrintColor(PrintColor color) {
         if (color == getPrintColor()) {
             return;
         }
@@ -960,6 +956,15 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintQuality</code>.
+     * <p>
+     * Note that quality and resolution are overlapping concepts.
+     * Therefore a printer may support setting one, or the other but
+     * not both. Applications setting these programmatically should
+     * query both properties and select appropriately from the supported
+     * values. If a printer supports non-standard values, code likely
+     * cannot distinguish the printer's interpretation of these values
+     * and it is safest to stick to selecting a standard value that
+     * matches the requirement.
      * @return an instance of <code>PrintQuality</code>
      */
     public final ObjectProperty<PrintQuality> printQualityProperty() {
@@ -1000,30 +1005,21 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PrintQuality property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return  get().toString();
+                }
             };
         }
         return quality;
     }
 
-    public PrintQuality getPrintQuality() {
+    public final PrintQuality getPrintQuality() {
         return  printQualityProperty().get();
     }
 
-    /**
-     * Set the <code>PrintQuality</code> property.
-     * A null value is ignored.
-     * <p>
-     * Note that quality and resolution overlapping concepts.
-     * Therefore a printer may support setting one, or the other but
-     * not both. Applications setting these programmatically should
-     * query both properties and select appropriately from the supported
-     * values. If a printer supports non-standard values, code likely
-     * cannot distinguish the printer's interpretation of these values
-     * and is safest to stick to selecting from the standard value that
-     * matches the requirement.
-     * @param quality new setting for print quality.
-     */
-    public void setPrintQuality(PrintQuality quality) {
+    public final void setPrintQuality(PrintQuality quality) {
         if (quality == getPrintQuality()) {
             return;
         }
@@ -1039,6 +1035,16 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintResolution</code>.
+     * A null value is ignored.
+     * <p>
+     * Note that quality and resolution are overlapping concepts.
+     * Therefore a printer may support setting one, or the other but
+     * not both. Applications setting these programmatically should
+     * query both properties and select appropriately from the supported
+     * values. If a printer supports non-standard values, code likely
+     * cannot distinguish the printer's interpretation of these values
+     * and it is safest to stick to selecting a standard value that
+     * matches the requirement.
      * @return an instance of <code>PrintResolution</code>
      */
     public final ObjectProperty<PrintResolution> printResolutionProperty() {
@@ -1081,34 +1087,21 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PrintResolution property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return  get().toString();
+                }
             };
         }
         return resolution;
     }
 
-    /**
-     *
-     * @return the print resolution
-     */
-    public PrintResolution getPrintResolution() {
+    public final PrintResolution getPrintResolution() {
         return printResolutionProperty().get();
     }
 
-    /**
-     * Set the <code>PrintResolution</code> property.
-     * A null value is ignored.
-     * <p>
-     * Note that quality and resolution overlapping concepts.
-     * Therefore a printer may support setting one, or the other but
-     * not both. Applications setting these programmatically should
-     * query both properties and select appropriately from the supported
-     * values. If a printer supports non-standard values, code likely
-     * cannot distinguish the printer's interpretation of these values
-     * and is safest to stick to selecting from the standard value that
-     * matches the requirement.
-     * @param resolution new setting for print resolution.
-     */
-    public void setPrintResolution(PrintResolution resolution) {
+    public final void setPrintResolution(PrintResolution resolution) {
         if (resolution == null || resolution == getPrintResolution()) {
             return;
         }
@@ -1124,6 +1117,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PaperSource</code>.
+     * A null value is ignored.
      * @return an instance of <code>PaperSource</code>
      */
     public final ObjectProperty<PaperSource> paperSourceProperty() {
@@ -1164,17 +1158,22 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PaperSource property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return  get().toString();
+                }
             };
         }
         return paperSource;
     }
 
 
-    public PaperSource getPaperSource() {
+    public final PaperSource getPaperSource() {
         return paperSourceProperty().get();
     }
 
-    public void setPaperSource(PaperSource value) {
+    public final void setPaperSource(PaperSource value) {
         paperSourceProperty().set(value);
     }
 
@@ -1196,6 +1195,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PageLayout</code>.
+     * Setting a null value is ignored.
      * @return an instance of <code>PageLayout</code>
      */
     public final ObjectProperty<PageLayout> pageLayoutProperty() {
@@ -1228,24 +1228,21 @@ public final class JobSettings {
                     throw new RuntimeException
                         ("PageLayout property cannot be bound");
                 }
+
+                @Override
+                public String toString() {
+                     return  get().toString();
+                }
             };
         }
         return layout;
     }
 
-    /**
-     * Get the current page layout for this job.
-     * @return page layout to use for the job.
-     */
-    public PageLayout getPageLayout() {
+    public final PageLayout getPageLayout() {
         return pageLayoutProperty().get();
     }
 
-    /**
-     * Set the PageLayout to use.
-     * @param pageLayout The page layout to use.
-     */
-    public void setPageLayout(PageLayout pageLayout) {
+    public final void setPageLayout(PageLayout pageLayout) {
         pageLayoutProperty().set(pageLayout);
     }
 
@@ -1259,7 +1256,8 @@ public final class JobSettings {
             " Copies = " + getCopies() + nl +
             " Sides = " + getPrintSides() + nl +
             " JobName = " + getJobName() + nl +
-            " Page ranges = " + getPageRanges() + nl +
+            " Output file = " + getOutputFile() + nl +
+            " Page ranges = " + pageRangesProperty().toString() + nl +
             " Print color = " + getPrintColor() + nl +
             " Print quality = " + getPrintQuality() + nl +
             " Print resolution = " + getPrintResolution() + nl +
