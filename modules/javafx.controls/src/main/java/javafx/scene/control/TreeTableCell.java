@@ -289,6 +289,11 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     private ReadOnlyObjectWrapper<TreeTableRow<S>> tableRow =
             new ReadOnlyObjectWrapper<TreeTableRow<S>>(this, "tableRow");
     private void setTableRow(TreeTableRow<S> value) { tableRow.set(value); }
+    /**
+     * Gets the value of the property {@code tableRow}.
+     * @return the value of the property {@code tableRow}
+     * @since 17
+     */
     public final TreeTableRow<S> getTableRow() { return tableRow.get(); }
     public final ReadOnlyObjectProperty<TreeTableRow<S>> tableRowProperty() {
         return tableRow.getReadOnlyProperty();
