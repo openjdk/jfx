@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package test.javafx.stage;
 
 import com.sun.javafx.PlatformUtil;
@@ -42,6 +43,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class StageAtTopPositionTest {
@@ -69,24 +71,18 @@ public class StageAtTopPositionTest {
             stage.setX(300);
             stage.setY(400);
             stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
-                                    Platform.runLater(startupLatch::countDown));
+                                  Platform.runLater(startupLatch::countDown));
             stage.show();
         }
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        assertTrue("Timeout waiting for FX runtime to start",
+                   startupLatch.await(15, TimeUnit.SECONDS));
     }
-
 
     @Test
     public void testMoveToTopPosition() throws Exception {
