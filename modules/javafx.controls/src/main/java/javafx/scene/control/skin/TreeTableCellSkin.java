@@ -128,7 +128,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
             return leftPadding;
         }
 
-        TreeTableRow<S> treeTableRow = cell.getTreeTableRow();
+        TreeTableRow<S> treeTableRow = cell.getTableRow();
         if (treeTableRow == null) return leftPadding;
 
         TreeItem<S> treeItem = treeTableRow.getTreeItem();
