@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,9 +36,12 @@ namespace WebCore {
 class JSValueInWrappedObject {
 public:
     JSValueInWrappedObject(JSC::JSValue = { });
+    JSValueInWrappedObject(const JSValueInWrappedObject&);
     operator JSC::JSValue() const;
     explicit operator bool() const;
-    void visit(JSC::SlotVisitor&) const;
+    JSValueInWrappedObject& operator=(const JSValueInWrappedObject& other);
+    template<typename Visitor> void visit(Visitor&) const;
+    void clear();
 
 private:
     // Use a weak pointer here so that if this code or client code has a visiting mistake,
@@ -50,7 +53,7 @@ private:
     Value m_value;
 };
 
-JSC::JSValue cachedPropertyValue(JSC::ExecState&, const JSDOMObject& owner, JSValueInWrappedObject& cacheSlot, const WTF::Function<JSC::JSValue()>&);
+JSC::JSValue cachedPropertyValue(JSC::JSGlobalObject&, const JSDOMObject& owner, JSValueInWrappedObject& cacheSlot, const WTF::Function<JSC::JSValue()>&);
 
 inline auto JSValueInWrappedObject::makeValue(JSC::JSValue value) -> Value
 {
@@ -66,6 +69,11 @@ inline auto JSValueInWrappedObject::makeValue(JSC::JSValue value) -> Value
 }
 
 inline JSValueInWrappedObject::JSValueInWrappedObject(JSC::JSValue value)
+    : m_value(makeValue(JSC::JSValue(value)))
+{
+}
+
+inline JSValueInWrappedObject::JSValueInWrappedObject(const JSValueInWrappedObject& value)
     : m_value(makeValue(value))
 {
 }
@@ -84,7 +92,14 @@ inline JSValueInWrappedObject::operator bool() const
     return JSC::JSValue { *this }.operator bool();
 }
 
-inline void JSValueInWrappedObject::visit(JSC::SlotVisitor& visitor) const
+inline JSValueInWrappedObject& JSValueInWrappedObject::operator=(const JSValueInWrappedObject& other)
+{
+    m_value = makeValue(JSC::JSValue(other));
+    return *this;
+}
+
+template<typename Visitor>
+inline void JSValueInWrappedObject::visit(Visitor& visitor) const
 {
     return WTF::switchOn(m_value, [] (JSC::JSValue) {
         // Nothing to visit.
@@ -93,12 +108,22 @@ inline void JSValueInWrappedObject::visit(JSC::SlotVisitor& visitor) const
     });
 }
 
-inline JSC::JSValue cachedPropertyValue(JSC::ExecState& state, const JSDOMObject& owner, JSValueInWrappedObject& cachedValue, const WTF::Function<JSC::JSValue()>& function)
+template void JSValueInWrappedObject::visit(JSC::AbstractSlotVisitor&) const;
+template void JSValueInWrappedObject::visit(JSC::SlotVisitor&) const;
+
+inline void JSValueInWrappedObject::clear()
 {
-    if (cachedValue && isWorldCompatible(state, cachedValue))
+    WTF::switchOn(m_value, [] (Weak& value) {
+        value.clear();
+    }, [] (auto&) { });
+}
+
+inline JSC::JSValue cachedPropertyValue(JSC::JSGlobalObject& lexicalGlobalObject, const JSDOMObject& owner, JSValueInWrappedObject& cachedValue, const WTF::Function<JSC::JSValue()>& function)
+{
+    if (cachedValue && isWorldCompatible(lexicalGlobalObject, cachedValue))
         return cachedValue;
-    cachedValue = cloneAcrossWorlds(state, owner, function());
-    ASSERT(isWorldCompatible(state, cachedValue));
+    cachedValue = cloneAcrossWorlds(lexicalGlobalObject, owner, function());
+    ASSERT(isWorldCompatible(lexicalGlobalObject, cachedValue));
     return cachedValue;
 }
 

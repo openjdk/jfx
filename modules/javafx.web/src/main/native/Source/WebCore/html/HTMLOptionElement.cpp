@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2011 Motorola Mobility, Inc.  All rights reserved.
  *
@@ -28,6 +28,7 @@
 #include "HTMLOptionElement.h"
 
 #include "Document.h"
+#include "ElementAncestorIterator.h"
 #include "HTMLDataListElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
@@ -68,7 +69,7 @@ Ref<HTMLOptionElement> HTMLOptionElement::create(const QualifiedName& tagName, D
     return adoptRef(*new HTMLOptionElement(tagName, document));
 }
 
-ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForJSConstructor(Document& document, const String& text, const String& value, bool defaultSelected, bool selected)
+ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForLegacyFactoryFunction(Document& document, const String& text, const String& value, bool defaultSelected, bool selected)
 {
     auto element = create(document);
 
@@ -84,7 +85,7 @@ ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForJSConstructor(Do
         element->setAttributeWithoutSynchronization(selectedAttr, emptyAtom());
     element->setSelected(selected);
 
-    return WTFMove(element);
+    return element;
 }
 
 bool HTMLOptionElement::isFocusable() const
@@ -134,11 +135,14 @@ void HTMLOptionElement::setText(const String &text)
         select->setSelectedIndex(oldSelectedIndex);
 }
 
-void HTMLOptionElement::accessKeyAction(bool)
+bool HTMLOptionElement::accessKeyAction(bool)
 {
     RefPtr<HTMLSelectElement> select = ownerSelectElement();
-    if (select)
+    if (select) {
         select->accessKeySetSelectedIndex(index());
+        return true;
+    }
+    return false;
 }
 
 int HTMLOptionElement::index() const
@@ -162,12 +166,12 @@ int HTMLOptionElement::index() const
     return 0;
 }
 
-void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
 #if ENABLE(DATALIST_ELEMENT)
     if (name == valueAttr) {
-        if (RefPtr<HTMLDataListElement> dataList = ownerDataListElement())
-            dataList->optionElementChildrenChanged();
+        for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
+            dataList.optionElementChildrenChanged();
     } else
 #endif
     if (name == disabledAttr) {
@@ -194,7 +198,7 @@ void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomicSt
 
 String HTMLOptionElement::value() const
 {
-    const AtomicString& value = attributeWithoutSynchronization(valueAttr);
+    const AtomString& value = attributeWithoutSynchronization(valueAttr);
     if (!value.isNull())
         return value;
     return stripLeadingAndTrailingHTMLSpaces(collectOptionInnerText()).simplifyWhiteSpace(isHTMLSpace);
@@ -205,7 +209,7 @@ void HTMLOptionElement::setValue(const String& value)
     setAttributeWithoutSynchronization(valueAttr, value);
 }
 
-bool HTMLOptionElement::selected()
+bool HTMLOptionElement::selected() const
 {
     if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
         select->updateListItemSelectedStates();
@@ -238,39 +242,17 @@ void HTMLOptionElement::setSelectedState(bool selected)
 void HTMLOptionElement::childrenChanged(const ChildChange& change)
 {
 #if ENABLE(DATALIST_ELEMENT)
-    if (RefPtr<HTMLDataListElement> dataList = ownerDataListElement())
-        dataList->optionElementChildrenChanged();
-    else
+    for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
+        dataList.optionElementChildrenChanged();
 #endif
     if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
         select->optionElementChildrenChanged();
     HTMLElement::childrenChanged(change);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-HTMLDataListElement* HTMLOptionElement::ownerDataListElement() const
-{
-    RefPtr<ContainerNode> datalist = parentNode();
-    while (datalist && !is<HTMLDataListElement>(*datalist))
-        datalist = datalist->parentNode();
-
-    if (!datalist)
-        return nullptr;
-
-    return downcast<HTMLDataListElement>(datalist.get());
-}
-#endif
-
 HTMLSelectElement* HTMLOptionElement::ownerSelectElement() const
 {
-    RefPtr<ContainerNode> select = parentNode();
-    while (select && !is<HTMLSelectElement>(*select))
-        select = select->parentNode();
-
-    if (!select)
-        return nullptr;
-
-    return downcast<HTMLSelectElement>(select.get());
+    return const_cast<HTMLSelectElement*>(ancestorsOfType<HTMLSelectElement>(*this).first());
 }
 
 String HTMLOptionElement::label() const

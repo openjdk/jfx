@@ -31,6 +31,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/URL.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,7 +49,7 @@ enum ApplicationCacheUpdateOption {
     ApplicationCacheUpdateWithoutBrowsingContext
 };
 
-class ApplicationCacheGroup {
+class ApplicationCacheGroup : public CanMakeWeakPtr<ApplicationCacheGroup> {
     WTF_MAKE_NONCOPYABLE(ApplicationCacheGroup);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -94,10 +95,10 @@ public:
     void disassociateDocumentLoader(DocumentLoader&);
 
 private:
-    static void postListenerTask(const AtomicString& eventType, const HashSet<DocumentLoader*>& set) { postListenerTask(eventType, 0, 0, set); }
-    static void postListenerTask(const AtomicString& eventType, DocumentLoader& loader)  { postListenerTask(eventType, 0, 0, loader); }
-    static void postListenerTask(const AtomicString& eventType, int progressTotal, int progressDone, const HashSet<DocumentLoader*>&);
-    static void postListenerTask(const AtomicString& eventType, int progressTotal, int progressDone, DocumentLoader&);
+    static void postListenerTask(const AtomString& eventType, const HashSet<DocumentLoader*>& set) { postListenerTask(eventType, 0, 0, set); }
+    static void postListenerTask(const AtomString& eventType, DocumentLoader& loader)  { postListenerTask(eventType, 0, 0, loader); }
+    static void postListenerTask(const AtomString& eventType, int progressTotal, int progressDone, const HashSet<DocumentLoader*>&);
+    static void postListenerTask(const AtomString& eventType, int progressTotal, int progressDone, DocumentLoader&);
 
     void scheduleReachedMaxAppCacheSizeCallback();
 
@@ -158,7 +159,7 @@ private:
 
     // Frame used for fetching resources when updating.
     // FIXME: An update started by a particular frame should not stop if it is destroyed, but there are other frames associated with the same cache group.
-    Frame* m_frame { nullptr };
+    WeakPtr<Frame> m_frame;
 
     // An obsolete cache group is never stored, but the opposite is not true - storing may fail for multiple reasons, such as exceeding disk quota.
     unsigned m_storageID { 0 };

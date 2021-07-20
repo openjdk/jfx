@@ -28,17 +28,15 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "FloatingState.h"
-#include "LayoutUnits.h"
+#include "FormattingContext.h"
+#include "LayoutContainerBox.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
-
 namespace Layout {
 
 class FloatAvoider;
 class Box;
-class Container;
-class FloatingPair;
 class LayoutState;
 
 // FloatingContext is responsible for adjusting the position of a box in the current formatting context
@@ -46,25 +44,50 @@ class LayoutState;
 class FloatingContext {
     WTF_MAKE_ISO_ALLOCATED(FloatingContext);
 public:
-    FloatingContext(FloatingState&);
+    FloatingContext(const FormattingContext&, const FloatingState&);
 
-    FloatingState& floatingState() const { return m_floatingState; }
+    const FloatingState& floatingState() const { return m_floatingState; }
 
-    Point positionForFloat(const Box&) const;
-    Optional<Point> positionForFloatAvoiding(const Box&) const;
+    LayoutPoint positionForFloat(const Box&, const HorizontalConstraints&) const;
+    LayoutPoint positionForNonFloatingFloatAvoider(const Box&, const HorizontalConstraints&) const;
 
-    struct ClearancePosition {
-        Optional<Position> position;
+    struct PositionWithClearance {
+        LayoutUnit position;
         Optional<LayoutUnit> clearance;
     };
-    ClearancePosition verticalPositionWithClearance(const Box&) const;
+    Optional<PositionWithClearance> verticalPositionWithClearance(const Box&) const;
+
+    Optional<LayoutUnit> top() const;
+    Optional<LayoutUnit> leftBottom() const { return bottom(Clear::Left); }
+    Optional<LayoutUnit> rightBottom() const { return bottom(Clear::Right); }
+    Optional<LayoutUnit> bottom() const { return bottom(Clear::Both); }
+
+    bool isEmpty() const { return m_floatingState.floats().isEmpty(); }
+
+    struct Constraints {
+        Optional<PointInContextRoot> left;
+        Optional<PointInContextRoot> right;
+    };
+    Constraints constraints(LayoutUnit candidateTop, LayoutUnit candidateHeight) const;
+
+    FloatingState::FloatItem toFloatItem(const Box& floatBox) const;
 
 private:
-    LayoutState& layoutState() const { return m_floatingState.layoutState(); }
+    Optional<LayoutUnit> bottom(Clear) const;
 
-    void floatingPosition(FloatAvoider&) const;
+    const LayoutState& layoutState() const { return m_floatingState.layoutState(); }
+    const FormattingContext& formattingContext() const { return m_formattingContext; }
+    const ContainerBox& root() const { return m_formattingContext.root(); }
 
-    FloatingState& m_floatingState;
+    void findPositionForFormattingContextRoot(FloatAvoider&) const;
+
+    struct AbsoluteCoordinateValuesForFloatAvoider;
+    AbsoluteCoordinateValuesForFloatAvoider absoluteCoordinates(const Box&) const;
+    LayoutPoint mapTopLeftToFloatingStateRoot(const Box&) const;
+    Point mapPointFromFormattingContextRootToFloatingStateRoot(Point) const;
+
+    const FormattingContext& m_formattingContext;
+    const FloatingState& m_floatingState;
 };
 
 }

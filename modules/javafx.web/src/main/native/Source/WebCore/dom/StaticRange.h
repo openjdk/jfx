@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,34 +25,49 @@
 
 #pragma once
 
-#include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include "AbstractRange.h"
+#include "SimpleRange.h"
+
+namespace JSC {
+
+class AbstractSlotVisitor;
+
+}
 
 namespace WebCore {
 
-class Node;
-class Range;
+template<typename> class ExceptionOr;
 
-class StaticRange : public RefCounted<StaticRange> {
+class StaticRange final : public AbstractRange, public SimpleRange {
+    WTF_MAKE_ISO_ALLOCATED(StaticRange);
 public:
-    ~StaticRange();
+    struct Init {
+        RefPtr<Node> startContainer;
+        unsigned startOffset { 0 };
+        RefPtr<Node> endContainer;
+        unsigned endOffset { 0 };
+    };
 
-    static Ref<StaticRange> createFromRange(const Range&);
-    static Ref<StaticRange> create(Ref<Node>&& startContainer, unsigned startOffset, Ref<Node>&& endContainer, unsigned endOffset);
+    static ExceptionOr<Ref<StaticRange>> create(Init&&);
+    WEBCORE_EXPORT static Ref<StaticRange> create(const SimpleRange&);
+    static Ref<StaticRange> create(SimpleRange&&);
 
-    unsigned startOffset() const { return m_startOffset; }
-    unsigned endOffset() const { return m_endOffset; }
-    Node* startContainer() const;
-    Node* endContainer() const;
-    bool collapsed() const;
+    Node& startContainer() const final { return SimpleRange::startContainer(); }
+    unsigned startOffset() const final { return SimpleRange::startOffset(); }
+    Node& endContainer() const final { return SimpleRange::endContainer(); }
+    unsigned endOffset() const final { return SimpleRange::endOffset(); }
+    bool collapsed() const final { return SimpleRange::collapsed(); }
+
+    void visitNodesConcurrently(JSC::AbstractSlotVisitor&) const;
 
 private:
-    StaticRange(Ref<Node>&& startContainer, unsigned startOffset, Ref<Node>&& endContainer, unsigned endOffset);
+    StaticRange(SimpleRange&&);
 
-    Ref<Node> m_startContainer;
-    unsigned m_startOffset;
-    Ref<Node> m_endContainer;
-    unsigned m_endOffset;
+    bool isLiveRange() const final { return false; }
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StaticRange)
+    static bool isType(const WebCore::AbstractRange& range) { return !range.isLiveRange(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
  * Copyright (C) 2013 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -113,9 +113,9 @@ namespace WTF {
 
 enum CheckMoveParameterTag { CheckMoveParameter };
 
-static const size_t KB = 1024;
-static const size_t MB = 1024 * 1024;
-static const size_t GB = 1024 * 1024 * 1024;
+static constexpr size_t KB = 1024;
+static constexpr size_t MB = 1024 * 1024;
+static constexpr size_t GB = 1024 * 1024 * 1024;
 
 inline bool isPointerAligned(void* p)
 {
@@ -127,9 +127,6 @@ inline bool is8ByteAligned(void* p)
     return !((uintptr_t)(p) & (sizeof(double) - 1));
 }
 
-/*
- * C++'s idea of a reinterpret_cast lacks sufficient cojones.
- */
 template<typename ToType, typename FromType>
 inline ToType bitwise_cast(FromType from)
 {
@@ -172,14 +169,10 @@ template<typename T> char (&ArrayLengthHelperFunction(T (&)[0]))[0];
 #endif
 #define WTF_ARRAY_LENGTH(array) sizeof(::WTF::ArrayLengthHelperFunction(array))
 
-ALWAYS_INLINE constexpr size_t roundUpToMultipleOfImpl0(size_t remainderMask, size_t x)
-{
-    return (x + remainderMask) & ~remainderMask;
-}
-
 ALWAYS_INLINE constexpr size_t roundUpToMultipleOfImpl(size_t divisor, size_t x)
 {
-    return roundUpToMultipleOfImpl0(divisor - 1, x);
+    size_t remainderMask = divisor - 1;
+    return (x + remainderMask) & ~remainderMask;
 }
 
 // Efficient implementation that takes advantage of powers of two.
@@ -321,20 +314,42 @@ bool checkAndSet(T& left, U right)
 }
 
 template<typename T>
-bool findBitInWord(T word, size_t& index, size_t endIndex, bool value)
+inline unsigned ctz(T value); // Clients will also need to #include MathExtras.h
+
+template<typename T>
+bool findBitInWord(T word, size_t& startOrResultIndex, size_t endIndex, bool value)
 {
     static_assert(std::is_unsigned<T>::value, "Type used in findBitInWord must be unsigned");
 
+    constexpr size_t bitsInWord = sizeof(word) * 8;
+    ASSERT_UNUSED(bitsInWord, startOrResultIndex <= bitsInWord && endIndex <= bitsInWord);
+
+    size_t index = startOrResultIndex;
     word >>= index;
 
+#if COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+    // We should only use ctz() when we know that ctz() is implementated using
+    // a fast hardware instruction. Otherwise, this will actually result in
+    // worse performance.
+
+    word ^= (static_cast<T>(value) - 1);
+    index += ctz(word);
+    if (index < endIndex) {
+        startOrResultIndex = index;
+        return true;
+    }
+#else
     while (index < endIndex) {
-        if ((word & 1) == static_cast<T>(value))
+        if ((word & 1) == static_cast<T>(value)) {
+            startOrResultIndex = index;
             return true;
+        }
         index++;
         word >>= 1;
     }
+#endif
 
-    index = endIndex;
+    startOrResultIndex = endIndex;
     return false;
 }
 
@@ -400,6 +415,11 @@ namespace Detail
 template <template <typename...> class Base, typename Derived>
 struct IsBaseOfTemplate : public std::integral_constant<bool, Detail::IsBaseOfTemplateImpl<Base, Derived>::value> {};
 
+// Based on 'Detecting in C++ whether a type is defined, part 3: SFINAE and incomplete types'
+// <https://devblogs.microsoft.com/oldnewthing/20190710-00/?p=102678>
+template<typename, typename = void> inline constexpr bool IsTypeComplete = false;
+template<typename T> inline constexpr bool IsTypeComplete<T, std::void_t<decltype(sizeof(T))>> = true;
+
 template <class T>
 struct RemoveCVAndReference  {
     typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
@@ -463,47 +483,7 @@ inline void* operator new(size_t, NotNullTag, void* location)
     return location;
 }
 
-// This adds various C++14 features for versions of the STL that may not yet have them.
 namespace std {
-#if COMPILER(CLANG) && __cplusplus < 201400L
-template<class T> struct _Unique_if {
-    typedef unique_ptr<T> _Single_object;
-};
-
-template<class T> struct _Unique_if<T[]> {
-    typedef unique_ptr<T[]> _Unknown_bound;
-};
-
-template<class T, size_t N> struct _Unique_if<T[N]> {
-    typedef void _Known_bound;
-};
-
-template<class T, class... Args> inline typename _Unique_if<T>::_Single_object
-make_unique(Args&&... args)
-{
-    return unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
-template<class T> inline typename _Unique_if<T>::_Unknown_bound
-make_unique(size_t n)
-{
-    typedef typename remove_extent<T>::type U;
-    return unique_ptr<T>(new U[n]());
-}
-
-template<class T, class... Args> typename _Unique_if<T>::_Known_bound
-make_unique(Args&&...) = delete;
-
-// std::exchange
-template<class T, class U = T>
-T exchange(T& t, U&& newValue)
-{
-    T oldValue = std::move(t);
-    t = std::forward<U>(newValue);
-
-    return oldValue;
-}
-#endif
 
 template<WTF::CheckMoveParameterTag, typename T>
 ALWAYS_INLINE constexpr typename remove_reference<T>::type&& move(T&& value)
@@ -516,58 +496,38 @@ ALWAYS_INLINE constexpr typename remove_reference<T>::type&& move(T&& value)
     return move(forward<T>(value));
 }
 
-#if __cplusplus < 201703L && (!defined(_MSC_FULL_VER) || _MSC_FULL_VER < 190023918) && !defined(__cpp_lib_logical_traits)
-template<class...> struct wtf_conjunction_impl;
-template<> struct wtf_conjunction_impl<> : true_type { };
-template<class B0> struct wtf_conjunction_impl<B0> : B0 { };
-template<class B0, class B1> struct wtf_conjunction_impl<B0, B1> : conditional<B0::value, B1, B0>::type { };
-template<class B0, class B1, class B2, class... Bn> struct wtf_conjunction_impl<B0, B1, B2, Bn...> : conditional<B0::value, wtf_conjunction_impl<B1, B2, Bn...>, B0>::type { };
-template<class... _Args> struct conjunction : wtf_conjunction_impl<_Args...> { };
-#endif
+} // namespace std
 
-// Provide in_place_t when not building with -std=c++17, or when building with libstdc++ 6
-// (which doesn't define the _GLIBCXX_RELEASE macro that's been introduced in libstdc++ 7).
-#if (__cplusplus < 201703L || (defined(__GLIBCXX__) && !defined(_GLIBCXX_RELEASE))) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201703L)
+namespace WTF {
 
-// These are inline variable for C++17 and later.
-#define __IN_PLACE_INLINE_VARIABLE static const
-
-struct in_place_t {
-    explicit in_place_t() = default;
-};
-__IN_PLACE_INLINE_VARIABLE constexpr in_place_t in_place { };
-
-template <class T> struct in_place_type_t {
-    explicit in_place_type_t() = default;
-};
-template <class T>
-__IN_PLACE_INLINE_VARIABLE constexpr in_place_type_t<T> in_place_type { };
-
-template <size_t I> struct in_place_index_t {
-    explicit in_place_index_t() = default;
-};
-template <size_t I>
-__IN_PLACE_INLINE_VARIABLE constexpr in_place_index_t<I> in_place_index { };
-#endif // __cplusplus < 201703L
-
-enum class ZeroStatus {
-    MayBeZero,
-    NonZero
-};
-
-constexpr size_t clz(uint32_t value, ZeroStatus mightBeZero = ZeroStatus::MayBeZero)
+template<class T, class... Args>
+ALWAYS_INLINE decltype(auto) makeUnique(Args&&... args)
 {
-    if (mightBeZero == ZeroStatus::MayBeZero && value) {
-#if COMPILER(MSVC)
-        return __lzcnt(value);
-#else
-        return __builtin_clz(value);
-#endif
-    }
-    return 32;
+    static_assert(std::is_same<typename T::webkitFastMalloced, int>::value, "T is FastMalloced");
+    return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
-} // namespace std
+template<class T, class... Args>
+ALWAYS_INLINE decltype(auto) makeUniqueWithoutFastMallocCheck(Args&&... args)
+{
+    return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+template <typename ResultType, size_t... Is, typename ...Args>
+constexpr auto constructFixedSizeArrayWithArgumentsImpl(std::index_sequence<Is...>, Args&&... args) -> std::array<ResultType, sizeof...(Is)>
+{
+    return { ((void)Is, ResultType { std::forward<Args>(args)... })... };
+}
+
+// Construct an std::array with N elements of ResultType, passing Args to each of the N constructors.
+template<typename ResultType, size_t N, typename ...Args>
+constexpr auto constructFixedSizeArrayWithArguments(Args&&... args) -> decltype(auto)
+{
+    auto tuple = std::make_index_sequence<N>();
+    return constructFixedSizeArrayWithArgumentsImpl<ResultType>(tuple, std::forward<Args>(args)...);
+}
+
+} // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
 
@@ -589,3 +549,6 @@ using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
+using WTF::makeUnique;
+using WTF::makeUniqueWithoutFastMallocCheck;
+using WTF::constructFixedSizeArrayWithArguments;

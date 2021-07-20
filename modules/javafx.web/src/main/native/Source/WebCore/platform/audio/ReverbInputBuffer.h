@@ -34,9 +34,10 @@
 namespace WebCore {
 
 // ReverbInputBuffer is used to buffer input samples for deferred processing by the background threads.
-class ReverbInputBuffer {
+class ReverbInputBuffer final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    ReverbInputBuffer(size_t length);
+    explicit ReverbInputBuffer(size_t length);
 
     // The realtime audio thread keeps writing samples here.
     // The assumption is that the buffer's length is evenly divisible by numberOfFrames (for nearly all cases this will be fine).
@@ -56,7 +57,7 @@ public:
 
 private:
     AudioFloatArray m_buffer;
-    size_t m_writeIndex;
+    size_t m_writeIndex { 0 };
 };
 
 } // namespace WebCore

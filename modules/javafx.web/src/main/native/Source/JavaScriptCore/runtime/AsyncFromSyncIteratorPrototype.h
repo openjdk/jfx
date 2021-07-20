@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Oleksandr Skachkov <gskachkov@gmail.com>.
+ * Copyright (C) 2017-2019 Oleksandr Skachkov <gskachkov@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,14 @@ namespace JSC {
 class AsyncFromSyncIteratorPrototype final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(AsyncFromSyncIteratorPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     DECLARE_INFO;
 

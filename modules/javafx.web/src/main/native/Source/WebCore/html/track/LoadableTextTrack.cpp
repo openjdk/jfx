@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2013 Google Inc. All rights reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +27,28 @@
 #include "config.h"
 #include "LoadableTextTrack.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "HTMLTrackElement.h"
 #include "TextTrackCueList.h"
 #include "VTTCue.h"
 #include "VTTRegionList.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(LoadableTextTrack);
 
 LoadableTextTrack::LoadableTextTrack(HTMLTrackElement& track, const String& kind, const String& label, const String& language)
     : TextTrack(&track.document(), &track, kind, emptyString(), label, language, TrackElement)
     , m_trackElement(&track)
     , m_loadTimer(*this, &LoadableTextTrack::loadTimerFired)
-    , m_isDefault(false)
 {
+}
+
+Ref<LoadableTextTrack> LoadableTextTrack::create(HTMLTrackElement& track, const String& kind, const String& label, const String& language)
+{
+    return adoptRef(*new LoadableTextTrack(track, kind, label, language));
 }
 
 void LoadableTextTrack::scheduleLoad(const URL& url)
@@ -81,7 +88,7 @@ void LoadableTextTrack::loadTimerFired()
     // 4. Download: If URL is not the empty string, perform a potentially CORS-enabled fetch of URL, with the
     // mode being the state of the media element's crossorigin content attribute, the origin being the
     // origin of the media element's Document, and the default origin behaviour set to fail.
-    m_loader = std::make_unique<TextTrackLoader>(static_cast<TextTrackLoaderClient&>(*this), static_cast<ScriptExecutionContext*>(&m_trackElement->document()));
+    m_loader = makeUnique<TextTrackLoader>(static_cast<TextTrackLoaderClient&>(*this), m_trackElement->document());
     if (!m_loader->load(m_url, *m_trackElement))
         m_trackElement->didCompleteLoad(HTMLTrackElement::Failure);
 }
@@ -90,16 +97,13 @@ void LoadableTextTrack::newCuesAvailable(TextTrackLoader& loader)
 {
     ASSERT_UNUSED(loader, m_loader.get() == &loader);
 
-    Vector<RefPtr<TextTrackCue>> newCues;
-    m_loader->getNewCues(newCues);
-
     if (!m_cues)
         m_cues = TextTrackCueList::create();
 
-    for (auto& newCue : newCues) {
+    for (auto& newCue : m_loader->getNewCues()) {
         newCue->setTrack(this);
-        DEBUG_LOG(LOGIDENTIFIER, *toVTTCue(newCue.get()));
-        m_cues->add(newCue.releaseNonNull());
+        INFO_LOG(LOGIDENTIFIER, newCue.get());
+        m_cues->add(WTFMove(newCue));
     }
 
     if (client())
@@ -121,13 +125,9 @@ void LoadableTextTrack::cueLoadingCompleted(TextTrackLoader& loader, bool loadin
 void LoadableTextTrack::newRegionsAvailable(TextTrackLoader& loader)
 {
     ASSERT_UNUSED(loader, m_loader.get() == &loader);
-
-    Vector<RefPtr<VTTRegion>> newRegions;
-    m_loader->getNewRegions(newRegions);
-
-    for (auto& newRegion : newRegions) {
+    for (auto& newRegion : m_loader->getNewRegions()) {
         newRegion->setTrack(this);
-        regions()->add(newRegion.releaseNonNull());
+        regions()->add(WTFMove(newRegion));
     }
 }
 
@@ -137,7 +137,7 @@ void LoadableTextTrack::newStyleSheetsAvailable(TextTrackLoader& loader)
     m_styleSheets = m_loader->getNewStyleSheets();
 }
 
-AtomicString LoadableTextTrack::id() const
+AtomString LoadableTextTrack::id() const
 {
     if (!m_trackElement)
         return emptyAtom();
@@ -160,6 +160,11 @@ size_t LoadableTextTrack::trackElementIndex()
     ASSERT_NOT_REACHED();
 
     return 0;
+}
+
+bool LoadableTextTrack::isDefault() const
+{
+    return m_trackElement && m_trackElement->hasAttributeWithoutSynchronization(defaultAttr);
 }
 
 } // namespace WebCore

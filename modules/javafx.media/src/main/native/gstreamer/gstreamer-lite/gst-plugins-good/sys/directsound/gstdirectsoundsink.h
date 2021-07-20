@@ -48,7 +48,7 @@ G_BEGIN_DECLS
 typedef struct _GstDirectSoundSink GstDirectSoundSink;
 typedef struct _GstDirectSoundSinkClass GstDirectSoundSinkClass;
 
-#define GST_DSOUND_LOCK(obj)    (g_mutex_lock (&obj->dsound_lock))
+#define GST_DSOUND_LOCK(obj)  (g_mutex_lock (&obj->dsound_lock))
 #define GST_DSOUND_UNLOCK(obj)  (g_mutex_unlock (&obj->dsound_lock))
 
 struct _GstDirectSoundSink
@@ -92,6 +92,11 @@ struct _GstDirectSoundSink
 #ifdef GSTREAMER_LITE
   gfloat panorama;
   guint rate;
+  DSBUFFERDESC descSecondary;
+  WAVEFORMATEX wfx;
+  void *gst_ds_notifier;
+  gboolean reload;
+  gboolean need_reload;
 #endif // GSTREAMER_LITE
 };
 

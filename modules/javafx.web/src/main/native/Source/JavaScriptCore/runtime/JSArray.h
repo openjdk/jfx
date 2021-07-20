@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,8 +22,8 @@
 
 #include "ArgList.h"
 #include "ArrayConventions.h"
-#include "ButterflyInlines.h"
-#include "JSCellInlines.h"
+#include "Butterfly.h"
+#include "JSCell.h"
 #include "JSObject.h"
 
 namespace JSC {
@@ -40,12 +40,18 @@ class JSArray : public JSNonFinalObject {
 
 public:
     typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames;
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
         ASSERT_UNUSED(inlineCapacity, !inlineCapacity);
         return sizeof(JSArray);
+    }
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.arraySpace;
     }
 
 protected:
@@ -82,9 +88,9 @@ public:
 
     static void eagerlyInitializeButterfly(ObjectInitializationScope&, JSArray*, unsigned initialLength);
 
-    JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool throwException);
+    JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool throwException);
 
-    JS_EXPORT_PRIVATE static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
+    JS_EXPORT_PRIVATE static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
 
     DECLARE_EXPORT_INFO;
 
@@ -92,19 +98,19 @@ public:
     unsigned length() const { return getArrayLength(); }
 
     // OK to use on new arrays, but not if it might be a RegExpMatchArray or RuntimeArray.
-    JS_EXPORT_PRIVATE bool setLength(ExecState*, unsigned, bool throwException = false);
+    JS_EXPORT_PRIVATE bool setLength(JSGlobalObject*, unsigned, bool throwException = false);
 
-    void pushInline(ExecState*, JSValue);
-    JS_EXPORT_PRIVATE void push(ExecState*, JSValue);
-    JS_EXPORT_PRIVATE JSValue pop(ExecState*);
+    void pushInline(JSGlobalObject*, JSValue);
+    JS_EXPORT_PRIVATE void push(JSGlobalObject*, JSValue);
+    JS_EXPORT_PRIVATE JSValue pop(JSGlobalObject*);
 
-    JSArray* fastSlice(ExecState&, unsigned startIndex, unsigned count);
+    JSArray* fastSlice(JSGlobalObject*, unsigned startIndex, unsigned count);
 
     bool canFastCopy(VM&, JSArray* otherArray);
     bool canDoFastIndexedAccess(VM&);
     // This function returns NonArray if the indexing types are not compatable for copying.
     IndexingType mergeIndexingTypeForCopying(IndexingType other);
-    bool appendMemcpy(ExecState*, VM&, unsigned startIndex, JSArray* otherArray);
+    bool appendMemcpy(JSGlobalObject*, VM&, unsigned startIndex, JSArray* otherArray);
 
     enum ShiftCountMode {
         // This form of shift hints that we're doing queueing. With this assumption in hand,
@@ -117,53 +123,53 @@ public:
         ShiftCountForSplice
     };
 
-    bool shiftCountForShift(ExecState* exec, unsigned startIndex, unsigned count)
+    bool shiftCountForShift(JSGlobalObject* globalObject, unsigned startIndex, unsigned count)
     {
-        VM& vm = exec->vm();
+        VM& vm = getVM(globalObject);
         return shiftCountWithArrayStorage(vm, startIndex, count, ensureArrayStorage(vm));
     }
-    bool shiftCountForSplice(ExecState* exec, unsigned& startIndex, unsigned count)
+    bool shiftCountForSplice(JSGlobalObject* globalObject, unsigned& startIndex, unsigned count)
     {
-        return shiftCountWithAnyIndexingType(exec, startIndex, count);
+        return shiftCountWithAnyIndexingType(globalObject, startIndex, count);
     }
     template<ShiftCountMode shiftCountMode>
-    bool shiftCount(ExecState* exec, unsigned& startIndex, unsigned count)
+    bool shiftCount(JSGlobalObject* globalObject, unsigned& startIndex, unsigned count)
     {
         switch (shiftCountMode) {
         case ShiftCountForShift:
-            return shiftCountForShift(exec, startIndex, count);
+            return shiftCountForShift(globalObject, startIndex, count);
         case ShiftCountForSplice:
-            return shiftCountForSplice(exec, startIndex, count);
+            return shiftCountForSplice(globalObject, startIndex, count);
         default:
             CRASH();
             return false;
         }
     }
 
-    bool unshiftCountForShift(ExecState* exec, unsigned startIndex, unsigned count)
+    bool unshiftCountForShift(JSGlobalObject* globalObject, unsigned startIndex, unsigned count)
     {
-        return unshiftCountWithArrayStorage(exec, startIndex, count, ensureArrayStorage(exec->vm()));
+        return unshiftCountWithArrayStorage(globalObject, startIndex, count, ensureArrayStorage(getVM(globalObject)));
     }
-    bool unshiftCountForSplice(ExecState* exec, unsigned startIndex, unsigned count)
+    bool unshiftCountForSplice(JSGlobalObject* globalObject, unsigned startIndex, unsigned count)
     {
-        return unshiftCountWithAnyIndexingType(exec, startIndex, count);
+        return unshiftCountWithAnyIndexingType(globalObject, startIndex, count);
     }
     template<ShiftCountMode shiftCountMode>
-    bool unshiftCount(ExecState* exec, unsigned startIndex, unsigned count)
+    bool unshiftCount(JSGlobalObject* globalObject, unsigned startIndex, unsigned count)
     {
         switch (shiftCountMode) {
         case ShiftCountForShift:
-            return unshiftCountForShift(exec, startIndex, count);
+            return unshiftCountForShift(globalObject, startIndex, count);
         case ShiftCountForSplice:
-            return unshiftCountForSplice(exec, startIndex, count);
+            return unshiftCountForSplice(globalObject, startIndex, count);
         default:
             CRASH();
             return false;
         }
     }
 
-    JS_EXPORT_PRIVATE void fillArgList(ExecState*, MarkedArgumentBuffer&);
-    JS_EXPORT_PRIVATE void copyToArguments(ExecState*, VirtualRegister firstElementDest, unsigned offset, unsigned length);
+    JS_EXPORT_PRIVATE void fillArgList(JSGlobalObject*, MarkedArgumentBuffer&);
+    JS_EXPORT_PRIVATE void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
 
     JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
 
@@ -180,10 +186,10 @@ protected:
         ASSERT_WITH_MESSAGE(type() == ArrayType || type() == DerivedArrayType, "Instance inheriting JSArray should have either ArrayType or DerivedArrayType");
     }
 
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
 private:
     bool isLengthWritable()
@@ -195,15 +201,15 @@ private:
         return !map || !map->lengthIsReadOnly();
     }
 
-    bool shiftCountWithAnyIndexingType(ExecState*, unsigned& startIndex, unsigned count);
+    bool shiftCountWithAnyIndexingType(JSGlobalObject*, unsigned& startIndex, unsigned count);
     JS_EXPORT_PRIVATE bool shiftCountWithArrayStorage(VM&, unsigned startIndex, unsigned count, ArrayStorage*);
 
-    bool unshiftCountWithAnyIndexingType(ExecState*, unsigned startIndex, unsigned count);
-    bool unshiftCountWithArrayStorage(ExecState*, unsigned startIndex, unsigned count, ArrayStorage*);
+    bool unshiftCountWithAnyIndexingType(JSGlobalObject*, unsigned startIndex, unsigned count);
+    bool unshiftCountWithArrayStorage(JSGlobalObject*, unsigned startIndex, unsigned count, ArrayStorage*);
     bool unshiftCountSlowCase(const AbstractLocker&, VM&, DeferGC&, bool, unsigned);
 
-    bool setLengthWithArrayStorage(ExecState*, unsigned newLength, bool throwException, ArrayStorage*);
-    void setLengthWritable(ExecState*, bool writable);
+    bool setLengthWithArrayStorage(JSGlobalObject*, unsigned newLength, bool throwException, ArrayStorage*);
+    void setLengthWritable(JSGlobalObject*, bool writable);
 };
 
 inline Butterfly* tryCreateArrayButterfly(VM& vm, JSObject* intendedOwner, unsigned initialLength)
@@ -289,7 +295,7 @@ JSArray* asArray(JSValue);
 
 inline JSArray* asArray(JSCell* cell)
 {
-    ASSERT(cell->inherits<JSArray>(*cell->vm()));
+    ASSERT(cell->inherits<JSArray>(cell->vm()));
     return jsCast<JSArray*>(cell);
 }
 
@@ -300,14 +306,14 @@ inline JSArray* asArray(JSValue value)
 
 inline bool isJSArray(JSCell* cell)
 {
-    ASSERT((cell->classInfo(*cell->vm()) == JSArray::info()) == (cell->type() == ArrayType));
+    ASSERT((cell->classInfo(cell->vm()) == JSArray::info()) == (cell->type() == ArrayType));
     return cell->type() == ArrayType;
 }
 
 inline bool isJSArray(JSValue v) { return v.isCell() && isJSArray(v.asCell()); }
 
-JS_EXPORT_PRIVATE JSArray* constructArray(ExecState*, Structure*, const ArgList& values);
-JS_EXPORT_PRIVATE JSArray* constructArray(ExecState*, Structure*, const JSValue* values, unsigned length);
-JS_EXPORT_PRIVATE JSArray* constructArrayNegativeIndexed(ExecState*, Structure*, const JSValue* values, unsigned length);
+JS_EXPORT_PRIVATE JSArray* constructArray(JSGlobalObject*, Structure*, const ArgList& values);
+JS_EXPORT_PRIVATE JSArray* constructArray(JSGlobalObject*, Structure*, const JSValue* values, unsigned length);
+JS_EXPORT_PRIVATE JSArray* constructArrayNegativeIndexed(JSGlobalObject*, Structure*, const JSValue* values, unsigned length);
 
 } // namespace JSC

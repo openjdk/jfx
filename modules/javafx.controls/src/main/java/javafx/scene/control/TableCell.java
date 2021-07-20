@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -299,13 +299,18 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    // editing location at start of edit - fix for JDK-8187229
+    private TablePosition<S, T> editingCellAtStartEdit;
+
     /** {@inheritDoc} */
     @Override public void startEdit() {
         final TableView<S> table = getTableView();
         final TableColumn<S,T> column = getTableColumn();
-        if (! isEditable() ||
-                (table != null && ! table.isEditable()) ||
-                (column != null && ! getTableColumn().isEditable())) {
+        final TableRow<S> row = getTableRow();
+        if (!isEditable() ||
+                (table != null && !table.isEditable()) ||
+                (column != null && !column.isEditable()) ||
+                (row != null && !row.isEditable())) {
             return;
         }
 
@@ -331,6 +336,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             Event.fireEvent(column, editEvent);
         }
+        editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
@@ -382,7 +388,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
         // reset the editing index on the TableView
         if (table != null) {
-            TablePosition<S,?> editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
@@ -393,7 +398,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
-                editingCell,
+                editingCellAtStartEdit,
                 TableColumn.editCancelEvent(),
                 null
             );
@@ -549,7 +554,13 @@ public class TableCell<S,T> extends IndexedCell<T> {
     }
 
     private void updateEditing() {
-        if (getIndex() == -1 || getTableView() == null) return;
+        if (getIndex() == -1 || getTableView() == null) {
+            // JDK-8265206: must cancel edit if index changed to -1 by re-use
+            if (isEditing()) {
+                doCancelEdit();
+            }
+            return;
+        }
 
         TablePosition<S,?> editCell = getTableView().getEditingCell();
         boolean match = match(editCell);
@@ -557,17 +568,30 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (match && ! isEditing()) {
             startEdit();
         } else if (! match && isEditing()) {
-            // If my index is not the one being edited then I need to cancel
-            // the edit. The tricky thing here is that as part of this call
-            // I cannot end up calling list.edit(-1) the way that the standard
-            // cancelEdit method would do. Yet, I need to call cancelEdit
-            // so that subclasses which override cancelEdit can execute. So,
-            // I have to use a kind of hacky flag workaround.
+            doCancelEdit();
+        }
+    }
+
+    /**
+     * Switches an editing cell into not editing without changing control's
+     * editing state.
+     */
+    private void doCancelEdit() {
+        // If my index is not the one being edited then I need to cancel
+        // the edit. The tricky thing here is that as part of this call
+        // I cannot end up calling list.edit(-1) the way that the standard
+        // cancelEdit method would do. Yet, I need to call cancelEdit
+        // so that subclasses which override cancelEdit can execute. So,
+        // I have to use a kind of hacky flag workaround.
+        try {
+            // try-finally to make certain that the flag is reliably reset to true
             updateEditingIndex = false;
             cancelEdit();
+        } finally {
             updateEditingIndex = true;
         }
     }
+
     private boolean updateEditingIndex = true;
 
     private boolean match(TablePosition<S,?> pos) {
@@ -682,9 +706,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
         super.layoutChildren();
     }
-
-
-
 
     /***************************************************************************
      *                                                                         *

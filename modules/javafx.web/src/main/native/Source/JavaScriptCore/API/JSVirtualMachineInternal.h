@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 
 namespace JSC {
 class VM;
-class SlotVisitor;
+class AbstractSlotVisitor;
 }
 
 #if defined(__OBJC__)
@@ -46,14 +46,16 @@ JSContextGroupRef getGroupFromVirtualMachine(JSVirtualMachine *);
 
 - (JSContext *)contextForGlobalContextRef:(JSGlobalContextRef)globalContext;
 - (void)addContext:(JSContext *)wrapper forGlobalContextRef:(JSGlobalContextRef)globalContext;
-- (JSC::VM&)vm;
+- (BOOL)isWebThreadAware;
+
+@property (readonly) JSContextGroupRef JSContextGroupRef;
 
 @end
 
 #endif // defined(__OBJC__)
 
-void scanExternalObjectGraph(JSC::VM&, JSC::SlotVisitor&, void* root);
-void scanExternalRememberedSet(JSC::VM&, JSC::SlotVisitor&);
+void scanExternalObjectGraph(JSC::VM&, JSC::AbstractSlotVisitor&, void* root);
+void scanExternalRememberedSet(JSC::VM&, JSC::AbstractSlotVisitor&);
 
 #endif // JSC_OBJC_API_ENABLED
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,15 +27,19 @@
 #include "JSPerformanceObserver.h"
 
 #include "PerformanceObserverCallback.h"
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
 
-void JSPerformanceObserver::visitAdditionalChildren(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void JSPerformanceObserver::visitAdditionalChildren(Visitor& visitor)
 {
     wrapped().callback().visitJSFunction(visitor);
 }
 
-bool JSPerformanceObserverOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::SlotVisitor&, const char** reason)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSPerformanceObserver);
+
+bool JSPerformanceObserverOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor&, const char** reason)
 {
     if (UNLIKELY(reason))
         *reason = "Registered PerformanceObserver callback";

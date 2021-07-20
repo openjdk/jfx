@@ -275,7 +275,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
         }
 
         public EqualizerBand addBand(double centerFrequency, double bandwidth, double gain) {
-            Double key = new Double(centerFrequency);
+            Double key = centerFrequency;
             if (bands.containsKey(key)) {
                 removeBand(centerFrequency);
             }
@@ -286,7 +286,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
         }
 
         public boolean removeBand(double centerFrequency) {
-            Double key = new Double(centerFrequency);
+            Double key = centerFrequency;
             if (bands.containsKey(key)) {
                 bands.remove(key);
                 return true;

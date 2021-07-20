@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "MarkingConstraintSolver.h"
 
 #include "JSCInlines.h"
+#include "MarkingConstraintSet.h"
 
 namespace JSC {
 
@@ -51,10 +52,6 @@ bool MarkingConstraintSolver::didVisitSomething() const
         if (visitCounter.visitCount())
             return true;
     }
-    // If the number of SlotVisitors increases after creating m_visitCounters,
-    // we conservatively say there could be something visited by added SlotVisitors.
-    if (m_heap.numberOfSlotVisitors() > m_visitCounters.size())
-        return true;
     return false;
 }
 
@@ -64,14 +61,12 @@ void MarkingConstraintSolver::execute(SchedulerPreference preference, ScopedLamb
     RELEASE_ASSERT(!m_numThreadsThatMayProduceWork);
 
     if (Options::useParallelMarkingConstraintSolver()) {
-        if (Options::logGC())
-            dataLog(preference == ParallelWorkFirst ? "P" : "N", "<");
+        dataLogIf(Options::logGC(), preference == ParallelWorkFirst ? "P" : "N", "<");
 
         m_heap.runFunctionInParallel(
             [&] (SlotVisitor& visitor) { runExecutionThread(visitor, preference, pickNext); });
 
-        if (Options::logGC())
-            dataLog(">");
+        dataLogIf(Options::logGC(), ">");
     } else
         runExecutionThread(m_mainVisitor, preference, pickNext);
 

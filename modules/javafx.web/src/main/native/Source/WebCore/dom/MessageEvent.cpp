@@ -31,14 +31,17 @@
 #include "Blob.h"
 #include "EventNames.h"
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace JSC;
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(MessageEvent);
+
 MessageEvent::MessageEvent() = default;
 
-inline MessageEvent::MessageEvent(const AtomicString& type, Init&& initializer, IsTrusted isTrusted)
+inline MessageEvent::MessageEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_data(JSValueInWrappedObject { initializer.data })
     , m_origin(initializer.origin)
@@ -58,7 +61,7 @@ inline MessageEvent::MessageEvent(DataType&& data, const String& origin, const S
 {
 }
 
-inline MessageEvent::MessageEvent(const AtomicString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId)
+inline MessageEvent::MessageEvent(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId)
     : Event(type, CanBubble::No, IsCancelable::No)
     , m_data(WTFMove(data))
     , m_origin(origin)
@@ -71,7 +74,7 @@ Ref<MessageEvent> MessageEvent::create(Vector<RefPtr<MessagePort>>&& ports, Ref<
     return adoptRef(*new MessageEvent(WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
 }
 
-Ref<MessageEvent> MessageEvent::create(const AtomicString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId)
+Ref<MessageEvent> MessageEvent::create(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId)
 {
     return adoptRef(*new MessageEvent(type, WTFMove(data), origin, lastEventId));
 }
@@ -96,14 +99,14 @@ Ref<MessageEvent> MessageEvent::createForBindings()
     return adoptRef(*new MessageEvent);
 }
 
-Ref<MessageEvent> MessageEvent::create(const AtomicString& type, Init&& initializer, IsTrusted isTrusted)
+Ref<MessageEvent> MessageEvent::create(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
 {
     return adoptRef(*new MessageEvent(type, WTFMove(initializer), isTrusted));
 }
 
 MessageEvent::~MessageEvent() = default;
 
-void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
 {
     if (isBeingDispatched())
         return;
@@ -122,6 +125,21 @@ void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bo
 EventInterface MessageEvent::eventInterface() const
 {
     return MessageEventInterfaceType;
+}
+
+size_t MessageEvent::memoryCost() const
+{
+    return WTF::switchOn(m_data, [] (const JSValueInWrappedObject&) {
+        return 0;
+    }, [] (const Ref<SerializedScriptValue>& data) {
+        return data->memoryCost();
+    }, [] (const String& string) {
+        return string.sizeInBytes();
+    }, [] (const Ref<Blob>& blob) {
+        return blob->size();
+    }, [] (const Ref<ArrayBuffer>& buffer) {
+        return buffer->byteLength();
+    });
 }
 
 } // namespace WebCore

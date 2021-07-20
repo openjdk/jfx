@@ -34,6 +34,7 @@
 #include "HitTestResult.h"
 #include "LocalizedStrings.h"
 #include "RenderLayer.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderScrollbar.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -76,7 +77,7 @@ static void resetOverriddenHeight(RenderBox* box, const RenderObject* ancestor)
     ASSERT(box != ancestor);
     if (!box || box->style().logicalHeight().isAuto())
         return; // Null box or its height was not overridden.
-    box->mutableStyle().setLogicalHeight(Length { Auto });
+    box->mutableStyle().setLogicalHeight(Length { LengthType::Auto });
     for (RenderObject* renderer = box; renderer != ancestor; renderer = renderer->parent()) {
         ASSERT(renderer);
         renderer->setNeedsLayout(MarkOnlyThis);
@@ -96,7 +97,7 @@ void RenderTextControlSingleLine::layout()
     // - Make the height of the container element equal to the intrinsic height of
     //   the inner elements when the field has a strong password button.
     //
-    // We don't honor paddings and borders for textfields without decorations
+    // We don't honor padding and borders for textfields without decorations
     // and type=search if the text height is taller than the contentHeight()
     // because of compability.
 
@@ -129,10 +130,10 @@ void RenderTextControlSingleLine::layout()
         if (desiredLogicalHeight != innerTextLogicalHeight)
             setNeedsLayout(MarkOnlyThis);
 
-        innerTextRenderer->mutableStyle().setLogicalHeight(Length(desiredLogicalHeight, Fixed));
+        innerTextRenderer->mutableStyle().setLogicalHeight(Length(desiredLogicalHeight, LengthType::Fixed));
         innerTextRenderer->setNeedsLayout(MarkOnlyThis);
         if (innerBlockRenderer) {
-            innerBlockRenderer->mutableStyle().setLogicalHeight(Length(desiredLogicalHeight, Fixed));
+            innerBlockRenderer->mutableStyle().setLogicalHeight(Length(desiredLogicalHeight, LengthType::Fixed));
             innerBlockRenderer->setNeedsLayout(MarkOnlyThis);
         }
         innerTextLogicalHeight = desiredLogicalHeight;
@@ -144,16 +145,16 @@ void RenderTextControlSingleLine::layout()
         oldContainerLogicalTop = containerRenderer->logicalTop();
         LayoutUnit containerLogicalHeight = containerRenderer->logicalHeight();
         if (inputElement().hasAutoFillStrongPasswordButton() && innerTextRenderer && containerLogicalHeight != innerTextLogicalHeight) {
-            containerRenderer->mutableStyle().setLogicalHeight(Length { innerTextLogicalHeight, Fixed });
+            containerRenderer->mutableStyle().setLogicalHeight(Length { innerTextLogicalHeight, LengthType::Fixed });
             setNeedsLayout(MarkOnlyThis);
         } else if (containerLogicalHeight > logicalHeightLimit) {
-            containerRenderer->mutableStyle().setLogicalHeight(Length(logicalHeightLimit, Fixed));
+            containerRenderer->mutableStyle().setLogicalHeight(Length(logicalHeightLimit, LengthType::Fixed));
             setNeedsLayout(MarkOnlyThis);
         } else if (containerRenderer->logicalHeight() < contentLogicalHeight()) {
-            containerRenderer->mutableStyle().setLogicalHeight(Length(contentLogicalHeight(), Fixed));
+            containerRenderer->mutableStyle().setLogicalHeight(Length(contentLogicalHeight(), LengthType::Fixed));
             setNeedsLayout(MarkOnlyThis);
         } else
-            containerRenderer->mutableStyle().setLogicalHeight(Length(containerLogicalHeight, Fixed));
+            containerRenderer->mutableStyle().setLogicalHeight(Length(containerLogicalHeight, LengthType::Fixed));
     }
 
     // If we need another layout pass, we have changed one of children's height so we need to relayout them.
@@ -175,11 +176,10 @@ void RenderTextControlSingleLine::layout()
 
     HTMLElement* placeholderElement = inputElement().placeholderElement();
     if (RenderBox* placeholderBox = placeholderElement ? placeholderElement->renderBox() : 0) {
-        LayoutSize innerTextSize;
+        auto innerTextWidth = LayoutUnit { };
         if (innerTextRenderer)
-            innerTextSize = innerTextRenderer->size();
-        placeholderBox->mutableStyle().setWidth(Length(innerTextSize.width() - placeholderBox->horizontalBorderAndPaddingExtent(), Fixed));
-        placeholderBox->mutableStyle().setHeight(Length(innerTextSize.height() - placeholderBox->verticalBorderAndPaddingExtent(), Fixed));
+            innerTextWidth = innerTextRenderer->logicalWidth();
+        placeholderBox->mutableStyle().setWidth(Length(innerTextWidth - placeholderBox->horizontalBorderAndPaddingExtent(), LengthType::Fixed));
         bool neededLayout = placeholderBox->needsLayout();
         bool placeholderBoxHadLayout = placeholderBox->everHadLayout();
         if (innerTextSizeChanged) {
@@ -187,15 +187,20 @@ void RenderTextControlSingleLine::layout()
             placeholderBox->setChildNeedsLayout(MarkOnlyThis);
         }
         placeholderBox->layoutIfNeeded();
-        LayoutPoint textOffset;
+        auto placeholderTopLeft = containerRenderer ? containerRenderer->location() : LayoutPoint { };
+        auto* innerBlockRenderer = innerBlockElement() ? innerBlockElement()->renderBox() : nullptr;
+        if (innerBlockRenderer)
+            placeholderTopLeft += toLayoutSize(innerBlockRenderer->location());
         if (innerTextRenderer)
-            textOffset = innerTextRenderer->location();
-        if (innerBlockElement() && innerBlockElement()->renderBox())
-            textOffset += toLayoutSize(innerBlockElement()->renderBox()->location());
-        if (containerRenderer)
-            textOffset += toLayoutSize(containerRenderer->location());
-        placeholderBox->setLocation(textOffset);
-
+            placeholderTopLeft += toLayoutSize(innerTextRenderer->location());
+        placeholderBox->setLogicalLeft(placeholderTopLeft.x());
+        // Here the container box indicates the renderer that the placeholder content is aligned with (no parent and/or containing block relationship).
+        auto* containerBox = innerTextRenderer ? innerTextRenderer : innerBlockRenderer ? innerBlockRenderer : containerRenderer;
+        if (containerBox) {
+            // Center vertical align the placeholder content.
+            auto logicalTop = placeholderTopLeft.y() + (containerBox->logicalHeight() / 2 - placeholderBox->logicalHeight() / 2);
+            placeholderBox->setLogicalTop(logicalTop);
+        }
         if (!placeholderBoxHadLayout && placeholderBox->checkForRepaintDuringLayout()) {
             // This assumes a shadow tree without floats. If floats are added, the
             // logic should be shared with RenderBlock::layoutBlockChild.
@@ -302,7 +307,7 @@ float RenderTextControlSingleLine::getAverageCharWidth()
 
 LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charWidth) const
 {
-    int factor;
+    int factor = 0;
     bool includesDecoration = inputElement().sizeShouldIncludeDecoration(factor);
     if (factor <= 0)
         factor = 20;
@@ -312,7 +317,7 @@ LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charW
     float maxCharWidth = 0.f;
 
 #if !PLATFORM(IOS_FAMILY)
-    const AtomicString& family = style().fontCascade().firstFamily();
+    const AtomString& family = style().fontCascade().firstFamily();
     // Since Lucida Grande is the default font, we want this to match the width
     // of MS Shell Dlg, the default font for textareas in Firefox, Safari Win and
     // IE for some encodings (in IE, the default font is encoding specific).
@@ -329,6 +334,9 @@ LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charW
 
     if (includesDecoration)
         result += inputElement().decorationWidth();
+
+    if (auto* innerRenderer = innerTextElement()->renderer())
+        result += innerRenderer->endPaddingWidthForCaret();
 
     return result;
 }
@@ -350,39 +358,39 @@ void RenderTextControlSingleLine::autoscroll(const IntPoint& position)
 
 int RenderTextControlSingleLine::scrollWidth() const
 {
-    if (innerTextElement())
-        return innerTextElement()->scrollWidth();
+    if (auto innerTextElement = this->innerTextElement(); innerTextElement && innerTextElement->renderer())
+        return innerTextElement->renderer()->scrollWidth();
     return RenderBlockFlow::scrollWidth();
 }
 
 int RenderTextControlSingleLine::scrollHeight() const
 {
-    if (innerTextElement())
-        return innerTextElement()->scrollHeight();
+    if (auto innerTextElement = this->innerTextElement(); innerTextElement && innerTextElement->renderer())
+        return innerTextElement->renderer()->scrollHeight();
     return RenderBlockFlow::scrollHeight();
 }
 
 int RenderTextControlSingleLine::scrollLeft() const
 {
-    if (innerTextElement())
-        return innerTextElement()->scrollLeft();
+    if (auto innerTextElement = this->innerTextElement(); innerTextElement && innerTextElement->renderer())
+        return innerTextElement->renderer()->scrollLeft();
     return RenderBlockFlow::scrollLeft();
 }
 
 int RenderTextControlSingleLine::scrollTop() const
 {
-    if (innerTextElement())
-        return innerTextElement()->scrollTop();
+    if (auto innerTextElement = this->innerTextElement(); innerTextElement && innerTextElement->renderer())
+        return innerTextElement->renderer()->scrollTop();
     return RenderBlockFlow::scrollTop();
 }
 
-void RenderTextControlSingleLine::setScrollLeft(int newLeft, ScrollClamping)
+void RenderTextControlSingleLine::setScrollLeft(int newLeft, const ScrollPositionChangeOptions&)
 {
     if (innerTextElement())
         innerTextElement()->setScrollLeft(newLeft);
 }
 
-void RenderTextControlSingleLine::setScrollTop(int newTop, ScrollClamping)
+void RenderTextControlSingleLine::setScrollTop(int newTop, const ScrollPositionChangeOptions&)
 {
     if (innerTextElement())
         innerTextElement()->setScrollTop(newTop);
@@ -390,19 +398,20 @@ void RenderTextControlSingleLine::setScrollTop(int newTop, ScrollClamping)
 
 bool RenderTextControlSingleLine::scroll(ScrollDirection direction, ScrollGranularity granularity, float multiplier, Element** stopElement, RenderBox* startBox, const IntPoint& wheelEventAbsolutePoint)
 {
-    RenderTextControlInnerBlock* renderer = innerTextElement()->renderer();
+    auto* renderer = innerTextElement()->renderer();
     if (!renderer)
         return false;
-    RenderLayer* layer = renderer->layer();
-    if (layer && layer->scroll(direction, granularity, multiplier))
+    auto* scrollableArea = renderer->layer() ? renderer->layer()->scrollableArea() : nullptr;
+    if (scrollableArea && scrollableArea->scroll(direction, granularity, multiplier))
         return true;
     return RenderBlockFlow::scroll(direction, granularity, multiplier, stopElement, startBox, wheelEventAbsolutePoint);
 }
 
 bool RenderTextControlSingleLine::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Element** stopElement)
 {
-    RenderLayer* layer = innerTextElement()->renderer()->layer();
-    if (layer && layer->scroll(logicalToPhysical(direction, style().isHorizontalWritingMode(), style().isFlippedBlocksWritingMode()), granularity, multiplier))
+    auto* layer = innerTextElement()->renderer()->layer();
+    auto* scrollableArea = layer ? layer->scrollableArea() : nullptr;
+    if (scrollableArea && scrollableArea->scroll(logicalToPhysical(direction, style().isHorizontalWritingMode(), style().isFlippedBlocksWritingMode()), granularity, multiplier))
         return true;
     return RenderBlockFlow::logicalScroll(direction, granularity, multiplier, stopElement);
 }

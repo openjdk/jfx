@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,28 +25,33 @@
 
 #pragma once
 
-#include "SVGAnimatedListPropertyTearOff.h"
-#include "SVGListPropertyTearOff.h"
 #include "SVGPoint.h"
-#include "SVGPointListValues.h"
+#include "SVGValuePropertyList.h"
 
 namespace WebCore {
 
-class SVGPointList : public SVGListPropertyTearOff<SVGPointListValues> {
+class SVGPointList final : public SVGValuePropertyList<SVGPoint> {
+    using Base = SVGValuePropertyList<SVGPoint>;
+    using Base::Base;
+
 public:
-    using AnimatedListPropertyTearOff = SVGAnimatedListPropertyTearOff<SVGPointListValues>;
-    using ListWrapperCache = AnimatedListPropertyTearOff::ListWrapperCache;
-
-    static Ref<SVGPointList> create(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGPointListValues& values, ListWrapperCache& wrappers)
+    static Ref<SVGPointList> create()
     {
-        return adoptRef(*new SVGPointList(animatedProperty, role, values, wrappers));
+        return adoptRef(*new SVGPointList());
     }
 
-private:
-    SVGPointList(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGPointListValues& values, ListWrapperCache& wrappers)
-        : SVGListPropertyTearOff<SVGPointListValues>(animatedProperty, role, values, wrappers)
+    static Ref<SVGPointList> create(SVGPropertyOwner* owner, SVGPropertyAccess access)
     {
+        return adoptRef(*new SVGPointList(owner, access));
     }
+
+    static Ref<SVGPointList> create(const SVGPointList& other, SVGPropertyAccess access)
+    {
+        return adoptRef(*new SVGPointList(other, access));
+    }
+
+    bool parse(StringView);
+    String valueAsString() const override;
 };
 
-} // namespace WebCore
+}

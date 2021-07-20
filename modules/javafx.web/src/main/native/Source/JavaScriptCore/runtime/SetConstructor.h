@@ -54,9 +54,10 @@ private:
     SetConstructor(VM&, Structure*);
     void finishCreation(VM&, SetPrototype*, GetterSetter* speciesSymbol);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(SetConstructor, InternalFunction);
 
-EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketHead(ExecState*);
-EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketNext(ExecState*);
-EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketKey(ExecState*);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketHead);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketNext);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketKey);
 
 } // namespace JSC

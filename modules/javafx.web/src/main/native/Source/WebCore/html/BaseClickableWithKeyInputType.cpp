@@ -39,14 +39,16 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-void BaseClickableWithKeyInputType::handleKeydownEvent(HTMLInputElement& element, KeyboardEvent& event)
+auto BaseClickableWithKeyInputType::handleKeydownEvent(HTMLInputElement& element, KeyboardEvent& event) -> ShouldCallBaseEventHandler
 {
     const String& key = event.keyIdentifier();
     if (key == "U+0020") {
         element.setActive(true, true);
         // No setDefaultHandled(), because IE dispatches a keypress in this case
         // and the caller will only dispatch a keypress if we don't call setDefaultHandled().
+        return ShouldCallBaseEventHandler::No;
     }
+    return ShouldCallBaseEventHandler::Yes;
 }
 
 void BaseClickableWithKeyInputType::handleKeypressEvent(HTMLInputElement& element, KeyboardEvent& event)
@@ -73,15 +75,15 @@ void BaseClickableWithKeyInputType::handleKeyupEvent(InputType& inputType, Keybo
 }
 
 // FIXME: Could share this with BaseCheckableInputType and RangeInputType if we had a common base class.
-void BaseClickableWithKeyInputType::accessKeyAction(HTMLInputElement& element, bool sendMouseEvents)
+bool BaseClickableWithKeyInputType::accessKeyAction(HTMLInputElement& element, bool sendMouseEvents)
 {
-    element.dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return element.dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
-void BaseClickableWithKeyInputType::handleKeydownEvent(KeyboardEvent& event)
+auto BaseClickableWithKeyInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
 {
     ASSERT(element());
-    handleKeydownEvent(*element(), event);
+    return handleKeydownEvent(*element(), event);
 }
 
 void BaseClickableWithKeyInputType::handleKeypressEvent(KeyboardEvent& event)
@@ -95,11 +97,11 @@ void BaseClickableWithKeyInputType::handleKeyupEvent(KeyboardEvent& event)
     handleKeyupEvent(*this, event);
 }
 
-void BaseClickableWithKeyInputType::accessKeyAction(bool sendMouseEvents)
+bool BaseClickableWithKeyInputType::accessKeyAction(bool sendMouseEvents)
 {
     InputType::accessKeyAction(sendMouseEvents);
     ASSERT(element());
-    accessKeyAction(*element(), sendMouseEvents);
+    return accessKeyAction(*element(), sendMouseEvents);
 }
 
 } // namespace WebCore

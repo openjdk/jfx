@@ -65,6 +65,7 @@
 #include "CSSVariableReferenceValue.h"
 
 #include "CSSGridAutoRepeatValue.h"
+#include "CSSGridIntegerRepeatValue.h"
 #include "CSSGridLineNamesValue.h"
 #include "CSSGridTemplateAreasValue.h"
 
@@ -73,7 +74,8 @@
 
 namespace WebCore {
 
-struct SameSizeAsCSSValue : public RefCounted<SameSizeAsCSSValue> {
+struct SameSizeAsCSSValue {
+    uint32_t refCount;
     uint32_t bitfields;
 };
 
@@ -83,6 +85,8 @@ bool CSSValue::isImplicitInitialValue() const
 {
     return m_classType == InitialClass && downcast<CSSInitialValue>(*this).isImplicit();
 }
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
 
 CSSValue::Type CSSValue::cssValueType() const
 {
@@ -162,10 +166,8 @@ bool CSSValue::equals(const CSSValue& other) const
             return compareCSSValues<CSSFontFaceSrcValue>(*this, other);
         case FontFeatureClass:
             return compareCSSValues<CSSFontFeatureValue>(*this, other);
-#if ENABLE(VARIATION_FONTS)
         case FontVariationClass:
             return compareCSSValues<CSSFontVariationValue>(*this, other);
-#endif
         case FunctionClass:
             return compareCSSValues<CSSFunctionValue>(*this, other);
         case LinearGradientClass:
@@ -188,6 +190,8 @@ bool CSSValue::equals(const CSSValue& other) const
             return compareCSSValues<CSSRevertValue>(*this, other);
         case GridAutoRepeatClass:
             return compareCSSValues<CSSGridAutoRepeatValue>(*this, other);
+        case GridIntegerRepeatClass:
+            return compareCSSValues<CSSGridIntegerRepeatValue>(*this, other);
         case GridLineNamesClass:
             return compareCSSValues<CSSGridLineNamesValue>(*this, other);
         case GridTemplateAreasClass:
@@ -262,10 +266,8 @@ String CSSValue::cssText() const
         return downcast<CSSFontFaceSrcValue>(*this).customCSSText();
     case FontFeatureClass:
         return downcast<CSSFontFeatureValue>(*this).customCSSText();
-#if ENABLE(VARIATION_FONTS)
     case FontVariationClass:
         return downcast<CSSFontVariationValue>(*this).customCSSText();
-#endif
     case FunctionClass:
         return downcast<CSSFunctionValue>(*this).customCSSText();
     case LinearGradientClass:
@@ -288,6 +290,8 @@ String CSSValue::cssText() const
         return downcast<CSSRevertValue>(*this).customCSSText();
     case GridAutoRepeatClass:
         return downcast<CSSGridAutoRepeatValue>(*this).customCSSText();
+    case GridIntegerRepeatClass:
+        return downcast<CSSGridIntegerRepeatValue>(*this).customCSSText();
     case GridLineNamesClass:
         return downcast<CSSGridLineNamesValue>(*this).customCSSText();
     case GridTemplateAreasClass:
@@ -361,11 +365,9 @@ void CSSValue::destroy()
     case FontFeatureClass:
         delete downcast<CSSFontFeatureValue>(this);
         return;
-#if ENABLE(VARIATION_FONTS)
     case FontVariationClass:
         delete downcast<CSSFontVariationValue>(this);
         return;
-#endif
     case FunctionClass:
         delete downcast<CSSFunctionValue>(this);
         return;
@@ -398,6 +400,9 @@ void CSSValue::destroy()
         return;
     case GridAutoRepeatClass:
         delete downcast<CSSGridAutoRepeatValue>(this);
+        return;
+    case GridIntegerRepeatClass:
+        delete downcast<CSSGridIntegerRepeatValue>(this);
         return;
     case GridLineNamesClass:
         delete downcast<CSSGridLineNamesValue>(this);

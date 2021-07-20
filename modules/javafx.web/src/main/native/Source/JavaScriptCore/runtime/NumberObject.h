@@ -32,6 +32,12 @@ protected:
 public:
     using Base = JSWrapperObject;
 
+    template<typename, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.numberObjectSpace;
+    }
+
     static NumberObject* create(VM& vm, Structure* structure)
     {
         NumberObject* number = new (NotNull, allocateCell<NumberObject>(vm.heap)) NumberObject(vm, structure);
@@ -45,8 +51,11 @@ public:
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(NumberObjectType, StructureFlags), info());
     }
-};
 
-JS_EXPORT_PRIVATE NumberObject* constructNumber(ExecState*, JSGlobalObject*, JSValue);
+    static String toStringName(const JSObject*, JSGlobalObject*);
+};
+static_assert(sizeof(NumberObject) == sizeof(JSWrapperObject));
+
+JS_EXPORT_PRIVATE NumberObject* constructNumber(JSGlobalObject*, JSValue);
 
 } // namespace JSC

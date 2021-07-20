@@ -75,7 +75,11 @@ static const gchar *_quark_strings[] = {
   "GstMessageStreamCollection", "collection", "stream", "stream-collection",
   "GstMessageStreamsSelected", "GstMessageRedirect", "redirect-entry-locations",
   "redirect-entry-taglists", "redirect-entry-structures",
-  "GstEventStreamGroupDone"
+  "GstEventStreamGroupDone", "GstQueryBitrate", "nominal-bitrate",
+  "GstMessageDeviceChanged", "device-changed", "trickmode-interval",
+  "GstEventInstantRateChange",
+  "GstEventInstantRateSyncTime", "GstMessageInstantRateRequest",
+  "upstream-running-time", "base", "offset", "plugin-api", "plugin-api-flags",
 };
 
 GQuark _priv_gst_quark_table[GST_QUARK_MAX];

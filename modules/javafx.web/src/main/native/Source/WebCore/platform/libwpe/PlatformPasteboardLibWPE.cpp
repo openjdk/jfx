@@ -47,6 +47,11 @@ PlatformPasteboard::PlatformPasteboard()
     ASSERT(m_pasteboard);
 }
 
+void PlatformPasteboard::performAsDataOwner(DataOwnerType, Function<void()>&& actions)
+{
+    actions();
+}
+
 void PlatformPasteboard::getTypes(Vector<String>& types)
 {
     struct wpe_pasteboard_string_vector pasteboardTypes = { nullptr, 0 };
@@ -60,7 +65,7 @@ void PlatformPasteboard::getTypes(Vector<String>& types)
     wpe_pasteboard_string_vector_free(&pasteboardTypes);
 }
 
-String PlatformPasteboard::readString(int, const String& type) const
+String PlatformPasteboard::readString(size_t, const String& type) const
 {
     struct wpe_pasteboard_string string = { nullptr, 0 };
     wpe_pasteboard_get_string(m_pasteboard, type.utf8().data(), &string);
@@ -122,7 +127,12 @@ Vector<String> PlatformPasteboard::typesSafeForDOMToReadAndWrite(const String&) 
     return { };
 }
 
-long PlatformPasteboard::write(const PasteboardCustomData&)
+int64_t PlatformPasteboard::write(const PasteboardCustomData&)
+{
+    return 0;
+}
+
+int64_t PlatformPasteboard::write(const Vector<PasteboardCustomData>&)
 {
     return 0;
 }

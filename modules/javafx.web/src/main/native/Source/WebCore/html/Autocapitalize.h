@@ -25,12 +25,16 @@
 
 #pragma once
 
+#if ENABLE(AUTOCAPITALIZE)
+
 #include "AutocapitalizeTypes.h"
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-AutocapitalizeType autocapitalizeTypeForAttributeValue(const AtomicString&);
-const AtomicString& stringForAutocapitalizeType(AutocapitalizeType);
+AutocapitalizeType autocapitalizeTypeForAttributeValue(const AtomString&);
+const AtomString& stringForAutocapitalizeType(AutocapitalizeType);
 
 } // namespace WebCore
+
+#endif // ENABLE(AUTOCAPITALIZE)

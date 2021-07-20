@@ -23,10 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TextTrackRepresentation_h
-#define TextTrackRepresentation_h
+#pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "PlatformLayer.h"
 #include <wtf/Forward.h>
@@ -55,10 +54,9 @@ public:
     virtual PlatformLayer* platformLayer() = 0;
     virtual void setContentScale(float) = 0;
     virtual IntRect bounds() const = 0;
+    virtual void setHidden(bool) const = 0;
 };
 
 }
 
 #endif
-
-#endif // TextTrackRepresentation_h

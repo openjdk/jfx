@@ -24,7 +24,6 @@
  * SECTION:gstcollectpads
  * @title: GstCollectPads
  * @short_description: manages a set of pads that operate in collect mode
- * @see_also:
  *
  * Manages a set of pads that operate in collect mode. This means that control
  * is given to the manager of this object when all pads have data.
@@ -78,9 +77,6 @@
 GST_DEBUG_CATEGORY_STATIC (collect_pads_debug);
 #define GST_CAT_DEFAULT collect_pads_debug
 
-#define parent_class gst_collect_pads_parent_class
-G_DEFINE_TYPE (GstCollectPads, gst_collect_pads, GST_TYPE_OBJECT);
-
 struct _GstCollectDataPrivate
 {
   /* refcounting for struct, and destroy callback */
@@ -130,6 +126,9 @@ struct _GstCollectPadsPrivate
   gboolean pending_flush_stop;
 };
 
+#define parent_class gst_collect_pads_parent_class
+G_DEFINE_TYPE_WITH_PRIVATE (GstCollectPads, gst_collect_pads, GST_TYPE_OBJECT);
+
 static void gst_collect_pads_clear (GstCollectPads * pads,
     GstCollectData * data);
 static GstFlowReturn gst_collect_pads_chain (GstPad * pad, GstObject * parent,
@@ -172,16 +171,13 @@ static gboolean gst_collect_pads_query_default_internal (GstCollectPads *
   g_mutex_unlock (GST_COLLECT_PADS_GET_EVT_LOCK (pads));          \
 } G_STMT_END
 #define GST_COLLECT_PADS_EVT_WAIT_TIMED(pads, cookie, timeout) G_STMT_START { \
-  GTimeVal __tv; \
-  \
-  g_get_current_time (&tv); \
-  g_time_val_add (&tv, timeout); \
+  gint64 end_time = g_get_monotonic_time () + timeout; \
   \
   g_mutex_lock (GST_COLLECT_PADS_GET_EVT_LOCK (pads));            \
   /* should work unless a lot of event'ing and thread starvation */\
   while (cookie == ((GstCollectPads *) pads)->priv->evt_cookie)         \
-    g_cond_timed_wait (GST_COLLECT_PADS_GET_EVT_COND (pads),            \
-        GST_COLLECT_PADS_GET_EVT_LOCK (pads), &tv);                    \
+    g_cond_wait_until (GST_COLLECT_PADS_GET_EVT_COND (pads),            \
+        GST_COLLECT_PADS_GET_EVT_LOCK (pads), end_time);                    \
   cookie = ((GstCollectPads *) pads)->priv->evt_cookie;                 \
   g_mutex_unlock (GST_COLLECT_PADS_GET_EVT_LOCK (pads));          \
 } G_STMT_END
@@ -203,8 +199,6 @@ gst_collect_pads_class_init (GstCollectPadsClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
 
-  g_type_class_add_private (klass, sizeof (GstCollectPadsPrivate));
-
   GST_DEBUG_CATEGORY_INIT (collect_pads_debug, "collectpads", 0,
       "GstCollectPads");
 
@@ -214,9 +208,7 @@ gst_collect_pads_class_init (GstCollectPadsClass * klass)
 static void
 gst_collect_pads_init (GstCollectPads * pads)
 {
-  pads->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (pads, GST_TYPE_COLLECT_PADS,
-      GstCollectPadsPrivate);
+  pads->priv = gst_collect_pads_get_instance_private (pads);
 
   pads->data = NULL;
   pads->priv->cookie = 0;
@@ -346,7 +338,7 @@ gst_collect_pads_set_buffer_function (GstCollectPads * pads,
  */
 /* NOTE allowing to change comparison seems not advisable;
 no known use-case, and collaboration with default algorithm is unpredictable.
-If custom compairing/operation is needed, just use a collect function of
+If custom comparing/operation is needed, just use a collect function of
 your own */
 void
 gst_collect_pads_set_compare_function (GstCollectPads * pads,
@@ -413,7 +405,7 @@ unref_data (GstCollectData * data)
   if (data->priv->destroy_notify)
     data->priv->destroy_notify (data);
 
-  g_object_unref (data->pad);
+  gst_object_unref (data->pad);
   if (data->buffer) {
     gst_buffer_unref (data->buffer);
   }

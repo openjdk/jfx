@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.SkinBaseShim;
 import javafx.scene.control.skin.LabelSkin;
+import javafx.scene.control.skin.LabelSkinBaseShim;
 import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.paint.Color;
@@ -133,6 +134,12 @@ public class LabelSkinTest {
     @Test public void vposChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.alignmentProperty());
         label.setAlignment(Pos.TOP_CENTER);
+        assertTrue(skin.propertyChanged);
+    }
+
+    @Test public void lineSpacingChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
+        skin.addWatchedProperty(label.lineSpacingProperty());
+        label.setLineSpacing(1.0);
         assertTrue(skin.propertyChanged);
     }
 
@@ -277,6 +284,15 @@ public class LabelSkinTest {
         label.setAlignment(Pos.TOP_CENTER);
         assertTrue(label.isNeedsLayout());
         assertFalse(skin.get_invalidText());
+    }
+
+    @Test public void lineSpacingChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
+        label.layout();
+        skin.updateDisplayedText();
+
+        label.setLineSpacing(1.0);
+        assertTrue(label.isNeedsLayout());
+        assertTrue(skin.get_invalidText());
     }
 
     @Test public void textChangesOnLabelShouldInvalidateLayoutAndDisplayTextAndTextWidth() {
@@ -1143,6 +1159,26 @@ public class LabelSkinTest {
         final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         final double height = label.prefHeight(-1);
         assertTrue(height >= singleLineHeight * 5);
+    }
+
+    @Test public void whenTextHasNewlinesAndPositiveLineSpacing_computePrefHeight_IncludesTheMultipleLinesAndLineSpacingInThePrefHeight() {
+        label.setLineSpacing(2);
+        label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
+        label.setPadding(new Insets(0, 0, 0, 0));
+        final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
+        final double expectedHeight = singleLineHeight * 5 + label.getLineSpacing() * 5 - label.getLineSpacing();
+        final double height = label.prefHeight(-1);
+        assertEquals(expectedHeight, height, 0);
+    }
+
+    @Test public void whenTextHasNewlinesAndNegativeLineSpacing_computePrefHeight_IncludesTheMultipleLinesAndLineSpacingInThePrefHeight() {
+        label.setLineSpacing(-2);
+        label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
+        label.setPadding(new Insets(0, 0, 0, 0));
+        final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
+        final double expectedHeight = singleLineHeight * 5 + label.getLineSpacing() * 5 - label.getLineSpacing();
+        final double height = label.prefHeight(-1);
+        assertEquals(expectedHeight, height, 0);
     }
 
     @Test public void whenTextHasNewlinesAfterPreviousComputationOf_computePrefHeight_IncludesTheMultipleLinesInThePrefHeight() {
@@ -2027,8 +2063,59 @@ public class LabelSkinTest {
      *                                                                          *
      ***************************************************************************/
 
-    // tests for updateDisplayedText (not even sure how to test it exactly yet)
+    @Test
+    public void mnemonicSymbolIsRemovedFromDisplayedText() {
+        label.setMnemonicParsing(true);
+        label.setText("foo _bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
+    }
 
+    @Test
+    public void extendedMnemonicIsRemovedFromDisplayedText() {
+        label.setMnemonicParsing(true);
+        label.setText("foo _(x)bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void escapedMnemonicSymbolIsRetainedInDisplayedText() {
+        label.setMnemonicParsing(true);
+        label.setText("foo __bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo _bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void escapedMnemonicSymbolIsNotProcessedWhenMnemonicParsingIsDisabled() {
+        label.setMnemonicParsing(false);
+        label.setText("foo __bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo __bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void underscoreNotFollowedByAlphabeticCharIsNotAMnemonic() {
+        label.setMnemonicParsing(true);
+        label.setText("foo_ bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo_ bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void underscoreAtEndOfTextIsNotAMnemonic() {
+        label.setMnemonicParsing(true);
+        label.setText("foo_");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo_", LabelSkinBaseShim.getText(label).getText());
+    }
 
     public static final class LabelSkinMock extends LabelSkin {
         boolean propertyChanged = false;

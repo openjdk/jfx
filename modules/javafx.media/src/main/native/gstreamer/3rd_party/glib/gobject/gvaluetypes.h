@@ -137,6 +137,19 @@ G_BEGIN_DECLS
  */
 #define G_VALUE_HOLDS_STRING(value)  (G_TYPE_CHECK_VALUE_TYPE ((value), G_TYPE_STRING))
 /**
+ * G_VALUE_IS_INTERNED_STRING:
+ * @value: a valid #GValue structure
+ *
+ * Checks whether @value contains a string which is canonical.
+ *
+ * Returns: %TRUE if the value contains a string in its canonical
+ * representation, as returned by g_intern_string(). See also
+ * g_value_set_interned_string().
+ *
+ * Since: 2.66
+ */
+#define G_VALUE_IS_INTERNED_STRING(value) (G_VALUE_HOLDS_STRING (value) && ((value)->data[1].v_uint & G_VALUE_INTERNED_STRING)) GLIB_AVAILABLE_MACRO_IN_2_66
+/**
  * G_VALUE_HOLDS_POINTER:
  * @value: a valid #GValue structure
  *
@@ -192,7 +205,7 @@ GLIB_AVAILABLE_IN_ALL
 guchar            g_value_get_uchar     (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_boolean   (GValue       *value,
-                         gboolean      v_boolean);
+             gboolean      v_boolean);
 GLIB_AVAILABLE_IN_ALL
 gboolean          g_value_get_boolean   (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
@@ -222,7 +235,7 @@ GLIB_AVAILABLE_IN_ALL
 gint64            g_value_get_int64     (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_uint64    (GValue       *value,
-                         guint64      v_uint64);
+             guint64      v_uint64);
 GLIB_AVAILABLE_IN_ALL
 guint64           g_value_get_uint64    (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
@@ -232,37 +245,40 @@ GLIB_AVAILABLE_IN_ALL
 gfloat            g_value_get_float     (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_double    (GValue       *value,
-                         gdouble       v_double);
+             gdouble       v_double);
 GLIB_AVAILABLE_IN_ALL
 gdouble           g_value_get_double    (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_string    (GValue       *value,
-                         const gchar  *v_string);
+             const gchar  *v_string);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_static_string (GValue       *value,
-                         const gchar  *v_string);
+             const gchar  *v_string);
+GLIB_AVAILABLE_IN_2_66
+void              g_value_set_interned_string (GValue      *value,
+                           const gchar  *v_string);
 GLIB_AVAILABLE_IN_ALL
 const gchar *         g_value_get_string    (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 gchar*            g_value_dup_string    (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_pointer   (GValue       *value,
-                         gpointer      v_pointer);
+             gpointer      v_pointer);
 GLIB_AVAILABLE_IN_ALL
 gpointer          g_value_get_pointer   (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 GType             g_gtype_get_type      (void);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_gtype         (GValue       *value,
-                         GType         v_gtype);
+             GType         v_gtype);
 GLIB_AVAILABLE_IN_ALL
 GType                 g_value_get_gtype         (const GValue *value);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_set_variant   (GValue       *value,
-                         GVariant     *variant);
+             GVariant     *variant);
 GLIB_AVAILABLE_IN_ALL
 void              g_value_take_variant  (GValue       *value,
-                         GVariant     *variant);
+             GVariant     *variant);
 GLIB_AVAILABLE_IN_ALL
 GVariant*         g_value_get_variant   (const GValue *value);
 GLIB_AVAILABLE_IN_ALL

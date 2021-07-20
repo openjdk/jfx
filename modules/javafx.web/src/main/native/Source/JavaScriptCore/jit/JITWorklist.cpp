@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,16 +29,15 @@
 #if ENABLE(JIT)
 
 #include "JIT.h"
-#include "JSCInlines.h"
 #include "VMInlines.h"
 
 namespace JSC {
 
 class JITWorklist::Plan : public ThreadSafeRefCounted<JITWorklist::Plan> {
 public:
-    Plan(CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
+    Plan(CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex)
         : m_codeBlock(codeBlock)
-        , m_jit(codeBlock->vm(), codeBlock, loopOSREntryBytecodeOffset)
+        , m_jit(codeBlock->vm(), codeBlock, loopOSREntryBytecodeIndex)
     {
         m_jit.doMainThreadPreparationBeforeCompile();
     }
@@ -57,14 +56,12 @@ public:
         switch (result) {
         case CompilationFailed:
             CODEBLOCK_LOG_EVENT(m_codeBlock, "delayJITCompile", ("compilation failed"));
-            if (Options::verboseOSR())
-                dataLogF("    JIT compilation failed.\n");
+            dataLogLnIf(Options::verboseOSR(), "    JIT compilation failed.");
             m_codeBlock->dontJITAnytimeSoon();
             m_codeBlock->m_didFailJITCompilation = true;
             return;
         case CompilationSuccessful:
-            if (Options::verboseOSR())
-                dataLogF("    JIT compilation successful.\n");
+            dataLogLnIf(Options::verboseOSR(), "    JIT compilation successful.");
             m_codeBlock->ownerExecutable()->installCode(m_codeBlock);
             m_codeBlock->jitSoon();
             return;
@@ -75,7 +72,7 @@ public:
     }
 
     CodeBlock* codeBlock() { return m_codeBlock; }
-    VM* vm() { return m_codeBlock->vm(); }
+    VM& vm() { return m_codeBlock->vm(); }
 
     bool isFinishedCompiling()
     {
@@ -83,9 +80,9 @@ public:
         return m_isFinishedCompiling;
     }
 
-    static void compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
+    static void compileNow(CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex)
     {
-        Plan plan(codeBlock, loopOSREntryBytecodeOffset);
+        Plan plan(codeBlock, loopOSREntryBytecodeIndex);
         plan.compileInThread();
         plan.finalize();
     }
@@ -97,7 +94,7 @@ private:
     bool m_isFinishedCompiling { false };
 };
 
-class JITWorklist::Thread : public AutomaticThread {
+class JITWorklist::Thread final : public AutomaticThread {
 public:
     Thread(const AbstractLocker& locker, JITWorklist& worklist)
         : AutomaticThread(locker, worklist.m_lock, worklist.m_condition.copyRef())
@@ -106,7 +103,7 @@ public:
         m_worklist.m_numAvailableThreads++;
     }
 
-    const char* name() const override
+    const char* name() const final
     {
 #if OS(LINUX)
         return "JITWorker";
@@ -115,8 +112,8 @@ public:
 #endif
     }
 
-protected:
-    PollResult poll(const AbstractLocker&) override
+private:
+    PollResult poll(const AbstractLocker&) final
     {
         RELEASE_ASSERT(m_worklist.m_numAvailableThreads);
 
@@ -128,7 +125,7 @@ protected:
         return PollResult::Work;
     }
 
-    WorkResult work() override
+    WorkResult work() final
     {
         RELEASE_ASSERT(!m_myPlans.isEmpty());
 
@@ -149,7 +146,6 @@ protected:
         return WorkResult::Continue;
     }
 
-private:
     JITWorklist& m_worklist;
     Plans m_myPlans;
 };
@@ -179,7 +175,7 @@ bool JITWorklist::completeAllForVM(VM& vm)
                 bool didFindUnfinishedPlan = false;
                 m_plans.removeAllMatching(
                     [&] (RefPtr<Plan>& plan) {
-                        if (plan->vm() != &vm)
+                        if (&plan->vm() != &vm)
                             return false;
                         if (!plan->isFinishedCompiling()) {
                             didFindUnfinishedPlan = true;
@@ -216,7 +212,7 @@ void JITWorklist::poll(VM& vm)
         LockHolder locker(*m_lock);
         m_plans.removeAllMatching(
             [&] (RefPtr<Plan>& plan) {
-                if (plan->vm() != &vm)
+                if (&plan->vm() != &vm)
                     return false;
                 if (!plan->isFinishedCompiling())
                     return false;
@@ -228,10 +224,10 @@ void JITWorklist::poll(VM& vm)
     finalizePlans(myPlans);
 }
 
-void JITWorklist::compileLater(CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
+void JITWorklist::compileLater(CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex)
 {
-    DeferGC deferGC(codeBlock->vm()->heap);
-    RELEASE_ASSERT(codeBlock->jitType() == JITCode::InterpreterThunk);
+    DeferGC deferGC(codeBlock->vm().heap);
+    RELEASE_ASSERT(codeBlock->jitType() == JITType::InterpreterThunk);
 
     if (codeBlock->m_didFailJITCompilation) {
         codeBlock->dontJITAnytimeSoon();
@@ -239,7 +235,7 @@ void JITWorklist::compileLater(CodeBlock* codeBlock, unsigned loopOSREntryByteco
     }
 
     if (!Options::useConcurrentJIT()) {
-        Plan::compileNow(codeBlock, loopOSREntryBytecodeOffset);
+        Plan::compileNow(codeBlock, loopOSREntryBytecodeIndex);
         return;
     }
 
@@ -253,7 +249,7 @@ void JITWorklist::compileLater(CodeBlock* codeBlock, unsigned loopOSREntryByteco
 
         if (m_numAvailableThreads) {
             m_planned.add(codeBlock);
-            RefPtr<Plan> plan = adoptRef(new Plan(codeBlock, loopOSREntryBytecodeOffset));
+            RefPtr<Plan> plan = adoptRef(new Plan(codeBlock, loopOSREntryBytecodeIndex));
             m_plans.append(plan);
             m_queue.append(plan);
             m_condition->notifyAll(locker);
@@ -277,14 +273,14 @@ void JITWorklist::compileLater(CodeBlock* codeBlock, unsigned loopOSREntryByteco
     // This works around the issue. If the concurrent JIT thread is convoyed, we revert to main
     // thread compiles. This is probably not as good as if we had multiple JIT threads. Maybe we
     // can do that someday.
-    Plan::compileNow(codeBlock, loopOSREntryBytecodeOffset);
+    Plan::compileNow(codeBlock, loopOSREntryBytecodeIndex);
 }
 
-void JITWorklist::compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
+void JITWorklist::compileNow(CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex)
 {
-    VM* vm = codeBlock->vm();
-    DeferGC deferGC(vm->heap);
-    if (codeBlock->jitType() != JITCode::InterpreterThunk)
+    VM& vm = codeBlock->vm();
+    DeferGC deferGC(vm.heap);
+    if (codeBlock->jitType() != JITType::InterpreterThunk)
         return;
 
     bool isPlanned;
@@ -296,11 +292,11 @@ void JITWorklist::compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecode
     if (isPlanned) {
         RELEASE_ASSERT(Options::useConcurrentJIT());
         // This is expensive, but probably good enough.
-        completeAllForVM(*vm);
+        completeAllForVM(vm);
     }
 
     // Now it might be compiled!
-    if (codeBlock->jitType() != JITCode::InterpreterThunk)
+    if (codeBlock->jitType() != JITType::InterpreterThunk)
         return;
 
     // We do this in case we had previously attempted, and then failed, to compile with the
@@ -308,7 +304,7 @@ void JITWorklist::compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecode
     codeBlock->resetJITData();
 
     // OK, just compile it.
-    JIT::compile(vm, codeBlock, JITCompilationMustSucceed, loopOSREntryBytecodeOffset);
+    JIT::compile(vm, codeBlock, JITCompilationMustSucceed, loopOSREntryBytecodeIndex);
     codeBlock->ownerExecutable()->installCode(codeBlock);
 }
 

@@ -28,32 +28,30 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 
 namespace JSC {
 
-JSWebAssemblyCompileError* JSWebAssemblyCompileError::create(ExecState* exec, VM& vm, Structure* structure, const String& message)
+JSWebAssemblyCompileError* JSWebAssemblyCompileError::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const String& message)
 {
     auto* instance = new (NotNull, allocateCell<JSWebAssemblyCompileError>(vm.heap)) JSWebAssemblyCompileError(vm, structure);
-    instance->m_sourceAppender = defaultSourceAppender;
     bool useCurrentFrame = true;
-    instance->finishCreation(exec, vm, message, useCurrentFrame);
+    instance->finishCreation(vm, globalObject, message, defaultSourceAppender, TypeNothing, useCurrentFrame);
     return instance;
 }
 
 JSWebAssemblyCompileError::JSWebAssemblyCompileError(VM& vm, Structure* structure)
-    : Base(vm, structure)
+    : Base(vm, structure, ErrorType::Error)
 {
 }
 
 const ClassInfo JSWebAssemblyCompileError::s_info = { "WebAssembly.CompileError", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyCompileError) };
 
 
-JSObject* createJSWebAssemblyCompileError(ExecState* exec, VM& vm, const String& message)
+JSObject* createJSWebAssemblyCompileError(JSGlobalObject* globalObject, VM& vm, const String& message)
 {
     ASSERT(!message.isEmpty());
-    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-    return JSWebAssemblyCompileError::create(exec, vm, globalObject->WebAssemblyCompileErrorStructure(), message);
+    return JSWebAssemblyCompileError::create(globalObject, vm, globalObject->webAssemblyCompileErrorStructure(), message);
 }
 
 } // namespace JSC

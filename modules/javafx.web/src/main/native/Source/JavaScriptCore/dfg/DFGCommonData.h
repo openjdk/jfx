@@ -30,6 +30,7 @@
 #include "CodeBlockJettisoningWatchpoint.h"
 #include "DFGAdaptiveInferredPropertyValueWatchpoint.h"
 #include "DFGAdaptiveStructureWatchpoint.h"
+#include "DFGCodeOriginPool.h"
 #include "DFGJumpReplacement.h"
 #include "DFGOSREntry.h"
 #include "InlineCallFrameSet.h"
@@ -73,19 +74,11 @@ class CommonData {
     WTF_MAKE_NONCOPYABLE(CommonData);
 public:
     CommonData()
-        : isStillValid(true)
-        , frameRegisterCount(std::numeric_limits<unsigned>::max())
-        , requiredRegisterCountForExit(std::numeric_limits<unsigned>::max())
+        : codeOrigins(CodeOriginPool::create())
     { }
     ~CommonData();
 
     void notifyCompilingStructureTransition(Plan&, CodeBlock*, Node*);
-    CallSiteIndex addCodeOrigin(CodeOrigin);
-    CallSiteIndex addUniqueCallSiteIndex(CodeOrigin);
-    CallSiteIndex lastCallSite() const;
-
-    DisposableCallSiteIndex addDisposableCallSiteIndex(CodeOrigin);
-    void removeDisposableCallSiteIndex(DisposableCallSiteIndex);
 
     void shrinkToFit();
 
@@ -94,14 +87,14 @@ public:
     void installVMTrapBreakpoints(CodeBlock* owner);
     bool isVMTrapBreakpoint(void* address);
 
-    CatchEntrypointData* catchOSREntryDataForBytecodeIndex(unsigned bytecodeIndex)
+    CatchEntrypointData* catchOSREntryDataForBytecodeIndex(BytecodeIndex bytecodeIndex)
     {
-        return tryBinarySearch<CatchEntrypointData, unsigned>(
+        return tryBinarySearch<CatchEntrypointData, BytecodeIndex>(
             catchEntrypoints, catchEntrypoints.size(), bytecodeIndex,
             [] (const CatchEntrypointData* item) { return item->bytecodeIndex; });
     }
 
-    void appendCatchEntrypoint(unsigned bytecodeIndex, MacroAssemblerCodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
+    void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, MacroAssemblerCodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
     {
         catchEntrypoints.append(CatchEntrypointData { machineCode,  WTFMove(argumentFormats), bytecodeIndex });
     }
@@ -120,12 +113,12 @@ public:
     void clearWatchpoints();
 
     RefPtr<InlineCallFrameSet> inlineCallFrames;
-    Vector<CodeOrigin, 0, UnsafeVectorOverflow> codeOrigins;
+    Ref<CodeOriginPool> codeOrigins;
 
     Vector<Identifier> dfgIdentifiers;
     Vector<WeakReferenceTransition> transitions;
     Vector<WriteBarrier<JSCell>> weakReferences;
-    Vector<WriteBarrier<Structure>> weakStructureReferences;
+    Vector<StructureID> weakStructureReferences;
     Vector<CatchEntrypointData> catchEntrypoints;
     Bag<CodeBlockJettisoningWatchpoint> watchpoints;
     Bag<AdaptiveStructureWatchpoint> adaptiveStructureWatchpoints;
@@ -137,19 +130,15 @@ public:
     RefPtr<Profiler::Compilation> compilation;
     bool livenessHasBeenProved; // Initialized and used on every GC.
     bool allTransitionsHaveBeenMarked; // Initialized and used on every GC.
-    bool isStillValid;
+    bool isStillValid { true };
     bool hasVMTrapsBreakpointsInstalled { false };
 
 #if USE(JSVALUE32_64)
     std::unique_ptr<Bag<double>> doubleConstants;
 #endif
 
-    unsigned frameRegisterCount;
-    unsigned requiredRegisterCountForExit;
-
-private:
-    HashSet<unsigned, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> callSiteIndexFreeList;
-
+    unsigned frameRegisterCount { std::numeric_limits<unsigned>::max() };
+    unsigned requiredRegisterCountForExit { std::numeric_limits<unsigned>::max() };
 };
 
 CodeBlock* codeBlockForVMTrapPC(void* pc);

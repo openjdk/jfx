@@ -28,7 +28,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "IdentifierInlines.h"
 #include "WasmNameSection.h"
 
 namespace JSC { namespace Wasm {
@@ -96,7 +95,7 @@ auto NameSectionParser::parse() -> Result
         }
         WASM_PARSER_FAIL_IF(payloadStart + payloadLength != m_offset);
     }
-    return WTFMove(nameSection);
+    return nameSection;
 }
 
 } } // namespace JSC::Wasm

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -342,7 +342,8 @@ public class ChoiceBoxTest {
         assertEquals("Orange", box.getValue());
     }
 
-    @Test public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
+    @Test
+    public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
         box.getItems().addAll("Apple", "Orange", "Banana");
         SelectionModel sm1 = box.getSelectionModel();
         sm1.select(1);
@@ -351,7 +352,10 @@ public class ChoiceBoxTest {
         box.setSelectionModel(sm2);
 
         sm1.select(2);  // value should not change as we are using old SM
-        assertEquals("Orange", box.getValue());
+        // was: incorrect test assumption
+        // - setting the new model (with null selected item) changed the value to null
+        // assertEquals("Orange", box.getValue());
+        assertEquals(sm2.getSelectedItem(), box.getValue());
 
         sm2.select(0);  // value should change, as we are using new SM
         assertEquals("Apple", box.getValue());
@@ -417,10 +421,17 @@ public class ChoiceBoxTest {
         assertFalse(box.isShowing());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyShowingViaCSS() {
-//        box.impl_cssSet("-fx-showing", true);
+        box.setStyle("-fx-showing: true;");
+        box.applyCss();
         assertFalse(box.isShowing());
+
+        box.show();
+        assertTrue(box.isShowing());
+
+        box.setStyle("-fx-showing: false;");
+        box.applyCss();
+        assertTrue(box.isShowing());
     }
 
     @Test public void settingShowingSetsPseudoClass() {

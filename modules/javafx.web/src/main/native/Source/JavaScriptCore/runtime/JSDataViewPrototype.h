@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,20 +31,25 @@ namespace JSC {
 
 class JSDataViewPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-protected:
-    JSDataViewPrototype(VM&, Structure*);
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSDataViewPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
-    void finishCreation(VM&);
-
-public:
     static JSDataViewPrototype* create(VM&, Structure*);
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+private:
+    JSDataViewPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC

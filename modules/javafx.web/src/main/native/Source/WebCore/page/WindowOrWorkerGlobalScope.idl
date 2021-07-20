@@ -25,39 +25,46 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if defined(ENABLE_VIDEO) && ENABLE_VIDEO && defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
-typedef (HTMLImageElement or HTMLVideoElement or HTMLCanvasElement or ImageBitmap or TypedOMCSSImageValue) CanvasImageSource;
-#elif defined(ENABLE_VIDEO) && ENABLE_VIDEO
-typedef (HTMLImageElement or HTMLVideoElement or HTMLCanvasElement or ImageBitmap) CanvasImageSource;
-#else
-typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap) CanvasImageSource;
+// FIXME: This should include SVGImageElement.
+typedef (HTMLImageElement
+#if defined(ENABLE_VIDEO) && ENABLE_VIDEO
+    or HTMLVideoElement
 #endif
+    or HTMLCanvasElement
+    or ImageBitmap
+#if defined(ENABLE_OFFSCREEN_CANVAS) && ENABLE_OFFSCREEN_CANVAS
+    or OffscreenCanvas
+#endif
+#if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
+    or TypedOMCSSImageValue
+#endif
+) CanvasImageSource;
 
 typedef (CanvasImageSource or Blob or ImageData) ImageBitmapSource;
 
-[
-    NoInterfaceObject,
-] interface WindowOrWorkerGlobalScope {
+// https://html.spec.whatwg.org/multipage/webappapis.html#windoworworkerglobalscope-mixin
+interface mixin WindowOrWorkerGlobalScope {
     [Replaceable] readonly attribute USVString origin;
-
-    // Timers
-    // FIXME: This should take a TimerHandler (a.k.a. (DOMString or Function)) rather than a ScheduledAction.
-    [CallWith=ExecState, MayThrowException] long setTimeout(ScheduledAction handler, optional long timeout = 0, any... arguments);
-    void clearTimeout(optional long handle = 0);
-    // FIXME: This should take a TimerHandler (a.k.a. (DOMString or Function)) rather than a ScheduledAction.
-    [CallWith=ExecState, MayThrowException] long setInterval(ScheduledAction handler, optional long timeout = 0, any... arguments);
-    void clearInterval(optional long handle = 0);
-
-    [Custom] void queueMicrotask(VoidCallback callback);
+    readonly attribute boolean isSecureContext;
+    // FIXME: Implement 'crossOriginIsolated'.
+    // readonly attribute boolean crossOriginIsolated;
 
     // Base64 utility methods.
     [MayThrowException] DOMString atob(DOMString string);
     [MayThrowException] DOMString btoa(DOMString string);
 
-    // Secure Contexts
-    [EnabledAtRuntime=IsSecureContextAttribute] readonly attribute boolean isSecureContext;
+    // Timers.
+    // FIXME: This should take a TimerHandler (a.k.a. (DOMString or Function)) rather than a ScheduledAction.
+    [CallWith=GlobalObject, MayThrowException] long setTimeout(ScheduledAction handler, optional long timeout = 0, any... arguments);
+    undefined clearTimeout(optional long handle = 0);
+    // FIXME: This should take a TimerHandler (a.k.a. (DOMString or Function)) rather than a ScheduledAction.
+    [CallWith=GlobalObject, MayThrowException] long setInterval(ScheduledAction handler, optional long timeout = 0, any... arguments);
+    undefined clearInterval(optional long handle = 0);
+
+    // microtask queuing.
+    [Custom] undefined queueMicrotask(VoidCallback callback);
 
     // ImageBitmap.
-    [EnabledAtRuntime=ImageBitmapOffscreenCanvas] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, optional ImageBitmapOptions options);
-    [EnabledAtRuntime=ImageBitmapOffscreenCanvas] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, long sx, long sy, long sw, long sh, optional ImageBitmapOptions options);
+    [EnabledAtRuntime=ImageBitmap] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, optional ImageBitmapOptions options);
+    [EnabledAtRuntime=ImageBitmap] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, long sx, long sy, long sw, long sh, optional ImageBitmapOptions options);
 };

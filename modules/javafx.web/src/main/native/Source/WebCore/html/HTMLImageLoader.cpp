@@ -61,23 +61,18 @@ void HTMLImageLoader::dispatchLoadEvent()
     element().dispatchEvent(Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-String HTMLImageLoader::sourceURI(const AtomicString& attr) const
+String HTMLImageLoader::sourceURI(const AtomString& attr) const
 {
-#if ENABLE(DASHBOARD_SUPPORT)
-    if (element().document().settings().usesDashboardBackwardCompatibilityMode() && attr.length() > 7 && attr.startsWith("url(\"") && attr.endsWith("\")"))
-        return attr.string().substring(5, attr.length() - 7);
-#endif
-
     return stripLeadingAndTrailingHTMLSpaces(attr);
 }
 
-void HTMLImageLoader::notifyFinished(CachedResource&)
+void HTMLImageLoader::notifyFinished(CachedResource&, const NetworkLoadMetrics& metrics)
 {
     ASSERT(image());
     CachedImage& cachedImage = *image();
 
     Ref<Element> protect(element());
-    ImageLoader::notifyFinished(cachedImage);
+    ImageLoader::notifyFinished(cachedImage, metrics);
 
     bool loadError = cachedImage.errorOccurred() || cachedImage.response().httpStatusCode() >= 400;
     if (!loadError) {

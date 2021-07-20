@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,14 +48,17 @@ class JSServiceWorkerGlobalScope;
 #endif
 
 class JSWorkerGlobalScopeBase : public JSDOMGlobalObject {
-    typedef JSDOMGlobalObject Base;
 public:
+    using Base = JSDOMGlobalObject;
+
+    template<typename, JSC::SubspaceAccess>
+    static void subspaceFor(JSC::VM&) { RELEASE_ASSERT_NOT_REACHED(); }
+
     static void destroy(JSC::JSCell*);
 
     DECLARE_INFO;
 
     WorkerGlobalScope& wrapped() const { return *m_wrapped; }
-    JSC::JSProxy* proxy() const { ASSERT(m_proxy); return m_proxy.get(); }
     ScriptExecutionContext* scriptExecutionContext() const;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -69,27 +72,25 @@ public:
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
-    static void queueTaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
-
-    void clearDOMGuardedObjects();
+    static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
+    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
 
 protected:
     JSWorkerGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkerGlobalScope>&&);
     void finishCreation(JSC::VM&, JSC::JSProxy*);
 
-    static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     RefPtr<WorkerGlobalScope> m_wrapped;
-    JSC::WriteBarrier<JSC::JSProxy> m_proxy;
 };
 
 // Returns a JSWorkerGlobalScope or jsNull()
 // Always ignores the execState and passed globalObject, WorkerGlobalScope is itself a globalObject and will always use its own prototype chain.
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, WorkerGlobalScope&);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, WorkerGlobalScope* scope) { return scope ? toJS(exec, globalObject, *scope) : JSC::jsNull(); }
-JSC::JSValue toJS(JSC::ExecState*, WorkerGlobalScope&);
-inline JSC::JSValue toJS(JSC::ExecState* exec, WorkerGlobalScope* scope) { return scope ? toJS(exec, *scope) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, WorkerGlobalScope&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, WorkerGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, globalObject, *scope) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, WorkerGlobalScope&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WorkerGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, *scope) : JSC::jsNull(); }
 
 JSDedicatedWorkerGlobalScope* toJSDedicatedWorkerGlobalScope(JSC::VM&, JSC::JSValue);
 JSWorkerGlobalScope* toJSWorkerGlobalScope(JSC::VM&, JSC::JSValue);

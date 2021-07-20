@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include "CacheableIdentifier.h"
 #include "ClassInfo.h"
 #include "CodeLocation.h"
-#include "CodeOrigin.h"
 #include "IndexingType.h"
 #include "JITStubRoutine.h"
 #include "Structure.h"
@@ -38,9 +38,10 @@ class Symbol;
 
 #if ENABLE(JIT)
 
+class ArrayProfile;
 class StructureStubInfo;
 
-enum JITArrayMode {
+enum JITArrayMode : uint8_t {
     JITInt32,
     JITDouble,
     JITContiguous,
@@ -55,7 +56,9 @@ enum JITArrayMode {
     JITUint16Array,
     JITUint32Array,
     JITFloat32Array,
-    JITFloat64Array
+    JITFloat64Array,
+    JITBigInt64Array,
+    JITBigUint64Array,
 };
 
 inline bool isOptimizableIndexingType(IndexingType indexingType)
@@ -145,6 +148,10 @@ inline JITArrayMode jitArrayModeForClassInfo(const ClassInfo* classInfo)
         return JITFloat32Array;
     case TypeFloat64:
         return JITFloat64Array;
+    case TypeBigInt64:
+        return JITBigInt64Array;
+    case TypeBigUint64:
+        return JITBigUint64Array;
     default:
         CRASH();
         return JITContiguous;
@@ -156,6 +163,10 @@ inline bool jitArrayModePermitsPut(JITArrayMode mode)
     switch (mode) {
     case JITDirectArguments:
     case JITScopedArguments:
+    // FIXME: Optimize BigInt64Array / BigUint64Array in IC
+    // https://bugs.webkit.org/show_bug.cgi?id=221183
+    case JITBigInt64Array:
+    case JITBigUint64Array:
         // We could support put_by_val on these at some point, but it's just not that profitable
         // at the moment.
         return false;
@@ -205,6 +216,10 @@ inline TypedArrayType typedArrayTypeForJITArrayMode(JITArrayMode mode)
         return TypeFloat32;
     case JITFloat64Array:
         return TypeFloat64;
+    case JITBigInt64Array:
+        return TypeBigInt64;
+    case JITBigUint64Array:
+        return TypeBigUint64;
     default:
         CRASH();
         return NotTypedArray;
@@ -224,44 +239,47 @@ inline JITArrayMode jitArrayModeForStructure(Structure* structure)
 }
 
 struct ByValInfo {
-    ByValInfo() { }
-
-    ByValInfo(unsigned bytecodeIndex, CodeLocationJump<JSInternalPtrTag> notIndexJump, CodeLocationJump<JSInternalPtrTag> badTypeJump, CodeLocationLabel<ExceptionHandlerPtrTag> exceptionHandler, JITArrayMode arrayMode, ArrayProfile* arrayProfile, CodeLocationLabel<JSInternalPtrTag> badTypeDoneTarget, CodeLocationLabel<JSInternalPtrTag> badTypeNextHotPathTarget, CodeLocationLabel<JSInternalPtrTag> slowPathTarget)
-        : notIndexJump(notIndexJump)
-        , badTypeJump(badTypeJump)
-        , exceptionHandler(exceptionHandler)
-        , badTypeDoneTarget(badTypeDoneTarget)
-        , badTypeNextHotPathTarget(badTypeNextHotPathTarget)
-        , slowPathTarget(slowPathTarget)
-        , arrayProfile(arrayProfile)
-        , bytecodeIndex(bytecodeIndex)
-        , slowPathCount(0)
-        , stubInfo(nullptr)
-        , arrayMode(arrayMode)
-        , tookSlowPath(false)
-        , seen(false)
+    ByValInfo(BytecodeIndex bytecodeIndex)
+        : bytecodeIndex(bytecodeIndex)
     {
     }
+
+    void setUp(CodeLocationJump<JSInternalPtrTag> notIndexJump, CodeLocationJump<JSInternalPtrTag> badTypeJump, CodeLocationLabel<ExceptionHandlerPtrTag> exceptionHandler, JITArrayMode arrayMode, ArrayProfile* arrayProfile, CodeLocationLabel<JSInternalPtrTag> doneTarget, CodeLocationLabel<JSInternalPtrTag> badTypeNextHotPathTarget, CodeLocationLabel<JSInternalPtrTag> slowPathTarget)
+    {
+        this->notIndexJump = notIndexJump;
+        this->badTypeJump = badTypeJump;
+        this->exceptionHandler = exceptionHandler;
+        this->doneTarget = doneTarget;
+        this->badTypeNextHotPathTarget = badTypeNextHotPathTarget;
+        this->slowPathTarget = slowPathTarget;
+        this->arrayProfile = arrayProfile;
+        this->slowPathCount = 0;
+        this->stubInfo = nullptr;
+        this->arrayMode = arrayMode;
+        this->tookSlowPath = false;
+        this->seen = false;
+    }
+
+    DECLARE_VISIT_AGGREGATE;
 
     CodeLocationJump<JSInternalPtrTag> notIndexJump;
     CodeLocationJump<JSInternalPtrTag> badTypeJump;
     CodeLocationLabel<ExceptionHandlerPtrTag> exceptionHandler;
-    CodeLocationLabel<JSInternalPtrTag> badTypeDoneTarget;
+    CodeLocationLabel<JSInternalPtrTag> doneTarget;
     CodeLocationLabel<JSInternalPtrTag> badTypeNextHotPathTarget;
     CodeLocationLabel<JSInternalPtrTag> slowPathTarget;
     ArrayProfile* arrayProfile;
-    unsigned bytecodeIndex;
+    BytecodeIndex bytecodeIndex;
     unsigned slowPathCount;
     RefPtr<JITStubRoutine> stubRoutine;
-    Identifier cachedId;
-    WriteBarrier<Symbol> cachedSymbol;
+    CacheableIdentifier cachedId; // Once we set cachedId, we must not change the value. JIT code relies on that configured cachedId is marked and retained by CodeBlock through ByValInfo.
     StructureStubInfo* stubInfo;
     JITArrayMode arrayMode; // The array mode that was baked into the inline JIT code.
     bool tookSlowPath : 1;
     bool seen : 1;
 };
 
-inline unsigned getByValInfoBytecodeIndex(ByValInfo* info)
+inline BytecodeIndex getByValInfoBytecodeIndex(ByValInfo* info)
 {
     return info->bytecodeIndex;
 }

@@ -39,7 +39,7 @@ extern "C" {
 #include <windows.h>
 #endif
 
-#define WGL_WGLEXT_VERSION 20190204
+#define WGL_WGLEXT_VERSION 20190728
 
 /* Generated C header for:
  * API: wgl
@@ -714,6 +714,15 @@ BOOL WINAPI wglEnumGpusFromAffinityDCNV (HDC hAffinityDC, UINT iGpuIndex, HGPUNV
 BOOL WINAPI wglDeleteDCNV (HDC hdc);
 #endif
 #endif /* WGL_NV_gpu_affinity */
+
+#ifndef WGL_NV_multigpu_context
+#define WGL_NV_multigpu_context 1
+#define WGL_CONTEXT_MULTIGPU_ATTRIB_NV    0x20AA
+#define WGL_CONTEXT_MULTIGPU_ATTRIB_SINGLE_NV 0x20AB
+#define WGL_CONTEXT_MULTIGPU_ATTRIB_AFR_NV 0x20AC
+#define WGL_CONTEXT_MULTIGPU_ATTRIB_MULTICAST_NV 0x20AD
+#define WGL_CONTEXT_MULTIGPU_ATTRIB_MULTI_DISPLAY_MULTICAST_NV 0x20AE
+#endif /* WGL_NV_multigpu_context */
 
 #ifndef WGL_NV_multisample_coverage
 #define WGL_NV_multisample_coverage 1

@@ -27,23 +27,34 @@
 #include "CSSPropertyNames.h"
 #include "ClipPathOperation.h"
 #include "CounterDirectives.h"
-#include "DataRef.h"
 #include "FillLayer.h"
+#include "GapLength.h"
 #include "LengthPoint.h"
 #include "LineClampValue.h"
 #include "NinePieceImage.h"
+#include "RotateTransformOperation.h"
+#include "ScaleTransformOperation.h"
 #include "ShapeValue.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
+#include "TouchAction.h"
+#include "TranslateTransformOperation.h"
 #include "WillChangeData.h"
 #include <memory>
+#include <wtf/DataRef.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
+
+#if ENABLE(CSS_SCROLL_SNAP)
+#include "StyleScrollSnapPoints.h"
+#endif
 
 namespace WebCore {
 
 class AnimationList;
 class ContentData;
 class ShadowData;
+class StyleCustomPropertyData;
 class StyleDeprecatedFlexibleBoxData;
 class StyleFilterData;
 class StyleFlexibleBoxData;
@@ -53,12 +64,9 @@ class StyleMarqueeData;
 class StyleMultiColData;
 class StyleReflection;
 class StyleResolver;
-class StyleScrollSnapArea;
-class StyleScrollSnapPort;
 class StyleTransformData;
 
 struct LengthSize;
-struct StyleDashboardRegion;
 
 // Page size type.
 // StyleRareNonInheritedData::pageSize is meaningful only when
@@ -73,7 +81,9 @@ enum PageSizeType {
 // This struct is for rarely used non-inherited CSS3, CSS2, and WebKit-specific properties.
 // By grouping them together, we save space, and only allocate this object when someone
 // actually uses one of these properties.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareNonInheritedData);
 class StyleRareNonInheritedData : public RefCounted<StyleRareNonInheritedData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRareNonInheritedData);
 public:
     static Ref<StyleRareNonInheritedData> create() { return adoptRef(*new StyleRareNonInheritedData); }
     Ref<StyleRareNonInheritedData> copy() const;
@@ -81,6 +91,8 @@ public:
 
     bool operator==(const StyleRareNonInheritedData&) const;
     bool operator!=(const StyleRareNonInheritedData& other) const { return !(*this == other); }
+
+    LengthPoint perspectiveOrigin() const { return { perspectiveOriginX, perspectiveOriginY }; }
 
     bool contentDataEquivalent(const StyleRareNonInheritedData&) const;
 
@@ -94,8 +106,8 @@ public:
 
     float opacity;
 
-    float aspectRatioDenominator;
-    float aspectRatioNumerator;
+    double aspectRatioWidth;
+    double aspectRatioHeight;
 
     float perspective;
     Length perspectiveOriginX;
@@ -104,10 +116,6 @@ public:
     LineClampValue lineClamp; // An Apple extension.
 
     IntSize initialLetter;
-
-#if ENABLE(DASHBOARD_SUPPORT)
-    Vector<StyleDashboardRegion> dashboardRegions;
-#endif
 
     DataRef<StyleDeprecatedFlexibleBoxData> deprecatedFlexibleBox; // Flexible box properties
     DataRef<StyleFlexibleBoxData> flexibleBox;
@@ -123,10 +131,16 @@ public:
     DataRef<StyleGridData> grid;
     DataRef<StyleGridItemData> gridItem;
 
+    LengthBox scrollMargin { 0, 0, 0, 0 };
+    LengthBox scrollPadding { Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto) };
 #if ENABLE(CSS_SCROLL_SNAP)
-    DataRef<StyleScrollSnapPort> scrollSnapPort;
-    DataRef<StyleScrollSnapArea> scrollSnapArea;
+    ScrollSnapType scrollSnapType;
+    ScrollSnapAlign scrollSnapAlign;
+    ScrollSnapStop scrollSnapStop { ScrollSnapStop::Normal };
 #endif
+
+    unsigned overscrollBehaviorX : 2; // OverscrollBehavior
+    unsigned overscrollBehaviorY : 2; // OverscrollBehavior
 
     std::unique_ptr<ContentData> content;
     std::unique_ptr<CounterDirectiveMap> counterDirectives;
@@ -138,10 +152,10 @@ public:
 
     RefPtr<StyleReflection> boxReflect;
 
-    std::unique_ptr<AnimationList> animations;
-    std::unique_ptr<AnimationList> transitions;
+    RefPtr<AnimationList> animations;
+    RefPtr<AnimationList> transitions;
 
-    FillLayer mask;
+    DataRef<FillLayer> mask;
     NinePieceImage maskBoxImage;
 
     LengthSize pageSize;
@@ -150,6 +164,8 @@ public:
     RefPtr<ShapeValue> shapeOutside;
     Length shapeMargin;
     float shapeImageThreshold;
+
+    int order;
 
     RefPtr<ClipPathOperation> clipPath;
 
@@ -162,8 +178,6 @@ public:
     Color visitedLinkBorderTopColor;
     Color visitedLinkBorderBottomColor;
 
-    int order;
-
     StyleContentAlignmentData alignContent;
     StyleSelfAlignmentData alignItems;
     StyleSelfAlignmentData alignSelf;
@@ -174,16 +188,19 @@ public:
     DataRef<StyleCustomPropertyData> customProperties;
     std::unique_ptr<HashSet<String>> customPaintWatchedProperties;
 
-#if ENABLE(POINTER_EVENTS)
-    unsigned touchActions : 5; // TouchAction
-#endif
+    RefPtr<RotateTransformOperation> rotate;
+    RefPtr<ScaleTransformOperation> scale;
+    RefPtr<TranslateTransformOperation> translate;
+
+    OptionSet<TouchAction> touchActions;
 
     unsigned pageSizeType : 2; // PageSizeType
-    unsigned transformStyle3D : 1; // TransformStyle3D
+    unsigned transformStyle3D : 2; // TransformStyle3D
     unsigned backfaceVisibility : 1; // BackfaceVisibility
 
     unsigned userDrag : 2; // UserDrag
     unsigned textOverflow : 1; // Whether or not lines that spill out should be truncated with "..."
+    unsigned useSmoothScrolling : 1; // ScrollBehavior
     unsigned marginBeforeCollapse : 2; // MarginCollapse
     unsigned marginAfterCollapse : 2; // MarginCollapse
     unsigned appearance : 6; // EAppearance
@@ -192,7 +209,7 @@ public:
 
     unsigned textDecorationStyle : 3; // TextDecorationStyle
 
-    unsigned aspectRatioType : 2;
+    unsigned aspectRatioType : 3;
 
 #if ENABLE(CSS_COMPOSITING)
     unsigned effectiveBlendMode: 5; // EBlendMode
@@ -201,7 +218,7 @@ public:
 
 #if ENABLE(APPLE_PAY)
     unsigned applePayButtonStyle : 2;
-    unsigned applePayButtonType : 3;
+    unsigned applePayButtonType : 4;
 #endif
 
     unsigned objectFit : 3; // ObjectFit

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +24,9 @@
  */
 
 #include "config.h"
-
 #include "GraphicsLayer.h"
 
+#include "ColorSerialization.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
@@ -79,11 +79,17 @@ bool GraphicsLayer::supportsLayerType(Type type)
     case Type::Normal:
     case Type::PageTiledBacking:
     case Type::ScrollContainer:
+    case Type::ScrolledContents:
         return true;
     case Type::Shape:
         return false;
     }
     ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool GraphicsLayer::supportsRoundedClip()
+{
     return false;
 }
 
@@ -111,7 +117,7 @@ bool GraphicsLayer::supportsContentsTiling()
 #endif
 
 // Singleton client used for layers on which clearClient has been called.
-class EmptyGraphicsLayerClient : public GraphicsLayerClient {
+class EmptyGraphicsLayerClient final : public GraphicsLayerClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static EmptyGraphicsLayerClient& singleton();
@@ -134,6 +140,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_masksToBounds(false)
     , m_drawsContent(false)
     , m_contentsVisible(true)
+    , m_contentsRectClipsDescendants(false)
     , m_acceleratesDrawing(false)
     , m_usesDisplayListDrawing(false)
     , m_appliesPageScale(false)
@@ -143,6 +150,9 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    , m_separated(false)
+#endif
 {
 #ifndef NDEBUG
     client().verifyNotPainting();
@@ -196,6 +206,11 @@ void GraphicsLayer::willBeDestroyed()
 void GraphicsLayer::clearClient()
 {
     m_client = &EmptyGraphicsLayerClient::singleton();
+}
+
+String GraphicsLayer::debugName() const
+{
+    return name();
 }
 
 void GraphicsLayer::setClient(GraphicsLayerClient& client)
@@ -342,7 +357,7 @@ void GraphicsLayer::setTransform(const TransformationMatrix& matrix)
     if (m_transform)
         *m_transform = matrix;
     else
-        m_transform = std::make_unique<TransformationMatrix>(matrix);
+        m_transform = makeUnique<TransformationMatrix>(matrix);
 }
 
 const TransformationMatrix& GraphicsLayer::childrenTransform() const
@@ -355,7 +370,7 @@ void GraphicsLayer::setChildrenTransform(const TransformationMatrix& matrix)
     if (m_childrenTransform)
         *m_childrenTransform = matrix;
     else
-        m_childrenTransform = std::make_unique<TransformationMatrix>(matrix);
+        m_childrenTransform = makeUnique<TransformationMatrix>(matrix);
 }
 
 void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
@@ -373,6 +388,11 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     }
 
     m_maskLayer = WTFMove(layer);
+}
+
+void GraphicsLayer::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
+{
+    m_masksToBoundsRect = roundedRect;
 }
 
 Path GraphicsLayer::shapeLayerPath() const
@@ -409,6 +429,11 @@ void GraphicsLayer::setShapeLayerWindRule(WindRule windRule)
 #else
     UNUSED_PARAM(windRule);
 #endif
+}
+
+void GraphicsLayer::setEventRegion(EventRegion&& eventRegion)
+{
+    m_eventRegion = WTFMove(eventRegion);
 }
 
 void GraphicsLayer::noteDeviceOrPageScaleFactorChangedIncludingDescendants()
@@ -485,6 +510,15 @@ void GraphicsLayer::setBackgroundColor(const Color& color)
     m_backgroundColor = color;
 }
 
+void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase)
+{
+    if (phase == m_paintingPhase)
+        return;
+
+    setNeedsDisplay();
+    m_paintingPhase = phase;
+}
+
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
     FloatSize offset = offsetFromRenderer() - toFloatSize(scrollOffset());
@@ -493,7 +527,65 @@ void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const F
     FloatRect clipRect(clip);
     clipRect.move(offset);
 
-    client().paintContents(this, context, m_paintingPhase, clipRect, layerPaintBehavior);
+    client().paintContents(this, context, clipRect, layerPaintBehavior);
+}
+
+FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverageRect, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect)
+{
+    // If the old visible rect is empty, we have no information about how the visible area is changing
+    // (maybe the layer was just created), so don't attempt to expand. Also don't attempt to expand if the rects don't overlap.
+    if (previousVisibleRect.isEmpty() || !currentVisibleRect.intersects(previousVisibleRect))
+        return unionRect(coverageRect, currentVisibleRect);
+
+    const float paddingMultiplier = 2;
+
+    float leftEdgeDelta = paddingMultiplier * (currentVisibleRect.x() - previousVisibleRect.x());
+    float rightEdgeDelta = paddingMultiplier * (currentVisibleRect.maxX() - previousVisibleRect.maxX());
+
+    float topEdgeDelta = paddingMultiplier * (currentVisibleRect.y() - previousVisibleRect.y());
+    float bottomEdgeDelta = paddingMultiplier * (currentVisibleRect.maxY() - previousVisibleRect.maxY());
+
+    FloatRect expandedRect = currentVisibleRect;
+
+    // More exposed on left side.
+    if (leftEdgeDelta < 0) {
+        float newLeft = expandedRect.x() + leftEdgeDelta;
+        // Pad to the left, but don't reduce padding that's already in the backing store (since we're still exposing to the left).
+        if (newLeft < previousVisibleRect.x())
+            expandedRect.shiftXEdgeTo(newLeft);
+        else
+            expandedRect.shiftXEdgeTo(previousVisibleRect.x());
+    }
+
+    // More exposed on right.
+    if (rightEdgeDelta > 0) {
+        float newRight = expandedRect.maxX() + rightEdgeDelta;
+        // Pad to the right, but don't reduce padding that's already in the backing store (since we're still exposing to the right).
+        if (newRight > previousVisibleRect.maxX())
+            expandedRect.setWidth(newRight - expandedRect.x());
+        else
+            expandedRect.setWidth(previousVisibleRect.maxX() - expandedRect.x());
+    }
+
+    // More exposed at top.
+    if (topEdgeDelta < 0) {
+        float newTop = expandedRect.y() + topEdgeDelta;
+        if (newTop < previousVisibleRect.y())
+            expandedRect.shiftYEdgeTo(newTop);
+        else
+            expandedRect.shiftYEdgeTo(previousVisibleRect.y());
+    }
+
+    // More exposed on bottom.
+    if (bottomEdgeDelta > 0) {
+        float newBottom = expandedRect.maxY() + bottomEdgeDelta;
+        if (newBottom > previousVisibleRect.maxY())
+            expandedRect.setHeight(newBottom - expandedRect.y());
+        else
+            expandedRect.setHeight(previousVisibleRect.maxY() - expandedRect.y());
+    }
+
+    return unionRect(coverageRect, expandedRect);
 }
 
 String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
@@ -519,34 +611,34 @@ void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
     width = 2;
 
     if (needsBackdrop()) {
-        color = Color(255, 0, 255, 128); // has backdrop: magenta
+        color = Color::magenta.colorWithAlphaByte(128); // has backdrop: magenta
         width = 12;
         return;
     }
 
     if (drawsContent()) {
         if (tiledBacking()) {
-            color = Color(255, 128, 0, 128); // tiled layer: orange
+            color = Color::orange.colorWithAlphaByte(128); // tiled layer: orange
             return;
         }
 
-        color = Color(0, 128, 32, 128); // normal layer: green
+        color = SRGBA<uint8_t> { 0, 128, 32, 128 }; // normal layer: green
         return;
     }
 
     if (usesContentsLayer()) {
-        color = Color(0, 64, 128, 150); // non-painting layer with contents: blue
+        color = SRGBA<uint8_t> { 0, 64, 128, 150 }; // non-painting layer with contents: blue
         width = 8;
         return;
     }
 
     if (masksToBounds()) {
-        color = Color(128, 255, 255, 48); // masking layer: pale blue
+        color = SRGBA<uint8_t> { 128, 255, 255, 48 }; // masking layer: pale blue
         width = 16;
         return;
     }
 
-    color = Color(255, 255, 0, 192); // container: yellow
+    color = Color::yellow.colorWithAlphaByte(192); // container: yellow
 }
 
 void GraphicsLayer::updateDebugIndicators()
@@ -642,7 +734,7 @@ static inline const TransformOperations& operationsAt(const KeyframeValueList& v
 
 int GraphicsLayer::validateTransformOperations(const KeyframeValueList& valueList, bool& hasBigRotation)
 {
-    ASSERT(valueList.property() == AnimatedPropertyTransform);
+    ASSERT(animatedPropertyIsTransformOrRelated(valueList.property()));
 
     hasBigRotation = false;
 
@@ -752,12 +844,6 @@ void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (Gra
         traverse(*maskLayer, traversalFunc);
 }
 
-GraphicsLayer::EmbeddedViewID GraphicsLayer::nextEmbeddedViewID()
-{
-    static GraphicsLayer::EmbeddedViewID nextEmbeddedViewID;
-    return ++nextEmbeddedViewID;
-}
-
 void GraphicsLayer::dumpLayer(TextStream& ts, LayerTreeAsTextBehavior behavior) const
 {
     ts << indent << "(" << "GraphicsLayer";
@@ -820,7 +906,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
 
 #if ENABLE(CSS_COMPOSITING)
     if (m_blendMode != BlendMode::Normal)
-        ts << indent << "(blendMode " << compositeOperatorName(CompositeSourceOver, m_blendMode) << ")\n";
+        ts << indent << "(blendMode " << compositeOperatorName(CompositeOperator::SourceOver, m_blendMode) << ")\n";
 #endif
 
     if (type() == Type::Normal && tiledBacking())
@@ -832,6 +918,9 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
 
     if (m_supportsSubpixelAntialiasedText)
         ts << indent << "(supports subpixel antialiased text " << m_supportsSubpixelAntialiasedText << ")\n";
+
+    if (m_masksToBounds && behavior & LayerTreeAsTextIncludeClipping)
+        ts << indent << "(clips " << m_masksToBounds << ")\n";
 
     if (m_preserves3D)
         ts << indent << "(preserves3D " << m_preserves3D << ")\n";
@@ -845,13 +934,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
     if (!m_backfaceVisibility)
         ts << indent << "(backfaceVisibility " << (m_backfaceVisibility ? "visible" : "hidden") << ")\n";
 
-    if (behavior & LayerTreeAsTextDebug) {
+    if (behavior & LayerTreeAsTextDebug)
         ts << indent << "(primary-layer-id " << primaryLayerID() << ")\n";
-        ts << indent << "(client " << static_cast<void*>(m_client) << ")\n";
-    }
 
     if (m_backgroundColor.isValid() && client().shouldDumpPropertyForLayer(this, "backgroundColor", behavior))
-        ts << indent << "(backgroundColor " << m_backgroundColor.nameForRenderTreeAsText() << ")\n";
+        ts << indent << "(backgroundColor " << serializationForRenderTreeAsText(m_backgroundColor) << ")\n";
 
     if (behavior & LayerTreeAsTextIncludeAcceleratesDrawing && m_acceleratesDrawing)
         ts << indent << "(acceleratesDrawing " << m_acceleratesDrawing << ")\n";
@@ -921,29 +1008,18 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
         ts << indent << ")\n";
     }
 
-    if (behavior & LayerTreeAsTextIncludePaintingPhases && paintingPhase()) {
-        ts << indent << "(paintingPhases\n";
-        TextStream::IndentScope indentScope(ts);
-        if (paintingPhase() & GraphicsLayerPaintBackground)
-            ts << indent << "GraphicsLayerPaintBackground\n";
-
-        if (paintingPhase() & GraphicsLayerPaintForeground)
-            ts << indent << "GraphicsLayerPaintForeground\n";
-
-        if (paintingPhase() & GraphicsLayerPaintMask)
-            ts << indent << "GraphicsLayerPaintMask\n";
-
-        if (paintingPhase() & GraphicsLayerPaintChildClippingMask)
-            ts << indent << "GraphicsLayerPaintChildClippingMask\n";
-
-        if (paintingPhase() & GraphicsLayerPaintOverflowContents)
-            ts << indent << "GraphicsLayerPaintOverflowContents\n";
-
-        if (paintingPhase() & GraphicsLayerPaintCompositedScroll)
-            ts << indent << "GraphicsLayerPaintCompositedScroll\n";
-
+    if (behavior & LayerTreeAsTextIncludeEventRegion && !m_eventRegion.isEmpty()) {
+        ts << indent << "(event region" << m_eventRegion;
         ts << indent << ")\n";
     }
+
+#if ENABLE(SCROLLING_THREAD)
+    if ((behavior & LayerTreeAsTextDebug) && m_scrollingNodeID)
+        ts << indent << "(scrolling node " << m_scrollingNodeID << ")\n";
+#endif
+
+    if (behavior & LayerTreeAsTextIncludePaintingPhases && paintingPhase())
+        ts << indent << "(paintingPhases " << paintingPhase() << ")\n";
 
     dumpAdditionalProperties(ts, behavior);
 
@@ -973,7 +1049,22 @@ TextStream& operator<<(TextStream& ts, const Vector<GraphicsLayer::PlatformLayer
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, const WebCore::GraphicsLayer::CustomAppearance& customAppearance)
+TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
+{
+    switch (phase) {
+    case GraphicsLayerPaintingPhase::Background: ts << "background"; break;
+    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"; break;
+    case GraphicsLayerPaintingPhase::Mask: ts << "mask"; break;
+    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"; break;
+    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"; break;
+    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"; break;
+    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"; break;
+    }
+
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& customAppearance)
 {
     switch (customAppearance) {
     case GraphicsLayer::CustomAppearance::None: ts << "none"; break;

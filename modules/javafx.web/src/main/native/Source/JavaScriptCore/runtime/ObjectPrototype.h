@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008, 2011 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,8 +26,15 @@ namespace JSC {
 
 class ObjectPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | IsImmutablePrototypeExoticObject;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | IsImmutablePrototypeExoticObject;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ObjectPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static ObjectPrototype* create(VM&, JSGlobalObject*, Structure*);
 
@@ -38,13 +45,12 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&, JSGlobalObject*);
-
 private:
     ObjectPrototype(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*);
 };
 
-JS_EXPORT_PRIVATE EncodedJSValue JSC_HOST_CALL objectProtoFuncToString(ExecState*);
+JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(objectProtoFuncToString);
+bool objectPrototypeHasOwnProperty(JSGlobalObject*, JSValue base, const Identifier& property);
 
 } // namespace JSC

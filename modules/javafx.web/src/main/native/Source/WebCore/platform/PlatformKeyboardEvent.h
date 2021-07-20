@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "CompositionUnderline.h"
 #include "KeypressCommand.h"
 #include "PlatformEvent.h"
 #include <wtf/WindowsExtras.h>
@@ -40,11 +41,6 @@ OBJC_CLASS NSEvent;
 OBJC_CLASS WebEvent;
 #endif
 
-#if PLATFORM(GTK)
-typedef struct _GdkEventKey GdkEventKey;
-#include "CompositionResults.h"
-#endif
-
 #if PLATFORM(JAVA)
 #include <jni.h>
 #endif
@@ -56,44 +52,21 @@ namespace WebCore {
     public:
         PlatformKeyboardEvent()
             : PlatformEvent(PlatformEvent::KeyDown)
-            , m_windowsVirtualKeyCode(0)
-#if USE(APPKIT) || PLATFORM(GTK)
-            , m_handledByInputMethod(false)
-#endif
-            , m_autoRepeat(false)
-            , m_isKeypad(false)
-            , m_isSystemKey(false)
-#if PLATFORM(GTK)
-            , m_gdkEventKey(0)
-#endif
         {
         }
 
-        PlatformKeyboardEvent(Type type, const String& text, const String& unmodifiedText,
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        const String& key,
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        const String& code,
-#endif
+        PlatformKeyboardEvent(Type type, const String& text, const String& unmodifiedText, const String& key, const String& code,
         const String& keyIdentifier, int windowsVirtualKeyCode, bool isAutoRepeat, bool isKeypad, bool isSystemKey, OptionSet<Modifier> modifiers, WallTime timestamp)
             : PlatformEvent(type, modifiers, timestamp)
-            , m_text(text)
-            , m_unmodifiedText(unmodifiedText)
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-            , m_key(key)
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-            , m_code(code)
-#endif
-            , m_keyIdentifier(keyIdentifier)
-            , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
-#if USE(APPKIT) || PLATFORM(GTK)
-            , m_handledByInputMethod(false)
-#endif
             , m_autoRepeat(isAutoRepeat)
             , m_isKeypad(isKeypad)
             , m_isSystemKey(isSystemKey)
+            , m_text(text)
+            , m_unmodifiedText(unmodifiedText)
+            , m_key(key)
+            , m_code(code)
+            , m_keyIdentifier(keyIdentifier)
+            , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
         {
         }
 
@@ -113,21 +86,21 @@ namespace WebCore {
         String unmodifiedText() const { return m_unmodifiedText; }
 
         String keyIdentifier() const { return m_keyIdentifier; }
-
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
         const String& key() const { return m_key; }
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
         const String& code() const { return m_code; }
-#endif
 
         // Most compatible Windows virtual key code associated with the event.
         // Zero for Char events.
         int windowsVirtualKeyCode() const { return m_windowsVirtualKeyCode; }
         void setWindowsVirtualKeyCode(int code) { m_windowsVirtualKeyCode = code; }
 
-#if USE(APPKIT) || PLATFORM(GTK)
+#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS) || PLATFORM(GTK) || USE(LIBWPE)
         bool handledByInputMethod() const { return m_handledByInputMethod; }
+#endif
+#if PLATFORM(GTK) || USE(LIBWPE)
+        const Optional<Vector<WebCore::CompositionUnderline>>& preeditUnderlines() const { return m_preeditUnderlines; }
+        const Optional<uint64_t>& preeditSelectionRangeStart() const { return m_preeditSelectionRangeStart; }
+        const Optional<uint64_t>& preeditSelectionRangeLength() const { return m_preeditSelectionRangeLength; }
 #endif
 #if USE(APPKIT)
         const Vector<KeypressCommand>& commands() const { return m_commands; }
@@ -138,6 +111,9 @@ namespace WebCore {
         bool isAutoRepeat() const { return m_autoRepeat; }
         bool isKeypad() const { return m_isKeypad; }
         bool isSystemKey() const { return m_isSystemKey; }
+
+        bool isSyntheticEvent() const { return m_isSyntheticEvent; }
+        void setIsSyntheticEvent() { m_isSyntheticEvent = true; }
 
         WEBCORE_EXPORT static bool currentCapsLockState();
         WEBCORE_EXPORT static void getCurrentModifierState(bool& shiftKey, bool& ctrlKey, bool& altKey, bool& metaKey);
@@ -157,10 +133,6 @@ namespace WebCore {
 #endif
 
 #if PLATFORM(GTK)
-        PlatformKeyboardEvent(GdkEventKey*, const CompositionResults&);
-        GdkEventKey* gdkEventKey() const { return m_gdkEventKey; }
-        const CompositionResults& compositionResults() const { return m_compositionResults; }
-
         // Used by WebKit2
         static String keyValueForGdkKeyCode(unsigned);
         static String keyCodeForHardwareKeyCode(unsigned);
@@ -185,27 +157,31 @@ namespace WebCore {
 #endif
 
     protected:
+        bool m_autoRepeat { false };
+        bool m_isKeypad { false };
+        bool m_isSystemKey { false };
+
         String m_text;
         String m_unmodifiedText;
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
         String m_key;
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
         String m_code;
-#endif
         String m_keyIdentifier;
-        int m_windowsVirtualKeyCode;
-#if USE(APPKIT) || PLATFORM(GTK)
-        bool m_handledByInputMethod;
+        int m_windowsVirtualKeyCode { 0 };
+
+        bool m_isSyntheticEvent { false };
+#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS) || PLATFORM(GTK) || USE(LIBWPE)
+        bool m_handledByInputMethod { false };
+#endif
+#if PLATFORM(GTK) || USE(LIBWPE)
+        Optional<Vector<WebCore::CompositionUnderline>> m_preeditUnderlines;
+        Optional<uint64_t> m_preeditSelectionRangeStart;
+        Optional<uint64_t> m_preeditSelectionRangeLength;
 #endif
 #if USE(APPKIT)
         Vector<KeypressCommand> m_commands;
 #elif PLATFORM(GTK)
         Vector<String> m_commands;
 #endif
-        bool m_autoRepeat;
-        bool m_isKeypad;
-        bool m_isSystemKey;
 
 #if PLATFORM(COCOA)
 #if !PLATFORM(IOS_FAMILY)
@@ -214,11 +190,6 @@ namespace WebCore {
         RetainPtr<::WebEvent> m_Event;
 #endif
 #endif
-#if PLATFORM(GTK)
-        GdkEventKey* m_gdkEventKey;
-        CompositionResults m_compositionResults;
-#endif
-
         // The modifier state is optional, since it is not needed in the UI process or in legacy WebKit.
         static Optional<OptionSet<Modifier>> s_currentModifiers;
     };

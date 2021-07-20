@@ -50,11 +50,13 @@ public:
     typedef Vector<BasicBlock*, 2> PredecessorList;
     typedef Vector<FrequentedBlock, 2> SuccessorList;
 
+    static constexpr unsigned uninsertedIndex = UINT_MAX;
     static const char* const dumpPrefix;
 
     ~BasicBlock();
 
     unsigned index() const { return m_index; }
+    bool isInserted() const { return m_index != uninsertedIndex; }
 
     ValueList::iterator begin() { return m_values.begin(); }
     ValueList::iterator end() { return m_values.end(); }
@@ -84,8 +86,6 @@ public:
 
     template<typename ValueType, typename... Arguments>
     ValueType* appendNew(Procedure&, Arguments...);
-    template<typename ValueType, typename... Arguments>
-    ValueType* appendNewNonTerminal(Procedure&, Arguments...);
 
     JS_EXPORT_PRIVATE Value* appendIntConstant(Procedure&, Origin, Type, int64_t value);
     Value* appendIntConstant(Procedure&, Value* likeValue, int64_t value);

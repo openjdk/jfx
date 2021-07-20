@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,15 +30,19 @@
 namespace JSC {
 
 class JSGlobalObject;
-class NativeStdFunctionCell;
 
-using NativeStdFunction = WTF::Function<EncodedJSValue(ExecState*)>;
+using NativeStdFunction = WTF::Function<EncodedJSValue(JSGlobalObject*, CallFrame*)>;
 
 class JSNativeStdFunction final : public JSFunction {
 public:
-    typedef JSFunction Base;
+    using Base = JSFunction;
 
-    const static unsigned StructureFlags = Base::StructureFlags;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+    static constexpr bool needsDestruction = true;
+    static void destroy(JSCell* cell)
+    {
+        static_cast<JSNativeStdFunction*>(cell)->JSNativeStdFunction::~JSNativeStdFunction();
+    }
 
     template<typename CellType, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -48,7 +52,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    JS_EXPORT_PRIVATE static JSNativeStdFunction* create(VM&, JSGlobalObject*, int length, const String& name, NativeStdFunction&&, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor);
+    JS_EXPORT_PRIVATE static JSNativeStdFunction* create(VM&, JSGlobalObject*, unsigned length, const String& name, NativeStdFunction&&, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -56,17 +60,14 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
     }
 
-    NativeStdFunctionCell* nativeStdFunctionCell() { return m_functionCell.get(); }
-
-protected:
-    static void visitChildren(JSCell*, SlotVisitor&);
-
-    void finishCreation(VM&, NativeExecutable*, int length, const String& name, NativeStdFunctionCell*);
+    const NativeStdFunction& function() { return m_function; }
 
 private:
-    JSNativeStdFunction(VM&, JSGlobalObject*, Structure*);
+    JSNativeStdFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, NativeStdFunction&&);
+    void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name);
+    DECLARE_VISIT_CHILDREN;
 
-    WriteBarrier<NativeStdFunctionCell> m_functionCell;
+    NativeStdFunction m_function;
 };
 
 } // namespace JSC

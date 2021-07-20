@@ -30,10 +30,10 @@ class HitTestResult;
 class EllipsisBox final : public InlineElementBox {
     WTF_MAKE_ISO_ALLOCATED(EllipsisBox);
 public:
-    EllipsisBox(RenderBlockFlow&, const AtomicString& ellipsisStr, InlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isHorizontal, InlineBox* markupBox);
+    EllipsisBox(RenderBlockFlow&, const AtomString& ellipsisStr, InlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isHorizontal, InlineBox* markupBox);
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) final;
-    void setSelectionState(RenderObject::SelectionState s) { m_selectionState = s; }
+    void setSelectionState(RenderObject::HighlightState s) { m_selectionState = s; }
     IntRect selectionRect();
 
     RenderBlockFlow& blockFlow() const { return downcast<RenderBlockFlow>(InlineBox::renderer()); }
@@ -41,14 +41,14 @@ public:
 private:
     void paintMarkupBox(PaintInfo&, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom, const RenderStyle&);
     int height() const { return m_height; }
-    RenderObject::SelectionState selectionState() override { return m_selectionState; }
+    RenderObject::HighlightState selectionState() override { return m_selectionState; }
     void paintSelection(GraphicsContext&, const LayoutPoint&, const RenderStyle&, const FontCascade&);
     InlineBox* markupBox() const;
 
     bool m_shouldPaintMarkupBox;
-    RenderObject::SelectionState m_selectionState { RenderObject::SelectionNone };
+    RenderObject::HighlightState m_selectionState { RenderObject::HighlightState::None };
     int m_height;
-    AtomicString m_str;
+    AtomString m_str;
 };
 
 } // namespace WebCore

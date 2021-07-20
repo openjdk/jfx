@@ -30,7 +30,7 @@
 
 #include "GeolocationClient.h"
 #include "GeolocationError.h"
-#include "GeolocationPosition.h"
+#include "GeolocationPositionData.h"
 
 namespace WebCore {
 
@@ -64,7 +64,7 @@ void GeolocationController::addObserver(Geolocation& observer, bool enableHighAc
     if (enableHighAccuracy)
         m_client.setEnableHighAccuracy(true);
     if (wasEmpty && m_page.isVisible())
-        m_client.startUpdating();
+        m_client.startUpdating(observer.authorizationToken());
 }
 
 void GeolocationController::removeObserver(Geolocation& observer)
@@ -79,6 +79,11 @@ void GeolocationController::removeObserver(Geolocation& observer)
         m_client.stopUpdating();
     else if (m_highAccuracyObservers.isEmpty())
         m_client.setEnableHighAccuracy(false);
+}
+
+void GeolocationController::revokeAuthorizationToken(const String& authorizationToken)
+{
+    m_client.revokeAuthorizationToken(authorizationToken);
 }
 
 void GeolocationController::requestPermission(Geolocation& geolocation)
@@ -99,7 +104,7 @@ void GeolocationController::cancelPermissionRequest(Geolocation& geolocation)
     m_client.cancelPermissionRequest(geolocation);
 }
 
-void GeolocationController::positionChanged(const Optional<GeolocationPosition>& position)
+void GeolocationController::positionChanged(const Optional<GeolocationPositionData>& position)
 {
     m_lastPosition = position;
     Vector<Ref<Geolocation>> observersVector;
@@ -120,7 +125,7 @@ void GeolocationController::errorOccurred(GeolocationError& error)
         observer->setError(error);
 }
 
-Optional<GeolocationPosition> GeolocationController::lastPosition()
+Optional<GeolocationPositionData> GeolocationController::lastPosition()
 {
     if (m_lastPosition)
         return m_lastPosition.value();
@@ -134,7 +139,7 @@ void GeolocationController::activityStateDidChange(OptionSet<ActivityState::Flag
     auto changed = oldActivityState ^ newActivityState;
     if (changed & ActivityState::IsVisible && !m_observers.isEmpty()) {
         if (newActivityState & ActivityState::IsVisible)
-            m_client.startUpdating();
+            m_client.startUpdating((*m_observers.random())->authorizationToken());
         else
             m_client.stopUpdating();
     }
@@ -155,7 +160,7 @@ const char* GeolocationController::supplementName()
 void provideGeolocationTo(Page* page, GeolocationClient& client)
 {
     ASSERT(page);
-    Supplement<Page>::provideTo(page, GeolocationController::supplementName(), std::make_unique<GeolocationController>(*page, client));
+    Supplement<Page>::provideTo(page, GeolocationController::supplementName(), makeUnique<GeolocationController>(*page, client));
 }
 
 } // namespace WebCore

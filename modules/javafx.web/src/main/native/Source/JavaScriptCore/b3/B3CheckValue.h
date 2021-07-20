@@ -31,7 +31,7 @@
 
 namespace JSC { namespace B3 {
 
-class CheckValue : public StackmapValue {
+class CheckValue final : public StackmapValue {
 public:
     static bool accepts(Kind kind)
     {
@@ -46,15 +46,15 @@ public:
         }
     }
 
-    ~CheckValue();
+    ~CheckValue() final;
 
     void convertToAdd();
 
-protected:
-    Value* cloneImpl() const override;
+    B3_SPECIALIZE_VALUE_FOR_FINAL_SIZE_VARARGS_CHILDREN
 
 private:
     friend class Procedure;
+    friend class Value;
 
     // Use this form for CheckAdd, CheckSub, and CheckMul.
     JS_EXPORT_PRIVATE CheckValue(Kind, Origin, Value* left, Value* right);

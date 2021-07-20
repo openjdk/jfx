@@ -51,13 +51,16 @@ CFLAGS += -fPIC \
          -DHAVE_CONFIG_H \
          -DGSTREAMER_LITE \
          -DGST_REMOVE_DISABLED \
-         -DOSX \
-         -msse2
+         -DOSX
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
 else
     CFLAGS += -O0 -g -Wall
+endif
+
+ifneq ($(ARCH), arm64)
+    CFLAGS += -msse2
 endif
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
@@ -167,6 +170,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/audio/audio.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
+	    gst-plugins-base/gst-libs/gst/audio/audio-buffer.c \
             gst-plugins-base/gst-libs/gst/audio/audio-converter.c \
             gst-plugins-base/gst-libs/gst/audio/audio-resampler.c \
             gst-plugins-base/gst-libs/gst/audio/audio-enumtypes.c \
@@ -244,6 +248,8 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-good/gst/isomp4/gstisoff.c \
             gst-plugins-good/gst/isomp4/qtdemux_dump.c \
             gst-plugins-good/gst/isomp4/qtdemux_lang.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tags.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tree.c \
             gst-plugins-good/gst/isomp4/qtdemux_types.c \
             gst-plugins-good/gst/spectrum/gstspectrum.c \
             gst-plugins-good/gst/wavparse/gstwavparse.c \

@@ -26,12 +26,12 @@
 #pragma once
 
 #include <wtf/Forward.h>
-#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
-typedef uint64_t SharedStringHash;
+using SharedStringHash = uint32_t;
 class Page;
 
 class VisitedLinkStore : public RefCounted<VisitedLinkStore> {
@@ -40,7 +40,7 @@ public:
     WEBCORE_EXPORT virtual ~VisitedLinkStore();
 
     // FIXME: These two members should only take the link hash.
-    virtual bool isLinkVisited(Page&, SharedStringHash, const URL& baseURL, const AtomicString& attributeURL) = 0;
+    virtual bool isLinkVisited(Page&, SharedStringHash, const URL& baseURL, const AtomString& attributeURL) = 0;
     virtual void addVisitedLink(Page&, SharedStringHash) = 0;
 
     void addPage(Page&);
@@ -50,7 +50,7 @@ public:
     WEBCORE_EXPORT void invalidateStylesForLink(SharedStringHash);
 
 private:
-    HashSet<Page*> m_pages;
+    WeakHashSet<Page> m_pages;
 };
 
 } // namespace WebCore

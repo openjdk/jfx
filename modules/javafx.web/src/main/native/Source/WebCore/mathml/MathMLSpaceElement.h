@@ -41,9 +41,7 @@ public:
 private:
     MathMLSpaceElement(const QualifiedName& tagName, Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
-
-    bool acceptsDisplayStyleAttribute() final { return false; }
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     Optional<Length> m_width;
     Optional<Length> m_height;

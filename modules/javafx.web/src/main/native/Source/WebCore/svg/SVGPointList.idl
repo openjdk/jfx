@@ -23,14 +23,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGPointList {
+[
+    Exposed=Window
+] interface SVGPointList {
+    readonly attribute unsigned long length;
     readonly attribute unsigned long numberOfItems;
 
-    [MayThrowException] void clear();
-    [MayThrowException] SVGPoint initialize(SVGPoint item);
-    [MayThrowException] SVGPoint getItem(unsigned long index);
-    [MayThrowException] SVGPoint insertItemBefore(SVGPoint item, unsigned long index);
-    [MayThrowException] SVGPoint replaceItem(SVGPoint item, unsigned long index);
+    [MayThrowException] undefined clear();
+    [MayThrowException] SVGPoint initialize(SVGPoint newItem);
+    [MayThrowException] getter SVGPoint getItem(unsigned long index);
+    [MayThrowException] SVGPoint insertItemBefore(SVGPoint newItem, unsigned long index);
+    [MayThrowException] SVGPoint replaceItem(SVGPoint newItem, unsigned long index);
     [MayThrowException] SVGPoint removeItem(unsigned long index);
-    [MayThrowException] SVGPoint appendItem(SVGPoint item);
+    [MayThrowException] SVGPoint appendItem(SVGPoint newItem);
+    setter undefined (unsigned long index, SVGPoint newItem);
 };

@@ -36,6 +36,7 @@ RefPtr<ApplicationCacheResourceLoader> ApplicationCacheResourceLoader::create(un
     options.storedCredentialsPolicy = StoredCredentialsPolicy::Use;
     options.credentials = FetchOptions::Credentials::Include;
     options.applicationCacheMode = ApplicationCacheMode::Bypass;
+    options.certificateInfoPolicy = CertificateInfoPolicy::IncludeCertificateInfo;
     CachedResourceRequest cachedResourceRequest { WTFMove(request), options };
     auto resource = loader.requestRawResource(WTFMove(cachedResourceRequest));
     if (!resource.has_value()) {
@@ -86,7 +87,7 @@ void ApplicationCacheResourceLoader::responseReceived(CachedResource& resource, 
     }
 
     if (response.httpStatusCode() == 304) {
-        notifyFinished(*m_resource);
+        notifyFinished(*m_resource, { });
         return;
     }
 
@@ -116,7 +117,7 @@ void ApplicationCacheResourceLoader::redirectReceived(CachedResource&, ResourceR
     callback(WTFMove(newRequest));
 }
 
-void ApplicationCacheResourceLoader::notifyFinished(CachedResource& resource)
+void ApplicationCacheResourceLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     auto protectedThis = makeRef(*this);
 

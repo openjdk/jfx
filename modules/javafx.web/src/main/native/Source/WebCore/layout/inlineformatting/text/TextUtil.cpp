@@ -28,65 +28,128 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "BreakLines.h"
 #include "FontCascade.h"
+#include "InlineTextItem.h"
+#include "LayoutInlineTextBox.h"
+#include "RenderBox.h"
 #include "RenderStyle.h"
 
 namespace WebCore {
 namespace Layout {
 
-Optional<ItemPosition> TextUtil::hyphenPositionBefore(const InlineItem&, ItemPosition, unsigned)
+InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, InlineLayoutUnit contentLogicalLeft)
 {
-    return WTF::nullopt;
+    return TextUtil::width(inlineTextItem, inlineTextItem.start(), inlineTextItem.end(), contentLogicalLeft);
 }
 
-LayoutUnit TextUtil::width(const InlineItem& inlineTextItem, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft)
+InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
 {
-    auto& style = inlineTextItem.style();
-    auto& font = style.fontCascade();
-    if (!font.size() || from == to)
+    RELEASE_ASSERT(from >= inlineTextItem.start());
+    RELEASE_ASSERT(to <= inlineTextItem.end());
+    if (inlineTextItem.isWhitespace() && !InlineTextItem::shouldPreserveSpacesAndTabs(inlineTextItem)) {
+        auto spaceWidth = inlineTextItem.style().fontCascade().spaceWidth();
+        return std::isnan(spaceWidth) ? 0.0f : std::isinf(spaceWidth) ? maxInlineLayoutUnit() : spaceWidth;
+    }
+    return TextUtil::width(inlineTextItem.inlineTextBox(), from, to, contentLogicalLeft);
+}
+
+InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
+{
+    if (from == to)
         return 0;
 
-    auto text = inlineTextItem.textContent();
+    auto& style = inlineTextBox.style();
+    auto& font = style.fontCascade();
+    auto text = inlineTextBox.content();
     ASSERT(to <= text.length());
-
-    if (font.isFixedPitch())
-        return fixedPitchWidth(text, style, from, to, contentLogicalLeft);
-
     auto hasKerningOrLigatures = font.enableKerning() || font.requiresShaping();
     auto measureWithEndSpace = hasKerningOrLigatures && to < text.length() && text[to] == ' ';
     if (measureWithEndSpace)
         ++to;
-    LayoutUnit width;
-    auto tabWidth = style.collapseWhiteSpace() ? 0 : style.tabSize();
-
-    WebCore::TextRun run(StringView(text).substring(from, to - from), contentLogicalLeft);
-    if (tabWidth)
-        run.setTabSize(true, tabWidth);
-    width = font.width(run);
+    float width = 0;
+    if (inlineTextBox.canUseSimplifiedContentMeasuring())
+        width = font.widthForSimpleText(StringView(text).substring(from, to - from));
+    else {
+        auto tabWidth = style.collapseWhiteSpace() ? TabSize(0) : style.tabSize();
+        WebCore::TextRun run(StringView(text).substring(from, to - from), contentLogicalLeft);
+        if (tabWidth)
+            run.setTabSize(true, tabWidth);
+        width = font.width(run);
+    }
 
     if (measureWithEndSpace)
         width -= (font.spaceWidth() + font.wordSpacing());
 
-    return std::max<LayoutUnit>(0, width);
+    return std::isnan(width) ? 0.0f : std::isinf(width) ? maxInlineLayoutUnit() : width;
 }
 
-LayoutUnit TextUtil::fixedPitchWidth(String text, const RenderStyle& style, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft)
+TextUtil::SplitData TextUtil::split(const InlineTextItem& inlineTextItem, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft)
 {
-    auto& font = style.fontCascade();
-    auto monospaceCharacterWidth = font.spaceWidth();
-    LayoutUnit width;
-    for (auto i = from; i < to; ++i) {
-        auto character = text[i];
-        if (character >= ' ' || character == '\n')
-            width += monospaceCharacterWidth;
-        else if (character == '\t')
-            width += style.collapseWhiteSpace() ? monospaceCharacterWidth : font.tabWidth(style.tabSize(), contentLogicalLeft + width);
+    ASSERT(availableWidth >= 0);
+    auto startPosition = inlineTextItem.start();
+    auto length = inlineTextItem.length();
+    ASSERT(length);
 
-        if (i > from && (character == ' ' || character == '\t' || character == '\n'))
-            width += font.wordSpacing();
+    auto left = startPosition;
+    // Pathological case of (extremely)long string and narrow lines.
+    // Adjust the range so that we can pick a reasonable midpoint.
+    InlineLayoutUnit averageCharacterWidth = textWidth / length;
+    unsigned offset = toLayoutUnit(2 * availableWidth / averageCharacterWidth).toUnsigned();
+    auto right = std::min<unsigned>(left + offset, (startPosition + length - 1));
+    // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
+    InlineLayoutUnit leftSideWidth = 0;
+    while (left < right) {
+        auto middle = (left + right) / 2;
+        auto width = TextUtil::width(inlineTextItem, startPosition, middle + 1, contentLogicalLeft);
+        if (width < availableWidth) {
+            left = middle + 1;
+            leftSideWidth = width;
+        } else if (width > availableWidth)
+            right = middle;
+        else {
+            right = middle + 1;
+            leftSideWidth = width;
+            break;
+        }
+    }
+    return { startPosition, right - startPosition, leftSideWidth };
+}
+
+unsigned TextUtil::findNextBreakablePosition(LazyLineBreakIterator& lineBreakIterator, unsigned startPosition, const RenderStyle& style)
+{
+    auto keepAllWordsForCJK = style.wordBreak() == WordBreak::KeepAll;
+    auto breakNBSP = style.autoWrap() && style.nbspMode() == NBSPMode::Space;
+
+    if (keepAllWordsForCJK) {
+        if (breakNBSP)
+            return nextBreakablePositionKeepingAllWords(lineBreakIterator, startPosition);
+        return nextBreakablePositionKeepingAllWordsIgnoringNBSP(lineBreakIterator, startPosition);
     }
 
-    return width;
+    if (lineBreakIterator.mode() == LineBreakIteratorMode::Default) {
+        if (breakNBSP)
+            return WebCore::nextBreakablePosition(lineBreakIterator, startPosition);
+        return nextBreakablePositionIgnoringNBSP(lineBreakIterator, startPosition);
+    }
+
+    if (breakNBSP)
+        return nextBreakablePositionWithoutShortcut(lineBreakIterator, startPosition);
+    return nextBreakablePositionIgnoringNBSPWithoutShortcut(lineBreakIterator, startPosition);
+}
+
+bool TextUtil::shouldPreserveSpacesAndTabs(const Box& layoutBox)
+{
+    // https://www.w3.org/TR/css-text-3/#white-space-property
+    auto whitespace = layoutBox.style().whiteSpace();
+    return whitespace == WhiteSpace::Pre || whitespace == WhiteSpace::PreWrap || whitespace == WhiteSpace::BreakSpaces;
+}
+
+bool TextUtil::shouldPreserveNewline(const Box& layoutBox)
+{
+    auto whitespace = layoutBox.style().whiteSpace();
+    // https://www.w3.org/TR/css-text-3/#white-space-property
+    return whitespace == WhiteSpace::Pre || whitespace == WhiteSpace::PreWrap || whitespace == WhiteSpace::BreakSpaces || whitespace == WhiteSpace::PreLine;
 }
 
 }

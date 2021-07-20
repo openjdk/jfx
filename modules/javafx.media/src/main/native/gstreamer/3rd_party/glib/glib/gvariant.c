@@ -1,6 +1,6 @@
 /*
- * Copyright © 2007, 2008 Ryan Lortie
- * Copyright © 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,6 +33,7 @@
 
 #include <string.h>
 
+#include "gstrfuncsprivate.h"
 
 /**
  * SECTION:gvariant
@@ -226,7 +227,7 @@
  * type information would be allocated.
  *
  * The type information cache, additionally, uses a #GHashTable to
- * store and lookup the cached items and stores a pointer to this
+ * store and look up the cached items and stores a pointer to this
  * hash table in static storage.  The hash table is freed when there
  * are zero items in the type cache.
  *
@@ -306,6 +307,11 @@
  *
  * Constructs a new trusted #GVariant instance from the provided data.
  * This is used to implement g_variant_new_* for all the basic types.
+ *
+ * Note: @data must be backed by memory that is aligned appropriately for the
+ * @type being loaded. Otherwise this function will internally create a copy of
+ * the memory (since GLib 2.60) or (in older versions) fail and exit the
+ * process.
  *
  * Returns: a new floating #GVariant
  */
@@ -421,7 +427,7 @@ NUMERIC_TYPE (BYTE, byte, guint8)
  **/
 /**
  * g_variant_get_int16:
- * @value: a int16 #GVariant instance
+ * @value: an int16 #GVariant instance
  *
  * Returns the 16-bit signed integer value of @value.
  *
@@ -471,7 +477,7 @@ NUMERIC_TYPE (UINT16, uint16, guint16)
  **/
 /**
  * g_variant_get_int32:
- * @value: a int32 #GVariant instance
+ * @value: an int32 #GVariant instance
  *
  * Returns the 32-bit signed integer value of @value.
  *
@@ -521,7 +527,7 @@ NUMERIC_TYPE (UINT32, uint32, guint32)
  **/
 /**
  * g_variant_get_int64:
- * @value: a int64 #GVariant instance
+ * @value: an int64 #GVariant instance
  *
  * Returns the 64-bit signed integer value of @value.
  *
@@ -720,7 +726,7 @@ g_variant_new_variant (GVariant *value)
   g_variant_ref_sink (value);
 
   return g_variant_new_from_children (G_VARIANT_TYPE_VARIANT,
-                                      g_memdup (&value, sizeof value),
+                                      g_memdup2 (&value, sizeof value),
                                       1, g_variant_is_trusted (value));
 }
 
@@ -937,7 +943,7 @@ g_variant_new_dict_entry (GVariant *key,
 /**
  * g_variant_lookup: (skip)
  * @dictionary: a dictionary #GVariant
- * @key: the key to lookup in the dictionary
+ * @key: the key to look up in the dictionary
  * @format_string: a GVariant format string
  * @...: the arguments to unpack the value into
  *
@@ -995,7 +1001,7 @@ g_variant_lookup (GVariant    *dictionary,
 /**
  * g_variant_lookup_value:
  * @dictionary: a dictionary #GVariant
- * @key: the key to lookup in the dictionary
+ * @key: the key to look up in the dictionary
  * @expected_type: (nullable): a #GVariantType, or %NULL
  *
  * Looks up a value in a dictionary #GVariant.
@@ -1008,7 +1014,7 @@ g_variant_lookup (GVariant    *dictionary,
  * string specifies what type of value is expected to be inside of the
  * variant. If the value inside the variant has a different type then
  * %NULL is returned. In the event that @dictionary has a value type other
- * than v then @expected_type must directly match the key type and it is
+ * than v then @expected_type must directly match the value type and it is
  * used to unpack the value directly or an error occurs.
  *
  * In either case, if @key is not found in @dictionary, %NULL is returned.
@@ -1224,7 +1230,7 @@ g_variant_new_fixed_array (const GVariantType  *element_type,
       return NULL;
     }
 
-  data = g_memdup (elements, n_elements * element_size);
+  data = g_memdup2 (elements, n_elements * element_size);
   value = g_variant_new_from_data (array_type, data,
                                    n_elements * element_size,
                                    FALSE, g_free, data);
@@ -1435,11 +1441,15 @@ g_variant_is_signature (const gchar *string)
  * type.  This includes the types %G_VARIANT_TYPE_STRING,
  * %G_VARIANT_TYPE_OBJECT_PATH and %G_VARIANT_TYPE_SIGNATURE.
  *
- * The string will always be UTF-8 encoded, and will never be %NULL.
+ * The string will always be UTF-8 encoded, will never be %NULL, and will never
+ * contain nul bytes.
  *
  * If @length is non-%NULL then the length of the string (in bytes) is
  * returned there.  For trusted values, this information is already
- * known.  For untrusted values, a strlen() will be performed.
+ * known.  Untrusted values will be validated and, if valid, a strlen() will be
+ * performed. If invalid, a default value will be returned â€” for
+ * %G_VARIANT_TYPE_OBJECT_PATH, this is `"/"`, and for other types it is the
+ * empty string.
  *
  * It is an error to call this function with a @value of any type
  * other than those three.
@@ -1547,19 +1557,20 @@ g_variant_new_strv (const gchar * const *strv,
                     gssize               length)
 {
   GVariant **strings;
-  gsize i;
+  gsize i, length_unsigned;
 
   g_return_val_if_fail (length == 0 || strv != NULL, NULL);
 
   if (length < 0)
     length = g_strv_length ((gchar **) strv);
+  length_unsigned = length;
 
-  strings = g_new (GVariant *, length);
-  for (i = 0; i < length; i++)
+  strings = g_new (GVariant *, length_unsigned);
+  for (i = 0; i < length_unsigned; i++)
     strings[i] = g_variant_ref_sink (g_variant_new_string (strv[i]));
 
   return g_variant_new_from_children (G_VARIANT_TYPE_STRING_ARRAY,
-                                      strings, length, TRUE);
+                                      strings, length_unsigned, TRUE);
 }
 
 /**
@@ -1683,19 +1694,20 @@ g_variant_new_objv (const gchar * const *strv,
                     gssize               length)
 {
   GVariant **strings;
-  gsize i;
+  gsize i, length_unsigned;
 
   g_return_val_if_fail (length == 0 || strv != NULL, NULL);
 
   if (length < 0)
     length = g_strv_length ((gchar **) strv);
+  length_unsigned = length;
 
-  strings = g_new (GVariant *, length);
-  for (i = 0; i < length; i++)
+  strings = g_new (GVariant *, length_unsigned);
+  for (i = 0; i < length_unsigned; i++)
     strings[i] = g_variant_ref_sink (g_variant_new_object_path (strv[i]));
 
   return g_variant_new_from_children (G_VARIANT_TYPE_OBJECT_PATH_ARRAY,
-                                      strings, length, TRUE);
+                                      strings, length_unsigned, TRUE);
 }
 
 /**
@@ -1901,7 +1913,7 @@ g_variant_dup_bytestring (GVariant *value,
   if (length)
     *length = size;
 
-  return g_memdup (original, size + 1);
+  return g_memdup2 (original, size + 1);
 }
 
 /**
@@ -1923,19 +1935,20 @@ g_variant_new_bytestring_array (const gchar * const *strv,
                                 gssize               length)
 {
   GVariant **strings;
-  gsize i;
+  gsize i, length_unsigned;
 
   g_return_val_if_fail (length == 0 || strv != NULL, NULL);
 
   if (length < 0)
     length = g_strv_length ((gchar **) strv);
+  length_unsigned = length;
 
-  strings = g_new (GVariant *, length);
-  for (i = 0; i < length; i++)
+  strings = g_new (GVariant *, length_unsigned);
+  for (i = 0; i < length_unsigned; i++)
     strings[i] = g_variant_ref_sink (g_variant_new_bytestring (strv[i]));
 
   return g_variant_new_from_children (G_VARIANT_TYPE_BYTESTRING_ARRAY,
-                                      strings, length, TRUE);
+                                      strings, length_unsigned, TRUE);
 }
 
 /**
@@ -2279,7 +2292,7 @@ g_variant_print_string (GVariant *value,
           else
             {
               /* fall through and handle normally... */
-        }
+            }
         }
 
       /*
@@ -2757,7 +2770,10 @@ g_variant_equal (gconstpointer one,
       data_one = g_variant_get_data ((GVariant *) one);
       data_two = g_variant_get_data ((GVariant *) two);
 
-      equal = memcmp (data_one, data_two, size_one) == 0;
+      if (size_one)
+        equal = memcmp (data_one, data_two, size_one) == 0;
+      else
+        equal = TRUE;
     }
   else
     {
@@ -2999,7 +3015,7 @@ g_variant_iter_init (GVariantIter *iter,
  * need it.
  *
  * A reference is taken to the container that @iter is iterating over
- * and will be releated only when g_variant_iter_free() is called.
+ * and will be related only when g_variant_iter_free() is called.
  *
  * Returns: (transfer full): a new heap-allocated #GVariantIter
  *
@@ -3957,7 +3973,7 @@ g_variant_dict_init (GVariantDict *dict,
 /**
  * g_variant_dict_lookup:
  * @dict: a #GVariantDict
- * @key: the key to lookup in the dictionary
+ * @key: the key to look up in the dictionary
  * @format_string: a GVariant format string
  * @...: the arguments to unpack the value into
  *
@@ -4004,7 +4020,7 @@ g_variant_dict_lookup (GVariantDict *dict,
 /**
  * g_variant_dict_lookup_value:
  * @dict: a #GVariantDict
- * @key: the key to lookup in the dictionary
+ * @key: the key to look up in the dictionary
  * @expected_type: (nullable): a #GVariantType, or %NULL
  *
  * Looks up a value in a #GVariantDict.
@@ -4044,7 +4060,7 @@ g_variant_dict_lookup_value (GVariantDict       *dict,
 /**
  * g_variant_dict_contains:
  * @dict: a #GVariantDict
- * @key: the key to lookup in the dictionary
+ * @key: the key to look up in the dictionary
  *
  * Checks if @key exists in @dict.
  *
@@ -4333,7 +4349,7 @@ g_variant_format_string_scan (const gchar  *string,
           if (c == '@')
             c = next_char ();
 
-          /* ISO/IEC 9899:1999 (C99) §7.21.5.2:
+          /* ISO/IEC 9899:1999 (C99) 7.21.5.2:
            *    The terminating null character is considered to be
            *    part of the string.
            */
@@ -4473,7 +4489,7 @@ g_variant_check_format_string (GVariant    *value,
               return FALSE;
             }
 
-          /* fall through */
+          G_GNUC_FALLTHROUGH;
         case '^':
         case '@':
           /* ignore these 2 (or 3) */
@@ -4494,7 +4510,7 @@ g_variant_check_format_string (GVariant    *value,
           if (*type_string != '(')
             return FALSE;
 
-          /* fall through */
+          G_GNUC_FALLTHROUGH;
         case '*':
           /* consume a full type string for the '*' or 'r' */
           if (!g_variant_type_string_scan (type_string, NULL, &type_string))
@@ -4685,7 +4701,7 @@ g_variant_valist_free_nnp (const gchar *str,
           if (str[2] != 'a') /* '^a&ay', '^ay' */
             g_free (ptr);
           else if (str[1] == 'a') /* '^aay' */
-        g_strfreev (ptr);
+            g_strfreev (ptr);
           break; /* '^&ay' */
         }
       else if (str[2] != '&') /* '^as', '^ao' */
@@ -4933,7 +4949,7 @@ g_variant_valist_get_nnp (const gchar **str,
 
     case '@':
       g_variant_type_string_scan (*str, NULL, str);
-      /* fall through */
+      G_GNUC_FALLTHROUGH;
 
     case '*':
     case '?':
@@ -5441,6 +5457,7 @@ g_variant_get (GVariant    *value,
 {
   va_list ap;
 
+  g_return_if_fail (value != NULL);
   g_return_if_fail (valid_format_string (format_string, TRUE, value));
 
   /* if any direct-pointer-access formats are in use, flatten first */
@@ -5954,6 +5971,7 @@ g_variant_byteswap (GVariant *value)
       serialised.type_info = g_variant_get_type_info (trusted);
       serialised.size = g_variant_get_size (trusted);
       serialised.data = g_malloc (serialised.size);
+      serialised.depth = g_variant_get_depth (trusted);
       g_variant_store (trusted, serialised.data);
       g_variant_unref (trusted);
 
@@ -6008,6 +6026,11 @@ g_variant_byteswap (GVariant *value)
  * @notify will be called with @user_data when @data is no longer
  * needed.  The exact time of this call is unspecified and might even be
  * before this function returns.
+ *
+ * Note: @data must be backed by memory that is aligned appropriately for the
+ * @type being loaded. Otherwise this function will internally create a copy of
+ * the memory (since GLib 2.60) or (in older versions) fail and exit the
+ * process.
  *
  * Returns: (transfer none): a new floating #GVariant of type @type
  *

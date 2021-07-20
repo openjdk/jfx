@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +30,7 @@
 #include "Error.h"
 #include "IteratorOperations.h"
 #include "JSArrayBuffer.h"
+#include "JSArrayBufferPrototypeInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSDataView.h"
 #include "JSGenericTypedArrayViewConstructor.h"
@@ -38,39 +40,29 @@
 namespace JSC {
 
 template<typename ViewClass>
-static EncodedJSValue JSC_HOST_CALL callGenericTypedArrayView(ExecState*);
-
-template<typename ViewClass>
-EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(ExecState*);
-
-template<typename ViewClass>
 JSGenericTypedArrayViewConstructor<ViewClass>::JSGenericTypedArrayViewConstructor(VM& vm, Structure* structure)
-    : Base(vm, structure, callGenericTypedArrayView<ViewClass>, constructGenericTypedArrayView<ViewClass>)
+    : Base(vm, structure, callConstructor(), constructConstructor())
 {
 }
 
 template<typename ViewClass>
-void JSGenericTypedArrayViewConstructor<ViewClass>::finishCreation(VM& vm, JSGlobalObject* globalObject, JSObject* prototype, const String& name, FunctionExecutable* privateAllocator)
+void JSGenericTypedArrayViewConstructor<ViewClass>::finishCreation(VM& vm, JSGlobalObject*, JSObject* prototype, const String& name)
 {
-    Base::finishCreation(vm, name);
+    Base::finishCreation(vm, ViewClass::TypedArrayStorageType == TypeDataView ? 1 : 3, name, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(3), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->BYTES_PER_ELEMENT, jsNumber(ViewClass::elementSize), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete);
-
-    if (privateAllocator)
-        putDirectBuiltinFunction(vm, globalObject, vm.propertyNames->builtinNames().allocateTypedArrayPrivateName(), privateAllocator, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 }
 
 template<typename ViewClass>
 JSGenericTypedArrayViewConstructor<ViewClass>*
 JSGenericTypedArrayViewConstructor<ViewClass>::create(
     VM& vm, JSGlobalObject* globalObject, Structure* structure, JSObject* prototype,
-    const String& name, FunctionExecutable* privateAllocator)
+    const String& name)
 {
     JSGenericTypedArrayViewConstructor* result =
         new (NotNull, allocateCell<JSGenericTypedArrayViewConstructor>(vm.heap))
         JSGenericTypedArrayViewConstructor(vm, structure);
-    result->finishCreation(vm, globalObject, prototype, name, privateAllocator);
+    result->finishCreation(vm, globalObject, prototype, name);
     return result;
 }
 
@@ -83,28 +75,28 @@ Structure* JSGenericTypedArrayViewConstructor<ViewClass>::createStructure(
 }
 
 template<typename ViewClass>
-inline JSObject* constructGenericTypedArrayViewFromIterator(ExecState* exec, Structure* structure, JSObject* iterable, JSValue iteratorMethod)
+inline JSObject* constructGenericTypedArrayViewFromIterator(JSGlobalObject* globalObject, Structure* structure, JSObject* iterable, JSValue iteratorMethod)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     MarkedArgumentBuffer storage;
-    forEachInIterable(*exec, iterable, iteratorMethod, [&] (VM&, ExecState&, JSValue value) {
+    forEachInIterable(*globalObject, iterable, iteratorMethod, [&] (VM&, JSGlobalObject&, JSValue value) {
         storage.append(value);
         if (UNLIKELY(storage.hasOverflowed())) {
-            throwOutOfMemoryError(exec, scope);
+            throwOutOfMemoryError(globalObject, scope);
             return;
         }
     });
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    ViewClass* result = ViewClass::createUninitialized(exec, structure, storage.size());
+    ViewClass* result = ViewClass::createUninitialized(globalObject, structure, storage.size());
     EXCEPTION_ASSERT(!!scope.exception() == !result);
     if (UNLIKELY(!result))
         return nullptr;
 
     for (unsigned i = 0; i < storage.size(); ++i) {
-        bool success = result->setIndex(exec, i, storage.at(i));
+        bool success = result->setIndex(globalObject, i, storage.at(i));
         EXCEPTION_ASSERT(scope.exception() || success);
         if (!success)
             return nullptr;
@@ -113,32 +105,75 @@ inline JSObject* constructGenericTypedArrayViewFromIterator(ExecState* exec, Str
     return result;
 }
 
-template<typename ViewClass>
-inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, Structure* structure, EncodedJSValue firstArgument, unsigned offset, Optional<unsigned> lengthOpt)
+inline JSArrayBuffer* constructCustomArrayBufferIfNeeded(JSGlobalObject* globalObject, JSArrayBufferView* view)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSArrayBuffer* source = view->possiblySharedJSBuffer(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    if (source->isShared())
+        return nullptr;
+
+    Optional<JSValue> species = arrayBufferSpeciesConstructor(globalObject, source, ArrayBufferSharingMode::Default);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    if (!species)
+        return nullptr;
+
+    if (!species->isConstructor(vm)) {
+        throwTypeError(globalObject, scope, "species is not a constructor"_s);
+        return nullptr;
+    }
+
+    JSValue prototype = species->get(globalObject, vm.propertyNames->prototype);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    auto buffer = ArrayBuffer::tryCreate(source->impl()->byteLength(), 1);
+    if (!buffer) {
+        throwOutOfMemoryError(globalObject, scope);
+        return nullptr;
+    }
+
+    auto result = JSArrayBuffer::create(vm, getFunctionRealm(vm, asObject(species.value()))->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(buffer));
+    if (prototype.isObject())
+        result->setPrototypeDirect(vm, prototype);
+    return result;
+}
+
+template<typename ViewClass>
+inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* globalObject, Structure* structure, EncodedJSValue firstArgument, unsigned offset, Optional<unsigned> lengthOpt)
+{
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue firstValue = JSValue::decode(firstArgument);
 
     if (JSArrayBuffer* jsBuffer = jsDynamicCast<JSArrayBuffer*>(vm, firstValue)) {
         RefPtr<ArrayBuffer> buffer = jsBuffer->impl();
-        unsigned length = 0;
+        if (buffer->isDetached()) {
+            throwTypeError(globalObject, scope, "Buffer is already detached"_s);
+            return nullptr;
+        }
 
+        unsigned length = 0;
         if (lengthOpt)
             length = lengthOpt.value();
         else {
-            if ((buffer->byteLength() - offset) % ViewClass::elementSize)
-                return throwRangeError(exec, scope, "ArrayBuffer length minus the byteOffset is not a multiple of the element size"_s);
+            if (UNLIKELY((buffer->byteLength() - offset) % ViewClass::elementSize)) {
+                throwRangeError(globalObject, scope, "ArrayBuffer length minus the byteOffset is not a multiple of the element size"_s);
+                return nullptr;
+            }
             length = (buffer->byteLength() - offset) / ViewClass::elementSize;
         }
 
-        RELEASE_AND_RETURN(scope, ViewClass::create(exec, structure, WTFMove(buffer), offset, length));
+        RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, WTFMove(buffer), offset, length));
     }
     ASSERT(!offset && !lengthOpt);
 
-    if (ViewClass::TypedArrayStorageType == TypeDataView)
-        return throwTypeError(exec, scope, "Expected ArrayBuffer for the first argument."_s);
+    if (UNLIKELY(ViewClass::TypedArrayStorageType == TypeDataView)) {
+        throwTypeError(globalObject, scope, "Expected ArrayBuffer for the first argument."_s);
+        return nullptr;
+    }
 
     // For everything but DataView, we allow construction with any of:
     // - Another array. This creates a copy of the of that array.
@@ -146,17 +181,33 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
 
     if (JSObject* object = jsDynamicCast<JSObject*>(vm, firstValue)) {
         unsigned length;
+        JSArrayBuffer* customBuffer = nullptr;
 
-        if (isTypedView(object->classInfo(vm)->typedArrayStorageType))
-            length = jsCast<JSArrayBufferView*>(object)->length();
-        else {
+        if (isTypedView(object->classInfo(vm)->typedArrayStorageType)) {
+            auto* view = jsCast<JSArrayBufferView*>(object);
+
+            customBuffer = constructCustomArrayBufferIfNeeded(globalObject, view);
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            if (view->isDetached()) {
+                throwTypeError(globalObject, scope, "Underlying ArrayBuffer has been detached from the view"_s);
+                return nullptr;
+            }
+
+            if (contentType(object->classInfo(vm)->typedArrayStorageType) != ViewClass::contentType) {
+                throwTypeError(globalObject, scope, "Content types of source and new typed array are different"_s);
+                return nullptr;
+            }
+
+            length = view->length();
+        } else {
             // This getPropertySlot operation should not be observed by the Proxy.
             // So we use VMInquiry. And purge the opaque object cases (proxy and namespace object) by isTaintedByOpaqueObject() guard.
-            PropertySlot lengthSlot(object, PropertySlot::InternalMethodType::VMInquiry);
-            object->getPropertySlot(exec, vm.propertyNames->length, lengthSlot);
+            PropertySlot lengthSlot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
+            object->getPropertySlot(globalObject, vm.propertyNames->length, lengthSlot);
             RETURN_IF_EXCEPTION(scope, nullptr);
+            lengthSlot.disallowVMEntry.reset();
 
-            JSValue iteratorFunc = object->get(exec, vm.propertyNames->iteratorSymbol);
+            JSValue iteratorFunc = object->get(globalObject, vm.propertyNames->iteratorSymbol);
             RETURN_IF_EXCEPTION(scope, nullptr);
 
             // We would like not use the iterator as it is painfully slow. Fortunately, unless
@@ -165,93 +216,90 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
             // 3) The base object might have indexed getters.
             // it should not be observable that we do not use the iterator.
 
-            if (!iteratorFunc.isUndefined()
+            if (!iteratorFunc.isUndefinedOrNull()
                 && (iteratorFunc != object->globalObject(vm)->arrayProtoValuesFunction()
                     || lengthSlot.isAccessor() || lengthSlot.isCustom() || lengthSlot.isTaintedByOpaqueObject()
                     || hasAnyArrayStorage(object->indexingType()))) {
 
-                    RELEASE_AND_RETURN(scope, constructGenericTypedArrayViewFromIterator<ViewClass>(exec, structure, object, iteratorFunc));
+                    RELEASE_AND_RETURN(scope, constructGenericTypedArrayViewFromIterator<ViewClass>(globalObject, structure, object, iteratorFunc));
             }
 
             if (lengthSlot.isUnset())
                 length = 0;
             else {
-                JSValue value = lengthSlot.getValue(exec, vm.propertyNames->length);
+                JSValue value = lengthSlot.getValue(globalObject, vm.propertyNames->length);
                 RETURN_IF_EXCEPTION(scope, nullptr);
-                length = value.toUInt32(exec);
+                length = value.toLength(globalObject);
                 RETURN_IF_EXCEPTION(scope, nullptr);
             }
         }
 
-
-        ViewClass* result = ViewClass::createUninitialized(exec, structure, length);
+        ViewClass* result = customBuffer
+            ? ViewClass::create(globalObject, structure, customBuffer->impl(), 0, length)
+            : ViewClass::createUninitialized(globalObject, structure, length);
         EXCEPTION_ASSERT(!!scope.exception() == !result);
         if (UNLIKELY(!result))
             return nullptr;
 
         scope.release();
-        if (!result->set(exec, 0, object, 0, length))
+        if (!result->set(globalObject, 0, object, 0, length))
             return nullptr;
 
         return result;
     }
 
-    unsigned length = firstValue.toIndex(exec, "length");
+    unsigned length = firstValue.toIndex(globalObject, "length");
     RETURN_IF_EXCEPTION(scope, nullptr);
-    RELEASE_AND_RETURN(scope, ViewClass::create(exec, structure, length));
+    RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, length));
 }
 
 template<typename ViewClass>
-EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(ExecState* exec)
+ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    InternalFunction* function = jsCast<InternalFunction*>(exec->jsCallee());
-    Structure* parentStructure = function->globalObject(vm)->typedArrayStructure(ViewClass::TypedArrayStorageType);
-    Structure* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), parentStructure);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* structure = newTarget == callFrame->jsCallee()
+        ? globalObject->typedArrayStructure(ViewClass::TypedArrayStorageType)
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->typedArrayStructure(ViewClass::TypedArrayStorageType));
+    RETURN_IF_EXCEPTION(scope, { });
 
-    size_t argCount = exec->argumentCount();
+    size_t argCount = callFrame->argumentCount();
 
     if (!argCount) {
         if (ViewClass::TypedArrayStorageType == TypeDataView)
-            return throwVMTypeError(exec, scope, "DataView constructor requires at least one argument."_s);
+            return throwVMTypeError(globalObject, scope, "DataView constructor requires at least one argument."_s);
 
-        RELEASE_AND_RETURN(scope, JSValue::encode(ViewClass::create(exec, structure, 0)));
+        RELEASE_AND_RETURN(scope, JSValue::encode(ViewClass::create(globalObject, structure, 0)));
     }
 
-    JSValue firstValue = exec->uncheckedArgument(0);
+    JSValue firstValue = callFrame->uncheckedArgument(0);
     unsigned offset = 0;
     Optional<unsigned> length = WTF::nullopt;
     if (jsDynamicCast<JSArrayBuffer*>(vm, firstValue) && argCount > 1) {
-        offset = exec->uncheckedArgument(1).toIndex(exec, "byteOffset");
+        offset = callFrame->uncheckedArgument(1).toIndex(globalObject, "byteOffset");
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
         if (argCount > 2) {
-            if (ViewClass::TypedArrayStorageType == TypeDataView) {
-                // If the DataView byteLength is present but undefined, treat it as missing.
-                JSValue byteLengthValue = exec->uncheckedArgument(2);
-                if (!byteLengthValue.isUndefined()) {
-                    length = byteLengthValue.toIndex(exec, "byteLength");
-                    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-                }
-            } else {
-                length = exec->uncheckedArgument(2).toIndex(exec, "length");
+            // If the length value is present but undefined, treat it as missing.
+            JSValue lengthValue = callFrame->uncheckedArgument(2);
+            if (!lengthValue.isUndefined()) {
+                length = lengthValue.toIndex(globalObject, ViewClass::TypedArrayStorageType == TypeDataView ? "byteLength" : "length");
                 RETURN_IF_EXCEPTION(scope, encodedJSValue());
             }
         }
     }
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(constructGenericTypedArrayViewWithArguments<ViewClass>(exec, structure, JSValue::encode(firstValue), offset, length)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(constructGenericTypedArrayViewWithArguments<ViewClass>(globalObject, structure, JSValue::encode(firstValue), offset, length)));
 }
 
 template<typename ViewClass>
-static EncodedJSValue JSC_HOST_CALL callGenericTypedArrayView(ExecState* exec)
+ALWAYS_INLINE EncodedJSValue callGenericTypedArrayViewImpl(JSGlobalObject* globalObject, CallFrame*)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(exec, scope, ViewClass::info()->className));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, ViewClass::info()->className));
 }
 
 } // namespace JSC

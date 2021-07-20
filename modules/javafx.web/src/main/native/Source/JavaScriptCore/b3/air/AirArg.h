@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 #include "B3Width.h"
 #include <wtf/Optional.h>
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
@@ -1104,6 +1104,7 @@ public:
         ASSERT_NOT_REACHED();
     }
 
+    bool canRepresent(Type) const;
     bool canRepresent(Value* value) const;
 
     bool isCompatibleBank(const Arg& other) const;
@@ -1466,7 +1467,7 @@ private:
 struct ArgHash {
     static unsigned hash(const Arg& key) { return key.hash(); }
     static bool equal(const Arg& a, const Arg& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } } // namespace JSC::B3::Air
@@ -1481,19 +1482,17 @@ JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Role);
 JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Signedness);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::Air::Arg> {
-    typedef JSC::B3::Air::ArgHash Hash;
-};
+template<> struct DefaultHash<JSC::B3::Air::Arg> : JSC::B3::Air::ArgHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Air::Arg> : SimpleClassHashTraits<JSC::B3::Air::Arg> {
     // Because m_scale is 1 in the empty value.
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

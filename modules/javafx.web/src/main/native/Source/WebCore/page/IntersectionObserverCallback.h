@@ -41,7 +41,9 @@ class IntersectionObserverCallback : public RefCounted<IntersectionObserverCallb
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(const Vector<Ref<IntersectionObserverEntry>>&, IntersectionObserver&) = 0;
+    virtual bool hasCallback() const { return false; }
+
+    virtual CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>&, IntersectionObserver&) = 0;
 };
 
 } // namespace WebCore

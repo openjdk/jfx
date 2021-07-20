@@ -26,31 +26,30 @@
 #include "config.h"
 #include "ValueRecovery.h"
 
-#include "CodeBlock.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
-JSValue ValueRecovery::recover(ExecState* exec) const
+JSValue ValueRecovery::recover(CallFrame* callFrame) const
 {
     switch (technique()) {
     case DisplacedInJSStack:
-        return exec->r(virtualRegister().offset()).jsValue();
+        return callFrame->r(virtualRegister()).jsValue();
     case Int32DisplacedInJSStack:
-        return jsNumber(exec->r(virtualRegister().offset()).unboxedInt32());
+        return jsNumber(callFrame->r(virtualRegister()).unboxedInt32());
     case Int52DisplacedInJSStack:
-        return jsNumber(exec->r(virtualRegister().offset()).unboxedInt52());
+        return jsNumber(callFrame->r(virtualRegister()).unboxedInt52());
     case StrictInt52DisplacedInJSStack:
-        return jsNumber(exec->r(virtualRegister().offset()).unboxedStrictInt52());
+        return jsNumber(callFrame->r(virtualRegister()).unboxedStrictInt52());
     case DoubleDisplacedInJSStack:
-        return jsNumber(purifyNaN(exec->r(virtualRegister().offset()).unboxedDouble()));
+        return jsNumber(purifyNaN(callFrame->r(virtualRegister()).unboxedDouble()));
     case CellDisplacedInJSStack:
-        return exec->r(virtualRegister().offset()).unboxedCell();
+        return callFrame->r(virtualRegister()).unboxedCell();
     case BooleanDisplacedInJSStack:
 #if USE(JSVALUE64)
-        return exec->r(virtualRegister().offset()).jsValue();
+        return callFrame->r(virtualRegister()).jsValue();
 #else
-        return jsBoolean(exec->r(virtualRegister().offset()).unboxedBoolean());
+        return jsBoolean(callFrame->r(virtualRegister()).unboxedBoolean());
 #endif
     case Constant:
         return constant();
@@ -133,7 +132,7 @@ void ValueRecovery::dumpInContext(PrintStream& out, DumpContext* context) const
 
 void ValueRecovery::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 #endif // ENABLE(JIT)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ IntSize TextureMapperJava::maxTextureSize() const
     return IntSize(s_maximumAllowedImageBufferDimension, s_maximumAllowedImageBufferDimension);
 }
 
-void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const FloatRect& rect)
+void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const FloatRoundedRect& rect)
 {
     GraphicsContext* context = currentContext();
     if (!context)
@@ -62,7 +62,7 @@ void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const Floa
     auto previousTransform = context->getCTM();
     context->save();
     context->concatCTM(matrix.toAffineTransform());
-    context->clip(rect);
+    context->clip(rect.rect());
     context->setCTM(previousTransform);
 }
 
@@ -75,7 +75,7 @@ void TextureMapperJava::drawTexture(const BitmapTexture& texture, const FloatRec
     const BitmapTextureJava& textureImageBuffer = static_cast<const BitmapTextureJava&>(texture);
     ImageBuffer* image = textureImageBuffer.image();
     context->save();
-    context->setCompositeOperation(isInMaskMode() ? CompositeDestinationIn : CompositeSourceOver);
+    context->setCompositeOperation(isInMaskMode() ? CompositeOperator::DestinationIn : CompositeOperator::SourceOver);
     context->setAlpha(opacity);
     context->platformContext()->rq().freeSpace(68)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_PERSPECTIVE_TRANSFORM
@@ -94,7 +94,7 @@ void TextureMapperJava::drawSolidColor(const FloatRect& rect, const Transformati
         return;
 
     context->save();
-    context->setCompositeOperation(isInMaskMode() ? CompositeDestinationIn : CompositeSourceOver);
+    context->setCompositeOperation(isInMaskMode() ? CompositeOperator::DestinationIn : CompositeOperator::SourceOver);
     context->platformContext()->rq().freeSpace(68)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_PERSPECTIVE_TRANSFORM
         << (float)transform.m11() << (float)transform.m12() << (float)transform.m13() << (float)transform.m14()

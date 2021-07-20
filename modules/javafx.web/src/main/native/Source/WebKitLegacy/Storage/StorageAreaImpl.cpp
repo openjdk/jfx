@@ -50,9 +50,6 @@ inline StorageAreaImpl::StorageAreaImpl(StorageType storageType, const SecurityO
     , m_securityOrigin(origin)
     , m_storageMap(StorageMap::create(quota))
     , m_storageSyncManager(WTFMove(syncManager))
-#ifndef NDEBUG
-    , m_isShutdown(false)
-#endif
     , m_accessCount(0)
     , m_closeDatabaseTimer(*this, &StorageAreaImpl::closeDatabaseTimerFired)
 {
@@ -87,7 +84,7 @@ StorageAreaImpl::StorageAreaImpl(const StorageAreaImpl& area)
     , m_securityOrigin(area.m_securityOrigin)
     , m_storageMap(area.m_storageMap)
     , m_storageSyncManager(area.m_storageSyncManager)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isShutdown(area.m_isShutdown)
 #endif
     , m_accessCount(0)
@@ -194,11 +191,12 @@ bool StorageAreaImpl::contains(const String& key)
     return m_storageMap->contains(key);
 }
 
-void StorageAreaImpl::importItems(const HashMap<String, String>& items)
+void StorageAreaImpl::importItems(HashMap<String, String>&& items)
 {
     ASSERT(!m_isShutdown);
+    ASSERT(!isMainThread());
 
-    m_storageMap->importItems(items);
+    m_storageMap->importItems(WTFMove(items));
 }
 
 void StorageAreaImpl::close()
@@ -206,7 +204,7 @@ void StorageAreaImpl::close()
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleFinalSync();
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_isShutdown = true;
 #endif
 }
@@ -290,6 +288,27 @@ void StorageAreaImpl::dispatchStorageEvent(const String& key, const String& oldV
         StorageEventDispatcher::dispatchLocalStorageEvents(key, oldValue, newValue, m_securityOrigin, sourceFrame);
     else
         StorageEventDispatcher::dispatchSessionStorageEvents(key, oldValue, newValue, m_securityOrigin, sourceFrame);
+}
+
+void StorageAreaImpl::sessionChanged(bool isNewSessionPersistent)
+{
+    ASSERT(isMainThread());
+
+    // If import is not completed, background storage thread may be modifying m_storageMap.
+    blockUntilImportComplete();
+
+    unsigned quota = m_storageMap->quota();
+    m_storageMap = StorageMap::create(quota);
+
+    if (isNewSessionPersistent && !m_storageAreaSync && m_storageSyncManager) {
+        m_storageAreaSync = StorageAreaSync::create(m_storageSyncManager.get(), *this, m_securityOrigin.databaseIdentifier());
+        return;
+    }
+
+    if (!isNewSessionPersistent && m_storageAreaSync) {
+        m_storageAreaSync->scheduleFinalSync();
+        m_storageAreaSync = nullptr;
+    }
 }
 
 } // namespace WebCore

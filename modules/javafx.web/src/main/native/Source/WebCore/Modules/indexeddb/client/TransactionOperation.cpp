@@ -42,8 +42,9 @@ TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBReque
     if (m_indexIdentifier)
         m_indexRecordType = request.requestedIndexRecordType();
     if (auto* cursor = request.pendingCursor())
-        m_cursorIdentifier = std::make_unique<IDBResourceIdentifier>(cursor->info().identifier());
+        m_cursorIdentifier = makeUnique<IDBResourceIdentifier>(cursor->info().identifier());
 
+    request.setTransactionOperationID(m_operationID);
     m_idbRequest = &request;
 }
 

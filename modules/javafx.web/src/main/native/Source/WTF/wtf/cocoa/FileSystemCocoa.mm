@@ -29,6 +29,20 @@
 #import "config.h"
 #import <wtf/FileSystem.h>
 
+#import <wtf/SoftLinking.h>
+
+typedef struct _BOMCopier* BOMCopier;
+
+SOFT_LINK_PRIVATE_FRAMEWORK(Bom)
+SOFT_LINK(Bom, BOMCopierNew, BOMCopier, (), ())
+SOFT_LINK(Bom, BOMCopierFree, void, (BOMCopier copier), (copier))
+SOFT_LINK(Bom, BOMCopierCopyWithOptions, int, (BOMCopier copier, const char* fromObj, const char* toObj, CFDictionaryRef options), (copier, fromObj, toObj, options))
+
+#define kBOMCopierOptionCreatePKZipKey CFSTR("createPKZip")
+#define kBOMCopierOptionSequesterResourcesKey CFSTR("sequesterResources")
+#define kBOMCopierOptionKeepParentKey CFSTR("keepParent")
+#define kBOMCopierOptionCopyResourcesKey CFSTR("copyResources")
+
 @interface WTFWebFileManagerDelegate : NSObject <NSFileManagerDelegate>
 @end
 
@@ -48,12 +62,38 @@ namespace WTF {
 
 namespace FileSystemImpl {
 
+String createTemporaryZipArchive(const String& path)
+{
+    String temporaryFile;
+
+    RetainPtr<NSFileCoordinator> coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
+    [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
+        CString archivePath([NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitGeneratedFileXXXXXX"].fileSystemRepresentation);
+        if (mkstemp(archivePath.mutableData()) == -1)
+            return;
+
+        NSDictionary *options = @{
+            (__bridge id)kBOMCopierOptionCreatePKZipKey : @YES,
+            (__bridge id)kBOMCopierOptionSequesterResourcesKey : @YES,
+            (__bridge id)kBOMCopierOptionKeepParentKey : @YES,
+            (__bridge id)kBOMCopierOptionCopyResourcesKey : @YES,
+        };
+
+        BOMCopier copier = BOMCopierNew();
+        if (!BOMCopierCopyWithOptions(copier, newURL.path.fileSystemRepresentation, archivePath.data(), (__bridge CFDictionaryRef)options))
+            temporaryFile = String::fromUTF8(archivePath);
+        BOMCopierFree(copier);
+    }];
+
+    return temporaryFile;
+}
+
 String homeDirectoryPath()
 {
     return NSHomeDirectory();
 }
 
-String openTemporaryFile(const String& prefix, PlatformFileHandle& platformFileHandle)
+String openTemporaryFile(const String& prefix, PlatformFileHandle& platformFileHandle, const String& suffix)
 {
     platformFileHandle = invalidPlatformFileHandle;
 
@@ -70,12 +110,16 @@ String openTemporaryFile(const String& prefix, PlatformFileHandle& platformFileH
         temporaryFilePath.append('/');
 
     // Append the file name.
-    CString prefixUtf8 = prefix.utf8();
-    temporaryFilePath.append(prefixUtf8.data(), prefixUtf8.length());
+    CString prefixUTF8 = prefix.utf8();
+    temporaryFilePath.append(prefixUTF8.data(), prefixUTF8.length());
     temporaryFilePath.append("XXXXXX", 6);
+
+    // Append the file name suffix.
+    CString suffixUTF8 = suffix.utf8();
+    temporaryFilePath.append(suffixUTF8.data(), suffixUTF8.length());
     temporaryFilePath.append('\0');
 
-    platformFileHandle = mkstemp(temporaryFilePath.data());
+    platformFileHandle = mkstemps(temporaryFilePath.data(), suffixUTF8.length());
     if (platformFileHandle == invalidPlatformFileHandle)
         return String();
 
@@ -138,6 +182,34 @@ bool deleteNonEmptyDirectory(const String& path)
 {
     return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
 }
+
+#if PLATFORM(IOS_FAMILY)
+bool isSafeToUseMemoryMapForPath(const String& path)
+{
+    NSError *error = nil;
+    NSDictionary<NSFileAttributeKey, id> *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:&error];
+    if (error) {
+        LOG_ERROR("Unable to get path protection class");
+        return false;
+    }
+    if ([[attributes objectForKey:NSFileProtectionKey] isEqualToString:NSFileProtectionComplete]) {
+        LOG_ERROR("Path protection class is NSFileProtectionComplete, so it is not safe to use memory map");
+        return false;
+    }
+    return true;
+}
+
+void makeSafeToUseMemoryMapForPath(const String& path)
+{
+    if (isSafeToUseMemoryMapForPath(path))
+        return;
+
+    NSError *error = nil;
+    BOOL success = [[NSFileManager defaultManager] setAttributes:@{ NSFileProtectionKey: NSFileProtectionCompleteUnlessOpen } ofItemAtPath:path error:&error];
+    ASSERT(!error);
+    ASSERT_UNUSED(success, success);
+}
+#endif
 
 } // namespace FileSystemImpl
 } // namespace WTF

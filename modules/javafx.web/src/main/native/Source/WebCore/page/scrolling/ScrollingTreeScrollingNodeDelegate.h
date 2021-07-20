@@ -46,15 +46,15 @@ protected:
     WEBCORE_EXPORT const FloatSize& reachableContentsSize();
     WEBCORE_EXPORT const IntPoint& scrollOrigin() const;
 
-    FloatPoint scrollPosition() const { return m_scrollingNode.scrollPosition(); }
+    FloatPoint currentScrollPosition() const { return m_scrollingNode.currentScrollPosition(); }
     FloatPoint minimumScrollPosition() const { return m_scrollingNode.minimumScrollPosition(); }
     FloatPoint maximumScrollPosition() const { return m_scrollingNode.maximumScrollPosition(); }
 
     FloatSize scrollableAreaSize() const { return m_scrollingNode.scrollableAreaSize(); }
     FloatSize totalContentsSize() const { return m_scrollingNode.totalContentsSize(); }
 
-    bool hasEnabledHorizontalScrollbar() const { return m_scrollingNode.hasEnabledHorizontalScrollbar(); }
-    bool hasEnabledVerticalScrollbar() const { return m_scrollingNode.hasEnabledVerticalScrollbar(); }
+    bool allowsHorizontalScrolling() const { return m_scrollingNode.allowsHorizontalScrolling(); }
+    bool allowsVerticalScrolling() const { return m_scrollingNode.allowsVerticalScrolling(); }
 
     ScrollElasticity horizontalScrollElasticity() const { return m_scrollingNode.horizontalScrollElasticity(); }
     ScrollElasticity verticalScrollElasticity() const { return m_scrollingNode.verticalScrollElasticity(); }

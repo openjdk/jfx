@@ -32,11 +32,11 @@
 
 namespace JSC { namespace B3 {
 
-class JS_EXPORT_PRIVATE FenceValue : public Value {
+class JS_EXPORT_PRIVATE FenceValue final : public Value {
 public:
     static bool accepts(Kind kind) { return kind == Fence; }
 
-    ~FenceValue();
+    ~FenceValue() final;
 
     // The read/write heaps are reflected in the effects() of this value. The compiler may change
     // the lowering of a Fence based on the heaps. For example, if a fence does not write anything
@@ -72,14 +72,14 @@ public:
     HeapRange read { HeapRange::top() };
     HeapRange write { HeapRange::top() };
 
-protected:
-    Value* cloneImpl() const override;
+    B3_SPECIALIZE_VALUE_FOR_NO_CHILDREN
 
 private:
     friend class Procedure;
+    friend class Value;
 
+    static Opcode opcodeFromConstructor(Origin, HeapRange = HeapRange(), HeapRange = HeapRange()) { return Fence; }
     FenceValue(Origin origin, HeapRange read, HeapRange write);
-
     FenceValue(Origin origin);
 };
 

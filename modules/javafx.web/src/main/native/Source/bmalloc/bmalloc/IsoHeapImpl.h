@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,10 @@
 #pragma once
 
 #include "BMalloced.h"
+#include "IsoAllocator.h"
 #include "IsoDirectoryPage.h"
 #include "IsoTLSAllocatorEntry.h"
+#include "Packed.h"
 #include "PhysicalPageMap.h"
 
 namespace bmalloc {
@@ -36,25 +38,63 @@ class AllIsoHeaps;
 
 class BEXPORT IsoHeapImplBase {
     MAKE_BMALLOCED;
+    IsoHeapImplBase(const IsoHeapImplBase&) = delete;
+    IsoHeapImplBase& operator=(const IsoHeapImplBase&) = delete;
 public:
+    static constexpr unsigned maxAllocationFromShared = 8;
+    static constexpr unsigned maxAllocationFromSharedMask = (1U << maxAllocationFromShared) - 1U;
+    static_assert(maxAllocationFromShared <= bmalloc::alignment, "");
+    static_assert(isPowerOfTwo(maxAllocationFromShared), "");
+
     virtual ~IsoHeapImplBase();
 
     virtual void scavenge(Vector<DeferredDecommit>&) = 0;
+#if BUSE(PARTIAL_SCAVENGE)
     virtual void scavengeToHighWatermark(Vector<DeferredDecommit>&) = 0;
-    virtual size_t freeableMemory() = 0;
-    virtual size_t footprint() = 0;
+#endif
 
     void scavengeNow();
     static void finishScavenging(Vector<DeferredDecommit>&);
 
-protected:
-    IsoHeapImplBase();
+    void didCommit(void* ptr, size_t bytes);
+    void didDecommit(void* ptr, size_t bytes);
+
+    void isNowFreeable(void* ptr, size_t bytes);
+    void isNoLongerFreeable(void* ptr, size_t bytes);
+
+    size_t freeableMemory();
+    size_t footprint();
+
     void addToAllIsoHeaps();
 
-private:
+protected:
+    IsoHeapImplBase(Mutex&);
+
+    friend class IsoSharedPage;
     friend class AllIsoHeaps;
 
+public:
+    // It's almost always the caller's responsibility to grab the lock. This lock comes from the
+    // (*PerProcess<IsoTLSEntryHolder<IsoTLSDeallocatorEntry<Config>>>::get())->lock. That's pretty weird, and we don't
+    // try to disguise the fact that it's weird. We only do that because heaps in the same size class
+    // share the same deallocator log, so it makes sense for them to also share the same lock to
+    // amortize lock acquisition costs.
+    Mutex& lock;
+protected:
     IsoHeapImplBase* m_next { nullptr };
+    std::chrono::steady_clock::time_point m_lastSlowPathTime;
+    size_t m_footprint { 0 };
+    size_t m_freeableMemory { 0 };
+#if ENABLE_PHYSICAL_PAGE_MAP
+    PhysicalPageMap m_physicalPageMap;
+#endif
+    std::array<PackedAlignedPtr<uint8_t, bmalloc::alignment>, maxAllocationFromShared> m_sharedCells { };
+protected:
+    unsigned m_numberOfAllocationsFromSharedInOneCycle { 0 };
+    unsigned m_availableShared { maxAllocationFromSharedMask };
+    AllocationMode m_allocationMode { AllocationMode::Init };
+    bool m_isInlineDirectoryEligibleOrDecommitted { true };
+    static_assert(sizeof(m_availableShared) * 8 >= maxAllocationFromShared, "");
 };
 
 template<typename Config>
@@ -65,18 +105,16 @@ class IsoHeapImpl final : public IsoHeapImplBase {
 public:
     IsoHeapImpl();
 
-    EligibilityResult<Config> takeFirstEligible();
+    EligibilityResult<Config> takeFirstEligible(const LockHolder&);
 
     // Callbacks from directory.
-    void didBecomeEligible(IsoDirectory<Config, numPagesInInlineDirectory>*);
-    void didBecomeEligible(IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>*);
+    void didBecomeEligibleOrDecommited(const LockHolder&, IsoDirectory<Config, numPagesInInlineDirectory>*);
+    void didBecomeEligibleOrDecommited(const LockHolder&, IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>*);
 
     void scavenge(Vector<DeferredDecommit>&) override;
+#if BUSE(PARTIAL_SCAVENGE)
     void scavengeToHighWatermark(Vector<DeferredDecommit>&) override;
-
-    size_t freeableMemory() override;
-
-    size_t footprint() override;
+#endif
 
     unsigned allocatorOffset();
     unsigned deallocatorOffset();
@@ -86,44 +124,26 @@ public:
     unsigned numCommittedPages();
 
     template<typename Func>
-    void forEachDirectory(const Func&);
+    void forEachDirectory(const LockHolder&, const Func&);
 
     template<typename Func>
-    void forEachCommittedPage(const Func&);
+    void forEachCommittedPage(const LockHolder&, const Func&);
 
     // This is only accurate when all threads are scavenged. Otherwise it will overestimate.
     template<typename Func>
-    void forEachLiveObject(const Func&);
+    void forEachLiveObject(const LockHolder&, const Func&);
 
-    void didCommit(void* ptr, size_t bytes);
-    void didDecommit(void* ptr, size_t bytes);
-
-    void isNowFreeable(void* ptr, size_t bytes);
-    void isNoLongerFreeable(void* ptr, size_t bytes);
-
-    // It's almost always the caller's responsibility to grab the lock. This lock comes from the
-    // PerProcess<IsoTLSDeallocatorEntry<Config>>::get()->lock. That's pretty weird, and we don't
-    // try to disguise the fact that it's weird. We only do that because heaps in the same size class
-    // share the same deallocator log, so it makes sense for them to also share the same lock to
-    // amortize lock acquisition costs.
-    Mutex& lock;
+    AllocationMode updateAllocationMode();
+    void* allocateFromShared(const LockHolder&, bool abortOnFailure);
 
 private:
+    PackedPtr<IsoDirectoryPage<Config>> m_headDirectory { nullptr };
+    PackedPtr<IsoDirectoryPage<Config>> m_tailDirectory { nullptr };
+    PackedPtr<IsoDirectoryPage<Config>> m_firstEligibleOrDecommitedDirectory { nullptr };
     IsoDirectory<Config, numPagesInInlineDirectory> m_inlineDirectory;
-    IsoDirectoryPage<Config>* m_headDirectory { nullptr };
-    IsoDirectoryPage<Config>* m_tailDirectory { nullptr };
-    size_t m_footprint { 0 };
-    size_t m_freeableMemory { 0 };
-#if ENABLE_PHYSICAL_PAGE_MAP
-    PhysicalPageMap m_physicalPageMap;
-#endif
     unsigned m_nextDirectoryPageIndex { 1 }; // We start at 1 so that the high water mark being zero means we've only allocated in the inline directory since the last scavenge.
     unsigned m_directoryHighWatermark { 0 };
-
-    bool m_isInlineDirectoryEligible { true };
-    IsoDirectoryPage<Config>* m_firstEligibleDirectory { nullptr };
-
-    IsoTLSAllocatorEntry<Config> m_allocator;
+    IsoTLSEntryHolder<IsoTLSAllocatorEntry<Config>> m_allocator;
 };
 
 } // namespace bmalloc

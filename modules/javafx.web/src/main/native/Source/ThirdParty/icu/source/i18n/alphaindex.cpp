@@ -260,8 +260,7 @@ AlphabeticIndex::ImmutableIndex *AlphabeticIndex::buildImmutableIndex(UErrorCode
     // but that would be worth it only if this method is called multiple times,
     // or called after using the old-style bucket iterator API.
     LocalPointer<BucketList> immutableBucketList(createBucketList(errorCode));
-    LocalPointer<RuleBasedCollator> coll(
-        static_cast<RuleBasedCollator *>(collatorPrimaryOnly_->clone()));
+    LocalPointer<RuleBasedCollator> coll(collatorPrimaryOnly_->clone());
     if (immutableBucketList.isNull() || coll.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
@@ -511,8 +510,8 @@ BucketList *AlphabeticIndex::createBucketList(UErrorCode &errorCode) const {
                                           ces, errorCode) &&
                 current.charAt(current.length() - 1) != 0xFFFF /* !current.endsWith("\uffff") */) {
             // "AE-ligature" or "Sch" etc.
-            for (int32_t i = bucketList->size() - 2;; --i) {
-                Bucket *singleBucket = getBucket(*bucketList, i);
+            for (int32_t j = bucketList->size() - 2;; --j) {
+                Bucket *singleBucket = getBucket(*bucketList, j);
                 if (singleBucket->labelType_ != U_ALPHAINDEX_NORMAL) {
                     // There is no single-character bucket since the last
                     // underflow or inflow label.
@@ -608,8 +607,8 @@ BucketList *AlphabeticIndex::createBucketList(UErrorCode &errorCode) const {
     }
     // Do not call publicBucketList->setDeleter():
     // This vector shares its objects with the bucketList.
-    for (int32_t i = 0; i < bucketList->size(); ++i) {
-        bucket = getBucket(*bucketList, i);
+    for (int32_t j = 0; j < bucketList->size(); ++j) {
+        bucket = getBucket(*bucketList, j);
         if (bucket->displayBucket_ == NULL) {
             publicBucketList->addElement(bucket, errorCode);
         }
@@ -907,7 +906,7 @@ void AlphabeticIndex::init(const Locale *locale, UErrorCode &status) {
             return;
         }
     }
-    collatorPrimaryOnly_ = static_cast<RuleBasedCollator *>(collator_->clone());
+    collatorPrimaryOnly_ = collator_->clone();
     if (collatorPrimaryOnly_ == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
@@ -958,7 +957,7 @@ collatorComparator(const void *context, const void *left, const void *right) {
     }
     if (leftString == NULL) {
         return 1;
-    };
+    }
     if (rightString == NULL) {
         return -1;
     }

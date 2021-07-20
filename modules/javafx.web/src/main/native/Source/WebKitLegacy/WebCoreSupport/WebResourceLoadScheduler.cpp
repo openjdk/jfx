@@ -25,6 +25,7 @@
 #include "WebResourceLoadScheduler.h"
 
 #include "PingHandle.h"
+#include <WebCore/CachedResource.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FetchOptions.h>
@@ -88,9 +89,9 @@ WebResourceLoadScheduler::~WebResourceLoadScheduler()
 {
 }
 
-void WebResourceLoadScheduler::loadResource(DocumentLoader& documentLoader, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<WebCore::SubresourceLoader>&&)>&& completionHandler)
+void WebResourceLoadScheduler::loadResource(Frame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<WebCore::SubresourceLoader>&&)>&& completionHandler)
 {
-    SubresourceLoader::create(documentLoader, resource, WTFMove(request), options, [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::SubresourceLoader>&& loader) mutable {
+    SubresourceLoader::create(frame, resource, WTFMove(request), options, [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::SubresourceLoader>&& loader) mutable {
         if (loader)
             scheduleLoad(loader.get());
 #if PLATFORM(IOS_FAMILY)
@@ -111,13 +112,17 @@ void WebResourceLoadScheduler::loadResourceSynchronously(FrameLoader& frameLoade
     ResourceHandle::loadResourceSynchronously(frameLoader.networkingContext(), request, options.credentials == FetchOptions::Credentials::Omit ? StoredCredentialsPolicy::DoNotUse : StoredCredentialsPolicy::Use, error, response, data);
 }
 
-void WebResourceLoadScheduler::pageLoadCompleted(uint64_t /*webPageID*/)
+void WebResourceLoadScheduler::pageLoadCompleted(Page&)
 {
 }
 
-void WebResourceLoadScheduler::schedulePluginStreamLoad(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<WebCore::NetscapePlugInStreamLoader>&&)>&& completionHandler)
+void WebResourceLoadScheduler::browsingContextRemoved(Frame&)
 {
-    NetscapePlugInStreamLoader::create(documentLoader, client, WTFMove(request), [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::NetscapePlugInStreamLoader>&& loader) mutable {
+}
+
+void WebResourceLoadScheduler::schedulePluginStreamLoad(Frame& frame, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<WebCore::NetscapePlugInStreamLoader>&&)>&& completionHandler)
+{
+    NetscapePlugInStreamLoader::create(frame, client, WTFMove(request), [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::NetscapePlugInStreamLoader>&& loader) mutable {
         if (loader)
             scheduleLoad(loader.get());
         completionHandler(WTFMove(loader));
@@ -197,6 +202,15 @@ void WebResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
     }
 #endif
     scheduleServePendingRequests();
+}
+
+void WebResourceLoadScheduler::isResourceLoadFinished(CachedResource& resource, CompletionHandler<void(bool)>&& callback)
+{
+    if (!resource.loader()) {
+        callback(true);
+        return;
+    }
+    callback(!hostForURL(resource.loader()->url()));
 }
 
 void WebResourceLoadScheduler::setDefersLoading(ResourceLoader& loader, bool defers)

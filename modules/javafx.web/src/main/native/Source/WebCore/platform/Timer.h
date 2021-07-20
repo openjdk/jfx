@@ -52,12 +52,12 @@ public:
     WEBCORE_EXPORT void start(Seconds nextFireInterval, Seconds repeatInterval);
 
     void startRepeating(Seconds repeatInterval) { start(repeatInterval, repeatInterval); }
-    void startOneShot(Seconds interval) { start(interval, 0_s); }
+    void startOneShot(Seconds delay) { start(delay, 0_s); }
 
     WEBCORE_EXPORT void stop();
     bool isActive() const;
 
-    Seconds nextFireInterval() const;
+    WEBCORE_EXPORT Seconds nextFireInterval() const;
     Seconds nextUnalignedFireInterval() const;
     Seconds repeatInterval() const { return m_repeatInterval; }
 
@@ -96,7 +96,6 @@ private:
 
     MonotonicTime m_unalignedNextFireTime; // m_nextFireTime not considering alignment interval
     Seconds m_repeatInterval; // 0 if not repeating
-    bool m_wasDeleted { false };
 
     RefPtr<ThreadTimerHeapItem> m_heapItem;
     Ref<Thread> m_thread { Thread::current() };
@@ -110,6 +109,16 @@ private:
 class Timer : public TimerBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    static void schedule(Seconds delay, WTF::Function<void()>&& function)
+    {
+        auto* timer = new Timer([] { });
+        timer->m_function = [timer, function = WTFMove(function)] {
+            function();
+            delete timer;
+        };
+        timer->startOneShot(delay);
+    }
+
     template <typename TimerFiredClass, typename TimerFiredBaseClass>
     Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
         : m_function(std::bind(function, &object))
@@ -150,7 +159,7 @@ public:
     {
     }
 
-    DeferrableOneShotTimer(WTF::Function<void ()>&& function, Seconds delay)
+    DeferrableOneShotTimer(WTF::Function<void()>&& function, Seconds delay)
         : m_function(WTFMove(function))
         , m_delay(delay)
         , m_shouldRestartWhenTimerFires(false)

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,11 +22,7 @@
 #pragma once
 
 #include "Gradient.h"
-#include "SVGAnimatedBoolean.h"
-#include "SVGAnimatedEnumeration.h"
-#include "SVGAnimatedTransformList.h"
 #include "SVGElement.h"
-#include "SVGExternalResourcesRequired.h"
 #include "SVGNames.h"
 #include "SVGURIReference.h"
 #include "SVGUnitTypes.h"
@@ -73,7 +69,7 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
     }
 };
 
-class SVGGradientElement : public SVGElement, public SVGExternalResourcesRequired, public SVGURIReference {
+class SVGGradientElement : public SVGElement, public SVGURIReference {
     WTF_MAKE_ISO_ALLOCATED(SVGGradientElement);
 public:
     enum {
@@ -83,37 +79,31 @@ public:
         SVG_SPREADMETHOD_REPEAT = SVGSpreadMethodUnknown
     };
 
-    Vector<Gradient::ColorStop> buildStops();
+    Gradient::ColorStopVector buildStops();
 
-    using AttributeOwnerProxy = SVGAttributeOwnerProxyImpl<SVGGradientElement, SVGElement, SVGExternalResourcesRequired, SVGURIReference>;
-    static AttributeOwnerProxy::AttributeRegistry& attributeRegistry() { return AttributeOwnerProxy::attributeRegistry(); }
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGGradientElement, SVGElement, SVGURIReference>;
 
-    SVGSpreadMethodType spreadMethod() const { return m_spreadMethod.currentValue(attributeOwnerProxy()); }
-    SVGUnitTypes::SVGUnitType gradientUnits() const { return m_gradientUnits.currentValue(attributeOwnerProxy()); }
-    const SVGTransformListValues& gradientTransform() const { return m_gradientTransform.currentValue(attributeOwnerProxy()); }
+    SVGSpreadMethodType spreadMethod() const { return m_spreadMethod->currentValue<SVGSpreadMethodType>(); }
+    SVGUnitTypes::SVGUnitType gradientUnits() const { return m_gradientUnits->currentValue<SVGUnitTypes::SVGUnitType>(); }
+    const SVGTransformList& gradientTransform() const { return m_gradientTransform->currentValue(); }
 
-    RefPtr<SVGAnimatedEnumeration> spreadMethodAnimated() { return m_spreadMethod.animatedProperty(attributeOwnerProxy()); }
-    RefPtr<SVGAnimatedEnumeration> gradientUnitsAnimated() { return m_gradientUnits.animatedProperty(attributeOwnerProxy()); }
-    RefPtr<SVGAnimatedTransformList> gradientTransformAnimated() { return m_gradientTransform.animatedProperty(attributeOwnerProxy()); }
+    SVGAnimatedEnumeration& spreadMethodAnimated() { return m_spreadMethod; }
+    SVGAnimatedEnumeration& gradientUnitsAnimated() { return m_gradientUnits; }
+    SVGAnimatedTransformList& gradientTransformAnimated() { return m_gradientTransform; }
 
 protected:
     SVGGradientElement(const QualifiedName&, Document&);
 
-    static bool isKnownAttribute(const QualifiedName& attributeName) { return AttributeOwnerProxy::isKnownAttribute(attributeName); }
-    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
 private:
     bool needsPendingResourceHandling() const override { return false; }
     void childrenChanged(const ChildChange&) override;
 
-    const SVGAttributeOwnerProxy& attributeOwnerProxy() const override { return m_attributeOwnerProxy; }
-    static void registerAttributes();
-
-    AttributeOwnerProxy m_attributeOwnerProxy { *this };
-    SVGAnimatedEnumerationAttribute<SVGSpreadMethodType> m_spreadMethod { SVGSpreadMethodPad };
-    SVGAnimatedEnumerationAttribute<SVGUnitTypes::SVGUnitType> m_gradientUnits { SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX };
-    SVGAnimatedTransformListAttribute m_gradientTransform;
+    Ref<SVGAnimatedEnumeration> m_spreadMethod { SVGAnimatedEnumeration::create(this, SVGSpreadMethodPad) };
+    Ref<SVGAnimatedEnumeration> m_gradientUnits { SVGAnimatedEnumeration::create(this, SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX) };
+    Ref<SVGAnimatedTransformList> m_gradientTransform { SVGAnimatedTransformList::create(this) };
 };
 
 } // namespace WebCore

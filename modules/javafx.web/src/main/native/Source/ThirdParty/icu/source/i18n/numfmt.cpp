@@ -156,7 +156,6 @@ static const icu::number::impl::CldrPatternStyle gFormatCldrStyles[UNUM_FORMAT_S
 
 // Static hashtable cache of NumberingSystem objects used by NumberFormat
 static UHashtable * NumberingSystem_cache = NULL;
-static UMutex nscacheMutex = U_MUTEX_INITIALIZER;
 static icu::UInitOnce gNSCacheInitOnce = U_INITONCE_INITIALIZER;
 
 #if !UCONFIG_NO_SERVICE
@@ -570,7 +569,7 @@ NumberFormat::format(const Formattable& obj,
     if(arg.wasCurrency() && u_strcmp(iso, getCurrency())) {
       // trying to format a different currency.
       // Right now, we clone.
-      LocalPointer<NumberFormat> cloneFmt((NumberFormat*)this->clone());
+      LocalPointer<NumberFormat> cloneFmt(this->clone());
       cloneFmt->setCurrency(iso, status);
       // next line should NOT recurse, because n is numeric whereas obj was a wrapper around currency amount.
       return cloneFmt->format(*n, appendTo, pos, status);
@@ -625,7 +624,7 @@ NumberFormat::format(const Formattable& obj,
     if(arg.wasCurrency() && u_strcmp(iso, getCurrency())) {
       // trying to format a different currency.
       // Right now, we clone.
-      LocalPointer<NumberFormat> cloneFmt((NumberFormat*)this->clone());
+      LocalPointer<NumberFormat> cloneFmt(this->clone());
       cloneFmt->setCurrency(iso, status);
       // next line should NOT recurse, because n is numeric whereas obj was a wrapper around currency amount.
       return cloneFmt->format(*n, appendTo, posIter, status);
@@ -987,15 +986,19 @@ static UBool haveService() {
 URegistryKey U_EXPORT2
 NumberFormat::registerFactory(NumberFormatFactory* toAdopt, UErrorCode& status)
 {
-  ICULocaleService *service = getNumberFormatService();
-  if (service) {
-      NFFactory *tempnnf = new NFFactory(toAdopt);
-      if (tempnnf != NULL) {
-          return service->registerFactory(tempnnf, status);
-      }
-  }
-  status = U_MEMORY_ALLOCATION_ERROR;
-  return NULL;
+    if (U_FAILURE(status)) {
+        delete toAdopt;
+        return nullptr;
+    }
+    ICULocaleService *service = getNumberFormatService();
+    if (service) {
+        NFFactory *tempnnf = new NFFactory(toAdopt);
+        if (tempnnf != NULL) {
+            return service->registerFactory(tempnnf, status);
+        }
+    }
+    status = U_MEMORY_ALLOCATION_ERROR;
+    return NULL;
 }
 
 // -------------------------------------
@@ -1056,7 +1059,7 @@ NumberFormat::createInstance(const Locale& loc, UNumberFormatStyle kind, UErrorC
     if (U_FAILURE(status)) {
         return NULL;
     }
-    NumberFormat *result = static_cast<NumberFormat *>((*shared)->clone());
+    NumberFormat *result = (*shared)->clone();
     shared->removeRef();
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -1326,13 +1329,13 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
 
         // if the locale has "@compat=host", create a host-specific NumberFormat
         if (U_SUCCESS(status) && count > 0 && uprv_strcmp(buffer, "host") == 0) {
-            Win32NumberFormat *f = NULL;
             UBool curr = TRUE;
 
             switch (style) {
             case UNUM_DECIMAL:
                 curr = FALSE;
                 // fall-through
+                U_FALLTHROUGH;
 
             case UNUM_CURRENCY:
             case UNUM_CURRENCY_ISO: // do not support plural formatting here
@@ -1340,14 +1343,13 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             case UNUM_CURRENCY_ACCOUNTING:
             case UNUM_CASH_CURRENCY:
             case UNUM_CURRENCY_STANDARD:
-                f = new Win32NumberFormat(desiredLocale, curr, status);
-
+            {
+                LocalPointer<Win32NumberFormat> f(new Win32NumberFormat(desiredLocale, curr, status), status);
                 if (U_SUCCESS(status)) {
-                    return f;
+                    return f.orphan();
                 }
-
-                delete f;
-                break;
+            }
+            break;
             default:
                 break;
             }
@@ -1364,6 +1366,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         // TODO: Bad hash key usage, see ticket #8504.
         int32_t hashKey = desiredLocale.hashCode();
 
+        static UMutex nscacheMutex;
         Mutex lock(&nscacheMutex);
         ns = (NumberingSystem *)uhash_iget(NumberingSystem_cache, hashKey);
         if (ns == NULL) {
@@ -1417,8 +1420,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         }
     }
 
-
-    NumberFormat *f;
+    LocalPointer<NumberFormat> f;
     if (ns->isAlgorithmic()) {
         UnicodeString nsDesc;
         UnicodeString nsRuleSetGroup;
@@ -1453,7 +1455,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             return NULL;
         }
         r->setDefaultRuleSet(nsRuleSetName,status);
-        f = r;
+        f.adoptInstead(r);
     } else {
         // replace single currency sign in the pattern with double currency sign
         // if the style is UNUM_CURRENCY_ISO
@@ -1462,9 +1464,22 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
                                    UnicodeString(TRUE, gDoubleCurrencySign, 2));
         }
 
-        // "new DecimalFormat()" does not adopt the symbols if its memory allocation fails.
-        DecimalFormatSymbols *syms = symbolsToAdopt.orphan();
-        DecimalFormat* df = new DecimalFormat(pattern, syms, style, status);
+        // "new DecimalFormat()" does not adopt the symbols argument if its memory allocation fails.
+        // So we can't use adoptInsteadAndCheckErrorCode as we need to know if the 'new' failed.
+        DecimalFormatSymbols *syms = symbolsToAdopt.getAlias();
+        LocalPointer<DecimalFormat> df(new DecimalFormat(pattern, syms, style, status));
+
+        if (df.isValid()) {
+            // if the DecimalFormat object was successfully new'ed, then it will own symbolsToAdopt, even if the status is a failure.
+            symbolsToAdopt.orphan();
+        }
+        else {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+
+        if (U_FAILURE(status)) {
+            return nullptr;
+        }
 
         // if it is cash currency style, setCurrencyUsage with usage
         if (style == UNUM_CASH_CURRENCY){
@@ -1472,25 +1487,18 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         }
 
         if (U_FAILURE(status)) {
-            delete df;
-            return NULL;
+            return nullptr;
         }
 
-        f = df;
-        if (f == NULL) {
-            delete syms;
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
-        }
+        f.adoptInstead(df.orphan());
     }
 
     f->setLocaleIDs(ures_getLocaleByType(ownedResource.getAlias(), ULOC_VALID_LOCALE, &status),
                     ures_getLocaleByType(ownedResource.getAlias(), ULOC_ACTUAL_LOCALE, &status));
     if (U_FAILURE(status)) {
-        delete f;
         return NULL;
     }
-    return f;
+    return f.orphan();
 }
 
 /**

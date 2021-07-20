@@ -33,6 +33,7 @@
 #include "runtime_object.h"
 #include <JavaScriptCore/Error.h>
 #include <JavaScriptCore/FunctionPrototype.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 
 using namespace WebCore;
 
@@ -42,22 +43,23 @@ using namespace Bindings;
 
 WEBCORE_EXPORT const ClassInfo RuntimeMethod::s_info = { "RuntimeMethod", &InternalFunction::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeMethod) };
 
-static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(callRuntimeMethod);
+static JSC_DECLARE_CUSTOM_GETTER(methodLengthGetter);
 
-RuntimeMethod::RuntimeMethod(JSGlobalObject* globalObject, Structure* structure, Method* method)
+RuntimeMethod::RuntimeMethod(VM& vm, Structure* structure, Method* method)
     // Callers will need to pass in the right global object corresponding to this native object "method".
-    : InternalFunction(globalObject->vm(), structure, callRuntimeMethod, nullptr)
+    : InternalFunction(vm, structure, callRuntimeMethod, nullptr)
     , m_method(method)
 {
 }
 
 void RuntimeMethod::finishCreation(VM& vm, const String& ident)
 {
-    Base::finishCreation(vm, ident);
+    Base::finishCreation(vm, 0, ident);
     ASSERT(inherits(vm, info()));
 }
 
-EncodedJSValue RuntimeMethod::lengthGetter(ExecState* exec, EncodedJSValue thisValue, PropertyName)
+JSC_DEFINE_CUSTOM_GETTER(methodLengthGetter, (JSGlobalObject* exec, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -65,15 +67,15 @@ EncodedJSValue RuntimeMethod::lengthGetter(ExecState* exec, EncodedJSValue thisV
     RuntimeMethod* thisObject = jsDynamicCast<RuntimeMethod*>(vm, JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(exec, scope);
-    return JSValue::encode(jsNumber(thisObject->m_method->numParameters()));
+    return JSValue::encode(jsNumber(thisObject->method()->numParameters()));
 }
 
-bool RuntimeMethod::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
+bool RuntimeMethod::getOwnPropertySlot(JSObject* object, JSGlobalObject* exec, PropertyName propertyName, PropertySlot &slot)
 {
     VM& vm = exec->vm();
     RuntimeMethod* thisObject = jsCast<RuntimeMethod*>(object);
     if (propertyName == vm.propertyNames->length) {
-        slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, thisObject->lengthGetter);
+        slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, methodLengthGetter);
         return true;
     }
 
@@ -85,35 +87,35 @@ IsoSubspace* RuntimeMethod::subspaceForImpl(VM& vm)
     return &static_cast<JSVMClientData*>(vm.clientData)->runtimeMethodSpace();
 }
 
-static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(callRuntimeMethod, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    RuntimeMethod* method = static_cast<RuntimeMethod*>(exec->jsCallee());
+    RuntimeMethod* method = static_cast<RuntimeMethod*>(callFrame->jsCallee());
 
     if (!method->method())
         return JSValue::encode(jsUndefined());
 
     RefPtr<Instance> instance;
 
-    JSValue thisValue = exec->thisValue();
+    JSValue thisValue = callFrame->thisValue();
     if (thisValue.inherits<RuntimeObject>(vm)) {
         RuntimeObject* runtimeObject = static_cast<RuntimeObject*>(asObject(thisValue));
         instance = runtimeObject->getInternalInstance();
         if (!instance)
-            return JSValue::encode(RuntimeObject::throwInvalidAccessError(exec, scope));
+            return JSValue::encode(throwRuntimeObjectInvalidAccessError(globalObject, scope));
     } else {
         // Calling a runtime object of a plugin element?
         if (thisValue.inherits<JSHTMLElement>(vm))
             instance = pluginInstance(jsCast<JSHTMLElement*>(asObject(thisValue))->wrapped());
         if (!instance)
-            return throwVMTypeError(exec, scope);
+            return throwVMTypeError(globalObject, scope);
     }
     ASSERT(instance);
 
     instance->begin();
-    JSValue result = instance->invokeMethod(exec, method);
+    JSValue result = instance->invokeMethod(globalObject, callFrame, method);
     instance->end();
     return JSValue::encode(result);
 }

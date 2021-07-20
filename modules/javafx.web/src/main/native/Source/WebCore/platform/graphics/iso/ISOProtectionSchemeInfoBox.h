@@ -32,7 +32,7 @@ namespace WebCore {
 class ISOSchemeTypeBox;
 class ISOSchemeInformationBox;
 
-class WEBCORE_EXPORT ISOProtectionSchemeInfoBox : public ISOBox {
+class WEBCORE_EXPORT ISOProtectionSchemeInfoBox final : public ISOBox {
 public:
     static FourCC boxTypeName() { return "sinf"; }
 
@@ -40,7 +40,7 @@ public:
     const ISOSchemeTypeBox* schemeTypeBox() const { return m_schemeTypeBox.get(); }
     const ISOSchemeInformationBox* schemeInformationBox() const { return m_schemeInformationBox.get(); }
 
-protected:
+private:
     bool parse(JSC::DataView&, unsigned& offset) override;
 
     ISOOriginalFormatBox m_originalFormatBox;

@@ -32,7 +32,7 @@
 namespace JSC {
 
 template<typename T> inline Weak<T>::Weak(T* cell, WeakHandleOwner* weakOwner, void* context)
-    : m_impl(cell ? WeakSet::allocate(cell, weakOwner, context) : 0)
+    : m_impl(cell ? WeakSet::allocate(cell, weakOwner, context) : nullptr)
 {
 }
 
@@ -41,7 +41,7 @@ template<typename T> inline bool Weak<T>::isHashTableDeletedValue() const
     return m_impl == hashTableDeletedValue();
 }
 
-template<typename T> inline Weak<T>::Weak(typename Weak<T>::HashTableDeletedValueTag)
+template<typename T> inline Weak<T>::Weak(WTF::HashTableDeletedValueType)
     : m_impl(hashTableDeletedValue())
 {
 }

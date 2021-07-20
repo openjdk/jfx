@@ -29,10 +29,14 @@
 #include <algorithm>
 #include <string.h>
 #include <wtf/Assertions.h>
-#include <wtf/FastMalloc.h>
-#include <wtf/StdLibExtras.h>
+#include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WTF {
+
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BitVector);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BitVector);
 
 void BitVector::setSlow(const BitVector& other)
 {
@@ -76,13 +80,13 @@ BitVector::OutOfLineBits* BitVector::OutOfLineBits::create(size_t numBits)
 {
     numBits = (numBits + bitsInPointer() - 1) & ~(static_cast<size_t>(bitsInPointer()) - 1);
     size_t size = sizeof(OutOfLineBits) + sizeof(uintptr_t) * (numBits / bitsInPointer());
-    OutOfLineBits* result = new (NotNull, fastMalloc(size)) OutOfLineBits(numBits);
+    OutOfLineBits* result = new (NotNull, BitVectorMalloc::malloc(size)) OutOfLineBits(numBits);
     return result;
 }
 
 void BitVector::OutOfLineBits::destroy(OutOfLineBits* outOfLineBits)
 {
-    fastFree(outOfLineBits);
+    BitVectorMalloc::free(outOfLineBits);
 }
 
 void BitVector::resizeOutOfLine(size_t numBits)
@@ -179,6 +183,17 @@ size_t BitVector::bitCountSlow() const
     for (unsigned i = bits->numWords(); i--;)
         result += bitCount(bits->bits()[i]);
     return result;
+}
+
+bool BitVector::isEmptySlow() const
+{
+    ASSERT(!isInline());
+    const OutOfLineBits* bits = outOfLineBits();
+    for (unsigned i = bits->numWords(); i--;) {
+        if (bits->bits()[i])
+            return false;
+    }
+    return true;
 }
 
 bool BitVector::equalsSlowCase(const BitVector& other) const

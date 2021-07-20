@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +30,7 @@
 #include "JSModuleEnvironment.h"
 
 #include "AbstractModuleRecord.h"
-#include "Interpreter.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
 
 namespace JSC {
 
@@ -67,37 +65,41 @@ void JSModuleEnvironment::finishCreation(VM& vm, JSValue initialValue, AbstractM
     this->moduleRecordSlot().set(vm, this, moduleRecord);
 }
 
-void JSModuleEnvironment::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSModuleEnvironment::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.appendValues(thisObject->variables(), thisObject->symbolTable()->scopeSize());
     visitor.append(thisObject->moduleRecordSlot());
 }
 
-bool JSModuleEnvironment::getOwnPropertySlot(JSObject* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+DEFINE_VISIT_CHILDREN(JSModuleEnvironment);
+
+bool JSModuleEnvironment::getOwnPropertySlot(JSObject* cell, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
-    AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(exec, Identifier::fromUid(exec, propertyName.uid()));
+    AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(globalObject, Identifier::fromUid(vm, propertyName.uid()));
     RETURN_IF_EXCEPTION(scope, false);
     if (resolution.type == AbstractModuleRecord::Resolution::Type::Resolved) {
         // When resolveImport resolves the resolution, the imported module environment must have the binding.
         JSModuleEnvironment* importedModuleEnvironment = resolution.moduleRecord->moduleEnvironment();
         PropertySlot redirectSlot(importedModuleEnvironment, PropertySlot::InternalMethodType::Get);
-        bool result = importedModuleEnvironment->methodTable(vm)->getOwnPropertySlot(importedModuleEnvironment, exec, resolution.localName, redirectSlot);
+        bool result = importedModuleEnvironment->methodTable(vm)->getOwnPropertySlot(importedModuleEnvironment, globalObject, resolution.localName, redirectSlot);
         ASSERT_UNUSED(result, result);
         ASSERT(redirectSlot.isValue());
-        JSValue value = redirectSlot.getValue(exec, resolution.localName);
+        JSValue value = redirectSlot.getValue(globalObject, resolution.localName);
         scope.assertNoException();
         slot.setValue(thisObject, redirectSlot.attributes(), value);
         return true;
     }
-    return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);
+    return Base::getOwnPropertySlot(thisObject, globalObject, propertyName, slot);
 }
 
-void JSModuleEnvironment::getOwnNonIndexPropertyNames(JSObject* cell, ExecState* exec, PropertyNameArray& propertyNamesArray, EnumerationMode mode)
+void JSModuleEnvironment::getOwnSpecialPropertyNames(JSObject* cell, JSGlobalObject*, PropertyNameArray& propertyNamesArray, DontEnumPropertiesMode)
 {
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     if (propertyNamesArray.includeStringProperties()) {
@@ -107,37 +109,36 @@ void JSModuleEnvironment::getOwnNonIndexPropertyNames(JSObject* cell, ExecState*
                 propertyNamesArray.add(importEntry.localName);
         }
     }
-    return Base::getOwnNonIndexPropertyNames(thisObject, exec, propertyNamesArray, mode);
 }
 
-bool JSModuleEnvironment::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+bool JSModuleEnvironment::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     // All imported bindings are immutable.
-    AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(exec, Identifier::fromUid(exec, propertyName.uid()));
+    AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(globalObject, Identifier::fromUid(vm, propertyName.uid()));
     RETURN_IF_EXCEPTION(scope, false);
     if (resolution.type == AbstractModuleRecord::Resolution::Type::Resolved) {
-        throwTypeError(exec, scope, ReadonlyPropertyWriteError);
+        throwTypeError(globalObject, scope, ReadonlyPropertyWriteError);
         return false;
     }
-    RELEASE_AND_RETURN(scope, Base::put(thisObject, exec, propertyName, value, slot));
+    RELEASE_AND_RETURN(scope, Base::put(thisObject, globalObject, propertyName, value, slot));
 }
 
-bool JSModuleEnvironment::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
+bool JSModuleEnvironment::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     // All imported bindings are immutable.
-    AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(exec, Identifier::fromUid(exec, propertyName.uid()));
+    AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(globalObject, Identifier::fromUid(vm, propertyName.uid()));
     RETURN_IF_EXCEPTION(scope, false);
     if (resolution.type == AbstractModuleRecord::Resolution::Type::Resolved)
         return false;
-    return Base::deleteProperty(thisObject, exec, propertyName);
+    return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
 } // namespace JSC

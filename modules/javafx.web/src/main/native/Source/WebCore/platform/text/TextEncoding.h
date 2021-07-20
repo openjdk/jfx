@@ -27,9 +27,11 @@
 
 #include <pal/text/UnencodableHandling.h>
 #include <wtf/URL.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringView.h>
 
 namespace WebCore {
+
+enum class NFCNormalize : bool { No, Yes };
 
 class TextEncoding : public WTF::URLTextEncoding {
 public:
@@ -48,8 +50,8 @@ public:
 
     WEBCORE_EXPORT String decode(const char*, size_t length, bool stopOnError, bool& sawError) const;
     String decode(const char*, size_t length) const;
-    WEBCORE_EXPORT Vector<uint8_t> encode(StringView, UnencodableHandling) const;
-    Vector<uint8_t> encodeForURLParsing(StringView string) const final { return encode(string, UnencodableHandling::URLEncodedEntities); }
+    WEBCORE_EXPORT Vector<uint8_t> encode(StringView, UnencodableHandling, NFCNormalize = NFCNormalize::Yes) const;
+    Vector<uint8_t> encodeForURLParsing(StringView string) const final { return encode(string, UnencodableHandling::URLEncodedEntities, NFCNormalize::No); }
 
     UChar backslashAsCurrencySymbol() const;
     bool isByteBasedEncoding() const { return !isNonByteBasedEncoding(); }
@@ -75,7 +77,7 @@ WEBCORE_EXPORT const TextEncoding& WindowsLatin1Encoding();
 // Unescapes the given string using URL escaping rules.
 // DANGER: If the URL has "%00" in it,
 // the resulting string will have embedded null characters!
-WEBCORE_EXPORT String decodeURLEscapeSequences(const String&, const TextEncoding& = UTF8Encoding());
+WEBCORE_EXPORT String decodeURLEscapeSequences(StringView, const TextEncoding& = UTF8Encoding());
 
 inline String TextEncoding::decode(const char* characters, size_t length) const
 {

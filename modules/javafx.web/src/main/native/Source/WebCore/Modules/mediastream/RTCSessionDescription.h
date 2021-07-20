@@ -39,14 +39,16 @@
 
 namespace WebCore {
 
-class RTCSessionDescription : public RefCounted<RTCSessionDescription>, public ScriptWrappable {
-public:
+struct RTCSessionDescriptionInit;
 
+class RTCSessionDescription final : public RefCounted<RTCSessionDescription>, public ScriptWrappable {
+    WTF_MAKE_ISO_ALLOCATED(RTCSessionDescription);
+public:
     struct Init {
         RTCSdpType type;
         String sdp;
     };
-    static Ref<RTCSessionDescription> create(Init&&);
+    static Ref<RTCSessionDescription> create(RTCSessionDescriptionInit&&);
     static Ref<RTCSessionDescription> create(RTCSdpType, String&& sdp);
 
     RTCSdpType type() const { return m_type; }

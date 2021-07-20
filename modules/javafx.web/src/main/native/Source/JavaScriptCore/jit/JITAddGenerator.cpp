@@ -28,13 +28,12 @@
 
 #include "ArithProfile.h"
 #include "JITMathIC.h"
-#include "LinkBuffer.h"
 
 #if ENABLE(JIT)
 
 namespace JSC {
 
-JITMathICInlineResult JITAddGenerator::generateInline(CCallHelpers& jit, MathICGenerationState& state, const ArithProfile* arithProfile)
+JITMathICInlineResult JITAddGenerator::generateInline(CCallHelpers& jit, MathICGenerationState& state, const BinaryArithProfile* arithProfile)
 {
     // We default to speculating int32.
     ObservedType lhs = ObservedType().withInt32();
@@ -73,7 +72,7 @@ JITMathICInlineResult JITAddGenerator::generateInline(CCallHelpers& jit, MathICG
     return JITMathICInlineResult::GenerateFullSnippet;
 }
 
-bool JITAddGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList& endJumpList, CCallHelpers::JumpList& slowPathJumpList, const ArithProfile* arithProfile, bool shouldEmitProfiling)
+bool JITAddGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList& endJumpList, CCallHelpers::JumpList& slowPathJumpList, const BinaryArithProfile* arithProfile, bool shouldEmitProfiling)
 {
     ASSERT(m_scratchGPR != InvalidGPRReg);
     ASSERT(m_scratchGPR != m_left.payloadGPR());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -223,20 +223,20 @@
 }
 
 
-+ (jmethodID)ApplicationNotifyQuitMethod
++ (jmethodID)ApplicationNotifyWillQuitMethod
 {
-    static jmethodID _ApplicationNotifyQuitMethod = NULL;
-    if (_ApplicationNotifyQuitMethod == NULL)
+    static jmethodID _ApplicationNotifyWillQuitMethod = NULL;
+    if (_ApplicationNotifyWillQuitMethod == NULL)
     {
         GET_MAIN_JENV;
-        _ApplicationNotifyQuitMethod = (*env)->GetMethodID(env, [GlassHelper ApplicationClass], "notifyQuit", "()V");
+        _ApplicationNotifyWillQuitMethod = (*env)->GetMethodID(env, [GlassHelper ApplicationClass], "notifyWillQuit", "()V");
         GLASS_CHECK_EXCEPTION(env);
     }
-    if (_ApplicationNotifyQuitMethod == NULL)
+    if (_ApplicationNotifyWillQuitMethod == NULL)
     {
-        NSLog(@"GlassHelper error: _ApplicationNotifyQuitMethod == NULL");
+        NSLog(@"GlassHelper error: _ApplicationNotifyWillQuitMethod == NULL");
     }
-    return _ApplicationNotifyQuitMethod;
+    return _ApplicationNotifyWillQuitMethod;
 }
 
 

@@ -33,11 +33,11 @@
 
 namespace JSC { namespace B3 {
 
-class SwitchValue : public Value {
+class SwitchValue final : public Value {
 public:
     static bool accepts(Kind kind) { return kind == Switch; }
 
-    ~SwitchValue();
+    ~SwitchValue() final;
 
     // numCaseValues() + 1 == numSuccessors().
     unsigned numCaseValues() const { return m_values.size(); }
@@ -62,16 +62,18 @@ public:
     JS_EXPORT_PRIVATE void setFallThrough(const FrequentedBlock&);
     JS_EXPORT_PRIVATE void appendCase(const SwitchCase&);
 
-    void dumpSuccessors(const BasicBlock*, PrintStream&) const override;
+    void dumpSuccessors(const BasicBlock*, PrintStream&) const final;
 
-protected:
-    void dumpMeta(CommaPrinter&, PrintStream&) const override;
-
-    Value* cloneImpl() const override;
+    B3_SPECIALIZE_VALUE_FOR_FIXED_CHILDREN(1)
+    B3_SPECIALIZE_VALUE_FOR_FINAL_SIZE_FIXED_CHILDREN
 
 private:
-    friend class Procedure;
+    void dumpMeta(CommaPrinter&, PrintStream&) const final;
 
+    friend class Procedure;
+    friend class Value;
+
+    static Opcode opcodeFromConstructor(Origin, Value*) { return Switch; }
     JS_EXPORT_PRIVATE SwitchValue(Origin, Value* child);
 
     Vector<int64_t> m_values;

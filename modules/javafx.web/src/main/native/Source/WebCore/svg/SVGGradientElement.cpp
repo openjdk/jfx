@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,7 +29,6 @@
 #include "RenderSVGResourceRadialGradient.h"
 #include "SVGNames.h"
 #include "SVGStopElement.h"
-#include "SVGTransformListValues.h"
 #include "SVGTransformable.h"
 #include "StyleResolver.h"
 #include <wtf/IsoMallocInlines.h>
@@ -41,54 +40,44 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGradientElement);
 
 SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGURIReference(this)
 {
-    registerAttributes();
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<SVGNames::spreadMethodAttr, SVGSpreadMethodType, &SVGGradientElement::m_spreadMethod>();
+        PropertyRegistry::registerProperty<SVGNames::gradientUnitsAttr, SVGUnitTypes::SVGUnitType, &SVGGradientElement::m_gradientUnits>();
+        PropertyRegistry::registerProperty<SVGNames::gradientTransformAttr, &SVGGradientElement::m_gradientTransform>();
+    });
 }
 
-void SVGGradientElement::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::spreadMethodAttr, SVGSpreadMethodType, &SVGGradientElement::m_spreadMethod>();
-    registry.registerAttribute<SVGNames::gradientUnitsAttr, SVGUnitTypes::SVGUnitType, &SVGGradientElement::m_gradientUnits>();
-    registry.registerAttribute<SVGNames::gradientTransformAttr, &SVGGradientElement::m_gradientTransform>();
-}
-
-void SVGGradientElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGGradientElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::gradientUnitsAttr) {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
         if (propertyValue > 0)
-            m_gradientUnits.setValue(propertyValue);
+            m_gradientUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         return;
     }
 
     if (name == SVGNames::gradientTransformAttr) {
-        SVGTransformListValues newList;
-        newList.parse(value);
-        m_gradientTransform.detachAnimatedListWrappers(attributeOwnerProxy(), newList.size());
-        m_gradientTransform.setValue(WTFMove(newList));
+        m_gradientTransform->baseVal()->parse(value);
         return;
     }
 
     if (name == SVGNames::spreadMethodAttr) {
         auto propertyValue = SVGPropertyTraits<SVGSpreadMethodType>::fromString(value);
         if (propertyValue > 0)
-            m_spreadMethod.setValue(propertyValue);
+            m_spreadMethod->setBaseValInternal<SVGSpreadMethodType>(propertyValue);
         return;
     }
 
     SVGElement::parseAttribute(name, value);
     SVGURIReference::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGGradientElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (isKnownAttribute(attrName) || SVGURIReference::isKnownAttribute(attrName)) {
+    if (PropertyRegistry::isKnownAttribute(attrName) || SVGURIReference::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         if (RenderObject* object = renderer())
             object->setNeedsLayout();
@@ -102,29 +91,22 @@ void SVGGradientElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser)
+    if (change.source == ChildChange::Source::Parser)
         return;
 
     if (RenderObject* object = renderer())
         object->setNeedsLayout();
 }
 
-Vector<Gradient::ColorStop> SVGGradientElement::buildStops()
+Gradient::ColorStopVector SVGGradientElement::buildStops()
 {
-    Vector<Gradient::ColorStop> stops;
+    Gradient::ColorStopVector stops;
     float previousOffset = 0.0f;
-
     for (auto& stop : childrenOfType<SVGStopElement>(*this)) {
-        const Color& color = stop.stopColorIncludingOpacity();
-
-        // Figure out right monotonic offset.
-        float offset = stop.offset();
-        offset = std::min(std::max(previousOffset, offset), 1.0f);
-        previousOffset = offset;
-
-        stops.append(Gradient::ColorStop(offset, color));
+        auto monotonicallyIncreasingOffset = std::clamp(stop.offset(), previousOffset, 1.0f);
+        previousOffset = monotonicallyIncreasingOffset;
+        stops.append({ monotonicallyIncreasingOffset, stop.stopColorIncludingOpacity() });
     }
-
     return stops;
 }
 

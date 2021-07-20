@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,23 +29,22 @@
 #if ENABLE(JIT)
 
 #include "CCallHelpers.h"
+#include "CacheableIdentifierInlines.h"
 #include "CallLinkInfo.h"
-#include "DOMJITGetterSetter.h"
 #include "DirectArguments.h"
 #include "GetterSetter.h"
 #include "GetterSetterAccessCase.h"
-#include "HeapInlines.h"
 #include "InstanceOfAccessCase.h"
 #include "IntrinsicGetterAccessCase.h"
-#include "JSCJSValueInlines.h"
+#include "JSCInlines.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleNamespaceObject.h"
+#include "LLIntThunks.h"
 #include "LinkBuffer.h"
 #include "ModuleNamespaceAccessCase.h"
 #include "PolymorphicAccess.h"
 #include "ScopedArguments.h"
 #include "ScratchRegisterAllocator.h"
-#include "SlotVisitorInlines.h"
 #include "StructureStubInfo.h"
 #include "SuperSampler.h"
 #include "ThunkGenerators.h"
@@ -53,23 +52,29 @@
 namespace JSC {
 
 namespace AccessCaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
-AccessCase::AccessCase(VM& vm, JSCell* owner, AccessType type, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
+
+AccessCase::AccessCase(VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
     : m_type(type)
     , m_offset(offset)
     , m_polyProtoAccessChain(WTFMove(prototypeAccessChain))
+    , m_identifier(identifier)
 {
     m_structure.setMayBeNull(vm, owner, structure);
     m_conditionSet = conditionSet;
+    RELEASE_ASSERT(m_conditionSet.isValid());
 }
 
-std::unique_ptr<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+std::unique_ptr<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
 {
     switch (type) {
     case InHit:
     case InMiss:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
         break;
     case ArrayLength:
     case StringLength:
@@ -78,17 +83,33 @@ std::unique_ptr<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType
     case ModuleNamespaceLoad:
     case Replace:
     case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
         RELEASE_ASSERT(!prototypeAccessChain);
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     };
 
-    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, type, offset, structure, conditionSet, WTFMove(prototypeAccessChain)));
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, type, identifier, offset, structure, conditionSet, WTFMove(prototypeAccessChain)));
 }
 
-std::unique_ptr<AccessCase> AccessCase::create(
-    VM& vm, JSCell* owner, PropertyOffset offset, Structure* oldStructure, Structure* newStructure,
+std::unique_ptr<AccessCase> AccessCase::createTransition(
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* oldStructure, Structure* newStructure,
     const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
 {
     RELEASE_ASSERT(oldStructure == newStructure->previousID());
@@ -101,7 +122,27 @@ std::unique_ptr<AccessCase> AccessCase::create(
         return nullptr;
     }
 
-    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, Transition, offset, newStructure, conditionSet, WTFMove(prototypeAccessChain)));
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, Transition, identifier, offset, newStructure, conditionSet, WTFMove(prototypeAccessChain)));
+}
+
+std::unique_ptr<AccessCase> AccessCase::createDelete(
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* oldStructure, Structure* newStructure)
+{
+    RELEASE_ASSERT(oldStructure == newStructure->previousID());
+    ASSERT(!newStructure->outOfLineCapacity() || oldStructure->outOfLineCapacity());
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, Delete, identifier, offset, newStructure, { }, { }));
+}
+
+std::unique_ptr<AccessCase> AccessCase::createCheckPrivateBrand(VM& vm, JSCell* owner, CacheableIdentifier identifier, Structure* structure)
+{
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, CheckPrivateBrand, identifier, invalidOffset, structure, { }, { }));
+}
+
+std::unique_ptr<AccessCase> AccessCase::createSetPrivateBrand(
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, Structure* oldStructure, Structure* newStructure)
+{
+    RELEASE_ASSERT(oldStructure == newStructure->previousID());
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, SetPrivateBrand, identifier, invalidOffset, newStructure, { }, { }));
 }
 
 AccessCase::~AccessCase()
@@ -109,23 +150,28 @@ AccessCase::~AccessCase()
 }
 
 std::unique_ptr<AccessCase> AccessCase::fromStructureStubInfo(
-    VM& vm, JSCell* owner, StructureStubInfo& stubInfo)
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, StructureStubInfo& stubInfo)
 {
-    switch (stubInfo.cacheType) {
+    switch (stubInfo.cacheType()) {
     case CacheType::GetByIdSelf:
-        return ProxyableAccessCase::create(vm, owner, Load, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
+        RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        return ProxyableAccessCase::create(vm, owner, Load, identifier, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
 
     case CacheType::PutByIdReplace:
-        return AccessCase::create(vm, owner, Replace, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
+        RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        return AccessCase::create(vm, owner, Replace, identifier, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
 
     case CacheType::InByIdSelf:
-        return AccessCase::create(vm, owner, InHit, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
+        RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        return AccessCase::create(vm, owner, InHit, identifier, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
 
     case CacheType::ArrayLength:
-        return AccessCase::create(vm, owner, AccessCase::ArrayLength);
+        RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        return AccessCase::create(vm, owner, AccessCase::ArrayLength, identifier);
 
     case CacheType::StringLength:
-        return AccessCase::create(vm, owner, AccessCase::StringLength);
+        RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        return AccessCase::create(vm, owner, AccessCase::StringLength, identifier);
 
     default:
         return nullptr;
@@ -149,7 +195,7 @@ std::unique_ptr<AccessCase> AccessCase::clone() const
     return result;
 }
 
-Vector<WatchpointSet*, 2> AccessCase::commit(VM& vm, const Identifier& ident)
+Vector<WatchpointSet*, 2> AccessCase::commit(VM& vm)
 {
     // It's fine to commit something that is already committed. That arises when we switch to using
     // newly allocated watchpoints. When it happens, it's not efficient - but we think that's OK
@@ -158,23 +204,27 @@ Vector<WatchpointSet*, 2> AccessCase::commit(VM& vm, const Identifier& ident)
 
     Vector<WatchpointSet*, 2> result;
     Structure* structure = this->structure();
+    auto append = [&] (auto* set) {
+        ASSERT(set->isStillValid());
+        result.append(set);
+    };
 
-    if (!ident.isNull()) {
+    if (m_identifier) {
         if ((structure && structure->needImpurePropertyWatchpoint())
             || m_conditionSet.needImpurePropertyWatchpoint()
-            || (m_polyProtoAccessChain && m_polyProtoAccessChain->needImpurePropertyWatchpoint()))
-            result.append(vm.ensureWatchpointSetForImpureProperty(ident));
+            || (m_polyProtoAccessChain && m_polyProtoAccessChain->needImpurePropertyWatchpoint(vm)))
+            append(vm.ensureWatchpointSetForImpureProperty(m_identifier.uid()));
     }
 
     if (additionalSet())
-        result.append(additionalSet());
+        append(additionalSet());
 
     if (structure
         && structure->hasRareData()
         && structure->rareData()->hasSharedPolyProtoWatchpoint()
         && structure->rareData()->sharedPolyProtoWatchpoint()->isStillValid()) {
         WatchpointSet* set = structure->rareData()->sharedPolyProtoWatchpoint()->inflate();
-        result.append(set);
+        append(set);
     }
 
     m_state = Committed;
@@ -182,7 +232,14 @@ Vector<WatchpointSet*, 2> AccessCase::commit(VM& vm, const Identifier& ident)
     return result;
 }
 
-bool AccessCase::guardedByStructureCheck() const
+bool AccessCase::guardedByStructureCheck(const StructureStubInfo& stubInfo) const
+{
+    if (!stubInfo.hasConstantIdentifier)
+        return false;
+    return guardedByStructureCheckSkippingConstantIdentifierCheck();
+}
+
+bool AccessCase::guardedByStructureCheckSkippingConstantIdentifierCheck() const
 {
     if (viaProxy())
         return false;
@@ -199,38 +256,346 @@ bool AccessCase::guardedByStructureCheck() const
     case InstanceOfHit:
     case InstanceOfMiss:
     case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
         return false;
     default:
         return true;
     }
 }
 
-bool AccessCase::doesCalls(Vector<JSCell*>* cellsToMark) const
+bool AccessCase::requiresIdentifierNameMatch() const
 {
-    switch (type()) {
+    switch (m_type) {
+    case Load:
+    // We don't currently have a by_val for these puts, but we do care about the identifier.
+    case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Replace:
+    case Miss:
+    case GetGetter:
     case Getter:
     case Setter:
     case CustomValueGetter:
     case CustomAccessorGetter:
     case CustomValueSetter:
     case CustomAccessorSetter:
+    case IntrinsicGetter:
+    case InHit:
+    case InMiss:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case ModuleNamespaceLoad:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
         return true;
-    case Transition:
-        if (newStructure()->outOfLineCapacity() != structure()->outOfLineCapacity()
-            && structure()->couldHaveIndexingHeader()) {
-            if (cellsToMark)
-                cellsToMark->append(newStructure());
-            return true;
-        }
-        return false;
-    default:
+    case InstanceOfHit:
+    case InstanceOfMiss:
+    case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
         return false;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+bool AccessCase::requiresInt32PropertyCheck() const
+{
+    switch (m_type) {
+    case Load:
+    case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Replace:
+    case Miss:
+    case GetGetter:
+    case Getter:
+    case Setter:
+    case CustomValueGetter:
+    case CustomAccessorGetter:
+    case CustomValueSetter:
+    case CustomAccessorSetter:
+    case IntrinsicGetter:
+    case InHit:
+    case InMiss:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case ModuleNamespaceLoad:
+    case InstanceOfHit:
+    case InstanceOfMiss:
+    case InstanceOfGeneric:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
+        return false;
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
+        return true;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+bool AccessCase::needsScratchFPR() const
+{
+    switch (m_type) {
+    case Load:
+    case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Replace:
+    case Miss:
+    case GetGetter:
+    case Getter:
+    case Setter:
+    case CustomValueGetter:
+    case CustomAccessorGetter:
+    case CustomValueSetter:
+    case CustomAccessorSetter:
+    case IntrinsicGetter:
+    case InHit:
+    case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case ModuleNamespaceLoad:
+    case InstanceOfHit:
+    case InstanceOfMiss:
+    case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedStringLoad:
+        return false;
+    case IndexedDoubleLoad:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedTypedArrayUint32Load:
+        return true;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+template<typename Functor>
+void AccessCase::forEachDependentCell(VM& vm, const Functor& functor) const
+{
+    m_conditionSet.forEachDependentCell(functor);
+    if (m_structure)
+        functor(m_structure.get());
+    if (m_polyProtoAccessChain) {
+        for (StructureID structureID : m_polyProtoAccessChain->chain())
+            functor(vm.getStructure(structureID));
+    }
+
+    switch (type()) {
+    case Getter:
+    case Setter: {
+        auto& accessor = this->as<GetterSetterAccessCase>();
+        if (accessor.callLinkInfo())
+            accessor.callLinkInfo()->forEachDependentCell(functor);
+        break;
+    }
+    case CustomValueGetter:
+    case CustomValueSetter: {
+        auto& accessor = this->as<GetterSetterAccessCase>();
+        if (accessor.customSlotBase())
+            functor(accessor.customSlotBase());
+        break;
+    }
+    case IntrinsicGetter: {
+        auto& intrinsic = this->as<IntrinsicGetterAccessCase>();
+        if (intrinsic.intrinsicFunction())
+            functor(intrinsic.intrinsicFunction());
+        break;
+    }
+    case ModuleNamespaceLoad: {
+        auto& accessCase = this->as<ModuleNamespaceAccessCase>();
+        if (accessCase.moduleNamespaceObject())
+            functor(accessCase.moduleNamespaceObject());
+        if (accessCase.moduleEnvironment())
+            functor(accessCase.moduleEnvironment());
+        break;
+    }
+    case InstanceOfHit:
+    case InstanceOfMiss:
+        if (as<InstanceOfAccessCase>().prototype())
+            functor(as<InstanceOfAccessCase>().prototype());
+        break;
+    case CustomAccessorGetter:
+    case CustomAccessorSetter:
+    case Load:
+    case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Replace:
+    case Miss:
+    case GetGetter:
+    case InHit:
+    case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
+        break;
+    }
+}
+
+bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) const
+{
+    bool doesCalls = false;
+    switch (type()) {
+    case Transition:
+        doesCalls = newStructure()->outOfLineCapacity() != structure()->outOfLineCapacity() && structure()->couldHaveIndexingHeader();
+        break;
+    case Getter:
+    case Setter:
+    case CustomValueGetter:
+    case CustomAccessorGetter:
+    case CustomValueSetter:
+    case CustomAccessorSetter:
+        doesCalls = true;
+        break;
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Load:
+    case Miss:
+    case GetGetter:
+    case IntrinsicGetter:
+    case InHit:
+    case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case ModuleNamespaceLoad:
+    case InstanceOfHit:
+    case InstanceOfMiss:
+    case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
+        doesCalls = false;
+        break;
+    case Replace:
+        doesCalls = viaProxy();
+        break;
+    }
+
+    if (doesCalls && cellsToMarkIfDoesCalls) {
+        forEachDependentCell(vm, [&](JSCell* cell) {
+            cellsToMarkIfDoesCalls->append(cell);
+        });
+    }
+    return doesCalls;
 }
 
 bool AccessCase::couldStillSucceed() const
 {
-    return m_conditionSet.structuresEnsureValidityAssumingImpurePropertyWatchpoint();
+    for (const ObjectPropertyCondition& condition : m_conditionSet) {
+        if (condition.condition().kind() == PropertyCondition::Equivalence) {
+            if (!condition.isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort::EnsureWatchability))
+                return false;
+        } else {
+            if (!condition.structureEnsuresValidityAssumingImpurePropertyWatchpoint())
+                return false;
+        }
+    }
+    return true;
 }
 
 bool AccessCase::canReplace(const AccessCase& other) const
@@ -241,42 +606,13 @@ bool AccessCase::canReplace(const AccessCase& other) const
     // Note that if A->guardedByStructureCheck() && B->guardedByStructureCheck() then
     // A->canReplace(B) == B->canReplace(A).
 
-    switch (type()) {
-    case ArrayLength:
-    case StringLength:
-    case DirectArgumentsLength:
-    case ScopedArgumentsLength:
-        return other.type() == type();
-    case ModuleNamespaceLoad: {
-        if (other.type() != type())
-            return false;
-        auto& thisCase = this->as<ModuleNamespaceAccessCase>();
-        auto& otherCase = this->as<ModuleNamespaceAccessCase>();
-        return thisCase.moduleNamespaceObject() == otherCase.moduleNamespaceObject();
-    }
-    case InstanceOfHit:
-    case InstanceOfMiss: {
-        if (other.type() != type())
-            return false;
+    if (m_identifier != other.m_identifier)
+        return false;
 
-        if (this->as<InstanceOfAccessCase>().prototype() != other.as<InstanceOfAccessCase>().prototype())
-            return false;
+    if (viaProxy() != other.viaProxy())
+        return false;
 
-        return structure() == other.structure();
-    }
-    case InstanceOfGeneric:
-        switch (other.type()) {
-        case InstanceOfGeneric:
-        case InstanceOfHit:
-        case InstanceOfMiss:
-            return true;
-        default:
-            return false;
-        }
-    default:
-        if (other.type() != type())
-            return false;
-
+    auto checkPolyProtoAndStructure = [&] {
         if (m_polyProtoAccessChain) {
             if (!other.m_polyProtoAccessChain)
                 return false;
@@ -287,11 +623,94 @@ bool AccessCase::canReplace(const AccessCase& other) const
                 && *m_polyProtoAccessChain == *other.m_polyProtoAccessChain;
         }
 
-        if (!guardedByStructureCheck() || !other.guardedByStructureCheck())
+        if (!guardedByStructureCheckSkippingConstantIdentifierCheck() || !other.guardedByStructureCheckSkippingConstantIdentifierCheck())
+            return false;
+
+        return structure() == other.structure();
+    };
+
+    switch (type()) {
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
+        return other.type() == type();
+
+    case ModuleNamespaceLoad: {
+        if (other.type() != type())
+            return false;
+        auto& thisCase = this->as<ModuleNamespaceAccessCase>();
+        auto& otherCase = this->as<ModuleNamespaceAccessCase>();
+        return thisCase.moduleNamespaceObject() == otherCase.moduleNamespaceObject();
+    }
+
+    case InstanceOfHit:
+    case InstanceOfMiss: {
+        if (other.type() != type())
+            return false;
+
+        if (this->as<InstanceOfAccessCase>().prototype() != other.as<InstanceOfAccessCase>().prototype())
             return false;
 
         return structure() == other.structure();
     }
+
+    case InstanceOfGeneric:
+        switch (other.type()) {
+        case InstanceOfGeneric:
+        case InstanceOfHit:
+        case InstanceOfMiss:
+            return true;
+        default:
+            return false;
+        }
+
+    case Load:
+    case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Replace:
+    case Miss:
+    case GetGetter:
+    case Setter:
+    case CustomValueGetter:
+    case CustomAccessorGetter:
+    case CustomValueSetter:
+    case CustomAccessorSetter:
+    case InHit:
+    case InMiss:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
+        if (other.type() != type())
+            return false;
+
+        return checkPolyProtoAndStructure();
+
+    case IntrinsicGetter:
+    case Getter:
+        if (other.type() != Getter && other.type() != IntrinsicGetter)
+            return false;
+
+        return checkPolyProtoAndStructure();
+    }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void AccessCase::dump(PrintStream& out) const
@@ -302,20 +721,22 @@ void AccessCase::dump(PrintStream& out) const
 
     out.print(comma, m_state);
 
+    out.print(comma, "ident = '", m_identifier, "'");
     if (isValidOffset(m_offset))
         out.print(comma, "offset = ", m_offset);
-    if (!m_conditionSet.isEmpty())
-        out.print(comma, "conditions = ", m_conditionSet);
 
     if (m_polyProtoAccessChain) {
         out.print(comma, "prototype access chain = ");
         m_polyProtoAccessChain->dump(structure(), out);
     } else {
-        if (m_type == Transition)
+        if (m_type == Transition || m_type == Delete || m_type == SetPrivateBrand)
             out.print(comma, "structure = ", pointerDump(structure()), " -> ", pointerDump(newStructure()));
         else if (m_structure)
             out.print(comma, "structure = ", pointerDump(m_structure.get()));
     }
+
+    if (!m_conditionSet.isEmpty())
+        out.print(comma, "conditions = ", m_conditionSet);
 
     dumpImpl(out, comma);
     out.print(")");
@@ -323,41 +744,21 @@ void AccessCase::dump(PrintStream& out) const
 
 bool AccessCase::visitWeak(VM& vm) const
 {
-    if (m_structure && !Heap::isMarked(m_structure.get()))
-        return false;
-    if (m_polyProtoAccessChain) {
-        for (Structure* structure : m_polyProtoAccessChain->chain()) {
-            if (!Heap::isMarked(structure))
-                return false;
-        }
-    }
-    if (!m_conditionSet.areStillLive())
-        return false;
     if (isAccessor()) {
         auto& accessor = this->as<GetterSetterAccessCase>();
         if (accessor.callLinkInfo())
             accessor.callLinkInfo()->visitWeak(vm);
-        if (accessor.customSlotBase() && !Heap::isMarked(accessor.customSlotBase()))
-            return false;
-    } else if (type() == IntrinsicGetter) {
-        auto& intrinsic = this->as<IntrinsicGetterAccessCase>();
-        if (intrinsic.intrinsicFunction() && !Heap::isMarked(intrinsic.intrinsicFunction()))
-            return false;
-    } else if (type() == ModuleNamespaceLoad) {
-        auto& accessCase = this->as<ModuleNamespaceAccessCase>();
-        if (accessCase.moduleNamespaceObject() && !Heap::isMarked(accessCase.moduleNamespaceObject()))
-            return false;
-        if (accessCase.moduleEnvironment() && !Heap::isMarked(accessCase.moduleEnvironment()))
-            return false;
-    } else if (type() == InstanceOfHit || type() == InstanceOfMiss) {
-        if (as<InstanceOfAccessCase>().prototype() && !Heap::isMarked(as<InstanceOfAccessCase>().prototype()))
-            return false;
     }
 
-    return true;
+    bool isValid = true;
+    forEachDependentCell(vm, [&](JSCell* cell) {
+        isValid &= vm.heap.isMarked(cell);
+    });
+    return isValid;
 }
 
-bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
+template<typename Visitor>
+bool AccessCase::propagateTransitions(Visitor& visitor) const
 {
     bool result = true;
 
@@ -365,13 +766,14 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
         result &= m_structure->markIfCheap(visitor);
 
     if (m_polyProtoAccessChain) {
-        for (Structure* structure : m_polyProtoAccessChain->chain())
-            result &= structure->markIfCheap(visitor);
+        for (StructureID structureID : m_polyProtoAccessChain->chain())
+            result &= visitor.vm().getStructure(structureID)->markIfCheap(visitor);
     }
 
     switch (m_type) {
     case Transition:
-        if (Heap::isMarked(m_structure->previousID()))
+    case Delete:
+        if (visitor.isMarked(m_structure->previousID()))
             visitor.appendUnbarriered(m_structure.get());
         else
             result = false;
@@ -383,10 +785,24 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
     return result;
 }
 
+template bool AccessCase::propagateTransitions(AbstractSlotVisitor&) const;
+template bool AccessCase::propagateTransitions(SlotVisitor&) const;
+
+
+template<typename Visitor>
+void AccessCase::visitAggregateImpl(Visitor& visitor) const
+{
+    m_identifier.visitAggregate(visitor);
+}
+
+DEFINE_VISIT_AGGREGATE_WITH_MODIFIER(AccessCase, const);
+
 void AccessCase::generateWithGuard(
     AccessGenerationState& state, CCallHelpers::JumpList& fallThrough)
 {
     SuperSamplerScope superSamplerScope(false);
+
+    checkConsistency(*state.stubInfo);
 
     RELEASE_ASSERT(m_state == Committed);
     m_state = Generated;
@@ -396,16 +812,26 @@ void AccessCase::generateWithGuard(
     VM& vm = state.m_vm;
     JSValueRegs valueRegs = state.valueRegs;
     GPRReg baseGPR = state.baseGPR;
-    GPRReg thisGPR = state.thisGPR != InvalidGPRReg ? state.thisGPR : baseGPR;
     GPRReg scratchGPR = state.scratchGPR;
 
-    UNUSED_PARAM(vm);
+    if (requiresIdentifierNameMatch() && !stubInfo.hasConstantIdentifier) {
+        RELEASE_ASSERT(m_identifier);
+        GPRReg propertyGPR = state.u.propertyGPR;
+        // non-rope string check done inside polymorphic access.
+
+        if (uid()->isSymbol())
+            jit.loadPtr(MacroAssembler::Address(propertyGPR, Symbol::offsetOfSymbolImpl()), scratchGPR);
+        else
+            jit.loadPtr(MacroAssembler::Address(propertyGPR, JSString::offsetOfValue()), scratchGPR);
+        fallThrough.append(jit.branchPtr(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImmPtr(uid())));
+    }
 
     auto emitDefaultGuard = [&] () {
         if (m_polyProtoAccessChain) {
+            ASSERT(!viaProxy());
             GPRReg baseForAccessGPR = state.scratchGPR;
             jit.move(state.baseGPR, baseForAccessGPR);
-            m_polyProtoAccessChain->forEach(structure(), [&] (Structure* structure, bool atEnd) {
+            m_polyProtoAccessChain->forEach(vm, structure(), [&] (Structure* structure, bool atEnd) {
                 fallThrough.append(
                     jit.branchStructure(
                         CCallHelpers::NotEqual,
@@ -419,7 +845,7 @@ void AccessCase::generateWithGuard(
                         // has the property.
 #if USE(JSVALUE64)
                         jit.load64(MacroAssembler::Address(baseForAccessGPR, offsetRelativeToBase(knownPolyProtoOffset)), baseForAccessGPR);
-                        fallThrough.append(jit.branch64(CCallHelpers::NotEqual, baseForAccessGPR, CCallHelpers::TrustedImm64(ValueNull)));
+                        fallThrough.append(jit.branch64(CCallHelpers::NotEqual, baseForAccessGPR, CCallHelpers::TrustedImm64(JSValue::ValueNull)));
 #else
                         jit.load32(MacroAssembler::Address(baseForAccessGPR, offsetRelativeToBase(knownPolyProtoOffset) + PayloadOffset), baseForAccessGPR);
                         fallThrough.append(jit.branchTestPtr(CCallHelpers::NonZero, baseForAccessGPR));
@@ -434,7 +860,7 @@ void AccessCase::generateWithGuard(
                         RELEASE_ASSERT(structure->isObject()); // Primitives must have a stored prototype. We use prototypeForLookup for them.
 #if USE(JSVALUE64)
                         jit.load64(MacroAssembler::Address(baseForAccessGPR, offsetRelativeToBase(knownPolyProtoOffset)), baseForAccessGPR);
-                        fallThrough.append(jit.branch64(CCallHelpers::Equal, baseForAccessGPR, CCallHelpers::TrustedImm64(ValueNull)));
+                        fallThrough.append(jit.branch64(CCallHelpers::Equal, baseForAccessGPR, CCallHelpers::TrustedImm64(JSValue::ValueNull)));
 #else
                         jit.load32(MacroAssembler::Address(baseForAccessGPR, offsetRelativeToBase(knownPolyProtoOffset) + PayloadOffset), baseForAccessGPR);
                         fallThrough.append(jit.branchTestPtr(CCallHelpers::Zero, baseForAccessGPR));
@@ -508,15 +934,12 @@ void AccessCase::generateWithGuard(
         fallThrough.append(
             jit.branchIfNotType(baseGPR, ScopedArgumentsType));
 
-        jit.loadPtr(
-            CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfStorage()),
-            scratchGPR);
         fallThrough.append(
             jit.branchTest8(
                 CCallHelpers::NonZero,
-                CCallHelpers::Address(scratchGPR, ScopedArguments::offsetOfOverrodeThingsInStorage())));
+                CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfOverrodeThings())));
         jit.load32(
-            CCallHelpers::Address(scratchGPR, ScopedArguments::offsetOfTotalLengthInStorage()),
+            CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfTotalLength()),
             valueRegs.payloadGPR());
         jit.boxInt32(valueRegs.payloadGPR(), valueRegs);
         state.succeed();
@@ -524,7 +947,352 @@ void AccessCase::generateWithGuard(
     }
 
     case ModuleNamespaceLoad: {
+        ASSERT(!viaProxy());
         this->as<ModuleNamespaceAccessCase>().emit(state, fallThrough);
+        return;
+    }
+
+    case IndexedScopedArgumentsLoad: {
+        ASSERT(!viaProxy());
+        // This code is written such that the result could alias with the base or the property.
+        GPRReg propertyGPR = state.u.propertyGPR;
+
+        jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
+        fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(ScopedArgumentsType)));
+
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
+        allocator.lock(scratchGPR);
+
+        GPRReg scratch2GPR = allocator.allocateScratchGPR();
+        GPRReg scratch3GPR = allocator.allocateScratchGPR();
+
+        ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(
+            jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+
+        CCallHelpers::JumpList failAndIgnore;
+
+        failAndIgnore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfTotalLength())));
+
+        jit.loadPtr(CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfTable()), scratchGPR);
+        jit.load32(CCallHelpers::Address(scratchGPR, ScopedArgumentsTable::offsetOfLength()), scratch2GPR);
+        auto overflowCase = jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratch2GPR);
+
+        jit.loadPtr(CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfScope()), scratch2GPR);
+        jit.loadPtr(CCallHelpers::Address(scratchGPR, ScopedArgumentsTable::offsetOfArguments()), scratchGPR);
+        jit.zeroExtend32ToWord(propertyGPR, scratch3GPR);
+        jit.load32(CCallHelpers::BaseIndex(scratchGPR, scratch3GPR, CCallHelpers::TimesFour), scratchGPR);
+        failAndIgnore.append(jit.branch32(CCallHelpers::Equal, scratchGPR, CCallHelpers::TrustedImm32(ScopeOffset::invalidOffset)));
+        jit.loadValue(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesEight, JSLexicalEnvironment::offsetOfVariables()), valueRegs);
+        auto done = jit.jump();
+
+        overflowCase.link(&jit);
+        jit.sub32(propertyGPR, scratch2GPR);
+        jit.neg32(scratch2GPR);
+        jit.loadPtr(CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfStorage()), scratch3GPR);
+#if USE(JSVALUE64)
+        jit.loadValue(CCallHelpers::BaseIndex(scratch3GPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratchGPR));
+        failAndIgnore.append(jit.branchIfEmpty(scratchGPR));
+        jit.move(scratchGPR, valueRegs.payloadGPR());
+#else
+        jit.loadValue(CCallHelpers::BaseIndex(scratch3GPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratch2GPR, scratchGPR));
+        failAndIgnore.append(jit.branchIfEmpty(scratch2GPR));
+        jit.move(scratchGPR, valueRegs.payloadGPR());
+        jit.move(scratch2GPR, valueRegs.tagGPR());
+#endif
+
+        done.link(&jit);
+
+        allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+
+        if (allocator.didReuseRegisters()) {
+            failAndIgnore.link(&jit);
+            allocator.restoreReusedRegistersByPopping(jit, preservedState);
+            state.failAndIgnore.append(jit.jump());
+        } else
+            state.failAndIgnore.append(failAndIgnore);
+
+        return;
+    }
+
+    case IndexedDirectArgumentsLoad: {
+        ASSERT(!viaProxy());
+        // This code is written such that the result could alias with the base or the property.
+        GPRReg propertyGPR = state.u.propertyGPR;
+        jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
+        fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(DirectArgumentsType)));
+
+        jit.load32(CCallHelpers::Address(baseGPR, DirectArguments::offsetOfLength()), scratchGPR);
+        state.failAndRepatch.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratchGPR));
+        state.failAndRepatch.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::Address(baseGPR, DirectArguments::offsetOfMappedArguments())));
+        jit.zeroExtend32ToWord(propertyGPR, scratchGPR);
+        jit.loadValue(CCallHelpers::BaseIndex(baseGPR, scratchGPR, CCallHelpers::TimesEight, DirectArguments::storageOffset()), valueRegs);
+        state.succeed();
+        return;
+    }
+
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load: {
+        ASSERT(!viaProxy());
+        // This code is written such that the result could alias with the base or the property.
+
+        TypedArrayType type = toTypedArrayType(m_type);
+
+        GPRReg propertyGPR = state.u.propertyGPR;
+
+
+        jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
+        fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(typeForTypedArrayType(type))));
+
+        jit.load32(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+        state.failAndRepatch.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratchGPR));
+
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
+        allocator.lock(scratchGPR);
+        GPRReg scratch2GPR = allocator.allocateScratchGPR();
+
+        ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(
+            jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+
+        jit.loadPtr(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfVector()), scratch2GPR);
+        jit.cageConditionally(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR);
+
+        jit.signExtend32ToPtr(propertyGPR, scratchGPR);
+        if (isInt(type)) {
+            switch (elementSize(type)) {
+            case 1:
+                if (JSC::isSigned(type))
+                    jit.load8SignedExtendTo32(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesOne), valueRegs.payloadGPR());
+                else
+                    jit.load8(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesOne), valueRegs.payloadGPR());
+                break;
+            case 2:
+                if (JSC::isSigned(type))
+                    jit.load16SignedExtendTo32(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesTwo), valueRegs.payloadGPR());
+                else
+                    jit.load16(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesTwo), valueRegs.payloadGPR());
+                break;
+            case 4:
+                jit.load32(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesFour), valueRegs.payloadGPR());
+                break;
+            default:
+                CRASH();
+            }
+
+            CCallHelpers::Jump done;
+            if (type == TypeUint32) {
+                RELEASE_ASSERT(state.scratchFPR != InvalidFPRReg);
+                auto canBeInt = jit.branch32(CCallHelpers::GreaterThanOrEqual, valueRegs.payloadGPR(), CCallHelpers::TrustedImm32(0));
+
+                jit.convertInt32ToDouble(valueRegs.payloadGPR(), state.scratchFPR);
+                jit.addDouble(CCallHelpers::AbsoluteAddress(&CCallHelpers::twoToThe32), state.scratchFPR);
+                jit.boxDouble(state.scratchFPR, valueRegs);
+                done = jit.jump();
+                canBeInt.link(&jit);
+            }
+
+            jit.boxInt32(valueRegs.payloadGPR(), valueRegs);
+            if (done.isSet())
+                done.link(&jit);
+        } else {
+            ASSERT(isFloat(type));
+            RELEASE_ASSERT(state.scratchFPR != InvalidFPRReg);
+            switch (elementSize(type)) {
+            case 4:
+                jit.loadFloat(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesFour), state.scratchFPR);
+                jit.convertFloatToDouble(state.scratchFPR, state.scratchFPR);
+                break;
+            case 8: {
+                jit.loadDouble(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesEight), state.scratchFPR);
+                break;
+            }
+            default:
+                CRASH();
+            }
+
+            jit.purifyNaN(state.scratchFPR);
+            jit.boxDouble(state.scratchFPR, valueRegs);
+        }
+
+        allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+
+        return;
+    }
+
+    case IndexedStringLoad: {
+        ASSERT(!viaProxy());
+        // This code is written such that the result could alias with the base or the property.
+        GPRReg propertyGPR = state.u.propertyGPR;
+
+        fallThrough.append(jit.branchIfNotString(baseGPR));
+
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
+        allocator.lock(scratchGPR);
+        GPRReg scratch2GPR = allocator.allocateScratchGPR();
+
+        CCallHelpers::JumpList failAndIgnore;
+
+        ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(
+            jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+
+        jit.loadPtr(CCallHelpers::Address(baseGPR, JSString::offsetOfValue()), scratch2GPR);
+        failAndIgnore.append(jit.branchIfRopeStringImpl(scratch2GPR));
+        jit.load32(CCallHelpers::Address(scratch2GPR, StringImpl::lengthMemoryOffset()), scratchGPR);
+
+        failAndIgnore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratchGPR));
+
+        jit.load32(CCallHelpers::Address(scratch2GPR, StringImpl::flagsOffset()), scratchGPR);
+        jit.loadPtr(CCallHelpers::Address(scratch2GPR, StringImpl::dataOffset()), scratch2GPR);
+        auto is16Bit = jit.branchTest32(CCallHelpers::Zero, scratchGPR, CCallHelpers::TrustedImm32(StringImpl::flagIs8Bit()));
+        jit.zeroExtend32ToWord(propertyGPR, scratchGPR);
+        jit.load8(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesOne, 0), scratch2GPR);
+        auto is8BitLoadDone = jit.jump();
+        is16Bit.link(&jit);
+        jit.zeroExtend32ToWord(propertyGPR, scratchGPR);
+        jit.load16(CCallHelpers::BaseIndex(scratch2GPR, scratchGPR, CCallHelpers::TimesTwo, 0), scratch2GPR);
+        is8BitLoadDone.link(&jit);
+
+        failAndIgnore.append(jit.branch32(CCallHelpers::Above, scratch2GPR, CCallHelpers::TrustedImm32(maxSingleCharacterString)));
+        jit.move(CCallHelpers::TrustedImmPtr(vm.smallStrings.singleCharacterStrings()), scratchGPR);
+        jit.loadPtr(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::ScalePtr, 0), valueRegs.payloadGPR());
+        jit.boxCell(valueRegs.payloadGPR(), valueRegs);
+        allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+
+        if (allocator.didReuseRegisters()) {
+            failAndIgnore.link(&jit);
+            allocator.restoreReusedRegistersByPopping(jit, preservedState);
+            state.failAndIgnore.append(jit.jump());
+        } else
+            state.failAndIgnore.append(failAndIgnore);
+
+        return;
+    }
+
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad: {
+        ASSERT(!viaProxy());
+        // This code is written such that the result could alias with the base or the property.
+        GPRReg propertyGPR = state.u.propertyGPR;
+
+        // int32 check done in polymorphic access.
+        jit.load8(CCallHelpers::Address(baseGPR, JSCell::indexingTypeAndMiscOffset()), scratchGPR);
+        jit.and32(CCallHelpers::TrustedImm32(IndexingShapeMask), scratchGPR);
+
+        CCallHelpers::Jump isOutOfBounds;
+        CCallHelpers::Jump isEmpty;
+
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
+        allocator.lock(scratchGPR);
+        GPRReg scratch2GPR = allocator.allocateScratchGPR();
+#if USE(JSVALUE32_64)
+        GPRReg scratch3GPR = allocator.allocateScratchGPR();
+#endif
+        ScratchRegisterAllocator::PreservedState preservedState;
+
+        CCallHelpers::JumpList failAndIgnore;
+        auto preserveReusedRegisters = [&] {
+            preservedState = allocator.preserveReusedRegistersByPushing(jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+        };
+
+        if (m_type == IndexedArrayStorageLoad) {
+            jit.add32(CCallHelpers::TrustedImm32(-ArrayStorageShape), scratchGPR, scratchGPR);
+            fallThrough.append(jit.branch32(CCallHelpers::Above, scratchGPR, CCallHelpers::TrustedImm32(SlowPutArrayStorageShape - ArrayStorageShape)));
+
+            preserveReusedRegisters();
+
+            jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
+            isOutOfBounds = jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, CCallHelpers::Address(scratchGPR, ArrayStorage::vectorLengthOffset()));
+
+            jit.zeroExtend32ToWord(propertyGPR, scratch2GPR);
+#if USE(JSVALUE64)
+            jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight, ArrayStorage::vectorOffset()), JSValueRegs(scratchGPR));
+            isEmpty = jit.branchIfEmpty(scratchGPR);
+            jit.move(scratchGPR, valueRegs.payloadGPR());
+#else
+            jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight, ArrayStorage::vectorOffset()), JSValueRegs(scratch3GPR, scratchGPR));
+            isEmpty = jit.branchIfEmpty(scratch3GPR);
+            jit.move(scratchGPR, valueRegs.payloadGPR());
+            jit.move(scratch3GPR, valueRegs.tagGPR());
+#endif
+        } else {
+            IndexingType expectedShape;
+            switch (m_type) {
+            case IndexedInt32Load:
+                expectedShape = Int32Shape;
+                break;
+            case IndexedDoubleLoad:
+                expectedShape = DoubleShape;
+                break;
+            case IndexedContiguousLoad:
+                expectedShape = ContiguousShape;
+                break;
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
+                break;
+            }
+
+            fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(expectedShape)));
+
+            preserveReusedRegisters();
+
+            jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
+            isOutOfBounds = jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, CCallHelpers::Address(scratchGPR, Butterfly::offsetOfPublicLength()));
+            jit.zeroExtend32ToWord(propertyGPR, scratch2GPR);
+            if (m_type == IndexedDoubleLoad) {
+                RELEASE_ASSERT(state.scratchFPR != InvalidFPRReg);
+                jit.loadDouble(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight), state.scratchFPR);
+                isEmpty = jit.branchIfNaN(state.scratchFPR);
+                jit.boxDouble(state.scratchFPR, valueRegs);
+            } else {
+#if USE(JSVALUE64)
+                jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratchGPR));
+                isEmpty = jit.branchIfEmpty(scratchGPR);
+                jit.move(scratchGPR, valueRegs.payloadGPR());
+#else
+                jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratch3GPR, scratchGPR));
+                isEmpty = jit.branchIfEmpty(scratch3GPR);
+                jit.move(scratchGPR, valueRegs.payloadGPR());
+                jit.move(scratch3GPR, valueRegs.tagGPR());
+#endif
+            }
+        }
+
+        allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+
+        if (allocator.didReuseRegisters()) {
+            isOutOfBounds.link(&jit);
+            isEmpty.link(&jit);
+            allocator.restoreReusedRegistersByPopping(jit, preservedState);
+            state.failAndIgnore.append(jit.jump());
+        } else {
+            state.failAndIgnore.append(isOutOfBounds);
+            state.failAndIgnore.append(isEmpty);
+        }
+
         return;
     }
 
@@ -534,63 +1302,48 @@ void AccessCase::generateWithGuard(
 
         fallThrough.append(
             jit.branchPtr(
-                CCallHelpers::NotEqual, thisGPR,
+                CCallHelpers::NotEqual, state.u.prototypeGPR,
                 CCallHelpers::TrustedImmPtr(as<InstanceOfAccessCase>().prototype())));
         break;
 
     case InstanceOfGeneric: {
-        // Legend: value = `base instanceof this`.
+        ASSERT(!viaProxy());
+        GPRReg prototypeGPR = state.u.prototypeGPR;
+        // Legend: value = `base instanceof prototypeGPR`.
 
         GPRReg valueGPR = valueRegs.payloadGPR();
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-        allocator.lock(valueGPR);
-        allocator.lock(thisGPR);
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
         allocator.lock(scratchGPR);
 
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
 
         if (!state.stubInfo->prototypeIsKnownObject)
-            state.failAndIgnore.append(jit.branchIfNotObject(thisGPR));
+            state.failAndIgnore.append(jit.branchIfNotObject(prototypeGPR));
 
         ScratchRegisterAllocator::PreservedState preservedState =
             allocator.preserveReusedRegistersByPushing(
                 jit,
                 ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
-        CCallHelpers::Jump failAndIgnore;
+        CCallHelpers::JumpList failAndIgnore;
 
         jit.move(baseGPR, valueGPR);
 
         CCallHelpers::Label loop(&jit);
-        failAndIgnore = jit.branchIfType(valueGPR, ProxyObjectType);
 
-        jit.emitLoadStructure(vm, valueGPR, scratch2GPR, scratchGPR);
 #if USE(JSVALUE64)
-        jit.load64(CCallHelpers::Address(scratch2GPR, Structure::prototypeOffset()), scratch2GPR);
-        CCallHelpers::Jump hasMonoProto = jit.branchTest64(CCallHelpers::NonZero, scratch2GPR);
-        jit.load64(
-            CCallHelpers::Address(valueGPR, offsetRelativeToBase(knownPolyProtoOffset)),
-            scratch2GPR);
-        hasMonoProto.link(&jit);
+        JSValueRegs resultRegs(scratch2GPR);
 #else
-        jit.load32(
-            CCallHelpers::Address(scratch2GPR, Structure::prototypeOffset() + TagOffset),
-            scratchGPR);
-        jit.load32(
-            CCallHelpers::Address(scratch2GPR, Structure::prototypeOffset() + PayloadOffset),
-            scratch2GPR);
-        CCallHelpers::Jump hasMonoProto = jit.branch32(
-            CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(JSValue::EmptyValueTag));
-        jit.load32(
-            CCallHelpers::Address(
-                valueGPR, offsetRelativeToBase(knownPolyProtoOffset) + PayloadOffset),
-            scratch2GPR);
-        hasMonoProto.link(&jit);
+        JSValueRegs resultRegs(scratchGPR, scratch2GPR);
 #endif
+
+        jit.emitLoadPrototype(vm, valueGPR, resultRegs, scratchGPR, failAndIgnore);
         jit.move(scratch2GPR, valueGPR);
 
-        CCallHelpers::Jump isInstance = jit.branchPtr(CCallHelpers::Equal, valueGPR, thisGPR);
+        CCallHelpers::Jump isInstance = jit.branchPtr(CCallHelpers::Equal, valueGPR, prototypeGPR);
 
 #if USE(JSVALUE64)
         jit.branchIfCell(JSValueRegs(valueGPR)).linkTo(loop, &jit);
@@ -616,6 +1369,12 @@ void AccessCase::generateWithGuard(
         return;
     }
 
+    case CheckPrivateBrand: {
+        emitDefaultGuard();
+        state.succeed();
+        return;
+    }
+
     default:
         emitDefaultGuard();
         break;
@@ -627,7 +1386,10 @@ void AccessCase::generateWithGuard(
 void AccessCase::generate(AccessGenerationState& state)
 {
     RELEASE_ASSERT(m_state == Committed);
+    RELEASE_ASSERT(state.stubInfo->hasConstantIdentifier);
     m_state = Generated;
+
+    checkConsistency(*state.stubInfo);
 
     generateImpl(state);
 }
@@ -643,26 +1405,26 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     CCallHelpers& jit = *state.jit;
     VM& vm = state.m_vm;
     CodeBlock* codeBlock = jit.codeBlock();
+    JSGlobalObject* globalObject = state.m_globalObject;
+    ECMAMode ecmaMode = state.m_ecmaMode;
     StructureStubInfo& stubInfo = *state.stubInfo;
-    const Identifier& ident = *state.ident;
     JSValueRegs valueRegs = state.valueRegs;
     GPRReg baseGPR = state.baseGPR;
-    GPRReg thisGPR = state.thisGPR != InvalidGPRReg ? state.thisGPR : baseGPR;
+    GPRReg thisGPR = stubInfo.thisValueIsInThisGPR() ? state.u.thisGPR : baseGPR;
     GPRReg scratchGPR = state.scratchGPR;
-
-    ASSERT(m_conditionSet.structuresEnsureValidityAssumingImpurePropertyWatchpoint());
 
     for (const ObjectPropertyCondition& condition : m_conditionSet) {
         RELEASE_ASSERT(!m_polyProtoAccessChain);
 
-        Structure* structure = condition.object()->structure(vm);
-
-        if (condition.isWatchableAssumingImpurePropertyWatchpoint()) {
-            structure->addTransitionWatchpoint(state.addWatchpoint(condition));
+        if (condition.isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort::EnsureWatchability)) {
+            state.installWatchpoint(condition);
             continue;
         }
 
-        if (!condition.structureEnsuresValidityAssumingImpurePropertyWatchpoint(structure)) {
+        // For now, we only allow equivalence when it's watchable.
+        RELEASE_ASSERT(condition.condition().kind() != PropertyCondition::Equivalence);
+
+        if (!condition.structureEnsuresValidityAssumingImpurePropertyWatchpoint()) {
             // The reason why this cannot happen is that we require that PolymorphicAccess calls
             // AccessCase::generate() only after it has verified that
             // AccessCase::couldStillSucceed() returned true.
@@ -672,6 +1434,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
         }
 
         // We will emit code that has a weak reference that isn't otherwise listed anywhere.
+        Structure* structure = condition.object()->structure(vm);
         state.weakReferences.append(WriteBarrier<JSCell>(vm, codeBlock, structure));
 
         jit.move(CCallHelpers::TrustedImmPtr(condition.object()), scratchGPR);
@@ -719,40 +1482,47 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             currStructure->startWatchingPropertyForReplacements(vm, offset());
         }
 
-        GPRReg baseForGetGPR;
-        if (viaProxy()) {
-            ASSERT(m_type != CustomValueSetter || m_type != CustomAccessorSetter); // Because setters need to not trash valueRegsPayloadGPR.
-            if (m_type == Getter || m_type == Setter)
-                baseForGetGPR = scratchGPR;
-            else
-                baseForGetGPR = valueRegsPayloadGPR;
+        bool doesPropertyStorageLoads = m_type == Load
+            || m_type == GetGetter
+            || m_type == Getter
+            || m_type == Setter;
 
-            ASSERT((m_type != Getter && m_type != Setter) || baseForGetGPR != baseGPR);
-            ASSERT(m_type != Setter || baseForGetGPR != valueRegsPayloadGPR);
+        bool takesPropertyOwnerAsCFunctionArgument = m_type == CustomValueGetter || m_type == CustomValueSetter;
 
-            jit.loadPtr(
-                CCallHelpers::Address(baseGPR, JSProxy::targetOffset()),
-                baseForGetGPR);
-        } else
-            baseForGetGPR = baseGPR;
+        GPRReg receiverGPR = baseGPR;
+        GPRReg propertyOwnerGPR;
 
-        GPRReg baseForAccessGPR;
         if (m_polyProtoAccessChain) {
             // This isn't pretty, but we know we got here via generateWithGuard,
             // and it left the baseForAccess inside scratchGPR. We could re-derive the base,
             // but it'd require emitting the same code to load the base twice.
-            baseForAccessGPR = scratchGPR;
-        } else {
-            if (hasAlternateBase()) {
-                jit.move(
-                    CCallHelpers::TrustedImmPtr(alternateBase()), scratchGPR);
-                baseForAccessGPR = scratchGPR;
-            } else
-                baseForAccessGPR = baseForGetGPR;
-        }
+            propertyOwnerGPR = scratchGPR;
+        } else if (hasAlternateBase()) {
+            jit.move(
+                CCallHelpers::TrustedImmPtr(alternateBase()), scratchGPR);
+            propertyOwnerGPR = scratchGPR;
+        } else if (viaProxy() && doesPropertyStorageLoads) {
+            // We only need this when loading an inline or out of line property. For customs accessors,
+            // we can invoke with a receiver value that is a JSProxy. For custom values, we unbox to the
+            // JSProxy's target. For getters/setters, we'll also invoke them with the JSProxy as |this|,
+            // but we need to load the actual GetterSetter cell from the JSProxy's target.
+
+            if (m_type == Getter || m_type == Setter)
+                propertyOwnerGPR = scratchGPR;
+            else
+                propertyOwnerGPR = valueRegsPayloadGPR;
+
+            jit.loadPtr(
+                CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), propertyOwnerGPR);
+        } else if (viaProxy() && takesPropertyOwnerAsCFunctionArgument) {
+            propertyOwnerGPR = scratchGPR;
+            jit.loadPtr(
+                CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), propertyOwnerGPR);
+        } else
+            propertyOwnerGPR = receiverGPR;
 
         GPRReg loadedValueGPR = InvalidGPRReg;
-        if (m_type != CustomValueGetter && m_type != CustomAccessorGetter && m_type != CustomValueSetter && m_type != CustomAccessorSetter) {
+        if (doesPropertyStorageLoads) {
             if (m_type == Load || m_type == GetGetter)
                 loadedValueGPR = valueRegsPayloadGPR;
             else
@@ -763,10 +1533,10 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
             GPRReg storageGPR;
             if (isInlineOffset(m_offset))
-                storageGPR = baseForAccessGPR;
+                storageGPR = propertyOwnerGPR;
             else {
                 jit.loadPtr(
-                    CCallHelpers::Address(baseForAccessGPR, JSObject::butterflyOffset()),
+                    CCallHelpers::Address(propertyOwnerGPR, JSObject::butterflyOffset()),
                     loadedValueGPR);
                 storageGPR = loadedValueGPR;
             }
@@ -802,7 +1572,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             }
 
             if (Options::useDOMJIT() && access.domAttribute()->domJIT) {
-                access.emitDOMJITGetter(state, access.domAttribute()->domJIT, baseForGetGPR);
+                access.emitDOMJITGetter(state, access.domAttribute()->domJIT, receiverGPR);
                 return;
             }
         }
@@ -831,7 +1601,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
         jit.store32(
             CCallHelpers::TrustedImm32(state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-            CCallHelpers::tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+            CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
 
         if (m_type == Getter || m_type == Setter) {
             auto& access = this->as<GetterSetterAccessCase>();
@@ -855,7 +1625,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             state.setSpillStateForJSGetterSetter(spillState);
 
             RELEASE_ASSERT(!access.callLinkInfo());
-            access.m_callLinkInfo = std::make_unique<CallLinkInfo>();
+            CallLinkInfo* callLinkInfo = state.m_callLinkInfos.add(stubInfo.codeOrigin);
+            access.m_callLinkInfo = callLinkInfo;
 
             // FIXME: If we generated a polymorphic call stub that jumped back to the getter
             // stub, which then jumped back to the main code, then we'd have a reachability
@@ -865,10 +1636,9 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             // be GC objects, and then we'd be able to say that the polymorphic call stub has a
             // reference to the getter stub.
             // https://bugs.webkit.org/show_bug.cgi?id=148914
-            access.callLinkInfo()->disallowStubs();
+            callLinkInfo->disallowStubs();
 
-            access.callLinkInfo()->setUpCall(
-                CallLinkInfo::Call, stubInfo.codeOrigin, loadedValueGPR);
+            callLinkInfo->setUpCall(CallLinkInfo::Call, loadedValueGPR);
 
             CCallHelpers::JumpList done;
 
@@ -879,20 +1649,27 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                 numberOfParameters++;
 
             // Get the accessor; if there ain't one then the result is jsUndefined().
+            // Note that GetterSetter always has cells for both. If it is not set (like, getter exits, but setter is not set), Null{Getter,Setter}Function is stored.
+            Optional<CCallHelpers::Jump> returnUndefined;
             if (m_type == Setter) {
                 jit.loadPtr(
                     CCallHelpers::Address(loadedValueGPR, GetterSetter::offsetOfSetter()),
                     loadedValueGPR);
+                if (ecmaMode.isStrict()) {
+                    CCallHelpers::Jump shouldNotThrowError = jit.branchIfNotType(loadedValueGPR, NullSetterFunctionType);
+                    // We replace setter with this AccessCase's JSGlobalObject::nullSetterStrictFunction, which will throw an error with the right JSGlobalObject.
+                    jit.move(CCallHelpers::TrustedImmPtr(globalObject->nullSetterStrictFunction()), loadedValueGPR);
+                    shouldNotThrowError.link(&jit);
+                }
             } else {
                 jit.loadPtr(
                     CCallHelpers::Address(loadedValueGPR, GetterSetter::offsetOfGetter()),
                     loadedValueGPR);
+                returnUndefined = jit.branchIfType(loadedValueGPR, NullSetterFunctionType);
             }
 
-            CCallHelpers::Jump returnUndefined = jit.branchTestPtr(
-                CCallHelpers::Zero, loadedValueGPR);
-
-            unsigned numberOfRegsForCall = CallFrame::headerSizeInRegisters + numberOfParameters;
+            unsigned numberOfRegsForCall = CallFrame::headerSizeInRegisters + roundArgumentCountToAlignFrame(numberOfParameters);
+            ASSERT(!(numberOfRegsForCall % stackAlignmentRegisters()));
             unsigned numberOfBytesForCall = numberOfRegsForCall * sizeof(Register) - sizeof(CallerFrameAndPC);
 
             unsigned alignedNumberOfBytesForCall =
@@ -908,20 +1685,20 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
             jit.store32(
                 CCallHelpers::TrustedImm32(numberOfParameters),
-                calleeFrame.withOffset(CallFrameSlot::argumentCount * sizeof(Register) + PayloadOffset));
+                calleeFrame.withOffset(CallFrameSlot::argumentCountIncludingThis * sizeof(Register) + PayloadOffset));
 
             jit.storeCell(
                 loadedValueGPR, calleeFrame.withOffset(CallFrameSlot::callee * sizeof(Register)));
 
             jit.storeCell(
                 thisGPR,
-                calleeFrame.withOffset(virtualRegisterForArgument(0).offset() * sizeof(Register)));
+                calleeFrame.withOffset(virtualRegisterForArgumentIncludingThis(0).offset() * sizeof(Register)));
 
             if (m_type == Setter) {
                 jit.storeValue(
                     valueRegs,
                     calleeFrame.withOffset(
-                        virtualRegisterForArgument(1).offset() * sizeof(Register)));
+                        virtualRegisterForArgumentIncludingThis(1).offset() * sizeof(Register)));
             }
 
             CCallHelpers::Jump slowCase = jit.branchPtrWithPatch(
@@ -940,15 +1717,17 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), GPRInfo::regT1);
 #endif
             jit.move(CCallHelpers::TrustedImmPtr(access.callLinkInfo()), GPRInfo::regT2);
+            jit.move(CCallHelpers::TrustedImmPtr(globalObject), GPRInfo::regT3);
             slowPathCall = jit.nearCall();
             if (m_type == Getter)
                 jit.setupResults(valueRegs);
             done.append(jit.jump());
 
-            returnUndefined.link(&jit);
-            if (m_type == Getter)
+            if (returnUndefined) {
+                ASSERT(m_type == Getter);
+                returnUndefined.value().link(&jit);
                 jit.moveTrustedValue(jsUndefined(), valueRegs);
-
+            }
             done.link(&jit);
 
             jit.addPtr(CCallHelpers::TrustedImm32((codeBlock->stackPointerOffset() * sizeof(Register)) - state.preservedReusedRegisterState.numberOfBytesPreserved - spillState.numberOfStackBytesUsedForRegisterPreservation),
@@ -968,6 +1747,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             });
         } else {
             ASSERT(m_type == CustomValueGetter || m_type == CustomAccessorGetter || m_type == CustomValueSetter || m_type == CustomAccessorSetter);
+            ASSERT(!doesPropertyStorageLoads); // Or we need an extra register. We rely on propertyOwnerGPR being correct here.
 
             // Need to make room for the C call so any of our stack spillage isn't overwritten. It's
             // hard to track if someone did spillage or not, so we just assume that we always need
@@ -975,28 +1755,53 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             jit.makeSpaceOnStackForCCall();
 
             // Check if it is a super access
-            GPRReg baseForCustomGetGPR = baseGPR != thisGPR ? thisGPR : baseForGetGPR;
+            GPRReg receiverForCustomGetGPR = baseGPR != thisGPR ? thisGPR : receiverGPR;
 
-            // getter: EncodedJSValue (*GetValueFunc)(ExecState*, EncodedJSValue thisValue, PropertyName);
-            // setter: void (*PutValueFunc)(ExecState*, EncodedJSValue thisObject, EncodedJSValue value);
-            // Custom values are passed the slotBase (the property holder), custom accessors are passed the thisVaule (reciever).
-            // FIXME: Remove this differences in custom values and custom accessors.
-            // https://bugs.webkit.org/show_bug.cgi?id=158014
-            GPRReg baseForCustom = m_type == CustomValueGetter || m_type == CustomValueSetter ? baseForAccessGPR : baseForCustomGetGPR;
+            // getter: EncodedJSValue (*GetValueFunc)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName);
+            // setter: bool (*PutValueFunc)(JSGlobalObject*, EncodedJSValue thisObject, EncodedJSValue value);
+            // Custom values are passed the slotBase (the property holder), custom accessors are passed the thisValue (receiver).
+            GPRReg baseForCustom = takesPropertyOwnerAsCFunctionArgument ? propertyOwnerGPR : receiverForCustomGetGPR;
+            // We do not need to keep globalObject alive since the owner CodeBlock (even if JSGlobalObject* is one of CodeBlock that is inlined and held by DFG CodeBlock)
+            // must keep it alive.
             if (m_type == CustomValueGetter || m_type == CustomAccessorGetter) {
-                jit.setupArguments<PropertySlot::GetValueFunc>(
-                    CCallHelpers::CellValue(baseForCustom),
-                    CCallHelpers::TrustedImmPtr(ident.impl()));
+                RELEASE_ASSERT(m_identifier);
+                if (Options::useJITCage()) {
+                    jit.setupArguments<PropertySlot::GetValueFuncWithPtr>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        CCallHelpers::TrustedImmPtr(uid()),
+                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.executableAddress()));
+                } else {
+                    jit.setupArguments<PropertySlot::GetValueFunc>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        CCallHelpers::TrustedImmPtr(uid()));
+                }
             } else {
-                jit.setupArguments<PutPropertySlot::PutValueFunc>(
-                    CCallHelpers::CellValue(baseForCustom),
-                    valueRegs);
+                if (Options::useJITCage()) {
+                    jit.setupArguments<PutPropertySlot::PutValueFuncWithPtr>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        valueRegs,
+                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.executableAddress()));
+                } else {
+                    jit.setupArguments<PutPropertySlot::PutValueFunc>(
+                        CCallHelpers::TrustedImmPtr(globalObject),
+                        CCallHelpers::CellValue(baseForCustom),
+                        valueRegs);
+                }
             }
             jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
 
-            operationCall = jit.call(OperationPtrTag);
+            if (Options::useJITCage())
+                operationCall = jit.call(OperationPtrTag);
+            else
+                operationCall = jit.call(CustomAccessorPtrTag);
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(operationCall, this->as<GetterSetterAccessCase>().m_customAccessor);
+                if (Options::useJITCage())
+                    linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryCustomAccessor));
+                else
+                    linkBuffer.link(operationCall, this->as<GetterSetterAccessCase>().m_customAccessor);
             });
 
             if (m_type == CustomValueGetter || m_type == CustomAccessorGetter)
@@ -1018,25 +1823,53 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     }
 
     case Replace: {
+        GPRReg base = baseGPR;
+        if (viaProxy()) {
+            // This aint pretty, but the path that structure checks loads the real base into scratchGPR.
+            base = scratchGPR;
+        }
+
         if (isInlineOffset(m_offset)) {
             jit.storeValue(
                 valueRegs,
                 CCallHelpers::Address(
-                    baseGPR,
+                    base,
                     JSObject::offsetOfInlineStorage() +
                     offsetInInlineStorage(m_offset) * sizeof(JSValue)));
         } else {
-            jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
+            jit.loadPtr(CCallHelpers::Address(base, JSObject::butterflyOffset()), scratchGPR);
             jit.storeValue(
                 valueRegs,
                 CCallHelpers::Address(
                     scratchGPR, offsetInButterfly(m_offset) * sizeof(JSValue)));
         }
+
+        if (viaProxy()) {
+            CCallHelpers::JumpList skipBarrier;
+            skipBarrier.append(jit.branchIfNotCell(valueRegs));
+            if (!isInlineOffset(m_offset))
+                jit.loadPtr(CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), scratchGPR);
+            skipBarrier.append(jit.barrierBranch(vm, scratchGPR, scratchGPR));
+
+            jit.loadPtr(CCallHelpers::Address(baseGPR, JSProxy::targetOffset()), scratchGPR);
+            auto spillState = state.preserveLiveRegistersToStackForCallWithoutExceptions();
+            jit.setupArguments<decltype(operationWriteBarrierSlowPath)>(CCallHelpers::TrustedImmPtr(&vm), scratchGPR);
+            jit.prepareCallOperation(vm);
+            auto operationCall = jit.call(OperationPtrTag);
+            jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(operationWriteBarrierSlowPath));
+            });
+            state.restoreLiveRegistersFromStackForCall(spillState);
+
+            skipBarrier.link(&jit);
+        }
+
         state.succeed();
         return;
     }
 
     case Transition: {
+        ASSERT(!viaProxy());
         // AccessCase::transition() should have returned null if this wasn't true.
         RELEASE_ASSERT(GPRInfo::numberOfRegisters >= 6 || !structure()->outOfLineCapacity() || structure()->outOfLineCapacity() == newStructure()->outOfLineCapacity());
 
@@ -1046,11 +1879,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
         bool reallocating = allocating && structure()->outOfLineCapacity();
         bool allocatingInline = allocating && !structure()->couldHaveIndexingHeader();
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-#if USE(JSVALUE32_64)
-        allocator.lock(stubInfo.patch.baseTagGPR);
-#endif
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
         allocator.lock(valueRegs);
         allocator.lock(scratchGPR);
 
@@ -1115,12 +1945,13 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                 jit.store32(
                     CCallHelpers::TrustedImm32(
                         state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-                    CCallHelpers::tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+                    CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
 
                 jit.makeSpaceOnStackForCCall();
 
                 if (!reallocating) {
-                    jit.setupArguments<decltype(operationReallocateButterflyToHavePropertyStorageWithInitialCapacity)>(baseGPR);
+                    jit.setupArguments<decltype(operationReallocateButterflyToHavePropertyStorageWithInitialCapacity)>(CCallHelpers::TrustedImmPtr(&vm), baseGPR);
+                    jit.prepareCallOperation(vm);
 
                     CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
                     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
@@ -1131,8 +1962,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                 } else {
                     // Handle the case where we are reallocating (i.e. the old structure/butterfly
                     // already had out-of-line property storage).
-                    jit.setupArguments<decltype(operationReallocateButterflyToGrowPropertyStorage)>(
-                        baseGPR, CCallHelpers::TrustedImm32(newSize / sizeof(JSValue)));
+                    jit.setupArguments<decltype(operationReallocateButterflyToGrowPropertyStorage)>(CCallHelpers::TrustedImmPtr(&vm), baseGPR, CCallHelpers::TrustedImm32(newSize / sizeof(JSValue)));
+                    jit.prepareCallOperation(vm);
 
                     CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
                     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
@@ -1202,6 +2033,74 @@ void AccessCase::generateImpl(AccessGenerationState& state)
         return;
     }
 
+    case Delete: {
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(baseGPR);
+        allocator.lock(scratchGPR);
+        ASSERT(structure()->transitionWatchpointSetHasBeenInvalidated());
+        ASSERT(newStructure()->transitionKind() == TransitionKind::PropertyDeletion);
+        ASSERT(baseGPR != scratchGPR);
+        ASSERT(!valueRegs.uses(baseGPR));
+        ASSERT(!valueRegs.uses(scratchGPR));
+
+        ScratchRegisterAllocator::PreservedState preservedState =
+            allocator.preserveReusedRegistersByPushing(jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+
+        jit.moveValue(JSValue(), valueRegs);
+
+        if (isInlineOffset(m_offset)) {
+            jit.storeValue(
+                valueRegs,
+                CCallHelpers::Address(
+                    baseGPR,
+                    JSObject::offsetOfInlineStorage() +
+                    offsetInInlineStorage(m_offset) * sizeof(JSValue)));
+        } else {
+            jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
+            jit.storeValue(
+                valueRegs,
+                CCallHelpers::Address(scratchGPR, offsetInButterfly(m_offset) * sizeof(JSValue)));
+        }
+
+        uint32_t structureBits = bitwise_cast<uint32_t>(newStructure()->id());
+        jit.store32(
+            CCallHelpers::TrustedImm32(structureBits),
+            CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
+
+        jit.move(MacroAssembler::TrustedImm32(true), valueRegs.payloadGPR());
+
+        allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+        return;
+    }
+
+    case SetPrivateBrand: {
+        ASSERT(structure()->transitionWatchpointSetHasBeenInvalidated());
+        ASSERT(newStructure()->transitionKind() == TransitionKind::SetBrand);
+
+        uint32_t structureBits = bitwise_cast<uint32_t>(newStructure()->id());
+        jit.store32(
+            CCallHelpers::TrustedImm32(structureBits),
+            CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
+
+        state.succeed();
+        return;
+    }
+
+    case DeleteNonConfigurable: {
+        jit.move(MacroAssembler::TrustedImm32(false), valueRegs.payloadGPR());
+        state.succeed();
+        return;
+    }
+
+    case DeleteMiss: {
+        jit.move(MacroAssembler::TrustedImm32(true), valueRegs.payloadGPR());
+        state.succeed();
+        return;
+    }
+
     case ArrayLength: {
         jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
         jit.load32(CCallHelpers::Address(scratchGPR, ArrayStorage::lengthOffset()), scratchGPR);
@@ -1215,14 +2114,14 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case StringLength: {
         jit.loadPtr(CCallHelpers::Address(baseGPR, JSString::offsetOfValue()), scratchGPR);
         auto isRope = jit.branchIfRopeStringImpl(scratchGPR);
-        jit.load32(CCallHelpers::Address(scratchGPR, StringImpl::lengthMemoryOffset()), scratchGPR);
+        jit.load32(CCallHelpers::Address(scratchGPR, StringImpl::lengthMemoryOffset()), valueRegs.payloadGPR());
         auto done = jit.jump();
 
         isRope.link(&jit);
-        jit.load32(CCallHelpers::Address(baseGPR, JSRopeString::offsetOfLength()), scratchGPR);
+        jit.load32(CCallHelpers::Address(baseGPR, JSRopeString::offsetOfLength()), valueRegs.payloadGPR());
 
         done.link(&jit);
-        jit.boxInt32(scratchGPR, valueRegs);
+        jit.boxInt32(valueRegs.payloadGPR(), valueRegs);
         state.succeed();
         return;
     }
@@ -1247,6 +2146,23 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
     case InstanceOfGeneric:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedStringLoad:
+    case CheckPrivateBrand:
         // These need to be handled by generateWithGuard(), since the guard is part of the
         // algorithm. We can be sure that nobody will call generate() directly for these since they
         // are not guarded by structure checks.
@@ -1255,6 +2171,44 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
     RELEASE_ASSERT_NOT_REACHED();
 }
+
+TypedArrayType AccessCase::toTypedArrayType(AccessType accessType)
+{
+    switch (accessType) {
+    case IndexedTypedArrayInt8Load:
+        return TypeInt8;
+    case IndexedTypedArrayUint8Load:
+        return TypeUint8;
+    case IndexedTypedArrayUint8ClampedLoad:
+        return TypeUint8Clamped;
+    case IndexedTypedArrayInt16Load:
+        return TypeInt16;
+    case IndexedTypedArrayUint16Load:
+        return TypeUint16;
+    case IndexedTypedArrayInt32Load:
+        return TypeInt32;
+    case IndexedTypedArrayUint32Load:
+        return TypeUint32;
+    case IndexedTypedArrayFloat32Load:
+        return TypeFloat32;
+    case IndexedTypedArrayFloat64Load:
+        return TypeFloat64;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+#if ASSERT_ENABLED
+void AccessCase::checkConsistency(StructureStubInfo& stubInfo)
+{
+    RELEASE_ASSERT(!(requiresInt32PropertyCheck() && requiresIdentifierNameMatch()));
+
+    if (stubInfo.hasConstantIdentifier) {
+        RELEASE_ASSERT(!requiresInt32PropertyCheck());
+        RELEASE_ASSERT(requiresIdentifierNameMatch());
+    }
+}
+#endif // ASSERT_ENABLED
 
 } // namespace JSC
 

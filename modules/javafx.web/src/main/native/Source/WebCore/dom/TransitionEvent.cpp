@@ -27,18 +27,22 @@
 #include "config.h"
 #include "TransitionEvent.h"
 
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
-TransitionEvent::TransitionEvent(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
-    : Event(type, CanBubble::Yes, IsCancelable::Yes)
+WTF_MAKE_ISO_ALLOCATED_IMPL(TransitionEvent);
+
+TransitionEvent::TransitionEvent(const AtomString& type, const String& propertyName, double elapsedTime, const String& pseudoElement, Optional<Seconds> timelineTime, WebAnimation* animation)
+    : AnimationEventBase(type, animation, timelineTime)
     , m_propertyName(propertyName)
     , m_elapsedTime(elapsedTime)
     , m_pseudoElement(pseudoElement)
 {
 }
 
-TransitionEvent::TransitionEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+TransitionEvent::TransitionEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
+    : AnimationEventBase(type, initializer, isTrusted)
     , m_propertyName(initializer.propertyName)
     , m_elapsedTime(initializer.elapsedTime)
     , m_pseudoElement(initializer.pseudoElement)

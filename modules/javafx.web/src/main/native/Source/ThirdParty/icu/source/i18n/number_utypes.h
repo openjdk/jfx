@@ -10,64 +10,38 @@
 #include "unicode/numberformatter.h"
 #include "number_types.h"
 #include "number_decimalquantity.h"
-#include "number_stringbuilder.h"
+#include "formatted_string_builder.h"
+#include "formattedval_impl.h"
 
 U_NAMESPACE_BEGIN namespace number {
 namespace impl {
 
 
-/**
- * Implementation class for UNumberFormatter with a magic number for safety.
- *
- * Wraps a LocalizedNumberFormatter by value.
- */
-struct UNumberFormatterData : public UMemory {
-    // The magic number to identify incoming objects.
-    // Reads in ASCII as "NFR" (NumberFormatteR with room at the end)
-    static constexpr int32_t kMagic = 0x4E465200;
-
-    // Data members:
-    int32_t fMagic = kMagic;
-    LocalizedNumberFormatter fFormatter;
-
-    /** Convert from UNumberFormatter -> UNumberFormatterData. */
-    static UNumberFormatterData* validate(UNumberFormatter* input, UErrorCode& status);
-
-    /** Convert from UNumberFormatter -> UNumberFormatterData (const version). */
-    static const UNumberFormatterData* validate(const UNumberFormatter* input, UErrorCode& status);
-
-    /** Convert from UNumberFormatterData -> UNumberFormatter. */
-    UNumberFormatter* exportForC();
-};
+/** Helper function used in upluralrules.cpp */
+const DecimalQuantity* validateUFormattedNumberToDecimalQuantity(
+    const UFormattedNumber* uresult, UErrorCode& status);
 
 
 /**
- * Implementation class for UFormattedNumber with magic number for safety.
+ * Struct for data used by FormattedNumber.
  *
- * This struct is also held internally by the C++ version FormattedNumber since the member types are not
+ * This struct is held internally by the C++ version FormattedNumber since the member types are not
  * declared in the public header file.
  *
- * The DecimalQuantity is not currently being used by FormattedNumber, but at some point it could be used
- * to add a toDecNumber() or similar method.
+ * Exported as U_I18N_API for tests
  */
-struct UFormattedNumberData : public UMemory {
-    // The magic number to identify incoming objects.
-    // Reads in ASCII as "FDN" (FormatteDNumber with room at the end)
-    static constexpr int32_t kMagic = 0x46444E00;
+class U_I18N_API UFormattedNumberData : public FormattedValueStringBuilderImpl {
+public:
+    UFormattedNumberData() : FormattedValueStringBuilderImpl(kUndefinedField) {}
+    virtual ~UFormattedNumberData();
 
-    // Data members:
-    int32_t fMagic = kMagic;
+    // The formatted quantity.
     DecimalQuantity quantity;
-    NumberStringBuilder string;
 
-    /** Convert from UFormattedNumber -> UFormattedNumberData. */
-    static UFormattedNumberData* validate(UFormattedNumber* input, UErrorCode& status);
-
-    /** Convert from UFormattedNumber -> UFormattedNumberData (const version). */
-    static const UFormattedNumberData* validate(const UFormattedNumber* input, UErrorCode& status);
-
-    /** Convert from UFormattedNumberData -> UFormattedNumber. */
-    UFormattedNumber* exportForC();
+    // The output unit for the formatted quantity.
+    // TODO(units,hugovdm): populate this correctly for the general case - it's
+    // currently only implemented for the .usage() use case.
+    MeasureUnit outputUnit;
 };
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.
+ * Copyright (C) 2017-2019 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -40,7 +40,6 @@ ALLOW_UNUSED_PARAMETERS_BEGIN
 
 ALLOW_UNUSED_PARAMETERS_END
 
-#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -49,19 +48,25 @@ RealtimeOutgoingVideoSource::RealtimeOutgoingVideoSource(Ref<MediaStreamTrackPri
     : m_videoSource(WTFMove(videoSource))
     , m_blackFrameTimer(*this, &RealtimeOutgoingVideoSource::sendOneBlackFrame)
 #if !RELEASE_LOG_DISABLED
-    , m_logIdentifier(reinterpret_cast<const void*>(cryptographicallyRandomNumber()))
+    , m_logger(m_videoSource->logger())
+    , m_logIdentifier(m_videoSource->logIdentifier())
 #endif
 {
 }
 
 RealtimeOutgoingVideoSource::~RealtimeOutgoingVideoSource()
 {
+ASSERT(!m_videoSource->hasObserver(*this));
+#if ASSERT_ENABLED
+    auto locker = holdLock(m_sinksLock);
+#endif
     ASSERT(m_sinks.isEmpty());
     stop();
 }
 
 void RealtimeOutgoingVideoSource::observeSource()
 {
+    ASSERT(!m_videoSource->hasObserver(*this));
     m_videoSource->addObserver(*this);
     initializeFromSource();
 }
@@ -69,23 +74,35 @@ void RealtimeOutgoingVideoSource::observeSource()
 void RealtimeOutgoingVideoSource::unobserveSource()
 {
     m_videoSource->removeObserver(*this);
+    m_videoSource->source().removeVideoSampleObserver(*this);
 }
 
-bool RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
+void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
 {
-    if (!m_initialSettings)
-        m_initialSettings = m_videoSource->source().settings();
-
-    auto locker = holdLock(m_sinksLock);
-    bool hasSinks = !m_sinks.isEmpty();
-
-    if (hasSinks)
-        unobserveSource();
+    ASSERT(isMainThread());
+    ASSERT(!m_videoSource->hasObserver(*this));
     m_videoSource = WTFMove(newSource);
-    if (hasSinks)
-        observeSource();
 
-    return true;
+    if (!m_areSinksAskingToApplyRotation)
+        return;
+    if (!m_videoSource->source().setShouldApplyRotation(true))
+        m_shouldApplyRotation = true;
+}
+
+void RealtimeOutgoingVideoSource::applyRotation()
+{
+    if (!isMainThread()) {
+        callOnMainThread([this, protectedThis = makeRef(*this)] {
+            applyRotation();
+        });
+        return;
+    }
+    if (m_areSinksAskingToApplyRotation)
+        return;
+
+    m_areSinksAskingToApplyRotation = true;
+    if (!m_videoSource->source().setShouldApplyRotation(true))
+        m_shouldApplyRotation = true;
 }
 
 void RealtimeOutgoingVideoSource::stop()
@@ -98,11 +115,13 @@ void RealtimeOutgoingVideoSource::stop()
 void RealtimeOutgoingVideoSource::updateBlackFramesSending()
 {
     if (!m_muted && m_enabled) {
+        m_videoSource->source().addVideoSampleObserver(*this);
         if (m_blackFrameTimer.isActive())
             m_blackFrameTimer.stop();
         return;
     }
 
+    m_videoSource->source().removeVideoSampleObserver(*this);
     sendBlackFramesIfNeeded();
 }
 
@@ -141,34 +160,16 @@ void RealtimeOutgoingVideoSource::AddOrUpdateSink(rtc::VideoSinkInterface<webrtc
     ASSERT(!sinkWants.black_frames);
 
     if (sinkWants.rotation_applied)
-        m_shouldApplyRotation = true;
+        applyRotation();
 
-    {
     auto locker = holdLock(m_sinksLock);
-    if (!m_sinks.add(sink) || m_sinks.size() != 1)
-        return;
-    }
-
-    callOnMainThread([protectedThis = makeRef(*this)]() {
-        protectedThis->observeSource();
-    });
+    m_sinks.add(sink);
 }
 
 void RealtimeOutgoingVideoSource::RemoveSink(rtc::VideoSinkInterface<webrtc::VideoFrame>* sink)
 {
-    {
     auto locker = holdLock(m_sinksLock);
-
-    if (!m_sinks.remove(sink) || m_sinks.size())
-        return;
-    }
-
-    unobserveSource();
-
-    callOnMainThread([protectedThis = makeRef(*this)]() {
-        if (protectedThis->m_blackFrameTimer.isActive())
-            protectedThis->m_blackFrameTimer.stop();
-    });
+    m_sinks.remove(sink);
 }
 
 void RealtimeOutgoingVideoSource::sendBlackFramesIfNeeded()
@@ -185,7 +186,7 @@ void RealtimeOutgoingVideoSource::sendBlackFramesIfNeeded()
     if (!m_blackFrame) {
         auto width = m_width;
         auto height = m_height;
-        if (m_shouldApplyRotation && (m_currentRotation == webrtc::kVideoRotation_0 || m_currentRotation == webrtc::kVideoRotation_90))
+        if (m_shouldApplyRotation && (m_currentRotation == webrtc::kVideoRotation_270 || m_currentRotation == webrtc::kVideoRotation_90))
             std::swap(width, height);
         m_blackFrame = createBlackFrame(width, height);
         ASSERT(m_blackFrame);
@@ -200,7 +201,7 @@ void RealtimeOutgoingVideoSource::sendBlackFramesIfNeeded()
 
 void RealtimeOutgoingVideoSource::sendOneBlackFrame()
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "test");
+    ALWAYS_LOG(LOGIDENTIFIER);
     sendFrame(rtc::scoped_refptr<webrtc::VideoFrameBuffer>(m_blackFrame));
 }
 
@@ -208,6 +209,19 @@ void RealtimeOutgoingVideoSource::sendFrame(rtc::scoped_refptr<webrtc::VideoFram
 {
     MonotonicTime timestamp = MonotonicTime::now();
     webrtc::VideoFrame frame(buffer, m_shouldApplyRotation ? webrtc::kVideoRotation_0 : m_currentRotation, static_cast<int64_t>(timestamp.secondsSinceEpoch().microseconds()));
+
+#if !RELEASE_LOG_DISABLED
+    ++m_frameCount;
+
+    auto delta = timestamp - m_lastFrameLogTime;
+    if (!m_lastFrameLogTime || delta >= 1_s) {
+        if (m_lastFrameLogTime) {
+            INFO_LOG(LOGIDENTIFIER, m_frameCount, " frames sent in ", delta.value(), " seconds");
+            m_frameCount = 0;
+        }
+        m_lastFrameLogTime = timestamp;
+    }
+#endif
 
     auto locker = holdLock(m_sinksLock);
     for (auto* sink : m_sinks)
@@ -218,13 +232,6 @@ void RealtimeOutgoingVideoSource::sendFrame(rtc::scoped_refptr<webrtc::VideoFram
 WTFLogChannel& RealtimeOutgoingVideoSource::logChannel() const
 {
     return LogWebRTC;
-}
-
-const Logger& RealtimeOutgoingVideoSource::logger() const
-{
-    if (!m_logger)
-        m_logger = Logger::create(this);
-    return *m_logger;
 }
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,12 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class Utilities {
 
@@ -50,11 +54,79 @@ public abstract class Utilities {
     protected abstract PopupMenu createPopupMenu();
     protected abstract ContextMenu createContextMenu();
 
+    private static final Set<String> asSet(String... items) {
+        return new HashSet(Arrays.asList(items));
+    }
+
+    // List of Class methods to allow
+    private static final Set<String> classMethodsAllowList = asSet(
+        "getCanonicalName",
+        "getEnumConstants",
+        "getFields",
+        "getMethods",
+        "getName",
+        "getPackageName",
+        "getSimpleName",
+        "getSuperclass",
+        "getTypeName",
+        "getTypeParameters",
+        "isAssignableFrom",
+        "isArray",
+        "isEnum",
+        "isInstance",
+        "isInterface",
+        "isLocalClass",
+        "isMemberClass",
+        "isPrimitive",
+        "isSynthetic",
+        "toGenericString",
+        "toString"
+    );
+
+    // List of classes to reject
+    private static final Set<String> classesRejectList = asSet(
+        "java.lang.ClassLoader",
+        "java.lang.Module",
+        "java.lang.Runtime",
+        "java.lang.System"
+    );
+
+    // List of packages to reject
+    private static final List<String> packagesRejectList = Arrays.asList(
+        "java.lang.invoke",
+        "java.lang.module",
+        "java.lang.reflect",
+        "java.security",
+        "sun.misc"
+    );
+
+    @SuppressWarnings("removal")
     private static Object fwkInvokeWithContext(final Method method,
                                                final Object instance,
                                                final Object[] args,
                                                AccessControlContext acc)
-    throws Throwable {
+            throws Throwable {
+
+        final Class<?> clazz = method.getDeclaringClass();
+        if (clazz.equals(java.lang.Class.class)) {
+            // check list of allowed Class methods
+            if (!classMethodsAllowList.contains(method.getName())) {
+                throw new UnsupportedOperationException("invocation not supported");
+            }
+        } else {
+            // check list of rejected class names
+            final String className = clazz.getName();
+            if (classesRejectList.contains(className)) {
+                throw new UnsupportedOperationException("invocation not supported");
+            }
+            // check list of rejected packages
+            packagesRejectList.forEach(packageName -> {
+                if (className.startsWith(packageName + ".")) {
+                    throw new UnsupportedOperationException("invocation not supported");
+                }
+            });
+        }
+
         try {
             return AccessController.doPrivileged((PrivilegedExceptionAction<Object>)
                     () -> MethodHelper.invoke(method, instance, args), acc);

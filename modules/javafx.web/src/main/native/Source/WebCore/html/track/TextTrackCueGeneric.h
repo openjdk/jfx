@@ -25,24 +25,20 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "Color.h"
 #include "VTTCue.h"
 
 namespace WebCore {
 
-class GenericCueData;
-
 // A "generic" cue is a non-WebVTT cue, so it is not positioned/sized with the WebVTT logic.
 class TextTrackCueGeneric final : public VTTCue {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(TextTrackCueGeneric, WEBCORE_EXPORT);
 public:
-    static Ref<TextTrackCueGeneric> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, const String& content)
-    {
-        return adoptRef(*new TextTrackCueGeneric(context, start, end, content));
-    }
+    WEBCORE_EXPORT static Ref<TextTrackCueGeneric> create(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
 
-    ExceptionOr<void> setLine(double) final;
+    ExceptionOr<void> setLine(const LineAndPositionSetting&) final;
     ExceptionOr<void> setPosition(const LineAndPositionSetting&) final;
 
     bool useDefaultPosition() const { return m_useDefaultPosition; }
@@ -67,21 +63,19 @@ public:
 
     void setFontSize(int, const IntSize&, bool important) final;
 
-    String toJSONString() const;
-
 private:
-    TextTrackCueGeneric(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String&);
+    TextTrackCueGeneric(Document&, const MediaTime& start, const MediaTime& end, const String&);
 
     bool isOrderedBefore(const TextTrackCue*) const final;
     bool isPositionedAbove(const TextTrackCue*) const final;
 
     Ref<VTTCueBox> createDisplayTree() final;
 
-    bool isEqual(const TextTrackCue&, CueMatchRules) const final;
     bool cueContentsMatch(const TextTrackCue&) const final;
-    bool doesExtendCue(const TextTrackCue&) const final;
 
-    CueType cueType() const final { return Generic; }
+    CueType cueType() const final { return ConvertedToWebVTT; }
+
+    void toJSON(JSON::Object&) const final;
 
     Color m_foregroundColor;
     Color m_backgroundColor;
@@ -96,16 +90,12 @@ private:
 
 namespace WTF {
 
-template<typename Type>
-struct LogArgument;
-
-template <>
-struct LogArgument<WebCore::TextTrackCueGeneric> {
-    static String toString(const WebCore::TextTrackCueGeneric& cue)
-    {
-        return cue.toJSONString();
-    }
-};
+template<> struct LogArgument<WebCore::TextTrackCueGeneric> : LogArgument<WebCore::TextTrackCue> { };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::TextTrackCueGeneric)
+static bool isType(const WebCore::TextTrackCue& cue) { return cue.cueType() == WebCore::TextTrackCue::ConvertedToWebVTT; }
+SPECIALIZE_TYPE_TRAITS_END()
+
 #endif

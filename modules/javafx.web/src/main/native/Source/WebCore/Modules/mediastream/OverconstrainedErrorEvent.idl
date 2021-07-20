@@ -28,8 +28,10 @@
 
 [
     Conditional=MEDIA_STREAM,
-    Constructor(DOMString type, optional OverconstrainedErrorEventInit eventInitDict),
+    Exposed=Window
 ] interface OverconstrainedErrorEvent : Event {
+    constructor(DOMString type, optional OverconstrainedErrorEventInit eventInitDict);
+
     readonly attribute OverconstrainedError? error;
 };
 

@@ -25,9 +25,10 @@
 
 #pragma once
 
+#include "DebugOverlayRegions.h"
 #include "Frame.h"
-#include "Settings.h"
 #include <wtf/HashMap.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -43,10 +44,11 @@ public:
         WheelEventHandlers,
         NonFastScrollableRegion,
     };
-    static const unsigned NumberOfRegionTypes = NonFastScrollableRegion + 1;
+    static constexpr unsigned NumberOfRegionTypes = static_cast<unsigned>(RegionType::NonFastScrollableRegion) + 1;
 
     static void didLayout(Frame&);
     static void didChangeEventHandlers(Frame&);
+    static void doAfterUpdateRendering(Page&);
 
     WEBCORE_EXPORT static void settingsChanged(Page&);
 
@@ -56,6 +58,8 @@ private:
     void showRegionOverlay(Page&, RegionType);
     void hideRegionOverlay(Page&, RegionType);
 
+    void updateRegionIfNecessary(Page&, RegionType);
+
     void regionChanged(Frame&, RegionType);
 
     bool hasOverlaysForPage(Page& page) const
@@ -63,7 +67,7 @@ private:
         return m_pageRegionOverlays.contains(&page);
     }
 
-    void updateOverlayRegionVisibility(Page&, DebugOverlayRegions);
+    void updateOverlayRegionVisibility(Page&, OptionSet<DebugOverlayRegions>);
 
     RegionOverlay* regionOverlayForPage(Page&, RegionType) const;
     RegionOverlay& ensureRegionOverlayForPage(Page&, RegionType);
@@ -97,6 +101,15 @@ inline void DebugPageOverlays::didChangeEventHandlers(Frame& frame)
 
     sharedDebugOverlays->regionChanged(frame, RegionType::WheelEventHandlers);
     sharedDebugOverlays->regionChanged(frame, RegionType::NonFastScrollableRegion);
+}
+
+inline void DebugPageOverlays::doAfterUpdateRendering(Page& page)
+{
+    if (LIKELY(!hasOverlays(page)))
+        return;
+
+    sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::WheelEventHandlers);
+    sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::NonFastScrollableRegion);
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 
 #include "JSLexicalEnvironment.h"
 #include "JSCInlines.h"
-#include "JSWithScope.h"
 
 namespace JSC {
 
@@ -56,7 +55,8 @@ void DebuggerScope::finishCreation(VM& vm)
     Base::finishCreation(vm);
 }
 
-void DebuggerScope::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void DebuggerScope::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     DebuggerScope* thisObject = jsCast<DebuggerScope*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -65,6 +65,8 @@ void DebuggerScope::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_scope);
     visitor.append(thisObject->m_next);
 }
+
+DEFINE_VISIT_CHILDREN(DebuggerScope);
 
 String DebuggerScope::className(const JSObject* object, VM& vm)
 {
@@ -77,7 +79,7 @@ String DebuggerScope::className(const JSObject* object, VM& vm)
     return thisObject->methodTable(vm)->className(thisObject, vm);
 }
 
-String DebuggerScope::toStringName(const JSObject* object, ExecState* exec)
+String DebuggerScope::toStringName(const JSObject* object, JSGlobalObject* globalObject)
 {
     const DebuggerScope* scope = jsCast<const DebuggerScope*>(object);
     // We cannot assert that scope->isValid() because the TypeProfiler may encounter an invalidated
@@ -85,10 +87,10 @@ String DebuggerScope::toStringName(const JSObject* object, ExecState* exec)
     if (!scope->isValid())
         return String();
     JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
-    return thisObject->methodTable(exec->vm())->toStringName(thisObject, exec);
+    return thisObject->methodTable(globalObject->vm())->toStringName(thisObject, globalObject);
 }
 
-bool DebuggerScope::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool DebuggerScope::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
     DebuggerScope* scope = jsCast<DebuggerScope*>(object);
     if (!scope->isValid())
@@ -105,8 +107,8 @@ bool DebuggerScope::getOwnPropertySlot(JSObject* object, ExecState* exec, Proper
     // does not presently need to distinguish between what's owned at each level in the
     // prototype chain. Hence, we'll invoke getPropertySlot() on the wrapped scope here
     // instead of getOwnPropertySlot().
-    bool result = thisObject->getPropertySlot(exec, propertyName, slot);
-    if (result && slot.isValue() && slot.getValue(exec, propertyName) == jsTDZValue()) {
+    bool result = thisObject->getPropertySlot(globalObject, propertyName, slot);
+    if (result && slot.isValue() && slot.getValue(globalObject, propertyName) == jsTDZValue()) {
         // FIXME:
         // We hit a scope property that has the TDZ empty value.
         // Currently, we just lie to the inspector and claim that this property is undefined.
@@ -118,7 +120,7 @@ bool DebuggerScope::getOwnPropertySlot(JSObject* object, ExecState* exec, Proper
     return result;
 }
 
-bool DebuggerScope::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+bool DebuggerScope::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     DebuggerScope* scope = jsCast<DebuggerScope*>(cell);
     ASSERT(scope->isValid());
@@ -126,44 +128,44 @@ bool DebuggerScope::put(JSCell* cell, ExecState* exec, PropertyName propertyName
         return false;
     JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
     slot.setThisValue(JSValue(thisObject));
-    return thisObject->methodTable(exec->vm())->put(thisObject, exec, propertyName, value, slot);
+    return thisObject->methodTable(globalObject->vm())->put(thisObject, globalObject, propertyName, value, slot);
 }
 
-bool DebuggerScope::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
+bool DebuggerScope::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     DebuggerScope* scope = jsCast<DebuggerScope*>(cell);
     ASSERT(scope->isValid());
     if (!scope->isValid())
         return false;
     JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
-    return thisObject->methodTable(exec->vm())->deleteProperty(thisObject, exec, propertyName);
+    return thisObject->methodTable(globalObject->vm())->deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
-void DebuggerScope::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+void DebuggerScope::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     DebuggerScope* scope = jsCast<DebuggerScope*>(object);
     ASSERT(scope->isValid());
     if (!scope->isValid())
         return;
     JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
-    thisObject->methodTable(exec->vm())->getPropertyNames(thisObject, exec, propertyNames, mode);
+    thisObject->getPropertyNames(globalObject, propertyNames, mode);
 }
 
-bool DebuggerScope::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
+bool DebuggerScope::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     DebuggerScope* scope = jsCast<DebuggerScope*>(object);
     ASSERT(scope->isValid());
     if (!scope->isValid())
         return false;
     JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
-    return thisObject->methodTable(exec->vm())->defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
+    return thisObject->methodTable(globalObject->vm())->defineOwnProperty(thisObject, globalObject, propertyName, descriptor, shouldThrow);
 }
 
 DebuggerScope* DebuggerScope::next()
 {
     ASSERT(isValid());
     if (!m_next && m_scope->next()) {
-        VM& vm = *m_scope->vm();
+        VM& vm = m_scope->vm();
         DebuggerScope* nextScope = create(vm, m_scope->next());
         m_next.set(vm, this, nextScope);
     }
@@ -224,7 +226,7 @@ bool DebuggerScope::isNestedLexicalScope() const
 
 String DebuggerScope::name() const
 {
-    SymbolTable* symbolTable = m_scope->symbolTable(*vm());
+    SymbolTable* symbolTable = m_scope->symbolTable(vm());
     if (!symbolTable)
         return String();
 
@@ -237,7 +239,7 @@ String DebuggerScope::name() const
 
 DebuggerLocation DebuggerScope::location() const
 {
-    SymbolTable* symbolTable = m_scope->symbolTable(*vm());
+    SymbolTable* symbolTable = m_scope->symbolTable(vm());
     if (!symbolTable)
         return DebuggerLocation();
 
@@ -249,7 +251,7 @@ DebuggerLocation DebuggerScope::location() const
     return DebuggerLocation(executable);
 }
 
-JSValue DebuggerScope::caughtValue(ExecState* exec) const
+JSValue DebuggerScope::caughtValue(JSGlobalObject* globalObject) const
 {
     ASSERT(isCatchScope());
     JSLexicalEnvironment* catchEnvironment = jsCast<JSLexicalEnvironment*>(m_scope.get());
@@ -257,9 +259,9 @@ JSValue DebuggerScope::caughtValue(ExecState* exec) const
     RELEASE_ASSERT(catchSymbolTable->size() == 1);
     PropertyName errorName(catchSymbolTable->begin(catchSymbolTable->m_lock)->key.get());
     PropertySlot slot(m_scope.get(), PropertySlot::InternalMethodType::Get);
-    bool success = catchEnvironment->getOwnPropertySlot(catchEnvironment, exec, errorName, slot);
+    bool success = catchEnvironment->getOwnPropertySlot(catchEnvironment, globalObject, errorName, slot);
     RELEASE_ASSERT(success && slot.isValue());
-    return slot.getValue(exec, errorName);
+    return slot.getValue(globalObject, errorName);
 }
 
 } // namespace JSC

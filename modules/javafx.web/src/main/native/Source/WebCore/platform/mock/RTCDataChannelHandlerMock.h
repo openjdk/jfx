@@ -33,16 +33,16 @@
 namespace WebCore {
 
 class RTCDataChannelHandlerMock final : public RTCDataChannelHandler, public TimerEventBasedMock {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     RTCDataChannelHandlerMock(const String&, const RTCDataChannelInit&);
 
 private:
     void setClient(RTCDataChannelHandlerClient&) final;
 
-    bool sendStringData(const String&) final;
+    bool sendStringData(const CString&) final;
     bool sendRawData(const char*, size_t) final;
     void close() final;
-    size_t bufferedAmount() const final { return 0; }
 
     RTCDataChannelHandlerClient* m_client { nullptr };
 

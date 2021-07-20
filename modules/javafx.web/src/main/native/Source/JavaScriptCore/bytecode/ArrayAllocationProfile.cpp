@@ -26,8 +26,7 @@
 #include "config.h"
 #include "ArrayAllocationProfile.h"
 
-#include "JSCInlines.h"
-
+#include "JSCellInlines.h"
 #include <algorithm>
 
 namespace JSC {
@@ -47,7 +46,13 @@ void ArrayAllocationProfile::updateProfile()
     //   it's possible for that array to no longer be reachable, it cannot actually
     //   be freed, since we require the GC to wait until all concurrent JITing
     //   finishes.
+    //
+    // But one exception is vector length. We access vector length to get the vector
+    // length hint. However vector length can be accessible only from the main
+    // thread because large butterfly can be realloced in the main thread.
+    // So for now, we update the allocation profile only from the main thread.
 
+    ASSERT(!isCompilationThread());
     JSArray* lastArray = m_lastArray;
     if (!lastArray)
         return;

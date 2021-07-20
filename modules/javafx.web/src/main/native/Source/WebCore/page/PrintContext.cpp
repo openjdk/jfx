@@ -25,7 +25,9 @@
 #include "GraphicsContext.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "LengthBox.h"
 #include "RenderView.h"
+#include "RuntimeEnabledFeatures.h"
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -76,6 +78,33 @@ void PrintContext::computePageRects(const FloatRect& printRect, float headerHeig
     }
 
     computePageRectsWithPageSizeInternal(FloatSize(pageWidth / userScaleFactor, pageHeight / userScaleFactor), allowHorizontalTiling);
+}
+
+FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
+{
+    if (!frame() || !frame()->document())
+        return printMargin;
+    if (!RuntimeEnabledFeatures::sharedFeatures().pageAtRuleSupportEnabled())
+        return printMargin;
+    // FIXME Currently no pseudo class is supported.
+    auto style = frame()->document()->styleScope().resolver().styleForPage(0);
+
+    float pixelToPointScaleFactor = 1 / CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSUnitType::CSS_PT);
+    return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
+        style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
+        style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
+        style->marginLeft().isAuto() ? printMargin.left() : style->marginLeft().value() * pixelToPointScaleFactor };
+}
+
+FloatSize PrintContext::computedPageSize(FloatSize pageSize, FloatBoxExtent printMargin)
+{
+    auto computedMargin = computedPageMargin(printMargin);
+    if (computedMargin == printMargin)
+        return pageSize;
+
+    auto horizontalMarginDelta = (printMargin.left() - computedMargin.left()) + (printMargin.right() - computedMargin.right());
+    auto verticalMarginDelta = (printMargin.top() - computedMargin.top()) + (printMargin.bottom() - computedMargin.bottom());
+    return { pageSize.width() + horizontalMarginDelta, pageSize.height() + verticalMarginDelta };
 }
 
 void PrintContext::computePageRectsWithPageSize(const FloatSize& pageSizeInPixels, bool allowHorizontalTiling)
@@ -201,6 +230,9 @@ void PrintContext::spoolPage(GraphicsContext& ctx, int pageNumber, float width)
         return;
 
     auto& frame = *this->frame();
+    if (!frame.view())
+        return;
+
     // FIXME: Not correct for vertical text.
     IntRect pageRect = m_pageRects[pageNumber];
     float scale = width / pageRect.width();
@@ -220,6 +252,9 @@ void PrintContext::spoolRect(GraphicsContext& ctx, const IntRect& rect)
         return;
 
     auto& frame = *this->frame();
+    if (!frame.view())
+        return;
+
     // FIXME: Not correct for vertical text.
     ctx.save();
     ctx.translate(-rect.x(), -rect.y());
@@ -292,7 +327,7 @@ void PrintContext::outputLinkedDestinations(GraphicsContext& graphicsContext, Do
         return;
 
     if (!m_linkedDestinations) {
-        m_linkedDestinations = std::make_unique<HashMap<String, Ref<Element>>>();
+        m_linkedDestinations = makeUnique<HashMap<String, Ref<Element>>>();
         collectLinkedDestinations(document);
     }
 
@@ -337,7 +372,7 @@ String PrintContext::pageProperty(Frame* frame, const char* propertyName, int pa
     if (!strcmp(propertyName, "font-family"))
         return style->fontDescription().firstFamily();
     if (!strcmp(propertyName, "size"))
-        return makeString(FormattedNumber::fixedPrecision(style->pageSize().width.value()), ' ', FormattedNumber::fixedPrecision(style->pageSize().height.value()));
+        return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
 
     return makeString("pageProperty() unimplemented for: ", propertyName);
 }
@@ -395,7 +430,7 @@ void PrintContext::spoolAllPagesWithBoundaries(Frame& frame, GraphicsContext& gr
     int totalHeight = pageRects.size() * (pageSizeInPixels.height() + 1) - 1;
 
     // Fill the whole background by white.
-    graphicsContext.setFillColor(Color(255, 255, 255));
+    graphicsContext.setFillColor(Color::white);
     graphicsContext.fillRect(FloatRect(0, 0, pageWidth, totalHeight));
 
     graphicsContext.save();
@@ -410,8 +445,8 @@ void PrintContext::spoolAllPagesWithBoundaries(Frame& frame, GraphicsContext& gr
             int boundaryLineY = currentHeight - 1;
 #endif
             graphicsContext.save();
-            graphicsContext.setStrokeColor(Color(0, 0, 255));
-            graphicsContext.setFillColor(Color(0, 0, 255));
+            graphicsContext.setStrokeColor(Color::blue);
+            graphicsContext.setFillColor(Color::blue);
             graphicsContext.drawLine(IntPoint(0, boundaryLineY), IntPoint(pageWidth, boundaryLineY));
             graphicsContext.restore();
         }

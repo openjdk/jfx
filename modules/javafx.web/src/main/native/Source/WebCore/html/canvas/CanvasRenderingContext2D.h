@@ -28,8 +28,6 @@
 #include "CanvasRenderingContext2DBase.h"
 #include "CanvasTextAlign.h"
 #include "CanvasTextBaseline.h"
-#include "FontCascade.h"
-#include "FontSelectorClient.h"
 #include "HTMLCanvasElement.h"
 #include <memory>
 
@@ -38,8 +36,9 @@ namespace WebCore {
 class TextMetrics;
 
 class CanvasRenderingContext2D final : public CanvasRenderingContext2DBase {
+    WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext2D);
 public:
-    static std::unique_ptr<CanvasRenderingContext2D> create(CanvasBase&, bool usesCSSCompatibilityParseMode, bool usesDashboardCompatibilityMode);
+    static std::unique_ptr<CanvasRenderingContext2D> create(CanvasBase&, bool usesCSSCompatibilityParseMode);
 
     virtual ~CanvasRenderingContext2D();
 
@@ -50,17 +49,9 @@ public:
 
     float webkitBackingStorePixelRatio() const { return 1; }
 
-    String font() const;
     void setFont(const String&);
 
-    CanvasTextAlign textAlign() const;
-    void setTextAlign(CanvasTextAlign);
-
-    CanvasTextBaseline textBaseline() const;
-    void setTextBaseline(CanvasTextBaseline);
-
     CanvasDirection direction() const;
-    void setDirection(CanvasDirection);
 
     void fillText(const String& text, float x, float y, Optional<float> maxWidth = WTF::nullopt);
     void strokeText(const String& text, float x, float y, Optional<float> maxWidth = WTF::nullopt);
@@ -69,21 +60,15 @@ public:
     bool is2d() const override { return true; }
 
 private:
-    CanvasRenderingContext2D(CanvasBase&, bool usesCSSCompatibilityParseMode, bool usesDashboardCompatibilityMode);
+    CanvasRenderingContext2D(CanvasBase&, bool usesCSSCompatibilityParseMode);
 
-    // The relationship between FontCascade and CanvasRenderingContext2D::FontProxy must hold certain invariants.
-    // Therefore, all font operations must pass through the State.
-    const FontProxy& fontProxy();
+    const FontProxy* fontProxy() final;
 
     void drawTextInternal(const String& text, float x, float y, bool fill, Optional<float> maxWidth = WTF::nullopt);
 
     void drawFocusIfNeededInternal(const Path&, Element&);
 
-    void prepareGradientForDashboard(CanvasGradient& gradient) const;
-
     TextDirection toTextDirection(CanvasRenderingContext2DBase::Direction, const RenderStyle** computedStyle = nullptr) const;
-
-    FloatPoint textOffset(float width, TextDirection);
 };
 
 } // namespace WebCore

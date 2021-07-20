@@ -26,35 +26,40 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/Markable.h>
+#include <wtf/OptionSet.h>
+#include <wtf/Optional.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WTF {
 
 class TextStream {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     struct FormatNumberRespectingIntegers {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
         FormatNumberRespectingIntegers(double number)
             : value(number) { }
 
         double value;
     };
 
-    enum Formatting {
+    enum class Formatting : uint8_t {
         SVGStyleRect                = 1 << 0, // "at (0,0) size 10x10"
         NumberRespectingIntegers    = 1 << 1,
         LayoutUnitsAsIntegers       = 1 << 2,
     };
 
-    using FormattingFlags = unsigned;
-
     enum class LineMode { SingleLine, MultipleLine };
-    TextStream(LineMode lineMode = LineMode::MultipleLine, FormattingFlags formattingFlags = 0)
+    TextStream(LineMode lineMode = LineMode::MultipleLine, OptionSet<Formatting> formattingFlags = { })
         : m_formattingFlags(formattingFlags)
         , m_multiLineMode(lineMode == LineMode::MultipleLine)
     {
     }
 
     WTF_EXPORT_PRIVATE TextStream& operator<<(bool);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(char);
     WTF_EXPORT_PRIVATE TextStream& operator<<(int);
     WTF_EXPORT_PRIVATE TextStream& operator<<(unsigned);
     WTF_EXPORT_PRIVATE TextStream& operator<<(long);
@@ -70,10 +75,14 @@ public:
     // Deprecated. Use the NumberRespectingIntegers FormattingFlag instead.
     WTF_EXPORT_PRIVATE TextStream& operator<<(const FormatNumberRespectingIntegers&);
 
-    FormattingFlags formattingFlags() const { return m_formattingFlags; }
-    void setFormattingFlags(FormattingFlags flags) { m_formattingFlags = flags; }
+#ifdef __OBJC__
+    WTF_EXPORT_PRIVATE TextStream& operator<<(id<NSObject>);
+#endif
 
-    bool hasFormattingFlag(Formatting flag) const { return m_formattingFlags & flag; }
+    OptionSet<Formatting> formattingFlags() const { return m_formattingFlags; }
+    void setFormattingFlags(OptionSet<Formatting> flags) { m_formattingFlags = flags; }
+
+    bool hasFormattingFlag(Formatting flag) const { return m_formattingFlags.contains(flag); }
 
     template<typename T>
     void dumpProperty(const String& name, const T& value)
@@ -91,6 +100,7 @@ public:
     WTF_EXPORT_PRIVATE void nextLine(); // Output newline and indent.
 
     int indent() const { return m_indent; }
+    void setIndent(int indent) { m_indent = indent; }
     void increaseIndent(int amount = 1) { m_indent += amount; }
     void decreaseIndent(int amount = 1) { m_indent -= amount; ASSERT(m_indent >= 0); }
 
@@ -100,6 +110,23 @@ public:
     TextStream& operator<<(TextStream& (*func)(TextStream&))
     {
         return (*func)(*this);
+    }
+
+    struct Repeat {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        Repeat(unsigned inWidth, char inCharacter)
+            : width(inWidth), character(inCharacter)
+        { }
+        unsigned width { 0 };
+        char character { ' ' };
+    };
+
+    TextStream& operator<<(const Repeat& repeated)
+    {
+        for (unsigned i = 0; i < repeated.width; ++i)
+            m_text.append(repeated.character);
+
+        return *this;
     }
 
     class IndentScope {
@@ -138,8 +165,8 @@ public:
 
 private:
     StringBuilder m_text;
-    FormattingFlags m_formattingFlags { 0 };
     int m_indent { 0 };
+    OptionSet<Formatting> m_formattingFlags;
     bool m_multiLineMode { true };
 };
 
@@ -149,8 +176,44 @@ inline TextStream& indent(TextStream& ts)
     return ts;
 }
 
+template<typename T>
+struct ValueOrNull {
+    explicit ValueOrNull(T* inValue)
+        : value(inValue)
+    { }
+    T* value;
+};
+
+template<typename T>
+TextStream& operator<<(TextStream& ts, ValueOrNull<T> item)
+{
+    if (item.value)
+        ts << *item.value;
+    else
+        ts << "null";
+    return ts;
+}
+
 template<typename Item>
-TextStream& operator<<(TextStream& ts, const Vector<Item>& vector)
+TextStream& operator<<(TextStream& ts, const Optional<Item>& item)
+{
+    if (item)
+        return ts << item.value();
+
+    return ts << "nullopt";
+}
+
+template<typename T, typename Traits>
+TextStream& operator<<(TextStream& ts, const Markable<T, Traits>& item)
+{
+    if (item)
+        return ts << item.value();
+
+    return ts << "unset";
+}
+
+template<typename ItemType, size_t inlineCapacity>
+TextStream& operator<<(TextStream& ts, const Vector<ItemType, inlineCapacity>& vector)
 {
     ts << "[";
 
@@ -164,10 +227,66 @@ TextStream& operator<<(TextStream& ts, const Vector<Item>& vector)
     return ts << "]";
 }
 
+template<typename T>
+TextStream& operator<<(TextStream& ts, const WeakPtr<T>& item)
+{
+    if (item)
+        return ts << *item;
+
+    return ts << "null";
+}
+
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+TextStream& operator<<(TextStream& ts, const HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>& map)
+{
+    ts << "{";
+
+    bool first = true;
+    for (const auto& keyValuePair : map) {
+        ts << keyValuePair.key << ": " << keyValuePair.value;
+        if (!first)
+            ts << ", ";
+        first = false;
+    }
+
+    return ts << "}";
+}
+
+template<typename ValueArg, typename HashArg, typename TraitsArg>
+TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsArg>& set)
+{
+    ts << "[";
+
+    bool first = true;
+    for (const auto& item : set) {
+        ts << item;
+        if (!first)
+            ts << ", ";
+        first = false;
+    }
+
+    return ts << "]";
+}
+
+template<typename Option>
+TextStream& operator<<(TextStream& ts, const OptionSet<Option>& options)
+{
+    ts << "[";
+    bool needComma = false;
+    for (auto option : options) {
+        if (needComma)
+            ts << ", ";
+        needComma = true;
+        ts << option;
+    }
+    return ts << "]";
+}
+
 // Deprecated. Use TextStream::writeIndent() instead.
 WTF_EXPORT_PRIVATE void writeIndent(TextStream&, int indent);
 
 } // namespace WTF
 
 using WTF::TextStream;
+using WTF::ValueOrNull;
 using WTF::indent;

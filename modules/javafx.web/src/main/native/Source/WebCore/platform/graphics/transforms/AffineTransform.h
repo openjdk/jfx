@@ -29,7 +29,7 @@
 
 #include <array>
 #include <wtf/FastMalloc.h>
-#include <wtf/Optional.h>
+#include <wtf/Forward.h>
 
 #if USE(CG)
 typedef struct CGAffineTransform CGAffineTransform;
@@ -53,6 +53,7 @@ class FloatSize;
 class IntPoint;
 class IntSize;
 class IntRect;
+class Region;
 class TransformationMatrix;
 
 class AffineTransform {
@@ -89,6 +90,8 @@ public:
     WEBCORE_EXPORT FloatRect mapRect(const FloatRect&) const;
     WEBCORE_EXPORT FloatQuad mapQuad(const FloatQuad&) const;
 
+    WEBCORE_EXPORT Region mapRegion(const Region&) const;
+
     WEBCORE_EXPORT bool isIdentity() const;
 
     double a() const { return m_transform[0]; }
@@ -108,7 +111,7 @@ public:
 
     WEBCORE_EXPORT AffineTransform& multiply(const AffineTransform& other);
     WEBCORE_EXPORT AffineTransform& scale(double);
-    AffineTransform& scale(double sx, double sy);
+    WEBCORE_EXPORT AffineTransform& scale(double sx, double sy);
     WEBCORE_EXPORT AffineTransform& scaleNonUniform(double sx, double sy); // Same as scale(sx, sy).
     WEBCORE_EXPORT AffineTransform& scale(const FloatSize&);
     WEBCORE_EXPORT AffineTransform& rotate(double);

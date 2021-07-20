@@ -28,24 +28,59 @@
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
-#include <wtf/text/AtomicStringHash.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
+#define TEXMAP_ATTRIBUTE_VARIABLES(macro) \
+    macro(vertex) \
+
+#define TEXMAP_UNIFORM_VARIABLES(macro) \
+    macro(modelViewMatrix) \
+    macro(projectionMatrix) \
+    macro(textureSpaceMatrix) \
+    macro(textureColorSpaceMatrix) \
+    macro(opacity) \
+    macro(color) \
+    macro(expandedQuadEdgesInScreenSpace) \
+    macro(yuvToRgb) \
+    macro(filterAmount) \
+    macro(gaussianKernel) \
+    macro(blurRadius) \
+    macro(shadowOffset) \
+    macro(roundedRectNumber) \
+    macro(roundedRect) \
+    macro(roundedRectInverseTransformMatrix) \
+
+#define TEXMAP_SAMPLER_VARIABLES(macro) \
+    macro(sampler) \
+    macro(samplerY) \
+    macro(samplerU) \
+    macro(samplerV) \
+    macro(mask) \
+    macro(contentTexture) \
+    macro(externalOESTexture) \
+
+#define TEXMAP_VARIABLES(macro) \
+    TEXMAP_ATTRIBUTE_VARIABLES(macro) \
+    TEXMAP_UNIFORM_VARIABLES(macro) \
+    TEXMAP_SAMPLER_VARIABLES(macro) \
+
 #define TEXMAP_DECLARE_VARIABLE(Accessor, Name, Type) \
     GLuint Accessor##Location() { \
-        static NeverDestroyed<const AtomicString> name(Name, AtomicString::ConstructFromLiteral); \
-        return getLocation(name.get(), Type); \
+        return getLocation(VariableID::Accessor, Name, Type); \
     }
 
-#define TEXMAP_DECLARE_UNIFORM(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "u_"#Accessor, UniformVariable)
-#define TEXMAP_DECLARE_ATTRIBUTE(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "a_"#Accessor, AttribVariable)
-#define TEXMAP_DECLARE_SAMPLER(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "s_"#Accessor, UniformVariable)
+#define TEXMAP_DECLARE_UNIFORM(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "u_"#Accessor""_s, UniformVariable)
+#define TEXMAP_DECLARE_ATTRIBUTE(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "a_"#Accessor""_s, AttribVariable)
+#define TEXMAP_DECLARE_SAMPLER(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "s_"#Accessor""_s, UniformVariable)
+
+#define TEXMAP_DECLARE_VARIABLE_ENUM(name) name,
 
 class TextureMapperShaderProgram : public RefCounted<TextureMapperShaderProgram> {
 public:
     enum Option {
-        Texture          = 1L << 0,
+        TextureRGB       = 1L << 0,
         Rect             = 1L << 1,
         SolidColor       = 1L << 2,
         Opacity          = 1L << 3,
@@ -61,7 +96,17 @@ public:
         BlurFilter       = 1L << 14,
         AlphaBlur        = 1L << 15,
         ContentTexture   = 1L << 16,
-        ManualRepeat     = 1L << 17
+        ManualRepeat     = 1L << 17,
+        TextureYUV       = 1L << 18,
+        TextureNV12      = 1L << 19,
+        TextureNV21      = 1L << 20,
+        TexturePackedYUV = 1L << 21,
+        TextureExternalOES = 1L << 22,
+        RoundedRectClip  = 1L << 23,
+    };
+
+    enum class VariableID {
+        TEXMAP_VARIABLES(TEXMAP_DECLARE_VARIABLE_ENUM)
     };
 
     typedef unsigned Options;
@@ -71,23 +116,10 @@ public:
 
     GLuint programID() const { return m_id; }
 
-    TEXMAP_DECLARE_ATTRIBUTE(vertex)
 
-    TEXMAP_DECLARE_UNIFORM(modelViewMatrix)
-    TEXMAP_DECLARE_UNIFORM(projectionMatrix)
-    TEXMAP_DECLARE_UNIFORM(textureSpaceMatrix)
-    TEXMAP_DECLARE_UNIFORM(textureColorSpaceMatrix)
-    TEXMAP_DECLARE_UNIFORM(opacity)
-    TEXMAP_DECLARE_UNIFORM(color)
-    TEXMAP_DECLARE_UNIFORM(expandedQuadEdgesInScreenSpace)
-    TEXMAP_DECLARE_SAMPLER(sampler)
-    TEXMAP_DECLARE_SAMPLER(mask)
-
-    TEXMAP_DECLARE_UNIFORM(filterAmount)
-    TEXMAP_DECLARE_UNIFORM(gaussianKernel)
-    TEXMAP_DECLARE_UNIFORM(blurRadius)
-    TEXMAP_DECLARE_UNIFORM(shadowOffset)
-    TEXMAP_DECLARE_SAMPLER(contentTexture)
+    TEXMAP_ATTRIBUTE_VARIABLES(TEXMAP_DECLARE_ATTRIBUTE)
+    TEXMAP_UNIFORM_VARIABLES(TEXMAP_DECLARE_UNIFORM)
+    TEXMAP_SAMPLER_VARIABLES(TEXMAP_DECLARE_SAMPLER)
 
     void setMatrix(GLuint, const TransformationMatrix&);
 
@@ -98,10 +130,10 @@ private:
     GLuint m_fragmentShader;
 
     enum VariableType { UniformVariable, AttribVariable };
-    GLuint getLocation(const AtomicString&, VariableType);
+    GLuint getLocation(VariableID, ASCIILiteral, VariableType);
 
     GLuint m_id;
-    HashMap<AtomicString, GLuint> m_variables;
+    HashMap<VariableID, GLuint, WTF::IntHash<VariableID>, WTF::StrongEnumHashTraits<VariableID>> m_variables;
 };
 
 }

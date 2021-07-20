@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if HAVE(CORE_VIDEO)
-
 #include <wtf/RetainPtr.h>
 
 typedef struct OpaqueVTPixelBufferConformer* VTPixelBufferConformerRef;
@@ -36,17 +34,14 @@ typedef struct __CVBuffer *CVPixelBufferRef;
 namespace WebCore {
 
 class PixelBufferConformerCV {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    PixelBufferConformerCV(CFDictionaryRef attributes);
-    RetainPtr<CVPixelBufferRef> convert(CVPixelBufferRef);
+    WEBCORE_EXPORT PixelBufferConformerCV(CFDictionaryRef attributes);
+    WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> convert(CVPixelBufferRef);
     RetainPtr<CGImageRef> createImageFromPixelBuffer(CVPixelBufferRef);
 
 private:
-#if USE(VIDEOTOOLBOX)
     RetainPtr<VTPixelBufferConformerRef> m_pixelConformer;
-#endif
 };
 
 }
-
-#endif // HAVE(CORE_VIDEO)

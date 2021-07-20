@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,20 +20,25 @@
 
 #pragma once
 
-#include "JSDestructibleObject.h"
+#include "JSObject.h"
 
 namespace JSC {
 
-class DateInstance final : public JSDestructibleObject {
-protected:
-    JS_EXPORT_PRIVATE DateInstance(VM&, Structure*);
-    void finishCreation(VM&);
-    JS_EXPORT_PRIVATE void finishCreation(VM&, double);
-
-    JS_EXPORT_PRIVATE static void destroy(JSCell*);
-
+class DateInstance final : public JSNonFinalObject {
 public:
-    using Base = JSDestructibleObject;
+    using Base = JSNonFinalObject;
+
+    static constexpr bool needsDestruction = true;
+    static void destroy(JSCell* cell)
+    {
+        static_cast<DateInstance*>(cell)->DateInstance::~DateInstance();
+    }
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.dateInstanceSpace;
+    }
 
     static DateInstance* create(VM& vm, Structure* structure, double date)
     {
@@ -49,33 +54,40 @@ public:
         return instance;
     }
 
+    static String toStringName(const JSObject*, JSGlobalObject*);
     double internalNumber() const { return m_internalNumber; }
     void setInternalNumber(double value) { m_internalNumber = value; }
 
     DECLARE_EXPORT_INFO;
 
-    const GregorianDateTime* gregorianDateTime(ExecState* exec) const
+    const GregorianDateTime* gregorianDateTime(DateCache& cache) const
     {
         if (m_data && m_data->m_gregorianDateTimeCachedForMS == internalNumber())
             return &m_data->m_cachedGregorianDateTime;
-        return calculateGregorianDateTime(exec);
+        return calculateGregorianDateTime(cache);
     }
 
-    const GregorianDateTime* gregorianDateTimeUTC(ExecState* exec) const
+    const GregorianDateTime* gregorianDateTimeUTC(DateCache& cache) const
     {
         if (m_data && m_data->m_gregorianDateTimeUTCCachedForMS == internalNumber())
             return &m_data->m_cachedGregorianDateTimeUTC;
-        return calculateGregorianDateTimeUTC(exec);
+        return calculateGregorianDateTimeUTC(cache);
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSDateType, StructureFlags), info());
     }
 
+    static ptrdiff_t offsetOfInternalNumber() { return OBJECT_OFFSETOF(DateInstance, m_internalNumber); }
+    static ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(DateInstance, m_data); }
+
 private:
-    JS_EXPORT_PRIVATE const GregorianDateTime* calculateGregorianDateTime(ExecState*) const;
-    JS_EXPORT_PRIVATE const GregorianDateTime* calculateGregorianDateTimeUTC(ExecState*) const;
+    JS_EXPORT_PRIVATE DateInstance(VM&, Structure*);
+    void finishCreation(VM&);
+    JS_EXPORT_PRIVATE void finishCreation(VM&, double);
+    JS_EXPORT_PRIVATE const GregorianDateTime* calculateGregorianDateTime(DateCache&) const;
+    JS_EXPORT_PRIVATE const GregorianDateTime* calculateGregorianDateTimeUTC(DateCache&) const;
 
     double m_internalNumber { PNaN };
     mutable RefPtr<DateInstanceData> m_data;

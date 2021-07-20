@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,12 @@
 
 
 #include "config.h"
-
 #include "PropertyDescriptor.h"
 
 #include "GetterSetter.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
-unsigned PropertyDescriptor::defaultAttributes = PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly;
 
 bool PropertyDescriptor::writable() const
 {
@@ -72,10 +69,9 @@ void PropertyDescriptor::setUndefined()
     m_attributes = PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum;
 }
 
-GetterSetter* PropertyDescriptor::slowGetterSetter(ExecState* exec)
+GetterSetter* PropertyDescriptor::slowGetterSetter(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
-    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    VM& vm = globalObject->vm();
     JSValue getter = m_getter && !m_getter.isUndefined() ? jsCast<JSObject*>(m_getter) : jsUndefined();
     JSValue setter = m_setter && !m_setter.isUndefined() ? jsCast<JSObject*>(m_setter) : jsUndefined();
     return GetterSetter::create(vm, globalObject, getter, setter);
@@ -96,13 +92,13 @@ JSValue PropertyDescriptor::setter() const
 JSObject* PropertyDescriptor::getterObject() const
 {
     ASSERT(isAccessorDescriptor() && getterPresent());
-    return m_getter.isObject() ? asObject(m_getter) : 0;
+    return m_getter.isObject() ? asObject(m_getter) : nullptr;
 }
 
 JSObject* PropertyDescriptor::setterObject() const
 {
     ASSERT(isAccessorDescriptor() && setterPresent());
-    return m_setter.isObject() ? asObject(m_setter) : 0;
+    return m_setter.isObject() ? asObject(m_setter) : nullptr;
 }
 
 void PropertyDescriptor::setDescriptor(JSValue value, unsigned attributes)
@@ -129,15 +125,16 @@ void PropertyDescriptor::setDescriptor(JSValue value, unsigned attributes)
     }
 }
 
-void PropertyDescriptor::setCustomDescriptor(unsigned attributes)
+void PropertyDescriptor::setAccessorDescriptor(unsigned attributes)
 {
-    ASSERT(!(attributes & PropertyAttribute::CustomValue));
-    m_attributes = attributes | PropertyAttribute::Accessor | PropertyAttribute::CustomAccessor;
-    m_attributes &= ~PropertyAttribute::ReadOnly;
+    ASSERT(attributes & PropertyAttribute::Accessor);
+    ASSERT(!(attributes & PropertyAttribute::CustomAccessorOrValue));
+    attributes &= ~PropertyAttribute::ReadOnly; // FIXME: we should be able to ASSERT this!
+
+    m_attributes = attributes;
+    m_getter = jsUndefined();
+    m_setter = jsUndefined();
     m_seenAttributes = EnumerablePresent | ConfigurablePresent;
-    setGetter(jsUndefined());
-    setSetter(jsUndefined());
-    m_value = JSValue();
 }
 
 void PropertyDescriptor::setAccessorDescriptor(GetterSetter* accessor, unsigned attributes)
@@ -193,15 +190,22 @@ void PropertyDescriptor::setGetter(JSValue getter)
     m_attributes &= ~PropertyAttribute::ReadOnly;
 }
 
-bool PropertyDescriptor::equalTo(ExecState* exec, const PropertyDescriptor& other) const
+bool PropertyDescriptor::equalTo(JSGlobalObject* globalObject, const PropertyDescriptor& other) const
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     if (other.m_value.isEmpty() != m_value.isEmpty()
         || other.m_getter.isEmpty() != m_getter.isEmpty()
         || other.m_setter.isEmpty() != m_setter.isEmpty())
         return false;
-    return (!m_value || sameValue(exec, other.m_value, m_value))
-        && (!m_getter || JSValue::strictEqual(exec, other.m_getter, m_getter))
-        && (!m_setter || JSValue::strictEqual(exec, other.m_setter, m_setter))
+    if (m_value) {
+        bool isSame = sameValue(globalObject, other.m_value, m_value);
+        RETURN_IF_EXCEPTION(scope, false);
+        if (!isSame)
+            return false;
+    }
+    return (!m_getter || JSValue::strictEqual(globalObject, other.m_getter, m_getter))
+        && (!m_setter || JSValue::strictEqual(globalObject, other.m_setter, m_setter))
         && attributesEqual(other);
 }
 

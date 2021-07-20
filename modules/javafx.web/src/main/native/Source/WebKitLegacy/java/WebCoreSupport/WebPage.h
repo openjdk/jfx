@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
+#include <wtf/java/JavaRef.h>
 #include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/PrintContext.h>
@@ -32,8 +34,6 @@
 #include <WebCore/ScrollTypes.h>
 
 #include <jni.h> // todo tav remove when building w/ pch
-#include <wtf/java/JavaRef.h>
-
 
 namespace WebCore {
 
@@ -94,7 +94,7 @@ public:
     void endPrinting();
     void setRootChildLayer(GraphicsLayer*);
     void setNeedsOneShotDrawingSynchronization();
-    void scheduleCompositingLayerSync();
+    void scheduleRenderingUpdate();
     void debugStarted();
     void debugEnded();
     void enableWatchdog();
@@ -112,11 +112,7 @@ private:
     // GraphicsLayerClient
     void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, MonotonicTime /*time*/) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*,
-                       GraphicsContext&,
-                       GraphicsLayerPaintingPhase,
-                       const FloatRect&,
-                       GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, GraphicsLayerPaintBehavior) override;
 
     bool keyEvent(const PlatformKeyboardEvent& event);
     bool charEvent(const PlatformKeyboardEvent& event);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,24 +27,27 @@
 
 #include "AirCode.h"
 #include "AirGenerate.h"
-#include "AirInstInlines.h"
 #include "AirSpecial.h"
 #include "AllowMacroScratchRegisterUsage.h"
 #include "B3BasicBlockInlines.h"
-#include "B3Compilation.h"
-#include "B3Procedure.h"
 #include "B3PatchpointSpecial.h"
+#include "B3PatchpointValue.h"
+#include "B3Procedure.h"
+#include "B3StackmapGenerationParams.h"
 #include "CCallHelpers.h"
 #include "InitializeThreading.h"
-#include "JSCInlines.h"
+#include "JITCompilation.h"
 #include "LinkBuffer.h"
+#include "ProbeContext.h"
 #include "PureNaN.h"
-#include <cmath>
+#include <regex>
 #include <string>
+#include <wtf/DataLog.h>
 #include <wtf/Lock.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/StdMap.h>
 #include <wtf/Threading.h>
+#include <wtf/text/StringCommon.h>
 
 // We don't have a NO_RETURN_DUE_TO_EXIT, nor should we. That's ridiculous.
 static bool hiddenTruthBecauseNoReturnIsStupid() { return true; }
@@ -82,21 +85,21 @@ Lock crashLock;
         CRASH();                                                        \
     } while (false)
 
-std::unique_ptr<B3::Compilation> compile(B3::Procedure& proc)
+std::unique_ptr<Compilation> compile(B3::Procedure& proc)
 {
     prepareForGeneration(proc.code());
     CCallHelpers jit;
     generate(proc.code(), jit);
     LinkBuffer linkBuffer(jit, nullptr);
 
-    return std::make_unique<B3::Compilation>(
-        FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "testair compilation"), proc.releaseByproducts());
+    return makeUnique<Compilation>(
+        FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testair compilation"), proc.releaseByproducts());
 }
 
 template<typename T, typename... Arguments>
-T invoke(const B3::Compilation& code, Arguments... arguments)
+T invoke(const Compilation& code, Arguments... arguments)
 {
-    void* executableAddress = untagCFunctionPtr(code.code().executableAddress(), B3CompilationPtrTag);
+    void* executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(code.code().executableAddress());
     T (*function)(Arguments...) = bitwise_cast<T(*)(Arguments...)>(executableAddress);
     return function(arguments...);
 }
@@ -1854,7 +1857,7 @@ void testInvalidateCachedTempRegisters()
     root->append(Move, nullptr, Arg::bigImm(bitwise_cast<intptr_t>(&things)), base);
 
     B3::BasicBlock* patchPoint1Root = proc.addBlock();
-    B3::Air::Special* patchpointSpecial = code.addSpecial(std::make_unique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
 
     // In Patchpoint, Load things[0] -> tmp. This will materialize the address in x17 (dataMemoryRegister).
     B3::PatchpointValue* patchpoint1 = patchPoint1Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -1929,7 +1932,7 @@ void testArgumentRegPinned()
     GPRReg pinned = GPRInfo::argumentGPR0;
     proc.pinRegister(pinned);
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(std::make_unique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
 
     B3::BasicBlock* b3Root = proc.addBlock();
     B3::PatchpointValue* patchpoint = b3Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -1961,7 +1964,7 @@ void testArgumentRegPinned2()
     GPRReg pinned = GPRInfo::argumentGPR0;
     proc.pinRegister(pinned);
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(std::make_unique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
 
     B3::BasicBlock* b3Root = proc.addBlock();
     B3::PatchpointValue* patchpoint = b3Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -1999,7 +2002,7 @@ void testArgumentRegPinned3()
     GPRReg pinned = GPRInfo::argumentGPR0;
     proc.pinRegister(pinned);
 
-    B3::Air::Special* patchpointSpecial = code.addSpecial(std::make_unique<B3::PatchpointSpecial>());
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
 
     B3::BasicBlock* b3Root = proc.addBlock();
     B3::PatchpointValue* patchpoint = b3Root->appendNew<B3::PatchpointValue>(proc, B3::Void, B3::Origin());
@@ -2062,26 +2065,321 @@ void testLea32()
     CHECK(r == a + b);
 }
 
-#define RUN(test) do {                          \
-        if (!shouldRun(#test))                  \
-            break;                              \
-        tasks.append(                           \
-            createSharedTask<void()>(           \
-                [&] () {                        \
-                    dataLog(#test "...\n");     \
-                    test;                       \
-                    dataLog(#test ": OK!\n");   \
-                }));                            \
+inline Vector<String> matchAll(const CString& source, std::regex regex)
+{
+    Vector<String> matches;
+    std::smatch match;
+    for (std::string str = source.data(); std::regex_search(str, match, regex); str = match.suffix()) {
+        ASSERT(match.size() == 1);
+        matches.append(match[0].str().c_str());
+    }
+    return matches;
+}
+
+void testElideSimpleMove()
+{
+    for (unsigned tmpCount = 1; tmpCount < 100; tmpCount++) {
+        B3::Procedure proc;
+        Code& code = proc.code();
+
+        BasicBlock* root = code.addBlock();
+
+        Tmp tmp = code.newTmp(B3::GP);
+        root->append(Move, nullptr, Tmp(GPRInfo::argumentGPR0), tmp);
+        for (unsigned i = 0; i < tmpCount; i++) {
+            Tmp newTmp = code.newTmp(B3::GP);
+            root->append(Move, nullptr, tmp, newTmp);
+            tmp = newTmp;
+        }
+        root->append(Move, nullptr, tmp, Tmp(GPRInfo::returnValueGPR));
+        root->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+        auto compilation = compile(proc);
+        CString disassembly = compilation->disassembly();
+        std::regex findRRMove(isARM64() ? "mov\\s+x\\d+, x\\d+\\n" : "mov %\\w+, %\\w+\\n");
+        auto result = matchAll(disassembly, findRRMove);
+        if (isARM64()) {
+            if (!Options::defaultB3OptLevel())
+                CHECK(result.size() == 2);
+            else
+                CHECK(result.size() == 0);
+        } else if (isX86()) {
+            // sp -> fp; arg0 -> ret0; fp -> sp
+            // fp -> sp only happens in O0 because we don't actually need to move the stack in general.
+            CHECK(result.size() == 2 + !Options::defaultB3OptLevel());
+        } else
+            RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+void testElideHandlesEarlyClobber()
+{
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    const unsigned tmpCount = RegisterSet::allGPRs().numberOfSetRegisters() * 2;
+    Vector<Tmp> tmps(tmpCount);
+    for (unsigned i = 0; i < tmpCount; ++i) {
+        tmps[i] = code.newTmp(B3::GP);
+        root->append(Move, nullptr, Arg::imm(i), tmps[i]);
+    }
+
+    RegisterSet registers = RegisterSet::allGPRs();
+    registers.exclude(RegisterSet::reservedHardwareRegisters());
+    registers.exclude(RegisterSet::stackRegisters());
+    Reg firstCalleeSave;
+    Reg lastCalleeSave;
+    auto* patch = proc.add<B3::PatchpointValue>(B3::Int32, B3::Origin());
+    patch->clobberEarly(registers);
+    for (Reg reg : registers) {
+        if (!firstCalleeSave)
+            firstCalleeSave = reg;
+        lastCalleeSave = reg;
+    }
+    ASSERT(firstCalleeSave != lastCalleeSave);
+    patch->earlyClobbered().clear(firstCalleeSave);
+    patch->resultConstraints.append({ B3::ValueRep::reg(firstCalleeSave) });
+    patch->earlyClobbered().clear(lastCalleeSave);
+    patch->clobber(RegisterSet(lastCalleeSave));
+
+    patch->setGenerator([=] (CCallHelpers& jit, const JSC::B3::StackmapGenerationParams&) {
+        jit.probe([=] (Probe::Context& context) {
+            for (Reg reg : registers)
+                context.gpr(reg.gpr()) = 0;
+        });
+    });
+
+    Inst inst(Patch, patch, Arg::special(code.addSpecial(WTF::makeUnique<JSC::B3::PatchpointSpecial>())));
+    inst.args.append(Tmp(firstCalleeSave));
+    root->appendInst(WTFMove(inst));
+
+    Tmp result = code.newTmp(B3::GP);
+    root->append(Move, nullptr, tmps[0], result);
+    for (Tmp tmp : tmps)
+        root->append(Add32, nullptr, tmp, result);
+
+    root->append(Move, nullptr, result, Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    auto runResult = compileAndRun<uint32_t>(proc);
+    CHECK(runResult == (tmpCount * (tmpCount - 1)) / 2);
+}
+
+void testElideMoveThenRealloc()
+{
+    RegisterSet registers = RegisterSet::allGPRs();
+    registers.exclude(RegisterSet::stackRegisters());
+    registers.exclude(RegisterSet::reservedHardwareRegisters());
+
+    for (Reg reg : registers) {
+        B3::Procedure proc;
+        Code& code = proc.code();
+
+        BasicBlock* root = code.addBlock();
+        BasicBlock* taken = code.addBlock();
+        BasicBlock* notTaken = code.addBlock();
+        BasicBlock* notTakenReturn = code.addBlock();
+        BasicBlock* ret = code.addBlock();
+        BasicBlock* continuation = code.addBlock();
+
+        Tmp tmp = code.newTmp(B3::GP);
+        Arg negOne;
+        if (isARM64()) {
+            negOne = code.newTmp(B3::GP);
+            root->append(Move, nullptr, Arg::bigImm(-1), negOne);
+        } else if (isX86())
+            negOne = Arg::bitImm(-1);
+        else
+            RELEASE_ASSERT_NOT_REACHED();
+
+        {
+            root->append(Move, nullptr, Arg::imm(1), Tmp(reg));
+
+            root->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), Tmp(reg), negOne);
+            root->setSuccessors(taken, notTaken);
+        }
+
+        {
+            taken->append(Jump, nullptr);
+            taken->setSuccessors(continuation);
+        }
+
+        {
+            notTaken->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), Tmp(reg), negOne);
+            notTaken->setSuccessors(continuation, notTakenReturn);
+        }
+
+        {
+            tmp = code.newTmp(B3::GP);
+            continuation->append(Move, nullptr, Arg::imm(42), tmp);
+            continuation->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), tmp, negOne);
+            continuation->setSuccessors(ret, notTakenReturn);
+        }
+
+        {
+            tmp = code.newTmp(B3::GP);
+            ret->append(Move, nullptr, Arg::imm(42), tmp);
+            ret->append(Move, nullptr, tmp, Tmp(reg));
+            ret->append(Move, nullptr, Tmp(reg), Tmp(GPRInfo::returnValueGPR));
+            ret->append(Add32, nullptr, Tmp(reg), Tmp(reg));
+            ret->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+        }
+
+        {
+            notTakenReturn->append(Move, nullptr, Tmp(reg), Tmp(GPRInfo::returnValueGPR));
+            notTakenReturn->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+        }
+
+        code.resetReachability();
+        auto runResult = compileAndRun<uint32_t>(proc);
+        CHECK(runResult == static_cast<unsigned>(42 + (42 * (reg == GPRInfo::returnValueGPR))));
+    }
+}
+
+void testLinearScanSpillRangesLateUse()
+{
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+
+    Vector<Tmp> tmps;
+    for (unsigned i = 0; i < 100; ++i) {
+        Tmp tmp = code.newTmp(GP);
+        tmps.append(tmp);
+        root->append(Move, nullptr, Arg::bigImm(i), tmp);
+    }
+
+    for (unsigned i = 0; i + 1 < tmps.size(); ++i) {
+        Tmp tmp1 = tmps[i];
+        Tmp tmp2 = tmps[i + 1];
+
+        B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+        B3::Value* dummyValue2 = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+        B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Void, B3::Origin());
+        patchpoint->append(dummyValue, B3::ValueRep::SomeRegister);
+        patchpoint->append(dummyValue2, B3::ValueRep::SomeLateRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            RELEASE_ASSERT(params[0].gpr() != params[1].gpr());
+
+            auto good = jit.branch32(CCallHelpers::Equal, params[0].gpr(), CCallHelpers::TrustedImm32(i));
+            jit.breakpoint();
+            good.link(&jit);
+
+            good = jit.branch32(CCallHelpers::Equal, params[1].gpr(), CCallHelpers::TrustedImm32(i + 1));
+            jit.breakpoint();
+            good.link(&jit);
+
+        });
+
+        Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+        inst.args.append(tmp1);
+        inst.args.append(tmp2);
+
+        root->append(inst);
+    }
+
+    root->append(Move32, nullptr, tmps.last(), Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    auto runResult = compileAndRun<uint32_t>(proc);
+    CHECK(runResult == 99);
+}
+
+void testLinearScanSpillRangesEarlyDef()
+{
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+
+    Vector<Tmp> tmps;
+    for (unsigned i = 0; i < 100; ++i) {
+        Tmp tmp = code.newTmp(GP);
+        tmps.append(tmp);
+        if (!i)
+            root->append(Move, nullptr, Arg::bigImm(i), tmp);
+    }
+
+    for (unsigned i = 0; i + 1 < tmps.size(); ++i) {
+        Tmp tmp1 = tmps[i];
+        Tmp tmp2 = tmps[i + 1];
+
+        B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+        B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Int32, B3::Origin());
+        patchpoint->resultConstraints = { B3::ValueRep::SomeEarlyRegister };
+        patchpoint->append(dummyValue, B3::ValueRep::SomeLateRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            RELEASE_ASSERT(params[0].gpr() != params[1].gpr());
+
+            auto good = jit.branch32(CCallHelpers::Equal, params[1].gpr(), CCallHelpers::TrustedImm32(i));
+            jit.breakpoint();
+            good.link(&jit);
+
+            jit.move(CCallHelpers::TrustedImm32(i + 1), params[0].gpr());
+        });
+
+        Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+        inst.args.append(tmp2); // def
+        inst.args.append(tmp1); // use
+
+        root->append(inst);
+    }
+
+    // Make all tmps live till the end
+    for (unsigned i = 0; i < tmps.size(); ++i) {
+        Tmp tmp = tmps[i];
+
+        B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+        B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Void, B3::Origin());
+        patchpoint->append(dummyValue, B3::ValueRep::SomeRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            auto good = jit.branch32(CCallHelpers::Equal, params[0].gpr(), CCallHelpers::TrustedImm32(i));
+            jit.breakpoint();
+            good.link(&jit);
+        });
+
+        Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+        inst.args.append(tmp);
+        root->append(inst);
+    }
+
+    root->append(Move32, nullptr, tmps.last(), Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    auto runResult = compileAndRun<uint32_t>(proc);
+    CHECK(runResult == 99);
+}
+
+#define PREFIX "O", Options::defaultB3OptLevel(), ": "
+
+#define RUN(test) do {                                 \
+        if (!shouldRun(#test))                         \
+            break;                                     \
+        tasks.append(                                  \
+            createSharedTask<void()>(                  \
+                [&] () {                               \
+                    dataLog(PREFIX #test "...\n");     \
+                    test;                              \
+                    dataLog(PREFIX #test ": OK!\n");   \
+                }));                                   \
     } while (false);
 
 void run(const char* filter)
 {
-    JSC::initializeThreading();
-
     Deque<RefPtr<SharedTask<void()>>> tasks;
 
     auto shouldRun = [&] (const char* testName) -> bool {
-        return !filter || !!strcasestr(testName, filter);
+        return !filter || WTF::findIgnoringASCIICaseWithoutLength(testName, filter) != WTF::notFound;
     };
 
     RUN(testSimple());
@@ -2150,6 +2448,13 @@ void run(const char* filter)
     RUN(testLea32());
     RUN(testLea64());
 
+    RUN(testElideSimpleMove());
+    RUN(testElideHandlesEarlyClobber());
+    RUN(testElideMoveThenRealloc());
+
+    RUN(testLinearScanSpillRangesLateUse());
+    RUN(testLinearScanSpillRangesEarlyDef());
+
     if (tasks.isEmpty())
         usage();
 
@@ -2178,6 +2483,7 @@ void run(const char* filter)
     for (auto& thread : threads)
         thread->waitForCompletion();
     crashLock.lock();
+    crashLock.unlock();
 }
 
 } // anonymous namespace
@@ -2205,6 +2511,19 @@ int main(int argc, char** argv)
         break;
     }
 
-    run(filter);
+    JSC::initialize();
+
+    for (unsigned i = 0; i <= 2; ++i) {
+        JSC::Options::defaultB3OptLevel() = i;
+        run(filter);
+    }
+
     return 0;
 }
+
+#if OS(WINDOWS)
+extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, const char* argv[])
+{
+    return main(argc, const_cast<char**>(argv));
+}
+#endif

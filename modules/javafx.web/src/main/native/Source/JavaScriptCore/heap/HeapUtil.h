@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,29 +52,29 @@ public:
         const HashSet<MarkedBlock*>& set = heap.objectSpace().blocks().set();
 
         ASSERT(heap.objectSpace().isMarking());
-        static const bool isMarking = true;
+        static constexpr bool isMarking = true;
 
         char* pointer = static_cast<char*>(passedPointer);
 
         // It could point to a large allocation.
-        if (heap.objectSpace().largeAllocationsForThisCollectionSize()) {
-            if (heap.objectSpace().largeAllocationsForThisCollectionBegin()[0]->aboveLowerBound(pointer)
-                && heap.objectSpace().largeAllocationsForThisCollectionEnd()[-1]->belowUpperBound(pointer)) {
-                LargeAllocation** result = approximateBinarySearch<LargeAllocation*>(
-                    heap.objectSpace().largeAllocationsForThisCollectionBegin(),
-                    heap.objectSpace().largeAllocationsForThisCollectionSize(),
-                    LargeAllocation::fromCell(pointer),
-                    [] (LargeAllocation** ptr) -> LargeAllocation* { return *ptr; });
+        if (heap.objectSpace().preciseAllocationsForThisCollectionSize()) {
+            if (heap.objectSpace().preciseAllocationsForThisCollectionBegin()[0]->aboveLowerBound(pointer)
+                && heap.objectSpace().preciseAllocationsForThisCollectionEnd()[-1]->belowUpperBound(pointer)) {
+                PreciseAllocation** result = approximateBinarySearch<PreciseAllocation*>(
+                    heap.objectSpace().preciseAllocationsForThisCollectionBegin(),
+                    heap.objectSpace().preciseAllocationsForThisCollectionSize(),
+                    PreciseAllocation::fromCell(pointer),
+                    [] (PreciseAllocation** ptr) -> PreciseAllocation* { return *ptr; });
                 if (result) {
-                    auto attemptLarge = [&] (LargeAllocation* allocation) {
-                        if (allocation->contains(pointer))
+                    auto attemptLarge = [&] (PreciseAllocation* allocation) {
+                        if (allocation->contains(pointer) && allocation->hasValidCell())
                             func(allocation->cell(), allocation->attributes().cellKind);
                     };
 
-                    if (result > heap.objectSpace().largeAllocationsForThisCollectionBegin())
+                    if (result > heap.objectSpace().preciseAllocationsForThisCollectionBegin())
                         attemptLarge(result[-1]);
                     attemptLarge(result[0]);
-                    if (result + 1 < heap.objectSpace().largeAllocationsForThisCollectionEnd())
+                    if (result + 1 < heap.objectSpace().preciseAllocationsForThisCollectionEnd())
                         attemptLarge(result[1]);
                 }
             }
@@ -88,7 +88,7 @@ public:
             MarkedBlock* previousCandidate = MarkedBlock::blockFor(previousPointer);
             if (!filter.ruleOut(bitwise_cast<Bits>(previousCandidate))
                 && set.contains(previousCandidate)
-                && hasInteriorPointers(previousCandidate->handle().cellKind())) {
+                && mayHaveIndexingHeader(previousCandidate->handle().cellKind())) {
                 previousPointer = static_cast<char*>(previousCandidate->handle().cellAlign(previousPointer));
                 if (previousCandidate->handle().isLiveCell(markingVersion, newlyAllocatedVersion, isMarking, previousPointer))
                     func(previousPointer, previousCandidate->handle().cellKind());
@@ -106,54 +106,43 @@ public:
         HeapCell::Kind cellKind = candidate->handle().cellKind();
 
         auto tryPointer = [&] (void* pointer) {
-            if (candidate->handle().isLiveCell(markingVersion, newlyAllocatedVersion, isMarking, pointer))
+            bool isLive = candidate->handle().isLiveCell(markingVersion, newlyAllocatedVersion, isMarking, pointer);
+            if (isLive)
                 func(pointer, cellKind);
+            // Only return early if we are marking a non-butterfly, since butterflies without indexed properties could point past the end of their allocation.
+            // If we do, and there is another live butterfly immediately following the first, we will mark the latter one here but we still need to
+            // mark the former.
+            return isLive && !mayHaveIndexingHeader(cellKind);
         };
 
         if (isJSCellKind(cellKind)) {
-            if (MarkedBlock::isAtomAligned(pointer))
-                tryPointer(pointer);
-            if (!hasInteriorPointers(cellKind))
-                return;
+            if (LIKELY(MarkedBlock::isAtomAligned(pointer))) {
+                if (tryPointer(pointer))
+                    return;
+            }
         }
 
-        // A butterfly could point into the middle of an object.
+        // We could point into the middle of an object.
         char* alignedPointer = static_cast<char*>(candidate->handle().cellAlign(pointer));
-        tryPointer(alignedPointer);
+        if (tryPointer(alignedPointer))
+            return;
 
         // Also, a butterfly could point at the end of an object plus sizeof(IndexingHeader). In that
         // case, this is pointing to the object to the right of the one we should be marking.
-        if (candidate->atomNumber(alignedPointer) > 0
+        if (candidate->candidateAtomNumber(alignedPointer) > 0
             && pointer <= alignedPointer + sizeof(IndexingHeader))
             tryPointer(alignedPointer - candidate->cellSize());
     }
 
-    static bool isPointerGCObjectJSCell(
-        Heap& heap, TinyBloomFilter filter, const void* pointer)
+    static bool isPointerGCObjectJSCell(Heap& heap, TinyBloomFilter filter, JSCell* pointer)
     {
         // It could point to a large allocation.
-        const Vector<LargeAllocation*>& largeAllocations = heap.objectSpace().largeAllocations();
-        if (!largeAllocations.isEmpty()) {
-            if (largeAllocations[0]->aboveLowerBound(pointer)
-                && largeAllocations.last()->belowUpperBound(pointer)) {
-                LargeAllocation*const* result = approximateBinarySearch<LargeAllocation*const>(
-                    largeAllocations.begin(), largeAllocations.size(),
-                    LargeAllocation::fromCell(pointer),
-                    [] (LargeAllocation*const* ptr) -> LargeAllocation* { return *ptr; });
-                if (result) {
-                    if (result > largeAllocations.begin()
-                        && result[-1]->cell() == pointer
-                        && isJSCellKind(result[-1]->attributes().cellKind))
-                        return true;
-                    if (result[0]->cell() == pointer
-                        && isJSCellKind(result[0]->attributes().cellKind))
-                        return true;
-                    if (result + 1 < largeAllocations.end()
-                        && result[1]->cell() == pointer
-                        && isJSCellKind(result[1]->attributes().cellKind))
-                        return true;
-                }
-            }
+        if (pointer->isPreciseAllocation()) {
+            auto* set = heap.objectSpace().preciseAllocationSet();
+            ASSERT(set);
+            if (set->isEmpty())
+                return false;
+            return set->contains(pointer);
         }
 
         const HashSet<MarkedBlock*>& set = heap.objectSpace().blocks().set();
@@ -179,12 +168,14 @@ public:
         return true;
     }
 
+    // This does not find the cell if the pointer is pointing at the middle of a JSCell.
     static bool isValueGCObject(
         Heap& heap, TinyBloomFilter filter, JSValue value)
     {
+        ASSERT(heap.objectSpace().preciseAllocationSet());
         if (!value.isCell())
             return false;
-        return isPointerGCObjectJSCell(heap, filter, static_cast<void*>(value.asCell()));
+        return isPointerGCObjectJSCell(heap, filter, value.asCell());
     }
 };
 

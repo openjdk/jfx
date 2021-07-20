@@ -137,8 +137,8 @@ typedef enum {
  * @GST_FLOW_EOS:                Pad is EOS.
  * @GST_FLOW_NOT_NEGOTIATED:     Pad is not negotiated.
  * @GST_FLOW_ERROR:      Some (fatal) error occurred. Element generating
- *                               this error should post an error message with more
- *                               details.
+ *                               this error should post an error message using
+ *                               GST_ELEMENT_ERROR() with more details.
  * @GST_FLOW_NOT_SUPPORTED:  This operation is not supported.
  * @GST_FLOW_CUSTOM_SUCCESS:     Elements can use values starting from
  *                               this (and higher) to define custom success
@@ -452,6 +452,9 @@ typedef GstPadLinkReturn    (*GstPadLinkFunction)       (GstPad *pad, GstObject 
  *          during the execution of this function.
  *
  * Function signature to handle a unlinking the pad prom its peer.
+ *
+ * The pad's lock is already held when the unlink function is called, so most
+ * pad functions cannot be called from within the callback.
  */
 typedef void            (*GstPadUnlinkFunction)     (GstPad *pad, GstObject *parent);
 
@@ -592,7 +595,7 @@ struct _GstPadProbeInfo
 
   /*< private >*/
   union {
-  gpointer _gst_reserved[GST_PADDING];
+    gpointer _gst_reserved[GST_PADDING];
     struct {
       GstFlowReturn flow_ret;
     } abi;
@@ -692,7 +695,7 @@ typedef gboolean  (*GstPadStickyEventsForeachFunction) (GstPad *pad, GstEvent **
  * @GST_PAD_FLAG_ACCEPT_TEMPLATE: the default accept-caps handler will use
  *                      the template pad caps instead of query caps to
  *                      compare with the accept caps. Use this in combination
- *                      with %GST_PAD_FLAG_ACCEPT_INTERSECT. (Since 1.6)
+ *                      with %GST_PAD_FLAG_ACCEPT_INTERSECT. (Since: 1.6)
  * @GST_PAD_FLAG_LAST: offset to define more flags
  *
  * Pad state flags
@@ -1325,8 +1328,8 @@ gboolean        gst_pad_activate_mode           (GstPad *pad, GstPadMode mode,
                                                                  gboolean active);
 GST_API
 gulong                  gst_pad_add_probe                       (GstPad *pad,
-                                 GstPadProbeType mask,
-                                 GstPadProbeCallback callback,
+                 GstPadProbeType mask,
+                 GstPadProbeCallback callback,
                                                                  gpointer user_data,
                                                                  GDestroyNotify destroy_data);
 GST_API
@@ -1482,7 +1485,7 @@ GstFlowReturn       gst_pad_push_list           (GstPad *pad, GstBufferList *lis
 
 GST_API
 GstFlowReturn       gst_pad_pull_range          (GstPad *pad, guint64 offset, guint size,
-                                 GstBuffer **buffer);
+                                                                 GstBuffer **buffer);
 GST_API
 gboolean        gst_pad_push_event          (GstPad *pad, GstEvent *event);
 
@@ -1502,7 +1505,7 @@ GstFlowReturn       gst_pad_chain_list                      (GstPad *pad, GstBuf
 
 GST_API
 GstFlowReturn       gst_pad_get_range           (GstPad *pad, guint64 offset, guint size,
-                                 GstBuffer **buffer);
+                                                                 GstBuffer **buffer);
 GST_API
 gboolean        gst_pad_send_event          (GstPad *pad, GstEvent *event);
 
@@ -1510,7 +1513,7 @@ gboolean        gst_pad_send_event          (GstPad *pad, GstEvent *event);
 
 GST_API
 gboolean        gst_pad_start_task          (GstPad *pad, GstTaskFunction func,
-                                 gpointer user_data, GDestroyNotify notify);
+                                                                 gpointer user_data, GDestroyNotify notify);
 GST_API
 gboolean        gst_pad_pause_task          (GstPad *pad);
 
@@ -1536,6 +1539,9 @@ GstIterator *           gst_pad_iterate_internal_links_default  (GstPad * pad, G
 
 #define gst_pad_set_iterate_internal_links_function(p,f) gst_pad_set_iterate_internal_links_function_full((p),(f),NULL,NULL)
 
+GST_API
+GstPad *                gst_pad_get_single_internal_link        (GstPad * pad);
+
 /* generic query function */
 
 GST_API
@@ -1558,11 +1564,9 @@ gboolean        gst_pad_query_default           (GstPad *pad, GstObject *parent,
 
 GST_API
 gboolean        gst_pad_forward                         (GstPad *pad, GstPadForwardFunction forward,
-                                 gpointer user_data);
+                 gpointer user_data);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstPad, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -27,7 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-find_package(PkgConfig)
+find_package(PkgConfig QUIET)
 
 # TODO Remove the check for Enchant 1.x once all major LTS GNU/Linux
 #      distributions ship the 2.x series (probably around mid-2020).
@@ -37,13 +37,13 @@ foreach (ENCHANT_NAME enchant-2 enchant)
 
     find_path(ENCHANT_INCLUDE_DIRS
         NAMES enchant.h
-        PATHS ${PC_ENCHANT_INCLUDEDIR}
+        HINTS ${PC_ENCHANT_INCLUDEDIR}
               ${PC_ENCHANT_INCLUDE_DIRS}
     )
 
     find_library(ENCHANT_LIBRARIES
         NAMES ${ENCHANT_NAME}
-        PATHS ${PC_ENCHANT_LIBDIR}
+        HINTS ${PC_ENCHANT_LIBDIR}
               ${PC_ENCHANT_LIBRARY_DIRS}
     )
 

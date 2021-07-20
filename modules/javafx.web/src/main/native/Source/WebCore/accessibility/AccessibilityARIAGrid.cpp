@@ -51,7 +51,7 @@ Ref<AccessibilityARIAGrid> AccessibilityARIAGrid::create(RenderObject* renderer)
     return adoptRef(*new AccessibilityARIAGrid(renderer));
 }
 
-bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
+bool AccessibilityARIAGrid::addTableCellChild(AXCoreObject* child, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
 {
     if (!child || (!is<AccessibilityTableRow>(*child) && !is<AccessibilityARIAGridRow>(*child)))
         return false;
@@ -81,11 +81,11 @@ bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSe
 
 bool AccessibilityARIAGrid::isMultiSelectable() const
 {
-    const AtomicString& ariaMultiSelectable = getAttribute(HTMLNames::aria_multiselectableAttr);
+    const AtomString& ariaMultiSelectable = getAttribute(HTMLNames::aria_multiselectableAttr);
     return !equalLettersIgnoringASCIICase(ariaMultiSelectable, "false");
 }
 
-void AccessibilityARIAGrid::addRowDescendant(AccessibilityObject* rowChild, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
+void AccessibilityARIAGrid::addRowDescendant(AXCoreObject* rowChild, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
 {
     if (!rowChild)
         return;
@@ -103,7 +103,7 @@ void AccessibilityARIAGrid::addChildren()
 {
     ASSERT(!m_haveChildren);
 
-    if (!isExposableThroughAccessibility()) {
+    if (!isExposable()) {
         AccessibilityRenderObject::addChildren();
         return;
     }
@@ -138,15 +138,15 @@ void AccessibilityARIAGrid::addChildren()
 
     // make the columns based on the number of columns in the first body
     for (unsigned i = 0; i < columnCount; ++i) {
-        auto& column = downcast<AccessibilityTableColumn>(*axCache->getOrCreate(AccessibilityRole::Column));
-        column.setColumnIndex(static_cast<int>(i));
+        auto& column = downcast<AccessibilityTableColumn>(*axCache->create(AccessibilityRole::Column));
+        column.setColumnIndex(i);
         column.setParent(this);
         m_columns.append(&column);
         if (!column.accessibilityIsIgnored())
             m_children.append(&column);
     }
 
-    AccessibilityObject* headerContainerObject = headerContainer();
+    auto* headerContainerObject = headerContainer();
     if (headerContainerObject && !headerContainerObject->accessibilityIsIgnored())
         m_children.append(headerContainerObject);
 }

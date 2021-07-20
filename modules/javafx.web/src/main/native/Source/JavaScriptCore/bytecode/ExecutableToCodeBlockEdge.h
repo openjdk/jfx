@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ class LLIntOffsetsExtractor;
 class ExecutableToCodeBlockEdge final : public JSCell {
 public:
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -54,8 +54,8 @@ public:
 
     CodeBlock* codeBlock() const { return m_codeBlock.get(); }
 
-    static void visitChildren(JSCell*, SlotVisitor&);
-    static void visitOutputConstraints(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
+    DECLARE_VISIT_OUTPUT_CONSTRAINTS;
     void finalizeUnconditionally(VM&);
 
     static CodeBlock* unwrap(ExecutableToCodeBlockEdge* edge)
@@ -82,7 +82,7 @@ private:
     void deactivate();
     bool isActive() const;
 
-    void runConstraint(const ConcurrentJSLocker&, VM&, SlotVisitor&);
+    template<typename Visitor> void runConstraint(const ConcurrentJSLocker&, VM&, Visitor&);
 
     WriteBarrier<CodeBlock> m_codeBlock;
 };

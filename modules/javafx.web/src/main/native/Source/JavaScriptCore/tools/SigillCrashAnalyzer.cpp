@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,13 @@
 #include "config.h"
 #include "SigillCrashAnalyzer.h"
 
-#include "CallFrame.h"
 #include "CodeBlock.h"
+#include "ExecutableAllocator.h"
 #include "MachineContext.h"
 #include "VMInspector.h"
 #include <mutex>
-#include <wtf/StdLibExtras.h>
 
-#if USE(ARM64_DISASSEMBLER)
+#if ENABLE(ARM64_DISASSEMBLER)
 #include "A64DOpcode.h"
 #endif
 
@@ -44,6 +43,8 @@ namespace JSC {
 struct SignalContext;
 
 class SigillCrashAnalyzer {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(SigillCrashAnalyzer);
 public:
     static SigillCrashAnalyzer& instance();
 
@@ -58,7 +59,7 @@ private:
     SigillCrashAnalyzer() { }
     void dumpCodeBlock(CodeBlock*, void* machinePC);
 
-#if USE(ARM64_DISASSEMBLER)
+#if ENABLE(ARM64_DISASSEMBLER)
     A64DOpcode m_arm64Opcode;
 #endif
 };
@@ -156,7 +157,9 @@ public:
 static void installCrashHandler()
 {
 #if CPU(X86_64) || CPU(ARM64)
-    installSignalHandler(Signal::Ill, [] (Signal, SigInfo&, PlatformRegisters& registers) {
+    addSignalHandler(Signal::IllegalInstruction, [] (Signal signal, SigInfo&, PlatformRegisters& registers) {
+        RELEASE_ASSERT(signal == Signal::IllegalInstruction);
+
         auto signalContext = SignalContext::tryCreate(registers);
         if (!signalContext)
             return SignalAction::NotHandled;
@@ -169,6 +172,7 @@ static void installCrashHandler()
         analyzer.analyze(*signalContext);
         return SignalAction::NotHandled;
     });
+    activateSignalHandlersFor(Signal::IllegalInstruction);
 #endif
 }
 
@@ -198,6 +202,7 @@ SigillCrashAnalyzer& SigillCrashAnalyzer::instance()
     static SigillCrashAnalyzer* analyzer;
     static std::once_flag once;
     std::call_once(once, [] {
+        ASSERT(Options::useJIT());
         installCrashHandler();
         analyzer = new SigillCrashAnalyzer;
     });

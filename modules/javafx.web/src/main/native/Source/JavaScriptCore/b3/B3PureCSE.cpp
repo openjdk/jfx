@@ -31,6 +31,7 @@
 #include "B3Dominators.h"
 #include "B3PhaseScope.h"
 #include "B3Value.h"
+#include "B3ValueInlines.h"
 
 namespace JSC { namespace B3 {
 
@@ -57,7 +58,12 @@ Value* PureCSE::findMatch(const ValueKey& key, BasicBlock* block, Dominators& do
         return nullptr;
 
     for (Value* match : iter->value) {
+        // Value is invalidated.
         if (!match->owner)
+            continue;
+        // Value is moved to a new BasicBlock which is not inserted yet.
+        // In that case, we should just ignore it. PureCSE will be recomputed after new BasicBlocks are actually inserted.
+        if (!match->owner->isInserted())
             continue;
         if (dominators.dominates(match->owner, block))
             return match;
@@ -68,7 +74,7 @@ Value* PureCSE::findMatch(const ValueKey& key, BasicBlock* block, Dominators& do
 
 bool PureCSE::process(Value* value, Dominators& dominators)
 {
-    if (value->opcode() == Identity)
+    if (value->opcode() == Identity || value->isConstant())
         return false;
 
     ValueKey key = value->key();
@@ -78,7 +84,12 @@ bool PureCSE::process(Value* value, Dominators& dominators)
     Matches& matches = m_map.add(key, Matches()).iterator->value;
 
     for (Value* match : matches) {
+        // Value is invalidated.
         if (!match->owner)
+            continue;
+        // Value is moved to a new BasicBlock which is not inserted yet.
+        // In that case, we should just ignore it. PureCSE will be recomputed after new BasicBlocks are actually inserted.
+        if (!match->owner->isInserted())
             continue;
         if (dominators.dominates(match->owner, value->owner)) {
             value->replaceWithIdentity(match);

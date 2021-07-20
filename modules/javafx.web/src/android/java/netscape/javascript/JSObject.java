@@ -144,7 +144,7 @@ public abstract class JSObject {
 
                 // Comment out MAYSCRIPT check because Internet Explorer doesn't support
                 // it.
-//              if (obj != null && (obj.equals("") || (new Boolean(obj).booleanValue() == true)))
+//              if (obj != null && (obj.equals("") || (Boolean.valueOf(obj).booleanValue() == true)))
                 {
                     // MAYSCRIPT is enabled
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,23 +34,26 @@
 
 namespace JSC {
 class JSObject;
+class VM;
 } // namespace JSC
 
 namespace WebCore {
 class JSDOMGlobalObject;
 
-class PaintWorkletGlobalScope : public WorkletGlobalScope {
+class PaintWorkletGlobalScope final : public WorkletGlobalScope {
+    WTF_MAKE_ISO_ALLOCATED(PaintWorkletGlobalScope);
 public:
-    static Ref<PaintWorkletGlobalScope> create(Document&, ScriptSourceCode&&);
+    static RefPtr<PaintWorkletGlobalScope> tryCreate(Document&, ScriptSourceCode&&);
 
-    ExceptionOr<void> registerPaint(JSC::ExecState&, JSDOMGlobalObject&, const String& name, JSC::Strong<JSC::JSObject> paintConstructor);
+    ExceptionOr<void> registerPaint(JSC::JSGlobalObject&, const String& name, JSC::Strong<JSC::JSObject> paintConstructor);
     double devicePixelRatio() const;
 
     // All paint definitions must be destroyed before the vm is destroyed, because otherwise they will point to freed memory.
     struct PaintDefinition : public CanMakeWeakPtr<PaintDefinition> {
-        PaintDefinition(const AtomicString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<String>&& inputProperties, Vector<String>&& inputArguments);
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<String>&& inputProperties, Vector<String>&& inputArguments);
 
-        const AtomicString name;
+        const AtomString name;
         const JSC::JSObject* const paintConstructor;
         const Ref<CSSPaintCallback> paintCallback;
         const Vector<String> inputProperties;
@@ -62,6 +65,10 @@ public:
 
     void prepareForDestruction() final
     {
+        if (m_hasPreparedForDestruction)
+            return;
+        m_hasPreparedForDestruction = true;
+
         {
             auto locker = holdLock(paintDefinitionLock());
             paintDefinitionMap().clear();
@@ -69,12 +76,14 @@ public:
         WorkletGlobalScope::prepareForDestruction();
     }
 
+    FetchOptions::Destination destination() const final { return FetchOptions::Destination::Paintworklet; }
+
 private:
-    PaintWorkletGlobalScope(Document&, ScriptSourceCode&&);
+    PaintWorkletGlobalScope(Document&, Ref<JSC::VM>&&, ScriptSourceCode&&);
 
     ~PaintWorkletGlobalScope()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         auto locker = holdLock(paintDefinitionLock());
         ASSERT(paintDefinitionMap().isEmpty());
 #endif
@@ -84,6 +93,7 @@ private:
 
     HashMap<String, std::unique_ptr<PaintDefinition>> m_paintDefinitionMap;
     Lock m_paintDefinitionLock;
+    bool m_hasPreparedForDestruction { false };
 };
 
 } // namespace WebCore

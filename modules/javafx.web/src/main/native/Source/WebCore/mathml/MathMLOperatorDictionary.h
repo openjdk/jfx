@@ -28,14 +28,14 @@
 #if ENABLE(MATHML)
 
 #include <unicode/utypes.h>
-#include <wtf/Optional.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
 namespace MathMLOperatorDictionary {
 enum Form { Infix, Prefix, Postfix };
 enum Flag {
-    Accent = 0x1, // FIXME: This must be used to implement accentunder/accent on munderover (https://bugs.webkit.org/show_bug.cgi?id=124826).
+    Accent = 0x1,
     Fence = 0x2, // This has no visual effect but allows to expose semantic information via the accessibility tree.
     LargeOp = 0x4,
     MovableLimits = 0x8,

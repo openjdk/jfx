@@ -36,8 +36,8 @@
 #include "DOMFormData.h"
 #include "DateComponents.h"
 #include "DateInputType.h"
-#include "DateTimeInputType.h"
 #include "DateTimeLocalInputType.h"
+#include "Decimal.h"
 #include "EmailInputType.h"
 #include "EventNames.h"
 #include "FileInputType.h"
@@ -62,10 +62,11 @@
 #include "RenderElement.h"
 #include "RenderTheme.h"
 #include "ResetInputType.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScopedEventQueue.h"
 #include "SearchInputType.h"
+#include "Settings.h"
 #include "ShadowRoot.h"
+#include "StepRange.h"
 #include "SubmitInputType.h"
 #include "TelephoneInputType.h"
 #include "TextControlInnerElements.h"
@@ -83,13 +84,12 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-typedef bool (RuntimeEnabledFeatures::*InputTypeConditionalFunction)() const;
-typedef const AtomicString& (*InputTypeNameFunction)();
+typedef bool (Settings::*InputTypeConditionalFunction)() const;
+typedef const AtomString& (*InputTypeNameFunction)();
 typedef Ref<InputType> (*InputTypeFactoryFunction)(HTMLInputElement&);
-typedef HashMap<AtomicString, InputTypeFactoryFunction, ASCIICaseInsensitiveHash> InputTypeFactoryMap;
+typedef HashMap<AtomString, std::pair<InputTypeConditionalFunction, InputTypeFactoryFunction>, ASCIICaseInsensitiveHash> InputTypeFactoryMap;
 
-template<class T>
-static Ref<InputType> createInputType(HTMLInputElement& element)
+template<class T> static Ref<InputType> createInputType(HTMLInputElement& element)
 {
     return adoptRef(*new T(element));
 }
@@ -104,23 +104,20 @@ static InputTypeFactoryMap createInputTypeFactoryMap()
         { nullptr, &InputTypeNames::button, &createInputType<ButtonInputType> },
         { nullptr, &InputTypeNames::checkbox, &createInputType<CheckboxInputType> },
 #if ENABLE(INPUT_TYPE_COLOR)
-        { &RuntimeEnabledFeatures::inputTypeColorEnabled, &InputTypeNames::color, &createInputType<ColorInputType> },
+        { &Settings::inputTypeColorEnabled, &InputTypeNames::color, &createInputType<ColorInputType> },
 #endif
 #if ENABLE(INPUT_TYPE_DATE)
-        { &RuntimeEnabledFeatures::inputTypeDateEnabled, &InputTypeNames::date, &createInputType<DateInputType> },
-#endif
-#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
-        { &RuntimeEnabledFeatures::inputTypeDateTimeEnabled, &InputTypeNames::datetime, &createInputType<DateTimeInputType> },
+        { &Settings::inputTypeDateEnabled, &InputTypeNames::date, &createInputType<DateInputType> },
 #endif
 #if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-        { &RuntimeEnabledFeatures::inputTypeDateTimeLocalEnabled, &InputTypeNames::datetimelocal, &createInputType<DateTimeLocalInputType> },
+        { &Settings::inputTypeDateTimeLocalEnabled, &InputTypeNames::datetimelocal, &createInputType<DateTimeLocalInputType> },
 #endif
         { nullptr, &InputTypeNames::email, &createInputType<EmailInputType> },
         { nullptr, &InputTypeNames::file, &createInputType<FileInputType> },
         { nullptr, &InputTypeNames::hidden, &createInputType<HiddenInputType> },
         { nullptr, &InputTypeNames::image, &createInputType<ImageInputType> },
 #if ENABLE(INPUT_TYPE_MONTH)
-        { &RuntimeEnabledFeatures::inputTypeMonthEnabled, &InputTypeNames::month, &createInputType<MonthInputType> },
+        { &Settings::inputTypeMonthEnabled, &InputTypeNames::month, &createInputType<MonthInputType> },
 #endif
         { nullptr, &InputTypeNames::number, &createInputType<NumberInputType> },
         { nullptr, &InputTypeNames::password, &createInputType<PasswordInputType> },
@@ -131,29 +128,27 @@ static InputTypeFactoryMap createInputTypeFactoryMap()
         { nullptr, &InputTypeNames::submit, &createInputType<SubmitInputType> },
         { nullptr, &InputTypeNames::telephone, &createInputType<TelephoneInputType> },
 #if ENABLE(INPUT_TYPE_TIME)
-        { &RuntimeEnabledFeatures::inputTypeTimeEnabled, &InputTypeNames::time, &createInputType<TimeInputType> },
+        { &Settings::inputTypeTimeEnabled, &InputTypeNames::time, &createInputType<TimeInputType> },
 #endif
         { nullptr, &InputTypeNames::url, &createInputType<URLInputType> },
 #if ENABLE(INPUT_TYPE_WEEK)
-        { &RuntimeEnabledFeatures::inputTypeWeekEnabled, &InputTypeNames::week, &createInputType<WeekInputType> },
+        { &Settings::inputTypeWeekEnabled, &InputTypeNames::week, &createInputType<WeekInputType> },
 #endif
         // No need to register "text" because it is the default type.
     };
 
     InputTypeFactoryMap map;
-    for (auto& inputType : inputTypes) {
-        auto conditionalFunction = inputType.conditionalFunction;
-        if (!conditionalFunction || (RuntimeEnabledFeatures::sharedFeatures().*conditionalFunction)())
-            map.add(inputType.nameFunction(), inputType.factoryFunction);
-    }
+    for (auto& inputType : inputTypes)
+        map.add(inputType.nameFunction(), std::make_pair(inputType.conditionalFunction, inputType.factoryFunction));
     return map;
 }
 
-Ref<InputType> InputType::create(HTMLInputElement& element, const AtomicString& typeName)
+Ref<InputType> InputType::create(HTMLInputElement& element, const AtomString& typeName)
 {
     if (!typeName.isEmpty()) {
         static const auto factoryMap = makeNeverDestroyed(createInputTypeFactoryMap());
-        if (auto factory = factoryMap.get().get(typeName))
+        auto&& [conditional, factory] = factoryMap.get().get(typeName);
+        if (factory && (!conditional || std::invoke(conditional, element.document().settings())))
             return factory(element);
     }
     return adoptRef(*new TextInputType(element));
@@ -169,21 +164,6 @@ InputType::~InputType() = default;
 bool InputType::themeSupportsDataListUI(InputType* type)
 {
     return RenderTheme::singleton().supportsDataListUI(type->formControlType());
-}
-
-bool InputType::isTextField() const
-{
-    return false;
-}
-
-bool InputType::isTextType() const
-{
-    return false;
-}
-
-bool InputType::isRangeControl() const
-{
-    return false;
 }
 
 bool InputType::shouldSaveAndRestoreFormControlState() const
@@ -246,11 +226,6 @@ ExceptionOr<void> InputType::setValueAsDecimal(const Decimal&, TextFieldEventBeh
     return Exception { InvalidStateError };
 }
 
-bool InputType::supportsValidation() const
-{
-    return true;
-}
-
 bool InputType::typeMismatchFor(const String&) const
 {
     return false;
@@ -291,7 +266,7 @@ bool InputType::rangeUnderflow(const String& value) const
     if (!numericValue.isFinite())
         return false;
 
-    return numericValue < createStepRange(RejectAny).minimum();
+    return numericValue < createStepRange(AnyStepHandling::Reject).minimum();
 }
 
 bool InputType::rangeOverflow(const String& value) const
@@ -303,7 +278,83 @@ bool InputType::rangeOverflow(const String& value) const
     if (!numericValue.isFinite())
         return false;
 
-    return numericValue > createStepRange(RejectAny).maximum();
+    return numericValue > createStepRange(AnyStepHandling::Reject).maximum();
+}
+
+bool InputType::isInvalid(const String& value) const
+{
+    switch (m_type) {
+    case Type::Button:
+        return isInvalidInputType<ButtonInputType>(*this, value);
+    case Type::Checkbox:
+        return isInvalidInputType<CheckboxInputType>(*this, value);
+    case Type::Color:
+#if ENABLE(INPUT_TYPE_COLOR)
+        return isInvalidInputType<ColorInputType>(*this, value);
+#else
+        return false;
+#endif
+    case Type::Date:
+#if ENABLE(INPUT_TYPE_DATE)
+        return isInvalidInputType<DateInputType>(*this, value);
+#else
+        return false;
+#endif
+    case Type::DateTimeLocal:
+#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+        return isInvalidInputType<DateTimeLocalInputType>(*this, value);
+#else
+        return false;
+#endif
+    case Type::Email:
+        return isInvalidInputType<EmailInputType>(*this, value);
+    case Type::File:
+        return isInvalidInputType<FileInputType>(*this, value);
+    case Type::Hidden:
+        return isInvalidInputType<HiddenInputType>(*this, value);
+    case Type::Image:
+        return isInvalidInputType<ImageInputType>(*this, value);
+    case Type::Month:
+#if ENABLE(INPUT_TYPE_MONTH)
+        return isInvalidInputType<MonthInputType>(*this, value);
+#else
+        return false;
+#endif
+    case Type::Number:
+        return isInvalidInputType<NumberInputType>(*this, value);
+    case Type::Password:
+        return isInvalidInputType<PasswordInputType>(*this, value);
+    case Type::Radio:
+        return isInvalidInputType<RadioInputType>(*this, value);
+    case Type::Range:
+        return isInvalidInputType<RangeInputType>(*this, value);
+    case Type::Reset:
+        return isInvalidInputType<ResetInputType>(*this, value);
+    case Type::Search:
+        return isInvalidInputType<SearchInputType>(*this, value);
+    case Type::Submit:
+        return isInvalidInputType<SubmitInputType>(*this, value);
+    case Type::Telephone:
+        return isInvalidInputType<TelephoneInputType>(*this, value);
+    case Type::Time:
+#if ENABLE(INPUT_TYPE_TIME)
+        return isInvalidInputType<TimeInputType>(*this, value);
+#else
+        return false;
+#endif
+    case Type::URL:
+        return isInvalidInputType<URLInputType>(*this, value);
+    case Type::Week:
+#if ENABLE(INPUT_TYPE_WEEK)
+        return isInvalidInputType<WeekInputType>(*this, value);
+#else
+        return false;
+#endif
+    case Type::Text:
+        return isInvalidInputType<TextInputType>(*this, value);
+    }
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 Decimal InputType::defaultValueForStepUp() const
@@ -313,12 +364,12 @@ Decimal InputType::defaultValueForStepUp() const
 
 double InputType::minimum() const
 {
-    return createStepRange(RejectAny).minimum().toDouble();
+    return createStepRange(AnyStepHandling::Reject).minimum().toDouble();
 }
 
 double InputType::maximum() const
 {
-    return createStepRange(RejectAny).maximum().toDouble();
+    return createStepRange(AnyStepHandling::Reject).maximum().toDouble();
 }
 
 bool InputType::sizeShouldIncludeDecoration(int, int& preferredSize) const
@@ -338,7 +389,7 @@ bool InputType::isInRange(const String& value) const
     if (!isSteppable())
         return false;
 
-    StepRange stepRange(createStepRange(RejectAny));
+    StepRange stepRange(createStepRange(AnyStepHandling::Reject));
     if (!stepRange.hasRangeLimitations())
         return false;
 
@@ -354,7 +405,7 @@ bool InputType::isOutOfRange(const String& value) const
     if (!isSteppable() || value.isEmpty())
         return false;
 
-    StepRange stepRange(createStepRange(RejectAny));
+    StepRange stepRange(createStepRange(AnyStepHandling::Reject));
     if (!stepRange.hasRangeLimitations())
         return false;
 
@@ -374,7 +425,7 @@ bool InputType::stepMismatch(const String& value) const
     if (!numericValue.isFinite())
         return false;
 
-    return createStepRange(RejectAny).stepMismatch(numericValue);
+    return createStepRange(AnyStepHandling::Reject).stepMismatch(numericValue);
 }
 
 String InputType::badInputText() const
@@ -425,7 +476,7 @@ String InputType::validationMessage() const
     if (!numericValue.isFinite())
         return emptyString();
 
-    StepRange stepRange(createStepRange(RejectAny));
+    StepRange stepRange(createStepRange(AnyStepHandling::Reject));
 
     if (numericValue < stepRange.minimum())
         return validationMessageRangeUnderflowText(serialize(stepRange.minimum()));
@@ -453,8 +504,9 @@ void InputType::handleDOMActivateEvent(Event&)
 {
 }
 
-void InputType::handleKeydownEvent(KeyboardEvent&)
+auto InputType::handleKeydownEvent(KeyboardEvent&) -> ShouldCallBaseEventHandler
 {
+    return ShouldCallBaseEventHandler::Yes;
 }
 
 void InputType::handleKeypressEvent(KeyboardEvent&)
@@ -496,7 +548,7 @@ void InputType::blur()
     element()->defaultBlur();
 }
 
-void InputType::createShadowSubtree()
+void InputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool)
 {
 }
 
@@ -521,24 +573,16 @@ Decimal InputType::parseToNumberOrNaN(const String& string) const
     return parseToNumber(string, Decimal::nan());
 }
 
-bool InputType::parseToDateComponents(const String&, DateComponents*) const
-{
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
 String InputType::serialize(const Decimal&) const
 {
     ASSERT_NOT_REACHED();
     return String();
 }
 
-#if PLATFORM(IOS_FAMILY)
-DateComponents::Type InputType::dateType() const
+DateComponentsType InputType::dateType() const
 {
-    return DateComponents::Invalid;
+    return DateComponentsType::Invalid;
 }
-#endif
 
 void InputType::dispatchSimulatedClickIfActive(KeyboardEvent& event) const
 {
@@ -591,10 +635,11 @@ void InputType::handleBlurEvent()
 {
 }
 
-void InputType::accessKeyAction(bool)
+bool InputType::accessKeyAction(bool)
 {
     ASSERT(element());
-    element()->focus(false);
+    element()->focus(SelectionRestorationMode::SelectAll);
+    return false;
 }
 
 void InputType::addSearchResult()
@@ -667,9 +712,9 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
 {
     ASSERT(element());
     element()->setValueInternal(sanitizedValue, eventBehavior);
-    element()->invalidateStyleForSubtree();
     if (!valueChanged)
         return;
+    element()->invalidateStyleForSubtree();
 
     switch (eventBehavior) {
     case DispatchChangeEvent:
@@ -751,124 +796,19 @@ bool InputType::shouldRespectListAttribute()
     return false;
 }
 
-bool InputType::isTextButton() const
+bool InputType::isInteractiveContent() const
 {
-    return false;
-}
-
-bool InputType::isRadioButton() const
-{
-    return false;
-}
-
-bool InputType::isSearchField() const
-{
-    return false;
-}
-
-bool InputType::isHiddenType() const
-{
-    return false;
-}
-
-bool InputType::isPasswordField() const
-{
-    return false;
-}
-
-bool InputType::isCheckbox() const
-{
-    return false;
-}
-
-bool InputType::isEmailField() const
-{
-    return false;
-}
-
-bool InputType::isFileUpload() const
-{
-    return false;
-}
-
-bool InputType::isImageButton() const
-{
-    return false;
+    return m_type != Type::Hidden;
 }
 
 bool InputType::supportLabels() const
 {
-    return true;
+    return m_type != Type::Hidden;
 }
 
-bool InputType::isNumberField() const
+bool InputType::isEnumeratable() const
 {
-    return false;
-}
-
-bool InputType::isSubmitButton() const
-{
-    return false;
-}
-
-bool InputType::isTelephoneField() const
-{
-    return false;
-}
-
-bool InputType::isURLField() const
-{
-    return false;
-}
-
-bool InputType::isDateField() const
-{
-    return false;
-}
-
-bool InputType::isDateTimeField() const
-{
-    return false;
-}
-
-bool InputType::isDateTimeLocalField() const
-{
-    return false;
-}
-
-bool InputType::isMonthField() const
-{
-    return false;
-}
-
-bool InputType::isTimeField() const
-{
-    return false;
-}
-
-bool InputType::isWeekField() const
-{
-    return false;
-}
-
-bool InputType::isEnumeratable()
-{
-    return true;
-}
-
-bool InputType::isCheckable()
-{
-    return false;
-}
-
-bool InputType::isSteppable() const
-{
-    return false;
-}
-
-bool InputType::isColorControl() const
-{
-    return false;
+    return m_type != Type::Image;
 }
 
 bool InputType::shouldRespectHeightAndWidthAttributes()
@@ -920,7 +860,7 @@ String InputType::defaultToolTip() const
 }
 
 #if ENABLE(DATALIST_ELEMENT)
-void InputType::listAttributeTargetChanged()
+void InputType::dataListMayHaveChanged()
 {
 }
 
@@ -1001,7 +941,7 @@ ExceptionOr<void> InputType::applyStep(int count, AnyStepHandling anyStepHandlin
 
 bool InputType::getAllowedValueStep(Decimal* step) const
 {
-    StepRange stepRange(createStepRange(RejectAny));
+    StepRange stepRange(createStepRange(AnyStepHandling::Reject));
     *step = stepRange.step();
     return stepRange.hasStep();
 }
@@ -1016,7 +956,7 @@ ExceptionOr<void> InputType::stepUp(int n)
 {
     if (!isSteppable())
         return Exception { InvalidStateError };
-    return applyStep(n, RejectAny, DispatchNoEvent);
+    return applyStep(n, AnyStepHandling::Reject, DispatchNoEvent);
 }
 
 void InputType::stepUpFromRenderer(int n)
@@ -1063,7 +1003,7 @@ void InputType::stepUpFromRenderer(int n)
     if (!n)
         return;
 
-    StepRange stepRange(createStepRange(AnyIsDefaultStep));
+    StepRange stepRange(createStepRange(AnyStepHandling::Default));
 
     // FIXME: Not any changes after stepping, even if it is an invalid value, may be better.
     // (e.g. Stepping-up for <input type="number" value="foo" step="any" /> => "foo")
@@ -1114,17 +1054,17 @@ void InputType::stepUpFromRenderer(int n)
 
             setValueAsDecimal(newValue, n == 1 || n == -1 ? DispatchInputAndChangeEvent : DispatchNoEvent);
             if (n > 1)
-                applyStep(n - 1, AnyIsDefaultStep, DispatchInputAndChangeEvent);
+                applyStep(n - 1, AnyStepHandling::Default, DispatchInputAndChangeEvent);
             else if (n < -1)
-                applyStep(n + 1, AnyIsDefaultStep, DispatchInputAndChangeEvent);
+                applyStep(n + 1, AnyStepHandling::Default, DispatchInputAndChangeEvent);
         } else
-            applyStep(n, AnyIsDefaultStep, DispatchInputAndChangeEvent);
+            applyStep(n, AnyStepHandling::Default, DispatchInputAndChangeEvent);
     }
 }
 
 Color InputType::valueAsColor() const
 {
-    return Color::transparent;
+    return Color::transparentBlack;
 }
 
 void InputType::selectColor(StringView)

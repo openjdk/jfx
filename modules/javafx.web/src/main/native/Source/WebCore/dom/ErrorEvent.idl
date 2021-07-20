@@ -30,15 +30,16 @@
  */
 
 [
-    Constructor(DOMString type, optional ErrorEventInit eventInitDict),
     Exposed=(Window,Worker),
     JSCustomMarkFunction,
 ] interface ErrorEvent : Event {
+    constructor(DOMString type, optional ErrorEventInit eventInitDict);
+
     readonly attribute DOMString message;
     readonly attribute USVString filename;
     readonly attribute unsigned long lineno;
     readonly attribute unsigned long colno;
-    [CallWith=ExecState&GlobalObject] readonly attribute any error;
+    [CallWith=GlobalObject] readonly attribute any error;
 };
 
 dictionary ErrorEventInit : EventInit {

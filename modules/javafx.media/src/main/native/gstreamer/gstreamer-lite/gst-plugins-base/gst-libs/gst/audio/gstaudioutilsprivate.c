@@ -23,11 +23,11 @@
 #include "config.h"
 #endif
 
-#ifdef _WIN32
+#include <gst/audio/audio.h>
+#ifdef G_OS_WIN32
 #include <windows.h>
 #endif
 
-#include <gst/audio/audio.h>
 #include "gstaudioutilsprivate.h"
 
 /*
@@ -217,15 +217,14 @@ exit:
   return res;
 }
 
-#ifdef _WIN32
+#ifdef G_OS_WIN32
 /* *INDENT-OFF* */
 static struct
 {
   HMODULE dll;
-  gboolean tried_loading;
 
-    HANDLE (WINAPI * AvSetMmThreadCharacteristics) (LPCSTR, LPDWORD);
-    BOOL (WINAPI * AvRevertMmThreadCharacteristics) (HANDLE);
+  FARPROC AvSetMmThreadCharacteristics;
+  FARPROC AvRevertMmThreadCharacteristics;
 } _gst_audio_avrt_tbl = { 0 };
 /* *INDENT-ON* */
 #endif
@@ -233,26 +232,46 @@ static struct
 static gboolean
 __gst_audio_init_thread_priority (void)
 {
-#ifdef _WIN32
-  if (_gst_audio_avrt_tbl.tried_loading)
-    return _gst_audio_avrt_tbl.dll != NULL;
+#ifdef G_OS_WIN32
+  static gsize init_once = 0;
+  static gboolean ret = FALSE;
 
-  if (!_gst_audio_avrt_tbl.dll)
+  if (g_once_init_enter (&init_once)) {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     _gst_audio_avrt_tbl.dll = LoadLibrary (TEXT ("avrt.dll"));
 
-  if (!_gst_audio_avrt_tbl.dll) {
-    GST_WARNING ("Failed to set thread priority, can't find avrt.dll");
-    _gst_audio_avrt_tbl.tried_loading = TRUE;
-    return FALSE;
+    if (!_gst_audio_avrt_tbl.dll) {
+      GST_WARNING ("Failed to set thread priority, can't find avrt.dll");
+      goto done;
+    }
+
+    _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics =
+        GetProcAddress (_gst_audio_avrt_tbl.dll,
+        "AvSetMmThreadCharacteristicsA");
+    if (!_gst_audio_avrt_tbl.AvSetMmThreadCharacteristics) {
+      GST_WARNING ("Cannot load AvSetMmThreadCharacteristicsA symbol");
+      FreeLibrary (_gst_audio_avrt_tbl.dll);
+      goto done;
+    }
+
+    _gst_audio_avrt_tbl.AvRevertMmThreadCharacteristics =
+        GetProcAddress (_gst_audio_avrt_tbl.dll,
+        "AvRevertMmThreadCharacteristics");
+
+    if (!_gst_audio_avrt_tbl.AvRevertMmThreadCharacteristics) {
+      GST_WARNING ("Cannot load AvRevertMmThreadCharacteristics symbol");
+      FreeLibrary (_gst_audio_avrt_tbl.dll);
+      goto done;
+    }
+
+    ret = TRUE;
+
+  done:
+#endif
+    g_once_init_leave (&init_once, 1);
   }
 
-  _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics =
-      GetProcAddress (_gst_audio_avrt_tbl.dll, "AvSetMmThreadCharacteristicsA");
-  _gst_audio_avrt_tbl.AvRevertMmThreadCharacteristics =
-      GetProcAddress (_gst_audio_avrt_tbl.dll,
-      "AvRevertMmThreadCharacteristics");
-
-  _gst_audio_avrt_tbl.tried_loading = TRUE;
+  return ret;
 #endif
 
   return TRUE;
@@ -261,19 +280,56 @@ __gst_audio_init_thread_priority (void)
 /*
  * Increases the priority of the thread it's called from
  */
-gpointer
-__gst_audio_set_thread_priority (void)
+gboolean
+__gst_audio_set_thread_priority (gpointer * handle)
 {
-  if (!__gst_audio_init_thread_priority ())
-    return NULL;
-
-#ifdef _WIN32
+#ifdef G_OS_WIN32
   DWORD taskIndex = 0;
-  /* This is only used from ringbuffer thread functions, so we don't need to
-   * ever need to revert the thread priorities. */
-  return _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics (TEXT ("Pro Audio"),
+#endif
+
+  g_return_val_if_fail (handle != NULL, FALSE);
+
+  *handle = NULL;
+
+  if (!__gst_audio_init_thread_priority ())
+    return FALSE;
+
+#ifdef G_OS_WIN32
+  /* This is only used from ringbuffer thread functions */
+  *handle = (gpointer)
+      _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics (TEXT ("Pro Audio"),
       &taskIndex);
+  if (*handle == 0) {
+    gchar *errorMsg = g_win32_error_message (GetLastError ());
+
+    GST_WARNING
+        ("Failed to set thread priority, AvSetMmThreadCharacteristics returned: %s",
+        errorMsg);
+    g_free (errorMsg);
+  }
+
+  return *handle != 0;
 #else
-  return NULL;
+  return TRUE;
+#endif
+}
+
+/*
+ * Restores the priority of the thread that was increased
+ * with __gst_audio_set_thread_priority.
+ * This function must be called from the same thread that called the
+ * __gst_audio_set_thread_priority function.
+ * See https://docs.microsoft.com/en-us/windows/win32/api/avrt/nf-avrt-avsetmmthreadcharacteristicsw#remarks
+ */
+gboolean
+__gst_audio_restore_thread_priority (gpointer handle)
+{
+#ifdef G_OS_WIN32
+  if (!handle)
+    return FALSE;
+
+  return _gst_audio_avrt_tbl.AvRevertMmThreadCharacteristics ((HANDLE) handle);
+#else
+  return TRUE;
 #endif
 }

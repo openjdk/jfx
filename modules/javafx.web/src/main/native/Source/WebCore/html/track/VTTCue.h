@@ -31,10 +31,12 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "HTMLElement.h"
 #include "TextTrackCue.h"
+#include "VTTRegion.h"
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -48,15 +50,13 @@ class WebVTTCueData;
 
 // ----------------------------
 
-class VTTCueBox : public HTMLElement {
+class VTTCueBox : public TextTrackCueBox {
     WTF_MAKE_ISO_ALLOCATED(VTTCueBox);
 public:
     static Ref<VTTCueBox> create(Document&, VTTCue&);
 
-    VTTCue* getCue() const;
-    virtual void applyCSSProperties(const IntSize& videoSize);
+    void applyCSSProperties(const IntSize&) override;
 
-    static const AtomicString& vttCueBoxShadowPseudoId();
     void setFontSizeFromCaptionUserPrefs(int fontSize) { m_fontSizeFromCaptionUserPrefs = fontSize; }
 
 protected:
@@ -73,29 +73,18 @@ private:
 
 // ----------------------------
 
-class VTTCue : public TextTrackCue, public CanMakeWeakPtr<VTTCue> {
+class VTTCue : public TextTrackCue {
+    WTF_MAKE_ISO_ALLOCATED(VTTCue);
 public:
-    static Ref<VTTCue> create(ScriptExecutionContext& context, double start, double end, const String& content)
-    {
-        return create(context, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), content);
-    }
-
-    static Ref<VTTCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, const String& content)
-    {
-        return adoptRef(*new VTTCue(context, start, end, content));
-    }
-
-    static Ref<VTTCue> create(ScriptExecutionContext&, const WebVTTCueData&);
-
-    static const AtomicString& cueBackdropShadowPseudoId();
+    static Ref<VTTCue> create(Document&, double start, double end, String&& content);
+    static Ref<VTTCue> create(Document&, const WebVTTCueData&);
 
     virtual ~VTTCue();
 
-    enum AutoKeyword {
-        Auto
-    };
-
+    enum AutoKeyword { Auto };
     using LineAndPositionSetting = Variant<double, AutoKeyword>;
+
+    void setTrack(TextTrack*);
 
     const String& vertical() const;
     ExceptionOr<void> setVertical(const String&);
@@ -103,11 +92,17 @@ public:
     bool snapToLines() const { return m_snapToLines; }
     void setSnapToLines(bool);
 
-    double line() const { return m_linePosition; }
-    virtual ExceptionOr<void> setLine(double);
+    LineAndPositionSetting line() const;
+    virtual ExceptionOr<void> setLine(const LineAndPositionSetting&);
+
+    const String& lineAlign() const;
+    ExceptionOr<void> setLineAlign(const String&);
 
     LineAndPositionSetting position() const;
     virtual ExceptionOr<void> setPosition(const LineAndPositionSetting&);
+
+    const String& positionAlign() const;
+    ExceptionOr<void> setPositionAlign(const String&);
 
     int size() const { return m_cueSize; }
     ExceptionOr<void> setSize(int);
@@ -121,21 +116,24 @@ public:
     const String& cueSettings() const { return m_settings; }
     void setCueSettings(const String&);
 
-    RefPtr<DocumentFragment> getCueAsHTML();
+    RefPtr<DocumentFragment> getCueAsHTML() final;
     RefPtr<DocumentFragment> createCueRenderingTree();
 
-    const String& regionId() const { return m_regionId; }
-    void setRegionId(const String&);
     void notifyRegionWhenRemovingDisplayTree(bool);
+
+    VTTRegion* region();
+    void setRegion(VTTRegion*);
+
+    const String& regionId();
 
     void setIsActive(bool) override;
 
     bool hasDisplayTree() const { return m_displayTree; }
-    VTTCueBox& getDisplayTree(const IntSize& videoSize, int fontSize);
+    RefPtr<TextTrackCueBox> getDisplayTree(const IntSize& videoSize, int fontSize) final;
     HTMLSpanElement& element() const { return *m_cueHighlightBox; }
 
-    void updateDisplayTree(const MediaTime&);
-    void removeDisplayTree();
+    void updateDisplayTree(const MediaTime&) final;
+    void removeDisplayTree() final;
     void markFutureAndPastNodes(ContainerNode*, const MediaTime&, const MediaTime&);
 
     int calculateComputedLinePosition();
@@ -149,7 +147,7 @@ public:
     CSSValueID getCSSWritingMode() const;
 
     enum WritingDirection {
-        Horizontal = 0,
+        Horizontal,
         VerticalGrowingLeft,
         VerticalGrowingRight,
         NumberOfWritingDirections
@@ -157,7 +155,7 @@ public:
     WritingDirection getWritingDirection() const { return m_writingDirection; }
 
     enum CueAlignment {
-        Start = 0,
+        Start,
         Center,
         End,
         Left,
@@ -166,34 +164,46 @@ public:
     };
     CueAlignment getAlignment() const { return m_cueAlignment; }
 
-    virtual void setFontSize(int, const IntSize&, bool important);
+    enum CueLignAlignment {
+        LignAlignmentStart,
+        LignAlignmentCenter,
+        LignAlignmentEnd,
+        NumberOfCueLineAlignments
+    };
 
-    bool isEqual(const TextTrackCue&, CueMatchRules) const override;
-    bool cueContentsMatch(const TextTrackCue&) const override;
-    bool doesExtendCue(const TextTrackCue&) const override;
+    enum CuePositionAlignment {
+        PositionAlignmentLignLeft,
+        PositionAlignmentLignCenter,
+        PositionAlignmentLignRight,
+        PositionAlignmentLignAuto,
+        NumberOfCuePositionAlignments
+    };
+
+    void recalculateStyles() final { m_displayTreeShouldChange = true; }
+    void setFontSize(int, const IntSize&, bool important) override;
 
     CueType cueType() const override { return WebVTT; }
-    bool isRenderable() const final { return true; }
+    bool isRenderable() const final { return !m_content.isEmpty(); }
 
-    void didChange() override;
-
-    String toJSONString() const;
+    void didChange() final;
 
     double calculateComputedTextPosition() const;
 
 protected:
-    VTTCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
-    VTTCue(ScriptExecutionContext&, const WebVTTCueData&);
+    VTTCue(Document&, const MediaTime& start, const MediaTime& end, String&& content);
+
+    bool cueContentsMatch(const TextTrackCue&) const override;
 
     virtual Ref<VTTCueBox> createDisplayTree();
     VTTCueBox& displayTreeInternal();
 
-    void toJSON(JSON::Object&) const final;
+    void toJSON(JSON::Object&) const override;
 
 private:
-    void initialize(ScriptExecutionContext&);
+    VTTCue(Document&, const WebVTTCueData&);
+
+    void initialize();
     void createWebVTTNodeTree();
-    void copyWebVTTNodeToDOMTree(ContainerNode* WebVTTNode, ContainerNode* root);
 
     void parseSettings(const String&);
 
@@ -209,55 +219,57 @@ private:
         Position,
         Size,
         Align,
-        RegionId
+        Region
     };
     CueSetting settingName(VTTScanner&);
 
+    static constexpr double undefinedPosition = -1;
+
     String m_content;
     String m_settings;
-    double m_linePosition;
-    double m_computedLinePosition;
-    double m_textPosition;
-    int m_cueSize;
+    double m_linePosition { std::numeric_limits<double>::quiet_NaN() };
+    double m_computedLinePosition { std::numeric_limits<double>::quiet_NaN() };
+    double m_textPosition { std::numeric_limits<double>::quiet_NaN() };
+    int m_cueSize { 100 };
 
-    WritingDirection m_writingDirection;
-    CueAlignment m_cueAlignment;
-    String m_regionId;
+    WritingDirection m_writingDirection { Horizontal };
+    CueAlignment m_cueAlignment { Center };
+
+    RefPtr<VTTRegion> m_region;
+    String m_parsedRegionId;
 
     RefPtr<DocumentFragment> m_webVTTNodeTree;
     RefPtr<HTMLSpanElement> m_cueHighlightBox;
     RefPtr<HTMLDivElement> m_cueBackdropBox;
     RefPtr<VTTCueBox> m_displayTree;
 
-    CSSValueID m_displayDirection;
-    int m_displaySize;
+    CSSValueID m_displayDirection { CSSValueLtr };
+    int m_displaySize { 0 };
     std::pair<float, float> m_displayPosition;
 
     MediaTime m_originalStartTime;
 
+    int m_fontSize { 0 };
+    bool m_fontSizeIsImportant { false };
+
     bool m_snapToLines : 1;
     bool m_displayTreeShouldChange : 1;
     bool m_notifyRegion : 1;
-};
 
-VTTCue* toVTTCue(TextTrackCue*);
-const VTTCue* toVTTCue(const TextTrackCue*);
+    CuePositionAlignment m_positionAlignment { PositionAlignmentLignAuto };
+    CueLignAlignment m_lineAlignment { LignAlignmentStart };
+};
 
 } // namespace WebCore
 
 namespace WTF {
 
-template<typename Type>
-struct LogArgument;
+template<> struct LogArgument<WebCore::VTTCue> : LogArgument<WebCore::TextTrackCue> { };
 
-template <>
-struct LogArgument<WebCore::VTTCue> {
-    static String toString(const WebCore::VTTCue& cue)
-    {
-        return cue.toJSONString();
-    }
-};
+}
 
-} // namespace WTF
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::VTTCue)
+static bool isType(const WebCore::TextTrackCue& cue) { return cue.cueType() == WebCore::TextTrackCue::WebVTT || cue.cueType() == WebCore::TextTrackCue::ConvertedToWebVTT; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

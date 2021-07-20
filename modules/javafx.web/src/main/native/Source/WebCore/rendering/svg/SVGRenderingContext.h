@@ -60,11 +60,11 @@ public:
     void prepareToRenderSVGContent(RenderElement&, PaintInfo&, NeedsGraphicsContextSave = DontSaveGraphicsContext);
     bool isRenderingPrepared() const { return m_renderingFlags & RenderingPrepared; }
 
-    static std::unique_ptr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, ColorSpace, RenderingMode, const GraphicsContext* = nullptr);
-    static std::unique_ptr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, ColorSpace, RenderingMode, const GraphicsContext* = nullptr);
+    static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, DestinationColorSpace, RenderingMode, const GraphicsContext* = nullptr);
+    static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, DestinationColorSpace, RenderingMode, const GraphicsContext* = nullptr);
 
-    static void renderSubtreeToImageBuffer(ImageBuffer*, RenderElement&, const AffineTransform&);
-    static void clipToImageBuffer(GraphicsContext&, const AffineTransform& absoluteTransform, const FloatRect& targetRect, std::unique_ptr<ImageBuffer>&, bool safeToClear);
+    static void renderSubtreeToContext(GraphicsContext&, RenderElement&, const AffineTransform&);
+    static void clipToImageBuffer(GraphicsContext&, const AffineTransform& absoluteTransform, const FloatRect& targetRect, RefPtr<ImageBuffer>&, bool safeToClear);
 
     static float calculateScreenFontSizeScalingFactor(const RenderObject&);
     static AffineTransform calculateTransformationToOutermostCoordinateSystem(const RenderObject&);
@@ -76,7 +76,7 @@ public:
     }
 
     // Support for the buffered-rendering hint.
-    bool bufferForeground(std::unique_ptr<ImageBuffer>&);
+    bool bufferForeground(RefPtr<ImageBuffer>&);
 
 private:
     // To properly revert partially successful initializtions in the destructor, we record all successful steps.
@@ -90,7 +90,7 @@ private:
     };
 
     // List of those flags which require actions during the destructor.
-    const static int ActionsNeeded = RestoreGraphicsContext | EndOpacityLayer | EndShadowLayer | EndFilterLayer;
+    static constexpr int ActionsNeeded = RestoreGraphicsContext | EndOpacityLayer | EndShadowLayer | EndFilterLayer;
 
     RenderElement* m_renderer { nullptr };
     PaintInfo* m_paintInfo { nullptr };

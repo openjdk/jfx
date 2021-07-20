@@ -34,7 +34,7 @@ namespace WebCore {
 static inline bool compositingLogEnabled()
 {
 #if !LOG_DISABLED
-    return LogCompositing.state == WTFLogChannelOn;
+    return LogCompositing.state == WTFLogChannelState::On;
 #else
     return false;
 #endif
@@ -68,6 +68,7 @@ static const char* vertexTemplateLT320Vars =
         varying vec2 v_texCoord;
         varying vec2 v_transformedTexCoord;
         varying float v_antialias;
+        varying vec4 v_nonProjectedPosition;
     );
 
 #if !USE(OPENGL_ES)
@@ -78,6 +79,7 @@ static const char* vertexTemplateGE320Vars =
         out vec2 v_texCoord;
         out vec2 v_transformedTexCoord;
         out float v_antialias;
+        out vec4 v_nonProjectedPosition;
     );
 #endif
 
@@ -133,7 +135,8 @@ static const char* vertexTemplateCommon =
             v_texCoord = position;
             vec4 clampedPosition = clamp(vec4(position, 0., 1.), 0., 1.);
             v_transformedTexCoord = (u_textureSpaceMatrix * clampedPosition).xy;
-            gl_Position = u_projectionMatrix * u_modelViewMatrix * vec4(position, 0., 1.);
+            v_nonProjectedPosition = u_modelViewMatrix * vec4(position, 0., 1.);
+            gl_Position = u_projectionMatrix * v_nonProjectedPosition;
         }
     );
 
@@ -160,6 +163,24 @@ static const char* vertexTemplateCommon =
     GLSL_DIRECTIVE(define GAUSSIAN_KERNEL_STEP 0.2)
 
 
+#define OES_EGL_IMAGE_EXTERNAL_DIRECTIVE \
+    GLSL_DIRECTIVE(ifdef ENABLE_TextureExternalOES) \
+        GLSL_DIRECTIVE(extension GL_OES_EGL_image_external : require) \
+        GLSL_DIRECTIVE(define SamplerExternalOESType samplerExternalOES) \
+    GLSL_DIRECTIVE(else) \
+        GLSL_DIRECTIVE(define SamplerExternalOESType sampler2D) \
+    GLSL_DIRECTIVE(endif)
+
+// The max number of stacked rounded rectangle clips allowed is 10, which is also the
+// max number of transforms that we can get. We need 3 components for each rounded
+// rectangle so we need 30 components to receive the 10 rectangles.
+//
+// Keep this is sync with the values defined in ClipStack.h
+#define ROUNDED_RECT_CONSTANTS                       \
+    GLSL_DIRECTIVE(define ROUNDED_RECT_MAX_RECTS 10) \
+    GLSL_DIRECTIVE(define ROUNDED_RECT_ARRAY_SIZE 30) \
+    GLSL_DIRECTIVE(define ROUNDED_RECT_INVERSE_TRANSFORM_ARRAY_SIZE 10)
+
 // Common header for all versions. We define the matrices variables here to keep the precision
 // directives scope: the first one applies to the matrices variables and the next one to the
 // rest of them. The precision is only used in GLES.
@@ -167,10 +188,10 @@ static const char* fragmentTemplateHeaderCommon =
     RECT_TEXTURE_DIRECTIVE
     ANTIALIASING_TEX_COORD_DIRECTIVE
     BLUR_CONSTANTS
+    ROUNDED_RECT_CONSTANTS
+    OES_EGL_IMAGE_EXTERNAL_DIRECTIVE
 #if USE(OPENGL_ES)
     TEXTURE_SPACE_MATRIX_PRECISION_DIRECTIVE
-#endif
-#if USE(OPENGL_ES)
     STRINGIFY(
         precision TextureSpaceMatrixPrecision float;
     )
@@ -192,6 +213,7 @@ static const char* fragmentTemplateLT320Vars =
         varying float v_antialias;
         varying vec2 v_texCoord;
         varying vec2 v_transformedTexCoord;
+        varying vec4 v_nonProjectedPosition;
     );
 
 #if !USE(OPENGL_ES)
@@ -201,19 +223,28 @@ static const char* fragmentTemplateGE320Vars =
         in float v_antialias;
         in vec2 v_texCoord;
         in vec2 v_transformedTexCoord;
+        in vec4 v_nonProjectedPosition;
     );
 #endif
 
 static const char* fragmentTemplateCommon =
     STRINGIFY(
         uniform SamplerType s_sampler;
+        uniform SamplerType s_samplerY;
+        uniform SamplerType s_samplerU;
+        uniform SamplerType s_samplerV;
         uniform sampler2D s_contentTexture;
+        uniform SamplerExternalOESType s_externalOESTexture;
         uniform float u_opacity;
         uniform float u_filterAmount;
+        uniform mat3 u_yuvToRgb;
         uniform vec2 u_blurRadius;
         uniform vec2 u_shadowOffset;
         uniform vec4 u_color;
         uniform float u_gaussianKernel[GAUSSIAN_KERNEL_HALF_WIDTH];
+        uniform int u_roundedRectNumber;
+        uniform vec4 u_roundedRect[ROUNDED_RECT_ARRAY_SIZE];
+        uniform mat4 u_roundedRectInverseTransformMatrix[ROUNDED_RECT_INVERSE_TRANSFORM_ARRAY_SIZE];
 
         void noop(inout vec4 dummyParameter) { }
         void noop(inout vec4 dummyParameter, vec2 texCoord) { }
@@ -231,7 +262,41 @@ static const char* fragmentTemplateCommon =
 
         void applyManualRepeat(inout vec2 pos) { pos = fract(pos); }
 
-        void applyTexture(inout vec4 color, vec2 texCoord) { color = u_textureColorSpaceMatrix * SamplerFunction(s_sampler, texCoord); }
+        void applyTextureRGB(inout vec4 color, vec2 texCoord) { color = u_textureColorSpaceMatrix * SamplerFunction(s_sampler, texCoord); }
+
+        vec3 yuvToRgb(float y, float u, float v)
+        {
+            // yuv is either bt601 or bt709 so the offset is the same
+            vec3 yuv = vec3(y - 0.0625, u - 0.5, v - 0.5);
+            return yuv * u_yuvToRgb;
+        }
+        void applyTextureYUV(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            float u = SamplerFunction(s_samplerU, texCoord).r;
+            float v = SamplerFunction(s_samplerV, texCoord).r;
+            vec4 data = vec4(yuvToRgb(y, u, v), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTextureNV12(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            vec2 uv = SamplerFunction(s_samplerU, texCoord).rg;
+            vec4 data = vec4(yuvToRgb(y, uv.x, uv.y), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTextureNV21(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            vec2 uv = SamplerFunction(s_samplerU, texCoord).gr;
+            vec4 data = vec4(yuvToRgb(y, uv.x, uv.y), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTexturePackedYUV(inout vec4 color, vec2 texCoord)
+        {
+            vec4 data = SamplerFunction(s_sampler, texCoord);
+            color = u_textureColorSpaceMatrix * vec4(yuvToRgb(data.b, data.g, data.r), data.a);
+        }
         void applyOpacity(inout vec4 color) { color *= u_opacity; }
         void applyAntialiasing(inout vec4 color) { color *= antialias(); }
 
@@ -272,10 +337,10 @@ static const char* fragmentTemplateCommon =
                 color.a);
         }
 
-        float invert(float n) { return (1.0 - n) * u_filterAmount + n * (1.0 - u_filterAmount); }
+        float invert(float n, float a) { return (a - n) * u_filterAmount + n * (1.0 - u_filterAmount); }
         void applyInvertFilter(inout vec4 color)
         {
-            color = vec4(invert(color.r), invert(color.g), invert(color.b), color.a);
+            color = vec4(invert(color.r, color.a), invert(color.g, color.a), invert(color.b, color.a), color.a);
         }
 
         void applyBrightnessFilter(inout vec4 color)
@@ -291,13 +356,13 @@ static const char* fragmentTemplateCommon =
 
         void applyOpacityFilter(inout vec4 color)
         {
-            color = vec4(color.r, color.g, color.b, color.a * u_filterAmount);
+            color *= u_filterAmount;
         }
 
         vec4 sampleColorAtRadius(float radius, vec2 texCoord)
         {
             vec2 coord = texCoord + radius * u_blurRadius;
-            return SamplerFunction(s_sampler, coord) * float(coord.x > 0. && coord.y > 0. && coord.x < 1. && coord.y < 1.);
+            return SamplerFunction(s_sampler, coord);
         }
 
         float sampleAlphaAtRadius(float radius, vec2 texCoord)
@@ -328,7 +393,7 @@ static const char* fragmentTemplateCommon =
             color *= total;
         }
 
-        vec4 sourceOver(vec4 src, vec4 dst) { return src + dst * (1. - dst.a); }
+        vec4 sourceOver(vec4 src, vec4 dst) { return src + dst * (1. - src.a); }
 
         void applyContentTexture(inout vec4 color, vec2 texCoord)
         {
@@ -336,14 +401,92 @@ static const char* fragmentTemplateCommon =
             color = sourceOver(contentColor, color);
         }
 
+        void applyTextureExternalOES(inout vec4 color, vec2 texCoord)
+        {
+            vec4 contentColor = texture2D(s_externalOESTexture, texCoord);
+            color = sourceOver(contentColor, color);
+        }
+
         void applySolidColor(inout vec4 color) { color *= u_color; }
+
+        float ellipsisDist(vec2 p, vec2 radius)
+        {
+            if (radius == vec2(0, 0))
+                return 0.0;
+
+            vec2 p0 = p / radius;
+            vec2 p1 = 2.0 * p0 / radius;
+
+            return (dot(p0, p0) - 1.0) / length (p1);
+        }
+
+        float ellipsisCoverage(vec2 point, vec2 center, vec2 radius)
+        {
+            float d = ellipsisDist(point - center, radius);
+            return clamp(0.5 - d, 0.0, 1.0);
+        }
+
+        float roundedRectCoverage(vec2 p, vec4 bounds, vec2 topLeftRadii, vec2 topRightRadii, vec2 bottomLeftRadii, vec2 bottomRightRadii)
+        {
+            if (p.x < bounds.x || p.y < bounds.y || p.x >= bounds.z || p.y >= bounds.w)
+                return 0.0;
+
+            vec2 topLeftCenter = bounds.xy + topLeftRadii;
+            vec2 topRightCenter = bounds.zy + (topRightRadii * vec2(-1, 1));
+            vec2 bottomLeftCenter = bounds.xw + (bottomLeftRadii * vec2(1, -1));
+            vec2 bottomRightCenter = bounds.zw + (bottomRightRadii * vec2(-1, -1));
+
+            if (p.x < topLeftCenter.x && p.y < topLeftCenter.y)
+                return ellipsisCoverage(p, topLeftCenter, topLeftRadii);
+
+            if (p.x > topRightCenter.x && p.y < topRightCenter.y)
+                return ellipsisCoverage(p, topRightCenter, topRightRadii);
+
+            if (p.x < bottomLeftCenter.x && p.y > bottomLeftCenter.y)
+                return ellipsisCoverage(p, bottomLeftCenter, bottomLeftRadii);
+
+            if (p.x > bottomRightCenter.x && p.y > bottomRightCenter.y)
+                return ellipsisCoverage(p, bottomRightCenter, bottomRightRadii);
+
+            return 1.0;
+        }
+
+        void applyRoundedRectClip(inout vec4 color)
+        {
+            // This works by checking whether the fragment position, once the transform is applied,
+            // is inside the defined rounded rectangle or not.
+            //
+            // We can't use gl_fragCoord for the fragment position because thats the projected point
+            // and the projection screws the Z component. We need the real 3D position that comes from
+            // the nonProjectedPosition variable.
+            //
+            // This implementation is not optimal, but it's done this way in order to overcome rpi3's
+            // proprietary video driver limitations (see https://bugs.webkit.org/show_bug.cgi?id=219739).
+
+            for (int rectIndex = 0; rectIndex < ROUNDED_RECT_MAX_RECTS; rectIndex++) {
+                if (rectIndex >= u_roundedRectNumber)
+                    break;
+
+                vec4 fragCoord = u_roundedRectInverseTransformMatrix[rectIndex] * v_nonProjectedPosition;
+                vec4 bounds = vec4(u_roundedRect[rectIndex * 3].xy, u_roundedRect[rectIndex * 3].xy + u_roundedRect[rectIndex * 3].zw);
+                vec2 topLeftRadii = u_roundedRect[(rectIndex * 3) + 1].xy;
+                vec2 topRightRadii = u_roundedRect[(rectIndex * 3) + 1].zw;
+                vec2 bottomLeftRadii = u_roundedRect[(rectIndex * 3) + 2].xy;
+                vec2 bottomRightRadii = u_roundedRect[(rectIndex * 3) + 2].zw;
+                color *= roundedRectCoverage(fragCoord.xy, bounds, topLeftRadii, topRightRadii, bottomLeftRadii, bottomRightRadii);
+            }
+        }
 
         void main(void)
         {
             vec4 color = vec4(1., 1., 1., 1.);
             vec2 texCoord = transformTexCoord();
             applyManualRepeatIfNeeded(texCoord);
-            applyTextureIfNeeded(color, texCoord);
+            applyTextureRGBIfNeeded(color, texCoord);
+            applyTextureYUVIfNeeded(color, texCoord);
+            applyTextureNV12IfNeeded(color, texCoord);
+            applyTextureNV21IfNeeded(color, texCoord);
+            applyTexturePackedYUVIfNeeded(color, texCoord);
             applySolidColorIfNeeded(color);
             applyAntialiasingIfNeeded(color);
             applyOpacityIfNeeded(color);
@@ -358,6 +501,8 @@ static const char* fragmentTemplateCommon =
             applyBlurFilterIfNeeded(color, texCoord);
             applyAlphaBlurIfNeeded(color, texCoord);
             applyContentTextureIfNeeded(color, texCoord);
+            applyTextureExternalOESIfNeeded(color, texCoord);
+            applyRoundedRectClipIfNeeded(color);
             gl_FragColor = color;
         }
     );
@@ -369,7 +514,11 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
         (options & TextureMapperShaderProgram::Applier) ? ENABLE_APPLIER(Applier) : DISABLE_APPLIER(Applier))
 
     StringBuilder optionsApplierBuilder;
-    SET_APPLIER_FROM_OPTIONS(Texture);
+    SET_APPLIER_FROM_OPTIONS(TextureRGB);
+    SET_APPLIER_FROM_OPTIONS(TextureYUV);
+    SET_APPLIER_FROM_OPTIONS(TextureNV12);
+    SET_APPLIER_FROM_OPTIONS(TextureNV21);
+    SET_APPLIER_FROM_OPTIONS(TexturePackedYUV);
     SET_APPLIER_FROM_OPTIONS(Rect);
     SET_APPLIER_FROM_OPTIONS(SolidColor);
     SET_APPLIER_FROM_OPTIONS(Opacity);
@@ -386,6 +535,8 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     SET_APPLIER_FROM_OPTIONS(AlphaBlur);
     SET_APPLIER_FROM_OPTIONS(ContentTexture);
     SET_APPLIER_FROM_OPTIONS(ManualRepeat);
+    SET_APPLIER_FROM_OPTIONS(TextureExternalOES);
+    SET_APPLIER_FROM_OPTIONS(RoundedRectClip);
 
     StringBuilder vertexShaderBuilder;
 
@@ -525,16 +676,15 @@ void TextureMapperShaderProgram::setMatrix(GLuint location, const Transformation
     glUniformMatrix4fv(location, 1, false, floatMatrix.data());
 }
 
-GLuint TextureMapperShaderProgram::getLocation(const AtomicString& name, VariableType type)
+GLuint TextureMapperShaderProgram::getLocation(VariableID variable, ASCIILiteral name, VariableType type)
 {
-    auto addResult = m_variables.ensure(name,
+    auto addResult = m_variables.ensure(variable,
         [this, &name, type] {
-            CString nameCString = name.string().utf8();
             switch (type) {
             case UniformVariable:
-                return glGetUniformLocation(m_id, nameCString.data());
+                return glGetUniformLocation(m_id, name);
             case AttribVariable:
-                return glGetAttribLocation(m_id, nameCString.data());
+                return glGetAttribLocation(m_id, name);
             }
             ASSERT_NOT_REACHED();
             return 0;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,64 +29,95 @@
 
 #pragma once
 
+#include "AudioArray.h"
+#include "ExceptionOr.h"
 #include "FloatPoint3D.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
+class AudioParam;
+class BaseAudioContext;
+
 // AudioListener maintains the state of the listener in the audio scene as defined in the OpenAL specification.
 
-class AudioListener final : public RefCounted<AudioListener> {
+class AudioListener : public RefCounted<AudioListener> {
 public:
-    static Ref<AudioListener> create()
+    static Ref<AudioListener> create(BaseAudioContext& context)
     {
-        return adoptRef(*new AudioListener);
+        return adoptRef(*new AudioListener(context));
     }
+    virtual ~AudioListener();
+
+    AudioParam& positionX() { return m_positionX.get(); }
+    AudioParam& positionY() { return m_positionY.get(); }
+    AudioParam& positionZ() { return m_positionZ.get(); }
+    AudioParam& forwardX() { return m_forwardX.get(); }
+    AudioParam& forwardY() { return m_forwardY.get(); }
+    AudioParam& forwardZ() { return m_forwardZ.get(); }
+    AudioParam& upX() { return m_upX.get(); }
+    AudioParam& upY() { return m_upY.get(); }
+    AudioParam& upZ() { return m_upZ.get(); }
 
     // Position
-    void setPosition(float x, float y, float z) { setPosition(FloatPoint3D(x, y, z)); }
-    void setPosition(const FloatPoint3D &position) { m_position = position; }
-    const FloatPoint3D& position() const { return m_position; }
+    ExceptionOr<void> setPosition(float x, float y, float z);
+    FloatPoint3D position() const;
 
     // Orientation
-    void setOrientation(float x, float y, float z, float upX, float upY, float upZ)
-    {
-        setOrientation(FloatPoint3D(x, y, z));
-        setUpVector(FloatPoint3D(upX, upY, upZ));
-    }
-    void setOrientation(const FloatPoint3D &orientation) { m_orientation = orientation; }
-    const FloatPoint3D& orientation() const { return m_orientation; }
+    ExceptionOr<void> setOrientation(float x, float y, float z, float upX, float upY, float upZ);
+    FloatPoint3D orientation() const;
 
-    // Up-vector
-    void setUpVector(const FloatPoint3D &upVector) { m_upVector = upVector; }
-    const FloatPoint3D& upVector() const { return m_upVector; }
+    FloatPoint3D upVector() const;
 
-    // Velocity
-    void setVelocity(float x, float y, float z) { setVelocity(FloatPoint3D(x, y, z)); }
-    void setVelocity(const FloatPoint3D &velocity) { m_velocity = velocity; }
-    const FloatPoint3D& velocity() const { return m_velocity; }
+    virtual bool isWebKitAudioListener() const { return false; }
 
-    // Doppler factor
-    void setDopplerFactor(double dopplerFactor) { m_dopplerFactor = dopplerFactor; }
-    double dopplerFactor() const { return m_dopplerFactor; }
+    bool hasSampleAccurateValues() const;
+    bool shouldUseARate() const;
 
-    // Speed of sound
-    void setSpeedOfSound(double speedOfSound) { m_speedOfSound = speedOfSound; }
-    double speedOfSound() const { return m_speedOfSound; }
+    const float* positionXValues(size_t framesToProcess);
+    const float* positionYValues(size_t framesToProcess);
+    const float* positionZValues(size_t framesToProcess);
+
+    const float* forwardXValues(size_t framesToProcess);
+    const float* forwardYValues(size_t framesToProcess);
+    const float* forwardZValues(size_t framesToProcess);
+
+    const float* upXValues(size_t framesToProcess);
+    const float* upYValues(size_t framesToProcess);
+    const float* upZValues(size_t framesToProcess);
+
+    void updateValuesIfNeeded(size_t framesToProcess);
+
+protected:
+    explicit AudioListener(BaseAudioContext&);
 
 private:
-    AudioListener();
 
-    // Position / Orientation
-    FloatPoint3D m_position;
-    FloatPoint3D m_orientation;
-    FloatPoint3D m_upVector;
+    Ref<AudioParam> m_positionX;
+    Ref<AudioParam> m_positionY;
+    Ref<AudioParam> m_positionZ;
+    Ref<AudioParam> m_forwardX;
+    Ref<AudioParam> m_forwardY;
+    Ref<AudioParam> m_forwardZ;
+    Ref<AudioParam> m_upX;
+    Ref<AudioParam> m_upY;
+    Ref<AudioParam> m_upZ;
 
-    FloatPoint3D m_velocity;
+    // Last time that the automations were updated.
+    double m_lastUpdateTime { -1 };
 
-    double m_dopplerFactor;
-    double m_speedOfSound;
+    AudioFloatArray m_positionXValues;
+    AudioFloatArray m_positionYValues;
+    AudioFloatArray m_positionZValues;
+
+    AudioFloatArray m_forwardXValues;
+    AudioFloatArray m_forwardYValues;
+    AudioFloatArray m_forwardZValues;
+
+    AudioFloatArray m_upXValues;
+    AudioFloatArray m_upYValues;
+    AudioFloatArray m_upZValues;
 };
 
 } // namespace WebCore

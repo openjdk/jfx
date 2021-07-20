@@ -1,6 +1,6 @@
 /*
- * Copyright ฉ 2007, 2008 Ryan Lortie
- * Copyright ฉ 2009, 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2009, 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -51,7 +51,7 @@ GVariantType *                  g_variant_format_string_scan_type       (const g
  * of #GVariant will handle.
  *
  * The limit must be at least 64 + 1, to allow D-Bus messages to be wrapped in
- * a top-level #GVariant. This comes from the D-Bus specification (ยง(Valid
+ * a top-level #GVariant. This comes from the D-Bus specification ((Valid
  * Signatures)), but also seems generally reasonable. #GDBusMessage wraps its
  * payload in a top-level tuple.
  *

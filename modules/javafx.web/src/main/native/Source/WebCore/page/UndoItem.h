@@ -55,7 +55,7 @@ public:
 
     Document* document() const;
 
-    UndoManager* undoManager() const { return m_undoManager.get(); }
+    UndoManager* undoManager() const;
     void setUndoManager(UndoManager*);
 
     const String& label() const { return m_label; }
@@ -74,6 +74,7 @@ private:
     Ref<VoidCallback> m_undoHandler;
     Ref<VoidCallback> m_redoHandler;
     WeakPtr<UndoManager> m_undoManager;
+    WeakPtr<Document> m_document;
 };
 
 } // namespace WebCore

@@ -40,14 +40,9 @@
 
 namespace WebCore {
 
-const AtomicString& ResetInputType::formControlType() const
+const AtomString& ResetInputType::formControlType() const
 {
     return InputTypeNames::reset();
-}
-
-bool ResetInputType::supportsValidation() const
-{
-    return false;
 }
 
 void ResetInputType::handleDOMActivateEvent(Event& event)
@@ -62,11 +57,6 @@ void ResetInputType::handleDOMActivateEvent(Event& event)
 String ResetInputType::defaultValue() const
 {
     return resetButtonDefaultLabel();
-}
-
-bool ResetInputType::isTextButton() const
-{
-    return true;
 }
 
 } // namespace WebCore

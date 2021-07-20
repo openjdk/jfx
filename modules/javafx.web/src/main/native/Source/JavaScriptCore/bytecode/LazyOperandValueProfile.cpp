@@ -26,7 +26,7 @@
 #include "config.h"
 #include "LazyOperandValueProfile.h"
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -46,7 +46,7 @@ LazyOperandValueProfile* CompressedLazyOperandValueProfileHolder::add(
     const ConcurrentJSLocker&, const LazyOperandValueProfileKey& key)
 {
     if (!m_data)
-        m_data = std::make_unique<LazyOperandValueProfile::List>();
+        m_data = makeUnique<LazyOperandValueProfile::List>();
     else {
         for (unsigned i = 0; i < m_data->size(); ++i) {
             if (m_data->at(i).key() == key)
@@ -81,7 +81,7 @@ LazyOperandValueProfile* LazyOperandValueProfileParser::getIfPresent(
         m_map.find(key);
 
     if (iter == m_map.end())
-        return 0;
+        return nullptr;
 
     return iter->value;
 }

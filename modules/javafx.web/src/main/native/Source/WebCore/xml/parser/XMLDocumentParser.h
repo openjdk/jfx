@@ -32,7 +32,7 @@
 #include <libxml/tree.h>
 #include <libxml/xmlstring.h>
 #include <wtf/HashMap.h>
-#include <wtf/text/AtomicStringHash.h>
+#include <wtf/text/AtomStringHash.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -67,9 +67,9 @@ public:
     {
         return adoptRef(*new XMLDocumentParser(document, view));
     }
-    static Ref<XMLDocumentParser> create(DocumentFragment& fragment, Element* element, ParserContentPolicy parserContentPolicy)
+    static Ref<XMLDocumentParser> create(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, ParserContentPolicy parserContentPolicy)
     {
-        return adoptRef(*new XMLDocumentParser(fragment, element, parserContentPolicy));
+        return adoptRef(*new XMLDocumentParser(fragment, WTFMove(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy));
     }
 
     ~XMLDocumentParser();
@@ -89,12 +89,11 @@ public:
 
 private:
     explicit XMLDocumentParser(Document&, FrameView* = nullptr);
-    XMLDocumentParser(DocumentFragment&, Element*, ParserContentPolicy);
+    XMLDocumentParser(DocumentFragment&, HashMap<AtomString, AtomString>&&, const AtomString&, ParserContentPolicy);
 
     void insert(SegmentedString&&) final;
     void append(RefPtr<StringImpl>&&) final;
     void finish() final;
-    bool isWaitingForScripts() const final;
     void stopParsing() final;
     void detach() final;
 
@@ -180,9 +179,10 @@ private:
     TextPosition m_scriptStartPosition;
 
     bool m_parsingFragment { false };
-    AtomicString m_defaultNamespaceURI;
 
-    HashMap<AtomicString, AtomicString> m_prefixToNamespaceMap;
+    HashMap<AtomString, AtomString> m_prefixToNamespaceMap;
+    AtomString m_defaultNamespaceURI;
+
     SegmentedString m_pendingSrc;
 };
 

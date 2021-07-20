@@ -67,13 +67,13 @@ struct ScopedFramePaintingState {
     const Color backgroundColor;
 };
 
-std::unique_ptr<ImageBuffer> snapshotFrameRect(Frame& frame, const IntRect& imageRect, SnapshotOptions options)
+RefPtr<ImageBuffer> snapshotFrameRect(Frame& frame, const IntRect& imageRect, SnapshotOptions options)
 {
     Vector<FloatRect> clipRects;
     return snapshotFrameRectWithClip(frame, imageRect, clipRects, options);
 }
 
-std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRect& imageRect, const Vector<FloatRect>& clipRects, SnapshotOptions options)
+RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRect& imageRect, const Vector<FloatRect>& clipRects, SnapshotOptions options)
 {
     if (!frame.page())
         return nullptr;
@@ -105,10 +105,13 @@ std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRe
 
     float scaleFactor = frame.page()->deviceScaleFactor();
 
-    if (frame.settings().delegatesPageScaling())
+    if (frame.page()->delegatesScaling())
         scaleFactor *= frame.page()->pageScaleFactor();
 
-    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(imageRect.size(), Unaccelerated, scaleFactor);
+    if (options & SnapshotOptionsPaintWithIntegralScaleFactor)
+        scaleFactor = ceilf(scaleFactor);
+
+    auto buffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated, scaleFactor);
     if (!buffer)
         return nullptr;
     buffer->context().translate(-imageRect.x(), -imageRect.y());
@@ -116,7 +119,7 @@ std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRe
     if (!clipRects.isEmpty()) {
         Path clipPath;
         for (auto& rect : clipRects)
-            clipPath.addRect(rect);
+            clipPath.addRect(encloseRectToDevicePixels(rect, scaleFactor));
         buffer->context().clipPath(clipPath);
     }
 
@@ -124,7 +127,7 @@ std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRe
     return buffer;
 }
 
-std::unique_ptr<ImageBuffer> snapshotSelection(Frame& frame, SnapshotOptions options)
+RefPtr<ImageBuffer> snapshotSelection(Frame& frame, SnapshotOptions options)
 {
     auto& selection = frame.selection();
 
@@ -141,14 +144,14 @@ std::unique_ptr<ImageBuffer> snapshotSelection(Frame& frame, SnapshotOptions opt
     return snapshotFrameRect(frame, enclosingIntRect(selectionBounds), options);
 }
 
-std::unique_ptr<ImageBuffer> snapshotNode(Frame& frame, Node& node)
+RefPtr<ImageBuffer> snapshotNode(Frame& frame, Node& node)
 {
     if (!node.renderer())
         return nullptr;
 
     ScopedFramePaintingState state(frame, &node);
 
-    frame.view()->setBaseBackgroundColor(Color::transparent);
+    frame.view()->setBaseBackgroundColor(Color::transparentBlack);
     frame.view()->setNodeToDraw(&node);
 
     LayoutRect topLevelRect;

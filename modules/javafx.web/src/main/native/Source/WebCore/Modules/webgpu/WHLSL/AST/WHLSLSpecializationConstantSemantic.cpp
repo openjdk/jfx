@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLSpecializationConstantSemantic.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLNativeTypeDeclaration.h"
 #include "WHLSLTypeReference.h"
@@ -42,10 +42,9 @@ bool SpecializationConstantSemantic::isAcceptableType(const UnnamedType& unnamed
     if (!is<TypeReference>(unnamedType))
         return false;
     auto& typeReference = downcast<TypeReference>(unnamedType);
-    ASSERT(typeReference.resolvedType());
-    if (!is<NativeTypeDeclaration>(*typeReference.resolvedType()))
+    if (!is<NativeTypeDeclaration>(typeReference.resolvedType()))
         return false;
-    return downcast<NativeTypeDeclaration>(*typeReference.resolvedType()).isNumber();
+    return downcast<NativeTypeDeclaration>(typeReference.resolvedType()).isNumber();
 }
 
 bool SpecializationConstantSemantic::isAcceptableForShaderItemDirection(ShaderItemDirection direction, const Optional<EntryPointType>&) const
@@ -59,4 +58,4 @@ bool SpecializationConstantSemantic::isAcceptableForShaderItemDirection(ShaderIt
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

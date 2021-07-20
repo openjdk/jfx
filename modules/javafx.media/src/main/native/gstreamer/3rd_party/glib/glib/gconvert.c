@@ -46,18 +46,12 @@
 #include "gstrfuncs.h"
 #include "gtestutils.h"
 #include "gthread.h"
+#include "gthreadprivate.h"
 #include "gunicode.h"
 #include "gfileutils.h"
+#include "genviron.h"
 
 #include "glibintl.h"
-
-#if defined(USE_LIBICONV_GNU) && !defined (_LIBICONV_H)
-#error GNU libiconv in use but included iconv.h not from libiconv
-#endif
-#if !defined(USE_LIBICONV_GNU) && defined (_LIBICONV_H) \
-     && !defined (__APPLE_CC__) && !defined (__LP_64__)
-#error GNU libiconv not in use but included iconv.h is from libiconv
-#endif
 
 
 /**
@@ -169,8 +163,8 @@ G_DEFINE_QUARK (g_convert_error, g_convert_error)
 
 static gboolean
 try_conversion (const char *to_codeset,
-        const char *from_codeset,
-        iconv_t    *cd)
+    const char *from_codeset,
+    iconv_t    *cd)
 {
   *cd = iconv_open (to_codeset, from_codeset);
 
@@ -182,19 +176,19 @@ try_conversion (const char *to_codeset,
 
 static gboolean
 try_to_aliases (const char **to_aliases,
-        const char  *from_codeset,
-        iconv_t     *cd)
+    const char  *from_codeset,
+    iconv_t     *cd)
 {
   if (to_aliases)
     {
       const char **p = to_aliases;
       while (*p)
-    {
-      if (try_conversion (*p, from_codeset, cd))
-        return TRUE;
+  {
+    if (try_conversion (*p, from_codeset, cd))
+      return TRUE;
 
-      p++;
-    }
+    p++;
+  }
     }
 
   return FALSE;
@@ -217,7 +211,7 @@ try_to_aliases (const char **to_aliases,
  **/
 GIConv
 g_iconv_open (const gchar  *to_codeset,
-          const gchar  *from_codeset)
+        const gchar  *from_codeset)
 {
   iconv_t cd;
 
@@ -227,22 +221,22 @@ g_iconv_open (const gchar  *to_codeset,
       const char **from_aliases = _g_charset_get_aliases (from_codeset);
 
       if (from_aliases)
-    {
-      const char **p = from_aliases;
-      while (*p)
-        {
-          if (try_conversion (to_codeset, *p, &cd))
-        goto out;
+  {
+    const char **p = from_aliases;
+    while (*p)
+      {
+        if (try_conversion (to_codeset, *p, &cd))
+    goto out;
 
-          if (try_to_aliases (to_aliases, *p, &cd))
-        goto out;
+        if (try_to_aliases (to_aliases, *p, &cd))
+    goto out;
 
-          p++;
-        }
-    }
+        p++;
+      }
+  }
 
       if (try_to_aliases (to_aliases, from_codeset, &cd))
-    goto out;
+  goto out;
     }
 
  out:
@@ -275,10 +269,10 @@ g_iconv_open (const gchar  *to_codeset,
  **/
 gsize
 g_iconv (GIConv   converter,
-     gchar  **inbuf,
-     gsize   *inbytes_left,
-     gchar  **outbuf,
-     gsize   *outbytes_left)
+   gchar  **inbuf,
+   gsize   *inbytes_left,
+   gchar  **outbuf,
+   gsize   *outbytes_left)
 {
   iconv_t cd = (iconv_t)converter;
 
@@ -310,8 +304,8 @@ g_iconv_close (GIConv converter)
 
 static GIConv
 open_converter (const gchar *to_codeset,
-        const gchar *from_codeset,
-        GError     **error)
+    const gchar *from_codeset,
+    GError     **error)
 {
   GIConv cd;
 
@@ -321,16 +315,16 @@ open_converter (const gchar *to_codeset,
     {
       /* Something went wrong.  */
       if (error)
-    {
-      if (errno == EINVAL)
-        g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_NO_CONVERSION,
-             _("Conversion from character set '%s' to '%s' is not supported"),
-             from_codeset, to_codeset);
-      else
-        g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_FAILED,
-             _("Could not open converter from '%s' to '%s'"),
-             from_codeset, to_codeset);
-    }
+  {
+    if (errno == EINVAL)
+      g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_NO_CONVERSION,
+       _("Conversion from character set '%s' to '%s' is not supported"),
+       from_codeset, to_codeset);
+    else
+      g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_FAILED,
+       _("Could not open converter from '%s' to '%s'"),
+       from_codeset, to_codeset);
+  }
     }
 
   return cd;
@@ -394,11 +388,11 @@ close_converter (GIConv cd)
  **/
 gchar*
 g_convert_with_iconv (const gchar *str,
-              gssize       len,
-              GIConv       converter,
-              gsize       *bytes_read,
-              gsize       *bytes_written,
-              GError     **error)
+          gssize       len,
+          GIConv       converter,
+          gsize       *bytes_read,
+          gsize       *bytes_written,
+          GError     **error)
 {
   gchar *dest;
   gchar *outp;
@@ -431,30 +425,30 @@ g_convert_with_iconv (const gchar *str,
         err = g_iconv (converter, (char **)&p, &inbytes_remaining, &outp, &outbytes_remaining);
 
       if (err == (gsize) -1)
-    {
-      switch (errno)
+  {
+    switch (errno)
+      {
+      case EINVAL:
+        /* Incomplete text, do not report an error */
+        done = TRUE;
+        break;
+      case E2BIG:
         {
-        case EINVAL:
-          /* Incomplete text, do not report an error */
-          done = TRUE;
-          break;
-        case E2BIG:
-          {
-        gsize used = outp - dest;
+    gsize used = outp - dest;
 
-        outbuf_size *= 2;
-        dest = g_realloc (dest, outbuf_size);
+    outbuf_size *= 2;
+    dest = g_realloc (dest, outbuf_size);
 
-        outp = dest + used;
-        outbytes_remaining = outbuf_size - used - NUL_TERMINATOR_LENGTH;
-          }
-          break;
-        case EILSEQ:
+    outp = dest + used;
+    outbytes_remaining = outbuf_size - used - NUL_TERMINATOR_LENGTH;
+        }
+        break;
+      case EILSEQ:
               g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_ILLEGAL_SEQUENCE,
                                    _("Invalid byte sequence in conversion input"));
-          have_error = TRUE;
-          break;
-        default:
+        have_error = TRUE;
+        break;
+      default:
               {
                 int errsv = errno;
 
@@ -462,10 +456,10 @@ g_convert_with_iconv (const gchar *str,
                              _("Error during conversion: %s"),
                              g_strerror (errsv));
               }
-          have_error = TRUE;
-          break;
-        }
-    }
+        have_error = TRUE;
+        break;
+      }
+  }
       else if (err > 0)
         {
           /* @err gives the number of replacement characters used. */
@@ -474,16 +468,16 @@ g_convert_with_iconv (const gchar *str,
           have_error = TRUE;
         }
       else
-    {
-      if (!reset)
-        {
-          /* call g_iconv with NULL inbuf to cleanup shift state */
-          reset = TRUE;
-          inbytes_remaining = 0;
-        }
-      else
-        done = TRUE;
-    }
+  {
+    if (!reset)
+      {
+        /* call g_iconv with NULL inbuf to cleanup shift state */
+        reset = TRUE;
+        inbytes_remaining = 0;
+      }
+    else
+      done = TRUE;
+  }
     }
 
   memset (outp, 0, NUL_TERMINATOR_LENGTH);
@@ -493,14 +487,14 @@ g_convert_with_iconv (const gchar *str,
   else
     {
       if ((p - str) != len)
-    {
+  {
           if (!have_error)
             {
               g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_PARTIAL_INPUT,
                                    _("Partial character sequence at end of input"));
               have_error = TRUE;
             }
-    }
+  }
     }
 
   if (bytes_written)
@@ -564,8 +558,8 @@ g_convert (const gchar *str,
            const gchar *to_codeset,
            const gchar *from_codeset,
            gsize       *bytes_read,
-       gsize       *bytes_written,
-       GError     **error)
+     gsize       *bytes_written,
+     GError     **error)
 {
   gchar *res;
   GIConv cd;
@@ -588,8 +582,8 @@ g_convert (const gchar *str,
     }
 
   res = g_convert_with_iconv (str, len, cd,
-                  bytes_read, bytes_written,
-                  error);
+            bytes_read, bytes_written,
+            error);
 
   close_converter (cd);
 
@@ -646,13 +640,13 @@ g_convert (const gchar *str,
  **/
 gchar*
 g_convert_with_fallback (const gchar *str,
-             gssize       len,
-             const gchar *to_codeset,
-             const gchar *from_codeset,
-             const gchar *fallback,
-             gsize       *bytes_read,
-             gsize       *bytes_written,
-             GError     **error)
+       gssize       len,
+       const gchar *to_codeset,
+       const gchar *from_codeset,
+       const gchar *fallback,
+       gsize       *bytes_read,
+       gsize       *bytes_written,
+       GError     **error)
 {
   gchar *utf8;
   gchar *dest;
@@ -682,7 +676,7 @@ g_convert_with_fallback (const gchar *str,
    * due to an illegal sequence in the input string.
    */
   dest = g_convert (str, len, to_codeset, from_codeset,
-            bytes_read, bytes_written, &local_error);
+        bytes_read, bytes_written, &local_error);
   if (!local_error)
     return dest;
 
@@ -712,7 +706,7 @@ g_convert_with_fallback (const gchar *str,
     }
 
   utf8 = g_convert (str, len, "UTF-8", from_codeset,
-            bytes_read, &inbytes_remaining, error);
+        bytes_read, &inbytes_remaining, error);
   if (!utf8)
     {
       close_converter (cd);
@@ -742,54 +736,55 @@ g_convert_with_fallback (const gchar *str,
       inbytes_remaining = inbytes_tmp;
 
       if (err == (gsize) -1)
-    {
-      switch (errno)
-        {
-        case EINVAL:
-          g_assert_not_reached();
-          break;
-        case E2BIG:
-          {
-        gsize used = outp - dest;
-
-        outbuf_size *= 2;
-        dest = g_realloc (dest, outbuf_size);
-
-        outp = dest + used;
-        outbytes_remaining = outbuf_size - used - NUL_TERMINATOR_LENGTH;
-
+  {
+    switch (errno)
+      {
+      case EINVAL:
+        g_assert_not_reached();
         break;
-          }
-        case EILSEQ:
-          if (save_p)
+      case E2BIG:
         {
-          /* Error converting fallback string - fatal
-           */
-          g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_ILLEGAL_SEQUENCE,
-                   _("Cannot convert fallback '%s' to codeset '%s'"),
-                   insert_str, to_codeset);
-          have_error = TRUE;
-          break;
-        }
-          else if (p)
-        {
-          if (!fallback)
-            {
-              gunichar ch = g_utf8_get_char (p);
-              insert_str = g_strdup_printf (ch < 0x10000 ? "\\u%04x" : "\\U%08x",
-                            ch);
-            }
-          else
-            insert_str = fallback;
+    gsize used = outp - dest;
 
-          save_p = g_utf8_next_char (p);
-          save_inbytes = inbytes_remaining - (save_p - p);
-          p = insert_str;
-          inbytes_remaining = strlen (p);
-          break;
+    outbuf_size *= 2;
+    dest = g_realloc (dest, outbuf_size);
+
+    outp = dest + used;
+    outbytes_remaining = outbuf_size - used - NUL_TERMINATOR_LENGTH;
+
+    break;
         }
-          /* fall thru if p is NULL */
-        default:
+      case EILSEQ:
+        if (save_p)
+    {
+      /* Error converting fallback string - fatal
+       */
+      g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_ILLEGAL_SEQUENCE,
+             _("Cannot convert fallback '%s' to codeset '%s'"),
+             insert_str, to_codeset);
+      have_error = TRUE;
+      break;
+    }
+        else if (p)
+    {
+      if (!fallback)
+        {
+          gunichar ch = g_utf8_get_char (p);
+          insert_str = g_strdup_printf (ch < 0x10000 ? "\\u%04x" : "\\U%08x",
+                ch);
+        }
+      else
+        insert_str = fallback;
+
+      save_p = g_utf8_next_char (p);
+      save_inbytes = inbytes_remaining - (save_p - p);
+      p = insert_str;
+      inbytes_remaining = strlen (p);
+      break;
+    }
+              /* if p is null */
+              G_GNUC_FALLTHROUGH;
+      default:
               {
                 int errsv = errno;
 
@@ -798,29 +793,29 @@ g_convert_with_fallback (const gchar *str,
                              g_strerror (errsv));
               }
 
-          have_error = TRUE;
-          break;
-        }
-    }
+        have_error = TRUE;
+        break;
+      }
+  }
       else
-    {
-      if (save_p)
-        {
-          if (!fallback)
-        g_free ((gchar *)insert_str);
-          p = save_p;
-          inbytes_remaining = save_inbytes;
-          save_p = NULL;
-        }
-      else if (p)
-        {
-          /* call g_iconv with NULL inbuf to cleanup shift state */
-          p = NULL;
-          inbytes_remaining = 0;
-        }
-      else
-        done = TRUE;
-    }
+  {
+    if (save_p)
+      {
+        if (!fallback)
+    g_free ((gchar *)insert_str);
+        p = save_p;
+        inbytes_remaining = save_inbytes;
+        save_p = NULL;
+      }
+    else if (p)
+      {
+        /* call g_iconv with NULL inbuf to cleanup shift state */
+        p = NULL;
+        inbytes_remaining = 0;
+      }
+    else
+      done = TRUE;
+  }
     }
 
   /* Cleanup
@@ -837,7 +832,7 @@ g_convert_with_fallback (const gchar *str,
   if (have_error)
     {
       if (save_p && !fallback)
-    g_free ((gchar *)insert_str);
+  g_free ((gchar *)insert_str);
       g_free (dest);
       return NULL;
     }
@@ -864,10 +859,10 @@ g_convert_with_fallback (const gchar *str,
  */
 static gchar *
 strdup_len (const gchar *string,
-        gssize       len,
-        gsize       *bytes_read,
-        gsize       *bytes_written,
-        GError     **error)
+      gssize       len,
+      gsize       *bytes_read,
+      gsize       *bytes_written,
+      GError     **error)
 {
   gsize real_len;
   const gchar *end_valid;
@@ -875,9 +870,9 @@ strdup_len (const gchar *string,
   if (!g_utf8_validate (string, len, &end_valid))
     {
       if (bytes_read)
-    *bytes_read = end_valid - string;
+  *bytes_read = end_valid - string;
       if (bytes_written)
-    *bytes_written = 0;
+  *bytes_written = 0;
 
       g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_ILLEGAL_SEQUENCE,
                            _("Invalid byte sequence in conversion input"));
@@ -1005,10 +1000,10 @@ convert_checked (const gchar      *string,
  **/
 gchar *
 g_locale_to_utf8 (const gchar  *opsysstring,
-          gssize        len,
-          gsize        *bytes_read,
-          gsize        *bytes_written,
-          GError      **error)
+      gssize        len,
+      gsize        *bytes_read,
+      gsize        *bytes_written,
+      GError      **error)
 {
   const char *charset;
 
@@ -1054,10 +1049,10 @@ g_locale_to_utf8 (const gchar  *opsysstring,
  **/
 gchar *
 g_locale_from_utf8 (const gchar *utf8string,
-            gssize       len,
-            gsize       *bytes_read,
-            gsize       *bytes_written,
-            GError     **error)
+        gssize       len,
+        gsize       *bytes_read,
+        gsize       *bytes_written,
+        GError     **error)
 {
   const gchar *charset;
 
@@ -1130,53 +1125,50 @@ g_get_filename_charsets (const gchar ***filename_charsets)
   const gchar *charset;
 
   if (!cache)
-    {
-      cache = g_new0 (GFilenameCharsetCache, 1);
-      g_private_set (&cache_private, cache);
-    }
+    cache = g_private_set_alloc0 (&cache_private, sizeof (GFilenameCharsetCache));
 
   g_get_charset (&charset);
 
   if (!(cache->charset && strcmp (cache->charset, charset) == 0))
     {
       const gchar *new_charset;
-      gchar *p;
+      const gchar *p;
       gint i;
 
       g_free (cache->charset);
       g_strfreev (cache->filename_charsets);
       cache->charset = g_strdup (charset);
 
-      p = getenv ("G_FILENAME_ENCODING");
+      p = g_getenv ("G_FILENAME_ENCODING");
       if (p != NULL && p[0] != '\0')
-    {
-      cache->filename_charsets = g_strsplit (p, ",", 0);
-      cache->is_utf8 = (strcmp (cache->filename_charsets[0], "UTF-8") == 0);
+  {
+    cache->filename_charsets = g_strsplit (p, ",", 0);
+    cache->is_utf8 = (strcmp (cache->filename_charsets[0], "UTF-8") == 0);
 
-      for (i = 0; cache->filename_charsets[i]; i++)
-        {
-          if (strcmp ("@locale", cache->filename_charsets[i]) == 0)
-        {
-          g_get_charset (&new_charset);
-          g_free (cache->filename_charsets[i]);
-          cache->filename_charsets[i] = g_strdup (new_charset);
-        }
-        }
-    }
-      else if (getenv ("G_BROKEN_FILENAMES") != NULL)
+    for (i = 0; cache->filename_charsets[i]; i++)
+      {
+        if (strcmp ("@locale", cache->filename_charsets[i]) == 0)
     {
-      cache->filename_charsets = g_new0 (gchar *, 2);
-      cache->is_utf8 = g_get_charset (&new_charset);
-      cache->filename_charsets[0] = g_strdup (new_charset);
+      g_get_charset (&new_charset);
+      g_free (cache->filename_charsets[i]);
+      cache->filename_charsets[i] = g_strdup (new_charset);
     }
+      }
+  }
+      else if (g_getenv ("G_BROKEN_FILENAMES") != NULL)
+  {
+    cache->filename_charsets = g_new0 (gchar *, 2);
+    cache->is_utf8 = g_get_charset (&new_charset);
+    cache->filename_charsets[0] = g_strdup (new_charset);
+  }
       else
-    {
-      cache->filename_charsets = g_new0 (gchar *, 3);
-      cache->is_utf8 = TRUE;
-      cache->filename_charsets[0] = g_strdup ("UTF-8");
-      if (!g_get_charset (&new_charset))
-        cache->filename_charsets[1] = g_strdup (new_charset);
-    }
+  {
+    cache->filename_charsets = g_new0 (gchar *, 3);
+    cache->is_utf8 = TRUE;
+    cache->filename_charsets[0] = g_strdup ("UTF-8");
+    if (!g_get_charset (&new_charset))
+      cache->filename_charsets[1] = g_strdup (new_charset);
+  }
     }
 
   if (filename_charsets)
@@ -1267,10 +1259,10 @@ get_filename_charset (const gchar **filename_charset)
  **/
 gchar*
 g_filename_to_utf8 (const gchar *opsysstring,
-            gssize       len,
-            gsize       *bytes_read,
-            gsize       *bytes_written,
-            GError     **error)
+        gssize       len,
+        gsize       *bytes_read,
+        gsize       *bytes_written,
+        GError     **error)
 {
   const gchar *charset;
 
@@ -1319,10 +1311,10 @@ g_filename_to_utf8 (const gchar *opsysstring,
  **/
 gchar*
 g_filename_from_utf8 (const gchar *utf8string,
-              gssize       len,
-              gsize       *bytes_read,
-              gsize       *bytes_written,
-              GError     **error)
+          gssize       len,
+          gsize       *bytes_read,
+          gsize       *bytes_written,
+          GError     **error)
 {
   const gchar *charset;
 
@@ -1348,7 +1340,7 @@ has_case_prefix (const gchar *haystack, const gchar *needle)
   n = needle;
 
   while (*n && *h &&
-     g_ascii_tolower (*n) == g_ascii_tolower (*h))
+   g_ascii_tolower (*n) == g_ascii_tolower (*h))
     {
       n++;
       h++;
@@ -1387,7 +1379,7 @@ static const gchar hex[16] = "0123456789ABCDEF";
  * escape something else, please read RFC-2396 */
 static gchar *
 g_escape_uri_string (const gchar *string,
-             UnsafeCharacterSet mask)
+         UnsafeCharacterSet mask)
 {
 #define ACCEPTABLE(a) ((a)>=32 && (a)<128 && (acceptable[(a)-32] & use_mask))
 
@@ -1399,10 +1391,10 @@ g_escape_uri_string (const gchar *string,
   UnsafeCharacterSet use_mask;
 
   g_return_val_if_fail (mask == UNSAFE_ALL
-            || mask == UNSAFE_ALLOW_PLUS
-            || mask == UNSAFE_PATH
-            || mask == UNSAFE_HOST
-            || mask == UNSAFE_SLASHES, NULL);
+      || mask == UNSAFE_ALLOW_PLUS
+      || mask == UNSAFE_PATH
+      || mask == UNSAFE_HOST
+      || mask == UNSAFE_SLASHES, NULL);
 
   unacceptable = 0;
   use_mask = mask;
@@ -1410,7 +1402,7 @@ g_escape_uri_string (const gchar *string,
     {
       c = (guchar) *p;
       if (!ACCEPTABLE (c))
-    unacceptable++;
+  unacceptable++;
     }
 
   result = g_malloc (p - string + unacceptable * 2 + 1);
@@ -1421,13 +1413,13 @@ g_escape_uri_string (const gchar *string,
       c = (guchar) *p;
 
       if (!ACCEPTABLE (c))
-    {
-      *q++ = '%'; /* means hex coming */
-      *q++ = hex[c >> 4];
-      *q++ = hex[c & 15];
-    }
+  {
+    *q++ = '%'; /* means hex coming */
+    *q++ = hex[c >> 4];
+    *q++ = hex[c & 15];
+  }
       else
-    *q++ = *p;
+  *q++ = *p;
     }
 
   *q = '\0';
@@ -1438,7 +1430,7 @@ g_escape_uri_string (const gchar *string,
 
 static gchar *
 g_escape_file_uri (const gchar *hostname,
-           const gchar *pathname)
+       const gchar *pathname)
 {
   char *escaped_hostname = NULL;
   char *escaped_path;
@@ -1469,10 +1461,10 @@ g_escape_file_uri (const gchar *hostname,
   escaped_path = g_escape_uri_string (pathname, UNSAFE_PATH);
 
   res = g_strconcat ("file://",
-             (escaped_hostname) ? escaped_hostname : "",
-             (*escaped_path != '/') ? "/" : "",
-             escaped_path,
-             NULL);
+         (escaped_hostname) ? escaped_hostname : "",
+         (*escaped_path != '/') ? "/" : "",
+         escaped_path,
+         NULL);
 
 #ifdef G_OS_WIN32
   g_free ((char *) pathname);
@@ -1503,9 +1495,9 @@ unescape_character (const char *scanner)
 
 static gchar *
 g_unescape_uri_string (const char *escaped,
-               int         len,
-               const char *illegal_escaped_characters,
-               gboolean    ascii_must_not_be_escaped)
+           int         len,
+           const char *illegal_escaped_characters,
+           gboolean    ascii_must_not_be_escaped)
 {
   const gchar *in, *in_end;
   gchar *out, *result;
@@ -1525,27 +1517,27 @@ g_unescape_uri_string (const char *escaped,
       c = *in;
 
       if (c == '%')
-    {
-      /* catch partial escape sequences past the end of the substring */
-      if (in + 3 > in_end)
-        break;
+  {
+    /* catch partial escape sequences past the end of the substring */
+    if (in + 3 > in_end)
+      break;
 
-      c = unescape_character (in + 1);
+    c = unescape_character (in + 1);
 
-      /* catch bad escape sequences and NUL characters */
-      if (c <= 0)
-        break;
+    /* catch bad escape sequences and NUL characters */
+    if (c <= 0)
+      break;
 
-      /* catch escaped ASCII */
-      if (ascii_must_not_be_escaped && c <= 0x7F)
-        break;
+    /* catch escaped ASCII */
+    if (ascii_must_not_be_escaped && c <= 0x7F)
+      break;
 
-      /* catch other illegal escaped characters */
-      if (strchr (illegal_escaped_characters, c) != NULL)
-        break;
+    /* catch other illegal escaped characters */
+    if (strchr (illegal_escaped_characters, c) != NULL)
+      break;
 
-      in += 2;
-    }
+    in += 2;
+  }
 
       *out++ = c;
     }
@@ -1590,21 +1582,21 @@ hostname_validate (const char *hostname)
       c = g_utf8_get_char (p);
       p = g_utf8_next_char (p);
       if (!is_asciialphanum (c))
-    return FALSE;
+  return FALSE;
       first_char = c;
       do
-    {
-      last_char = c;
-      c = g_utf8_get_char (p);
-      p = g_utf8_next_char (p);
-    }
+  {
+    last_char = c;
+    c = g_utf8_get_char (p);
+    p = g_utf8_next_char (p);
+  }
       while (is_asciialphanum (c) || c == '-');
       if (last_char == '-')
-    return FALSE;
+  return FALSE;
 
       /* if that was the last label, check that it was a toplabel */
       if (c == '\0' || (c == '.' && *p == '\0'))
-    return is_asciialpha (first_char);
+  return is_asciialpha (first_char);
     }
   while (c == '.');
   return FALSE;
@@ -1627,8 +1619,8 @@ hostname_validate (const char *hostname)
  **/
 gchar *
 g_filename_from_uri (const gchar *uri,
-             gchar      **hostname,
-             GError     **error)
+         gchar      **hostname,
+         GError     **error)
 {
   const char *path_part;
   const char *host_part;
@@ -1646,8 +1638,8 @@ g_filename_from_uri (const gchar *uri,
   if (!has_case_prefix (uri, "file:/"))
     {
       g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
-           _("The URI '%s' is not an absolute URI using the 'file' scheme"),
-           uri);
+       _("The URI '%s' is not an absolute URI using the 'file' scheme"),
+       uri);
       return NULL;
     }
 
@@ -1656,8 +1648,8 @@ g_filename_from_uri (const gchar *uri,
   if (strchr (path_part, '#') != NULL)
     {
       g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
-           _("The local file URI '%s' may not include a '#'"),
-           uri);
+       _("The local file URI '%s' may not include a '#'"),
+       uri);
       return NULL;
     }
 
@@ -1671,29 +1663,29 @@ g_filename_from_uri (const gchar *uri,
       path_part = strchr (path_part, '/');
 
       if (path_part == NULL)
-    {
-      g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
-               _("The URI '%s' is invalid"),
-               uri);
-      return NULL;
-    }
+  {
+    g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
+           _("The URI '%s' is invalid"),
+           uri);
+    return NULL;
+  }
 
       unescaped_hostname = g_unescape_uri_string (host_part, path_part - host_part, "", TRUE);
 
       if (unescaped_hostname == NULL ||
-      !hostname_validate (unescaped_hostname))
-    {
-      g_free (unescaped_hostname);
-      g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
-               _("The hostname of the URI '%s' is invalid"),
-               uri);
-      return NULL;
-    }
+    !hostname_validate (unescaped_hostname))
+  {
+    g_free (unescaped_hostname);
+    g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
+           _("The hostname of the URI '%s' is invalid"),
+           uri);
+    return NULL;
+  }
 
       if (hostname)
-    *hostname = unescaped_hostname;
+  *hostname = unescaped_hostname;
       else
-    g_free (unescaped_hostname);
+  g_free (unescaped_hostname);
     }
 
   filename = g_unescape_uri_string (path_part, -1, "/", FALSE);
@@ -1701,8 +1693,8 @@ g_filename_from_uri (const gchar *uri,
   if (filename == NULL)
     {
       g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_BAD_URI,
-           _("The URI '%s' contains invalidly escaped characters"),
-           uri);
+       _("The URI '%s' contains invalidly escaped characters"),
+       uri);
       return NULL;
     }
 
@@ -1731,12 +1723,12 @@ g_filename_from_uri (const gchar *uri,
   if (g_ascii_isalpha (filename[1]))
     {
       if (filename[2] == ':')
-    offs = 1;
+  offs = 1;
       else if (filename[2] == '|')
-    {
-      filename[2] = ':';
-      offs = 1;
-    }
+  {
+    filename[2] = ':';
+    offs = 1;
+  }
     }
 #endif
 
@@ -1763,8 +1755,8 @@ g_filename_from_uri (const gchar *uri,
  **/
 gchar *
 g_filename_to_uri (const gchar *filename,
-           const gchar *hostname,
-           GError     **error)
+       const gchar *hostname,
+       GError     **error)
 {
   char *escaped_uri;
 
@@ -1773,14 +1765,14 @@ g_filename_to_uri (const gchar *filename,
   if (!g_path_is_absolute (filename))
     {
       g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_NOT_ABSOLUTE_PATH,
-           _("The pathname '%s' is not an absolute path"),
-           filename);
+       _("The pathname '%s' is not an absolute path"),
+       filename);
       return NULL;
     }
 
   if (hostname &&
       !(g_utf8_validate (hostname, -1, NULL)
-    && hostname_validate (hostname)))
+  && hostname_validate (hostname)))
     {
       g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_ILLEGAL_SEQUENCE,
                            _("Invalid hostname"));
@@ -1815,12 +1807,10 @@ g_filename_to_uri (const gchar *filename,
 gchar **
 g_uri_list_extract_uris (const gchar *uri_list)
 {
-  GSList *uris, *u;
+  GPtrArray *uris;
   const gchar *p, *q;
-  gchar **result;
-  gint n_uris = 0;
 
-  uris = NULL;
+  uris = g_ptr_array_new ();
 
   p = uri_list;
 
@@ -1834,41 +1824,32 @@ g_uri_list_extract_uris (const gchar *uri_list)
   while (p)
     {
       if (*p != '#')
-    {
-      while (g_ascii_isspace (*p))
-        p++;
+  {
+    while (g_ascii_isspace (*p))
+      p++;
 
-      q = p;
-      while (*q && (*q != '\n') && (*q != '\r'))
-        q++;
+    q = p;
+    while (*q && (*q != '\n') && (*q != '\r'))
+      q++;
 
-      if (q > p)
-        {
-          q--;
-          while (q > p && g_ascii_isspace (*q))
+    if (q > p)
+      {
         q--;
+        while (q > p && g_ascii_isspace (*q))
+    q--;
 
-          if (q > p)
-        {
-          uris = g_slist_prepend (uris, g_strndup (p, q - p + 1));
-          n_uris++;
-        }
-        }
+        if (q > p)
+                g_ptr_array_add (uris, g_strndup (p, q - p + 1));
     }
+      }
       p = strchr (p, '\n');
       if (p)
-    p++;
+  p++;
     }
 
-  result = g_new (gchar *, n_uris + 1);
+  g_ptr_array_add (uris, NULL);
 
-  result[n_uris--] = NULL;
-  for (u = uris; u; u = u->next)
-    result[n_uris--] = u->data;
-
-  g_slist_free (uris);
-
-  return result;
+  return (gchar **) g_ptr_array_free (uris, FALSE);
 }
 
 /**
@@ -1951,7 +1932,7 @@ g_filename_display_name (const gchar *filename)
   if (is_utf8)
     {
       if (g_utf8_validate (filename, -1, NULL))
-    display_name = g_strdup (filename);
+  display_name = g_strdup (filename);
     }
 
   if (!display_name)
@@ -1960,13 +1941,13 @@ g_filename_display_name (const gchar *filename)
        * Skip the first charset if it is UTF-8.
        */
       for (i = is_utf8 ? 1 : 0; charsets[i]; i++)
-    {
-      display_name = g_convert (filename, -1, "UTF-8", charsets[i],
-                    NULL, NULL, NULL);
+  {
+    display_name = g_convert (filename, -1, "UTF-8", charsets[i],
+            NULL, NULL, NULL);
 
-      if (display_name)
-        break;
-    }
+    if (display_name)
+      break;
+  }
     }
 
   /* if all conversions failed, we replace invalid UTF-8

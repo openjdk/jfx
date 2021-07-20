@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #import <mach/task_info.h>
 #import <malloc/malloc.h>
 #import <notify.h>
+#import <wtf/ResourceUsage.h>
 #import <wtf/spi/darwin/DispatchSPI.h>
 
 #define ENABLE_FMW_FOOTPRINT_COMPARISON 0
@@ -53,13 +54,13 @@ static int notifyTokens[3];
 
 // Disable memory event reception for a minimum of s_minimumHoldOffTime
 // seconds after receiving an event. Don't let events fire any sooner than
-// s_holdOffMultiplier times the last cleanup processing time. Effectively 
+// s_holdOffMultiplier times the last cleanup processing time. Effectively
 // this is 1 / s_holdOffMultiplier percent of the time.
 // These value seems reasonable and testing verifies that it throttles frequent
 // low memory events, greatly reducing CPU usage.
 static const Seconds s_minimumHoldOffTime { 5_s };
 #if !PLATFORM(IOS_FAMILY)
-static const unsigned s_holdOffMultiplier = 20;
+static constexpr unsigned s_holdOffMultiplier = 20;
 #endif
 
 void MemoryPressureHandler::install()

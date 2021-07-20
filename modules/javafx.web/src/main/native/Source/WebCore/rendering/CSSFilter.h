@@ -33,6 +33,7 @@
 namespace WebCore {
 
 class FilterEffect;
+class FilterEffectRenderer;
 class FilterOperations;
 class GraphicsContext;
 class ReferenceFilterOperation;
@@ -61,6 +62,7 @@ public:
     bool hasFilterThatShouldBeRestrictedBySecurityOrigin() const { return m_hasFilterThatShouldBeRestrictedBySecurityOrigin; }
 
     void determineFilterPrimitiveSubregion();
+    IntOutsets outsets() const;
 
 private:
     CSSFilter();
@@ -93,11 +95,13 @@ private:
     Ref<SourceGraphic> m_sourceGraphic;
     RefPtr<FilterEffect> m_sourceAlpha;
 
-    IntRectExtent m_outsets;
+    mutable IntOutsets m_outsets;
 
     bool m_graphicsBufferAttached { false };
     bool m_hasFilterThatMovesPixels { false };
     bool m_hasFilterThatShouldBeRestrictedBySecurityOrigin { false };
+
+    std::unique_ptr<FilterEffectRenderer> m_filterRenderer;
 };
 
 } // namespace WebCore

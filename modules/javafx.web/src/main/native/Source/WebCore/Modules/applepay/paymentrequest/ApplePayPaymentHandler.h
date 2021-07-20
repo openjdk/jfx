@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,14 +34,16 @@
 #include "PaymentRequest.h"
 #include "PaymentSession.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/Ref.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
+class ApplePayError;
 class PaymentCoordinator;
 
 class ApplePayPaymentHandler final : public PaymentHandler, public PaymentSession, private ContextDestructionObserver {
 public:
+    static ExceptionOr<void> validateData(Document&, JSC::JSValue);
     static bool handlesIdentifier(const PaymentRequest::MethodIdentifier&);
     static bool hasActiveSession(Document&);
 
@@ -52,22 +54,23 @@ private:
     Document& document() const;
     PaymentCoordinator& paymentCoordinator() const;
 
-    ExceptionOr<Vector<ApplePaySessionPaymentRequest::ShippingMethod>> computeShippingMethods();
-    ExceptionOr<ApplePaySessionPaymentRequest::TotalAndLineItems> computeTotalAndLineItems() const;
-    Vector<PaymentError> computeErrors(String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) const;
-    void computeAddressErrors(String&& error, AddressErrors&&, Vector<PaymentError>&) const;
-    void computePayerErrors(PayerErrorFields&&, Vector<PaymentError>&) const;
-    ExceptionOr<void> computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<PaymentError>&) const;
+    ExceptionOr<Vector<ApplePayShippingMethod>> computeShippingMethods();
+    ExceptionOr<std::tuple<ApplePayLineItem, Vector<ApplePayLineItem>>> computeTotalAndLineItems() const;
+    Vector<RefPtr<ApplePayError>> computeErrors(String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) const;
+    Vector<RefPtr<ApplePayError>> computeErrors(JSC::JSObject* paymentMethodErrors) const;
+    void computeAddressErrors(String&& error, AddressErrors&&, Vector<RefPtr<ApplePayError>>&) const;
+    void computePayerErrors(PayerErrorFields&&, Vector<RefPtr<ApplePayError>>&) const;
+    ExceptionOr<void> computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<RefPtr<ApplePayError>>&) const;
 
-    ExceptionOr<void> shippingAddressUpdated(Vector<PaymentError>&& errors);
+    ExceptionOr<void> shippingAddressUpdated(Vector<RefPtr<ApplePayError>>&& errors);
     ExceptionOr<void> shippingOptionUpdated();
-    ExceptionOr<void> paymentMethodUpdated();
+    ExceptionOr<void> paymentMethodUpdated(Vector<RefPtr<ApplePayError>>&& errors);
 
     // PaymentHandler
-    ExceptionOr<void> convertData(JSC::JSValue&&) final;
-    ExceptionOr<void> show() final;
+    ExceptionOr<void> convertData(JSC::JSValue) final;
+    ExceptionOr<void> show(Document&) final;
     void hide() final;
-    void canMakePayment(WTF::Function<void(bool)>&& completionHandler) final;
+    void canMakePayment(Document&, WTF::Function<void(bool)>&& completionHandler) final;
     ExceptionOr<void> detailsUpdated(PaymentRequest::UpdateReason, String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) final;
     ExceptionOr<void> merchantValidationCompleted(JSC::JSValue&&) final;
     void complete(Optional<PaymentComplete>&&) final;
@@ -77,16 +80,28 @@ private:
     unsigned version() const final;
     void validateMerchant(URL&&) final;
     void didAuthorizePayment(const Payment&) final;
-    void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&) final;
+    void didSelectShippingMethod(const ApplePayShippingMethod&) final;
     void didSelectShippingContact(const PaymentContact&) final;
     void didSelectPaymentMethod(const PaymentMethod&) final;
-    void didCancelPaymentSession() final;
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    void didChangePaymentMethodMode(String&& paymentMethodMode) final;
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    void didCancelPaymentSession(PaymentSessionError&&) final;
 
     PaymentRequest::MethodIdentifier m_identifier;
     Ref<PaymentRequest> m_paymentRequest;
     Optional<ApplePayRequest> m_applePayRequest;
     Optional<ApplePayPaymentMethodType> m_selectedPaymentMethodType;
-    bool m_isUpdating { false };
+
+    enum class UpdateState : uint8_t {
+        None,
+        ShippingAddress,
+        ShippingOption,
+        PaymentMethod,
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+        PaymentMethodMode,
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    } m_updateState { UpdateState::None };
 };
 
 } // namespace WebCore

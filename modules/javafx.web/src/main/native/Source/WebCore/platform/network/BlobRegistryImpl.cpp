@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -54,12 +54,12 @@ BlobRegistryImpl::~BlobRegistryImpl() = default;
 
 static Ref<ResourceHandle> createBlobResourceHandle(const ResourceRequest& request, ResourceHandleClient* client)
 {
-    return static_cast<BlobRegistryImpl&>(blobRegistry()).createResourceHandle(request, client);
+    return blobRegistry().blobRegistryImpl()->createResourceHandle(request, client);
 }
 
 static void loadBlobResourceSynchronously(NetworkingContext*, const ResourceRequest& request, StoredCredentialsPolicy, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
-    BlobData* blobData = static_cast<BlobRegistryImpl&>(blobRegistry()).getBlobDataFromURL(request.url());
+    auto* blobData = blobRegistry().blobRegistryImpl()->getBlobDataFromURL(request.url());
     BlobResourceHandle::loadResourceSynchronously(blobData, request, error, response, data);
 }
 
@@ -77,7 +77,7 @@ Ref<ResourceHandle> BlobRegistryImpl::createResourceHandle(const ResourceRequest
 {
     auto handle = BlobResourceHandle::createAsync(getBlobDataFromURL(request.url()), request, client);
     handle->start();
-    return WTFMove(handle);
+    return handle;
 }
 
 void BlobRegistryImpl::appendStorageItems(BlobData* blobData, const BlobDataItemList& items, long long offset, long long length)
@@ -134,13 +134,13 @@ void BlobRegistryImpl::registerBlobURL(const URL& url, Vector<BlobPart>&& blobPa
 
     for (BlobPart& part : blobParts) {
         switch (part.type()) {
-        case BlobPart::Data: {
+        case BlobPart::Type::Data: {
             auto movedData = part.moveData();
             auto data = ThreadSafeDataBuffer::create(WTFMove(movedData));
             blobData->appendData(data);
             break;
         }
-        case BlobPart::Blob: {
+        case BlobPart::Type::Blob: {
             if (auto blob = m_blobs.get(part.url().string())) {
                 for (const BlobDataItem& item : blob->items())
                     blobData->m_items.append(item);
@@ -223,6 +223,8 @@ void BlobRegistryImpl::unregisterBlobURL(const URL& url)
 BlobData* BlobRegistryImpl::getBlobDataFromURL(const URL& url) const
 {
     ASSERT(isMainThread());
+    if (url.hasFragmentIdentifier())
+        return m_blobs.get(url.stringWithoutFragmentIdentifier().toStringWithoutCopying());
     return m_blobs.get(url.string());
 }
 
@@ -242,7 +244,7 @@ unsigned long long BlobRegistryImpl::blobSize(const URL& url)
 
 static WorkQueue& blobUtilityQueue()
 {
-    static auto& queue = WorkQueue::create("org.webkit.BlobUtility", WorkQueue::Type::Serial, WorkQueue::QOS::Background).leakRef();
+    static auto& queue = WorkQueue::create("org.webkit.BlobUtility", WorkQueue::Type::Serial, WorkQueue::QOS::Utility).leakRef();
     return queue;
 }
 
@@ -330,7 +332,7 @@ void BlobRegistryImpl::writeBlobsToTemporaryFiles(const Vector<String>& blobURLs
 void BlobRegistryImpl::writeBlobToFilePath(const URL& blobURL, const String& path, Function<void(bool success)>&& completionHandler)
 {
     Vector<BlobForFileWriting> blobsForWriting;
-    if (!populateBlobsForFileWriting({ blobURL }, blobsForWriting) || blobsForWriting.size() != 1) {
+    if (!populateBlobsForFileWriting({ blobURL.string() }, blobsForWriting) || blobsForWriting.size() != 1) {
         completionHandler(false);
         return;
     }
@@ -341,6 +343,21 @@ void BlobRegistryImpl::writeBlobToFilePath(const URL& blobURL, const String& pat
             completionHandler(success);
         });
     });
+}
+
+Vector<RefPtr<BlobDataFileReference>> BlobRegistryImpl::filesInBlob(const URL& url) const
+{
+    auto* blobData = getBlobDataFromURL(url);
+    if (!blobData)
+        return { };
+
+    Vector<RefPtr<BlobDataFileReference>> result;
+    for (const BlobDataItem& item : blobData->items()) {
+        if (item.type() == BlobDataItem::Type::File)
+            result.append(item.file());
+    }
+
+    return result;
 }
 
 } // namespace WebCore

@@ -41,12 +41,12 @@ namespace JSC { namespace B3 {
 //
 //     Patch &patchpoint, result, args...
 
-class PatchpointSpecial : public StackmapSpecial {
+class PatchpointSpecial final : public StackmapSpecial {
 public:
     JS_EXPORT_PRIVATE PatchpointSpecial();
-    virtual ~PatchpointSpecial();
+    JS_EXPORT_PRIVATE ~PatchpointSpecial() final;
 
-protected:
+private:
     void forEachArg(Air::Inst&, const ScopedLambda<Air::Inst::EachArgCallback>&) final;
     bool isValid(Air::Inst&) final;
     bool admitsStack(Air::Inst&, unsigned argIndex) final;
@@ -55,7 +55,7 @@ protected:
     // NOTE: the generate method will generate the hidden branch and then register a LatePath that
     // generates the stackmap. Super crazy dude!
 
-    CCallHelpers::Jump generate(Air::Inst&, CCallHelpers&, Air::GenerationContext&) final;
+    MacroAssembler::Jump generate(Air::Inst&, CCallHelpers&, Air::GenerationContext&) final;
 
     bool isTerminal(Air::Inst&) final;
 

@@ -24,7 +24,7 @@
 #include "DocumentFragment.h"
 
 #include "Document.h"
-#include "ElementDescendantIterator.h"
+#include "ElementIterator.h"
 #include "HTMLDocumentParser.h"
 #include "Page.h"
 #include "XMLDocumentParser.h"
@@ -79,7 +79,7 @@ Ref<Node> DocumentFragment::cloneNodeInternal(Document& targetDocument, CloningO
         cloneChildNodes(clone);
         break;
     }
-    return WTFMove(clone);
+    return clone;
 }
 
 void DocumentFragment::parseHTML(const String& source, Element* contextElement, ParserContentPolicy parserContentPolicy)
@@ -93,9 +93,9 @@ bool DocumentFragment::parseXML(const String& source, Element* contextElement, P
     return XMLDocumentParser::parseDocumentFragment(source, *this, contextElement, parserContentPolicy);
 }
 
-Element* DocumentFragment::getElementById(const AtomicString& id) const
+Element* DocumentFragment::getElementById(const AtomString& id) const
 {
-    if (id.isNull())
+    if (id.isEmpty())
         return nullptr;
 
     // Fast path for ShadowRoot, where we are both a DocumentFragment and a TreeScope.
@@ -103,7 +103,7 @@ Element* DocumentFragment::getElementById(const AtomicString& id) const
         return treeScope().getElementById(id);
 
     // Otherwise, fall back to iterating all of the element descendants.
-    for (auto& element : elementDescendants(*this)) {
+    for (auto& element : descendantsOfType<Element>(*this)) {
         if (element.getIdAttribute() == id)
             return const_cast<Element*>(&element);
     }

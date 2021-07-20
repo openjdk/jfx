@@ -67,6 +67,7 @@
 #include "config.h"
 #endif
 
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include "gstmemory.h"
 
@@ -95,6 +96,7 @@ _gst_memory_free (GstMemory * mem)
   allocator = mem->allocator;
 
   gst_allocator_free (allocator, mem);
+
   gst_object_unref (allocator);
 }
 
@@ -168,7 +170,7 @@ gst_memory_is_type (GstMemory * mem, const gchar * mem_type)
  *
  * Get the current @size, @offset and @maxsize of @mem.
  *
- * Returns: the current sizes of @mem
+ * Returns: the current size of @mem
  */
 gsize
 gst_memory_get_sizes (GstMemory * mem, gsize * offset, gsize * maxsize)
@@ -218,7 +220,7 @@ gst_memory_resize (GstMemory * mem, gssize offset, gsize size)
 /**
  * gst_memory_make_mapped:
  * @mem: (transfer full): a #GstMemory
- * @info: (out): pointer for info
+ * @info: (out caller-allocates): pointer for info
  * @flags: mapping flags
  *
  * Create a #GstMemory object that is mapped with @flags. If @mem is mappable
@@ -268,7 +270,7 @@ cannot_map:
 /**
  * gst_memory_map:
  * @mem: a #GstMemory
- * @info: (out): pointer for info
+ * @info: (out caller-allocates): pointer for info
  * @flags: mapping flags
  *
  * Fill @info with the pointer and sizes of the memory in @mem that can be
@@ -303,7 +305,7 @@ gst_memory_map (GstMemory * mem, GstMapInfo * info, GstMapFlags flags)
   if (mem->allocator->mem_map_full)
     info->data = mem->allocator->mem_map_full (mem, info, mem->maxsize);
   else
-  info->data = mem->allocator->mem_map (mem, mem->maxsize, flags);
+    info->data = mem->allocator->mem_map (mem, mem->maxsize, flags);
 
   if (G_UNLIKELY (info->data == NULL))
     goto error;
@@ -321,7 +323,7 @@ lock_failed:
   }
 error:
   {
-    /* something went wrong, restore the orginal state again
+    /* something went wrong, restore the original state again
      * it is up to the subclass to log an error if needed. */
     GST_CAT_INFO (GST_CAT_MEMORY, "mem %p: subclass map failed", mem);
     gst_memory_unlock (mem, (GstLockFlags) flags);
@@ -347,7 +349,7 @@ gst_memory_unmap (GstMemory * mem, GstMapInfo * info)
   if (mem->allocator->mem_unmap_full)
     mem->allocator->mem_unmap_full (mem, info);
   else
-  mem->allocator->mem_unmap (mem);
+    mem->allocator->mem_unmap (mem);
   gst_memory_unlock (mem, (GstLockFlags) info->flags);
 }
 
@@ -462,4 +464,30 @@ void
 _priv_gst_memory_initialize (void)
 {
   _gst_memory_type = gst_memory_get_type ();
+}
+
+/**
+ * gst_memory_ref: (skip)
+ * @memory: The memory to refcount
+ *
+ * Increase the refcount of this memory.
+ *
+ * Returns: (transfer full): @memory (for convenience when doing assignments)
+ */
+GstMemory *
+gst_memory_ref (GstMemory * memory)
+{
+  return (GstMemory *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (memory));
+}
+
+/**
+ * gst_memory_unref: (skip)
+ * @memory: (transfer full): the memory to refcount
+ *
+ * Decrease the refcount of a memory, freeing it if the refcount reaches 0.
+ */
+void
+gst_memory_unref (GstMemory * memory)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (memory));
 }

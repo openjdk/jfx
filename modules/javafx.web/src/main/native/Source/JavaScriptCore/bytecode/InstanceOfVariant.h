@@ -33,6 +33,7 @@ namespace JSC {
 class InstanceOfStatus;
 
 class InstanceOfVariant {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     InstanceOfVariant() = default;
     InstanceOfVariant(const StructureSet&, const ObjectPropertyConditionSet&, JSObject* prototype, bool isHit);
@@ -52,6 +53,11 @@ public:
 
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
+
+    bool overlaps(const InstanceOfVariant& other)
+    {
+        return structureSet().overlaps(other.structureSet());
+    }
 
 private:
     friend class InstanceOfStatus;

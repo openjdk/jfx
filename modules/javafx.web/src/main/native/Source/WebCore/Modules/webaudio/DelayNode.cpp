@@ -28,27 +28,45 @@
 
 #include "DelayNode.h"
 
+#include "DelayOptions.h"
 #include "DelayProcessor.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-const double maximumAllowedDelayTime = 180;
+WTF_MAKE_ISO_ALLOCATED_IMPL(DelayNode);
 
-inline DelayNode::DelayNode(AudioContext& context, float sampleRate, double maxDelayTime)
-    : AudioBasicProcessorNode(context, sampleRate)
+constexpr double maximumAllowedDelayTime = 180;
+
+inline DelayNode::DelayNode(BaseAudioContext& context, double maxDelayTime)
+    : AudioBasicProcessorNode(context, NodeTypeDelay)
 {
-    m_processor = std::make_unique<DelayProcessor>(context, sampleRate, 1, maxDelayTime);
-    setNodeType(NodeTypeDelay);
+    m_processor = makeUnique<DelayProcessor>(context, context.sampleRate(), 1, maxDelayTime);
+
+    // Initialize so that AudioParams can be processed.
+    initialize();
 }
 
-ExceptionOr<Ref<DelayNode>> DelayNode::create(AudioContext& context, float sampleRate, double maxDelayTime)
+ExceptionOr<Ref<DelayNode>> DelayNode::create(BaseAudioContext& context, const DelayOptions& options)
 {
-    if (maxDelayTime <= 0 || maxDelayTime >= maximumAllowedDelayTime)
-        return Exception { NotSupportedError };
-    return adoptRef(*new DelayNode(context, sampleRate, maxDelayTime));
+    if (options.maxDelayTime <= 0)
+        return Exception { NotSupportedError, "maxDelayTime should be a positive value"_s };
+
+    if (options.maxDelayTime >= maximumAllowedDelayTime)
+        return Exception { NotSupportedError, makeString("maxDelayTime should be less than ", maximumAllowedDelayTime) };
+
+    auto delayNode = adoptRef(*new DelayNode(context, options.maxDelayTime));
+
+    auto result = delayNode->handleAudioNodeOptions(options, { 2, ChannelCountMode::Max, ChannelInterpretation::Speakers });
+    if (result.hasException())
+        return result.releaseException();
+
+    delayNode->delayTime().setValue(options.delayTime);
+
+    return delayNode;
 }
 
-AudioParam* DelayNode::delayTime()
+AudioParam& DelayNode::delayTime()
 {
     return static_cast<DelayProcessor&>(*m_processor).delayTime();
 }

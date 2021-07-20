@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2015, 2016 Canon Inc. All rights reserved.
- *  Copyright (C) 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -23,13 +23,27 @@
 
 namespace WebCore {
 
+JSC_DECLARE_HOST_FUNCTION(callThrowTypeErrorForJSDOMConstructorNotConstructable);
+
 // Base class for all constructor objects in the JSC bindings.
 class JSDOMConstructorBase : public JSDOMObject {
 public:
     using Base = JSDOMObject;
 
-    static const unsigned StructureFlags = Base::StructureFlags | JSC::ImplementsHasInstance | JSC::ImplementsDefaultHasInstance | JSC::OverridesGetCallData;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::ImplementsHasInstance | JSC::ImplementsDefaultHasInstance | JSC::OverridesGetCallData;
+    static constexpr bool needsDestruction = false;
     static JSC::Structure* createStructure(JSC::VM&, JSC::JSGlobalObject*, JSC::JSValue);
+
+    template<typename CellType, JSC::SubspaceAccess>
+    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        static_assert(sizeof(CellType) == sizeof(JSDOMConstructorBase));
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(CellType, JSDOMConstructorBase);
+        static_assert(CellType::destroy == JSC::JSCell::destroy, "JSDOMConstructor<JSClass> is not destructible actually");
+        return subspaceForImpl(vm);
+    }
+
+    static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
 
 protected:
     JSDOMConstructorBase(JSC::Structure* structure, JSDOMGlobalObject& globalObject)
@@ -37,9 +51,7 @@ protected:
     {
     }
 
-    static String className(const JSObject*, JSC::VM&);
-    static String toStringName(const JSObject*, JSC::ExecState*);
-    static JSC::CallType getCallData(JSCell*, JSC::CallData&);
+    static JSC::CallData getCallData(JSC::JSCell*);
 };
 
 inline JSC::Structure* JSDOMConstructorBase::createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)

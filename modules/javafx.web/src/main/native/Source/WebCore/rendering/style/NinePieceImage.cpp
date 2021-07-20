@@ -40,12 +40,22 @@ inline DataRef<NinePieceImage::Data>& NinePieceImage::defaultData()
     return data.get();
 }
 
-NinePieceImage::NinePieceImage()
-    : m_data(defaultData())
+inline DataRef<NinePieceImage::Data>& NinePieceImage::defaultMaskData()
+{
+    static NeverDestroyed<DataRef<Data>> maskData { Data::create() };
+    auto& data = maskData.get().access();
+    data.imageSlices = LengthBox(0);
+    data.fill = true;
+    data.borderSlices = LengthBox();
+    return maskData.get();
+}
+
+NinePieceImage::NinePieceImage(Type imageType)
+    : m_data(imageType == Type::Normal ? defaultData() : defaultMaskData())
 {
 }
 
-NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
     : m_data(Data::create(WTFMove(image), imageSlices, fill, borderSlices, outset, horizontalRule, verticalRule))
 {
 }
@@ -53,7 +63,7 @@ NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices
 LayoutUnit NinePieceImage::computeSlice(Length length, LayoutUnit width, LayoutUnit slice, LayoutUnit extent)
 {
     if (length.isRelative())
-        return length.value() * width;
+        return LayoutUnit(length.value() * width);
     if (length.isAuto())
         return slice;
     return valueForLength(length, extent);
@@ -72,17 +82,17 @@ LayoutBoxExtent NinePieceImage::computeSlices(const LayoutSize& size, const Leng
 LayoutBoxExtent NinePieceImage::computeSlices(const LayoutSize& size, const LengthBox& lengths, const FloatBoxExtent& widths, const LayoutBoxExtent& slices)
 {
     return {
-        computeSlice(lengths.top(), widths.top(), slices.top(), size.height()),
-        computeSlice(lengths.right(), widths.right(), slices.right(), size.width()),
-        computeSlice(lengths.bottom(), widths.bottom(), slices.bottom(), size.height()),
-        computeSlice(lengths.left(), widths.left(), slices.left(), size.width())
+        computeSlice(lengths.top(), LayoutUnit(widths.top()), slices.top(), size.height()),
+        computeSlice(lengths.right(), LayoutUnit(widths.right()), slices.right(), size.width()),
+        computeSlice(lengths.bottom(), LayoutUnit(widths.bottom()), slices.bottom(), size.height()),
+        computeSlice(lengths.left(), LayoutUnit(widths.left()), slices.left(), size.width())
     };
 }
 
 void NinePieceImage::scaleSlicesIfNeeded(const LayoutSize& size, LayoutBoxExtent& slices, float deviceScaleFactor)
 {
-    LayoutUnit width  = std::max<LayoutUnit>(1 / deviceScaleFactor, slices.left() + slices.right());
-    LayoutUnit height = std::max<LayoutUnit>(1 / deviceScaleFactor, slices.top() + slices.bottom());
+    LayoutUnit width  = std::max(LayoutUnit(1 / deviceScaleFactor), slices.left() + slices.right());
+    LayoutUnit height = std::max(LayoutUnit(1 / deviceScaleFactor), slices.top() + slices.bottom());
 
     float sliceScaleFactor = std::min((float)size.width() / width, (float)size.height() / height);
 
@@ -120,18 +130,18 @@ Vector<FloatRect> NinePieceImage::computeNineRects(const FloatRect& outer, const
 
     Vector<FloatRect> rects(MaxPiece);
 
-    rects[TopLeftPiece]     = snapRectToDevicePixels(outer.x(),    outer.y(),    slices.left(),  slices.top(),    deviceScaleFactor);
-    rects[BottomLeftPiece]  = snapRectToDevicePixels(outer.x(),    inner.maxY(), slices.left(),  slices.bottom(), deviceScaleFactor);
-    rects[LeftPiece]        = snapRectToDevicePixels(outer.x(),    inner.y(),    slices.left(),  inner.height(),  deviceScaleFactor);
+    rects[TopLeftPiece] = snapRectToDevicePixels(LayoutUnit(outer.x()), LayoutUnit(outer.y()), slices.left(), slices.top(), deviceScaleFactor);
+    rects[BottomLeftPiece] = snapRectToDevicePixels(LayoutUnit(outer.x()), LayoutUnit(inner.maxY()), slices.left(), slices.bottom(), deviceScaleFactor);
+    rects[LeftPiece] = snapRectToDevicePixels(LayoutUnit(outer.x()), LayoutUnit(inner.y()), slices.left(), LayoutUnit(inner.height()), deviceScaleFactor);
 
-    rects[TopRightPiece]    = snapRectToDevicePixels(inner.maxX(), outer.y(),    slices.right(), slices.top(),    deviceScaleFactor);
-    rects[BottomRightPiece] = snapRectToDevicePixels(inner.maxX(), inner.maxY(), slices.right(), slices.bottom(), deviceScaleFactor);
-    rects[RightPiece]       = snapRectToDevicePixels(inner.maxX(), inner.y(),    slices.right(), inner.height(),  deviceScaleFactor);
+    rects[TopRightPiece] = snapRectToDevicePixels(LayoutUnit(inner.maxX()), LayoutUnit(outer.y()), slices.right(), slices.top(), deviceScaleFactor);
+    rects[BottomRightPiece] = snapRectToDevicePixels(LayoutUnit(inner.maxX()), LayoutUnit(inner.maxY()), slices.right(), slices.bottom(), deviceScaleFactor);
+    rects[RightPiece] = snapRectToDevicePixels(LayoutUnit(inner.maxX()), LayoutUnit(inner.y()), slices.right(), LayoutUnit(inner.height()), deviceScaleFactor);
 
-    rects[TopPiece]         = snapRectToDevicePixels(inner.x(),    outer.y(),    inner.width(),  slices.top(),    deviceScaleFactor);
-    rects[BottomPiece]      = snapRectToDevicePixels(inner.x(),    inner.maxY(), inner.width(),  slices.bottom(), deviceScaleFactor);
+    rects[TopPiece] = snapRectToDevicePixels(LayoutUnit(inner.x()), LayoutUnit(outer.y()), LayoutUnit(inner.width()), slices.top(), deviceScaleFactor);
+    rects[BottomPiece] = snapRectToDevicePixels(LayoutUnit(inner.x()), LayoutUnit(inner.maxY()), LayoutUnit(inner.width()), slices.bottom(), deviceScaleFactor);
 
-    rects[MiddlePiece]      = snapRectToDevicePixels(inner.x(),    inner.y(),    inner.width(),  inner.height(),  deviceScaleFactor);
+    rects[MiddlePiece] = snapRectToDevicePixels(LayoutUnit(inner.x()), LayoutUnit(inner.y()), LayoutUnit(inner.width()), LayoutUnit(inner.height()), deviceScaleFactor);
     return rects;
 }
 
@@ -150,7 +160,7 @@ FloatSize NinePieceImage::computeSideTileScale(ImagePiece piece, const Vector<Fl
     return FloatSize(scale, scale);
 }
 
-FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, ENinePieceImageRule hRule, ENinePieceImageRule vRule)
+FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule)
 {
     FloatSize scale(1, 1);
     if (isEmptyPieceRect(MiddlePiece, destinationRects, sourceRects))
@@ -158,14 +168,14 @@ FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales
 
     // Unlike the side pieces, the middle piece can have "stretch" specified in one axis but not the other.
     // In fact the side pieces don't even use the scale factor unless they have a rule other than "stretch".
-    if (hRule == StretchImageRule)
+    if (hRule == NinePieceImageRule::Stretch)
         scale.setWidth(destinationRects[MiddlePiece].width() / sourceRects[MiddlePiece].width());
     else if (!isEmptyPieceRect(TopPiece, destinationRects, sourceRects))
         scale.setWidth(scales[TopPiece].width());
     else if (!isEmptyPieceRect(BottomPiece, destinationRects, sourceRects))
         scale.setWidth(scales[BottomPiece].width());
 
-    if (vRule == StretchImageRule)
+    if (vRule == NinePieceImageRule::Stretch)
         scale.setHeight(destinationRects[MiddlePiece].height() / sourceRects[MiddlePiece].height());
     else if (!isEmptyPieceRect(LeftPiece, destinationRects, sourceRects))
         scale.setHeight(scales[LeftPiece].height());
@@ -175,7 +185,7 @@ FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales
     return scale;
 }
 
-Vector<FloatSize> NinePieceImage::computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, ENinePieceImageRule hRule, ENinePieceImageRule vRule)
+Vector<FloatSize> NinePieceImage::computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule)
 {
     Vector<FloatSize> scales(MaxPiece, FloatSize(1, 1));
 
@@ -213,24 +223,19 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* rend
             continue;
 
         if (isCornerPiece(piece)) {
-            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], op);
+            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::FromImage });
             continue;
         }
 
         Image::TileRule hRule = isHorizontalPiece(piece) ? static_cast<Image::TileRule>(horizontalRule()) : Image::StretchTile;
         Image::TileRule vRule = isVerticalPiece(piece) ? static_cast<Image::TileRule>(verticalRule()) : Image::StretchTile;
-        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, op);
+        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::FromImage });
     }
 }
 
-inline NinePieceImage::Data::Data()
-    : fill(false)
-    , horizontalRule(StretchImageRule)
-    , verticalRule(StretchImageRule)
-{
-}
+inline NinePieceImage::Data::Data() = default;
 
-inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
     : fill(fill)
     , horizontalRule(horizontalRule)
     , verticalRule(verticalRule)
@@ -258,7 +263,7 @@ inline Ref<NinePieceImage::Data> NinePieceImage::Data::create()
     return adoptRef(*new Data);
 }
 
-inline Ref<NinePieceImage::Data> NinePieceImage::Data::create(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+inline Ref<NinePieceImage::Data> NinePieceImage::Data::create(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
 {
     return adoptRef(*new Data(WTFMove(image), imageSlices, fill, borderSlices, outset, horizontalRule, verticalRule));
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,8 +44,14 @@ class JSCallee : public JSNonFinalObject {
     friend class VM;
 
 public:
-    typedef JSNonFinalObject Base;
-    const static unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | ImplementsDefaultHasInstance;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | ImplementsDefaultHasInstance;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.calleeSpace;
+    }
 
     static JSCallee* create(VM& vm, JSGlobalObject* globalObject, JSScope* scope)
     {
@@ -94,7 +100,7 @@ protected:
     void finishCreation(VM&);
     using Base::finishCreation;
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     friend class LLIntOffsetsExtractor;

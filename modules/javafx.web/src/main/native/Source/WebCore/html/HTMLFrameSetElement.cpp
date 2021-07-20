@@ -75,7 +75,7 @@ bool HTMLFrameSetElement::isPresentationAttribute(const QualifiedName& name) con
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLFrameSetElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLFrameSetElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == bordercolorAttr)
         addHTMLColorToStyle(style, CSSPropertyBorderColor, value);
@@ -83,7 +83,7 @@ void HTMLFrameSetElement::collectStyleForPresentationAttribute(const QualifiedNa
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == rowsAttr) {
         // FIXME: What is the right thing to do when removing this attribute?
@@ -214,24 +214,15 @@ void HTMLFrameSetElement::willRecalcStyle(Style::Change)
 Node::InsertedIntoAncestorResult HTMLFrameSetElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    if (insertionType.connectedToDocument) {
-        if (RefPtr<Frame> frame = document().frame())
-            frame->loader().client().dispatchDidBecomeFrameset(document().isFrameSet());
-    }
-
     return InsertedIntoAncestorResult::Done;
 }
 
 void HTMLFrameSetElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-    if (removalType.disconnectedFromDocument) {
-        if (RefPtr<Frame> frame = document().frame())
-            frame->loader().client().dispatchDidBecomeFrameset(document().isFrameSet());
-    }
 }
 
-WindowProxy* HTMLFrameSetElement::namedItem(const AtomicString& name)
+WindowProxy* HTMLFrameSetElement::namedItem(const AtomString& name)
 {
     auto frameElement = makeRefPtr(children()->namedItem(name));
     if (!is<HTMLFrameElement>(frameElement))
@@ -240,7 +231,7 @@ WindowProxy* HTMLFrameSetElement::namedItem(const AtomicString& name)
     return downcast<HTMLFrameElement>(*frameElement).contentWindow();
 }
 
-Vector<AtomicString> HTMLFrameSetElement::supportedPropertyNames() const
+Vector<AtomString> HTMLFrameSetElement::supportedPropertyNames() const
 {
     // NOTE: Left empty as no specification defines this named getter and we
     //       have not historically exposed these named items for enumeration.

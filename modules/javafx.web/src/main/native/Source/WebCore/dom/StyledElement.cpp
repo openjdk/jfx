@@ -56,13 +56,13 @@ COMPILE_ASSERT(sizeof(StyledElement) == sizeof(Element), styledelement_should_re
 
 using namespace HTMLNames;
 
-void StyledElement::synchronizeStyleAttributeInternal(StyledElement* styledElement)
+void StyledElement::synchronizeStyleAttributeInternalImpl()
 {
-    ASSERT(styledElement->elementData());
-    ASSERT(styledElement->elementData()->styleAttributeIsDirty());
-    styledElement->elementData()->setStyleAttributeIsDirty(false);
-    if (const StyleProperties* inlineStyle = styledElement->inlineStyle())
-        styledElement->setSynchronizedLazyAttribute(styleAttr, inlineStyle->asText());
+    ASSERT(elementData());
+    ASSERT(elementData()->styleAttributeIsDirty());
+    elementData()->setStyleAttributeIsDirty(false);
+    if (const StyleProperties* inlineStyle = this->inlineStyle())
+        setSynchronizedLazyAttribute(styleAttr, inlineStyle->asText());
 }
 
 StyledElement::~StyledElement()
@@ -88,13 +88,18 @@ public:
 private:
     RefPtr<TypedOMCSSStyleValue> get(const String& property) const final
     {
-        return extractInlineProperty(property, m_element.get());
+        ASSERT(m_element); // Hitting this assertion would imply a GC bug. Element is collected while this property map is alive.
+        if (!m_element)
+            return nullptr;
+        return extractInlineProperty(property, *m_element);
     }
 
     explicit StyledElementInlineStylePropertyMap(StyledElement& element)
-        : m_element(makeRef(element))
+        : m_element(&element)
     {
     }
+
+    void clearElement() override { m_element = nullptr; }
 
     static RefPtr<TypedOMCSSStyleValue> extractInlineProperty(const String& name, StyledElement& element)
     {
@@ -114,7 +119,7 @@ private:
         return StylePropertyMapReadOnly::reifyValue(value.get(), element.document(), &element);
     }
 
-    Ref<StyledElement> m_element;
+    StyledElement* m_element { nullptr };
 };
 
 StylePropertyMap& StyledElement::ensureAttributeStyleMap()
@@ -135,7 +140,7 @@ MutableStyleProperties& StyledElement::ensureMutableInlineStyle()
     return downcast<MutableStyleProperties>(*inlineStyle);
 }
 
-void StyledElement::attributeChanged(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason reason)
+void StyledElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
     if (oldValue != newValue) {
         if (name == styleAttr)
@@ -163,9 +168,9 @@ static bool usesStyleBasedEditability(const StyleProperties& properties)
     return properties.getPropertyCSSValue(CSSPropertyWebkitUserModify);
 }
 
-void StyledElement::setInlineStyleFromString(const AtomicString& newStyleString)
+void StyledElement::setInlineStyleFromString(const AtomString& newStyleString)
 {
-    RefPtr<StyleProperties>& inlineStyle = elementData()->m_inlineStyle;
+    auto& inlineStyle = elementData()->m_inlineStyle;
 
     // Avoid redundant work if we're using shared attribute data with already parsed inline style.
     if (inlineStyle && !elementData()->isUnique())
@@ -185,29 +190,27 @@ void StyledElement::setInlineStyleFromString(const AtomicString& newStyleString)
         document().setHasElementUsingStyleBasedEditability();
 }
 
-void StyledElement::styleAttributeChanged(const AtomicString& newStyleString, AttributeModificationReason reason)
+void StyledElement::styleAttributeChanged(const AtomString& newStyleString, AttributeModificationReason reason)
 {
-    WTF::OrdinalNumber startLineNumber = WTF::OrdinalNumber::beforeFirst();
+    auto startLineNumber = WTF::OrdinalNumber::beforeFirst();
     if (document().scriptableDocumentParser() && !document().isInDocumentWrite())
         startLineNumber = document().scriptableDocumentParser()->textPosition().m_line;
 
-    if (newStyleString.isNull()) {
-        if (PropertySetCSSStyleDeclaration* cssomWrapper = inlineStyleCSSOMWrapper())
-            cssomWrapper->clearParentElement();
-        ensureUniqueElementData().m_inlineStyle = nullptr;
-    } else if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url(), startLineNumber, String(), isInUserAgentShadowTree()))
+    if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, String(), isInUserAgentShadowTree()))
         setInlineStyleFromString(newStyleString);
 
     elementData()->setStyleAttributeIsDirty(false);
 
     invalidateStyle();
-    InspectorInstrumentation::didInvalidateStyleAttr(document(), *this);
+    InspectorInstrumentation::didInvalidateStyleAttr(*this);
 }
 
 void StyledElement::invalidateStyleAttribute()
 {
-    if (usesStyleBasedEditability(*inlineStyle()))
-        document().setHasElementUsingStyleBasedEditability();
+    if (auto* inlineStyle = this->inlineStyle()) {
+        if (usesStyleBasedEditability(*inlineStyle))
+            document().setHasElementUsingStyleBasedEditability();
+    }
 
     elementData()->setStyleAttributeIsDirty(true);
     invalidateStyle();
@@ -226,7 +229,7 @@ void StyledElement::invalidateStyleAttribute()
 void StyledElement::inlineStyleChanged()
 {
     invalidateStyleAttribute();
-    InspectorInstrumentation::didInvalidateStyleAttr(document(), *this);
+    InspectorInstrumentation::didInvalidateStyleAttr(*this);
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSValueID identifier, bool important)
@@ -243,7 +246,7 @@ bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSProperty
     return true;
 }
 
-bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, double value, CSSPrimitiveValue::UnitType unit, bool important)
+bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, double value, CSSUnitType unit, bool important)
 {
     ensureMutableInlineStyle().setProperty(propertyID, CSSValuePool::singleton().createValue(value, unit), important);
     inlineStyleChanged();
@@ -305,7 +308,7 @@ void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperti
     style.setProperty(propertyID, CSSValuePool::singleton().createIdentifierValue(identifier));
 }
 
-void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, double value, CSSPrimitiveValue::UnitType unit)
+void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, double value, CSSUnitType unit)
 {
     style.setProperty(propertyID, CSSValuePool::singleton().createValue(value, unit));
 }

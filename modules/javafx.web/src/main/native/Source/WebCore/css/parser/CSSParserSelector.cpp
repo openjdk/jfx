@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-CSSParserSelector* CSSParserSelector::parsePagePseudoSelector(const AtomicString& pseudoTypeString)
+std::unique_ptr<CSSParserSelector> CSSParserSelector::parsePagePseudoSelector(StringView pseudoTypeString)
 {
     CSSSelector::PagePseudoClassType pseudoType;
     if (equalLettersIgnoringASCIICase(pseudoTypeString, "first"))
@@ -44,66 +44,64 @@ CSSParserSelector* CSSParserSelector::parsePagePseudoSelector(const AtomicString
     else
         return nullptr;
 
-    auto selector = std::make_unique<CSSParserSelector>();
+    auto selector = makeUnique<CSSParserSelector>();
     selector->m_selector->setMatch(CSSSelector::PagePseudoClass);
     selector->m_selector->setPagePseudoType(pseudoType);
-    return selector.release();
+    return selector;
 }
 
-CSSParserSelector* CSSParserSelector::parsePseudoElementSelectorFromStringView(StringView& pseudoTypeString)
+std::unique_ptr<CSSParserSelector> CSSParserSelector::parsePseudoElementSelector(StringView pseudoTypeString)
 {
-    AtomicString name = pseudoTypeString.toAtomicString();
+    auto pseudoType = CSSSelector::parsePseudoElementType(pseudoTypeString);
+    if (pseudoType == CSSSelector::PseudoElementUnknown)
+        return nullptr;
 
-    CSSSelector::PseudoElementType pseudoType = CSSSelector::parsePseudoElementType(name);
-    if (pseudoType == CSSSelector::PseudoElementUnknown) {
-        // FIXME-NEWPARSER: We can't add "slotted" to the map without breaking the old
-        // parser, so this hack ensures the new parser still recognizes it. When the new
-        // parser turns on, we can add "slotted" to the map and remove this code.
-        if (pseudoTypeString.startsWithIgnoringASCIICase("slotted"))
-            pseudoType = CSSSelector::PseudoElementSlotted;
-        else
-            return nullptr;
-    }
-
-    auto selector = std::make_unique<CSSParserSelector>();
+    auto selector = makeUnique<CSSParserSelector>();
     selector->m_selector->setMatch(CSSSelector::PseudoElement);
     selector->m_selector->setPseudoElementType(pseudoType);
-    if (pseudoType == CSSSelector::PseudoElementWebKitCustomLegacyPrefixed) {
-        ASSERT_WITH_MESSAGE(name == "-webkit-input-placeholder", "-webkit-input-placeholder is the only LegacyPrefix pseudo type.");
-        if (name == "-webkit-input-placeholder")
-            name = AtomicString("placeholder", AtomicString::ConstructFromLiteral);
+    AtomString name;
+    if (pseudoType != CSSSelector::PseudoElementWebKitCustomLegacyPrefixed)
+        name = pseudoTypeString.convertToASCIILowercase();
+    else {
+        if (equalLettersIgnoringASCIICase(pseudoTypeString, "-webkit-input-placeholder"))
+            name = AtomString("placeholder", AtomString::ConstructFromLiteral);
+        else if (equalLettersIgnoringASCIICase(pseudoTypeString, "-webkit-file-upload-button"))
+            name = AtomString("file-selector-button", AtomString::ConstructFromLiteral);
+        else {
+            ASSERT_NOT_REACHED();
+            name = pseudoTypeString.convertToASCIILowercase();
+        }
     }
     selector->m_selector->setValue(name);
-    return selector.release();
+    return selector;
 }
 
-CSSParserSelector* CSSParserSelector::parsePseudoClassSelectorFromStringView(StringView& pseudoTypeString)
+std::unique_ptr<CSSParserSelector> CSSParserSelector::parsePseudoClassSelector(StringView pseudoTypeString)
 {
-    PseudoClassOrCompatibilityPseudoElement pseudoType = parsePseudoClassAndCompatibilityElementString(pseudoTypeString);
+    auto pseudoType = parsePseudoClassAndCompatibilityElementString(pseudoTypeString);
     if (pseudoType.pseudoClass != CSSSelector::PseudoClassUnknown) {
-        auto selector = std::make_unique<CSSParserSelector>();
+        auto selector = makeUnique<CSSParserSelector>();
         selector->m_selector->setMatch(CSSSelector::PseudoClass);
         selector->m_selector->setPseudoClassType(pseudoType.pseudoClass);
-        return selector.release();
+        return selector;
     }
     if (pseudoType.compatibilityPseudoElement != CSSSelector::PseudoElementUnknown) {
-        auto selector = std::make_unique<CSSParserSelector>();
+        auto selector = makeUnique<CSSParserSelector>();
         selector->m_selector->setMatch(CSSSelector::PseudoElement);
         selector->m_selector->setPseudoElementType(pseudoType.compatibilityPseudoElement);
-        AtomicString name = pseudoTypeString.toAtomicString();
-        selector->m_selector->setValue(name);
-        return selector.release();
+        selector->m_selector->setValue(pseudoTypeString.convertToASCIILowercase());
+        return selector;
     }
     return nullptr;
 }
 
 CSSParserSelector::CSSParserSelector()
-    : m_selector(std::make_unique<CSSSelector>())
+    : m_selector(makeUnique<CSSSelector>())
 {
 }
 
 CSSParserSelector::CSSParserSelector(const QualifiedName& tagQName)
-    : m_selector(std::make_unique<CSSSelector>(tagQName))
+    : m_selector(makeUnique<CSSSelector>(tagQName))
 {
 }
 
@@ -124,13 +122,13 @@ CSSParserSelector::~CSSParserSelector()
 
 void CSSParserSelector::adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>&& selectorVector)
 {
-    m_selector->setSelectorList(std::make_unique<CSSSelectorList>(WTFMove(selectorVector)));
+    m_selector->setSelectorList(makeUnique<CSSSelectorList>(WTFMove(selectorVector)));
 }
 
-void CSSParserSelector::setLangArgumentList(std::unique_ptr<Vector<AtomicString>> argumentList)
+void CSSParserSelector::setArgumentList(std::unique_ptr<Vector<AtomString>> argumentList)
 {
     ASSERT_WITH_MESSAGE(!argumentList->isEmpty(), "No CSS Selector takes an empty argument list.");
-    m_selector->setLangArgumentList(WTFMove(argumentList));
+    m_selector->setArgumentList(WTFMove(argumentList));
 }
 
 void CSSParserSelector::setSelectorList(std::unique_ptr<CSSSelectorList> selectorList)
@@ -207,12 +205,12 @@ void CSSParserSelector::appendTagHistory(CSSParserSelectorCombinator relation, s
 
 void CSSParserSelector::prependTagSelector(const QualifiedName& tagQName, bool tagIsForNamespaceRule)
 {
-    auto second = std::make_unique<CSSParserSelector>();
+    auto second = makeUnique<CSSParserSelector>();
     second->m_selector = WTFMove(m_selector);
     second->m_tagHistory = WTFMove(m_tagHistory);
     m_tagHistory = WTFMove(second);
 
-    m_selector = std::make_unique<CSSSelector>(tagQName, tagIsForNamespaceRule);
+    m_selector = makeUnique<CSSSelector>(tagQName, tagIsForNamespaceRule);
     m_selector->setRelation(CSSSelector::Subselector);
 }
 

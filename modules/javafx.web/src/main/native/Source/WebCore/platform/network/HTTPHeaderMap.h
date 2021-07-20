@@ -158,7 +158,7 @@ public:
     WEBCORE_EXPORT void add(const String& name, const String& value);
     WEBCORE_EXPORT void append(const String& name, const String& value);
     WEBCORE_EXPORT bool contains(const String&) const;
-    bool remove(const String&);
+    WEBCORE_EXPORT bool remove(const String&);
 
 #if USE(CF)
     void set(CFStringRef name, const String& value);
@@ -190,7 +190,17 @@ public:
 
     friend bool operator==(const HTTPHeaderMap& a, const HTTPHeaderMap& b)
     {
-        return a.m_commonHeaders == b.m_commonHeaders && a.m_uncommonHeaders == b.m_uncommonHeaders;
+        if (a.m_commonHeaders.size() != b.m_commonHeaders.size() || a.m_uncommonHeaders.size() != b.m_uncommonHeaders.size())
+            return false;
+        for (auto& commonHeader : a.m_commonHeaders) {
+            if (b.get(commonHeader.key) != commonHeader.value)
+                return false;
+        }
+        for (auto& uncommonHeader : a.m_uncommonHeaders) {
+            if (b.getUncommonHeader(uncommonHeader.key) != uncommonHeader.value)
+                return false;
+        }
+        return true;
     }
 
     friend bool operator!=(const HTTPHeaderMap& a, const HTTPHeaderMap& b)
@@ -199,9 +209,12 @@ public:
     }
 
     template <class Encoder> void encode(Encoder&) const;
-    template <class Decoder> static bool decode(Decoder&, HTTPHeaderMap&);
+    template <class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, HTTPHeaderMap&);
 
 private:
+    void setUncommonHeader(const String& name, const String& value);
+    WEBCORE_EXPORT String getUncommonHeader(const String& name) const;
+
     CommonHeadersVector m_commonHeaders;
     UncommonHeadersVector m_uncommonHeaders;
 };
@@ -209,7 +222,7 @@ private:
 template <class Encoder>
 void HTTPHeaderMap::CommonHeader::encode(Encoder& encoder) const
 {
-    encoder.encodeEnum(key);
+    encoder << key;
     encoder << value;
 }
 
@@ -217,7 +230,7 @@ template <class Decoder>
 auto HTTPHeaderMap::CommonHeader::decode(Decoder& decoder) -> Optional<CommonHeader>
 {
     HTTPHeaderName name;
-    if (!decoder.decodeEnum(name))
+    if (!decoder.decode(name))
         return WTF::nullopt;
     String value;
     if (!decoder.decode(value))

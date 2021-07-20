@@ -33,6 +33,7 @@
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/Int8Array.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
@@ -51,7 +52,7 @@ String MockBox::peekType(ArrayBuffer* data)
     StringBuilder builder;
     auto array = JSC::Int8Array::create(data, 0, 4);
     for (int i = 0; i < 4; ++i)
-        builder.append(array->item(i));
+        builder.append(static_cast<char>(array->item(i)));
     return builder.toString();
 }
 
@@ -72,7 +73,7 @@ MockTrackBox::MockTrackBox(ArrayBuffer* data)
     StringBuilder builder;
     auto array = JSC::Int8Array::create(data, 12, 4);
     for (int i = 0; i < 4; ++i)
-        builder.append(array->item(i));
+        builder.append(static_cast<char>(array->item(i)));
     m_codec = builder.toString();
 
     m_kind = static_cast<TrackKind>(view->get<uint8_t>(16, true));
@@ -98,10 +99,10 @@ MockInitializationBox::MockInitializationBox(ArrayBuffer* data)
 
     while (offset < m_length) {
         auto subBuffer = data->slice(offset);
-        if (MockBox::peekType(subBuffer.ptr()) != MockTrackBox::type())
+        if (MockBox::peekType(subBuffer.get()) != MockTrackBox::type())
             break;
 
-        MockTrackBox trackBox(subBuffer.ptr());
+        MockTrackBox trackBox(subBuffer.get());
         offset += trackBox.length();
         m_tracks.append(trackBox);
     }

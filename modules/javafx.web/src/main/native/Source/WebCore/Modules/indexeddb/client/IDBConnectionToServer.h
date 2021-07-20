@@ -45,6 +45,8 @@ class IDBResultData;
 class IDBValue;
 class SecurityOrigin;
 
+struct ClientOrigin;
+struct IDBDatabaseNameAndVersion;
 struct IDBGetAllRecordsData;
 struct IDBGetRecordData;
 struct IDBIterateCursorData;
@@ -55,7 +57,7 @@ class IDBConnectionToServer : public ThreadSafeRefCounted<IDBConnectionToServer>
 public:
     WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&);
 
-    WEBCORE_EXPORT uint64_t identifier() const;
+    WEBCORE_EXPORT IDBConnectionIdentifier identifier() const;
 
     IDBConnectionProxy& proxy();
 
@@ -116,12 +118,11 @@ public:
     WEBCORE_EXPORT void didAbortTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError&);
 
     WEBCORE_EXPORT void fireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
-    void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier);
+    void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer);
 
     WEBCORE_EXPORT void didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError&);
 
     WEBCORE_EXPORT void didCloseFromServer(uint64_t databaseConnectionIdentifier, const IDBError&);
-    void confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier);
 
     WEBCORE_EXPORT void connectionToServerLost(const IDBError&);
 
@@ -137,8 +138,8 @@ public:
     // versionchange transaction, but the page is already torn down.
     void abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier);
 
-    void getAllDatabaseNames(const SecurityOrigin& mainFrameOrigin, const SecurityOrigin& openingOrigin, WTF::Function<void (const Vector<String>&)>&&);
-    WEBCORE_EXPORT void didGetAllDatabaseNames(uint64_t callbackID, const Vector<String>& databaseNames);
+    void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&);
+    WEBCORE_EXPORT void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&);
 
 private:
     IDBConnectionToServer(IDBConnectionToServerDelegate&);
@@ -148,8 +149,6 @@ private:
 
     WeakPtr<IDBConnectionToServerDelegate> m_delegate;
     bool m_serverConnectionIsValid { true };
-
-    HashMap<uint64_t, WTF::Function<void (const Vector<String>&)>> m_getAllDatabaseNamesCallbacks;
 
     std::unique_ptr<IDBConnectionProxy> m_proxy;
 };

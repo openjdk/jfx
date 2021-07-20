@@ -24,7 +24,6 @@
 #include "HTMLNameCollection.h"
 
 #include "Element.h"
-#include "HTMLAppletElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLIFrameElement.h"
@@ -33,21 +32,24 @@
 #include "HTMLObjectElement.h"
 #include "NodeRareData.h"
 #include "NodeTraversal.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(WindowNameCollection);
+WTF_MAKE_ISO_ALLOCATED_IMPL(DocumentNameCollection);
+
 bool WindowNameCollection::elementMatchesIfNameAttributeMatch(const Element& element)
 {
-    return is<HTMLAppletElement>(element)
-        || is<HTMLEmbedElement>(element)
+    return is<HTMLEmbedElement>(element)
         || is<HTMLFormElement>(element)
         || is<HTMLImageElement>(element)
         || is<HTMLObjectElement>(element);
 }
 
-bool WindowNameCollection::elementMatches(const Element& element, const AtomicStringImpl* name)
+bool WindowNameCollection::elementMatches(const Element& element, const AtomStringImpl* name)
 {
     // Find only images, forms, applets, embeds and objects by name, but anything by id.
     return (elementMatchesIfNameAttributeMatch(element) && element.getNameAttribute().impl() == name)
@@ -63,21 +65,19 @@ bool DocumentNameCollection::elementMatchesIfIdAttributeMatch(const Element& ele
 {
     // FIXME: We need to fix HTMLImageElement to update the hash map for us when the name attribute is removed.
     return isObjectElementForDocumentNameCollection(element)
-        || is<HTMLAppletElement>(element)
-        || (is<HTMLImageElement>(element) && element.hasName());
+        || (is<HTMLImageElement>(element) && element.hasName() && !element.getNameAttribute().isEmpty());
 }
 
 bool DocumentNameCollection::elementMatchesIfNameAttributeMatch(const Element& element)
 {
     return isObjectElementForDocumentNameCollection(element)
-        || is<HTMLAppletElement>(element)
         || is<HTMLEmbedElement>(element)
         || is<HTMLFormElement>(element)
         || is<HTMLIFrameElement>(element)
         || is<HTMLImageElement>(element);
 }
 
-bool DocumentNameCollection::elementMatches(const Element& element, const AtomicStringImpl* name)
+bool DocumentNameCollection::elementMatches(const Element& element, const AtomStringImpl* name)
 {
     // Find images, forms, applets, embeds, objects and iframes by name, applets and object by id, and images by id
     // but only if they have a name attribute (this very strange rule matches IE).

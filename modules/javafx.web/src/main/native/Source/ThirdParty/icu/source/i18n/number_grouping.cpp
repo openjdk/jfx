@@ -34,7 +34,7 @@ int16_t getMinGroupingForLocale(const Locale& locale) {
 
 }
 
-Grouper Grouper::forStrategy(UGroupingStrategy grouping) {
+Grouper Grouper::forStrategy(UNumberGroupingStrategy grouping) {
     switch (grouping) {
     case UNUM_GROUPING_OFF:
         return {-1, -1, -2, grouping};
@@ -47,8 +47,7 @@ Grouper Grouper::forStrategy(UGroupingStrategy grouping) {
     case UNUM_GROUPING_THOUSANDS:
         return {3, 3, 1, grouping};
     default:
-        U_ASSERT(FALSE);
-        return {}; // return a value: silence compiler warning
+        UPRV_UNREACHABLE;
     }
 }
 
@@ -65,6 +64,13 @@ Grouper Grouper::forProperties(const DecimalFormatProperties& properties) {
 }
 
 void Grouper::setLocaleData(const impl::ParsedPatternInfo &patternInfo, const Locale& locale) {
+    if (fMinGrouping == -2) {
+        fMinGrouping = getMinGroupingForLocale(locale);
+    } else if (fMinGrouping == -3) {
+        fMinGrouping = static_cast<int16_t>(uprv_max(2, getMinGroupingForLocale(locale)));
+    } else {
+        // leave fMinGrouping alone
+    }
     if (fGrouping1 != -2 && fGrouping2 != -4) {
         return;
     }
@@ -76,13 +82,6 @@ void Grouper::setLocaleData(const impl::ParsedPatternInfo &patternInfo, const Lo
     }
     if (grouping3 == -1) {
         grouping2 = grouping1;
-    }
-    if (fMinGrouping == -2) {
-        fMinGrouping = getMinGroupingForLocale(locale);
-    } else if (fMinGrouping == -3) {
-        fMinGrouping = uprv_max(2, getMinGroupingForLocale(locale));
-    } else {
-        // leave fMinGrouping alone
     }
     fGrouping1 = grouping1;
     fGrouping2 = grouping2;

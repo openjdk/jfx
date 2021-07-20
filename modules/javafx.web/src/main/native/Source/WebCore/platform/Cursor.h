@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "Image.h"
 #include "IntPoint.h"
 #include <wtf/Assertions.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/RefPtr.h>
 
 #if PLATFORM(WIN)
@@ -42,7 +43,7 @@ typedef HICON HCURSOR;
 #include <jni.h>
 #endif
 
-#if USE(APPKIT)
+#if HAVE(NSCURSOR)
 OBJC_CLASS NSCursor;
 #endif
 
@@ -72,7 +73,7 @@ private:
 
 #if PLATFORM(WIN)
 using PlatformCursor = RefPtr<SharedCursor>;
-#elif USE(APPKIT)
+#elif HAVE(NSCURSOR)
 using PlatformCursor = NSCursor *;
 #elif PLATFORM(GTK)
 using PlatformCursor = GRefPtr<GdkCursor>;
@@ -139,8 +140,6 @@ public:
     void setPlatformCursor(const Cursor&) const;
 #endif
 
-#if !PLATFORM(IOS_FAMILY)
-
     WEBCORE_EXPORT static const Cursor& fromType(Cursor::Type);
 
     WEBCORE_EXPORT Cursor(Image*, const IntPoint& hotSpot);
@@ -163,6 +162,8 @@ public:
 
     WEBCORE_EXPORT PlatformCursor platformCursor() const;
 
+    WEBCORE_EXPORT void setAsPlatformCursor() const;
+
 private:
     void ensurePlatformCursor() const;
 
@@ -175,7 +176,7 @@ private:
     float m_imageScaleFactor { 1 };
 #endif
 
-#if !USE(APPKIT)
+#if !HAVE(NSCURSOR)
 #if PLATFORM(JAVA)
     mutable PlatformCursor m_platformCursor {};
 #else
@@ -185,7 +186,6 @@ private:
     mutable RetainPtr<NSCursor> m_platformCursor;
 #endif
 
-#endif // !PLATFORM(IOS_FAMILY)
 };
 
 IntPoint determineHotSpot(Image*, const IntPoint& specifiedHotSpot);
@@ -234,8 +234,6 @@ const Cursor& noneCursor();
 const Cursor& grabCursor();
 const Cursor& grabbingCursor();
 
-#if !PLATFORM(IOS_FAMILY)
-
 inline Cursor::Type Cursor::type() const
 {
     ASSERT(m_type >= 0);
@@ -243,6 +241,58 @@ inline Cursor::Type Cursor::type() const
     return m_type;
 }
 
-#endif
-
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::Cursor::Type> {
+    using values = EnumValues<
+        WebCore::Cursor::Type,
+        WebCore::Cursor::Type::Pointer,
+        WebCore::Cursor::Type::Cross,
+        WebCore::Cursor::Type::Hand,
+        WebCore::Cursor::Type::IBeam,
+        WebCore::Cursor::Type::Wait,
+        WebCore::Cursor::Type::Help,
+        WebCore::Cursor::Type::EastResize,
+        WebCore::Cursor::Type::NorthResize,
+        WebCore::Cursor::Type::NorthEastResize,
+        WebCore::Cursor::Type::NorthWestResize,
+        WebCore::Cursor::Type::SouthResize,
+        WebCore::Cursor::Type::SouthEastResize,
+        WebCore::Cursor::Type::SouthWestResize,
+        WebCore::Cursor::Type::WestResize,
+        WebCore::Cursor::Type::NorthSouthResize,
+        WebCore::Cursor::Type::EastWestResize,
+        WebCore::Cursor::Type::NorthEastSouthWestResize,
+        WebCore::Cursor::Type::NorthWestSouthEastResize,
+        WebCore::Cursor::Type::ColumnResize,
+        WebCore::Cursor::Type::RowResize,
+        WebCore::Cursor::Type::MiddlePanning,
+        WebCore::Cursor::Type::EastPanning,
+        WebCore::Cursor::Type::NorthPanning,
+        WebCore::Cursor::Type::NorthEastPanning,
+        WebCore::Cursor::Type::NorthWestPanning,
+        WebCore::Cursor::Type::SouthPanning,
+        WebCore::Cursor::Type::SouthEastPanning,
+        WebCore::Cursor::Type::SouthWestPanning,
+        WebCore::Cursor::Type::WestPanning,
+        WebCore::Cursor::Type::Move,
+        WebCore::Cursor::Type::VerticalText,
+        WebCore::Cursor::Type::Cell,
+        WebCore::Cursor::Type::ContextMenu,
+        WebCore::Cursor::Type::Alias,
+        WebCore::Cursor::Type::Progress,
+        WebCore::Cursor::Type::NoDrop,
+        WebCore::Cursor::Type::Copy,
+        WebCore::Cursor::Type::None,
+        WebCore::Cursor::Type::NotAllowed,
+        WebCore::Cursor::Type::ZoomIn,
+        WebCore::Cursor::Type::ZoomOut,
+        WebCore::Cursor::Type::Grab,
+        WebCore::Cursor::Type::Grabbing,
+        WebCore::Cursor::Type::Custom
+    >;
+};
+
+} // namespace WTF

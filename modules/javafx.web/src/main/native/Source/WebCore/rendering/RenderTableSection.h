@@ -42,7 +42,7 @@ enum CollapsedBorderSide {
 // Helper class for paintObject.
 struct CellSpan {
 public:
-    CellSpan(unsigned start, unsigned end)
+    explicit CellSpan(unsigned start, unsigned end)
         : start(start)
         , end(end)
     {
@@ -149,10 +149,9 @@ public:
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
 
-protected:
+private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-private:
     static RenderPtr<RenderTableSection> createTableSectionWithStyle(Document&, const RenderStyle&);
 
     enum ShouldIncludeAllIntersectingCells {

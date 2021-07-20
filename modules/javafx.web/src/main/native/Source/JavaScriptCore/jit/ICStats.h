@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,9 +38,9 @@ namespace JSC {
 
 #define FOR_EACH_ICEVENT_KIND(macro) \
     macro(InvalidKind) \
-    macro(GetByIdAddAccessCase) \
-    macro(GetByIdReplaceWithJump) \
-    macro(GetByIdSelfPatch) \
+    macro(GetByAddAccessCase) \
+    macro(GetByReplaceWithJump) \
+    macro(GetBySelfPatch) \
     macro(InAddAccessCase) \
     macro(InReplaceWithJump) \
     macro(InstanceOfAddAccessCase) \
@@ -49,10 +49,10 @@ namespace JSC {
     macro(OperationGetByIdGeneric) \
     macro(OperationGetByIdBuildList) \
     macro(OperationGetByIdOptimize) \
+    macro(OperationGetByValOptimize) \
     macro(OperationGetByIdWithThisOptimize) \
     macro(OperationGenericIn) \
     macro(OperationInById) \
-    macro(OperationInByIdGeneric) \
     macro(OperationInByIdOptimize) \
     macro(OperationPutByIdStrict) \
     macro(OperationPutByIdNonStrict) \
@@ -64,12 +64,22 @@ namespace JSC {
     macro(OperationPutByIdDirectNonStrictOptimize) \
     macro(OperationPutByIdStrictBuildList) \
     macro(OperationPutByIdNonStrictBuildList) \
-    macro(OperationPutByIdDirectStrictBuildList) \
-    macro(OperationPutByIdDirectNonStrictBuildList) \
+    macro(OperationPutByIdDefinePrivateFieldFieldStrictOptimize) \
+    macro(OperationPutByIdPutPrivateFieldFieldStrictOptimize) \
     macro(PutByIdAddAccessCase) \
     macro(PutByIdReplaceWithJump) \
     macro(PutByIdSelfPatch) \
-    macro(InByIdSelfPatch)
+    macro(InByIdSelfPatch) \
+    macro(DelByReplaceWithJump) \
+    macro(DelByReplaceWithGeneric) \
+    macro(OperationGetPrivateNameOptimize) \
+    macro(OperationGetPrivateNameById) \
+    macro(OperationGetPrivateNameByIdOptimize) \
+    macro(OperationGetPrivateNameByIdGeneric) \
+    macro(CheckPrivateBrandAddAccessCase) \
+    macro(SetPrivateBrandAddAccessCase) \
+    macro(CheckPrivateBrandReplaceWithJump) \
+    macro(SetPrivateBrandReplaceWithJump)
 
 class ICEvent {
 public:
@@ -77,6 +87,12 @@ public:
 #define ICEVENT_KIND_DECLARATION(name) name,
         FOR_EACH_ICEVENT_KIND(ICEVENT_KIND_DECLARATION)
 #undef ICEVENT_KIND_DECLARATION
+    };
+
+    enum PropertyLocation {
+        Unknown,
+        BaseObject,
+        ProtoLookup
     };
 
     ICEvent()
@@ -87,6 +103,15 @@ public:
         : m_kind(kind)
         , m_classInfo(classInfo)
         , m_propertyName(propertyName)
+        , m_propertyLocation(Unknown)
+    {
+    }
+
+    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName, bool isBaseProperty)
+        : m_kind(kind)
+        , m_classInfo(classInfo)
+        , m_propertyName(propertyName)
+        , m_propertyLocation(isBaseProperty ? BaseObject : ProtoLookup)
     {
     }
 
@@ -123,7 +148,9 @@ public:
 
     unsigned hash() const
     {
-        return m_kind + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo) + StringHash::hash(m_propertyName.string());
+        if (m_propertyName.isNull())
+            return m_kind + m_propertyLocation + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo);
+        return m_kind + m_propertyLocation + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo) + StringHash::hash(m_propertyName.string());
     }
 
     bool isHashTableDeletedValue() const
@@ -140,12 +167,13 @@ private:
     Kind m_kind { InvalidKind };
     const ClassInfo* m_classInfo { nullptr };
     Identifier m_propertyName;
+    PropertyLocation m_propertyLocation;
 };
 
 struct ICEventHash {
     static unsigned hash(const ICEvent& key) { return key.hash(); }
     static bool equal(const ICEvent& a, const ICEvent& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -155,13 +183,11 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::ICEvent::Kind);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ICEvent> {
-    typedef JSC::ICEventHash Hash;
-};
+template<> struct DefaultHash<JSC::ICEvent> : JSC::ICEventHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ICEvent> : SimpleClassHashTraits<JSC::ICEvent> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

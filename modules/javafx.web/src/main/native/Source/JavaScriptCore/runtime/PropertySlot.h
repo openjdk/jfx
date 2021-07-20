@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2005-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -21,6 +21,8 @@
 #pragma once
 
 #include "DOMAnnotation.h"
+#include "DisallowVMEntry.h"
+#include "GetVM.h"
 #include "JSCJSValue.h"
 #include "PropertyName.h"
 #include "PropertyOffset.h"
@@ -29,7 +31,6 @@
 #include <wtf/ForbidHeapAllocation.h>
 
 namespace JSC {
-class ExecState;
 class GetterSetter;
 class JSObject;
 class JSModuleEnvironment;
@@ -83,11 +84,17 @@ inline unsigned attributesForStructure(unsigned attributes)
     return static_cast<uint8_t>(attributes);
 }
 
+using GetValueFunc = EncodedJSValue(JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName);
+using GetValueFuncWithPtr = EncodedJSValue(JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName, void*);
+
+using PutValueFunc = bool (*)(JSGlobalObject*, EncodedJSValue baseObject, EncodedJSValue value);
+using PutValueFuncWithPtr = bool (*)(JSGlobalObject*, EncodedJSValue baseObject, EncodedJSValue value, void*);
+
 class PropertySlot {
 
     // We rely on PropertySlot being stack allocated when used. This is needed
     // because we rely on some of its fields being a GC root. For example, it
-    // may be the only thing that points to the CustomGetterSetter property it has.
+    // may be the only thing that points to the GetterSetter property it has.
     WTF_FORBID_HEAP_ALLOCATION;
 
     enum PropertyType : uint8_t {
@@ -95,7 +102,6 @@ class PropertySlot {
         TypeValue,
         TypeGetter,
         TypeCustom,
-        TypeCustomAccessor,
     };
 
 public:
@@ -112,33 +118,26 @@ public:
         ModuleNamespace, // ModuleNamespaceObject's environment access.
     };
 
-    explicit PropertySlot(const JSValue thisValue, InternalMethodType internalMethodType)
-        : m_offset(invalidOffset)
-        , m_thisValue(thisValue)
-        , m_slotBase(nullptr)
-        , m_watchpointSet(nullptr)
-        , m_cacheability(CachingAllowed)
-        , m_propertyType(TypeUnset)
+    explicit PropertySlot(const JSValue thisValue, InternalMethodType internalMethodType, VM* vmForInquiry = nullptr)
+        : m_thisValue(thisValue)
         , m_internalMethodType(internalMethodType)
-        , m_additionalDataType(AdditionalDataType::None)
-        , m_isTaintedByOpaqueObject(false)
     {
+        if (isVMInquiry())
+            disallowVMEntry.emplace(*vmForInquiry);
     }
 
-    // FIXME: Remove this slotBase / receiver behavior difference in custom values and custom accessors.
-    // https://bugs.webkit.org/show_bug.cgi?id=158014
-    typedef EncodedJSValue (*GetValueFunc)(ExecState*, EncodedJSValue thisValue, PropertyName);
+    using GetValueFunc = JSC::GetValueFunc;
+    using GetValueFuncWithPtr = JSC::GetValueFuncWithPtr;
 
-    JSValue getValue(ExecState*, PropertyName) const;
-    JSValue getValue(ExecState*, unsigned propertyName) const;
+    JSValue getValue(JSGlobalObject*, PropertyName) const;
+    JSValue getValue(JSGlobalObject*, uint64_t propertyName) const;
     JSValue getPureResult() const;
 
-    bool isCacheable() const { return m_cacheability == CachingAllowed && m_offset != invalidOffset; }
+    bool isCacheable() const { return isUnset() || m_cacheability == CachingAllowed; }
     bool isUnset() const { return m_propertyType == TypeUnset; }
     bool isValue() const { return m_propertyType == TypeValue; }
     bool isAccessor() const { return m_propertyType == TypeGetter; }
     bool isCustom() const { return m_propertyType == TypeCustom; }
-    bool isCustomAccessor() const { return m_propertyType == TypeCustomAccessor; }
     bool isCacheableValue() const { return isCacheable() && isValue(); }
     bool isCacheableGetter() const { return isCacheable() && isAccessor(); }
     bool isCacheableCustom() const { return isCacheable() && isCustom(); }
@@ -146,6 +145,7 @@ public:
     bool isTaintedByOpaqueObject() const { return m_isTaintedByOpaqueObject; }
 
     InternalMethodType internalMethodType() const { return m_internalMethodType; }
+    bool isVMInquiry() const { return m_internalMethodType == InternalMethodType::VMInquiry; }
 
     void disableCaching()
     {
@@ -168,14 +168,14 @@ public:
 
     GetValueFunc customGetter() const
     {
-        ASSERT(isCacheableCustom());
+        ASSERT(isCustom());
         return m_data.custom.getValue;
     }
 
-    CustomGetterSetter* customGetterSetter() const
+    PutValueFunc customSetter() const
     {
-        ASSERT(isCustomAccessor());
-        return m_data.customAccessor.getterSetter;
+        ASSERT(isCustom());
+        return m_data.custom.putValue;
     }
 
     JSObject* slotBase() const
@@ -217,7 +217,8 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeValue;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value, PropertyOffset offset)
@@ -232,6 +233,8 @@ public:
         m_slotBase = slotBase;
         m_propertyType = TypeValue;
         m_offset = offset;
+
+        m_cacheability = CachingAllowed;
     }
 
     void setValue(JSString*, unsigned attributes, JSValue value)
@@ -242,9 +245,10 @@ public:
         m_data.value = JSValue::encode(value);
         m_attributes = attributes;
 
-        m_slotBase = 0;
+        m_slotBase = nullptr;
         m_propertyType = TypeValue;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setValueModuleNamespace(JSObject* slotBase, unsigned attributes, JSValue value, JSModuleEnvironment* environment, ScopeOffset scopeOffset)
@@ -255,65 +259,53 @@ public:
         m_additionalData.moduleNamespaceSlot.scopeOffset = scopeOffset.offset();
     }
 
-    void setCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue)
+    void setCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, PutValueFunc putValue = nullptr)
     {
         ASSERT(attributes == attributesForStructure(attributes));
 
         ASSERT(getValue);
         assertIsCFunctionPtr(getValue);
         m_data.custom.getValue = getValue;
+        assertIsNullOrCFunctionPtr(putValue);
+        m_data.custom.putValue = putValue;
         m_attributes = attributes;
 
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeCustom;
-        m_offset = invalidOffset;
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
-    void setCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, DOMAttributeAnnotation domAttribute)
+    void setCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, PutValueFunc putValue, DOMAttributeAnnotation domAttribute)
     {
-        setCustom(slotBase, attributes, getValue);
+        setCustom(slotBase, attributes, getValue, putValue);
         m_additionalDataType = AdditionalDataType::DOMAttribute;
         m_additionalData.domAttribute = domAttribute;
     }
 
-    void setCacheableCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue)
+    void setCacheableCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, PutValueFunc putValue = nullptr)
     {
         ASSERT(attributes == attributesForStructure(attributes));
 
         ASSERT(getValue);
         assertIsCFunctionPtr(getValue);
         m_data.custom.getValue = getValue;
+        assertIsNullOrCFunctionPtr(putValue);
+        m_data.custom.putValue = putValue;
         m_attributes = attributes;
 
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeCustom;
-        m_offset = !invalidOffset;
+
+        m_cacheability = CachingAllowed;
     }
 
-    void setCacheableCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, DOMAttributeAnnotation domAttribute)
+    void setCacheableCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, PutValueFunc putValue, DOMAttributeAnnotation domAttribute)
     {
-        setCacheableCustom(slotBase, attributes, getValue);
+        setCacheableCustom(slotBase, attributes, getValue, putValue);
         m_additionalDataType = AdditionalDataType::DOMAttribute;
         m_additionalData.domAttribute = domAttribute;
-    }
-
-    void setCustomGetterSetter(JSObject* slotBase, unsigned attributes, CustomGetterSetter* getterSetter)
-    {
-        ASSERT(attributes == attributesForStructure(attributes));
-        ASSERT(attributes & PropertyAttribute::CustomAccessor);
-
-        disableCaching();
-
-        ASSERT(getterSetter);
-        m_data.customAccessor.getterSetter = getterSetter;
-        m_attributes = attributes;
-
-        ASSERT(slotBase);
-        m_slotBase = slotBase;
-        m_propertyType = TypeCustomAccessor;
-        m_offset = invalidOffset;
     }
 
     void setGetterSlot(JSObject* slotBase, unsigned attributes, GetterSetter* getterSetter)
@@ -327,7 +319,8 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeGetter;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setCacheableGetterSlot(JSObject* slotBase, unsigned attributes, GetterSetter* getterSetter, PropertyOffset offset)
@@ -342,6 +335,8 @@ public:
         m_slotBase = slotBase;
         m_propertyType = TypeGetter;
         m_offset = offset;
+
+        m_cacheability = CachingAllowed;
     }
 
     JSValue thisValue() const
@@ -359,20 +354,19 @@ public:
         m_data.value = JSValue::encode(jsUndefined());
         m_attributes = PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum;
 
-        m_slotBase = 0;
+        m_slotBase = nullptr;
         m_propertyType = TypeValue;
-        m_offset = invalidOffset;
     }
 
     void setWatchpointSet(WatchpointSet& set)
     {
+        ASSERT(set.isStillValid());
         m_watchpointSet = &set;
     }
 
 private:
-    JS_EXPORT_PRIVATE JSValue functionGetter(ExecState*) const;
-    JS_EXPORT_PRIVATE JSValue customGetter(ExecState*, PropertyName) const;
-    JS_EXPORT_PRIVATE JSValue customAccessorGetter(ExecState*, PropertyName) const;
+    JS_EXPORT_PRIVATE JSValue functionGetter(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSValue customGetter(JSGlobalObject*, PropertyName) const;
 
     union {
         EncodedJSValue value;
@@ -381,48 +375,46 @@ private:
         } getter;
         struct {
             GetValueFunc getValue;
+            PutValueFunc putValue;
         } custom;
-        struct {
-            CustomGetterSetter* getterSetter;
-        } customAccessor;
     } m_data;
 
-    unsigned m_attributes;
-    PropertyOffset m_offset;
+    unsigned m_attributes { 0 };
+    PropertyOffset m_offset { invalidOffset };
     JSValue m_thisValue;
-    JSObject* m_slotBase;
-    WatchpointSet* m_watchpointSet;
-    CacheabilityType m_cacheability;
-    PropertyType m_propertyType;
+    JSObject* m_slotBase { nullptr };
+    WatchpointSet* m_watchpointSet { nullptr };
+    CacheabilityType m_cacheability { CachingDisallowed };
+    PropertyType m_propertyType { TypeUnset };
     InternalMethodType m_internalMethodType;
-    AdditionalDataType m_additionalDataType;
-    bool m_isTaintedByOpaqueObject;
+    AdditionalDataType m_additionalDataType { AdditionalDataType::None };
+    bool m_isTaintedByOpaqueObject { false };
+public:
+    Optional<DisallowVMEntry> disallowVMEntry;
+private:
     union {
         DOMAttributeAnnotation domAttribute;
         ModuleNamespaceSlot moduleNamespaceSlot;
-    } m_additionalData;
+    } m_additionalData { { nullptr, nullptr } };
 };
 
-ALWAYS_INLINE JSValue PropertySlot::getValue(ExecState* exec, PropertyName propertyName) const
+ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, PropertyName propertyName) const
 {
     if (m_propertyType == TypeValue)
         return JSValue::decode(m_data.value);
     if (m_propertyType == TypeGetter)
-        return functionGetter(exec);
-    if (m_propertyType == TypeCustomAccessor)
-        return customAccessorGetter(exec, propertyName);
-    return customGetter(exec, propertyName);
+        return functionGetter(globalObject);
+    return customGetter(globalObject, propertyName);
 }
 
-ALWAYS_INLINE JSValue PropertySlot::getValue(ExecState* exec, unsigned propertyName) const
+ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, uint64_t propertyName) const
 {
+    VM& vm = getVM(globalObject);
     if (m_propertyType == TypeValue)
         return JSValue::decode(m_data.value);
     if (m_propertyType == TypeGetter)
-        return functionGetter(exec);
-    if (m_propertyType == TypeCustomAccessor)
-        return customAccessorGetter(exec, Identifier::from(exec, propertyName));
-    return customGetter(exec, Identifier::from(exec, propertyName));
+        return functionGetter(globalObject);
+    return customGetter(globalObject, Identifier::from(vm, propertyName));
 }
 
 } // namespace JSC

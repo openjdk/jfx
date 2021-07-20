@@ -38,7 +38,7 @@
 #define GETTEXT_PACKAGE "glib20"
 
 /* Define to the GLIB binary age */
-#define GLIB_BINARY_AGE 5802
+#define GLIB_BINARY_AGE 6202
 
 /* Define to the GLIB interface age */
 #define GLIB_INTERFACE_AGE 1
@@ -53,7 +53,7 @@
 #define GLIB_MICRO_VERSION 2
 
 /* Define to the GLIB minor version */
-#define GLIB_MINOR_VERSION 58
+#define GLIB_MINOR_VERSION 62
 
 /* A 'va_copy' style function */
 #if !defined (_MSC_VER) || (_MSC_VER >= 1800)
@@ -110,7 +110,7 @@
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
 #ifndef _MSC_VER
-#define HAVE_DIRENT_H 1
+/* #undef HAVE_DIRENT_H */
 #else
 /* #undef HAVE_DIRENT_H */
 #endif
@@ -690,7 +690,7 @@
 #define PACKAGE_NAME "glib"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "glib 2.58.2"
+#define PACKAGE_STRING "glib 2.62.2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "glib"
@@ -699,7 +699,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.58.2"
+#define PACKAGE_VERSION "2.62.2"
 
 /* define if posix_memalign() can allocate any size */
 /* #undef POSIX_MEMALIGN_WITH_COMPLIANT_ALLOCS */
@@ -867,3 +867,9 @@
 /* #undef HAVE_RTLD_LAZY */
 /* #undef HAVE_RTLD_NOW */
 /* #undef HAVE_RTLD_GLOBAL */
+
+#ifdef GSTREAMER_LITE
+#define XSIZE_INLINE static inline
+#define _GL_INLINE_HEADER_BEGIN
+#define _GL_INLINE_HEADER_END
+#endif // GSTREAMER_LITE

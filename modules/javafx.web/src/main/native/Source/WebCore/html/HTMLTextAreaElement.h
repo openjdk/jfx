@@ -34,6 +34,7 @@ class VisibleSelection;
 class HTMLTextAreaElement final : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLTextAreaElement);
 public:
+    WEBCORE_EXPORT static Ref<HTMLTextAreaElement> create(Document&);
     static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     unsigned cols() const { return m_cols; }
@@ -54,7 +55,7 @@ public:
     bool tooLong() const final;
     bool isValidValue(const String&) const;
 
-    RefPtr<TextControlInnerTextElement> innerTextElement() const final;
+    WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElement() const final;
     RenderStyle createInnerTextStyle(const RenderStyle&) final;
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
@@ -74,8 +75,8 @@ private:
 
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
-    void maxLengthAttributeChanged(const AtomicString& newValue);
-    void minLengthAttributeChanged(const AtomicString& newValue);
+    void maxLengthAttributeChanged(const AtomString& newValue);
+    void minLengthAttributeChanged(const AtomString& newValue);
 
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) const;
     static String sanitizeUserInputValue(const String&, unsigned maxLength);
@@ -98,7 +99,9 @@ private:
     bool isEnumeratable() const final { return true; }
     bool supportLabels() const final { return true; }
 
-    const AtomicString& formControlType() const final;
+    bool isInteractiveContent() const final { return true; }
+
+    const AtomString& formControlType() const final;
 
     FormControlState saveFormControlState() const final;
     void restoreFormControlState(const FormControlState&) final;
@@ -106,18 +109,19 @@ private:
     bool isTextField() const final { return true; }
 
     void childrenChanged(const ChildChange&) final;
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool appendFormData(DOMFormData&, bool) final;
     void reset() final;
     bool hasCustomFocusLogic() const final;
+    int defaultTabIndex() const final;
     bool isMouseFocusable() const final;
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) final;
 
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
     bool shouldUseInputMethod() final;
     bool matchesReadWritePseudoClass() const final;

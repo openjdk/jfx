@@ -35,6 +35,7 @@
 #include "IDBResourceIdentifier.h"
 #include "IDBTransactionInfo.h"
 #include "ThreadSafeDataBuffer.h"
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -88,11 +89,12 @@ public:
     static IDBResultData iterateCursorSuccess(const IDBResourceIdentifier&, const IDBGetResult&);
 
     WEBCORE_EXPORT IDBResultData(const IDBResultData&);
+    IDBResultData(IDBResultData&&) = default;
     IDBResultData& operator=(IDBResultData&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBResultData(const IDBResultData&, IsolatedCopyTag);
-    IDBResultData isolatedCopy() const;
+    WEBCORE_EXPORT IDBResultData isolatedCopy() const;
 
     IDBResultType type() const { return m_type; }
     IDBResourceIdentifier requestIdentifier() const { return m_requestIdentifier; }
@@ -107,6 +109,7 @@ public:
     uint64_t resultInteger() const { return m_resultInteger; }
 
     WEBCORE_EXPORT const IDBGetResult& getResult() const;
+    WEBCORE_EXPORT IDBGetResult& getResultRef();
     WEBCORE_EXPORT const IDBGetAllResult& getAllResult() const;
 
     WEBCORE_EXPORT IDBResultData();
@@ -137,7 +140,7 @@ void IDBResultData::encode(Encoder& encoder) const
 {
     encoder << m_requestIdentifier << m_error << m_databaseConnectionIdentifier << m_resultInteger;
 
-    encoder.encodeEnum(m_type);
+    encoder << m_type;
 
     encoder << !!m_databaseInfo;
     if (m_databaseInfo)
@@ -175,7 +178,7 @@ template<class Decoder> Optional<IDBResultData> IDBResultData::decode(Decoder& d
     if (!decoder.decode(result.m_resultInteger))
         return WTF::nullopt;
 
-    if (!decoder.decodeEnum(result.m_type))
+    if (!decoder.decode(result.m_type))
         return WTF::nullopt;
 
     bool hasObject;
@@ -183,7 +186,7 @@ template<class Decoder> Optional<IDBResultData> IDBResultData::decode(Decoder& d
     if (!decoder.decode(hasObject))
         return WTF::nullopt;
     if (hasObject) {
-        auto object = std::make_unique<IDBDatabaseInfo>();
+        auto object = makeUnique<IDBDatabaseInfo>();
         if (!decoder.decode(*object))
             return WTF::nullopt;
         result.m_databaseInfo = WTFMove(object);
@@ -192,7 +195,7 @@ template<class Decoder> Optional<IDBResultData> IDBResultData::decode(Decoder& d
     if (!decoder.decode(hasObject))
         return WTF::nullopt;
     if (hasObject) {
-        auto object = std::make_unique<IDBTransactionInfo>();
+        auto object = makeUnique<IDBTransactionInfo>();
         if (!decoder.decode(*object))
             return WTF::nullopt;
         result.m_transactionInfo = WTFMove(object);
@@ -201,7 +204,7 @@ template<class Decoder> Optional<IDBResultData> IDBResultData::decode(Decoder& d
     if (!decoder.decode(hasObject))
         return WTF::nullopt;
     if (hasObject) {
-        auto object = std::make_unique<IDBKeyData>();
+        auto object = makeUnique<IDBKeyData>();
         Optional<IDBKeyData> optional;
         decoder >> optional;
         if (!optional)
@@ -213,7 +216,7 @@ template<class Decoder> Optional<IDBResultData> IDBResultData::decode(Decoder& d
     if (!decoder.decode(hasObject))
         return WTF::nullopt;
     if (hasObject) {
-        auto object = std::make_unique<IDBGetResult>();
+        auto object = makeUnique<IDBGetResult>();
         if (!decoder.decode(*object))
             return WTF::nullopt;
         result.m_getResult = WTFMove(object);
@@ -222,15 +225,43 @@ template<class Decoder> Optional<IDBResultData> IDBResultData::decode(Decoder& d
     if (!decoder.decode(hasObject))
         return WTF::nullopt;
     if (hasObject) {
-        auto object = std::make_unique<IDBGetAllResult>();
+        auto object = makeUnique<IDBGetAllResult>();
         if (!decoder.decode(*object))
             return WTF::nullopt;
         result.m_getAllResult = WTFMove(object);
     }
 
-    return WTFMove(result);
+    return result;
 }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::IDBResultType> {
+    using values = EnumValues<
+        WebCore::IDBResultType,
+        WebCore::IDBResultType::Error,
+        WebCore::IDBResultType::OpenDatabaseSuccess,
+        WebCore::IDBResultType::OpenDatabaseUpgradeNeeded,
+        WebCore::IDBResultType::DeleteDatabaseSuccess,
+        WebCore::IDBResultType::CreateObjectStoreSuccess,
+        WebCore::IDBResultType::DeleteObjectStoreSuccess,
+        WebCore::IDBResultType::ClearObjectStoreSuccess,
+        WebCore::IDBResultType::PutOrAddSuccess,
+        WebCore::IDBResultType::GetRecordSuccess,
+        WebCore::IDBResultType::GetAllRecordsSuccess,
+        WebCore::IDBResultType::GetCountSuccess,
+        WebCore::IDBResultType::DeleteRecordSuccess,
+        WebCore::IDBResultType::CreateIndexSuccess,
+        WebCore::IDBResultType::DeleteIndexSuccess,
+        WebCore::IDBResultType::OpenCursorSuccess,
+        WebCore::IDBResultType::IterateCursorSuccess,
+        WebCore::IDBResultType::RenameObjectStoreSuccess,
+        WebCore::IDBResultType::RenameIndexSuccess
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(INDEXED_DATABASE)

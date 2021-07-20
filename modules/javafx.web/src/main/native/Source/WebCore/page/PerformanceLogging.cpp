@@ -26,6 +26,7 @@
 #include "config.h"
 #include "PerformanceLogging.h"
 
+#include "BackForwardCache.h"
 #include "CommonVM.h"
 #include "DOMWindow.h"
 #include "Document.h"
@@ -35,7 +36,6 @@
 #include "JSDOMWindow.h"
 #include "Logging.h"
 #include "Page.h"
-#include "PageCache.h"
 
 namespace WebCore {
 
@@ -48,6 +48,8 @@ static const char* toString(PerformanceLogging::PointOfInterest poi)
     case PerformanceLogging::MainFrameLoadCompleted:
         return "MainFrameLoadCompleted";
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return "";
 }
 #endif
 
@@ -56,11 +58,12 @@ HashMap<const char*, size_t> PerformanceLogging::memoryUsageStatistics(ShouldInc
     HashMap<const char*, size_t> stats;
 
     auto& vm = commonVM();
+    JSC::JSLockHolder locker(vm);
     stats.add("javascript_gc_heap_capacity", vm.heap.capacity());
     stats.add("javascript_gc_heap_extra_memory_size", vm.heap.extraMemorySize());
 
-    auto& pageCache = PageCache::singleton();
-    stats.add("pagecache_page_count", pageCache.pageCount());
+    auto& backForwardCache = BackForwardCache::singleton();
+    stats.add("backforward_cache_page_count", backForwardCache.pageCount());
 
     stats.add("document_count", Document::allDocuments().size());
 

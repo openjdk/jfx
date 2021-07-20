@@ -146,8 +146,10 @@ bool RenderMathMLUnderOver::isValid() const
     }
 }
 
-bool RenderMathMLUnderOver::shouldMoveLimits()
+bool RenderMathMLUnderOver::shouldMoveLimits() const
 {
+    if (style().mathStyle() == MathStyle::Normal)
+        return false;
     if (auto* renderOperator = unembellishedOperator())
         return renderOperator->shouldMoveLimits();
     return false;
@@ -352,6 +354,8 @@ void RenderMathMLUnderOver::layoutBlock(bool relayoutChildren, LayoutUnit pageLo
     setLogicalHeight(verticalOffset);
 
     layoutPositionedObjects(relayoutChildren);
+
+    updateScrollInfoAfterLayout();
 
     clearNeedsLayout();
 }

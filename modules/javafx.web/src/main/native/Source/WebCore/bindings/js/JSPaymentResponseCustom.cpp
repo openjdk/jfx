@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,17 +30,20 @@
 
 namespace WebCore {
 
-JSC::JSValue JSPaymentResponse::details(JSC::ExecState& state) const
+JSC::JSValue JSPaymentResponse::details(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(state, *this, wrapped().cachedDetails(), [this, &state] {
-        return wrapped().detailsFunction()(state).get();
+    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().cachedDetails(), [this, &lexicalGlobalObject] {
+        return wrapped().detailsFunction()(lexicalGlobalObject).get();
     });
 }
 
-void JSPaymentResponse::visitAdditionalChildren(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void JSPaymentResponse::visitAdditionalChildren(Visitor& visitor)
 {
     wrapped().cachedDetails().visit(visitor);
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSPaymentResponse);
 
 } // namespace WebCore
 

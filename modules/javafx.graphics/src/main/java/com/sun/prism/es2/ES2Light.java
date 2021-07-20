@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,14 +32,32 @@ class ES2Light {
 
     float x, y, z = 0;
     float r, g, b, w = 1;
+    float ca, la, qa, maxRange;
+    float dirX, dirY, dirZ;
+    float innerAngle, outerAngle, falloff;
 
-    ES2Light(float ix, float iy, float iz, float ir, float ig, float ib, float iw) {
-        x = ix;
-        y = iy;
-        z = iz;
-        r = ir;
-        g = ig;
-        b = ib;
-        w = iw;
+    ES2Light(float x, float y, float z, float r, float g, float b, float w, float ca, float la, float qa,
+            float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.w = w;
+        this.ca = ca;
+        this.la = la;
+        this.qa = qa;
+        this.maxRange = maxRange;
+        this.dirX = dirX;
+        this.dirY = dirY;
+        this.dirZ = dirZ;
+        this.innerAngle = innerAngle;
+        this.outerAngle = outerAngle;
+        this.falloff = falloff;
+    }
+
+    boolean isPointLight() {
+        return falloff == 0 && outerAngle == 180;
     }
 }

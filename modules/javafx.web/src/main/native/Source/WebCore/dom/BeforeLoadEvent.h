@@ -32,6 +32,7 @@
 namespace WebCore {
 
 class BeforeLoadEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(BeforeLoadEvent);
 public:
     static Ref<BeforeLoadEvent> create(const String& url)
     {
@@ -42,7 +43,7 @@ public:
         String url;
     };
 
-    static Ref<BeforeLoadEvent> create(const AtomicString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<BeforeLoadEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new BeforeLoadEvent(type, initializer, isTrusted));
     }
@@ -58,7 +59,7 @@ private:
     {
     }
 
-    BeforeLoadEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+    BeforeLoadEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
         : Event(type, initializer, isTrusted)
         , m_url(initializer.url)
     {

@@ -25,25 +25,27 @@
 
 #pragma once
 
+#include "ContextDestructionObserver.h"
 #include "ExceptionOr.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class ScriptExecutionContext;
 class ServiceWorkerContainer;
 
-class NavigatorBase : public RefCounted<NavigatorBase> {
+class NavigatorBase : public RefCounted<NavigatorBase>, public ContextDestructionObserver, public CanMakeWeakPtr<NavigatorBase> {
 public:
     virtual ~NavigatorBase();
 
     static String appName();
     String appVersion() const;
     virtual const String& userAgent() const = 0;
-    virtual const String& platform() const;
+    virtual String platform() const;
 
     static String appCodeName();
     static String product();
@@ -65,7 +67,7 @@ public:
     ExceptionOr<ServiceWorkerContainer&> serviceWorker(ScriptExecutionContext&);
 
 private:
-    UniqueRef<ServiceWorkerContainer> m_serviceWorkerContainer;
+    std::unique_ptr<ServiceWorkerContainer> m_serviceWorkerContainer;
 #endif
 };
 

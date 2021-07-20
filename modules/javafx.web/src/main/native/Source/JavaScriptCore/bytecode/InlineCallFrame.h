@@ -37,7 +37,7 @@
 namespace JSC {
 
 struct InlineCallFrame;
-class ExecState;
+class CallFrame;
 class JSFunction;
 
 struct InlineCallFrame {
@@ -152,7 +152,7 @@ struct InlineCallFrame {
             tailCallee = inlineCallFrame->isTail();
             callKind = inlineCallFrame->kind;
             codeOrigin = &inlineCallFrame->directCaller;
-            inlineCallFrame = codeOrigin->inlineCallFrame;
+            inlineCallFrame = codeOrigin->inlineCallFrame();
         } while (inlineCallFrame && tailCallee);
 
         if (tailCallee)
@@ -172,25 +172,28 @@ struct InlineCallFrame {
     InlineCallFrame* getCallerInlineFrameSkippingTailCalls()
     {
         CodeOrigin* caller = getCallerSkippingTailCalls();
-        return caller ? caller->inlineCallFrame : nullptr;
+        return caller ? caller->inlineCallFrame() : nullptr;
     }
 
     Vector<ValueRecovery> argumentsWithFixup; // Includes 'this' and arity fixups.
     WriteBarrier<CodeBlock> baselineCodeBlock;
-    ValueRecovery calleeRecovery;
     CodeOrigin directCaller;
 
-    unsigned argumentCountIncludingThis; // Do not include fixups.
+    unsigned argumentCountIncludingThis : 22; // Do not include fixups.
+    unsigned tmpOffset : 10;
     signed stackOffset : 28;
     unsigned kind : 3; // real type is Kind
     bool isClosureCall : 1; // If false then we know that callee/scope are constants and the DFG won't treat them as variables, i.e. they have to be recovered manually.
     VirtualRegister argumentCountRegister; // Only set when we inline a varargs call.
+
+    ValueRecovery calleeRecovery;
 
     // There is really no good notion of a "default" set of values for
     // InlineCallFrame's fields. This constructor is here just to reduce confusion if
     // we forgot to initialize explicitly.
     InlineCallFrame()
         : argumentCountIncludingThis(0)
+        , tmpOffset(0)
         , stackOffset(0)
         , kind(Call)
         , isClosureCall(false)
@@ -207,7 +210,7 @@ struct InlineCallFrame {
     JSFunction* calleeConstant() const;
 
     // Get the callee given a machine call frame to which this InlineCallFrame belongs.
-    JSFunction* calleeForCallFrame(ExecState*) const;
+    JSFunction* calleeForCallFrame(CallFrame*) const;
 
     CString inferredName() const;
     CodeBlockHash hash() const;
@@ -219,10 +222,16 @@ struct InlineCallFrame {
         RELEASE_ASSERT(static_cast<signed>(stackOffset) == offset);
     }
 
+    void setTmpOffset(unsigned offset)
+    {
+        tmpOffset = offset;
+        RELEASE_ASSERT(static_cast<unsigned>(tmpOffset) == offset);
+    }
+
     ptrdiff_t callerFrameOffset() const { return stackOffset * sizeof(Register) + CallFrame::callerFrameOffset(); }
     ptrdiff_t returnPCOffset() const { return stackOffset * sizeof(Register) + CallFrame::returnPCOffset(); }
 
-    bool isStrictMode() const { return baselineCodeBlock->isStrictMode(); }
+    bool isInStrictContext() const { return baselineCodeBlock->ownerExecutable()->isInStrictContext(); }
 
     void dumpBriefFunctionInformation(PrintStream&) const;
     void dump(PrintStream&) const;
@@ -240,29 +249,59 @@ inline CodeBlock* baselineCodeBlockForInlineCallFrame(InlineCallFrame* inlineCal
 
 inline CodeBlock* baselineCodeBlockForOriginAndBaselineCodeBlock(const CodeOrigin& codeOrigin, CodeBlock* baselineCodeBlock)
 {
-    ASSERT(baselineCodeBlock->jitType() == JITCode::BaselineJIT);
-    if (codeOrigin.inlineCallFrame)
-        return baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame);
+    ASSERT(JITCode::isBaselineCode(baselineCodeBlock->jitType()));
+    auto* inlineCallFrame = codeOrigin.inlineCallFrame();
+    if (inlineCallFrame)
+        return baselineCodeBlockForInlineCallFrame(inlineCallFrame);
     return baselineCodeBlock;
 }
 
+// These function is defined here and not in CodeOrigin because it needs access to the directCaller field in InlineCallFrame
 template <typename Function>
-inline void CodeOrigin::walkUpInlineStack(const Function& function)
+inline void CodeOrigin::walkUpInlineStack(const Function& function) const
 {
     CodeOrigin codeOrigin = *this;
     while (true) {
         function(codeOrigin);
-        if (!codeOrigin.inlineCallFrame)
+        auto* inlineCallFrame = codeOrigin.inlineCallFrame();
+        if (!inlineCallFrame)
             break;
-        codeOrigin = codeOrigin.inlineCallFrame->directCaller;
+        codeOrigin = inlineCallFrame->directCaller;
     }
 }
 
-ALWAYS_INLINE VirtualRegister remapOperand(InlineCallFrame* inlineCallFrame, VirtualRegister reg)
+inline bool CodeOrigin::inlineStackContainsActiveCheckpoint() const
+{
+    bool result = false;
+    walkUpInlineStack([&] (CodeOrigin origin) {
+        if (origin.bytecodeIndex().checkpoint())
+            result = true;
+    });
+    return result;
+}
+
+ALWAYS_INLINE Operand remapOperand(InlineCallFrame* inlineCallFrame, Operand operand)
 {
     if (inlineCallFrame)
-        return VirtualRegister(reg.offset() + inlineCallFrame->stackOffset);
-    return reg;
+        return operand.isTmp() ? Operand::tmp(operand.value() + inlineCallFrame->tmpOffset) : operand.virtualRegister() + inlineCallFrame->stackOffset;
+    return operand;
+}
+
+ALWAYS_INLINE Operand remapOperand(InlineCallFrame* inlineCallFrame, VirtualRegister reg)
+{
+    return remapOperand(inlineCallFrame, Operand(reg));
+}
+
+ALWAYS_INLINE Operand unmapOperand(InlineCallFrame* inlineCallFrame, Operand operand)
+{
+    if (inlineCallFrame)
+        return operand.isTmp() ? Operand::tmp(operand.value() - inlineCallFrame->tmpOffset) : Operand(operand.virtualRegister() - inlineCallFrame->stackOffset);
+    return operand;
+}
+
+ALWAYS_INLINE Operand unmapOperand(InlineCallFrame* inlineCallFrame, VirtualRegister reg)
+{
+    return unmapOperand(inlineCallFrame, Operand(reg));
 }
 
 } // namespace JSC

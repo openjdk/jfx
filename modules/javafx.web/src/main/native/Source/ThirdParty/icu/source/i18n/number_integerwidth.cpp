@@ -40,17 +40,21 @@ IntegerWidth IntegerWidth::truncateAt(int32_t maxInt) {
 }
 
 void IntegerWidth::apply(impl::DecimalQuantity& quantity, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
     if (fHasError) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
     } else if (fUnion.minMaxInt.fMaxInt == -1) {
-        quantity.setIntegerLength(fUnion.minMaxInt.fMinInt, INT32_MAX);
+        quantity.setMinInteger(fUnion.minMaxInt.fMinInt);
     } else {
         // Enforce the backwards-compatibility feature "FormatFailIfMoreThanMaxDigits"
         if (fUnion.minMaxInt.fFormatFailIfMoreThanMaxDigits &&
             fUnion.minMaxInt.fMaxInt < quantity.getMagnitude()) {
             status = U_ILLEGAL_ARGUMENT_ERROR;
         }
-        quantity.setIntegerLength(fUnion.minMaxInt.fMinInt, fUnion.minMaxInt.fMaxInt);
+        quantity.setMinInteger(fUnion.minMaxInt.fMinInt);
+        quantity.applyMaxInteger(fUnion.minMaxInt.fMaxInt);
     }
 }
 

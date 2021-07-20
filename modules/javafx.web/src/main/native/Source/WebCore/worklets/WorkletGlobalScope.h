@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,117 +26,111 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
-#include "EventTarget.h"
+#include "Document.h"
 #include "ExceptionOr.h"
+#include "FetchRequestCredentials.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
-#include "WorkerEventQueue.h"
-
+#include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/RuntimeFlags.h>
-#include <pal/SessionID.h>
-#include <wtf/URL.h>
+#include <wtf/CompletionHandler.h>
+#include <wtf/Deque.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/Optional.h>
+#include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class WorkletScriptController;
-class ScriptSourceCode;
+
+class MessagePortChannelProvider;
+class WorkerMessagePortChannelProvider;
+class WorkerScriptLoader;
+
+struct WorkletParameters;
 
 enum WorkletGlobalScopeIdentifierType { };
 using WorkletGlobalScopeIdentifier = ObjectIdentifier<WorkletGlobalScopeIdentifierType>;
 
-class WorkletGlobalScope : public RefCounted<WorkletGlobalScope>, public ScriptExecutionContext, public EventTargetWithInlineData {
+class WorkletGlobalScope : public WorkerOrWorkletGlobalScope {
+    WTF_MAKE_ISO_ALLOCATED(WorkletGlobalScope);
 public:
     virtual ~WorkletGlobalScope();
 
-    using WorkletGlobalScopesSet = HashSet<const WorkletGlobalScope*>;
-    WEBCORE_EXPORT static WorkletGlobalScopesSet& allWorkletGlobalScopesSet();
-
+#if ENABLE(CSS_PAINTING_API)
     virtual bool isPaintWorkletGlobalScope() const { return false; }
+#endif
+#if ENABLE(WEB_AUDIO)
+    virtual bool isAudioWorkletGlobalScope() const { return false; }
+#endif
 
-    const URL& url() const final { return m_code.url(); }
-    String origin() const final;
+    WEBCORE_EXPORT static unsigned numberOfWorkletGlobalScopes();
+
+    MessagePortChannelProvider& messagePortChannelProvider();
+
+    const URL& url() const final { return m_url; }
 
     void evaluate();
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
-    WorkletScriptController* script() { return m_script.get(); }
+    ReferrerPolicy referrerPolicy() const final;
 
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final;
 
-    bool isJSExecutionForbidden() const final;
     SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
 
     SocketProvider* socketProvider() final { return nullptr; }
 
-    bool isContextThread() const final { return true; }
     bool isSecureContext() const final { return false; }
 
     JSC::RuntimeFlags jsRuntimeFlags() const { return m_jsRuntimeFlags; }
 
-    virtual void prepareForDestruction();
+    void prepareForDestruction() override;
 
-protected:
-    WorkletGlobalScope(Document&, ScriptSourceCode&&);
-    WorkletGlobalScope(const WorkletGlobalScope&) = delete;
-    WorkletGlobalScope(WorkletGlobalScope&&) = delete;
+    void fetchAndInvokeScript(const URL&, FetchRequestCredentials, CompletionHandler<void(Optional<Exception>&&)>&&);
 
     Document* responsibleDocument() { return m_document.get(); }
     const Document* responsibleDocument() const { return m_document.get(); }
+
+protected:
+    WorkletGlobalScope(WorkerOrWorkletThread&, Ref<JSC::VM>&&, const WorkletParameters&);
+    WorkletGlobalScope(Document&, Ref<JSC::VM>&&, ScriptSourceCode&&);
 
 private:
 #if ENABLE(INDEXED_DATABASE)
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { ASSERT_NOT_REACHED(); return nullptr; }
 #endif
 
-    void postTask(Task&&) final { ASSERT_NOT_REACHED(); }
-
-    void refScriptExecutionContext() final { ref(); }
-    void derefScriptExecutionContext() final { deref(); }
-
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
-
-    ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkletGlobalScope*>(this); }
+    // EventTarget.
     EventTargetInterface eventTargetInterface() const final { return WorkletGlobalScopeEventTargetInterfaceType; }
 
     bool isWorkletGlobalScope() const final { return true; }
 
     void logExceptionToConsole(const String& errorMessage, const String&, int, int, RefPtr<Inspector::ScriptCallStack>&&) final;
-    void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::ExecState*, unsigned long) final;
+    void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject*, unsigned long) final;
     void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long) final;
 
     EventTarget* errorEventTarget() final { return this; }
-    EventQueue& eventQueue() const final { ASSERT_NOT_REACHED(); return m_eventQueue; }
 
 #if ENABLE(WEB_CRYPTO)
     bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return false; }
     bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return false; }
 #endif
-    URL completeURL(const String&) const final;
-    PAL::SessionID sessionID() const final { return m_sessionID; }
+    URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
-    void disableEval(const String&) final;
-    void disableWebAssembly(const String&) final;
+    const Settings::Values& settingsValues() const final { return m_settingsValues; }
 
     WeakPtr<Document> m_document;
 
-    PAL::SessionID m_sessionID;
-    std::unique_ptr<WorkletScriptController> m_script;
-
     Ref<SecurityOrigin> m_topOrigin;
 
-    // FIXME: This is not implemented properly, it just satisfies the compiler.
-    // https://bugs.webkit.org/show_bug.cgi?id=191136
-    mutable WorkerEventQueue m_eventQueue;
-
+    URL m_url;
     JSC::RuntimeFlags m_jsRuntimeFlags;
-    ScriptSourceCode m_code;
+    Optional<ScriptSourceCode> m_code;
+
+    std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
+
+    Settings::Values m_settingsValues;
 };
 
 } // namespace WebCore
@@ -144,4 +138,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkletGlobalScope)
 static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isWorkletGlobalScope(); }
 SPECIALIZE_TYPE_TRAITS_END()
-#endif

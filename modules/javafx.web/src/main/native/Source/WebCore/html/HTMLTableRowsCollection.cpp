@@ -33,17 +33,20 @@
 #include "HTMLNames.h"
 #include "HTMLTableElement.h"
 #include "HTMLTableRowElement.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableRowsCollection);
+
 static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowElement* row)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     UNUSED_PARAM(table);
     UNUSED_PARAM(row);
-#else
+#else // not ASSERT_ENABLED
     if (!row)
         return;
     if (row->parentNode() == &table)
@@ -51,7 +54,7 @@ static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowEleme
     ASSERT(row->parentNode());
     ASSERT(row->parentNode()->hasTagName(theadTag) || row->parentNode()->hasTagName(tbodyTag) || row->parentNode()->hasTagName(tfootTag));
     ASSERT(row->parentNode()->parentNode() == &table);
-#endif
+#endif // not ASSERT_ENABLED
 }
 
 static inline bool isInSection(HTMLTableRowElement& row, const HTMLQualifiedName& sectionTag)
@@ -149,7 +152,7 @@ HTMLTableRowElement* HTMLTableRowsCollection::lastRow(HTMLTableElement& table)
 }
 
 HTMLTableRowsCollection::HTMLTableRowsCollection(HTMLTableElement& table)
-    : CachedHTMLCollection<HTMLTableRowsCollection, CollectionTypeTraits<TableRows>::traversalType>(table, TableRows)
+    : CachedHTMLCollection(table, TableRows)
 {
 }
 

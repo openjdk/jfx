@@ -1,6 +1,6 @@
 /*
- * Copyright © 2007, 2008 Ryan Lortie
- * Copyright © 2009, 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2009, 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -306,7 +306,7 @@ struct _GVariantBuilder {
       const GVariantType *type;
       gsize y[14];
     } s;
-  gsize x[16];
+    gsize x[16];
   } u;
 };
 
@@ -329,7 +329,8 @@ typedef enum
   G_VARIANT_PARSE_ERROR_UNEXPECTED_TOKEN,
   G_VARIANT_PARSE_ERROR_UNKNOWN_KEYWORD,
   G_VARIANT_PARSE_ERROR_UNTERMINATED_STRING_CONSTANT,
-  G_VARIANT_PARSE_ERROR_VALUE_EXPECTED
+  G_VARIANT_PARSE_ERROR_VALUE_EXPECTED,
+  G_VARIANT_PARSE_ERROR_RECURSION
 } GVariantParseError;
 #define G_VARIANT_PARSE_ERROR (g_variant_parse_error_quark ())
 
@@ -445,7 +446,7 @@ struct _GVariantDict {
       gsize partial_magic;
       gsize y[14];
     } s;
-  gsize x[16];
+    gsize x[16];
   } u;
 };
 

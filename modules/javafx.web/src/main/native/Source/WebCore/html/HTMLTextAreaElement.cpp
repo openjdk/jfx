@@ -103,15 +103,19 @@ Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(const QualifiedName& tagNam
     return textArea;
 }
 
-void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot& root)
+Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(Document& document)
 {
-    root.appendChild(TextControlInnerTextElement::create(document()));
-    updateInnerTextElementEditability();
+    return create(textareaTag, document, nullptr);
 }
 
-const AtomicString& HTMLTextAreaElement::formControlType() const
+void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
-    static NeverDestroyed<const AtomicString> textarea("textarea", AtomicString::ConstructFromLiteral);
+    root.appendChild(TextControlInnerTextElement::create(document(), isInnerTextElementEditable()));
+}
+
+const AtomString& HTMLTextAreaElement::formControlType() const
+{
+    static MainThreadNeverDestroyed<const AtomString> textarea("textarea", AtomString::ConstructFromLiteral);
     return textarea;
 }
 
@@ -148,7 +152,7 @@ bool HTMLTextAreaElement::isPresentationAttribute(const QualifiedName& name) con
     return HTMLTextFormControlElement::isPresentationAttribute(name);
 }
 
-void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == wrapAttr) {
         if (shouldWrapText()) {
@@ -162,7 +166,7 @@ void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedNa
         HTMLTextFormControlElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == rowsAttr) {
         unsigned rows = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(value, defaultRows);
@@ -201,13 +205,13 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const Atomic
         HTMLTextFormControlElement::parseAttribute(name, value);
 }
 
-void HTMLTextAreaElement::maxLengthAttributeChanged(const AtomicString& newValue)
+void HTMLTextAreaElement::maxLengthAttributeChanged(const AtomString& newValue)
 {
     internalSetMaxLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
     updateValidity();
 }
 
-void HTMLTextAreaElement::minLengthAttributeChanged(const AtomicString& newValue)
+void HTMLTextAreaElement::minLengthAttributeChanged(const AtomString& newValue)
 {
     internalSetMinLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
     updateValidity();
@@ -245,6 +249,11 @@ bool HTMLTextAreaElement::hasCustomFocusLogic() const
     return true;
 }
 
+int HTMLTextAreaElement::defaultTabIndex() const
+{
+    return 0;
+}
+
 bool HTMLTextAreaElement::isKeyboardFocusable(KeyboardEvent*) const
 {
     // If a given text area can be focused at all, then it will always be keyboard focusable.
@@ -258,13 +267,14 @@ bool HTMLTextAreaElement::isMouseFocusable() const
 
 void HTMLTextAreaElement::updateFocusAppearance(SelectionRestorationMode restorationMode, SelectionRevealMode revealMode)
 {
-    if (restorationMode == SelectionRestorationMode::SetDefault || !hasCachedSelection()) {
+    if (restorationMode == SelectionRestorationMode::RestoreOrSelectAll && hasCachedSelection())
+        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    else {
         // If this is the first focus, set a caret at the beginning of the text.
         // This matches some browsers' behavior; see bug 11746 Comment #15.
         // http://bugs.webkit.org/show_bug.cgi?id=11746#c15
         setSelectionRange(0, 0, SelectionHasNoDirection, revealMode, Element::defaultFocusTextStateChangeIntent());
-    } else
-        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    }
 }
 
 void HTMLTextAreaElement::defaultEventHandler(Event& event)
@@ -279,12 +289,13 @@ void HTMLTextAreaElement::defaultEventHandler(Event& event)
 
 void HTMLTextAreaElement::subtreeHasChanged()
 {
-    setChangedSinceLastFormControlChangeEvent(true);
     setFormControlValueMatchesRenderer(false);
     updateValidity();
 
     if (!focused())
         return;
+
+    setChangedSinceLastFormControlChangeEvent(true);
 
     if (RefPtr<Frame> frame = document().frame())
         frame->editor().textDidChangeInTextArea(this);
@@ -312,7 +323,8 @@ void HTMLTextAreaElement::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&
     // If the text field has no focus, we don't need to take account of the
     // selection length. The selection is the source of text drag-and-drop in
     // that case, and nothing in the text field will be removed.
-    unsigned selectionLength = focused() ? computeLengthForSubmission(plainText(document().frame()->selection().selection().toNormalizedRange().get())) : 0;
+    auto selectionRange = focused() ? document().frame()->selection().selection().toNormalizedRange() : WTF::nullopt;
+    unsigned selectionLength = selectionRange ? computeLengthForSubmission(plainText(*selectionRange)) : 0;
     ASSERT(currentLength >= selectionLength);
     unsigned baseLength = currentLength - selectionLength;
     unsigned appendableLength = unsignedMaxLength > baseLength ? unsignedMaxLength - baseLength : 0;
@@ -493,9 +505,10 @@ bool HTMLTextAreaElement::isValidValue(const String& candidate) const
     return !valueMissing(candidate) && !tooShort(candidate, IgnoreDirtyFlag) && !tooLong(candidate, IgnoreDirtyFlag);
 }
 
-void HTMLTextAreaElement::accessKeyAction(bool)
+bool HTMLTextAreaElement::accessKeyAction(bool)
 {
     focus();
+    return false;
 }
 
 void HTMLTextAreaElement::setCols(unsigned cols)
@@ -551,13 +564,6 @@ RenderStyle HTMLTextAreaElement::createInnerTextStyle(const RenderStyle& style)
     textBlockStyle.inheritFrom(style);
     adjustInnerTextStyle(style, textBlockStyle);
     textBlockStyle.setDisplay(DisplayType::Block);
-
-#if PLATFORM(IOS_FAMILY)
-    // We're adding three extra pixels of padding to line textareas up with text fields.
-    textBlockStyle.setPaddingLeft(Length(3, Fixed));
-    textBlockStyle.setPaddingRight(Length(3, Fixed));
-#endif
-
     return textBlockStyle;
 }
 

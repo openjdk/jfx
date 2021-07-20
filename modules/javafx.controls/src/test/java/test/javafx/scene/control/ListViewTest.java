@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,14 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.tk.Toolkit;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -74,6 +80,9 @@ import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static javafx.collections.FXCollections.*;
+
+import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -148,6 +157,18 @@ public class ListViewTest {
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
+    @Test public void noArgConstructorSetsVerticalPseudoclass() {
+        ListView<?> listView = new ListView<String>();
+        assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
+        assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
+    }
+
+    @Test public void singleArgConstructorSetsVerticalPseudoclass() {
+        ListView<?> listView = new ListView<>(FXCollections.observableArrayList());
+        assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
+        assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
+    }
+
     /*********************************************************************
      * Tests for selection model                                         *
      ********************************************************************/
@@ -168,6 +189,40 @@ public class ListViewTest {
         MultipleSelectionModel<String> sm = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
         listView.setSelectionModel(sm);
         assertSame(sm, sm);
+    }
+
+    @Test public void testCtrlAWhenSwitchingSelectionModel() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm;
+        StageLoader sl = new StageLoader(listView);
+        KeyEventFirer keyboard = new KeyEventFirer(listView);
+
+        MultipleSelectionModel<String> smMultiple = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
+        smMultiple.setSelectionMode(SelectionMode.MULTIPLE);
+        MultipleSelectionModel<String> smSingle = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
+        smSingle.setSelectionMode(SelectionMode.SINGLE);
+
+        listView.setSelectionModel(smMultiple);
+        sm = listView.getSelectionModel();
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
+
+        listView.setSelectionModel(smSingle);
+        sm = listView.getSelectionModel();
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
     }
 
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
@@ -589,7 +644,10 @@ public class ListViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
+
     }
 
     @Test public void test_rt30400() {
@@ -820,6 +878,52 @@ public class ListViewTest {
         sl.dispose();
     }
 
+//--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(listView.getItems().size() - 1);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(listView.getItems().size() - 1);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(0);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        assertNotNull("sanity: ", selectedItem);
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
         final ListView<String> listView = new ListView<String>(fxList);
@@ -836,6 +940,8 @@ public class ListViewTest {
         assertEquals("C", fxList.get(1));
     }
 
+//-------- end regression testing of JDK-8093144
+
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
         final ListView<String> textFieldListView = new ListView<String>();
@@ -844,7 +950,7 @@ public class ListViewTest {
         textFieldListView.setCellFactory(TextFieldListCell.forListView());
         textFieldListView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
-            System.out.println("On Edit Cancel: " + t);
+            //System.out.println("On Edit Cancel: " + t);
         });
 
         ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
@@ -1020,12 +1126,12 @@ public class ListViewTest {
                     items.remove(12);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 39 : 45, rt_35395_counter);
+                        assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
                         rt_35395_counter = 0;
                         items.add(12, "yellow");
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
-                            assertEquals(useFixedCellSize ? 39 : 45, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
                             rt_35395_counter = 0;
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
@@ -1035,7 +1141,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 53, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 21 : 23, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
@@ -1383,7 +1489,8 @@ public class ListViewTest {
         MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+        // Enable below prints for debug if needed
+        /*sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
             while (change.next()) {
                 System.out.println("sm.getSelectedItems(): " + change.getList());
             }
@@ -1393,7 +1500,7 @@ public class ListViewTest {
             while (change.next()) {
                 System.out.println("rt_39482_list: " + change.getList());
             }
-        });
+        });*/
 
         Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
 
@@ -1409,7 +1516,6 @@ public class ListViewTest {
     private void test_rt_39482_selectRow(String expectedString,
                                          MultipleSelectionModel<String> sm,
                                          int rowToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedIndices().size());
         assertEquals(4, sm.getSelectedItems().size());
@@ -1460,6 +1566,33 @@ public class ListViewTest {
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals("a", sm.getSelectedItems().get(0));
         assertEquals("b", sm.getSelectedItems().get(1));
+
+        sl.dispose();
+    }
+
+    @Test public void testCtrlAWhenSwitchingSelectionMode() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        StageLoader sl = new StageLoader(listView);
+        KeyEventFirer keyboard = new KeyEventFirer(listView);
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
 
         sl.dispose();
     }
@@ -1790,7 +1923,7 @@ public class ListViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
@@ -1974,5 +2107,82 @@ public class ListViewTest {
         assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
         assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
         assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+    }
+
+    @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
+        ListView<String> listView = new ListView<>(FXCollections
+                .observableArrayList("Item1", "Item2"));
+        StageLoader sl = new StageLoader(listView);
+
+        ListViewBehavior lvBehavior = (ListViewBehavior) ControlSkinFactory.getBehavior(listView.getSkin());
+        InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        ObservableList<?> inputMappings = lvInputMap.getMappings();
+        // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
+        InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+        ObservableList<?> verticalInputMappings = verticalInputMap.getMappings();
+
+        // Verify FocusTraversalInputMap
+        for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
+            assertTrue(inputMappings.contains(mapping));
+        }
+
+        // Verify default InputMap
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut());
+
+        // Verify vertical child InputMap
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift());
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift());
+
+        sl.dispose();
+    }
+
+    private void testInterceptor(ObservableList<?> mappings, KeyBinding binding) {
+        int i = mappings.indexOf(new KeyMapping(binding, null));
+        if (((KeyMapping)mappings.get(i)).getInterceptor() != null) {
+            assertFalse(((KeyMapping)mappings.get(i)).getInterceptor().test(null));
+        } else {
+            // JDK-8209788 added interceptor for few KeyMappings
+            fail("Interceptor must not be null");
+        }
+    }
+
+    @Test
+    public void testListViewLeak() {
+        ObservableList<String> items = FXCollections.observableArrayList();
+        WeakReference<ListView<String>> listViewRef = new WeakReference<>(new ListView<>(items));
+        attemptGC(listViewRef, 10);
+        assertNull("ListView is not GCed.", listViewRef.get());
+    }
+
+    @Test
+    public void testItemLeak() {
+        WeakReference<String> itemRef = new WeakReference<>(new String("Leak Item"));
+        ObservableList<String> items = FXCollections.observableArrayList(itemRef.get());
+        ListView<String> listView = new ListView<>(items);
+        items.clear();
+        attemptGC(itemRef, 10);
+        assertNull("ListView item is not GCed.", itemRef.get());
+    }
+
+    private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
+        for (int i = 0; i < n; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (weakRef.get() == null) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                fail("InterruptedException occurred during Thread.sleep()");
+            }
+        }
     }
 }

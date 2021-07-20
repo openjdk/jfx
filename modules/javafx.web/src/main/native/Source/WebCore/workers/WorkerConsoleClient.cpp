@@ -27,6 +27,7 @@
 #include "WorkerConsoleClient.h"
 
 #include "InspectorInstrumentation.h"
+#include "WorkerGlobalScope.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/ScriptArguments.h>
 #include <JavaScriptCore/ScriptCallStack.h>
@@ -35,45 +36,67 @@
 namespace WebCore {
 using namespace Inspector;
 
-WorkerConsoleClient::WorkerConsoleClient(WorkerGlobalScope& workerGlobalScope)
-    : m_workerGlobalScope(workerGlobalScope)
+WorkerConsoleClient::WorkerConsoleClient(WorkerOrWorkletGlobalScope& globalScope)
+    : m_globalScope(globalScope)
 {
 }
 
 WorkerConsoleClient::~WorkerConsoleClient() = default;
 
-void WorkerConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::ExecState* exec, Ref<Inspector::ScriptArguments>&& arguments)
+void WorkerConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::JSGlobalObject* exec, Ref<Inspector::ScriptArguments>&& arguments)
 {
     String messageText;
     arguments->getFirstArgumentAsString(messageText);
-    auto message = std::make_unique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, type, level, messageText, WTFMove(arguments), exec);
-    m_workerGlobalScope.addConsoleMessage(WTFMove(message));
+    auto message = makeUnique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, type, level, messageText, WTFMove(arguments), exec);
+    m_globalScope.addConsoleMessage(WTFMove(message));
 }
 
-void WorkerConsoleClient::count(JSC::ExecState* exec, Ref<ScriptArguments>&& arguments)
+void WorkerConsoleClient::count(JSC::JSGlobalObject* exec, const String& label)
 {
-    InspectorInstrumentation::consoleCount(m_workerGlobalScope, exec, WTFMove(arguments));
+    // FIXME: Add support for WorkletGlobalScope.
+    if (is<WorkerGlobalScope>(m_globalScope))
+        InspectorInstrumentation::consoleCount(downcast<WorkerGlobalScope>(m_globalScope), exec, label);
 }
 
-void WorkerConsoleClient::time(JSC::ExecState*, const String& title)
+void WorkerConsoleClient::countReset(JSC::JSGlobalObject* exec, const String& label)
 {
-    InspectorInstrumentation::startConsoleTiming(m_workerGlobalScope, title);
+    // FIXME: Add support for WorkletGlobalScope.
+    if (is<WorkerGlobalScope>(m_globalScope))
+        InspectorInstrumentation::consoleCountReset(downcast<WorkerGlobalScope>(m_globalScope), exec, label);
 }
 
-void WorkerConsoleClient::timeEnd(JSC::ExecState* exec, const String& title)
+void WorkerConsoleClient::time(JSC::JSGlobalObject* exec, const String& label)
 {
-    InspectorInstrumentation::stopConsoleTiming(m_workerGlobalScope, title, createScriptCallStackForConsole(exec, 1));
+    // FIXME: Add support for WorkletGlobalScope.
+    if (is<WorkerGlobalScope>(m_globalScope))
+        InspectorInstrumentation::startConsoleTiming(downcast<WorkerGlobalScope>(m_globalScope), exec, label);
+}
+
+void WorkerConsoleClient::timeLog(JSC::JSGlobalObject* exec, const String& label, Ref<ScriptArguments>&& arguments)
+{
+    // FIXME: Add support for WorkletGlobalScope.
+    if (is<WorkerGlobalScope>(m_globalScope))
+        InspectorInstrumentation::logConsoleTiming(downcast<WorkerGlobalScope>(m_globalScope), exec, label, WTFMove(arguments));
+}
+
+void WorkerConsoleClient::timeEnd(JSC::JSGlobalObject* exec, const String& label)
+{
+    // FIXME: Add support for WorkletGlobalScope.
+    if (is<WorkerGlobalScope>(m_globalScope))
+        InspectorInstrumentation::stopConsoleTiming(downcast<WorkerGlobalScope>(m_globalScope), exec, label);
 }
 
 // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-void WorkerConsoleClient::profile(JSC::ExecState*, const String&) { }
-void WorkerConsoleClient::profileEnd(JSC::ExecState*, const String&) { }
+void WorkerConsoleClient::profile(JSC::JSGlobalObject*, const String&) { }
+void WorkerConsoleClient::profileEnd(JSC::JSGlobalObject*, const String&) { }
 
 // FIXME: <https://webkit.org/b/127634> Web Inspector: support debugging web workers
-void WorkerConsoleClient::takeHeapSnapshot(JSC::ExecState*, const String&) { }
-void WorkerConsoleClient::timeStamp(JSC::ExecState*, Ref<ScriptArguments>&&) { }
+void WorkerConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String&) { }
+void WorkerConsoleClient::timeStamp(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
 
-void WorkerConsoleClient::record(JSC::ExecState*, Ref<ScriptArguments>&&) { }
-void WorkerConsoleClient::recordEnd(JSC::ExecState*, Ref<ScriptArguments>&&) { }
+void WorkerConsoleClient::record(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
+void WorkerConsoleClient::recordEnd(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
+
+void WorkerConsoleClient::screenshot(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
 
 } // namespace WebCore

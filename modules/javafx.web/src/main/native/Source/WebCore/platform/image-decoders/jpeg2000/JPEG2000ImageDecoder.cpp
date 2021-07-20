@@ -360,7 +360,7 @@ void JPEG2000ImageDecoder::decode(bool onlySize, bool allDataReceived)
     if (failed())
         return;
 
-    std::unique_ptr<opj_codec_t, void(*)(opj_codec_t*)> decoder(opj_create_decompress(m_format == Format::JP2 ? OPJ_CODEC_JP2 : OPJ_CODEC_J2K), opj_destroy_codec);
+    std::unique_ptr<opj_codec_t, decltype(&opj_destroy_codec)> decoder(opj_create_decompress(m_format == Format::JP2 ? OPJ_CODEC_JP2 : OPJ_CODEC_J2K), opj_destroy_codec);
     if (!decoder) {
         setFailed();
         return;
@@ -373,14 +373,14 @@ void JPEG2000ImageDecoder::decode(bool onlySize, bool allDataReceived)
         return;
     }
 
-    std::unique_ptr<opj_stream_t, void(*)(opj_stream_t*)> stream(opj_stream_default_create(OPJ_TRUE), opj_stream_destroy);
+    std::unique_ptr<opj_stream_t, decltype(&opj_stream_destroy)> stream(opj_stream_default_create(OPJ_TRUE), opj_stream_destroy);
     if (!stream) {
         setFailed();
         return;
     }
 
     struct Reader {
-        SharedBuffer& data;
+        SharedBuffer::DataSegment& data;
         size_t offset;
     } reader = { *m_data, 0 };
 
@@ -424,7 +424,7 @@ void JPEG2000ImageDecoder::decode(bool onlySize, bool allDataReceived)
         return;
     }
 
-    std::unique_ptr<opj_image_t, void(*)(opj_image_t*)> image(imagePtr, opj_image_destroy);
+    std::unique_ptr<opj_image_t, decltype(&opj_image_destroy)> image(imagePtr, opj_image_destroy);
     setSize({ static_cast<int>(image->x1 - image->x0), static_cast<int>(image->y1 - image->y0) });
     if (onlySize)
         return;
@@ -479,7 +479,7 @@ void JPEG2000ImageDecoder::decode(bool onlySize, bool allDataReceived)
     }
 
     auto& buffer = m_frameBufferCache[0];
-    if (!buffer.initialize(scaledSize(), m_premultiplyAlpha)) {
+    if (!buffer.initialize(size(), m_premultiplyAlpha)) {
         setFailed();
         return;
     }

@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLBaseSemantic.h"
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Optional.h>
 
 namespace WebCore {
@@ -38,6 +39,7 @@ namespace WHLSL {
 namespace AST {
 
 class BuiltInSemantic : public BaseSemantic {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Variable : uint8_t {
         SVInstanceID,
@@ -56,8 +58,8 @@ public:
         SVGroupThreadID
     };
 
-    BuiltInSemantic(Lexer::Token&& origin, Variable variable, Optional<unsigned>&& targetIndex = WTF::nullopt)
-        : BaseSemantic(WTFMove(origin))
+    BuiltInSemantic(CodeLocation location, Variable variable, Optional<unsigned>&& targetIndex = WTF::nullopt)
+        : BaseSemantic(location)
         , m_variable(variable)
         , m_targetIndex(WTFMove(targetIndex))
     {
@@ -81,6 +83,40 @@ public:
         return !(*this == other);
     }
 
+    StringView toString() const
+    {
+        switch (m_variable) {
+        case Variable::SVInstanceID:
+            return "SVInstanceID";
+        case Variable::SVVertexID:
+            return "SVVertexID";
+        case Variable::PSize:
+            return "PSize";
+        case Variable::SVPosition:
+            return "SVPosition";
+        case Variable::SVIsFrontFace:
+            return "SVIsFrontFace";
+        case Variable::SVSampleIndex:
+            return "SVSampleIndex";
+        case Variable::SVInnerCoverage:
+            return "SVInnerCoverage";
+        case Variable::SVTarget:
+            return "SVTarget";
+        case Variable::SVDepth:
+            return "SVDepth";
+        case Variable::SVCoverage:
+            return "SVCoverage";
+        case Variable::SVDispatchThreadID:
+            return "SVDispatchThreadID";
+        case Variable::SVGroupID:
+            return "SVGroupID";
+        case Variable::SVGroupIndex:
+            return "SVGroupIndex";
+        case Variable::SVGroupThreadID:
+            return "SVGroupThreadID";
+        }
+    }
+
     bool isAcceptableType(const UnnamedType&, const Intrinsics&) const override;
     bool isAcceptableForShaderItemDirection(ShaderItemDirection, const Optional<EntryPointType>&) const override;
 
@@ -95,4 +131,4 @@ private:
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

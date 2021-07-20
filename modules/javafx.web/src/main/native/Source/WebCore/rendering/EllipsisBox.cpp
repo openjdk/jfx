@@ -34,7 +34,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(EllipsisBox);
 
-EllipsisBox::EllipsisBox(RenderBlockFlow& renderer, const AtomicString& ellipsisStr, InlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isHorizontal, InlineBox* markupBox)
+EllipsisBox::EllipsisBox(RenderBlockFlow& renderer, const AtomString& ellipsisStr, InlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isHorizontal, InlineBox* markupBox)
     : InlineElementBox(renderer, FloatPoint(0, y), width, firstLine, true, false, false, isHorizontal, 0, 0, parent)
     , m_shouldPaintMarkupBox(markupBox)
     , m_height(height)
@@ -60,7 +60,7 @@ void EllipsisBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, La
     }
 
     const FontCascade& font = lineStyle.fontCascade();
-    if (selectionState() != RenderObject::SelectionNone) {
+    if (selectionState() != RenderObject::HighlightState::None) {
         paintSelection(context, paintOffset, lineStyle, font);
 
         // Select the correct color for painting the text.
@@ -70,7 +70,7 @@ void EllipsisBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, La
     }
 
     // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
-    context.drawText(font, RenderBlock::constructTextRun(m_str, lineStyle, AllowTrailingExpansion), LayoutPoint(x() + paintOffset.x(), y() + paintOffset.y() + lineStyle.fontMetrics().ascent()));
+    context.drawText(font, RenderBlock::constructTextRun(m_str, lineStyle, AllowRightExpansion), LayoutPoint(x() + paintOffset.x(), y() + paintOffset.y() + lineStyle.fontMetrics().ascent()));
 
     // Restore the regular fill color.
     if (textColor != context.fillColor())
@@ -87,7 +87,7 @@ InlineBox* EllipsisBox::markupBox() const
     if (!m_shouldPaintMarkupBox)
         return 0;
 
-    RootInlineBox* lastLine = blockFlow().lineAtIndex(blockFlow().lineCount() - 1);
+    RootInlineBox* lastLine = blockFlow().lastRootBox();
     if (!lastLine)
         return 0;
 
@@ -118,8 +118,8 @@ IntRect EllipsisBox::selectionRect()
     const FontCascade& font = lineStyle.fontCascade();
     const RootInlineBox& rootBox = root();
     // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
-    LayoutRect selectionRect = LayoutRect(x(), y() + rootBox.selectionTopAdjustedForPrecedingBlock(), 0_lu, rootBox.selectionHeightAdjustedForPrecedingBlock());
-    font.adjustSelectionRectForText(RenderBlock::constructTextRun(m_str, lineStyle, AllowTrailingExpansion), selectionRect);
+    LayoutRect selectionRect { LayoutUnit(x()), LayoutUnit(y() + rootBox.selectionTopAdjustedForPrecedingBlock()), 0_lu, rootBox.selectionHeightAdjustedForPrecedingBlock() };
+    font.adjustSelectionRectForText(RenderBlock::constructTextRun(m_str, lineStyle, AllowRightExpansion), selectionRect);
     // FIXME: use directional pixel snapping instead.
     return enclosingIntRect(selectionRect);
 }
@@ -134,13 +134,13 @@ void EllipsisBox::paintSelection(GraphicsContext& context, const LayoutPoint& pa
     // If the text color ends up being the same as the selection background, invert the selection
     // background.
     if (textColor == c)
-        c = Color(0xff - c.red(), 0xff - c.green(), 0xff - c.blue());
+        c = c.invertedColorWithAlpha(1.0);
 
     const RootInlineBox& rootBox = root();
     GraphicsContextStateSaver stateSaver(context);
     // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
-    LayoutRect selectionRect = LayoutRect(x() + paintOffset.x(), y() + paintOffset.y() + rootBox.selectionTop(), 0_lu, rootBox.selectionHeight());
-    TextRun run = RenderBlock::constructTextRun(m_str, style, AllowTrailingExpansion);
+    LayoutRect selectionRect { LayoutUnit(x() + paintOffset.x()), LayoutUnit(y() + paintOffset.y() + rootBox.selectionTop()), 0_lu, rootBox.selectionHeight() };
+    TextRun run = RenderBlock::constructTextRun(m_str, style, AllowRightExpansion);
     font.adjustSelectionRectForText(run, selectionRect);
     context.fillRect(snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), run.ltr()), c);
 }
@@ -152,18 +152,18 @@ bool EllipsisBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     // Hit test the markup box.
     if (InlineBox* markupBox = this->markupBox()) {
         const RenderStyle& lineStyle = this->lineStyle();
-        LayoutUnit mtx = adjustedLocation.x() + logicalWidth() - markupBox->x();
-        LayoutUnit mty = adjustedLocation.y() + lineStyle.fontMetrics().ascent() - (markupBox->y() + markupBox->lineStyle().fontMetrics().ascent());
+        LayoutUnit mtx { adjustedLocation.x() + logicalWidth() - markupBox->x() };
+        LayoutUnit mty { adjustedLocation.y() + lineStyle.fontMetrics().ascent() - (markupBox->y() + markupBox->lineStyle().fontMetrics().ascent()) };
         if (markupBox->nodeAtPoint(request, result, locationInContainer, LayoutPoint(mtx, mty), lineTop, lineBottom, hitTestAction)) {
             blockFlow().updateHitTestResult(result, locationInContainer.point() - LayoutSize(mtx, mty));
             return true;
         }
     }
 
-    LayoutRect boundsRect(adjustedLocation, LayoutSize(logicalWidth(), m_height));
+    LayoutRect boundsRect { adjustedLocation, LayoutSize(LayoutUnit(logicalWidth()), m_height) };
     if (visibleToHitTesting() && boundsRect.intersects(HitTestLocation::rectForPoint(locationInContainer.point(), 0, 0, 0, 0))) {
         blockFlow().updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-        if (result.addNodeToListBasedTestResult(blockFlow().element(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(blockFlow().nodeForHitTest(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
             return true;
     }
 

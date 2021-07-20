@@ -54,7 +54,7 @@ bool CredentialsContainer::doesHaveSameOriginAsItsAncestors()
 
     auto& origin = m_document->securityOrigin();
     for (auto* document = m_document->parentDocument(); document; document = document->parentDocument()) {
-        if (!originsMatch(document->securityOrigin(), origin))
+        if (!origin.isSameOriginAs(document->securityOrigin()))
             return false;
     }
     return true;
@@ -83,7 +83,13 @@ void CredentialsContainer::get(CredentialRequestOptions&& options, CredentialPro
         return;
     }
 
-    m_document->page()->authenticatorCoordinator().discoverFromExternalSource(m_document->securityOrigin(), options.publicKey.value(), doesHaveSameOriginAsItsAncestors(), WTFMove(options.signal), WTFMove(promise));
+    // Extra.
+    if (!m_document->hasFocus()) {
+        promise.reject(Exception { NotAllowedError, "The document is not focused."_s });
+        return;
+    }
+
+    m_document->page()->authenticatorCoordinator().discoverFromExternalSource(*m_document, options.publicKey.value(), doesHaveSameOriginAsItsAncestors(), WTFMove(options.signal), WTFMove(promise));
 }
 
 void CredentialsContainer::store(const BasicCredential&, CredentialPromise&& promise)
@@ -112,7 +118,13 @@ void CredentialsContainer::isCreate(CredentialCreationOptions&& options, Credent
         return;
     }
 
-    m_document->page()->authenticatorCoordinator().create(m_document->securityOrigin(), options.publicKey.value(), doesHaveSameOriginAsItsAncestors(), WTFMove(options.signal), WTFMove(promise));
+    // Extra.
+    if (!m_document->hasFocus()) {
+        promise.reject(Exception { NotAllowedError, "The document is not focused."_s });
+        return;
+    }
+
+    m_document->page()->authenticatorCoordinator().create(*m_document, options.publicKey.value(), doesHaveSameOriginAsItsAncestors(), WTFMove(options.signal), WTFMove(promise));
 }
 
 void CredentialsContainer::preventSilentAccess(DOMPromiseDeferred<void>&& promise) const

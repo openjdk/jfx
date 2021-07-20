@@ -1,6 +1,6 @@
 /*
- * Copyright © 2007, 2008 Ryan Lortie
- * Copyright © 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,5 +33,7 @@ GVariant *              g_variant_new_from_children                     (const G
 gboolean                g_variant_is_trusted                            (GVariant            *value);
 
 GVariantTypeInfo *      g_variant_get_type_info                         (GVariant            *value);
+
+gsize                   g_variant_get_depth                             (GVariant            *value);
 
 #endif /* __G_VARIANT_CORE_H__ */

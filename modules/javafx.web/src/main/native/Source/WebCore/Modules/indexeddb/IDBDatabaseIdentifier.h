@@ -27,8 +27,8 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include "ClientOrigin.h"
 #include "SecurityOriginData.h"
-#include <pal/SessionID.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,7 +44,7 @@ public:
     {
     }
 
-    WEBCORE_EXPORT IDBDatabaseIdentifier(const String& databaseName, const PAL::SessionID&, SecurityOriginData&& openingOrigin, SecurityOriginData&& mainFrameOrigin);
+    WEBCORE_EXPORT IDBDatabaseIdentifier(const String& databaseName, SecurityOriginData&& openingOrigin, SecurityOriginData&& mainFrameOrigin, bool isTransient = false);
 
     IDBDatabaseIdentifier isolatedCopy() const;
 
@@ -56,13 +56,10 @@ public:
     unsigned hash() const
     {
         unsigned nameHash = StringHash::hash(m_databaseName);
-        unsigned sessionIDHash = WTF::SessionIDHash::hash(m_sessionID);
-        unsigned openingProtocolHash = StringHash::hash(m_openingOrigin.protocol);
-        unsigned openingHostHash = StringHash::hash(m_openingOrigin.host);
-        unsigned mainFrameProtocolHash = StringHash::hash(m_mainFrameOrigin.protocol);
-        unsigned mainFrameHostHash = StringHash::hash(m_mainFrameOrigin.host);
+        unsigned originHash = m_origin.hash();
+        unsigned transientHash = m_isTransient;
 
-        unsigned hashCodes[8] = { nameHash, sessionIDHash, openingProtocolHash, openingHostHash, m_openingOrigin.port.valueOr(0), mainFrameProtocolHash, mainFrameHostHash, m_mainFrameOrigin.port.valueOr(0) };
+        unsigned hashCodes[3] = { nameHash, originHash, transientHash };
         return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
     }
 
@@ -79,34 +76,29 @@ public:
 
     bool operator==(const IDBDatabaseIdentifier& other) const
     {
-        return other.m_databaseName == m_databaseName
-            && other.m_openingOrigin == m_openingOrigin
-            && other.m_mainFrameOrigin == m_mainFrameOrigin;
+        return other.m_databaseName == m_databaseName && other.m_origin == m_origin && other.m_isTransient == m_isTransient;
     }
 
     const String& databaseName() const { return m_databaseName; }
-    const PAL::SessionID& sessionID() const { return m_sessionID; }
+    const ClientOrigin& origin() const { return m_origin; }
+    bool isTransient() const { return m_isTransient; }
 
-    String databaseDirectoryRelativeToRoot(const String& rootDirectory) const;
-    static String databaseDirectoryRelativeToRoot(const SecurityOriginData& topLevelOrigin, const SecurityOriginData& openingOrigin, const String& rootDirectory);
+    String databaseDirectoryRelativeToRoot(const String& rootDirectory, const String& versionString="v1") const;
+    static String databaseDirectoryRelativeToRoot(const SecurityOriginData& topLevelOrigin, const SecurityOriginData& openingOrigin, const String& rootDirectory, const String& versionString);
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<IDBDatabaseIdentifier> decode(Decoder&);
 
 #if !LOG_DISABLED
-    String debugString() const;
+    String loggingString() const;
 #endif
 
-    bool isRelatedToOrigin(const SecurityOriginData& other) const
-    {
-        return m_openingOrigin == other || m_mainFrameOrigin == other;
-    }
+    bool isRelatedToOrigin(const SecurityOriginData& other) const { return m_origin.isRelated(other); }
 
 private:
     String m_databaseName;
-    PAL::SessionID m_sessionID;
-    SecurityOriginData m_openingOrigin;
-    SecurityOriginData m_mainFrameOrigin;
+    ClientOrigin m_origin;
+    bool m_isTransient { false };
 };
 
 struct IDBDatabaseIdentifierHash {
@@ -124,7 +116,7 @@ struct IDBDatabaseIdentifierHashTraits : WTF::SimpleClassHashTraits<IDBDatabaseI
 template<class Encoder>
 void IDBDatabaseIdentifier::encode(Encoder& encoder) const
 {
-    encoder << m_databaseName << m_sessionID << m_openingOrigin << m_mainFrameOrigin;
+    encoder << m_databaseName << m_origin << m_isTransient;
 }
 
 template<class Decoder>
@@ -135,27 +127,21 @@ Optional<IDBDatabaseIdentifier> IDBDatabaseIdentifier::decode(Decoder& decoder)
     if (!databaseName)
         return WTF::nullopt;
 
-    Optional<PAL::SessionID> sessionID;
-    decoder >> sessionID;
-    if (!sessionID)
+    Optional<ClientOrigin> origin;
+    decoder >> origin;
+    if (!origin)
         return WTF::nullopt;
 
-    Optional<SecurityOriginData> openingOrigin;
-    decoder >> openingOrigin;
-    if (!openingOrigin)
-        return WTF::nullopt;
-
-    Optional<SecurityOriginData> mainFrameOrigin;
-    decoder >> mainFrameOrigin;
-    if (!mainFrameOrigin)
+    Optional<bool> isTransient;
+    decoder >> isTransient;
+    if (!isTransient)
         return WTF::nullopt;
 
     IDBDatabaseIdentifier identifier;
     identifier.m_databaseName = WTFMove(*databaseName); // FIXME: When decoding from IPC, databaseName can be null, and the non-empty constructor asserts that this is not the case.
-    identifier.m_sessionID = WTFMove(*sessionID);
-    identifier.m_openingOrigin = WTFMove(*openingOrigin);
-    identifier.m_mainFrameOrigin = WTFMove(*mainFrameOrigin);
-    return WTFMove(identifier);
+    identifier.m_origin = WTFMove(*origin);
+    identifier.m_isTransient = *isTransient;
+    return identifier;
 }
 
 } // namespace WebCore
@@ -163,9 +149,7 @@ Optional<IDBDatabaseIdentifier> IDBDatabaseIdentifier::decode(Decoder& decoder)
 namespace WTF {
 
 template<> struct HashTraits<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHashTraits { };
-template<> struct DefaultHash<WebCore::IDBDatabaseIdentifier> {
-    typedef WebCore::IDBDatabaseIdentifierHash Hash;
-};
+template<> struct DefaultHash<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHash { };
 
 } // namespace WTF
 

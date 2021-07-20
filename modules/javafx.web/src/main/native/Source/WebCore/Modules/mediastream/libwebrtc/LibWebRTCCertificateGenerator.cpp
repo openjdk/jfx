@@ -27,12 +27,14 @@
 
 #if USE(LIBWEBRTC)
 
+#include "JSDOMPromiseDeferred.h"
 #include "JSRTCCertificate.h"
 #include "LibWebRTCMacros.h"
+#include "RTCCertificate.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/rtc_base/rtccertificategenerator.h>
+#include <webrtc/rtc_base/rtc_certificate_generator.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -112,7 +114,9 @@ void generateCertificate(Ref<SecurityOrigin>&& origin, LibWebRTCProvider& provid
     if (info.expires)
         expiresMs = static_cast<uint64_t>(*info.expires);
 
-    provider.certificateGenerator().GenerateCertificateAsync(keyParamsFromCertificateType(info), expiresMs, WTFMove(callback));
+    provider.prepareCertificateGenerator([info, expiresMs, callback = WTFMove(callback)](auto& generator) mutable {
+        generator.GenerateCertificateAsync(keyParamsFromCertificateType(info), expiresMs, WTFMove(callback));
+    });
 }
 
 } // namespace LibWebRTCCertificateGenerator

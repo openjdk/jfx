@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -88,7 +87,7 @@ import javafx.util.Pair;
  * making use of ListView, as all modern IDEs are able to auto-complete far
  * more successfully with the additional type information.
  *
- * <h3>Populating a ListView</h3>
+ * <h2>Populating a ListView</h2>
  * <p>A simple example of how to create and populate a ListView of names (Strings)
  * is shown here:
  *
@@ -122,7 +121,7 @@ import javafx.util.Pair;
  * copied into the items list - meaning that subsequent changes to the content
  * list are not observed, and will not be reflected visually within the ListView.
  *
- * <h3>ListView Selection / Focus APIs</h3>
+ * <h2>ListView Selection / Focus APIs</h2>
  * <p>To track selection and focus, it is necessary to become familiar with the
  * {@link SelectionModel} and {@link FocusModel} classes. A ListView has at most
  * one instance of each of these classes, available from
@@ -142,14 +141,14 @@ import javafx.util.Pair;
  *
  * <pre> {@code listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
- * <h3>Customizing ListView Visuals</h3>
+ * <h2>Customizing ListView Visuals</h2>
  * <p>The visuals of the ListView can be entirely customized by replacing the
  * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
  * generate {@link ListCell} instances, which are used to represent an item in the
  * ListView. See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
- * <h3>Editing</h3>
+ * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
  * give an overview of the available APIs and how you should use them.</p>
  *
@@ -357,6 +356,8 @@ public class ListView<T> extends Control {
                 selectFirstRowByDefault = _selectFirstRowByDefault;
             }
         });
+
+        pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL, true);
     }
 
 
@@ -1221,9 +1222,6 @@ public class ListView<T> extends Control {
 
             this.listView = listView;
 
-            ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(listView.getItems());
-
-
             /*
              * The following two listeners are used in conjunction with
              * SelectionModel.select(T obj) to allow for a developer to select
@@ -1238,7 +1236,6 @@ public class ListView<T> extends Control {
                 @Override public void invalidated(Observable observable) {
                     ObservableList<T> oldItems = weakItemsRef.get();
                     weakItemsRef = new WeakReference<>(listView.getItems());
-                    ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(listView.getItems());
                     updateItemsObserver(oldItems, listView.getItems());
                 }
             };

@@ -65,6 +65,7 @@
 #include <string.h>
 #include <signal.h>
 
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include <gst/gst.h>
 #include <gobject/gvaluecollector.h>
@@ -92,14 +93,14 @@ typedef struct _GstCapsImpl
   (GST_CAPS_REFCOUNT_VALUE (caps) == 1)
 
 /* same as gst_caps_is_any () */
-#define CAPS_IS_ANY(caps)               \
+#define CAPS_IS_ANY(caps)       \
   (!!(GST_CAPS_FLAGS(caps) & GST_CAPS_FLAG_ANY))
 
 /* same as gst_caps_is_empty () */
-#define CAPS_IS_EMPTY(caps)             \
+#define CAPS_IS_EMPTY(caps)       \
   (!CAPS_IS_ANY(caps) && CAPS_IS_EMPTY_SIMPLE(caps))
 
-#define CAPS_IS_EMPTY_SIMPLE(caps)                  \
+#define CAPS_IS_EMPTY_SIMPLE(caps)          \
   ((GST_CAPS_ARRAY (caps) == NULL) || (GST_CAPS_LEN (caps) == 0))
 
 #define gst_caps_features_copy_conditional(f) ((f && (gst_caps_features_is_any (f) || !gst_caps_features_is_equal (f, GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY))) ? gst_caps_features_copy (f) : NULL)
@@ -175,8 +176,7 @@ _gst_caps_copy (const GstCaps * caps)
   GST_CAPS_FLAGS (newcaps) = GST_CAPS_FLAGS (caps);
   n = GST_CAPS_LEN (caps);
 
-  GST_CAT_DEBUG_OBJECT (GST_CAT_PERFORMANCE, caps, "doing copy %p -> %p",
-      caps, newcaps);
+  GST_CAT_DEBUG (GST_CAT_PERFORMANCE, "doing copy %p -> %p", caps, newcaps);
 
   for (i = 0; i < n; i++) {
     structure = gst_caps_get_structure_unchecked (caps, i);
@@ -216,6 +216,11 @@ _gst_caps_free (GstCaps * caps)
 #ifdef DEBUG_REFCOUNT
   GST_CAT_TRACE (GST_CAT_CAPS, "freeing caps %p", caps);
 #endif
+
+#ifdef USE_POISONING
+  memset (caps, 0xff, sizeof (GstCapsImpl));
+#endif
+
   g_slice_free1 (sizeof (GstCapsImpl), caps);
 }
 
@@ -506,6 +511,20 @@ gst_caps_remove_and_get_structure (GstCaps * caps, guint idx)
   return s;
 }
 
+static void
+gst_caps_make_any (GstCaps * caps)
+{
+  guint i;
+  GstStructure *s;
+
+  /* empty out residual structures */
+  for (i = GST_CAPS_LEN (caps); i; i--) {
+    s = gst_caps_remove_and_get_structure (caps, 0);
+    gst_structure_free (s);
+  }
+  GST_CAPS_FLAGS (caps) |= GST_CAPS_FLAG_ANY;
+}
+
 /**
  * gst_caps_steal_structure:
  * @caps: the #GstCaps to retrieve from
@@ -550,7 +569,7 @@ gst_caps_append (GstCaps * caps1, GstCaps * caps2)
   g_return_if_fail (IS_WRITABLE (caps1));
 
   if (G_UNLIKELY (CAPS_IS_ANY (caps1) || CAPS_IS_ANY (caps2))) {
-    GST_CAPS_FLAGS (caps1) |= GST_CAPS_FLAG_ANY;
+    gst_caps_make_any (caps1);
     gst_caps_unref (caps2);
   } else {
     caps2 = gst_caps_make_writable (caps2);
@@ -632,6 +651,13 @@ gst_caps_append_structure (GstCaps * caps, GstStructure * structure)
   g_return_if_fail (GST_IS_CAPS (caps));
   g_return_if_fail (IS_WRITABLE (caps));
 
+  if (CAPS_IS_ANY (caps)) {
+    /* ANY caps will stay as ANY caps */
+    if (structure)
+      gst_structure_free (structure);
+    return;
+  }
+
   if (G_LIKELY (structure)) {
     gst_caps_append_structure_unchecked (caps, structure, NULL);
   }
@@ -655,6 +681,15 @@ gst_caps_append_structure_full (GstCaps * caps, GstStructure * structure,
   g_return_if_fail (GST_IS_CAPS (caps));
   g_return_if_fail (IS_WRITABLE (caps));
 
+  if (CAPS_IS_ANY (caps)) {
+    /* ANY caps will stay as ANY caps */
+    if (structure)
+      gst_structure_free (structure);
+    if (features)
+      gst_caps_features_free (features);
+    return;
+  }
+
   if (G_LIKELY (structure)) {
     gst_caps_append_structure_unchecked (caps, structure, features);
   }
@@ -674,7 +709,7 @@ gst_caps_remove_structure (GstCaps * caps, guint idx)
   GstStructure *structure;
 
   g_return_if_fail (caps != NULL);
-  g_return_if_fail (idx <= gst_caps_get_size (caps));
+  g_return_if_fail (idx < gst_caps_get_size (caps));
   g_return_if_fail (IS_WRITABLE (caps));
 
   structure = gst_caps_remove_and_get_structure (caps, idx);
@@ -702,6 +737,12 @@ gst_caps_merge_structure (GstCaps * caps, GstStructure * structure)
 
   if (G_UNLIKELY (structure == NULL))
     return caps;
+
+  if (CAPS_IS_ANY (caps)) {
+    /* ANY caps will stay as ANY caps */
+    gst_structure_free (structure);
+    return caps;
+  }
 
   /* check each structure */
   for (i = GST_CAPS_LEN (caps) - 1; i >= 0; i--) {
@@ -753,6 +794,14 @@ gst_caps_merge_structure_full (GstCaps * caps, GstStructure * structure,
 
   if (G_UNLIKELY (structure == NULL))
     return caps;
+
+  if (CAPS_IS_ANY (caps)) {
+    /* ANY caps will stay as ANY caps */
+    gst_structure_free (structure);
+    if (features)
+      gst_caps_features_free (features);
+    return caps;
+  }
 
   /* To make comparisons easier below */
   features_tmp = features ? features : GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
@@ -881,7 +930,8 @@ gst_caps_get_features (const GstCaps * caps, guint index)
     gst_caps_features_set_parent_refcount (features, &GST_CAPS_REFCOUNT (caps));
 
     storage = gst_caps_get_features_storage_unchecked (caps, index);
-    if (!g_atomic_pointer_compare_and_exchange (storage, NULL, features)) {
+    if (!g_atomic_pointer_compare_and_exchange (storage,
+            (GstCapsFeatures *) NULL, features)) {
       /* Someone did the same we just tried in the meantime */
       gst_caps_features_set_parent_refcount (features, NULL);
       gst_caps_features_free (features);
@@ -910,7 +960,7 @@ gst_caps_set_features (GstCaps * caps, guint index, GstCapsFeatures * features)
   GstCapsFeatures **storage, *old;
 
   g_return_if_fail (caps != NULL);
-  g_return_if_fail (index <= gst_caps_get_size (caps));
+  g_return_if_fail (index < gst_caps_get_size (caps));
   g_return_if_fail (IS_WRITABLE (caps));
 
   storage = gst_caps_get_features_storage_unchecked (caps, index);
@@ -928,6 +978,46 @@ gst_caps_set_features (GstCaps * caps, guint index, GstCapsFeatures * features)
 }
 
 /**
+ * gst_caps_set_features_simple:
+ * @caps: a #GstCaps
+ * @features: (allow-none) (transfer full): the #GstCapsFeatures to set
+ *
+ * Sets the #GstCapsFeatures @features for all the structures of @caps.
+ *
+ * Since: 1.16
+ */
+void
+gst_caps_set_features_simple (GstCaps * caps, GstCapsFeatures * features)
+{
+  guint i;
+  guint n;
+
+  g_return_if_fail (caps != NULL);
+  g_return_if_fail (IS_WRITABLE (caps));
+
+  n = gst_caps_get_size (caps);
+
+  if (n == 0) {
+    /* features will not be set on any structure */
+    if (features)
+      gst_caps_features_free (features);
+    return;
+  }
+
+  for (i = 0; i < n; i++) {
+    GstCapsFeatures *f;
+
+    /* Transfer ownership of @features to the last structure */
+    if (features && i < n - 1)
+      f = gst_caps_features_copy (features);
+    else
+      f = features;
+
+    gst_caps_set_features (caps, i, f);
+  }
+}
+
+/**
  * gst_caps_copy_nth:
  * @caps: the #GstCaps to copy
  * @nth: the nth structure to copy
@@ -936,6 +1026,8 @@ gst_caps_set_features (GstCaps * caps, guint index, GstCapsFeatures * features)
  * contained in @caps.
  *
  * Returns: (transfer full): the new #GstCaps
+ *
+ * Since: 1.16
  */
 GstCaps *
 gst_caps_copy_nth (const GstCaps * caps, guint nth)
@@ -971,6 +1063,10 @@ gst_caps_copy_nth (const GstCaps * caps, guint nth)
  * on it if necessary, so you must not use @caps afterwards unless you keep an
  * additional reference to it with gst_caps_ref().
  *
+ * Note that it is not guaranteed that the returned caps have exactly one
+ * structure. If @caps is any or empty caps then then returned caps will be
+ * the same and contain no structure at all.
+ *
  * Returns: (transfer full): truncated caps
  */
 GstCaps *
@@ -980,7 +1076,13 @@ gst_caps_truncate (GstCaps * caps)
 
   g_return_val_if_fail (GST_IS_CAPS (caps), NULL);
 
+  /* Nothing to truncate here */
+  if (GST_CAPS_LEN (caps) == 0)
+    return caps;
+
   i = GST_CAPS_LEN (caps) - 1;
+
+  /* Already truncated */
   if (i == 0)
     return caps;
 
@@ -1044,6 +1146,7 @@ gst_caps_set_simple_valist (GstCaps * caps, const char *field, va_list varargs)
     G_VALUE_COLLECT_INIT (&value, type, varargs, 0, &err);
     if (G_UNLIKELY (err)) {
       g_critical ("%s", err);
+      g_free (err);
       return;
     }
 
@@ -1142,6 +1245,10 @@ gst_caps_is_fixed (const GstCaps * caps)
   if (GST_CAPS_LEN (caps) != 1)
     return FALSE;
 
+  /* double check not ANY, even though ANY caps should have 0 length */
+  if (CAPS_IS_ANY (caps))
+    return FALSE;
+
   features = gst_caps_get_features_unchecked (caps, 0);
   if (features && gst_caps_features_is_any (features))
     return FALSE;
@@ -1229,11 +1336,12 @@ gst_caps_is_subset (const GstCaps * subset, const GstCaps * superset)
     return FALSE;
 
   for (i = GST_CAPS_LEN (subset) - 1; i >= 0; i--) {
+    s1 = gst_caps_get_structure_unchecked (subset, i);
+    f1 = gst_caps_get_features_unchecked (subset, i);
+    if (!f1)
+      f1 = GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
+
     for (j = GST_CAPS_LEN (superset) - 1; j >= 0; j--) {
-      s1 = gst_caps_get_structure_unchecked (subset, i);
-      f1 = gst_caps_get_features_unchecked (subset, i);
-      if (!f1)
-        f1 = GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
       s2 = gst_caps_get_structure_unchecked (superset, j);
       f2 = gst_caps_get_features_unchecked (superset, j);
       if (!f2)
@@ -1246,6 +1354,7 @@ gst_caps_is_subset (const GstCaps * subset, const GstCaps * superset)
         break;
       }
     }
+
     /* If we found no superset for this subset structure
      * we return FALSE immediately */
     if (j == -1) {
@@ -1387,6 +1496,12 @@ gst_caps_is_strictly_equal (const GstCaps * caps1, const GstCaps * caps2)
   if (G_UNLIKELY (caps1 == caps2))
     return TRUE;
 
+  /* if both are ANY caps, consider them strictly equal */
+  if (CAPS_IS_ANY (caps1))
+    return (CAPS_IS_ANY (caps2));
+  else if (CAPS_IS_ANY (caps2))
+    return FALSE;
+
   if (GST_CAPS_LEN (caps1) != GST_CAPS_LEN (caps2))
     return FALSE;
 
@@ -1509,21 +1624,6 @@ gst_caps_intersect_zig_zag (GstCaps * caps1, GstCaps * caps2)
   GstCaps *dest;
   GstStructure *istruct;
 
-  /* caps are exactly the same pointers, just copy one caps */
-  if (G_UNLIKELY (caps1 == caps2))
-    return gst_caps_ref (caps1);
-
-  /* empty caps on either side, return empty */
-  if (G_UNLIKELY (CAPS_IS_EMPTY (caps1) || CAPS_IS_EMPTY (caps2)))
-    return gst_caps_ref (GST_CAPS_NONE);
-
-  /* one of the caps is any, just copy the other caps */
-  if (G_UNLIKELY (CAPS_IS_ANY (caps1)))
-    return gst_caps_ref (caps2);
-
-  if (G_UNLIKELY (CAPS_IS_ANY (caps2)))
-    return gst_caps_ref (caps1);
-
   dest = gst_caps_new_empty ();
   /* run zigzag on top line then right line, this preserves the caps order
    * much better than a simple loop.
@@ -1608,21 +1708,6 @@ gst_caps_intersect_first (GstCaps * caps1, GstCaps * caps2)
   GstCaps *dest;
   GstStructure *istruct;
 
-  /* caps are exactly the same pointers, just copy one caps */
-  if (G_UNLIKELY (caps1 == caps2))
-    return gst_caps_ref (caps1);
-
-  /* empty caps on either side, return empty */
-  if (G_UNLIKELY (CAPS_IS_EMPTY (caps1) || CAPS_IS_EMPTY (caps2)))
-    return gst_caps_ref (GST_CAPS_NONE);
-
-  /* one of the caps is any, just copy the other caps */
-  if (G_UNLIKELY (CAPS_IS_ANY (caps1)))
-    return gst_caps_ref (caps2);
-
-  if (G_UNLIKELY (CAPS_IS_ANY (caps2)))
-    return gst_caps_ref (caps1);
-
   dest = gst_caps_new_empty ();
   len1 = GST_CAPS_LEN (caps1);
   len2 = GST_CAPS_LEN (caps2);
@@ -1673,6 +1758,22 @@ gst_caps_intersect_full (GstCaps * caps1, GstCaps * caps2,
 {
   g_return_val_if_fail (GST_IS_CAPS (caps1), NULL);
   g_return_val_if_fail (GST_IS_CAPS (caps2), NULL);
+
+  /* Common fast-path */
+  /* caps are exactly the same pointers, just copy one caps */
+  if (G_UNLIKELY (caps1 == caps2))
+    return gst_caps_ref (caps1);
+
+  /* empty caps on either side, return empty */
+  if (G_UNLIKELY (CAPS_IS_EMPTY (caps1) || CAPS_IS_EMPTY (caps2)))
+    return gst_caps_ref (GST_CAPS_NONE);
+
+  /* one of the caps is any, just copy the other caps */
+  if (G_UNLIKELY (CAPS_IS_ANY (caps1)))
+    return gst_caps_ref (caps2);
+
+  if (G_UNLIKELY (CAPS_IS_ANY (caps2)))
+    return gst_caps_ref (caps1);
 
   switch (mode) {
     case GST_CAPS_INTERSECT_FIRST:
@@ -2086,6 +2187,10 @@ gst_caps_simplify (GstCaps * caps)
 
   g_return_val_if_fail (GST_IS_CAPS (caps), NULL);
 
+  /* empty/any caps are as simple as can be */
+  if (GST_CAPS_LEN (caps) == 0)
+    return caps;
+
   start = GST_CAPS_LEN (caps) - 1;
   /* one caps, already as simple as can be */
   if (start == 0)
@@ -2147,6 +2252,12 @@ gst_caps_simplify (GstCaps * caps)
  * on it so you must not use @caps afterwards unless you keep an additional
  * reference to it with gst_caps_ref().
  *
+ * Note that it is not guaranteed that the returned caps have exactly one
+ * structure. If @caps are empty caps then then returned caps will be
+ * the empty too and contain no structure at all.
+ *
+ * Calling this function with any caps is not allowed.
+ *
  * Returns: (transfer full): the fixated caps
  */
 GstCaps *
@@ -2156,10 +2267,20 @@ gst_caps_fixate (GstCaps * caps)
   GstCapsFeatures *f;
 
   g_return_val_if_fail (GST_IS_CAPS (caps), NULL);
+  g_return_val_if_fail (!CAPS_IS_ANY (caps), NULL);
 
   /* default fixation */
   caps = gst_caps_truncate (caps);
   caps = gst_caps_make_writable (caps);
+
+  /* need to return early here because empty caps have no structure
+   * but must return after make_writable() because the documentation
+   * specifies that it will call make_writable() on the return value
+   * and callers might assume writable caps.
+   */
+  if (CAPS_IS_EMPTY (caps))
+    return caps;
+
   s = gst_caps_get_structure (caps, 0);
   gst_structure_fixate (s);
 
@@ -2543,4 +2664,120 @@ gst_caps_filter_and_map_in_place (GstCaps * caps, GstCapsFilterMapFunc func,
       i++;
     }
   }
+}
+
+/**
+ * gst_caps_copy:
+ * @caps: a #GstCaps.
+ *
+ * Creates a new #GstCaps as a copy of the old @caps. The new caps will have a
+ * refcount of 1, owned by the caller. The structures are copied as well.
+ *
+ * Note that this function is the semantic equivalent of a gst_caps_ref()
+ * followed by a gst_caps_make_writable(). If you only want to hold on to a
+ * reference to the data, you should use gst_caps_ref().
+ *
+ * When you are finished with the caps, call gst_caps_unref() on it.
+ *
+ * Returns: the new #GstCaps
+ */
+GstCaps *(gst_caps_copy) (const GstCaps * caps)
+{
+  return GST_CAPS (gst_mini_object_copy (GST_MINI_OBJECT_CAST (caps)));
+}
+
+/**
+ * gst_caps_ref: (skip)
+ * @caps: the #GstCaps to reference
+ *
+ * Add a reference to a #GstCaps object.
+ *
+ * From this point on, until the caller calls gst_caps_unref() or
+ * gst_caps_make_writable(), it is guaranteed that the caps object will not
+ * change. This means its structures won't change, etc. To use a #GstCaps
+ * object, you must always have a refcount on it -- either the one made
+ * implicitly by e.g. gst_caps_new_simple(), or via taking one explicitly with
+ * this function.
+ *
+ * Returns: the same #GstCaps object.
+ */
+GstCaps *
+gst_caps_ref (GstCaps * caps)
+{
+  return (GstCaps *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (caps));
+}
+
+/**
+ * gst_caps_unref: (skip)
+ * @caps: a #GstCaps.
+ *
+ * Unref a #GstCaps and and free all its structures and the
+ * structures' values when the refcount reaches 0.
+ */
+void
+gst_caps_unref (GstCaps * caps)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (caps));
+}
+
+/**
+ * gst_clear_caps: (skip)
+ * @caps_ptr: a pointer to a #GstCaps reference
+ *
+ * Clears a reference to a #GstCaps.
+ *
+ * @caps_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the caps is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+void
+gst_clear_caps (GstCaps ** caps_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) caps_ptr);
+}
+
+/**
+ * gst_caps_replace: (skip)
+ * @old_caps: (inout) (transfer full) (nullable): pointer to a pointer
+ *     to a #GstCaps to be replaced.
+ * @new_caps: (transfer none) (allow-none): pointer to a #GstCaps that will
+ *     replace the caps pointed to by @old_caps.
+ *
+ * Modifies a pointer to a #GstCaps to point to a different #GstCaps. The
+ * modification is done atomically (so this is useful for ensuring thread safety
+ * in some cases), and the reference counts are updated appropriately (the old
+ * caps is unreffed, the new is reffed).
+ *
+ * Either @new_caps or the #GstCaps pointed to by @old_caps may be %NULL.
+ *
+ * Returns: %TRUE if @new_caps was different from @old_caps
+ */
+gboolean
+gst_caps_replace (GstCaps ** old_caps, GstCaps * new_caps)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_caps,
+      (GstMiniObject *) new_caps);
+}
+
+/**
+ * gst_caps_take: (skip)
+ * @old_caps: (inout) (transfer full): pointer to a pointer to a #GstCaps to be
+ *     replaced.
+ * @new_caps: (transfer full) (allow-none): pointer to a #GstCaps that will
+ *     replace the caps pointed to by @old_caps.
+ *
+ * Modifies a pointer to a #GstCaps to point to a different #GstCaps. This
+ * function is similar to gst_caps_replace() except that it takes ownership
+ * of @new_caps.
+ *
+ * Returns: %TRUE if @new_caps was different from @old_caps
+ */
+gboolean
+gst_caps_take (GstCaps ** old_caps, GstCaps * new_caps)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_caps,
+      (GstMiniObject *) new_caps);
 }

@@ -37,7 +37,8 @@
 #define WIRServiceEnabledNotification           "com.apple.webinspectord.enabled"
 #define WIRServiceDisabledNotification          "com.apple.webinspectord.disabled"
 #define WIRAutomaticInspectionEnabledState      "com.apple.webinspectord.automatic_inspection_enabled"
-
+#define WIRRemoteAutomationEnabledNotification  "com.apple.webinspectord.remote_automation_enabled"
+#define WIRRemoteAutomationDisabledNotification "com.apple.webinspectord.remote_automation_disabled"
 
 #define WIRApplicationIdentifierKey             @"WIRApplicationIdentifierKey"
 #define WIRApplicationBundleIdentifierKey       @"WIRApplicationBundleIdentifierKey"
@@ -56,6 +57,7 @@
 #define WIRApplicationDictionaryKey             @"WIRApplicationDictionaryKey"
 #define WIRMessageDataKey                       @"WIRMessageDataKey"
 #define WIRApplicationGetListingMessage         @"WIRApplicationGetListingMessage"
+#define WIRApplicationWakeUpDebuggablesMessage  @"WIRApplicationWakeUpDebuggablesMessage"
 #define WIRIndicateMessage                      @"WIRIndicateMessage"
 #define WIRIndicateEnabledKey                   @"WIRIndicateEnabledKey"
 #define WIRSenderKey                            @"WIRSenderKey"
@@ -68,14 +70,23 @@
 #define WIRListingMessage                       @"WIRListingMessage"
 #define WIRListingKey                           @"WIRListingKey"
 #define WIRRemoteAutomationEnabledKey           @"WIRRemoteAutomationEnabledKey"
+#define WIRAutomationAvailabilityKey            @"WIRAutomationAvailabilityKey"
 #define WIRDestinationKey                       @"WIRDestinationKey"
 #define WIRConnectionDiedMessage                @"WIRConnectionDiedMessage"
 #define WIRTypeKey                              @"WIRTypeKey"
-#define WIRTypeJavaScript                       @"WIRTypeJavaScript"
-#define WIRTypeServiceWorker                    @"WIRTypeServiceWorker"
-#define WIRTypeWeb                              @"WIRTypeWeb"
 #define WIRTypeAutomation                       @"WIRTypeAutomation"
+#define WIRTypeITML                             @"WIRTypeITML"
+#define WIRTypeJavaScript                       @"WIRTypeJavaScript"
+#define WIRTypePage                             @"WIRTypePage"
+#define WIRTypeServiceWorker                    @"WIRTypeServiceWorker"
+#define WIRTypeWeb                              @"WIRTypeWeb" // COMPATIBILITY (iOS 13): "Web" was split into "Page" (WebCore::Page) and "WebPage" (WebKit::WebPageProxy).
+#define WIRTypeWebPage                          @"WIRTypeWebPage"
 #define WIRAutomaticallyPause                   @"WIRAutomaticallyPause"
+
+// Allowed values for WIRAutomationAvailabilityKey.
+#define WIRAutomationAvailabilityNotAvailable     @"WIRAutomationAvailabilityNotAvailable"
+#define WIRAutomationAvailabilityAvailable        @"WIRAutomationAvailabilityAvailable"
+#define WIRAutomationAvailabilityUnknown          @"WIRAutomationAvailabilityUnknown"
 
 #define WIRAutomaticInspectionEnabledKey           @"WIRAutomaticInspectionEnabledKey"
 #define WIRAutomaticInspectionSessionIdentifierKey @"WIRAutomaticInspectionSessionIdentifierKey"
@@ -109,3 +120,6 @@
 #define WIRProxyApplicationParentAuditDataKey   @"WIRProxyApplicationParentAuditData"
 #define WIRProxyApplicationSetupMessage         @"WIRProxyApplicationSetupMessage"
 #define WIRProxyApplicationSetupResponseMessage @"WIRProxyApplicationSetupResponseMessage"
+
+#define WIRRemoteInspectorEnabledKey            CFSTR("RemoteInspectorEnabled")
+#define WIRRemoteInspectorDomainName            CFSTR("com.apple.webinspectord")

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,14 @@ namespace JSC {
 class BigIntPrototype final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(BigIntPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static BigIntPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
@@ -49,11 +56,9 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&, JSGlobalObject*);
-
 private:
     BigIntPrototype(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*);
 };
 
 } // namespace JSC

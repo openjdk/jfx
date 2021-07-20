@@ -42,34 +42,25 @@
 #include <wtf/StdLibExtras.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "Chrome.h"
-#include "ChromeClient.h"
-#include "Frame.h"
-#include "WKContentObservation.h"
-#include "WKContentObservationInternal.h"
+#include "ContentChangeObserver.h"
+#include "DOMTimerHoldingTank.h"
 #endif
 
 namespace WebCore {
 
-static const Seconds maxIntervalForUserGestureForwarding { 1_s }; // One second matches Gecko.
 static const Seconds minIntervalForNonUserObservableChangeTimers { 1_s }; // Empirically determined to maximize battery life.
 static const int maxTimerNestingLevel = 5;
 
 class DOMTimerFireState {
 public:
-    DOMTimerFireState(ScriptExecutionContext& context, int nestingLevel, const Seconds& nestedTimerInterval)
+    DOMTimerFireState(ScriptExecutionContext& context, int nestingLevel)
         : m_context(context)
-        , m_nestedTimerInterval(nestedTimerInterval)
         , m_contextIsDocument(is<Document>(m_context))
-    {
         // For worker threads, don't update the current DOMTimerFireState.
         // Setting this from workers would not be thread-safe, and its not relevant to current uses.
-        if (m_contextIsDocument) {
-            m_initialDOMTreeVersion = downcast<Document>(context).domTreeVersion();
-            m_previous = current;
-            current = this;
-        }
-
+        , m_initialDOMTreeVersion(m_contextIsDocument ? downcast<Document>(m_context).domTreeVersion() : 0)
+        , m_previous(m_contextIsDocument ? std::exchange(current, this) : nullptr)
+    {
         m_context.setTimerNestingLevel(nestingLevel);
     }
 
@@ -81,8 +72,6 @@ public:
     }
 
     Document* contextDocument() const { return m_contextIsDocument ? &downcast<Document>(m_context) : nullptr; }
-
-    const Seconds& nestedTimerInterval() const { return m_nestedTimerInterval; }
 
     void setScriptMadeUserObservableChanges() { m_scriptMadeUserObservableChanges = true; }
     void setScriptMadeNonUserObservableChanges() { m_scriptMadeNonUserObservableChanges = true; }
@@ -102,12 +91,11 @@ public:
 
 private:
     ScriptExecutionContext& m_context;
-    Seconds m_nestedTimerInterval;
-    uint64_t m_initialDOMTreeVersion;
-    DOMTimerFireState* m_previous;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
+    uint64_t m_initialDOMTreeVersion;
+    DOMTimerFireState* m_previous;
 };
 
 DOMTimerFireState* DOMTimerFireState::current = nullptr;
@@ -167,44 +155,15 @@ private:
 
 bool NestedTimersMap::isTrackingNestedTimers = false;
 
-static inline bool shouldForwardUserGesture(Seconds interval)
-{
-    return UserGestureIndicator::processingUserGesture()
-        && interval <= maxIntervalForUserGestureForwarding;
-}
-
-static inline RefPtr<UserGestureToken> userGestureTokenToForward(Seconds interval)
-{
-    if (!shouldForwardUserGesture(interval))
-        return nullptr;
-
-    return UserGestureIndicator::currentUserGesture();
-}
-
-static inline Seconds currentNestedTimerInterval()
-{
-    if (DOMTimerFireState::current)
-        return DOMTimerFireState::current->nestedTimerInterval();
-    return { };
-}
-
 DOMTimer::DOMTimer(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, Seconds interval, bool singleShot)
-    : SuspendableTimer(context)
+    : SuspendableTimerBase(&context)
     , m_nestingLevel(context.timerNestingLevel())
     , m_action(WTFMove(action))
     , m_originalInterval(interval)
     , m_throttleState(Undetermined)
     , m_currentTimerInterval(intervalClampedToMinimum())
-    , m_nestedTimerInterval(currentNestedTimerInterval())
-    , m_userGestureTokenToForward(userGestureTokenToForward(m_nestedTimerInterval + m_currentTimerInterval))
+    , m_userGestureTokenToForward(UserGestureIndicator::currentUserGesture())
 {
-    RefPtr<DOMTimer> reference = adoptRef(this);
-
-    // Keep asking for the next id until we're given one that we don't already have.
-    do {
-        m_timeoutId = context.circularSequentialID();
-    } while (!context.addTimeout(m_timeoutId, *this));
-
     if (singleShot)
         startOneShot(m_currentTimerInterval);
     else
@@ -215,28 +174,27 @@ DOMTimer::~DOMTimer() = default;
 
 int DOMTimer::install(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, Seconds timeout, bool singleShot)
 {
-    // DOMTimer constructor passes ownership of the initial ref on the object to the constructor.
-    // This reference will be released automatically when a one-shot timer fires, when the context
-    // is destroyed, or if explicitly cancelled by removeById.
-    DOMTimer* timer = new DOMTimer(context, WTFMove(action), timeout, singleShot);
-#if PLATFORM(IOS_FAMILY)
-    if (WKIsObservingDOMTimerScheduling() && is<Document>(context)) {
-        bool didDeferTimeout = context.activeDOMObjectsAreSuspended();
-        if (!didDeferTimeout && timeout <= 250_ms && singleShot) {
-            WKSetObservedContentChange(WKContentIndeterminateChange);
-            WebThreadAddObservedDOMTimer(timer);
-            LOG_WITH_STREAM(ContentObservation, stream << "DOMTimer::install: registed this timer: (" << timer << ") and observe when it fires.");
-        }
-    }
-#endif
-
+    Ref<DOMTimer> timer = adoptRef(*new DOMTimer(context, WTFMove(action), timeout, singleShot));
     timer->suspendIfNeeded();
+
+    // Keep asking for the next id until we're given one that we don't already have.
+    do {
+        timer->m_timeoutId = context.circularSequentialID();
+    } while (!context.addTimeout(timer->m_timeoutId, timer.get()));
+
     InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);
 
     // Keep track of nested timer installs.
     if (NestedTimersMap* nestedTimers = NestedTimersMap::instanceForContext(context))
-        nestedTimers->add(timer->m_timeoutId, *timer);
-
+        nestedTimers->add(timer->m_timeoutId, timer.get());
+#if PLATFORM(IOS_FAMILY)
+    if (is<Document>(context)) {
+        auto& document = downcast<Document>(context);
+        document.contentChangeObserver().didInstallDOMTimer(timer.get(), timeout, singleShot);
+        if (DeferDOMTimersForScope::isDeferring())
+            document.domTimerHoldingTank().add(timer.get());
+    }
+#endif
     return timer->m_timeoutId;
 }
 
@@ -247,6 +205,17 @@ void DOMTimer::removeById(ScriptExecutionContext& context, int timeoutId)
     // respectively
     if (timeoutId <= 0)
         return;
+
+#if PLATFORM(IOS_FAMILY)
+    if (is<Document>(context)) {
+        auto& document = downcast<Document>(context);
+        if (auto* timer = document.findTimeout(timeoutId)) {
+            document.contentChangeObserver().didRemoveDOMTimer(*timer);
+            if (auto* holdingTank = document.domTimerHoldingTankIfExists())
+                holdingTank->remove(*timer);
+        }
+    }
+#endif
 
     if (NestedTimersMap* nestedTimers = NestedTimersMap::instanceForContext(context))
         nestedTimers->remove(timeoutId);
@@ -309,12 +278,28 @@ void DOMTimer::fired()
     // Retain this - if the timer is cancelled while this function is on the stack (implicitly and always
     // for one-shot timers, or if removeById is called on itself from within an interval timer fire) then
     // wait unit the end of this function to delete DOMTimer.
-    RefPtr<DOMTimer> reference = this;
+    Ref<DOMTimer> protectedThis(*this);
+
+    bool oneShot = !repeatInterval();
 
     ASSERT(scriptExecutionContext());
     ScriptExecutionContext& context = *scriptExecutionContext();
 
-    DOMTimerFireState fireState(context, std::min(m_nestingLevel + 1, maxTimerNestingLevel), m_nestedTimerInterval + m_currentTimerInterval);
+#if PLATFORM(IOS_FAMILY)
+    if (is<Document>(context)) {
+        auto& document = downcast<Document>(context);
+        if (auto* holdingTank = document.domTimerHoldingTankIfExists(); holdingTank && holdingTank->contains(*this)) {
+            if (oneShot)
+                startOneShot(0_s);
+            return;
+        }
+    }
+#endif
+
+    DOMTimerFireState fireState(context, std::min(m_nestingLevel + 1, maxTimerNestingLevel));
+
+    if (m_userGestureTokenToForward && m_userGestureTokenToForward->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
+        m_userGestureTokenToForward = nullptr;
 
     ASSERT(!isSuspended());
     ASSERT(!context.activeDOMObjectsAreSuspended());
@@ -322,7 +307,7 @@ void DOMTimer::fired()
     // Only the first execution of a multi-shot timer should get an affirmative user gesture indicator.
     m_userGestureTokenToForward = nullptr;
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireTimer(context, m_timeoutId, !repeatInterval());
+    InspectorInstrumentation::willFireTimer(context, m_timeoutId, oneShot);
 
     // Simple case for non-one-shot timers.
     if (isActive()) {
@@ -333,60 +318,25 @@ void DOMTimer::fired()
 
         m_action->execute(context);
 
-        InspectorInstrumentation::didFireTimer(cookie);
-        updateThrottlingStateIfNecessary(fireState);
+        InspectorInstrumentation::didFireTimer(context, m_timeoutId, oneShot);
 
+        updateThrottlingStateIfNecessary(fireState);
         return;
     }
 
     context.removeTimeout(m_timeoutId);
-
-#if PLATFORM(IOS_FAMILY)
-    auto isObversingLastTimer = false;
-    auto shouldBeginObservingChanges = false;
-    if (is<Document>(context)) {
-        isObversingLastTimer = WebThreadCountOfObservedDOMTimers() == 1;
-        shouldBeginObservingChanges = WebThreadContainsObservedDOMTimer(this);
-    }
-
-    if (shouldBeginObservingChanges) {
-        LOG_WITH_STREAM(ContentObservation, stream << "DOMTimer::fired: start observing (" << this << ") timer callback.");
-        WKStartObservingContentChanges();
-        WKStartObservingStyleRecalcScheduling();
-        WebThreadRemoveObservedDOMTimer(this);
-    }
-#endif
 
     // Keep track nested timer installs.
     NestedTimersMap* nestedTimers = NestedTimersMap::instanceForContext(context);
     if (nestedTimers)
         nestedTimers->startTracking();
 
+#if PLATFORM(IOS_FAMILY)
+    ContentChangeObserver::DOMTimerScope observingScope(is<Document>(context) ? &downcast<Document>(context) : nullptr, *this);
+#endif
     m_action->execute(context);
 
-#if PLATFORM(IOS_FAMILY)
-    if (shouldBeginObservingChanges) {
-        LOG_WITH_STREAM(ContentObservation, stream << "DOMTimer::fired: stop observing (" << this << ") timer callback.");
-        WKStopObservingStyleRecalcScheduling();
-        WKStopObservingContentChanges();
-
-        auto observedContentChange = WKObservedContentChange();
-        // Check if the timer callback triggered either a sync or async style update.
-        auto inDeterminedState = observedContentChange == WKContentVisibilityChange || (isObversingLastTimer && observedContentChange == WKContentNoChange);
-        if (inDeterminedState) {
-            LOG(ContentObservation, "DOMTimer::fired: in determined state.");
-            auto& document = downcast<Document>(context);
-            if (auto* page = document.page())
-                page->chrome().client().observedContentChange(*document.frame());
-        } else if (observedContentChange == WKContentIndeterminateChange) {
-            // An async style recalc has been scheduled. Let's observe it.
-            LOG(ContentObservation, "DOMTimer::fired: wait until next style recalc fires.");
-            WKSetShouldObserveNextStyleRecalc(true);
-        }
-    }
-#endif
-
-    InspectorInstrumentation::didFireTimer(cookie);
+    InspectorInstrumentation::didFireTimer(context, m_timeoutId, oneShot);
 
     // Check if we should throttle nested single-shot timers.
     if (nestedTimers) {

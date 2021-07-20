@@ -55,13 +55,15 @@ namespace WebCore {
 
 static inline bool canReferToParentFrameEncoding(const Frame* frame, const Frame* parentFrame)
 {
-    return parentFrame && parentFrame->document()->securityOrigin().canAccess(frame->document()->securityOrigin());
+    if (is<XMLDocument>(frame->document()))
+        return false;
+    return parentFrame && parentFrame->document()->securityOrigin().isSameOriginDomain(frame->document()->securityOrigin());
 }
 
 // This is only called by ScriptController::executeIfJavaScriptURL
 // and always contains the result of evaluating a javascript: url.
 // This is the <iframe src="javascript:'html'"> case.
-void DocumentWriter::replaceDocument(const String& source, Document* ownerDocument)
+void DocumentWriter::replaceDocumentWithResultOfExecutingJavascriptURL(const String& source, Document* ownerDocument)
 {
     m_frame->loader().stopAllLoaders();
 
@@ -108,14 +110,14 @@ bool DocumentWriter::begin()
 Ref<Document> DocumentWriter::createDocument(const URL& url)
 {
     if (!m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->loader().client().shouldAlwaysUsePluginDocument(m_mimeType))
-        return PluginDocument::create(m_frame, url);
+        return PluginDocument::create(*m_frame, url);
 #if PLATFORM(IOS_FAMILY)
     if (MIMETypeRegistry::isPDFMIMEType(m_mimeType) && (m_frame->isMainFrame() || !m_frame->settings().useImageDocumentForSubframePDF()))
-        return SinkDocument::create(m_frame, url);
+        return SinkDocument::create(*m_frame, url);
 #endif
     if (!m_frame->loader().client().hasHTMLView())
         return Document::createNonRenderedPlaceholder(*m_frame, url);
-    return DOMImplementation::createDocument(m_mimeType, m_frame, url);
+    return DOMImplementation::createDocument(m_mimeType, m_frame.get(), m_frame->settings(), url);
 }
 
 bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument)
@@ -132,23 +134,27 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
     // If the new document is for a Plugin but we're supposed to be sandboxed from Plugins,
     // then replace the document with one whose parser will ignore the incoming data (bug 39323)
     if (document->isPluginDocument() && document->isSandboxed(SandboxPlugins))
-        document = SinkDocument::create(m_frame, url);
+        document = SinkDocument::create(*m_frame, url);
 
     // FIXME: Do we need to consult the content security policy here about blocked plug-ins?
 
-    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url);
-    if (shouldReuseDefaultView)
-        document->takeDOMWindowFrom(*m_frame->document());
-    else
-        document->createDOMWindow();
+    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument()
+        && m_frame->document()->isSecureTransitionTo(url)
+        && (!m_frame->window() || !m_frame->window()->wasWrappedWithoutInitializedSecurityOrigin());
 
     // Temporarily extend the lifetime of the existing document so that FrameLoader::clear() doesn't destroy it as
     // we need to retain its ongoing set of upgraded requests in new navigation contexts per <http://www.w3.org/TR/upgrade-insecure-requests/>
-    // and we may also need to inherit its Content Security Policy in FrameLoader::didBeginDocument().
+    // and we may also need to inherit its Content Security Policy below.
     RefPtr<Document> existingDocument = m_frame->document();
-    auto* previousContentSecurityPolicy = existingDocument ? existingDocument->contentSecurityPolicy() : nullptr;
 
-    m_frame->loader().clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView);
+    Function<void()> handleDOMWindowCreation = [this, document, shouldReuseDefaultView] {
+        if (shouldReuseDefaultView)
+            document->takeDOMWindowFrom(*m_frame->document());
+        else
+            document->createDOMWindow();
+    };
+
+    m_frame->loader().clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView, true, WTFMove(handleDOMWindowCreation));
     clear();
 
     // m_frame->loader().clear() might fire unload event which could remove the view of the document.
@@ -162,18 +168,31 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
     m_frame->loader().setOutgoingReferrer(url);
     m_frame->setDocument(document.copyRef());
 
-    if (previousContentSecurityPolicy)
-        document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(previousContentSecurityPolicy->takeNavigationRequestsToUpgrade());
-
     if (m_decoder)
         document->setDecoder(m_decoder.get());
     if (ownerDocument) {
+        // |document| is the result of evaluating a JavaScript URL.
         document->setCookieURL(ownerDocument->cookieURL());
         document->setSecurityOriginPolicy(ownerDocument->securityOriginPolicy());
         document->setStrictMixedContentMode(ownerDocument->isStrictMixedContentMode());
+
+        document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
+        document->contentSecurityPolicy()->copyStateFrom(ownerDocument->contentSecurityPolicy());
+        document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(ownerDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade());
+    } else if (existingDocument) {
+        if (url.protocolIsData() || url.protocolIsBlob()) {
+            document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
+            document->contentSecurityPolicy()->copyStateFrom(existingDocument->contentSecurityPolicy());
+
+            // Fix up 'self' for blob: and data:, which is inherited from its embedding document or opener.
+            auto* parentFrame = m_frame->tree().parent();
+            if (auto* ownerFrame = parentFrame ? parentFrame : m_frame->loader().opener())
+                document->contentSecurityPolicy()->updateSourceSelf(ownerFrame->document()->securityOrigin());
+        }
+        document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(existingDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade());
     }
 
-    m_frame->loader().didBeginDocument(dispatch, previousContentSecurityPolicy);
+    m_frame->loader().didBeginDocument(dispatch);
 
     document->implicitOpen();
 
@@ -205,10 +224,10 @@ TextResourceDecoder& DocumentWriter::decoder()
         // an attack vector.
         // FIXME: This might be too cautious for non-7bit-encodings and
         // we may consider relaxing this later after testing.
-        if (canReferToParentFrameEncoding(m_frame, parentFrame))
+        if (canReferToParentFrameEncoding(m_frame.get(), parentFrame))
             m_decoder->setHintEncoding(parentFrame->document()->decoder());
         if (m_encoding.isEmpty()) {
-            if (canReferToParentFrameEncoding(m_frame, parentFrame))
+            if (canReferToParentFrameEncoding(m_frame.get(), parentFrame))
                 m_decoder->setEncoding(parentFrame->document()->textEncoding(), TextResourceDecoder::EncodingFromParentFrame);
         } else {
             m_decoder->setEncoding(m_encoding,
@@ -234,7 +253,10 @@ void DocumentWriter::addData(const char* bytes, size_t length)
 {
     // FIXME: Change these to ASSERT once https://bugs.webkit.org/show_bug.cgi?id=80427 has been resolved.
     RELEASE_ASSERT(m_state != State::NotStarted);
-    RELEASE_ASSERT(m_state != State::Finished);
+    if (m_state == State::Finished) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     ASSERT(m_parser);
     m_parser->appendBytes(*this, bytes, length);
 }
@@ -275,6 +297,11 @@ void DocumentWriter::setEncoding(const String& name, bool userChosen)
 {
     m_encoding = name;
     m_encodingWasChosenByUser = userChosen;
+}
+
+void DocumentWriter::setFrame(Frame& frame)
+{
+    m_frame = makeWeakPtr(frame);
 }
 
 void DocumentWriter::setDocumentWasLoadedAsPartOfNavigation()

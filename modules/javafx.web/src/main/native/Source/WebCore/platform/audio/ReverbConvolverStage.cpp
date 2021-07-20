@@ -42,31 +42,36 @@
 
 namespace WebCore {
 
-using namespace VectorMath;
-
 ReverbConvolverStage::ReverbConvolverStage(const float* impulseResponse, size_t, size_t reverbTotalLatency, size_t stageOffset, size_t stageLength,
-                                           size_t fftSize, size_t renderPhase, size_t renderSliceSize, ReverbAccumulationBuffer* accumulationBuffer, bool directMode)
+    size_t fftSize, size_t renderPhase, size_t renderSliceSize, ReverbAccumulationBuffer* accumulationBuffer, float scale, bool directMode)
     : m_accumulationBuffer(accumulationBuffer)
-    , m_accumulationReadIndex(0)
-    , m_inputReadIndex(0)
     , m_directMode(directMode)
 {
     ASSERT(impulseResponse);
     ASSERT(accumulationBuffer);
 
     if (!m_directMode) {
-        m_fftKernel = std::make_unique<FFTFrame>(fftSize);
+        m_fftKernel = makeUnique<FFTFrame>(fftSize);
         m_fftKernel->doPaddedFFT(impulseResponse + stageOffset, stageLength);
-        m_fftConvolver = std::make_unique<FFTConvolver>(fftSize);
+        // Account for the normalization (if any) of the convolver. By linearity,
+        // we can scale the FFT by the factor instead of the input. We do it this
+        // way so we don't need to create a temporary for the scaled result before
+        // computing the FFT.
+        if (scale != 1)
+            m_fftKernel->scaleFFT(scale);
+        m_fftConvolver = makeUnique<FFTConvolver>(fftSize);
     } else {
         ASSERT(!stageOffset);
         ASSERT(stageLength <= fftSize / 2);
 
-        m_directKernel = std::make_unique<AudioFloatArray>(fftSize / 2);
+        m_directKernel = makeUnique<AudioFloatArray>(fftSize / 2);
         m_directKernel->copyToRange(impulseResponse, 0, stageLength);
-        m_directConvolver = std::make_unique<DirectConvolver>(renderSliceSize);
+        // Account for the normalization (if any) of the convolver node.
+        if (scale != 1)
+            VectorMath::multiplyByScalar(m_directKernel->data(), scale, m_directKernel->data(), stageLength);
+        m_directConvolver = makeUnique<DirectConvolver>(renderSliceSize);
     }
-    m_temporaryBuffer.allocate(renderSliceSize);
+    m_temporaryBuffer.resize(renderSliceSize);
 
     // The convolution stage at offset stageOffset needs to have a corresponding delay to cancel out the offset.
     size_t totalDelay = stageOffset + reverbTotalLatency;
@@ -92,7 +97,7 @@ ReverbConvolverStage::ReverbConvolverStage(const float* impulseResponse, size_t,
 
     size_t delayBufferSize = m_preDelayLength < fftSize ? fftSize : m_preDelayLength;
     delayBufferSize = delayBufferSize < renderSliceSize ? renderSliceSize : delayBufferSize;
-    m_preDelayBuffer.allocate(delayBufferSize);
+    m_preDelayBuffer.resize(delayBufferSize);
 }
 
 ReverbConvolverStage::~ReverbConvolverStage() = default;

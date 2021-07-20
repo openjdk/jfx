@@ -241,6 +241,11 @@ gst_segment_do_seek (GstSegment * segment, gdouble rate,
   g_return_val_if_fail (segment != NULL, FALSE);
   g_return_val_if_fail (segment->format == format, FALSE);
 
+  /* Elements should not pass instant-rate seeks to gst_segment_do_seek().
+   * This helps catch elements that have not been updated yet */
+  if (flags & GST_SEEK_FLAG_INSTANT_RATE_CHANGE)
+    return FALSE;
+
   update_start = update_stop = TRUE;
 
   position = segment->position;
@@ -354,6 +359,8 @@ gst_segment_do_seek (GstSegment * segment, gdouble rate,
     segment->flags |= GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS;
   if ((flags & GST_SEEK_FLAG_TRICKMODE_NO_AUDIO) != 0)
     segment->flags |= GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO;
+  if ((flags & GST_SEEK_FLAG_TRICKMODE_FORWARD_PREDICTED) != 0)
+    segment->flags |= GST_SEGMENT_FLAG_TRICKMODE_FORWARD_PREDICTED;
 
   segment->rate = rate;
   segment->applied_rate = 1.0;
@@ -392,7 +399,7 @@ gst_segment_do_seek (GstSegment * segment, gdouble rate,
  * negative stream-time.
  *
  * This function is typically used by elements that need to synchronize buffers
- * against the clock or eachother.
+ * against the clock or each other.
  *
  * @position can be any value and the result of this function for values outside
  * of the segment is extrapolated.
@@ -699,7 +706,7 @@ gst_segment_position_from_stream_time (const GstSegment * segment,
   if (res == 1)
     return position;
 
-    return -1;
+  return -1;
 }
 
 /**
@@ -714,7 +721,7 @@ gst_segment_position_from_stream_time (const GstSegment * segment,
  * negative running-time.
  *
  * This function is typically used by elements that need to synchronize buffers
- * against the clock or eachother.
+ * against the clock or each other.
  *
  * @position can be any value and the result of this function for values outside
  * of the segment is extrapolated.
@@ -751,17 +758,20 @@ gst_segment_to_running_time_full (const GstSegment * segment, GstFormat format,
   if (G_LIKELY (segment->rate > 0.0)) {
     start = segment->start + offset;
 
-  /* bring to uncorrected position in segment */
+    /* bring to uncorrected position in segment */
     if (position < start) {
       /* negative value */
       result = start - position;
       res = -1;
     } else {
-  result = position - start;
+      result = position - start;
       res = 1;
     }
   } else {
     stop = segment->stop;
+
+    if (stop == -1 && segment->duration != -1)
+      stop = segment->start + segment->duration;
 
     /* cannot continue if no stop position set or invalid offset */
     g_return_val_if_fail (stop != -1, 0);
@@ -774,10 +784,10 @@ gst_segment_to_running_time_full (const GstSegment * segment, GstFormat format,
       /* negative value */
       result = position - stop;
       res = -1;
-  } else {
+    } else {
       result = stop - position;
       res = 1;
-  }
+    }
   }
 
   if (running_time) {
@@ -800,7 +810,7 @@ gst_segment_to_running_time_full (const GstSegment * segment, GstFormat format,
       /* negative and base is smaller, subtract base and remainder is
        * negative */
       *running_time = result - segment->base;
-}
+    }
   }
   return res;
 
@@ -853,17 +863,17 @@ gst_segment_to_running_time (const GstSegment * segment, GstFormat format,
   }
   /* after the segment boundary */
   if (G_UNLIKELY (segment->stop != -1 && position > segment->stop)) {
-      GST_DEBUG ("position(%" G_GUINT64_FORMAT ") > stop(%" G_GUINT64_FORMAT
+    GST_DEBUG ("position(%" G_GUINT64_FORMAT ") > stop(%" G_GUINT64_FORMAT
         ")", position, segment->stop);
-      return -1;
-    }
+    return -1;
+  }
 
   if (gst_segment_to_running_time_full (segment, format, position,
           &result) == 1)
     return result;
 
-      return -1;
-    }
+  return -1;
+}
 
 /**
  * gst_segment_clip:
@@ -1040,10 +1050,10 @@ gst_segment_position_from_running_time_full (const GstSegment * segment,
       /* move into the segment at the right rate */
       if (G_UNLIKELY (abs_rate != 1.0))
         *position = ceil (*position * abs_rate);
-    /* bring to corrected position in segment */
+      /* bring to corrected position in segment */
       *position += start + segment->offset;
       res = 1;
-  } else {
+    } else {
       *position = base - running_time;
       if (G_UNLIKELY (abs_rate != 1.0))
         *position = ceil (*position * abs_rate);
@@ -1056,8 +1066,8 @@ gst_segment_position_from_running_time_full (const GstSegment * segment,
          * so negate the return result */
         *position = *position - (start + segment->offset);
         res = -1;
-  }
-}
+      }
+    }
   } else {
     if (G_LIKELY (running_time >= base)) {
       *position = running_time - base;

@@ -106,7 +106,7 @@ Element* AccessibilitySVGElement::childElementWithMatchingLanguage(ChildrenType&
     return fallback;
 }
 
-void AccessibilitySVGElement::accessibilityText(Vector<AccessibilityText>& textOrder)
+void AccessibilitySVGElement::accessibilityText(Vector<AccessibilityText>& textOrder) const
 {
     String description = accessibilityDescription();
     if (!description.isEmpty())
@@ -141,13 +141,6 @@ String AccessibilitySVGElement::accessibilityDescription() const
             return xlinkTitle;
     }
 
-    if (m_renderer->isSVGText()) {
-        AccessibilityTextUnderElementMode mode;
-        String text = textUnderElement(mode);
-        if (!text.isEmpty())
-            return text;
-    }
-
     if (is<SVGUseElement>(element())) {
         if (AccessibilityObject* target = targetForUseElement())
             return target->accessibilityDescription();
@@ -157,7 +150,7 @@ String AccessibilitySVGElement::accessibilityDescription() const
     // listed as a supported attribute of the 'image' element in the SVG spec:
     // https://www.w3.org/TR/SVG/struct.html#ImageElement
     if (m_renderer->isSVGImage()) {
-        const AtomicString& alt = getAttribute(HTMLNames::altAttr);
+        const AtomString& alt = getAttribute(HTMLNames::altAttr);
         if (!alt.isNull())
             return alt;
     }
@@ -188,18 +181,9 @@ String AccessibilitySVGElement::helpText() const
             return target->helpText();
     }
 
-    String description = accessibilityDescription();
-
-    if (m_renderer->isSVGText()) {
-        AccessibilityTextUnderElementMode mode;
-        String text = textUnderElement(mode);
-        if (!text.isEmpty() && text != description)
-            return text;
-    }
-
     auto titleElements = childrenOfType<SVGTitleElement>(*element());
     if (auto titleChild = childElementWithMatchingLanguage(titleElements)) {
-        if (titleChild->textContent() != description)
+        if (titleChild->textContent() != accessibilityDescription())
             return titleChild->textContent();
     }
 
@@ -245,8 +229,15 @@ bool AccessibilitySVGElement::computeAccessibilityIsIgnored() const
 
     // SVG shapes should not be included unless there's a concrete reason for inclusion.
     // https://rawgit.com/w3c/aria/master/svg-aam/svg-aam.html#exclude_elements
-    if (m_renderer->isSVGShape())
-        return !(hasAttributesRequiredForInclusion() || canSetFocusAttribute() || element()->hasEventListeners());
+    if (m_renderer->isSVGShape()) {
+        if (canSetFocusAttribute() || element()->hasEventListeners())
+            return false;
+        if (auto* svgParent = Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
+            return object.hasAttributesRequiredForInclusion() || object.isAccessibilitySVGRoot();
+        }))
+            return !svgParent->hasAttributesRequiredForInclusion();
+        return true;
+    }
 
     return AccessibilityRenderObject::computeAccessibilityIsIgnored();
 }

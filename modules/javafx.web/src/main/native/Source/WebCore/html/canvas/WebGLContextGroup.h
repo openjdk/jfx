@@ -25,7 +25,10 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLRenderingContextBase.h"
+#include <wtf/Lock.h>
 
 namespace WebCore {
 
@@ -40,7 +43,9 @@ public:
     void addObject(WebGLSharedObject&);
     void removeObject(WebGLSharedObject&);
 
-    GraphicsContext3D& getAGraphicsContext3D();
+    bool hasAContext() const;
+    GraphicsContextGL& getAGraphicsContextGL();
+    Lock& objectGraphLockForAContext();
 
     void loseContextGroup(WebGLRenderingContextBase::LostContextMode);
 
@@ -54,3 +59,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

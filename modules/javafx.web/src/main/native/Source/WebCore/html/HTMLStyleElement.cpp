@@ -32,7 +32,6 @@
 #include "HTMLNames.h"
 #include "MediaList.h"
 #include "MediaQueryParser.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptableDocumentParser.h"
 #include "ShadowRoot.h"
 #include "StyleScope.h"
@@ -76,7 +75,7 @@ Ref<HTMLStyleElement> HTMLStyleElement::create(Document& document)
     return adoptRef(*new HTMLStyleElement(styleTag, document, false));
 }
 
-void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == titleAttr && sheet() && !isInShadowTree())
         sheet()->setTitle(value);
@@ -121,9 +120,9 @@ void HTMLStyleElement::childrenChanged(const ChildChange& change)
     m_styleSheetOwner.childrenChanged(*this);
 }
 
-void HTMLStyleElement::dispatchPendingLoadEvents()
+void HTMLStyleElement::dispatchPendingLoadEvents(Page* page)
 {
-    styleLoadEventSender().dispatchPendingEvents();
+    styleLoadEventSender().dispatchPendingEvents(page);
 }
 
 void HTMLStyleElement::dispatchPendingEvent(StyleEventSender* eventSender)

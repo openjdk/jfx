@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ import java.security.PrivilegedAction;
  * @see javafx.beans.property.ObjectProperty
  * @see JavaBeanObjectPropertyBuilder
  *
- * @param T type of the wrapped {@code Object}
+ * @param <T> type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implements JavaBeanProperty<T> {
@@ -98,6 +98,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     private ObservableValue<? extends T> observable = null;
     private ExpressionHelper<T> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanObjectProperty(PropertyDescriptor descriptor, Object bean) {
@@ -114,7 +115,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"removal","unchecked"})
     @Override
     public T get() {
         return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
@@ -135,6 +136,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final T value) {
         if (isBound()) {

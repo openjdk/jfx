@@ -117,19 +117,18 @@ def generate_from_specification(primary_specification_filepath=None,
                                 output_dirpath=None,
                                 force_output=False,
                                 framework_name="",
-                                platform_name="",
                                 generate_frontend=True,
                                 generate_backend=True):
 
     def load_specification(protocol, filepath, isSupplemental=False):
         try:
             with open(filepath, "r") as input_file:
-                parsed_json = json.load(input_file)
+                regex = re.compile(r"\/\*.*?\*\/", re.DOTALL)
+                parsed_json = json.loads(re.sub(regex, "", input_file.read()))
                 protocol.parse_specification(parsed_json, isSupplemental)
         except ValueError as e:
             raise Exception("Error parsing valid JSON in file: " + filepath + "\nParse error: " + str(e))
 
-    platform = Platform.fromString(platform_name)
     protocol = models.Protocol(framework_name)
     for specification in supplemental_specification_filepaths:
         load_specification(protocol, specification, isSupplemental=True)
@@ -137,7 +136,7 @@ def generate_from_specification(primary_specification_filepath=None,
 
     protocol.resolve_types()
 
-    generator_arguments = [protocol, platform, primary_specification_filepath]
+    generator_arguments = [protocol, primary_specification_filepath]
     generators = []
 
     if protocol.framework is Frameworks.Test:
@@ -161,7 +160,6 @@ def generate_from_specification(primary_specification_filepath=None,
         generators.append(ObjCProtocolTypesImplementationGenerator(*generator_arguments))
 
     elif protocol.framework is Frameworks.JavaScriptCore:
-        generators.append(JSBackendCommandsGenerator(*generator_arguments))
         generators.append(CppAlternateBackendDispatcherHeaderGenerator(*generator_arguments))
         generators.append(CppBackendDispatcherHeaderGenerator(*generator_arguments))
         generators.append(CppBackendDispatcherImplementationGenerator(*generator_arguments))
@@ -228,7 +226,6 @@ def generate_from_specification(primary_specification_filepath=None,
 
 if __name__ == '__main__':
     allowed_framework_names = ['JavaScriptCore', 'WebInspector', 'WebInspectorUI', 'WebKit', 'Test']
-    allowed_platform_names = ['iOS', 'macOS', 'all', 'generic']
     cli_parser = optparse.OptionParser(usage="usage: %prog [options] PrimaryProtocol.json [SupplementalProtocol.json ...]")
     cli_parser.add_option("-o", "--outputDir", help="Directory where generated files should be written.")
     cli_parser.add_option("--framework", type="choice", choices=allowed_framework_names, help="The framework that the primary specification belongs to.")
@@ -237,7 +234,6 @@ if __name__ == '__main__':
     cli_parser.add_option("-t", "--test", action="store_true", help="Enable test mode. Use unique output filenames created by prepending the input filename.")
     cli_parser.add_option("--frontend", action="store_true", help="Generate code for the frontend-side of the protocol only.")
     cli_parser.add_option("--backend", action="store_true", help="Generate code for the backend-side of the protocol only.")
-    cli_parser.add_option("--platform", default="generic", help="The platform of the backend being generated. For example, we compile WebKit2 for either macOS or iOS. This value is case-insensitive. Allowed values: %s" % ", ".join(allowed_platform_names))
     options = None
 
     arg_options, arg_values = cli_parser.parse_args()
@@ -263,7 +259,6 @@ if __name__ == '__main__':
         'output_dirpath': arg_options.outputDir,
         'concatenate_output': arg_options.test,
         'framework_name': arg_options.framework,
-        'platform_name': arg_options.platform,
         'force_output': arg_options.force,
         'generate_backend': generate_backend,
         'generate_frontend': generate_frontend,

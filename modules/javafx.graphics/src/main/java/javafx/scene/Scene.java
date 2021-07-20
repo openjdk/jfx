@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
+import javafx.css.Stylesheet;
 import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
@@ -83,6 +84,7 @@ import javafx.util.Duration;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
+import java.io.File;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -179,6 +181,7 @@ public class Scene implements EventTarget {
 
     private EnumSet<DirtyBits> dirtyBits = EnumSet.noneOf(DirtyBits.class);
 
+    @SuppressWarnings("removal")
     final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
@@ -839,6 +842,11 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
 
+    // FIXME: make this method package-scope in the next release
+    /**
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "17")
     public void disposePeer() {
         if (peer == null) {
             // This is fine, the window is either not shown yet and there is no
@@ -1290,11 +1298,13 @@ public class Scene implements EventTarget {
 
         int xMin = (int)Math.floor(x);
         int yMin = (int)Math.floor(y);
-        int xMax = (int)Math.ceil(x + w);
-        int yMax = (int)Math.ceil(y + h);
-        int width = Math.max(xMax - xMin, 1);
-        int height = Math.max(yMax - yMin, 1);
+        int width;
+        int height;
         if (wimg == null) {
+            int xMax = (int)Math.ceil(x + w);
+            int yMax = (int)Math.ceil(y + h);
+            width = Math.max(xMax - xMin, 1);
+            height = Math.max(yMax - yMin, 1);
             wimg = new WritableImage(width, height);
         } else {
             width = (int)wimg.getWidth();
@@ -1337,7 +1347,10 @@ public class Scene implements EventTarget {
         context.platformImage = accessor.getTkImageLoader(wimg);
         setAllowPGAccess(false);
         Object tkImage = tk.renderToImage(context);
-        accessor.loadTkImage(wimg, tkImage);
+
+        if (tkImage != null) {
+            accessor.loadTkImage(wimg, tkImage);
+        }
 
         if (camera != null) {
             setAllowPGAccess(true);
@@ -1381,6 +1394,7 @@ public class Scene implements EventTarget {
     private static List<Runnable> snapshotRunnableListB;
     private static List<Runnable> snapshotRunnableList;
 
+    @SuppressWarnings("removal")
     static void addSnapshotRunnable(final Runnable runnable) {
         Toolkit.getToolkit().checkFxUserThread();
 
@@ -1613,7 +1627,13 @@ public class Scene implements EventTarget {
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
-     * </p>
+     * <p>
+     * The RFC 2397 "data" scheme for URLs is supported in addition to the protocol handlers that
+     * are registered for the application.
+     * If a URL uses the "data" scheme and the MIME type is either empty, "text/plain", or "text/css",
+     * the payload will be interpreted as a CSS file.
+     * If the MIME type is "application/octet-stream", the payload will be interpreted as a binary
+     * CSS file (see {@link Stylesheet#convertToBinary(File, File)}).
      * <pre><code>
      *
      * package com.example.javafx.app;
@@ -1684,13 +1704,22 @@ public class Scene implements EventTarget {
      * the platform-default user-agent stylesheet. If the URL does not resolve to a valid location,
      * the platform-default user-agent stylesheet will be used.
      * <p>
-     * For additional information about using CSS with the scene graph,
-     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
-     * </p>
-     * @param url The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
+     * <p>
+     * The RFC 2397 "data" scheme for URLs is supported in addition to the protocol handlers that
+     * are registered for the application.
+     * If a URL uses the "data" scheme and the MIME type is either empty, "text/plain", or "text/css",
+     * the payload will be interpreted as a CSS file.
+     * If the MIME type is "application/octet-stream", the payload will be interpreted as a binary
+     * CSS file (see {@link Stylesheet#convertToBinary(File, File)}).
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     *
+     * @param url the URL of the user-agent stylesheet
      * @since  JavaFX 8u20
      */
     public final void setUserAgentStylesheet(String url) {
@@ -2111,6 +2140,12 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT);
     }
 
+    // FIXME: make this method package-scope in the next release
+    /**
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
+     * @param e undocumented method parameter
+     */
+    @Deprecated(forRemoval = true, since = "17")
     public void processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
@@ -2197,6 +2232,12 @@ public class Scene implements EventTarget {
         }
     }
 
+    // FIXME: make this method package-scope in the next release
+    /**
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
+     * @param enable undocumented method parameter
+     */
+    @Deprecated(forRemoval = true, since = "17")
     public void enableInputMethodEvents(boolean enable) {
        if (peer != null) {
            peer.enableInputMethodEvents(enable);
@@ -3628,6 +3669,7 @@ public class Scene implements EventTarget {
             currentEventTarget = currentEventTargets.size() > 0
                     ? currentEventTargets.get(0) : null;
             pdrEventTarget.clear();
+            pdrEventTargets.clear();
         }
 
         public void enterFullPDR(EventTarget gestureSource) {
@@ -3780,7 +3822,8 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 if (e.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     if (!(primaryButtonDown || secondaryButtonDown || middleButtonDown ||
-                            backButtonDown || forwardButtonDown)) {
+                            backButtonDown || forwardButtonDown) &&
+                            Scene.this.dndGesture == null) {
                         //old gesture ended and new one started
                         gestureStarted = true;
                         if (!PLATFORM_DRAG_GESTURE_INITIATION) {
@@ -6228,6 +6271,7 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
+    @SuppressWarnings("removal")
     private static final NodeOrientation defaultNodeOrientation =
         AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
@@ -6431,6 +6475,7 @@ public class Scene implements EventTarget {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
+                @SuppressWarnings("removal")
                 @Override public AccessControlContext getAccessControlContext() {
                     return getPeer().getAccessControlContext();
                 }

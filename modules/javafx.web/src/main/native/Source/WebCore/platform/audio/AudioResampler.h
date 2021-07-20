@@ -37,7 +37,8 @@ namespace WebCore {
 // The audio stream may be single or multi-channel.
 // The default constructor defaults to single-channel (mono).
 
-class AudioResampler {
+class AudioResampler final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     AudioResampler();
     AudioResampler(unsigned numberOfChannels);
@@ -55,10 +56,10 @@ public:
     void setRate(double rate);
     double rate() const { return m_rate; }
 
-    static const double MaxRate;
+    static constexpr double MaxRate { 8 };
 
 private:
-    double m_rate;
+    double m_rate { 1 };
     Vector<std::unique_ptr<AudioResamplerKernel>> m_kernels;
     RefPtr<AudioBus> m_sourceBus;
 };

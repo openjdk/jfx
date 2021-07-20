@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLStageInOutSemantic.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLArrayType.h"
 #include "WHLSLEnumerationDefinition.h"
@@ -47,13 +47,12 @@ bool StageInOutSemantic::isAcceptableType(const UnnamedType& unnamedType, const 
     if (!is<TypeReference>(unnamedType))
         return false;
     auto& typeReference = downcast<TypeReference>(unnamedType);
-    ASSERT(typeReference.resolvedType());
-    auto& resolvedType = *typeReference.resolvedType();
+    auto& resolvedType = typeReference.resolvedType();
     if (is<EnumerationDefinition>(resolvedType))
         return true;
     if (!is<NativeTypeDeclaration>(resolvedType))
         return false;
-    auto& nativeTypeDeclaration = downcast<NativeTypeDeclaration>(*typeReference.resolvedType());
+    auto& nativeTypeDeclaration = downcast<NativeTypeDeclaration>(typeReference.resolvedType());
     return nativeTypeDeclaration.isNumber()
         || nativeTypeDeclaration.isVector()
         || nativeTypeDeclaration.isMatrix();
@@ -77,4 +76,4 @@ bool StageInOutSemantic::isAcceptableForShaderItemDirection(ShaderItemDirection 
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

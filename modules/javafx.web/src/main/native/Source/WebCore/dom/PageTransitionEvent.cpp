@@ -26,15 +26,19 @@
 #include "config.h"
 #include "PageTransitionEvent.h"
 
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
-PageTransitionEvent::PageTransitionEvent(const AtomicString& type, bool persisted)
+WTF_MAKE_ISO_ALLOCATED_IMPL(PageTransitionEvent);
+
+PageTransitionEvent::PageTransitionEvent(const AtomString& type, bool persisted)
     : Event(type, CanBubble::Yes, IsCancelable::Yes)
     , m_persisted(persisted)
 {
 }
 
-PageTransitionEvent::PageTransitionEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+PageTransitionEvent::PageTransitionEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_persisted(initializer.persisted)
 {

@@ -41,45 +41,43 @@ class DOMStorageFrontendDispatcher;
 namespace WebCore {
 
 class Frame;
-class InspectorPageAgent;
 class Page;
 class SecurityOrigin;
 class Storage;
-
-typedef String ErrorString;
 
 class InspectorDOMStorageAgent final : public InspectorAgentBase, public Inspector::DOMStorageBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorDOMStorageAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorDOMStorageAgent(WebAgentContext&, InspectorPageAgent*);
-    virtual ~InspectorDOMStorageAgent();
+    InspectorDOMStorageAgent(PageAgentContext&);
+    ~InspectorDOMStorageAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
-    // Called from the front-end.
-    void enable(ErrorString&) override;
-    void disable(ErrorString&) override;
-    void getDOMStorageItems(ErrorString&, const JSON::Object& storageId, RefPtr<JSON::ArrayOf<JSON::ArrayOf<String>>>& items) override;
-    void setDOMStorageItem(ErrorString&, const JSON::Object& storageId, const String& key, const String& value) override;
-    void removeDOMStorageItem(ErrorString&, const JSON::Object& storageId, const String& key) override;
-
-    // Called from the injected script.
-    String storageId(Storage&);
-    RefPtr<Inspector::Protocol::DOMStorage::StorageId> storageId(SecurityOrigin*, bool isLocalStorage);
+    // DOMStorageBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOMStorage::Item>>> getDOMStorageItems(Ref<JSON::Object>&& storageId);
+    Inspector::Protocol::ErrorStringOr<void> setDOMStorageItem(Ref<JSON::Object>&& storageId, const String& key, const String& value);
+    Inspector::Protocol::ErrorStringOr<void> removeDOMStorageItem(Ref<JSON::Object>&& storageId, const String& key);
+    Inspector::Protocol::ErrorStringOr<void> clearDOMStorageItems(Ref<JSON::Object>&& storageId);
 
     // InspectorInstrumentation
     void didDispatchDOMStorageEvent(const String& key, const String& oldValue, const String& newValue, StorageType, SecurityOrigin*);
 
+    // CommandLineAPI
+    static String storageId(Storage&);
+    static Ref<Inspector::Protocol::DOMStorage::StorageId> storageId(SecurityOrigin*, bool isLocalStorage);
+
 private:
-    RefPtr<StorageArea> findStorageArea(ErrorString&, const JSON::Object&, Frame*&);
+    RefPtr<StorageArea> findStorageArea(Inspector::Protocol::ErrorString&, Ref<JSON::Object>&& storageId, Frame*&);
 
     std::unique_ptr<Inspector::DOMStorageFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::DOMStorageBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent { nullptr };
 
-    bool m_enabled { false };
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

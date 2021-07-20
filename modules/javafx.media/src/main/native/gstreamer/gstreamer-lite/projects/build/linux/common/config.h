@@ -6,6 +6,8 @@
 /* poll doesn't work on devices */
 #undef BROKEN_POLL
 
+#define GSTCONFIG_BUILT_WITH_MSVC 0
+
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
 #undef ENABLE_NLS
@@ -24,6 +26,9 @@
 
 /* The GIO install prefix. */
 #undef GIO_PREFIX
+
+/* public symbol export define */
+#undef GST_API_EXPORT
 
 /* GStreamer API Version */
 #define GST_API_VERSION "1.0"
@@ -47,7 +52,6 @@
 #undef GST_ENABLE_EXTRA_CHECKS
 
 /* Extra platform specific plugin suffix */
-//#undef GST_EXTRA_MODULE_SUFFIX
 #define GST_EXTRA_MODULE_SUFFIX ".so"
 
 /* macro to use to show function name */
@@ -80,6 +84,10 @@
 /* libexecdir path component, used to find plugin-scanner on relocatable
    builds on windows */
 #undef GST_PLUGIN_SCANNER_SUBDIR
+
+/* plugin directory path component, used to find plugins on relocatable builds
+   on windows */
+#undef GST_PLUGIN_SUBDIR
 
 /* location of the installed gst-ptp-helper */
 #undef GST_PTP_HELPER_INSTALLED
@@ -290,14 +298,7 @@
 /* Define to 1 if you have the `pselect' function. */
 #define HAVE_PSELECT 1
 
-/* Define if you have POSIX threads libraries and header files. */
-#undef HAVE_PTHREAD
-
-/* Have PTHREAD_PRIO_INHERIT. */
-#define HAVE_PTHREAD_PRIO_INHERIT 1
-
-/* Have function pthread_setname_np(const char*) */
-#undef HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID
+#define HAVE_PTHREAD_CONDATTR_SETCLOCK 1
 
 /* PTP support available */
 #undef HAVE_PTP
@@ -469,16 +470,16 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 1.14.4"
+#define PACKAGE_STRING "GStreamer 1.18.4"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL ""
+#undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.14.4"
+#define PACKAGE_VERSION "1.18.4"
 
 /* directory where plugins are located */
 #undef PLUGINDIR
@@ -518,7 +519,7 @@
 #undef USE_POISONING
 
 /* Version number of package */
-#define VERSION "1.14.4"
+#define VERSION "1.18.4"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

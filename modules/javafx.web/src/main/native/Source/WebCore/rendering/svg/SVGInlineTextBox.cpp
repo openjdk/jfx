@@ -123,7 +123,7 @@ FloatRect SVGInlineTextBox::selectionRectForTextFragment(const SVGTextFragment& 
 
     textOrigin.move(0, -scaledFontMetrics.floatAscent());
 
-    LayoutRect selectionRect = LayoutRect(textOrigin, LayoutSize(0, fragment.height * scalingFactor));
+    LayoutRect selectionRect { textOrigin, LayoutSize(0, LayoutUnit(fragment.height * scalingFactor)) };
     TextRun run = constructTextRun(style, fragment);
     scaledFont.adjustSelectionRectForText(run, selectionRect, startPosition, endPosition);
     FloatRect snappedSelectionRect = snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), run.ltr());
@@ -189,7 +189,7 @@ void SVGInlineTextBox::paintSelectionBackground(PaintInfo& paintInfo)
 
     // Determine whether or not we're selected.
     bool paintSelectedTextOnly = paintInfo.phase == PaintPhase::Selection;
-    bool hasSelection = selectionState() != RenderObject::SelectionNone;
+    bool hasSelection = selectionState() != RenderObject::HighlightState::None;
     if (!hasSelection || paintSelectedTextOnly)
         return;
 
@@ -202,9 +202,7 @@ void SVGInlineTextBox::paintSelectionBackground(PaintInfo& paintInfo)
 
     auto& style = parentRenderer.style();
 
-    unsigned startPosition;
-    unsigned endPosition;
-    std::tie(startPosition, endPosition) = selectionStartEnd();
+    auto [startPosition, endPosition] = selectionStartEnd();
 
     unsigned fragmentStartPosition = 0;
     unsigned fragmentEndPosition = 0;
@@ -242,14 +240,14 @@ void SVGInlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     if (renderer().style().visibility() != Visibility::Visible)
         return;
 
-    // Note: We're explicitely not supporting composition & custom underlines and custom highlighters - unlike InlineTextBox.
+    // Note: We're explicitly not supporting composition & custom underlines and custom highlighters - unlike InlineTextBox.
     // If we ever need that for SVG, it's very easy to refactor and reuse the code.
 
     auto& parentRenderer = parent()->renderer();
 
     bool paintSelectedTextOnly = paintInfo.phase == PaintPhase::Selection;
     bool shouldPaintSelectionHighlight = !(paintInfo.paintBehavior.contains(PaintBehavior::SkipSelectionHighlight));
-    bool hasSelection = !parentRenderer.document().printing() && selectionState() != RenderObject::SelectionNone;
+    bool hasSelection = !parentRenderer.document().printing() && selectionState() != RenderObject::HighlightState::None;
     if (!hasSelection && paintSelectedTextOnly)
         return;
 
@@ -393,7 +391,7 @@ TextRun SVGInlineTextBox::constructTextRun(const RenderStyle& style, const SVGTe
     TextRun run(StringView(renderer().text()).substring(fragment.characterOffset, fragment.length)
                 , 0 /* xPos, only relevant with allowTabs=true */
                 , 0 /* padding, only relevant for justified text, not relevant for SVG */
-                , AllowTrailingExpansion
+                , AllowRightExpansion
                 , direction()
                 , dirOverride() || style.rtlOrdering() == Order::Visual /* directionalOverride */);
 
@@ -604,13 +602,10 @@ void SVGInlineTextBox::paintText(GraphicsContext& context, const RenderStyle& st
         paintTextWithShadows(context, style, textRun, fragment, 0, startPosition);
 
     // Draw text using selection style from the start to the end position of the selection
-    if (style != selectionStyle)
-        SVGResourcesCache::clientStyleChanged(parent()->renderer(), StyleDifference::Repaint, selectionStyle);
-
-    paintTextWithShadows(context, selectionStyle, textRun, fragment, startPosition, endPosition);
-
-    if (style != selectionStyle)
-        SVGResourcesCache::clientStyleChanged(parent()->renderer(), StyleDifference::Repaint, style);
+    {
+        SVGResourcesCache::SetStyleForScope temporaryStyleChange(parent()->renderer(), style, selectionStyle);
+        paintTextWithShadows(context, selectionStyle, textRun, fragment, startPosition, endPosition);
+    }
 
     // Eventually draw text using regular style from the end position of the selection to the end of the current chunk part
     if (endPosition < fragment.length && !paintSelectedTextOnly)
@@ -670,7 +665,7 @@ bool SVGInlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult&
 
                     if (fragmentQuad.containsPoint(locationInContainer.point())) {
                         renderer().updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-                        if (result.addNodeToListBasedTestResult(&renderer().textNode(), request, locationInContainer, rect) == HitTestProgress::Stop)
+                        if (result.addNodeToListBasedTestResult(renderer().nodeForHitTest(), request, locationInContainer, rect) == HitTestProgress::Stop)
                             return true;
                     }
                 }

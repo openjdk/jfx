@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "TextTrackCue.h"
 
@@ -40,11 +40,11 @@ public:
     TextTrackCue* item(unsigned index) const;
     TextTrackCue* getCueById(const String&) const;
 
-    unsigned cueIndex(TextTrackCue&) const;
+    unsigned cueIndex(const TextTrackCue&) const;
 
     void add(Ref<TextTrackCue>&&);
     void remove(TextTrackCue&);
-    void updateCueIndex(TextTrackCue&);
+    void updateCueIndex(const TextTrackCue&);
 
     void clear();
 
@@ -57,11 +57,6 @@ private:
     RefPtr<TextTrackCueList> m_activeCues;
 };
 
-inline Ref<TextTrackCueList> TextTrackCueList::create()
-{
-    return adoptRef(*new TextTrackCueList);
-}
-
 inline unsigned TextTrackCueList::length() const
 {
     return m_vector.size();
@@ -69,4 +64,4 @@ inline unsigned TextTrackCueList::length() const
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

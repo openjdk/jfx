@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,10 +112,11 @@ import javafx.event.EventHandler;
  * duration of media playback is then the product of the cycle duration and the
  * number of times the cycle is played. If the stop time of the cycle is reached
  * and the cycle is to be played again, the event handler registered with the
- * {@link #onRepeatProperty onRepeat} property is invoked. If the stop time is reached and
- * the cycle is <i>not</i> to be repeated, then the event handler registered
- * with the {@link #onEndOfMediaProperty onEndOfMedia} property is invoked. A zero-relative index of
- * which cycle is presently being played is maintained by {@link #currentCountProperty currentCount}.
+ * {@link #onRepeatProperty onRepeat} property is invoked. If the stop time is
+ * reached, then the event handler registered with the {@link #onEndOfMediaProperty onEndOfMedia}
+ * property is invoked regardless of whether the cycle is to be repeated or not.
+ * A zero-relative index of which cycle is presently being played is maintained
+ * by {@link #currentCountProperty currentCount}.
  * </p>
  *
  * <p>The operation of a <code>MediaPlayer</code> is inherently asynchronous.

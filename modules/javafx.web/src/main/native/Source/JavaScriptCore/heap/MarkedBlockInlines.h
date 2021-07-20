@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include "JSCast.h"
 #include "MarkedBlock.h"
 #include "MarkedSpace.h"
-#include "Operations.h"
+#include "Scribble.h"
 #include "SuperSampler.h"
 #include "VM.h"
 
@@ -52,7 +52,7 @@ inline bool MarkedBlock::hasAnyNewlyAllocated()
 
 inline Heap* MarkedBlock::heap() const
 {
-    return &vm()->heap;
+    return &vm().heap;
 }
 
 inline MarkedSpace* MarkedBlock::space() const
@@ -253,12 +253,12 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
 
     unsigned cellSize = this->cellSize();
 
-    VM& vm = *this->vm();
+    VM& vm = this->vm();
     auto destroy = [&] (void* cell) {
         JSCell* jsCell = static_cast<JSCell*>(cell);
         if (!jsCell->isZapped()) {
             destroyFunc(vm, jsCell);
-            jsCell->zap();
+            jsCell->zap(HeapCell::Destruction);
         }
     };
 
@@ -306,7 +306,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
     // This produces a free list that is ordered in reverse through the block.
     // This is fine, since the allocation code makes no assumptions about the
     // order of the free list.
-    FreeCell* head = 0;
+    FreeCell* head = nullptr;
     size_t count = 0;
     uintptr_t secret;
     cryptographicallyRandomValues(&secret, sizeof(uintptr_t));
@@ -481,6 +481,12 @@ inline MarkedBlock::Handle::MarksMode MarkedBlock::Handle::marksMode()
     if (space()->isMarking())
         marksAreUseful |= block().marksConveyLivenessDuringMarking(markingVersion);
     return marksAreUseful ? MarksNotStale : MarksStale;
+}
+
+inline void MarkedBlock::Handle::setIsFreeListed()
+{
+    m_directory->setIsEmpty(NoLockingNecessary, this, false);
+    m_isFreeListed = true;
 }
 
 template <typename Functor>

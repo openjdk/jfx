@@ -12,7 +12,7 @@
 #include "unicode/uniset.h"
 #include "unicode/simpleformatter.h"
 #include "standardplural.h"
-#include "number_stringbuilder.h"
+#include "formatted_string_builder.h"
 #include "number_types.h"
 
 U_NAMESPACE_BEGIN namespace number {
@@ -28,14 +28,20 @@ class U_I18N_API ConstantAffixModifier : public Modifier, public UObject {
                           bool strong)
             : fPrefix(prefix), fSuffix(suffix), fField(field), fStrong(strong) {}
 
-    int32_t apply(NumberStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
+    int32_t apply(FormattedStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
                   UErrorCode &status) const U_OVERRIDE;
 
-    int32_t getPrefixLength(UErrorCode &status) const U_OVERRIDE;
+    int32_t getPrefixLength() const U_OVERRIDE;
 
-    int32_t getCodePointCount(UErrorCode &status) const U_OVERRIDE;
+    int32_t getCodePointCount() const U_OVERRIDE;
 
     bool isStrong() const U_OVERRIDE;
+
+    bool containsField(Field field) const U_OVERRIDE;
+
+    void getParameters(Parameters& output) const U_OVERRIDE;
+
+    bool semanticallyEquivalent(const Modifier& other) const U_OVERRIDE;
 
   private:
     UnicodeString fPrefix;
@@ -52,21 +58,30 @@ class U_I18N_API SimpleModifier : public Modifier, public UMemory {
   public:
     SimpleModifier(const SimpleFormatter &simpleFormatter, Field field, bool strong);
 
+    SimpleModifier(const SimpleFormatter &simpleFormatter, Field field, bool strong,
+                   const Modifier::Parameters parameters);
+
     // Default constructor for LongNameHandler.h
     SimpleModifier();
 
-    int32_t apply(NumberStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
+    int32_t apply(FormattedStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
                   UErrorCode &status) const U_OVERRIDE;
 
-    int32_t getPrefixLength(UErrorCode &status) const U_OVERRIDE;
+    int32_t getPrefixLength() const U_OVERRIDE;
 
-    int32_t getCodePointCount(UErrorCode &status) const U_OVERRIDE;
+    int32_t getCodePointCount() const U_OVERRIDE;
 
     bool isStrong() const U_OVERRIDE;
 
+    bool containsField(Field field) const U_OVERRIDE;
+
+    void getParameters(Parameters& output) const U_OVERRIDE;
+
+    bool semanticallyEquivalent(const Modifier& other) const U_OVERRIDE;
+
     /**
      * TODO: This belongs in SimpleFormatterImpl. The only reason I haven't moved it there yet is because
-     * DoubleSidedStringBuilder is an internal class and SimpleFormatterImpl feels like it should not depend on it.
+     * FormattedStringBuilder is an internal class and SimpleFormatterImpl feels like it should not depend on it.
      *
      * <p>
      * Formats a value that is already stored inside the StringBuilder <code>result</code> between the indices
@@ -85,27 +100,56 @@ class U_I18N_API SimpleModifier : public Modifier, public UMemory {
      * @return The number of characters (UTF-16 code points) that were added to the StringBuilder.
      */
     int32_t
-    formatAsPrefixSuffix(NumberStringBuilder &result, int32_t startIndex, int32_t endIndex, Field field,
-                         UErrorCode &status) const;
+    formatAsPrefixSuffix(FormattedStringBuilder& result, int32_t startIndex, int32_t endIndex,
+                         UErrorCode& status) const;
+
+    /**
+     * TODO: Like above, this belongs with the rest of the SimpleFormatterImpl code.
+     * I put it here so that the SimpleFormatter uses in FormattedStringBuilder are near each other.
+     *
+     * <p>
+     * Applies the compiled two-argument pattern to the FormattedStringBuilder.
+     *
+     * <p>
+     * This method is optimized for the case where the prefix and suffix are often empty, such as
+     * in the range pattern like "{0}-{1}".
+     */
+    static int32_t
+    formatTwoArgPattern(const SimpleFormatter& compiled, FormattedStringBuilder& result,
+                        int32_t index, int32_t* outPrefixLength, int32_t* outSuffixLength,
+                        Field field, UErrorCode& status);
 
   private:
     UnicodeString fCompiledPattern;
     Field fField;
-    bool fStrong;
-    int32_t fPrefixLength;
-    int32_t fSuffixOffset;
-    int32_t fSuffixLength;
+    bool fStrong = false;
+    int32_t fPrefixLength = 0;
+    int32_t fSuffixOffset = -1;
+    int32_t fSuffixLength = 0;
+    Modifier::Parameters fParameters;
 };
 
 /**
  * An implementation of {@link Modifier} that allows for multiple types of fields in the same modifier. Constructed
- * based on the contents of two {@link NumberStringBuilder} instances (one for the prefix, one for the suffix).
+ * based on the contents of two {@link FormattedStringBuilder} instances (one for the prefix, one for the suffix).
  */
 class U_I18N_API ConstantMultiFieldModifier : public Modifier, public UMemory {
   public:
     ConstantMultiFieldModifier(
-            const NumberStringBuilder &prefix,
-            const NumberStringBuilder &suffix,
+            const FormattedStringBuilder &prefix,
+            const FormattedStringBuilder &suffix,
+            bool overwrite,
+            bool strong,
+            const Modifier::Parameters parameters)
+      : fPrefix(prefix),
+        fSuffix(suffix),
+        fOverwrite(overwrite),
+        fStrong(strong),
+        fParameters(parameters) {}
+
+    ConstantMultiFieldModifier(
+            const FormattedStringBuilder &prefix,
+            const FormattedStringBuilder &suffix,
             bool overwrite,
             bool strong)
       : fPrefix(prefix),
@@ -113,22 +157,29 @@ class U_I18N_API ConstantMultiFieldModifier : public Modifier, public UMemory {
         fOverwrite(overwrite),
         fStrong(strong) {}
 
-    int32_t apply(NumberStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
+    int32_t apply(FormattedStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
                   UErrorCode &status) const U_OVERRIDE;
 
-    int32_t getPrefixLength(UErrorCode &status) const U_OVERRIDE;
+    int32_t getPrefixLength() const U_OVERRIDE;
 
-    int32_t getCodePointCount(UErrorCode &status) const U_OVERRIDE;
+    int32_t getCodePointCount() const U_OVERRIDE;
 
     bool isStrong() const U_OVERRIDE;
 
+    bool containsField(Field field) const U_OVERRIDE;
+
+    void getParameters(Parameters& output) const U_OVERRIDE;
+
+    bool semanticallyEquivalent(const Modifier& other) const U_OVERRIDE;
+
   protected:
-    // NOTE: In Java, these are stored as array pointers. In C++, the NumberStringBuilder is stored by
+    // NOTE: In Java, these are stored as array pointers. In C++, the FormattedStringBuilder is stored by
     // value and is treated internally as immutable.
-    NumberStringBuilder fPrefix;
-    NumberStringBuilder fSuffix;
+    FormattedStringBuilder fPrefix;
+    FormattedStringBuilder fSuffix;
     bool fOverwrite;
     bool fStrong;
+    Modifier::Parameters fParameters;
 };
 
 /** Identical to {@link ConstantMultiFieldModifier}, but supports currency spacing. */
@@ -136,19 +187,19 @@ class U_I18N_API CurrencySpacingEnabledModifier : public ConstantMultiFieldModif
   public:
     /** Safe code path */
     CurrencySpacingEnabledModifier(
-            const NumberStringBuilder &prefix,
-            const NumberStringBuilder &suffix,
+            const FormattedStringBuilder &prefix,
+            const FormattedStringBuilder &suffix,
             bool overwrite,
             bool strong,
             const DecimalFormatSymbols &symbols,
             UErrorCode &status);
 
-    int32_t apply(NumberStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
+    int32_t apply(FormattedStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
                   UErrorCode &status) const U_OVERRIDE;
 
     /** Unsafe code path */
     static int32_t
-    applyCurrencySpacing(NumberStringBuilder &output, int32_t prefixStart, int32_t prefixLen,
+    applyCurrencySpacing(FormattedStringBuilder &output, int32_t prefixStart, int32_t prefixLen,
                          int32_t suffixStart, int32_t suffixLen, const DecimalFormatSymbols &symbols,
                          UErrorCode &status);
 
@@ -167,7 +218,7 @@ class U_I18N_API CurrencySpacingEnabledModifier : public ConstantMultiFieldModif
     };
 
     /** Unsafe code path */
-    static int32_t applyCurrencySpacingAffix(NumberStringBuilder &output, int32_t index, EAffix affix,
+    static int32_t applyCurrencySpacingAffix(FormattedStringBuilder &output, int32_t index, EAffix affix,
                                              const DecimalFormatSymbols &symbols, UErrorCode &status);
 
     static UnicodeSet
@@ -183,7 +234,7 @@ class U_I18N_API EmptyModifier : public Modifier, public UMemory {
   public:
     explicit EmptyModifier(bool isStrong) : fStrong(isStrong) {}
 
-    int32_t apply(NumberStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
+    int32_t apply(FormattedStringBuilder &output, int32_t leftIndex, int32_t rightIndex,
                   UErrorCode &status) const U_OVERRIDE {
         (void)output;
         (void)leftIndex;
@@ -192,13 +243,11 @@ class U_I18N_API EmptyModifier : public Modifier, public UMemory {
         return 0;
     }
 
-    int32_t getPrefixLength(UErrorCode &status) const U_OVERRIDE {
-        (void)status;
+    int32_t getPrefixLength() const U_OVERRIDE {
         return 0;
     }
 
-    int32_t getCodePointCount(UErrorCode &status) const U_OVERRIDE {
-        (void)status;
+    int32_t getCodePointCount() const U_OVERRIDE {
         return 0;
     }
 
@@ -206,56 +255,76 @@ class U_I18N_API EmptyModifier : public Modifier, public UMemory {
         return fStrong;
     }
 
+    bool containsField(Field field) const U_OVERRIDE {
+        (void)field;
+        return false;
+    }
+
+    void getParameters(Parameters& output) const U_OVERRIDE {
+        output.obj = nullptr;
+    }
+
+    bool semanticallyEquivalent(const Modifier& other) const U_OVERRIDE {
+        return other.getCodePointCount() == 0;
+    }
+
   private:
     bool fStrong;
 };
 
 /**
- * A ParameterizedModifier by itself is NOT a Modifier. Rather, it wraps a data structure containing two or more
- * Modifiers and returns the modifier appropriate for the current situation.
+ * This implementation of ModifierStore adopts Modifer pointers.
  */
-class U_I18N_API ParameterizedModifier : public UMemory {
+class U_I18N_API AdoptingModifierStore : public ModifierStore, public UMemory {
   public:
-    // NOTE: mods is zero-initialized (to nullptr)
-    ParameterizedModifier() : mods() {
-    }
+    virtual ~AdoptingModifierStore();
+
+    static constexpr StandardPlural::Form DEFAULT_STANDARD_PLURAL = StandardPlural::OTHER;
+
+    AdoptingModifierStore() = default;
 
     // No copying!
-    ParameterizedModifier(const ParameterizedModifier &other) = delete;
+    AdoptingModifierStore(const AdoptingModifierStore &other) = delete;
 
-    ~ParameterizedModifier() {
-        for (const Modifier *mod : mods) {
-            delete mod;
-        }
-    }
-
-    void adoptPositiveNegativeModifiers(
-            const Modifier *positive, const Modifier *zero, const Modifier *negative) {
-        mods[2] = positive;
-        mods[1] = zero;
-        mods[0] = negative;
-    }
-
-    /** The modifier is ADOPTED. */
-    void adoptSignPluralModifier(int8_t signum, StandardPlural::Form plural, const Modifier *mod) {
+    /**
+     * Sets the Modifier with the specified signum and plural form.
+     */
+    void adoptModifier(Signum signum, StandardPlural::Form plural, const Modifier *mod) {
+        U_ASSERT(mods[getModIndex(signum, plural)] == nullptr);
         mods[getModIndex(signum, plural)] = mod;
     }
 
-    /** Returns a reference to the modifier; no ownership change. */
-    const Modifier *getModifier(int8_t signum) const {
-        return mods[signum + 1];
+    /**
+     * Sets the Modifier with the specified signum.
+     * The modifier will apply to all plural forms.
+     */
+    void adoptModifierWithoutPlural(Signum signum, const Modifier *mod) {
+        U_ASSERT(mods[getModIndex(signum, DEFAULT_STANDARD_PLURAL)] == nullptr);
+        mods[getModIndex(signum, DEFAULT_STANDARD_PLURAL)] = mod;
     }
 
     /** Returns a reference to the modifier; no ownership change. */
-    const Modifier *getModifier(int8_t signum, StandardPlural::Form plural) const {
-        return mods[getModIndex(signum, plural)];
+    const Modifier *getModifier(Signum signum, StandardPlural::Form plural) const U_OVERRIDE {
+        const Modifier* modifier = mods[getModIndex(signum, plural)];
+        if (modifier == nullptr && plural != DEFAULT_STANDARD_PLURAL) {
+            modifier = mods[getModIndex(signum, DEFAULT_STANDARD_PLURAL)];
+        }
+        return modifier;
+    }
+
+    /** Returns a reference to the modifier; no ownership change. */
+    const Modifier *getModifierWithoutPlural(Signum signum) const {
+        return mods[getModIndex(signum, DEFAULT_STANDARD_PLURAL)];
     }
 
   private:
-    const Modifier *mods[3 * StandardPlural::COUNT];
+    // NOTE: mods is zero-initialized (to nullptr)
+    const Modifier *mods[4 * StandardPlural::COUNT] = {};
 
-    inline static int32_t getModIndex(int8_t signum, StandardPlural::Form plural) {
-        return static_cast<int32_t>(plural) * 3 + (signum + 1);
+    inline static int32_t getModIndex(Signum signum, StandardPlural::Form plural) {
+        U_ASSERT(signum >= 0 && signum < SIGNUM_COUNT);
+        U_ASSERT(plural >= 0 && plural < StandardPlural::COUNT);
+        return static_cast<int32_t>(plural) * SIGNUM_COUNT + signum;
     }
 };
 

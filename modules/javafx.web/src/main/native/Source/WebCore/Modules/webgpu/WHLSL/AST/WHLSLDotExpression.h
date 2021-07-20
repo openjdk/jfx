@@ -25,10 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
-#include "WHLSLLexer.h"
 #include "WHLSLPropertyAccessExpression.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/StringConcatenate.h>
 
@@ -38,40 +38,27 @@ namespace WHLSL {
 
 namespace AST {
 
-class DotExpression : public PropertyAccessExpression {
+class DotExpression final : public PropertyAccessExpression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    DotExpression(Lexer::Token&& origin, UniqueRef<Expression>&& base, String&& fieldName)
-        : PropertyAccessExpression(WTFMove(origin), WTFMove(base))
+    DotExpression(CodeLocation location, UniqueRef<Expression>&& base, String&& fieldName)
+        : PropertyAccessExpression(location, Kind::Dot, WTFMove(base))
         , m_fieldName(WTFMove(fieldName))
     {
+        UNUSED_PARAM(m_padding);
     }
 
-    virtual ~DotExpression() = default;
+    ~DotExpression() = default;
 
     DotExpression(const DotExpression&) = delete;
     DotExpression(DotExpression&&) = default;
-
-    bool isDotExpression() const override { return true; }
-
-    String getFunctionName() const override
-    {
-        return makeString("operator.", m_fieldName);
-    }
-
-    String setFunctionName() const override
-    {
-        return makeString("operator.", m_fieldName, "=");
-    }
-
-    String andFunctionName() const override
-    {
-        return makeString("operator&.", m_fieldName);
-    }
 
     String& fieldName() { return m_fieldName; }
 
 private:
     String m_fieldName;
+    // This is used to allow for replaceWith into a bigger type.
+    char m_padding[12];
 };
 
 } // namespace AST
@@ -80,6 +67,8 @@ private:
 
 }
 
+DEFINE_DEFAULT_DELETE(DotExpression)
+
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(DotExpression, isDotExpression())
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

@@ -44,15 +44,15 @@ namespace WTF {
 class MetaAllocatorTracker {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    void notify(MetaAllocatorHandle*);
-    void release(MetaAllocatorHandle*);
+    void notify(MetaAllocatorHandle&);
+    void release(MetaAllocatorHandle&);
 
     MetaAllocatorHandle* find(void* address)
     {
         MetaAllocatorHandle* handle = m_allocations.findGreatestLessThanOrEqual(address);
-        if (handle && address < handle->end().untaggedPtr())
+        if (handle && handle->start().untaggedPtr() <= address && address < handle->end().untaggedPtr())
             return handle;
-        return 0;
+        return nullptr;
     }
 
     RedBlackTree<MetaAllocatorHandle, void*> m_allocations;
@@ -64,11 +64,16 @@ class MetaAllocator {
 public:
     using FreeSpacePtr = MetaAllocatorPtr<FreeSpacePtrTag>;
 
-    WTF_EXPORT_PRIVATE MetaAllocator(size_t allocationGranule, size_t pageSize = WTF::pageSize());
+    WTF_EXPORT_PRIVATE MetaAllocator(Lock&, size_t allocationGranule, size_t pageSize = WTF::pageSize());
 
     WTF_EXPORT_PRIVATE virtual ~MetaAllocator();
 
-    WTF_EXPORT_PRIVATE RefPtr<MetaAllocatorHandle> allocate(size_t sizeInBytes, void* ownerUID);
+    ALWAYS_INLINE RefPtr<MetaAllocatorHandle> allocate(size_t sizeInBytes)
+    {
+        auto locker = holdLock(m_lock);
+        return allocate(locker, sizeInBytes);
+    }
+    WTF_EXPORT_PRIVATE RefPtr<MetaAllocatorHandle> allocate(const LockHolder&, size_t sizeInBytes);
 
     void trackAllocations(MetaAllocatorTracker* tracker)
     {
@@ -82,11 +87,17 @@ public:
 
     // Atomic method for getting allocator statistics.
     struct Statistics {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
         size_t bytesAllocated;
         size_t bytesReserved;
         size_t bytesCommitted;
     };
-    WTF_EXPORT_PRIVATE Statistics currentStatistics();
+    Statistics currentStatistics()
+    {
+        auto locker = holdLock(m_lock);
+        return currentStatistics(locker);
+    }
+    WTF_EXPORT_PRIVATE Statistics currentStatistics(const LockHolder&);
 
     // Add more free space to the allocator. Call this directly from
     // the constructor if you wish to operate the allocator within a
@@ -97,7 +108,6 @@ public:
     // builds.
     WTF_EXPORT_PRIVATE size_t debugFreeSpaceSize();
 
-    Lock& getLock() { return m_lock; }
     WTF_EXPORT_PRIVATE bool isInAllocatedMemory(const AbstractLocker&, void* address);
 
 #if ENABLE(META_ALLOCATOR_PROFILE)
@@ -113,15 +123,17 @@ protected:
     virtual FreeSpacePtr allocateNewSpace(size_t& numPages) = 0;
 
     // Commit a page.
-    virtual void notifyNeedPage(void* page) = 0;
+    virtual void notifyNeedPage(void* page, size_t) = 0;
 
     // Uncommit a page.
-    virtual void notifyPageIsFree(void* page) = 0;
+    virtual void notifyPageIsFree(void* page, size_t) = 0;
 
     // NOTE: none of the above methods are called during allocator
     // destruction, in part because a MetaAllocator cannot die so long
     // as there are Handles that refer to it.
 
+    // Release a MetaAllocatorHandle.
+    WTF_EXPORT_PRIVATE virtual void release(const LockHolder&, MetaAllocatorHandle&);
 private:
 
     friend class MetaAllocatorHandle;
@@ -150,9 +162,6 @@ private:
     };
     typedef RedBlackTree<FreeSpaceNode, size_t> Tree;
 
-    // Release a MetaAllocatorHandle.
-    void release(MetaAllocatorHandle*);
-
     // Remove free space from the allocator. This is effectively
     // the allocate() function, except that it does not mark the
     // returned space as being in-use.
@@ -179,8 +188,8 @@ private:
     WTF_EXPORT_PRIVATE void freeFreeSpaceNode(FreeSpaceNode*);
 
     size_t m_allocationGranule;
-    unsigned m_logAllocationGranule;
     size_t m_pageSize;
+    unsigned m_logAllocationGranule;
     unsigned m_logPageSize;
 
     Tree m_freeSpaceSizeMap;
@@ -192,9 +201,9 @@ private:
     size_t m_bytesReserved;
     size_t m_bytesCommitted;
 
-    Lock m_lock;
+    Lock& m_lock;
 
-    MetaAllocatorTracker* m_tracker;
+    MetaAllocatorTracker* m_tracker { nullptr };
 
 #ifndef NDEBUG
     size_t m_mallocBalance;

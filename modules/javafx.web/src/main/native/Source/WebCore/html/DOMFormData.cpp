@@ -33,6 +33,7 @@
 
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -47,6 +48,7 @@ DOMFormData::DOMFormData(HTMLFormElement* form)
     if (!form)
         return;
 
+    ASSERT(isMainThread());
     for (auto& element : form->copyAssociatedElementsVector()) {
         if (!element->asHTMLElement().isDisabledFormControl())
             element->appendFormData(*this, true);
@@ -57,10 +59,10 @@ DOMFormData::DOMFormData(HTMLFormElement* form)
 auto DOMFormData::createFileEntry(const String& name, Blob& blob, const String& filename) -> Item
 {
     if (!blob.isFile())
-        return { name, File::create(blob, filename.isNull() ? "blob"_s : filename) };
+        return { name, File::create(blob.scriptExecutionContext(), blob, filename.isNull() ? "blob"_s : filename) };
 
     if (!filename.isNull())
-        return { name, File::create(downcast<File>(blob), filename) };
+        return { name, File::create(blob.scriptExecutionContext(), downcast<File>(blob), filename) };
 
     return { name, RefPtr<File> { &downcast<File>(blob) } };
 }

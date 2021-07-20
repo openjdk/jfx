@@ -90,13 +90,13 @@ public:
     int32_t getRefCount() const;
 
     /**
-     * If noHardReferences() == TRUE then this object has no hard references.
+     * If noHardReferences() == true then this object has no hard references.
      * Must be called only from within the internals of UnifiedCache.
      */
     inline UBool noHardReferences() const { return getRefCount() == 0; }
 
     /**
-     * If hasHardReferences() == TRUE then this object has hard references.
+     * If hasHardReferences() == true then this object has hard references.
      * Must be called only from within the internals of UnifiedCache.
      */
     inline UBool hasHardReferences() const { return getRefCount() != 0; }
@@ -104,7 +104,7 @@ public:
     /**
      * Deletes this object if it has no references.
      * Available for non-cached SharedObjects only. Ownership of cached objects
-     * is with the UnifiedCache, which is soley responsible for eviction and deletion.
+     * is with the UnifiedCache, which is solely responsible for eviction and deletion.
      */
     void deleteIfZeroRefCount() const;
 

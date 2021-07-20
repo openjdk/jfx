@@ -28,6 +28,7 @@
 
 #if ENABLE(CSS_TYPED_OM)
 
+#include "JSDOMWrapperCache.h"
 #include "JSTypedOMCSSImageValue.h"
 #include "JSTypedOMCSSUnitValue.h"
 #include "JSTypedOMCSSUnparsedValue.h"
@@ -35,7 +36,7 @@
 namespace WebCore {
 using namespace JSC;
 
-JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<TypedOMCSSStyleValue>&& value)
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<TypedOMCSSStyleValue>&& value)
 {
     if (value->isUnitValue())
         return createWrapper<TypedOMCSSUnitValue>(globalObject, WTFMove(value));
@@ -48,9 +49,9 @@ JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<TypedO
     return createWrapper<TypedOMCSSStyleValue>(globalObject, WTFMove(value));
 }
 
-JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, TypedOMCSSStyleValue& object)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, TypedOMCSSStyleValue& object)
 {
-    return wrap(state, globalObject, object);
+    return wrap(lexicalGlobalObject, globalObject, object);
 }
 
 } // namespace WebCore

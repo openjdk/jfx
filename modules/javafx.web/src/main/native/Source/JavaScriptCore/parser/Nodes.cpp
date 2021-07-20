@@ -27,11 +27,13 @@
 #include "Nodes.h"
 #include "NodeConstructors.h"
 
-#include "JSCInlines.h"
+#include "ExecutableInfo.h"
 #include "ModuleScopeData.h"
 #include <wtf/Assertions.h>
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ParserArenaRoot);
 
 // ------------------------------ StatementNode --------------------------------
 
@@ -124,7 +126,7 @@ ScopeNode::ScopeNode(ParserArena& parserArena, const JSTokenLocation& startLocat
     , m_features(inStrictContext ? StrictModeFeature : NoFeatures)
     , m_innerArrowFunctionCodeFeatures(NoInnerArrowFunctionFeatures)
     , m_numConstants(0)
-    , m_statements(0)
+    , m_statements(nullptr)
 {
 }
 
@@ -175,6 +177,7 @@ ModuleProgramNode::ModuleProgramNode(ParserArena& parserArena, const JSTokenLoca
     : ScopeNode(parserArena, startLocation, endLocation, source, children, varEnvironment, WTFMove(funcStack), lexicalVariables, WTFMove(sloppyModeHoistedFunctions), features, innerArrowFunctionCodeFeatures, numConstants)
     , m_startColumn(startColumn)
     , m_endColumn(endColumn)
+    , m_usesAwait(features & AwaitFeature)
     , m_moduleScopeData(*WTFMove(moduleScopeData))
 {
 }
@@ -198,7 +201,9 @@ FunctionMetadataNode::FunctionMetadataNode(
         , m_isInStrictContext(isInStrictContext)
         , m_superBinding(static_cast<unsigned>(superBinding))
         , m_constructorKind(static_cast<unsigned>(constructorKind))
+        , m_needsClassFieldInitializer(static_cast<unsigned>(NeedsClassFieldInitializer::No))
         , m_isArrowFunctionBodyExpression(isArrowFunctionBodyExpression)
+        , m_privateBrandRequirement(static_cast<unsigned>(PrivateBrandRequirement::None))
         , m_parseMode(mode)
         , m_startColumn(startColumn)
         , m_endColumn(endColumn)
@@ -221,7 +226,9 @@ FunctionMetadataNode::FunctionMetadataNode(
         , m_isInStrictContext(isInStrictContext)
         , m_superBinding(static_cast<unsigned>(superBinding))
         , m_constructorKind(static_cast<unsigned>(constructorKind))
+        , m_needsClassFieldInitializer(static_cast<unsigned>(NeedsClassFieldInitializer::No))
         , m_isArrowFunctionBodyExpression(isArrowFunctionBodyExpression)
+        , m_privateBrandRequirement(static_cast<unsigned>(PrivateBrandRequirement::None))
         , m_parseMode(mode)
         , m_startColumn(startColumn)
         , m_endColumn(endColumn)
@@ -250,25 +257,24 @@ void FunctionMetadataNode::setEndPosition(JSTextPosition position)
 
 bool FunctionMetadataNode::operator==(const FunctionMetadataNode& other) const
 {
-    return m_parseMode== other.m_parseMode
+    return m_parseMode == other.m_parseMode
         && m_isInStrictContext == other.m_isInStrictContext
         && m_superBinding == other.m_superBinding
         && m_constructorKind == other.m_constructorKind
         && m_isArrowFunctionBodyExpression == other.m_isArrowFunctionBodyExpression
         && m_ident == other.m_ident
         && m_ecmaName == other.m_ecmaName
-        && m_inferredName == other.m_inferredName
-        && m_functionMode== other.m_functionMode
-        && m_startColumn== other.m_startColumn
-        && m_endColumn== other.m_endColumn
-        && m_functionKeywordStart== other.m_functionKeywordStart
-        && m_functionNameStart== other.m_functionNameStart
-        && m_parametersStart== other.m_parametersStart
-        && m_source== other.m_source
-        && m_classSource== other.m_classSource
-        && m_startStartOffset== other.m_startStartOffset
-        && m_parameterCount== other.m_parameterCount
-        && m_lastLine== other.m_lastLine
+        && m_functionMode == other.m_functionMode
+        && m_startColumn == other.m_startColumn
+        && m_endColumn == other.m_endColumn
+        && m_functionKeywordStart == other.m_functionKeywordStart
+        && m_functionNameStart == other.m_functionNameStart
+        && m_parametersStart == other.m_parametersStart
+        && m_source == other.m_source
+        && m_classSource == other.m_classSource
+        && m_startStartOffset == other.m_startStartOffset
+        && m_parameterCount == other.m_parameterCount
+        && m_lastLine == other.m_lastLine
         && m_position == other.m_position;
 }
 
@@ -281,7 +287,6 @@ void FunctionMetadataNode::dump(PrintStream& stream) const
     stream.println("m_isArrowFunctionBodyExpression ", m_isArrowFunctionBodyExpression);
     stream.println("m_ident ", m_ident);
     stream.println("m_ecmaName ", m_ecmaName);
-    stream.println("m_inferredName ", m_inferredName);
     stream.println("m_functionMode ", static_cast<uint32_t>(m_functionMode));
     stream.println("m_startColumn ", m_startColumn);
     stream.println("m_endColumn ", m_endColumn);
@@ -324,6 +329,31 @@ bool PropertyListNode::hasStaticallyNamedProperty(const Identifier& propName)
                 return true;
         }
         list = list->m_next;
+    }
+    return false;
+}
+
+// FIXME: calculate this feature once when parsing the property list.
+// https://bugs.webkit.org/show_bug.cgi?id=206174
+bool PropertyListNode::shouldCreateLexicalScopeForClass(PropertyListNode* list)
+{
+    while (list) {
+        if (list->m_node->isComputedClassField() || list->m_node->isPrivate())
+            return true;
+        list = list->m_next;
+    }
+    return false;
+}
+
+// ------------------------------ ClassExprNode -----------------------------
+
+// FIXME: calculate this feature once when parsing the property list.
+// https://bugs.webkit.org/show_bug.cgi?id=206174
+bool PropertyListNode::hasInstanceFields() const
+{
+    for (auto list = this; list; list = list->m_next) {
+        if (list->m_node->isInstanceClassField())
+            return true;
     }
     return false;
 }

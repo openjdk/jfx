@@ -39,7 +39,7 @@
  * The application that wants to index the stream will create a new index object
  * using gst_index_new() or gst_index_factory_make(). The index is assigned to a
  * specific element, a bin or the whole pipeline. This will cause indexable
- * elements to add entires to the index while playing.
+ * elements to add entries to the index while playing.
  */
 
 /* FIXME: complete gobject annotations */
@@ -161,7 +161,7 @@ gst_index_class_init (GstIndexClass * klass)
   gst_index_signals[ENTRY_ADDED] =
       g_signal_new ("entry-added", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstIndexClass, entry_added), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_INDEX_ENTRY);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_INDEX_ENTRY);
 
   gobject_class->set_property = gst_index_set_property;
   gobject_class->get_property = gst_index_get_property;
@@ -313,7 +313,7 @@ gst_index_new (void)
 /**
  * gst_index_commit:
  * @index: the index to commit
- * @id: the writer that commited the index
+ * @id: the writer that committed the index
  *
  * Tell the index that the writer with the given id is done
  * with this index and is not going to write any more entries
@@ -772,7 +772,7 @@ gst_index_add_entry (GstIndex * index, GstIndexEntry * entry)
  * gst_index_add_associationv:
  * @index: the index to add the entry to
  * @id: the id of the index writer
- * @flags: optinal flags for this entry
+ * @flags: optional flags for this entry
  * @n: number of associations
  * @list: (array length=n): list of associations
  *
@@ -811,7 +811,7 @@ gst_index_add_associationv (GstIndex * index, gint id,
  * gst_index_add_association:
  * @index: the index to add the entry to
  * @id: the id of the index writer
- * @flags: optinal flags for this entry
+ * @flags: optional flags for this entry
  * @format: the format of the value
  * @value: the value
  * @...: other format/value pairs or 0 to end the list

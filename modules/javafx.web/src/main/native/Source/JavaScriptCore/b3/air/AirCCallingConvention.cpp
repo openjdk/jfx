@@ -31,7 +31,6 @@
 #include "AirCCallSpecial.h"
 #include "AirCode.h"
 #include "B3CCallValue.h"
-#include "B3ValueInlines.h"
 
 namespace JSC { namespace B3 { namespace Air {
 
@@ -45,7 +44,7 @@ Arg marshallCCallArgumentImpl(unsigned& argumentCount, unsigned& stackOffset, Va
         return Tmp(BankInfo::toArgumentRegister(argumentIndex));
 
     unsigned slotSize;
-    if (isARM64() && isIOS()) {
+    if (isARM64() && isDarwin()) {
         // Arguments are packed.
         slotSize = sizeofType(child->type());
     } else {
@@ -91,7 +90,7 @@ Vector<Arg> computeCCallingConvention(Code& code, CCallValue* value)
 
 Tmp cCallResult(Type type)
 {
-    switch (type) {
+    switch (type.kind()) {
     case Void:
         return Tmp();
     case Int32:
@@ -100,6 +99,8 @@ Tmp cCallResult(Type type)
     case Float:
     case Double:
         return Tmp(FPRInfo::returnValueFPR);
+    case Tuple:
+        break;
     }
 
     RELEASE_ASSERT_NOT_REACHED();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,7 +109,11 @@ jint GetModifiers()
 
 extern "C" {
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
+#else
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+#endif
 {
     memset(&javaIDs, 0, sizeof(javaIDs));
     jvm = vm;

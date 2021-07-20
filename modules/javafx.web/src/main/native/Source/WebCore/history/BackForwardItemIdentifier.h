@@ -38,9 +38,14 @@ struct BackForwardItemIdentifier {
     ObjectIdentifier<ItemIdentifierType> itemIdentifier;
 
     unsigned hash() const;
+    explicit operator bool() const { return processIdentifier && itemIdentifier; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<BackForwardItemIdentifier> decode(Decoder&);
+
+    String string() const { return makeString(processIdentifier.toUInt64(), '-', itemIdentifier.toUInt64()); }
+
+    WEBCORE_EXPORT bool isValid() const;
 
 #if !LOG_DISABLED
     const char* logString() const;
@@ -59,6 +64,11 @@ inline const char* BackForwardItemIdentifier::logString() const
 inline bool operator==(const BackForwardItemIdentifier& a, const BackForwardItemIdentifier& b)
 {
     return a.processIdentifier == b.processIdentifier &&  a.itemIdentifier == b.itemIdentifier;
+}
+
+inline bool operator!=(const BackForwardItemIdentifier& a, const BackForwardItemIdentifier& b)
+{
+    return !(a == b);
 }
 
 template<class Encoder>
@@ -80,7 +90,10 @@ Optional<BackForwardItemIdentifier> BackForwardItemIdentifier::decode(Decoder& d
     if (!itemIdentifier)
         return WTF::nullopt;
 
-    return { { WTFMove(*processIdentifier), WTFMove(*itemIdentifier) } };
+    BackForwardItemIdentifier result = { WTFMove(*processIdentifier), WTFMove(*itemIdentifier) };
+    if (!result.isValid())
+        return WTF::nullopt;
+    return result;
 }
 
 inline unsigned BackForwardItemIdentifier::hash() const
@@ -106,8 +119,6 @@ template<> struct HashTraits<WebCore::BackForwardItemIdentifier> : GenericHashTr
     static bool isDeletedValue(const WebCore::BackForwardItemIdentifier& slot) { return slot.processIdentifier.toUInt64() == std::numeric_limits<uint64_t>::max(); }
 };
 
-template<> struct DefaultHash<WebCore::BackForwardItemIdentifier> {
-    typedef BackForwardItemIdentifierHash Hash;
-};
+template<> struct DefaultHash<WebCore::BackForwardItemIdentifier> : BackForwardItemIdentifierHash { };
 
 } // namespace WTF

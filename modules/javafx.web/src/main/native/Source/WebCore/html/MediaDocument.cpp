@@ -92,15 +92,15 @@ void MediaDocumentParser::createDocumentStructure()
     rootElement->insertedByParser();
 
     if (document.frame())
-        document.frame()->injectUserScripts(InjectAtDocumentStart);
+        document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
 #if PLATFORM(IOS_FAMILY)
     auto headElement = HTMLHeadElement::create(document);
     rootElement->appendChild(headElement);
 
     auto metaElement = HTMLMetaElement::create(document);
-    metaElement->setAttributeWithoutSynchronization(nameAttr, AtomicString("viewport", AtomicString::ConstructFromLiteral));
-    metaElement->setAttributeWithoutSynchronization(contentAttr, AtomicString("width=device-width,initial-scale=1", AtomicString::ConstructFromLiteral));
+    metaElement->setAttributeWithoutSynchronization(nameAttr, AtomString("viewport", AtomString::ConstructFromLiteral));
+    metaElement->setAttributeWithoutSynchronization(contentAttr, AtomString("width=device-width,initial-scale=1", AtomString::ConstructFromLiteral));
     headElement->appendChild(metaElement);
 #endif
 
@@ -125,6 +125,7 @@ void MediaDocumentParser::createDocumentStructure()
     }
 
     body->appendChild(videoElement);
+    document.setHasVisuallyNonEmptyCustomContent();
 
     RefPtr<Frame> frame = document.frame();
     if (!frame)
@@ -143,9 +144,8 @@ void MediaDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
     finish();
 }
 
-MediaDocument::MediaDocument(Frame* frame, const URL& url)
-    : HTMLDocument(frame, url, MediaDocumentClass)
-    , m_replaceMediaElementTimer(*this, &MediaDocument::replaceMediaElementTimerFired)
+MediaDocument::MediaDocument(Frame* frame, const Settings& settings, const URL& url)
+    : HTMLDocument(frame, settings, url, MediaDocumentClass)
 {
     setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
     lockCompatibilityMode();
@@ -155,7 +155,6 @@ MediaDocument::MediaDocument(Frame* frame, const URL& url)
 
 MediaDocument::~MediaDocument()
 {
-    ASSERT(!m_replaceMediaElementTimer.isActive());
 }
 
 Ref<DocumentParser> MediaDocument::createParser()
@@ -227,16 +226,6 @@ void MediaDocument::defaultEventHandler(Event& event)
     }
 }
 
-void MediaDocument::mediaElementSawUnsupportedTracks()
-{
-    // The HTMLMediaElement was told it has something that the underlying
-    // MediaPlayer cannot handle so we should switch from <video> to <embed>
-    // and let the plugin handle this. Don't do it immediately as this
-    // function may be called directly from a media engine callback, and
-    // replaceChild will destroy the element, media player, and media engine.
-    m_replaceMediaElementTimer.startOneShot(0_s);
-}
-
 void MediaDocument::replaceMediaElementTimerFired()
 {
     auto htmlBody = makeRefPtr(bodyOrFrameset());
@@ -244,15 +233,15 @@ void MediaDocument::replaceMediaElementTimerFired()
         return;
 
     // Set body margin width and height to 0 as that is what a PluginDocument uses.
-    htmlBody->setAttributeWithoutSynchronization(marginwidthAttr, AtomicString("0", AtomicString::ConstructFromLiteral));
-    htmlBody->setAttributeWithoutSynchronization(marginheightAttr, AtomicString("0", AtomicString::ConstructFromLiteral));
+    htmlBody->setAttributeWithoutSynchronization(marginwidthAttr, AtomString("0", AtomString::ConstructFromLiteral));
+    htmlBody->setAttributeWithoutSynchronization(marginheightAttr, AtomString("0", AtomString::ConstructFromLiteral));
 
     if (auto videoElement = makeRefPtr(descendantVideoElement(*htmlBody))) {
         auto embedElement = HTMLEmbedElement::create(*this);
 
-        embedElement->setAttributeWithoutSynchronization(widthAttr, AtomicString("100%", AtomicString::ConstructFromLiteral));
-        embedElement->setAttributeWithoutSynchronization(heightAttr, AtomicString("100%", AtomicString::ConstructFromLiteral));
-        embedElement->setAttributeWithoutSynchronization(nameAttr, AtomicString("plugin", AtomicString::ConstructFromLiteral));
+        embedElement->setAttributeWithoutSynchronization(widthAttr, AtomString("100%", AtomString::ConstructFromLiteral));
+        embedElement->setAttributeWithoutSynchronization(heightAttr, AtomString("100%", AtomString::ConstructFromLiteral));
+        embedElement->setAttributeWithoutSynchronization(nameAttr, AtomString("plugin", AtomString::ConstructFromLiteral));
         embedElement->setAttributeWithoutSynchronization(srcAttr, url().string());
 
         ASSERT(loader());

@@ -69,7 +69,7 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
 
     if (equalLettersIgnoringASCIICase(encodingType, "text/plain")) {
         // Convention seems to be to decode, and s/&/\r\n/. Also, spaces are encoded as %20.
-        body = decodeURLEscapeSequences(body.replaceWithLiteral('&', "\r\n").replace('+', ' ') + "\r\n");
+        body = decodeURLEscapeSequences(makeString(body.replaceWithLiteral('&', "\r\n").replace('+', ' '), "\r\n"));
     }
 
     Vector<char> bodyData;
@@ -77,11 +77,11 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
     FormDataBuilder::encodeStringAsFormData(bodyData, body.utf8());
     body = String(bodyData.data(), bodyData.size()).replaceWithLiteral('+', "%20");
 
-    String query = url.query();
+    auto query = url.query();
     if (query.isEmpty())
         url.setQuery(body);
     else
-        url.setQuery(query + '&' + body);
+        url.setQuery(makeString(query, '&', body));
 }
 
 void FormSubmission::Attributes::parseAction(const String& action)
@@ -147,7 +147,7 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attribut
     auto copiedAttributes = attributes;
 
     if (auto* submitButton = form.findSubmitButton(event)) {
-        AtomicString attributeValue;
+        AtomString attributeValue;
         if (!(attributeValue = submitButton->attributeWithoutSynchronization(formactionAttr)).isNull())
             copiedAttributes.parseAction(attributeValue);
         if (!(attributeValue = submitButton->attributeWithoutSynchronization(formenctypeAttr)).isNull())
@@ -198,7 +198,7 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attribut
     String boundary;
 
     if (isMultiPartForm) {
-        formData = FormData::createMultiPart(domFormData, &document);
+        formData = FormData::createMultiPart(domFormData);
         boundary = formData->boundary().data();
     } else {
         formData = FormData::create(domFormData, attributes.method() == Method::Get ? FormData::FormURLEncoded : FormData::parseEncodingType(encodingType));
@@ -248,7 +248,6 @@ void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
 
     frameRequest.resourceRequest().setURL(requestURL());
     FrameLoader::addHTTPOriginIfNeeded(frameRequest.resourceRequest(), m_origin);
-    FrameLoader::addHTTPUpgradeInsecureRequestsIfNeeded(frameRequest.resourceRequest());
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +27,34 @@
 #include "CommonVM.h"
 
 #include "DOMWindow.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
+#include "RuntimeApplicationChecks.h"
 #include "ScriptController.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/MachineStackMarker.h>
 #include <JavaScriptCore/VM.h>
 #include <wtf/MainThread.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/RunLoop.h>
+#include <wtf/text/AtomString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThreadInternal.h"
 #endif
 
 namespace WebCore {
+
+// FIXME: <rdar://problem/25965028> This should be removed or replaced with a Setting that iBooks can use if it is still needed.
+static bool globalConstRedeclarationShouldThrow()
+{
+#if PLATFORM(MAC)
+    return !MacApplication::isIBooks();
+#elif PLATFORM(IOS_FAMILY)
+    return !IOSApplication::isIBooks();
+#else
+    return true;
+#endif
+}
 
 JSC::VM* g_commonVMOrNull;
 
@@ -50,36 +63,47 @@ JSC::VM& commonVMSlow()
     ASSERT(isMainThread());
     ASSERT(!g_commonVMOrNull);
 
-    ScriptController::initializeThreading();
+    // FIXME: Remove this call to ScriptController::initializeMainThread(). The
+    // main thread should have been initialized by a WebKit entrypoint already.
+    // Also, initializeMainThread() does nothing on iOS.
+    ScriptController::initializeMainThread();
 
-    auto& vm = JSC::VM::create(JSC::LargeHeap).leakRef();
+#if PLATFORM(IOS_FAMILY)
+    RunLoop* runLoop = RunLoop::webIfExists();
+#else
+    RunLoop* runLoop = nullptr;
+#endif
+
+    auto& vm = JSC::VM::create(JSC::LargeHeap, runLoop).leakRef();
 
     g_commonVMOrNull = &vm;
 
     vm.heap.acquireAccess(); // At any time, we may do things that affect the GC.
 
 #if PLATFORM(IOS_FAMILY)
-    vm.setRunLoop(WebThreadRunLoop());
+    if (WebThreadIsEnabled())
+        vm.apiLock().makeWebThreadAware();
     vm.heap.machineThreads().addCurrentThread();
 #endif
 
-    vm.setGlobalConstRedeclarationShouldThrow(DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow());
+    vm.setGlobalConstRedeclarationShouldThrow(globalConstRedeclarationShouldThrow());
 
-    JSVMClientData::initNormalWorld(&vm);
+    JSVMClientData::initNormalWorld(&vm, WorkerThreadType::Main);
 
     return vm;
 }
 
 Frame* lexicalFrameFromCommonVM()
 {
-    if (auto* topCallFrame = commonVM().topCallFrame) {
+    JSC::VM& vm = commonVM();
+    if (auto* topCallFrame = vm.topCallFrame) {
 #if PLATFORM(JAVA) && ENABLE(C_LOOP)
         if (!topCallFrame->codeBlock()) {
             return nullptr;
         }
 #endif
-        if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject())) {
-            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(commonVM(), globalObject)) {
+        if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject(vm))) {
+            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(vm, globalObject)) {
                 if (auto* frame = window->wrapped().frame())
                     return frame;
             }
@@ -88,9 +112,9 @@ Frame* lexicalFrameFromCommonVM()
     return nullptr;
 }
 
-void addImpureProperty(const AtomicString& propertyName)
+void addImpureProperty(const AtomString& propertyName)
 {
-    commonVM().addImpureProperty(propertyName);
+    commonVM().addImpureProperty(propertyName.impl());
 }
 
 } // namespace WebCore

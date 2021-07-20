@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,7 @@ static String convertUTF8ToUTF16WithLatin1Fallback(const NPUTF8* UTF8Chars, int 
 }
 
 // Variant value must be released with NPReleaseVariantValue()
-void convertValueToNPVariant(ExecState* exec, JSValue value, NPVariant* result)
+void convertValueToNPVariant(JSGlobalObject* exec, JSValue value, NPVariant* result)
 {
     JSLockHolder lock(exec);
     VM& vm = exec->vm();
@@ -96,7 +96,7 @@ void convertValueToNPVariant(ExecState* exec, JSValue value, NPVariant* result)
                 OBJECT_TO_NPVARIANT(obj, *result);
             }
         } else {
-            JSGlobalObject* globalObject = vm.vmEntryGlobalObject(exec);
+            JSGlobalObject* globalObject = vm.deprecatedVMEntryGlobalObject(exec);
 
             RootObject* rootObject = findRootObject(globalObject);
             if (rootObject) {
@@ -107,7 +107,7 @@ void convertValueToNPVariant(ExecState* exec, JSValue value, NPVariant* result)
     }
 }
 
-JSValue convertNPVariantToValue(ExecState* exec, const NPVariant* variant, RootObject* rootObject)
+JSValue convertNPVariantToValue(JSGlobalObject* exec, const NPVariant* variant, RootObject* rootObject)
 {
     JSLockHolder lock(exec);
 
@@ -124,7 +124,7 @@ JSValue convertNPVariantToValue(ExecState* exec, const NPVariant* variant, RootO
     if (type == NPVariantType_Double)
         return jsNumber(NPVARIANT_TO_DOUBLE(*variant));
     if (type == NPVariantType_String)
-        return jsStringWithCache(exec, convertNPStringToUTF16(&variant->value.stringValue));
+        return jsStringWithCache(exec->vm(), convertNPStringToUTF16(&variant->value.stringValue));
     if (type == NPVariantType_Object) {
         NPObject* obj = variant->value.objectValue;
 
@@ -144,9 +144,10 @@ String convertNPStringToUTF16(const NPString* string)
     return String::fromUTF8WithLatin1Fallback(string->UTF8Characters, string->UTF8Length);
 }
 
-Identifier identifierFromNPIdentifier(ExecState* exec, const NPUTF8* name)
+Identifier identifierFromNPIdentifier(JSGlobalObject* exec, const NPUTF8* name)
 {
-    return Identifier::fromString(exec, convertUTF8ToUTF16WithLatin1Fallback(name, -1));
+    VM& vm = exec->vm();
+    return Identifier::fromString(vm, convertUTF8ToUTF16WithLatin1Fallback(name, -1));
 }
 
 } }

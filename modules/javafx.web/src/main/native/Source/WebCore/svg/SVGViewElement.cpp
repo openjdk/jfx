@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,7 +22,9 @@
 #include "config.h"
 #include "SVGViewElement.h"
 
+#include "RenderSVGResource.h"
 #include "SVGNames.h"
+#include "SVGSVGElement.h"
 #include "SVGStringList.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -32,9 +34,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGViewElement);
 
 inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGFitToViewBox(this)
-    , m_viewTarget(SVGNames::viewTargetAttr)
 {
     ASSERT(hasTagName(SVGNames::viewTag));
 }
@@ -44,20 +44,30 @@ Ref<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGViewElement(tagName, document));
 }
 
-Ref<SVGStringList> SVGViewElement::viewTarget()
+void SVGViewElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    return SVGStringList::create(*this, m_viewTarget);
-}
-
-void SVGViewElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
-{
-    if (name == SVGNames::viewTargetAttr)
-        m_viewTarget.reset(value);
-
     SVGElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
     SVGFitToViewBox::parseAttribute(name, value);
     SVGZoomAndPan::parseAttribute(name, value);
+}
+
+void SVGViewElement::svgAttributeChanged(const QualifiedName& attrName)
+{
+    // We ignore changes to SVGNames::viewTargetAttr, which is deprecated and unused in WebCore.
+    if (PropertyRegistry::isKnownAttribute(attrName))
+        return;
+
+    if (SVGFitToViewBox::isKnownAttribute(attrName)) {
+        if (m_targetElement) {
+            m_targetElement->inheritViewAttributes(*this);
+            if (auto* renderer = m_targetElement->renderer())
+                RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        }
+
+        return;
+    }
+
+    SVGElement::svgAttributeChanged(attrName);
 }
 
 }

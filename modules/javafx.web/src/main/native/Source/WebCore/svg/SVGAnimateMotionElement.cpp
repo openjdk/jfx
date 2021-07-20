@@ -46,7 +46,6 @@ using namespace SVGNames;
 
 inline SVGAnimateMotionElement::SVGAnimateMotionElement(const QualifiedName& tagName, Document& document)
     : SVGAnimationElement(tagName, document)
-    , m_hasToPointAtEndOfDuration(false)
 {
     setCalcMode(CalcMode::Paced);
     ASSERT(hasTagName(animateMotionTag));
@@ -57,7 +56,7 @@ Ref<SVGAnimateMotionElement> SVGAnimateMotionElement::create(const QualifiedName
     return adoptRef(*new SVGAnimateMotionElement(tagName, document));
 }
 
-bool SVGAnimateMotionElement::hasValidAttributeType()
+bool SVGAnimateMotionElement::hasValidAttributeType() const
 {
     auto targetElement = makeRefPtr(this->targetElement());
     if (!targetElement)
@@ -90,13 +89,13 @@ bool SVGAnimateMotionElement::hasValidAttributeType()
     return false;
 }
 
-bool SVGAnimateMotionElement::hasValidAttributeName()
+bool SVGAnimateMotionElement::hasValidAttributeName() const
 {
     // AnimateMotion does not use attributeName so it is always valid.
     return true;
 }
 
-void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::pathAttr) {
         m_path = buildPathFromString(value);
@@ -109,9 +108,9 @@ void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const At
 
 SVGAnimateMotionElement::RotateMode SVGAnimateMotionElement::rotateMode() const
 {
-    static NeverDestroyed<const AtomicString> autoVal("auto", AtomicString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomicString> autoReverse("auto-reverse", AtomicString::ConstructFromLiteral);
-    const AtomicString& rotate = getAttribute(SVGNames::rotateAttr);
+    static MainThreadNeverDestroyed<const AtomString> autoVal("auto", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> autoReverse("auto-reverse", AtomString::ConstructFromLiteral);
+    const AtomString& rotate = getAttribute(SVGNames::rotateAttr);
     if (rotate == autoVal)
         return RotateAuto;
     if (rotate == autoReverse)
@@ -139,7 +138,7 @@ void SVGAnimateMotionElement::updateAnimationPath()
     updateAnimationMode();
 }
 
-void SVGAnimateMotionElement::resetAnimatedType()
+void SVGAnimateMotionElement::startAnimation()
 {
     if (!hasValidAttributeType())
         return;
@@ -150,37 +149,36 @@ void SVGAnimateMotionElement::resetAnimatedType()
         transform->makeIdentity();
 }
 
-void SVGAnimateMotionElement::clearAnimatedType(SVGElement* targetElement)
+void SVGAnimateMotionElement::stopAnimation(SVGElement* targetElement)
 {
     if (!targetElement)
         return;
     if (AffineTransform* transform = targetElement->supplementalTransform())
         transform->makeIdentity();
+    applyResultsToTarget();
 }
 
 bool SVGAnimateMotionElement::calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString)
 {
-    parsePoint(toAtEndOfDurationString, m_toPointAtEndOfDuration);
-    m_hasToPointAtEndOfDuration = true;
+    m_toPointAtEndOfDuration = parsePoint(toAtEndOfDurationString).valueOr(FloatPoint { });
     return true;
 }
 
 bool SVGAnimateMotionElement::calculateFromAndToValues(const String& fromString, const String& toString)
 {
-    m_hasToPointAtEndOfDuration = false;
-    parsePoint(fromString, m_fromPoint);
-    parsePoint(toString, m_toPoint);
+    m_toPointAtEndOfDuration = WTF::nullopt;
+    m_fromPoint = parsePoint(fromString).valueOr(FloatPoint { });
+    m_toPoint = parsePoint(toString).valueOr(FloatPoint { });
     return true;
 }
 
 bool SVGAnimateMotionElement::calculateFromAndByValues(const String& fromString, const String& byString)
 {
-    m_hasToPointAtEndOfDuration = false;
-    if (animationMode() == ByAnimation && !isAdditive())
+    m_toPointAtEndOfDuration = WTF::nullopt;
+    if (animationMode() == AnimationMode::By && !isAdditive())
         return false;
-    parsePoint(fromString, m_fromPoint);
-    FloatPoint byPoint;
-    parsePoint(byString, byPoint);
+    m_fromPoint = parsePoint(fromString).valueOr(FloatPoint { });
+    auto byPoint = parsePoint(byString).valueOr(FloatPoint { });
     m_toPoint = FloatPoint(m_fromPoint.x() + byPoint.x(), m_fromPoint.y() + byPoint.y());
     return true;
 }
@@ -189,10 +187,9 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
 {
     ASSERT(!m_animationPath.isEmpty());
 
-    bool success = false;
     float positionOnPath = m_animationPath.length() * percentage;
-    auto traversalState(m_animationPath.traversalStateAtLength(positionOnPath, success));
-    if (!success)
+    auto traversalState(m_animationPath.traversalStateAtLength(positionOnPath));
+    if (!traversalState.success())
         return;
 
     FloatPoint position = traversalState.current();
@@ -207,25 +204,23 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
     transform->rotate(angle);
 }
 
-void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount, SVGSMILElement*)
+void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount)
 {
     auto targetElement = makeRefPtr(this->targetElement());
     if (!targetElement)
         return;
+
     AffineTransform* transform = targetElement->supplementalTransform();
     if (!transform)
         return;
 
-    if (RenderObject* targetRenderer = targetElement->renderer())
-        targetRenderer->setNeedsTransformUpdate();
-
     if (!isAdditive())
         transform->makeIdentity();
 
-    if (animationMode() != PathAnimation) {
+    if (animationMode() != AnimationMode::Path) {
         FloatPoint toPointAtEndOfDuration = m_toPoint;
-        if (isAccumulated() && repeatCount && m_hasToPointAtEndOfDuration)
-            toPointAtEndOfDuration = m_toPointAtEndOfDuration;
+        if (isAccumulated() && repeatCount && m_toPointAtEndOfDuration)
+            toPointAtEndOfDuration = *m_toPointAtEndOfDuration;
 
         float animatedX = 0;
         animateAdditiveNumber(percentage, repeatCount, m_fromPoint.x(), m_toPoint.x(), toPointAtEndOfDuration.x(), animatedX);
@@ -253,8 +248,10 @@ void SVGAnimateMotionElement::applyResultsToTarget()
     if (!targetElement)
         return;
 
-    if (RenderElement* renderer = targetElement->renderer())
+    if (RenderElement* renderer = targetElement->renderer()) {
+        renderer->setNeedsTransformUpdate();
         RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    }
 
     AffineTransform* targetSupplementalTransform = targetElement->supplementalTransform();
     if (!targetSupplementalTransform)
@@ -273,22 +270,22 @@ void SVGAnimateMotionElement::applyResultsToTarget()
     }
 }
 
-float SVGAnimateMotionElement::calculateDistance(const String& fromString, const String& toString)
+Optional<float> SVGAnimateMotionElement::calculateDistance(const String& fromString, const String& toString)
 {
-    FloatPoint from;
-    FloatPoint to;
-    if (!parsePoint(fromString, from))
-        return -1;
-    if (!parsePoint(toString, to))
-        return -1;
-    FloatSize diff = to - from;
-    return sqrtf(diff.width() * diff.width() + diff.height() * diff.height());
+    auto from = parsePoint(fromString);
+    if (!from)
+        return { };
+    auto to = parsePoint(toString);
+    if (!to)
+        return { };
+    auto diff = *to - *from;
+    return std::hypot(diff.width(), diff.height());
 }
 
 void SVGAnimateMotionElement::updateAnimationMode()
 {
     if (!m_animationPath.isEmpty())
-        setAnimationMode(PathAnimation);
+        setAnimationMode(AnimationMode::Path);
     else
         SVGAnimationElement::updateAnimationMode();
 }

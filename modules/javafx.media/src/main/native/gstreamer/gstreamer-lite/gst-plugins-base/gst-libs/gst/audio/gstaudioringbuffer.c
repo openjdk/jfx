@@ -33,6 +33,9 @@
  * implementations.
  *
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 
@@ -295,8 +298,8 @@ gst_audio_ring_buffer_parse_caps (GstAudioRingBufferSpec * spec, GstCaps * caps)
     gst_structure_get_int (structure, "channels", &info.channels);
     if (!g_strcmp0 (gst_structure_get_string (structure, "stream-format"),
             "adts"))
-    spec->type = (i == 2) ? GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC :
-        GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC;
+      spec->type = (i == 2) ? GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC :
+          GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC;
     else
       spec->type = (i == 2) ?
           GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC_RAW :
@@ -426,7 +429,7 @@ gst_audio_ring_buffer_set_callback_full (GstAudioRingBuffer * buf,
 
   if (old_notify) {
     old_notify (old_data);
-}
+  }
 }
 
 
@@ -1186,11 +1189,11 @@ done:
  * implementation uses another internal buffer between the audio
  * device.
  *
- * For playback ringbuffers this is the amount of samples transfered from the
+ * For playback ringbuffers this is the amount of samples transferred from the
  * ringbuffer to the device but still not played.
  *
  * For capture ringbuffers this is the amount of samples in the device that are
- * not yet transfered to the ringbuffer.
+ * not yet transferred to the ringbuffer.
  *
  * Returns: The number of samples queued in the audio device.
  *
@@ -1288,6 +1291,12 @@ gst_audio_ring_buffer_set_sample (GstAudioRingBuffer * buf, guint64 sample)
       sample, buf->segbase);
 }
 
+/**
+ * default_clear_all:
+ * @buf: the #GstAudioRingBuffer to clear
+ *
+ * Fill the ringbuffer with silence.
+ */
 static void
 default_clear_all (GstAudioRingBuffer * buf)
 {
@@ -1308,7 +1317,7 @@ default_clear_all (GstAudioRingBuffer * buf)
  * gst_audio_ring_buffer_clear_all:
  * @buf: the #GstAudioRingBuffer to clear
  *
- * Fill the ringbuffer with silence.
+ * Clear all samples from the ringbuffer.
  *
  * MT safe.
  */
@@ -1418,91 +1427,91 @@ G_STMT_START {                                  \
   }                                             \
 } G_STMT_END
 
-#define FWD_SAMPLES(s,se,d,de,F)            \
-G_STMT_START {                  \
-  /* no rate conversion */          \
-  guint towrite = MIN (se + bpf - s, de - d);   \
-  /* simple copy */             \
-  if (!skip)                    \
-    F (d, s, towrite);                  \
-  in_samples -= towrite / bpf;          \
-  out_samples -= towrite / bpf;         \
-  s += towrite;                 \
-  GST_DEBUG ("copy %u bytes", towrite);     \
+#define FWD_SAMPLES(s,se,d,de,F)          \
+G_STMT_START {          \
+  /* no rate conversion */      \
+  guint towrite = MIN (se + bpf - s, de - d); \
+  /* simple copy */       \
+  if (!skip)          \
+    F (d, s, towrite);              \
+  in_samples -= towrite / bpf;      \
+  out_samples -= towrite / bpf;     \
+  s += towrite;         \
+  GST_DEBUG ("copy %u bytes", towrite);   \
 } G_STMT_END
 
 /* in_samples >= out_samples, rate > 1.0 */
-#define FWD_UP_SAMPLES(s,se,d,de,F)         \
-G_STMT_START {                  \
-  guint8 *sb = s, *db = d;          \
-  while (s <= se && d < de) {           \
-    if (!skip)                  \
-      F (d, s, bpf);                        \
-    s += bpf;                   \
-    *accum += outr;             \
-    if ((*accum << 1) >= inr) {         \
-      *accum -= inr;                \
-      d += bpf;                 \
-    }                       \
-  }                     \
-  in_samples -= (s - sb)/bpf;           \
-  out_samples -= (d - db)/bpf;          \
+#define FWD_UP_SAMPLES(s,se,d,de,F)     \
+G_STMT_START {          \
+  guint8 *sb = s, *db = d;      \
+  while (s <= se && d < de) {     \
+    if (!skip)          \
+      F (d, s, bpf);                    \
+    s += bpf;         \
+    *accum += outr;       \
+    if ((*accum << 1) >= inr) {     \
+      *accum -= inr;        \
+      d += bpf;         \
+    }           \
+  }           \
+  in_samples -= (s - sb)/bpf;     \
+  out_samples -= (d - db)/bpf;      \
   GST_DEBUG ("fwd_up end %d/%d",*accum,*toprocess); \
 } G_STMT_END
 
 /* out_samples > in_samples, for rates smaller than 1.0 */
-#define FWD_DOWN_SAMPLES(s,se,d,de,F)       \
-G_STMT_START {                  \
-  guint8 *sb = s, *db = d;          \
-  while (s <= se && d < de) {           \
-    if (!skip)                  \
-      F (d, s, bpf);                        \
-    d += bpf;                   \
-    *accum += inr;              \
-    if ((*accum << 1) >= outr) {        \
-      *accum -= outr;               \
-      s += bpf;                 \
-    }                       \
-  }                     \
-  in_samples -= (s - sb)/bpf;           \
-  out_samples -= (d - db)/bpf;          \
-  GST_DEBUG ("fwd_down end %d/%d",*accum,*toprocess);   \
+#define FWD_DOWN_SAMPLES(s,se,d,de,F)     \
+G_STMT_START {          \
+  guint8 *sb = s, *db = d;      \
+  while (s <= se && d < de) {     \
+    if (!skip)          \
+      F (d, s, bpf);                    \
+    d += bpf;         \
+    *accum += inr;        \
+    if ((*accum << 1) >= outr) {    \
+      *accum -= outr;       \
+      s += bpf;         \
+    }           \
+  }           \
+  in_samples -= (s - sb)/bpf;     \
+  out_samples -= (d - db)/bpf;      \
+  GST_DEBUG ("fwd_down end %d/%d",*accum,*toprocess); \
 } G_STMT_END
 
-#define REV_UP_SAMPLES(s,se,d,de,F)         \
-G_STMT_START {                  \
-  guint8 *sb = se, *db = d;         \
-  while (s <= se && d < de) {           \
-    if (!skip)                  \
-      F (d, se, bpf);                       \
-    se -= bpf;                  \
-    *accum += outr;             \
-    while (d < de && (*accum << 1) >= inr) {    \
-      *accum -= inr;                \
-      d += bpf;                 \
-    }                       \
-  }                     \
-  in_samples -= (sb - se)/bpf;          \
-  out_samples -= (d - db)/bpf;          \
+#define REV_UP_SAMPLES(s,se,d,de,F)     \
+G_STMT_START {          \
+  guint8 *sb = se, *db = d;     \
+  while (s <= se && d < de) {     \
+    if (!skip)          \
+      F (d, se, bpf);                     \
+    se -= bpf;          \
+    *accum += outr;       \
+    while (d < de && (*accum << 1) >= inr) {  \
+      *accum -= inr;        \
+      d += bpf;         \
+    }           \
+  }           \
+  in_samples -= (sb - se)/bpf;      \
+  out_samples -= (d - db)/bpf;      \
   GST_DEBUG ("rev_up end %d/%d",*accum,*toprocess); \
 } G_STMT_END
 
-#define REV_DOWN_SAMPLES(s,se,d,de,F)       \
-G_STMT_START {                  \
-  guint8 *sb = se, *db = d;         \
-  while (s <= se && d < de) {           \
-    if (!skip)                  \
-      F (d, se, bpf);                   \
-    d += bpf;                   \
-    *accum += inr;              \
+#define REV_DOWN_SAMPLES(s,se,d,de,F)     \
+G_STMT_START {          \
+  guint8 *sb = se, *db = d;     \
+  while (s <= se && d < de) {     \
+    if (!skip)          \
+      F (d, se, bpf);             \
+    d += bpf;         \
+    *accum += inr;        \
     while (s <= se && (*accum << 1) >= outr) {  \
-      *accum -= outr;               \
-      se -= bpf;                \
-    }                       \
-  }                     \
-  in_samples -= (sb - se)/bpf;          \
-  out_samples -= (d - db)/bpf;          \
-  GST_DEBUG ("rev_down end %d/%d",*accum,*toprocess);   \
+      *accum -= outr;       \
+      se -= bpf;        \
+    }           \
+  }           \
+  in_samples -= (sb - se)/bpf;      \
+  out_samples -= (d - db)/bpf;      \
+  GST_DEBUG ("rev_down end %d/%d",*accum,*toprocess); \
 } G_STMT_END
 
 static guint
@@ -1823,7 +1832,7 @@ gst_audio_ring_buffer_read (GstAudioRingBuffer * buf, guint64 sample,
       /* Reorder from device order to GStreamer order */
       for (i = 0; i < sampleslen; i++) {
         for (j = 0; j < channels; j++) {
-          memcpy (data + reorder_map[j] * bps, ptr + j * bps, bps);
+          memcpy (data + i * bpf + reorder_map[j] * bps, ptr + j * bps, bps);
         }
         ptr += bpf;
       }
@@ -2031,6 +2040,7 @@ gst_audio_ring_buffer_set_channel_positions (GstAudioRingBuffer * buf,
   channels = buf->spec.info.channels;
   to = buf->spec.info.position;
 
+  buf->need_reorder = FALSE;
   if (memcmp (position, to, channels * sizeof (to[0])) == 0)
     return;
 
@@ -2039,7 +2049,6 @@ gst_audio_ring_buffer_set_channel_positions (GstAudioRingBuffer * buf,
     return;
   }
 
-  buf->need_reorder = FALSE;
   if (!gst_audio_get_channel_reorder_map (channels, position, to,
           buf->channel_reorder_map))
     g_return_if_reached ();

@@ -1,6 +1,5 @@
- /*
- * Copyright (C) 2014 Igalia S.L.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+/*
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +29,7 @@
 
 #pragma once
 
+#include "HighlightData.h"
 #include "RenderSelectionInfo.h"
 
 #if ENABLE(SERVICE_CONTROLS)
@@ -38,65 +38,27 @@
 
 namespace WebCore {
 
-struct OldSelectionData;
-
-class SelectionRangeData {
+class SelectionRangeData : public HighlightData {
 public:
     SelectionRangeData(RenderView&);
 
-    class Context {
-    public:
-        Context() = default;
-        Context(RenderObject* start, RenderObject* end, unsigned startOffset, unsigned endOffset)
-            : m_start(makeWeakPtr(start))
-            , m_end(makeWeakPtr(end))
-            , m_startPosition(startOffset)
-            , m_endPosition(endOffset)
-        {
-        }
-
-        RenderObject* start() const { return m_start.get(); }
-        RenderObject* end() const { return m_end.get(); }
-        Optional<unsigned> startPosition() const { return m_startPosition; }
-        Optional<unsigned> endPosition() const { return m_endPosition; }
-
-        bool operator==(const Context& other) const
-        {
-            return m_start == other.m_start && m_end == other.m_end && m_startPosition == other.m_startPosition && m_endPosition == other.m_endPosition;
-        }
-
-    private:
-        WeakPtr<RenderObject> m_start;
-        WeakPtr<RenderObject> m_end;
-        Optional<unsigned> m_startPosition;
-        Optional<unsigned> m_endPosition;
-    };
-
     enum class RepaintMode { NewXOROld, NewMinusOld, Nothing };
-    void set(const Context&, RepaintMode = RepaintMode::NewXOROld);
-    const Context& get() const { return m_selectionContext; }
-
-    RenderObject* start() const { return m_selectionContext.start(); }
-    RenderObject* end() const { return m_selectionContext.end(); }
-    unsigned startPosition() const { ASSERT(m_selectionContext.startPosition()); return m_selectionContext.startPosition().value(); }
-    unsigned endPosition() const { ASSERT(m_selectionContext.endPosition()); return m_selectionContext.endPosition().value(); }
-
+    void set(const RenderRange&, RepaintMode = RepaintMode::NewXOROld);
     void clear();
-    IntRect bounds() const { return collectBounds(ClipToVisibleContent::No); }
-    IntRect boundsClippedToVisibleContent() const { return collectBounds(ClipToVisibleContent::Yes); }
     void repaint() const;
 
-private:
-    enum class ClipToVisibleContent { Yes, No };
-    IntRect collectBounds(ClipToVisibleContent) const;
-    void apply(const Context&, RepaintMode);
+    IntRect bounds() const { return collectBounds(ClipToVisibleContent::No); }
+    IntRect boundsClippedToVisibleContent() const { return collectBounds(ClipToVisibleContent::Yes); }
 
+private:
     const RenderView& m_renderView;
 #if ENABLE(SERVICE_CONTROLS)
     SelectionRectGatherer m_selectionRectGatherer;
 #endif
-    Context m_selectionContext;
     bool m_selectionWasCaret { false };
+    enum class ClipToVisibleContent { Yes, No };
+    IntRect collectBounds(ClipToVisibleContent) const;
+    void apply(const RenderRange&, RepaintMode);
 };
 
 } // namespace WebCore

@@ -25,7 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
+
+#include "WHLSLError.h"
+#include <wtf/Expected.h>
 
 namespace WebCore {
 
@@ -33,10 +36,10 @@ namespace WHLSL {
 
 class Program;
 
-bool checkRecursion(Program&);
+Expected<void, Error> checkRecursion(Program&);
 
 }
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

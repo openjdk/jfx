@@ -25,54 +25,51 @@
 
 #pragma once
 
-#include "CSSRegisteredCustomProperty.h"
 #include "CSSValue.h"
+#include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
 #include "Length.h"
 #include "StyleImage.h"
-#include <wtf/RefPtr.h>
 #include <wtf/Variant.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CSSParserToken;
-class CSSVariableReferenceValue;
 class RenderStyle;
 
 class CSSCustomPropertyValue final : public CSSValue {
 public:
     using VariantValue = Variant<Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, Length, Ref<StyleImage>>;
 
-    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomicString& name, Ref<CSSVariableReferenceValue>&& value)
+    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, Ref<CSSVariableReferenceValue>&& value)
     {
         return adoptRef(*new CSSCustomPropertyValue(name, { WTFMove(value) }));
     }
 
-    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomicString& name, CSSValueID value)
+    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, CSSValueID value)
     {
         return adoptRef(*new CSSCustomPropertyValue(name, { value }));
     }
 
-    static Ref<CSSCustomPropertyValue> createWithID(const AtomicString& name, CSSValueID id)
+    static Ref<CSSCustomPropertyValue> createWithID(const AtomString& name, CSSValueID id)
     {
         ASSERT(id == CSSValueInherit || id == CSSValueInitial || id == CSSValueUnset || id == CSSValueRevert || id == CSSValueInvalid);
         return adoptRef(*new CSSCustomPropertyValue(name, { id }));
     }
 
-    static Ref<CSSCustomPropertyValue> createSyntaxAll(const AtomicString& name, Ref<CSSVariableData>&& value)
+    static Ref<CSSCustomPropertyValue> createSyntaxAll(const AtomString& name, Ref<CSSVariableData>&& value)
     {
         return adoptRef(*new CSSCustomPropertyValue(name, { WTFMove(value) }));
     }
 
-    static Ref<CSSCustomPropertyValue> createSyntaxLength(const AtomicString& name, Length value)
+    static Ref<CSSCustomPropertyValue> createSyntaxLength(const AtomString& name, Length value)
     {
         ASSERT(!value.isUndefined());
         ASSERT(!value.isCalculated());
         return adoptRef(*new CSSCustomPropertyValue(name, { WTFMove(value) }));
     }
 
-    static Ref<CSSCustomPropertyValue> createSyntaxImage(const AtomicString& name, Ref<StyleImage>&& value)
+    static Ref<CSSCustomPropertyValue> createSyntaxImage(const AtomString& name, Ref<StyleImage>&& value)
     {
         return adoptRef(*new CSSCustomPropertyValue(name, { WTFMove(value) }));
     }
@@ -84,10 +81,10 @@ public:
 
     String customCSSText() const;
 
-    const AtomicString& name() const { return m_name; }
-    bool isResolved() const  { return !WTF::holds_alternative<Ref<CSSVariableReferenceValue>>(m_value); }
-    bool isUnset() const  { return WTF::holds_alternative<CSSValueID>(m_value) && WTF::get<CSSValueID>(m_value) == CSSValueUnset; }
-    bool isInvalid() const  { return WTF::holds_alternative<CSSValueID>(m_value) && WTF::get<CSSValueID>(m_value) == CSSValueInvalid; }
+    const AtomString& name() const { return m_name; }
+    bool isResolved() const { return !WTF::holds_alternative<Ref<CSSVariableReferenceValue>>(m_value); }
+    bool isUnset() const { return WTF::holds_alternative<CSSValueID>(m_value) && WTF::get<CSSValueID>(m_value) == CSSValueUnset; }
+    bool isInvalid() const { return WTF::holds_alternative<CSSValueID>(m_value) && WTF::get<CSSValueID>(m_value) == CSSValueInvalid; }
 
     const VariantValue& value() const { return m_value; }
 
@@ -95,7 +92,7 @@ public:
     bool equals(const CSSCustomPropertyValue& other) const;
 
 private:
-    CSSCustomPropertyValue(const AtomicString& name, VariantValue&& value)
+    CSSCustomPropertyValue(const AtomString& name, VariantValue&& value)
         : CSSValue(CustomPropertyClass)
         , m_name(name)
         , m_value(WTFMove(value))
@@ -110,7 +107,7 @@ private:
         , m_stringValue(other.m_stringValue)
         , m_serialized(other.m_serialized)
     {
-        // No copy constructor for Ref<CSSVariableData>, so we have to do this ourselves
+        // No copy constructor for Ref<>, so we have to do this ourselves
         auto visitor = WTF::makeVisitor([&](const Ref<CSSVariableReferenceValue>& value) {
             m_value = value.copyRef();
         }, [&](const CSSValueID& value) {
@@ -125,11 +122,11 @@ private:
         WTF::visit(visitor, other.m_value);
     }
 
-    const AtomicString m_name;
+    const AtomString m_name;
     VariantValue m_value;
 
     mutable String m_stringValue;
-    mutable bool m_serialized { false };
+    mutable bool m_serialized { false }; // FIXME: Should use null m_stringValue instead of a separate boolean.
 };
 
 } // namespace WebCore

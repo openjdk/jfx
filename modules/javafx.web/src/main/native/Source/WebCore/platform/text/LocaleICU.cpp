@@ -37,14 +37,15 @@
 #include <unicode/uloc.h>
 #include <wtf/DateMath.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 
 namespace WebCore {
 using namespace icu;
 
-std::unique_ptr<Locale> Locale::create(const AtomicString& locale)
+std::unique_ptr<Locale> Locale::create(const AtomString& locale)
 {
-    return std::make_unique<LocaleICU>(locale.string().utf8().data());
+    return makeUnique<LocaleICU>(locale.string().utf8().data());
 }
 
 LocaleICU::LocaleICU(const char* locale)
@@ -69,8 +70,8 @@ String LocaleICU::decimalSymbol(UNumberFormatSymbol symbol)
 {
     UErrorCode status = U_ZERO_ERROR;
     int32_t bufferLength = unum_getSymbol(m_numberFormat, symbol, 0, 0, &status);
-    ASSERT(U_SUCCESS(status) || status == U_BUFFER_OVERFLOW_ERROR);
-    if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR)
+    ASSERT(U_SUCCESS(status) || needsToGrowToProduceBuffer(status));
+    if (U_FAILURE(status) && !needsToGrowToProduceBuffer(status))
         return String();
     Vector<UChar> buffer(bufferLength);
     status = U_ZERO_ERROR;
@@ -84,8 +85,8 @@ String LocaleICU::decimalTextAttribute(UNumberFormatTextAttribute tag)
 {
     UErrorCode status = U_ZERO_ERROR;
     int32_t bufferLength = unum_getTextAttribute(m_numberFormat, tag, 0, 0, &status);
-    ASSERT(U_SUCCESS(status) || status == U_BUFFER_OVERFLOW_ERROR);
-    if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR)
+    ASSERT(U_SUCCESS(status) || needsToGrowToProduceBuffer(status));
+    if (U_FAILURE(status) && !needsToGrowToProduceBuffer(status))
         return String();
     Vector<UChar> buffer(bufferLength);
     status = U_ZERO_ERROR;
@@ -150,7 +151,7 @@ static String getDateFormatPattern(const UDateFormat* dateFormat)
 
     UErrorCode status = U_ZERO_ERROR;
     int32_t length = udat_toPattern(dateFormat, TRUE, 0, 0, &status);
-    if (status != U_BUFFER_OVERFLOW_ERROR || !length)
+    if (!needsToGrowToProduceBuffer(status) || !length)
         return emptyString();
     Vector<UChar> buffer(length);
     status = U_ZERO_ERROR;
@@ -163,22 +164,22 @@ static String getDateFormatPattern(const UDateFormat* dateFormat)
 std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* dateFormat, UDateFormatSymbolType type, int32_t startIndex, int32_t size)
 {
     if (!dateFormat)
-        return std::make_unique<Vector<String>>();
+        return makeUnique<Vector<String>>();
     if (udat_countSymbols(dateFormat, type) != startIndex + size)
-        return std::make_unique<Vector<String>>();
+        return makeUnique<Vector<String>>();
 
-    auto labels = std::make_unique<Vector<String>>();
+    auto labels = makeUnique<Vector<String>>();
     labels->reserveCapacity(size);
     for (int32_t i = 0; i < size; ++i) {
         UErrorCode status = U_ZERO_ERROR;
         int32_t length = udat_getSymbols(dateFormat, type, startIndex + i, 0, 0, &status);
-        if (status != U_BUFFER_OVERFLOW_ERROR)
-            return std::make_unique<Vector<String>>();
+        if (!needsToGrowToProduceBuffer(status))
+            return makeUnique<Vector<String>>();
         Vector<UChar> buffer(length);
         status = U_ZERO_ERROR;
         udat_getSymbols(dateFormat, type, startIndex + i, buffer.data(), length, &status);
         if (U_FAILURE(status))
-            return std::make_unique<Vector<String>>();
+            return makeUnique<Vector<String>>();
         labels->append(String::adopt(WTFMove(buffer)));
     }
     return WTFMove(labels);
@@ -186,7 +187,7 @@ std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* 
 
 static std::unique_ptr<Vector<String>> createFallbackMonthLabels()
 {
-    auto labels = std::make_unique<Vector<String>>();
+    auto labels = makeUnique<Vector<String>>();
     labels->reserveCapacity(WTF_ARRAY_LENGTH(WTF::monthFullName));
     for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthFullName); ++i)
         labels->append(WTF::monthFullName[i]);
@@ -208,7 +209,7 @@ const Vector<String>& LocaleICU::monthLabels()
 
 static std::unique_ptr<Vector<String>> createFallbackAMPMLabels()
 {
-    auto labels = std::make_unique<Vector<String>>();
+    auto labels = makeUnique<Vector<String>>();
     labels->reserveCapacity(2);
     labels->append("AM");
     labels->append("PM");
@@ -264,7 +265,7 @@ static String getFormatForSkeleton(const char* locale, const UChar* skeleton, in
         return format;
     status = U_ZERO_ERROR;
     int32_t length = udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, 0, 0, &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR && length) {
+    if (needsToGrowToProduceBuffer(status) && length) {
         Vector<UChar> buffer(length);
         status = U_ZERO_ERROR;
         udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, buffer.data(), length, &status);

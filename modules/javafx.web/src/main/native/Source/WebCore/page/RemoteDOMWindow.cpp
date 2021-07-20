@@ -29,8 +29,11 @@
 #include "RemoteFrame.h"
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RemoteDOMWindow);
 
 RemoteDOMWindow::RemoteDOMWindow(Ref<RemoteFrame>&& frame, GlobalWindowIdentifier&& identifier)
     : AbstractDOMWindow(WTFMove(identifier))
@@ -115,7 +118,7 @@ WindowProxy* RemoteDOMWindow::parent() const
     return &m_frame->windowProxy();
 }
 
-void RemoteDOMWindow::postMessage(JSC::ExecState&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&)
+void RemoteDOMWindow::postMessage(JSC::JSGlobalObject&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&)
 {
     UNUSED_PARAM(incumbentWindow);
     UNUSED_PARAM(message);

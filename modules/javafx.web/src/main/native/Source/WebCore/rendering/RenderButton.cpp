@@ -74,7 +74,7 @@ void RenderButton::updateAnonymousChildStyle(RenderStyle& childStyle) const
 {
     childStyle.setFlexGrow(1.0f);
     // min-width: 0; is needed for correct shrinking.
-    childStyle.setMinWidth(Length(0, Fixed));
+    childStyle.setMinWidth(Length(0, LengthType::Fixed));
     // Use margin:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
     childStyle.setMarginTop(Length());
@@ -141,6 +141,20 @@ LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) co
 {
     // Clip to the padding box to at least give content the extra padding space.
     return LayoutRect(additionalOffset.x() + borderLeft(), additionalOffset.y() + borderTop(), width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
+}
+
+static int synthesizedBaselineFromContentBox(const RenderBox& box, LineDirectionMode direction)
+{
+    return direction == HorizontalLine ? box.borderTop() + box.paddingTop() + box.contentHeight() : box.borderRight() + box.paddingRight() + box.contentWidth();
+}
+
+int RenderButton::baselinePosition(FontBaseline, bool, LineDirectionMode direction, LinePositionMode) const
+{
+    // We cannot rely on RenderFlexibleBox::baselinePosition() because of flexboxes have some special behavior
+    // regarding baselines that shouldn't apply to buttons.
+    int baseline = firstLineBaseline().valueOr(synthesizedBaselineFromContentBox(*this, direction));
+    int marginAscent = direction == HorizontalLine ? marginTop() : marginRight();
+    return baseline + marginAscent;
 }
 
 #if PLATFORM(IOS_FAMILY)

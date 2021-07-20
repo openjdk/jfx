@@ -25,11 +25,14 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLExtension.h"
 
 namespace WebCore {
 
 class WebGLCompressedTextureASTC final : public WebGLExtension {
+    WTF_MAKE_ISO_ALLOCATED(WebGLCompressedTextureASTC);
 public:
     explicit WebGLCompressedTextureASTC(WebGLRenderingContextBase&);
     virtual ~WebGLCompressedTextureASTC();
@@ -44,3 +47,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

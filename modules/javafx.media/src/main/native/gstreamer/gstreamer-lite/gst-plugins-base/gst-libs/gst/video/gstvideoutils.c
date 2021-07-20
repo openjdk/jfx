@@ -18,13 +18,18 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include <gst/video/video.h>
 #include "gstvideoutils.h"
+
+/**
+ * SECTION:gstvideoutils
+ * @title: GstVideo Codec utility function
+ * @short_description: Extra utility functions for video codecs
+ */
 
 #include <string.h>
 

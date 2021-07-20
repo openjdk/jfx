@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,7 @@ import javafx.scene.Scene;
 
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.stage.WindowPeerListener;
@@ -198,6 +199,7 @@ public class Window implements EventTarget {
                         return window.screenProperty();
                     }
 
+                    @SuppressWarnings("removal")
                     @Override
                     public AccessControlContext getAccessControlContext(Window window) {
                         return window.acc;
@@ -213,6 +215,7 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
+        @SuppressWarnings("removal")
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
@@ -221,6 +224,7 @@ public class Window implements EventTarget {
         return unmodifiableWindows;
     }
 
+    @SuppressWarnings("removal")
     final AccessControlContext acc = AccessController.getContext();
 
     protected Window() {
@@ -1080,7 +1084,11 @@ public class Window implements EventTarget {
                     // Register pulse listener
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
-                    if (getScene() != null) {
+                    boolean isEmbeddedWindow = Window.this instanceof EmbeddedWindow;
+                    if (isEmbeddedWindow && getScene() != null) {
+                        // JDK-8257719: The scene of embedded windows like JFXPanel
+                        // or FXCanvas has to be initialized before setting the
+                        // output scales
                         SceneHelper.initPeer(getScene());
                         peer.setScene(SceneHelper.getPeer(getScene()));
                         SceneHelper.preferredSize(getScene());
@@ -1097,6 +1105,14 @@ public class Window implements EventTarget {
                     // forced setSize and setLocation down below.
                     peerBoundsConfigurator.setRenderScaleX(getRenderScaleX());
                     peerBoundsConfigurator.setRenderScaleY(getRenderScaleY());
+
+                    if (!isEmbeddedWindow && getScene() != null) {
+                        // The scene of regular windows is initialized
+                        // after setting the output scale
+                        SceneHelper.initPeer(getScene());
+                        peer.setScene(SceneHelper.getPeer(getScene()));
+                        SceneHelper.preferredSize(getScene());
+                    }
 
                     // Set peer bounds
                     if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {

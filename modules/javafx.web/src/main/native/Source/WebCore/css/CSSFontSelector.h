@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "CSSFontFace.h"
 #include "CSSFontFaceSet.h"
 #include "CachedResourceHandle.h"
@@ -47,7 +48,7 @@ class CachedFont;
 class Document;
 class StyleRuleFontFace;
 
-class CSSFontSelector final : public FontSelector, public CSSFontFaceSetClient, public CanMakeWeakPtr<CSSFontSelector> {
+class CSSFontSelector final : public FontSelector, public CSSFontFace::Client, public CanMakeWeakPtr<CSSFontSelector>, public ActiveDOMObject {
 public:
     static Ref<CSSFontSelector> create(Document& document)
     {
@@ -58,18 +59,17 @@ public:
     unsigned version() const final { return m_version; }
     unsigned uniqueId() const final { return m_uniqueId; }
 
-    FontRanges fontRangesForFamily(const FontDescription&, const AtomicString&) final;
+    FontRanges fontRangesForFamily(const FontDescription&, const AtomString&) final;
     size_t fallbackFontCount() final;
     RefPtr<Font> fallbackFontAt(const FontDescription&, size_t) final;
 
-    void clearDocument();
+    void stopLoadingAndClearFonts();
     void emptyCaches();
     void buildStarted();
     void buildCompleted();
 
     void addFontFaceRule(StyleRuleFontFace&, bool isInitiatingElementInUserAgentShadowTree);
 
-    void fontLoaded();
     void fontCacheInvalidated() final;
 
     bool isEmpty() const;
@@ -77,25 +77,42 @@ public:
     void registerForInvalidationCallbacks(FontSelectorClient&) final;
     void unregisterForInvalidationCallbacks(FontSelectorClient&) final;
 
-    Document* document() const { return m_document; }
+    Document* document() const { return m_document.get(); }
 
     void beginLoadingFontSoon(CachedFont&);
+    void suspendFontLoadingTimer();
 
+    FontFaceSet* fontFaceSetIfExists();
     FontFaceSet& fontFaceSet();
 
     void incrementIsComputingRootStyleFont() { ++m_computingRootStyleFontCount; }
     void decrementIsComputingRootStyleFont() { --m_computingRootStyleFontCount; }
+
+    void loadPendingFonts();
+
+    // CSSFontFace::Client needs to be able to be held in a RefPtr.
+    void ref() final { FontSelector::ref(); }
+    void deref() final { FontSelector::deref(); }
 
 private:
     explicit CSSFontSelector(Document&);
 
     void dispatchInvalidationCallbacks();
 
-    void opportunisticallyStartFontDataURLLoading(const FontCascadeDescription&, const AtomicString& family) final;
+    void opportunisticallyStartFontDataURLLoading(const FontCascadeDescription&, const AtomString& family) final;
 
-    void fontModified() final;
+    // CSSFontFace::Client
+    void fontLoaded(CSSFontFace&) final;
+    void fontStyleUpdateNeeded(CSSFontFace&) final;
 
-    void beginLoadTimerFired();
+    void fontModified();
+    void fontLoadingTimerFired();
+
+    // ActiveDOMObject
+    void stop() final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
+    const char* activeDOMObjectName() const final { return "CSSFontSelector"_s; }
 
     struct PendingFontFaceRule {
         StyleRuleFontFace& styleRuleFontFace;
@@ -103,7 +120,7 @@ private:
     };
     Vector<PendingFontFaceRule> m_stagingArea;
 
-    Document* m_document;
+    WeakPtr<Document> m_document;
     RefPtr<FontFaceSet> m_fontFaceSet;
     Ref<CSSFontFaceSet> m_cssFontFaceSet;
     HashSet<FontSelectorClient*> m_clients;
@@ -111,13 +128,18 @@ private:
     Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
     HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
     HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
-    Timer m_beginLoadingTimer;
+
+    CSSFontFaceSet::FontModifiedObserver m_fontModifiedObserver;
+
+    Timer m_fontLoadingTimer;
+    bool m_isFontLoadingSuspended { false };
 
     unsigned m_uniqueId;
     unsigned m_version;
     unsigned m_computingRootStyleFontCount { 0 };
     bool m_creatingFont { false };
     bool m_buildIsUnderway { false };
+    bool m_isStopped { false };
 };
 
 } // namespace WebCore

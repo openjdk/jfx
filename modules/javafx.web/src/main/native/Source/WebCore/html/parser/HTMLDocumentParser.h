@@ -47,8 +47,9 @@ class HTMLTreeBuilder;
 class HTMLResourcePreloader;
 class PumpSession;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HTMLDocumentParser);
 class HTMLDocumentParser : public ScriptableDocumentParser, private HTMLScriptRunnerHost, private PendingScriptClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(HTMLDocumentParser);
 public:
     static Ref<HTMLDocumentParser> create(HTMLDocument&);
     virtual ~HTMLDocumentParser();
@@ -81,7 +82,7 @@ private:
     bool processingData() const final;
     void prepareToStopParsing() final;
     void stopParsing() final;
-    bool isWaitingForScripts() const override;
+    bool isWaitingForScripts() const;
     bool isExecutingScript() const final;
     bool hasScriptsWaitingForStylesheets() const final;
     void executeScriptsWaitingForStylesheets() final;
@@ -142,6 +143,7 @@ private:
 
     bool m_endWasDelayed { false };
     unsigned m_pumpSessionNestingLevel { 0 };
+    bool m_shouldEmitTracePoints { false };
 };
 
 inline HTMLTokenizer& HTMLDocumentParser::tokenizer()

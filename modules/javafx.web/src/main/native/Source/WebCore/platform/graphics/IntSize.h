@@ -26,11 +26,8 @@
 #pragma once
 
 #include <algorithm>
+#include <wtf/JSONValues.h>
 #include <wtf/Forward.h>
-
-#if PLATFORM(MAC) && defined __OBJC__
-#import <Foundation/NSGeometry.h>
-#endif
 
 #if USE(CG)
 typedef struct CGSize CGSize;
@@ -139,9 +136,9 @@ public:
         return Checked<unsigned, T>(abs(m_width)) * abs(m_height);
     }
 
-    size_t unclampedArea() const
+    uint64_t unclampedArea() const
     {
-        return static_cast<size_t>(abs(m_width)) * abs(m_height);
+        return static_cast<uint64_t>(abs(m_width)) * abs(m_height);
     }
 
     int diagonalLengthSquared() const
@@ -172,6 +169,9 @@ public:
     operator D2D1_SIZE_U() const;
     operator D2D1_SIZE_F() const;
 #endif
+
+    String toJSONString() const;
+    Ref<JSON::Object> toJSONObject() const;
 
 private:
     int m_width, m_height;
@@ -223,4 +223,14 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntSize&);
 namespace WTF {
 template<> struct DefaultHash<WebCore::IntSize>;
 template<> struct HashTraits<WebCore::IntSize>;
+
+template<typename Type> struct LogArgument;
+template <>
+struct LogArgument<WebCore::IntSize> {
+    static String toString(const WebCore::IntSize& size)
+    {
+        return size.toJSONString();
+    }
+};
 }
+

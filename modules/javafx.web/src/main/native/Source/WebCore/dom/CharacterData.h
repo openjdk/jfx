@@ -45,11 +45,11 @@ public:
     unsigned parserAppendData(const String& string, unsigned offset, unsigned lengthLimit);
 
 protected:
-    CharacterData(Document& document, const String& text, ConstructionType type)
+    CharacterData(Document& document, const String& text, ConstructionType type = CreateCharacterData)
         : Node(document, type)
         , m_data(!text.isNull() ? text : emptyString())
     {
-        ASSERT(type == CreateOther || type == CreateText || type == CreateEditingText);
+        ASSERT(type == CreateCharacterData || type == CreateText || type == CreateEditingText);
     }
 
     void setDataWithoutUpdate(const String& data)
@@ -59,16 +59,23 @@ protected:
     }
     void dispatchModifiedEvent(const String& oldValue);
 
+    enum class UpdateLiveRanges : bool { No, Yes };
+    virtual void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges = UpdateLiveRanges::Yes);
+
 private:
     String nodeValue() const final;
     ExceptionOr<void> setNodeValue(const String&) final;
-    bool isCharacterDataNode() const final { return true; }
-    int maxCharacterOffset() const final;
-    void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength);
-    void notifyParentAfterChange(ContainerNode::ChildChangeSource);
+    void notifyParentAfterChange(ContainerNode::ChildChange::Source);
 
     String m_data;
 };
+
+inline unsigned Node::length() const
+{
+    if (is<CharacterData>(*this))
+        return downcast<CharacterData>(*this).length();
+    return countChildNodes();
+}
 
 } // namespace WebCore
 

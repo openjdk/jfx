@@ -33,13 +33,14 @@
 
 namespace WebCore {
 
+class Document;
 class HTMLCanvasElement;
 class Image;
-class ScriptExecutionContext;
 
 class CanvasCaptureMediaStreamTrack final : public MediaStreamTrack {
+    WTF_MAKE_ISO_ALLOCATED(CanvasCaptureMediaStreamTrack);
 public:
-    static Ref<CanvasCaptureMediaStreamTrack> create(ScriptExecutionContext&, Ref<HTMLCanvasElement>&&, Optional<double>&& frameRequestRate);
+    static Ref<CanvasCaptureMediaStreamTrack> create(Document&, Ref<HTMLCanvasElement>&&, Optional<double>&& frameRequestRate);
 
     HTMLCanvasElement& canvas() { return m_canvas.get(); }
     void requestFrame() { static_cast<Source&>(source()).requestFrame(); }
@@ -47,6 +48,8 @@ public:
     RefPtr<MediaStreamTrack> clone() final;
 
 private:
+    const char* activeDOMObjectName() const override;
+
     class Source final : public RealtimeMediaSource, private CanvasObserver {
     public:
         static Ref<Source> create(HTMLCanvasElement&, Optional<double>&& frameRequestRate);
@@ -75,14 +78,14 @@ private:
         bool m_shouldEmitFrame { true };
         Optional<double> m_frameRequestRate;
         Timer m_requestFrameTimer;
-        Timer m_canvasChangedTimer;
+        Timer m_captureCanvasTimer;
         Optional<RealtimeMediaSourceSettings> m_currentSettings;
         HTMLCanvasElement* m_canvas;
         RefPtr<Image> m_currentImage;
     };
 
-    CanvasCaptureMediaStreamTrack(ScriptExecutionContext&, Ref<HTMLCanvasElement>&&, Ref<Source>&&);
-    CanvasCaptureMediaStreamTrack(ScriptExecutionContext&, Ref<HTMLCanvasElement>&&, Ref<MediaStreamTrackPrivate>&&);
+    CanvasCaptureMediaStreamTrack(Document&, Ref<HTMLCanvasElement>&&, Ref<Source>&&);
+    CanvasCaptureMediaStreamTrack(Document&, Ref<HTMLCanvasElement>&&, Ref<MediaStreamTrackPrivate>&&);
 
     bool isCanvas() const final { return true; }
 

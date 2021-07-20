@@ -28,8 +28,6 @@
 
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include "ObjectConstructor.h"
 
 namespace JSC {
 
@@ -39,7 +37,6 @@ void AsyncIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    didBecomePrototype();
 
     JSFunction* asyncIteratorPrototypeFunction = JSFunction::create(vm, asyncIteratorPrototypeSymbolAsyncIteratorGetterCodeGenerator(vm), globalObject);
     putDirectWithoutTransition(vm, vm.propertyNames->asyncIteratorSymbol, asyncIteratorPrototypeFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));

@@ -38,6 +38,7 @@ namespace WTF {
 static constexpr const unsigned stringHashingStartValue = 0x9E3779B9U;
 
 class StringHasher {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static constexpr const unsigned flagCount = 8; // Save 8 bits for StringImpl to use as flags.
     static constexpr const unsigned maskHash = (1U << (sizeof(unsigned) * 8 - flagCount)) - 1;
@@ -76,12 +77,12 @@ public:
     void addCharacters(UChar a, UChar b)
     {
         if (m_hasPendingCharacter) {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             m_hasPendingCharacter = false;
 #endif
             addCharactersAssumingAligned(m_pendingCharacter, a);
             m_pendingCharacter = b;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             m_hasPendingCharacter = true;
 #endif
             return;

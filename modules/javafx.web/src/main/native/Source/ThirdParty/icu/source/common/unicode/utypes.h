@@ -290,6 +290,11 @@ typedef double UDate;
  * @stable ICU 3.4
  */
 
+#ifdef U_IN_DOXYGEN
+// This definition is required when generating the API docs.
+#define U_COMBINED_IMPLEMENTATION 1
+#endif
+
 #if defined(U_COMBINED_IMPLEMENTATION)
 #define U_DATA_API     U_EXPORT
 #define U_COMMON_API   U_EXPORT
@@ -380,17 +385,31 @@ typedef double UDate;
 /*===========================================================================*/
 
 /**
- * Error code to replace exception handling, so that the code is compatible with all C++ compilers,
- * and to use the same mechanism for C and C++.
+ * Standard ICU4C error code type, a substitute for exceptions.
  *
- * \par
- * ICU functions that take a reference (C++) or a pointer (C) to a UErrorCode
- * first test if(U_FAILURE(errorCode)) { return immediately; }
+ * Initialize the UErrorCode with U_ZERO_ERROR, and check for success or
+ * failure using U_SUCCESS() or U_FAILURE():
+ *
+ *     UErrorCode errorCode = U_ZERO_ERROR;
+ *     // call ICU API that needs an error code parameter.
+ *     if (U_FAILURE(errorCode)) {
+ *         // An error occurred. Handle it here.
+ *     }
+ *
+ * C++ code should use icu::ErrorCode, available in unicode/errorcode.h, or a
+ * suitable subclass.
+ *
+ * For more information, see:
+ * http://icu-project.org/userguide/conventions
+ *
+ * Note: By convention, ICU functions that take a reference (C++) or a pointer
+ * (C) to a UErrorCode first test:
+ *
+ *     if (U_FAILURE(errorCode)) { return immediately; }
+ *
  * so that in a chain of such functions the first one that sets an error code
  * causes the following ones to not perform any operations.
  *
- * \par
- * Error codes should be tested using U_FAILURE() and U_SUCCESS().
  * @stable ICU 2.0
  */
 typedef enum UErrorCode {
@@ -460,13 +479,23 @@ typedef enum UErrorCode {
     U_COLLATOR_VERSION_MISMATCH = 28,   /**< Collator version is not compatible with the base version */
     U_USELESS_COLLATOR_ERROR  = 29,     /**< Collator is options only and no base is specified */
     U_NO_WRITE_PERMISSION     = 30,     /**< Attempt to modify read-only or constant data. */
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * The input is impractically long for an operation.
+     * It is rejected because it may lead to problems such as excessive
+     * processing time, stack depth, or heap memory requirements.
+     *
+     * @draft ICU 68
+     */
+    U_INPUT_TOO_LONG_ERROR = 31,
+#endif  // U_HIDE_DRAFT_API
 
 #ifndef U_HIDE_DEPRECATED_API
     /**
      * One more than the highest standard error code.
      * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.
      */
-    U_STANDARD_ERROR_LIMIT,
+    U_STANDARD_ERROR_LIMIT = 32,
 #endif  // U_HIDE_DEPRECATED_API
 
     /*
@@ -539,12 +568,8 @@ typedef enum UErrorCode {
     U_DEFAULT_KEYWORD_MISSING,        /**< Missing DEFAULT rule in plural rules */
     U_DECIMAL_NUMBER_SYNTAX_ERROR,    /**< Decimal number syntax error */
     U_FORMAT_INEXACT_ERROR,           /**< Cannot format a number exactly and rounding mode is ROUND_UNNECESSARY @stable ICU 4.8 */
-#ifndef U_HIDE_DRAFT_API
-    U_NUMBER_ARG_OUTOFBOUNDS_ERROR,   /**< The argument to a NumberFormatter helper method was out of bounds; the bounds are usually 0 to 999. @draft ICU 61 */
-#endif  // U_HIDE_DRAFT_API
-#ifndef U_HIDE_DRAFT_API
-    U_NUMBER_SKELETON_SYNTAX_ERROR,   /**< The number skeleton passed to C++ NumberFormatter or C UNumberFormatter was invalid or contained a syntax error. @draft ICU 62 */
-#endif  // U_HIDE_DRAFT_API
+    U_NUMBER_ARG_OUTOFBOUNDS_ERROR,   /**< The argument to a NumberFormatter helper method was out of bounds; the bounds are usually 0 to 999. @stable ICU 61 */
+    U_NUMBER_SKELETON_SYNTAX_ERROR,   /**< The number skeleton passed to C++ NumberFormatter or C UNumberFormatter was invalid or contained a syntax error. @stable ICU 62 */
 #ifndef U_HIDE_DEPRECATED_API
     /**
      * One more than the highest normal formatting API error code.
@@ -700,7 +725,7 @@ typedef enum UErrorCode {
  * in the UErrorCode enum above.
  * @stable ICU 2.0
  */
-U_STABLE const char * U_EXPORT2
+U_CAPI const char * U_EXPORT2
 u_errorName(UErrorCode code);
 
 

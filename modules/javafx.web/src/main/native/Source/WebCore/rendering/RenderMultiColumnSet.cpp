@@ -148,7 +148,7 @@ LayoutUnit RenderMultiColumnSet::heightAdjustedForSetOffset(LayoutUnit height) c
     LayoutUnit contentLogicalTop = logicalTop() - multicolBlock.borderAndPaddingBefore();
 
     height -= contentLogicalTop;
-    return std::max(height, 1_lu); // Let's avoid zero height, as that would probably cause an infinite amount of columns to be created.
+    return std::max(height, 0_lu);
 }
 
 LayoutUnit RenderMultiColumnSet::pageLogicalTopForOffset(LayoutUnit offset) const
@@ -584,7 +584,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     const Color& ruleColor = blockStyle.visitedDependentColorWithColorFilter(CSSPropertyColumnRuleColor);
     bool ruleTransparent = blockStyle.columnRuleIsTransparent();
     BorderStyle ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
-    LayoutUnit ruleThickness = blockStyle.columnRuleWidth();
+    LayoutUnit ruleThickness { blockStyle.columnRuleWidth() };
     LayoutUnit colGap = columnGap();
     bool renderRule = ruleStyle > BorderStyle::Hidden && !ruleTransparent;
     if (!renderRule)
@@ -603,8 +603,8 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
         LayoutUnit ruleLogicalLeft = leftToRight ? 0_lu : contentLogicalWidth();
         LayoutUnit inlineDirectionSize = computedColumnWidth();
         BoxSide boxSide = isHorizontalWritingMode()
-            ? leftToRight ? BSLeft : BSRight
-            : leftToRight ? BSTop : BSBottom;
+            ? leftToRight ? BoxSide::Left : BoxSide::Right
+            : leftToRight ? BoxSide::Top : BoxSide::Bottom;
 
         for (unsigned i = 0; i < colCount; i++) {
             // Move to the next position.
@@ -645,7 +645,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
 
         ruleRect.moveBy(paintOffset);
 
-        BoxSide boxSide = isHorizontalWritingMode() ? topToBottom ? BSTop : BSBottom : topToBottom ? BSLeft : BSRight;
+        BoxSide boxSide = isHorizontalWritingMode() ? topToBottom ? BoxSide::Top : BoxSide::Bottom : topToBottom ? BoxSide::Left : BoxSide::Right;
 
         LayoutSize step(0_lu, topToBottom ? computedColumnHeight() + colGap : -(computedColumnHeight() + colGap));
         if (!isHorizontalWritingMode())
@@ -964,6 +964,11 @@ LayoutPoint RenderMultiColumnSet::translateFragmentPointToFragmentedFlow(const L
     return logicalPoint;
 }
 
+Node* RenderMultiColumnSet::nodeForHitTest() const
+{
+    return document().documentElement();
+}
+
 void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
 {
     if (result.innerNode() || !parent()->isRenderView())
@@ -971,8 +976,7 @@ void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const Layo
 
     // Note this does not work with column spans, but once we implement RenderPageSet, we can move this code
     // over there instead (and spans of course won't be allowed on pages).
-    Node* node = document().documentElement();
-    if (node) {
+    if (auto* node = nodeForHitTest()) {
         result.setInnerNode(node);
         if (!result.innerNonSharedNode())
             result.setInnerNonSharedNode(node);

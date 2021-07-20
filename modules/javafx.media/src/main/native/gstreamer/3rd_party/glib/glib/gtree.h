@@ -82,7 +82,7 @@ gboolean g_tree_lookup_extended (GTree            *tree,
 GLIB_AVAILABLE_IN_ALL
 void     g_tree_foreach         (GTree            *tree,
                                  GTraverseFunc     func,
-                                 gpointer      user_data);
+                                 gpointer    user_data);
 
 GLIB_DEPRECATED
 void     g_tree_traverse        (GTree            *tree,

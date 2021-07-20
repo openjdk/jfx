@@ -278,7 +278,7 @@ static bool setTableCellsChanged(Element& element)
     return cellChanged;
 }
 
-static bool getBordersFromFrameAttributeValue(const AtomicString& value, bool& borderTop, bool& borderRight, bool& borderBottom, bool& borderLeft)
+static bool getBordersFromFrameAttributeValue(const AtomString& value, bool& borderTop, bool& borderRight, bool& borderBottom, bool& borderLeft)
 {
     borderTop = false;
     borderRight = false;
@@ -304,14 +304,14 @@ static bool getBordersFromFrameAttributeValue(const AtomicString& value, bool& b
     return true;
 }
 
-void HTMLTableElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLTableElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr)
         addHTMLLengthToStyle(style, CSSPropertyWidth, value);
     else if (name == heightAttr)
         addHTMLLengthToStyle(style, CSSPropertyHeight, value);
     else if (name == borderAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSPrimitiveValue::CSS_PX);
+        addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSUnitType::CSS_PX);
     else if (name == bordercolorAttr) {
         if (!value.isEmpty())
             addHTMLColorToStyle(style, CSSPropertyBorderColor, value);
@@ -368,7 +368,7 @@ bool HTMLTableElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLTableElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLTableElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     CellBorders bordersBefore = cellBorders();
     unsigned short oldPadding = m_padding;
@@ -473,7 +473,7 @@ HTMLTableElement::CellBorders HTMLTableElement::cellBorders() const
     return NoBorders;
 }
 
-Ref<StyleProperties> HTMLTableElement::createSharedCellStyle()
+Ref<StyleProperties> HTMLTableElement::createSharedCellStyle() const
 {
     auto style = MutableStyleProperties::create();
 
@@ -494,12 +494,12 @@ Ref<StyleProperties> HTMLTableElement::createSharedCellStyle()
         style->setProperty(CSSPropertyBorderColor, cssValuePool.createInheritedValue());
         break;
     case SolidBorders:
-        style->setProperty(CSSPropertyBorderWidth, cssValuePool.createValue(1, CSSPrimitiveValue::CSS_PX));
+        style->setProperty(CSSPropertyBorderWidth, cssValuePool.createValue(1, CSSUnitType::CSS_PX));
         style->setProperty(CSSPropertyBorderStyle, cssValuePool.createIdentifierValue(CSSValueSolid));
         style->setProperty(CSSPropertyBorderColor, cssValuePool.createInheritedValue());
         break;
     case InsetBorders:
-        style->setProperty(CSSPropertyBorderWidth, cssValuePool.createValue(1, CSSPrimitiveValue::CSS_PX));
+        style->setProperty(CSSPropertyBorderWidth, cssValuePool.createValue(1, CSSUnitType::CSS_PX));
         style->setProperty(CSSPropertyBorderStyle, cssValuePool.createIdentifierValue(CSSValueInset));
         style->setProperty(CSSPropertyBorderColor, cssValuePool.createInheritedValue());
         break;
@@ -509,12 +509,12 @@ Ref<StyleProperties> HTMLTableElement::createSharedCellStyle()
     }
 
     if (m_padding)
-        style->setProperty(CSSPropertyPadding, cssValuePool.createValue(m_padding, CSSPrimitiveValue::CSS_PX));
+        style->setProperty(CSSPropertyPadding, cssValuePool.createValue(m_padding, CSSUnitType::CSS_PX));
 
-    return WTFMove(style);
+    return style;
 }
 
-const StyleProperties* HTMLTableElement::additionalCellStyle()
+const StyleProperties* HTMLTableElement::additionalCellStyle() const
 {
     if (!m_sharedCellStyle)
         m_sharedCellStyle = createSharedCellStyle();
@@ -538,11 +538,10 @@ static StyleProperties* leakGroupBorderStyle(int rows)
     return &style.leakRef();
 }
 
-const StyleProperties* HTMLTableElement::additionalGroupStyle(bool rows)
+const StyleProperties* HTMLTableElement::additionalGroupStyle(bool rows) const
 {
     if (m_rulesAttr != GroupsRules)
-        return 0;
-
+        return nullptr;
     if (rows) {
         static StyleProperties* rowBorderStyle = leakGroupBorderStyle(true);
         return rowBorderStyle;
@@ -566,12 +565,12 @@ Ref<HTMLCollection> HTMLTableElement::tBodies()
     return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<TableTBodies>::traversalType>>(*this, TableTBodies);
 }
 
-const AtomicString& HTMLTableElement::rules() const
+const AtomString& HTMLTableElement::rules() const
 {
     return attributeWithoutSynchronization(rulesAttr);
 }
 
-const AtomicString& HTMLTableElement::summary() const
+const AtomString& HTMLTableElement::summary() const
 {
     return attributeWithoutSynchronization(summaryAttr);
 }

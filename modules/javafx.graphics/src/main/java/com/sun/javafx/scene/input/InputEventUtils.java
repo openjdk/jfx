@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.SubSceneHelper;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Collections;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
@@ -111,18 +110,14 @@ public class InputEventUtils {
         return coordinates;
     }
 
-    private static final List<TransferMode> TM_ANY =
-            Collections.unmodifiableList(Arrays.asList(
-                TransferMode.COPY,
-                TransferMode.MOVE,
-                TransferMode.LINK
-            ));
+    private static final List<TransferMode> TM_ANY = List.of(
+        TransferMode.COPY,
+        TransferMode.MOVE,
+        TransferMode.LINK);
 
-    private static final List<TransferMode> TM_COPY_OR_MOVE =
-            Collections.unmodifiableList(Arrays.asList(
-                TransferMode.COPY,
-                TransferMode.MOVE
-            ));
+    private static final List<TransferMode> TM_COPY_OR_MOVE = List.of(
+        TransferMode.COPY,
+        TransferMode.MOVE);
 
     /**
      * Makes sure changes to the static arrays specified in TransferMode

@@ -25,6 +25,7 @@
 #include "config.h"
 #include "ImageDocument.h"
 
+#include "AddEventListenerOptions.h"
 #include "CachedImage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
@@ -157,7 +158,7 @@ void ImageDocument::finishedParsing()
         if (data && loader()->isLoadingMultipartContent())
             data = data->copy();
 
-        cachedImage.finishLoading(data.get());
+        cachedImage.finishLoading(data.get(), { });
         cachedImage.finish();
 
         // Report the natural image size in the page title, regardless of zoom level.
@@ -197,7 +198,7 @@ void ImageDocumentParser::finish()
 }
 
 ImageDocument::ImageDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, url, ImageDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, ImageDocumentClass)
     , m_imageElement(nullptr)
     , m_imageSizeIsKnown(false)
 #if !PLATFORM(IOS_FAMILY)
@@ -220,7 +221,7 @@ void ImageDocument::createDocumentStructure()
     appendChild(rootElement);
     rootElement->insertedByParser();
 
-    frame()->injectUserScripts(InjectAtDocumentStart);
+    frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
     // We need a <head> so that the call to setTitle() later on actually has an <head> to append to <title> to.
     auto head = HTMLHeadElement::create(*this);

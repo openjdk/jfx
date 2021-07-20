@@ -29,7 +29,6 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CCallHelpers.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
 #include "WasmCallingConvention.h"
 #include "WasmInstance.h"
@@ -46,14 +45,14 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToWasm(unsi
     const PinnedRegisterInfo& pinnedRegs = PinnedRegisterInfo::get();
     JIT jit;
 
-    GPRReg scratch = GPRInfo::nonPreservedNonArgumentGPR0;
+    GPRReg scratch = wasmCallingConvention().prologueScratchGPRs[0];
     GPRReg baseMemory = pinnedRegs.baseMemoryPointer;
+    ASSERT(baseMemory != GPRReg::InvalidGPRReg);
     ASSERT(baseMemory != scratch);
-    const auto& sizeRegs = pinnedRegs.sizeRegisters;
-    ASSERT(sizeRegs.size() >= 1);
-    ASSERT(sizeRegs[0].sizeRegister != baseMemory);
-    ASSERT(sizeRegs[0].sizeRegister != scratch);
-    GPRReg sizeRegAsScratch = sizeRegs[0].sizeRegister;
+    ASSERT(pinnedRegs.boundsCheckingSizeRegister != baseMemory);
+    ASSERT(pinnedRegs.boundsCheckingSizeRegister != scratch);
+    GPRReg sizeRegAsScratch = pinnedRegs.boundsCheckingSizeRegister;
+    ASSERT(sizeRegAsScratch != GPRReg::InvalidGPRReg);
 
     // B3's call codegen ensures that the JSCell is a WebAssemblyFunction.
     jit.loadWasmContextInstance(sizeRegAsScratch); // Old Instance*
@@ -68,24 +67,23 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToWasm(unsi
 
     // FIXME the following code assumes that all Wasm::Instance have the same pinned registers. https://bugs.webkit.org/show_bug.cgi?id=162952
     // Set up the callee's baseMemory register as well as the memory size registers.
-    ASSERT(!sizeRegs[0].sizeOffset); // The following code assumes we start at 0, and calculates subsequent size registers relative to 0.
-    jit.loadPtr(JIT::Address(baseMemory, Wasm::Instance::offsetOfCachedMemorySize()), sizeRegs[0].sizeRegister); // Memory size.
-    jit.loadPtr(JIT::Address(baseMemory, Wasm::Instance::offsetOfCachedMemory()), baseMemory); // Wasm::Memory::void*.
-    for (unsigned i = 1; i < sizeRegs.size(); ++i) {
-        ASSERT(sizeRegs[i].sizeRegister != baseMemory);
-        ASSERT(sizeRegs[i].sizeRegister != scratch);
-        jit.add64(JIT::TrustedImm32(-sizeRegs[i].sizeOffset), sizeRegs[0].sizeRegister, sizeRegs[i].sizeRegister);
+    {
+        GPRReg scratchOrBoundsCheckingSize = !Gigacage::isEnabled(Gigacage::Primitive) ? pinnedRegs.boundsCheckingSizeRegister : wasmCallingConvention().prologueScratchGPRs[1];
+
+        jit.loadPtr(JIT::Address(baseMemory, Wasm::Instance::offsetOfCachedBoundsCheckingSize()), pinnedRegs.boundsCheckingSizeRegister); // Bound checking size.
+        jit.loadPtr(JIT::Address(baseMemory, Wasm::Instance::offsetOfCachedMemory()), baseMemory); // Wasm::Memory::TaggedArrayStoragePtr<void> (void*).
+        jit.cageConditionally(Gigacage::Primitive, baseMemory, pinnedRegs.boundsCheckingSizeRegister, scratchOrBoundsCheckingSize);
     }
 
     // Tail call into the callee WebAssembly function.
     jit.loadPtr(scratch, scratch);
-    jit.jump(scratch, WasmEntryPtrTag);
+    jit.farJump(scratch, WasmEntryPtrTag);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, JITCompilationCanFail);
     if (UNLIKELY(patchBuffer.didFailToAllocate()))
         return makeUnexpected(BindingFailure::OutOfMemory);
 
-    return FINALIZE_CODE(patchBuffer, WasmEntryPtrTag, "WebAssembly->WebAssembly import[%i]", importIndex);
+    return FINALIZE_WASM_CODE(patchBuffer, WasmEntryPtrTag, "WebAssembly->WebAssembly import[%i]", importIndex);
 }
 
 } } // namespace JSC::Wasm

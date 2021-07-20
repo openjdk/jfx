@@ -27,7 +27,6 @@
 
 #if ENABLE(CSS_SCROLL_SNAP)
 
-#include "AxisScrollSnapOffsets.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollTypes.h"
 #include <wtf/Optional.h>
@@ -39,6 +38,7 @@ class FloatPoint;
 class FloatSize;
 
 class ScrollingMomentumCalculator {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ScrollingMomentumCalculator(const FloatSize& viewportSize, const FloatSize& contentSize, const FloatPoint& initialOffset, const FloatSize& initialDelta, const FloatSize& initialVelocity);
     static std::unique_ptr<ScrollingMomentumCalculator> create(const FloatSize& viewportSize, const FloatSize& contentSize, const FloatPoint& initialOffset, const FloatSize& initialDelta, const FloatSize& initialVelocity);

@@ -31,6 +31,8 @@ namespace WebCore {
 
 bool CSSCustomPropertyValue::equals(const CSSCustomPropertyValue& other) const
 {
+    if (this == &other)
+        return true;
     if (m_name != other.m_name || m_value.index() != other.m_value.index())
         return false;
     return WTF::switchOn(m_value, [&](const Ref<CSSVariableReferenceValue>& value) {
@@ -58,7 +60,7 @@ String CSSCustomPropertyValue::customCSSText() const
         }, [&](const Ref<CSSVariableData>& value) {
             m_stringValue = value->tokenRange().serialize();
         }, [&](const Length& value) {
-            m_stringValue = CSSPrimitiveValue::create(value.value(), CSSPrimitiveValue::CSS_PX)->cssText();
+            m_stringValue = CSSPrimitiveValue::create(value.value(), CSSUnitType::CSS_PX)->cssText();
         }, [&](const Ref<StyleImage>& value) {
             m_stringValue = value->cssValue()->cssText();
         });

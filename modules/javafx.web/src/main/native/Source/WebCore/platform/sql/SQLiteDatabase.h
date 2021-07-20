@@ -53,7 +53,8 @@ public:
     WEBCORE_EXPORT SQLiteDatabase();
     WEBCORE_EXPORT ~SQLiteDatabase();
 
-    WEBCORE_EXPORT bool open(const String& filename, bool forWebSQLDatabase = false);
+    enum class OpenMode { ReadOnly, ReadWrite, ReadWriteCreate };
+    WEBCORE_EXPORT bool open(const String& filename, OpenMode = OpenMode::ReadWriteCreate);
     bool isOpen() const { return m_db; }
     WEBCORE_EXPORT void close();
 
@@ -63,14 +64,14 @@ public:
     bool returnsAtLeastOneResult(const String&);
 
     WEBCORE_EXPORT bool tableExists(const String&);
-    void clearAllTables();
-    int runVacuumCommand();
-    int runIncrementalVacuumCommand();
+    WEBCORE_EXPORT void clearAllTables();
+    WEBCORE_EXPORT int runVacuumCommand();
+    WEBCORE_EXPORT int runIncrementalVacuumCommand();
 
     bool transactionInProgress() const { return m_transactionInProgress; }
 
     // Aborts the current database operation. This is thread safe.
-    void interrupt();
+    WEBCORE_EXPORT void interrupt();
 
     int64_t lastInsertRowID();
     int lastChanges();
@@ -79,6 +80,12 @@ public:
     void setBusyHandler(int(*)(void*, int));
 
     void setFullsync(bool);
+
+    // This enables automatic WAL truncation via a commit hook that uses SQLITE_CHECKPOINT_TRUNCATE.
+    // However, it shouldn't be used if you use a custom busy handler or timeout. This is because
+    // SQLITE_CHECKPOINT_TRUNCATE will invoke the busy handler if it can't acquire the necessary
+    // locks, which can lead to unintended delays.
+    void enableAutomaticWALTruncation();
 
     // Gets/sets the maximum size in bytes
     // Depending on per-database attributes, the size will only be settable in units that are the page size of the database, which is established at creation
@@ -124,23 +131,26 @@ public:
     //               file, but removes the empty pages only when PRAGMA INCREMANTAL_VACUUM
     //               is called.
     enum AutoVacuumPragma { AutoVacuumNone = 0, AutoVacuumFull = 1, AutoVacuumIncremental = 2 };
-    bool turnOnIncrementalAutoVacuum();
+    WEBCORE_EXPORT bool turnOnIncrementalAutoVacuum();
 
     WEBCORE_EXPORT void setCollationFunction(const String& collationName, WTF::Function<int(int, const void*, int, const void*)>&&);
     void removeCollationFunction(const String& collationName);
 
     // Set this flag to allow access from multiple threads.  Not all multi-threaded accesses are safe!
     // See http://www.sqlite.org/cvstrac/wiki?p=MultiThreading for more info.
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     WEBCORE_EXPORT void disableThreadingChecks();
 #else
-    WEBCORE_EXPORT void disableThreadingChecks() {}
+    void disableThreadingChecks() { }
 #endif
+
+    WEBCORE_EXPORT static void setIsDatabaseOpeningForbidden(bool);
 
 private:
     static int authorizerFunction(void*, int, const char*, const char*, const char*, const char*);
 
     void enableAuthorizer(bool enable);
+    void useWALJournalMode();
 
     int pageSize();
 
@@ -150,9 +160,11 @@ private:
     int m_pageSize { -1 };
 
     bool m_transactionInProgress { false };
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool m_sharable { false };
 #endif
+
+    bool m_useWAL { false };
 
     Lock m_authorizerLock;
     RefPtr<DatabaseAuthorizer> m_authorizer;

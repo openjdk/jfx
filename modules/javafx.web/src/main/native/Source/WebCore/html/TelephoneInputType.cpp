@@ -36,14 +36,9 @@
 
 namespace WebCore {
 
-const AtomicString& TelephoneInputType::formControlType() const
+const AtomString& TelephoneInputType::formControlType() const
 {
     return InputTypeNames::telephone();
-}
-
-bool TelephoneInputType::isTelephoneField() const
-{
-    return true;
 }
 
 } // namespace WebCore

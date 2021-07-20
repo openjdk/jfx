@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLNativeFunctionDeclaration.h"
 #include "WHLSLNativeTypeDeclaration.h"
@@ -58,16 +58,58 @@ public:
         return *m_boolType;
     }
 
-    AST::NativeTypeDeclaration& intType() const
+    AST::NativeTypeDeclaration& boolVectorTypeForSize(unsigned size) const
     {
-        ASSERT(m_intType);
-        return *m_intType;
+        RELEASE_ASSERT(size == 2 || size == 3 || size == 4);
+        return *m_vectorBool[size - 2];
     }
 
     AST::NativeTypeDeclaration& uintType() const
     {
         ASSERT(m_uintType);
         return *m_uintType;
+    }
+
+    AST::NativeTypeDeclaration& intType() const
+    {
+        ASSERT(m_intType);
+        return *m_intType;
+    }
+
+    AST::NativeTypeDeclaration& uint2Type() const
+    {
+        ASSERT(m_vectorUint[0]);
+        return *m_vectorUint[0];
+    }
+
+    AST::NativeTypeDeclaration& uint4Type() const
+    {
+        ASSERT(m_vectorUint[2]);
+        return *m_vectorUint[2];
+    }
+
+    AST::NativeTypeDeclaration& uintVectorTypeForSize(unsigned size) const
+    {
+        RELEASE_ASSERT(size == 2 || size == 3 || size == 4);
+        return *m_vectorUint[size - 2];
+    }
+
+    AST::NativeTypeDeclaration& int2Type() const
+    {
+        ASSERT(m_vectorInt[0]);
+        return *m_vectorInt[0];
+    }
+
+    AST::NativeTypeDeclaration& int4Type() const
+    {
+        ASSERT(m_vectorInt[2]);
+        return *m_vectorInt[2];
+    }
+
+    AST::NativeTypeDeclaration& intVectorTypeForSize(unsigned size) const
+    {
+        RELEASE_ASSERT(size == 2 || size == 3 || size == 4);
+        return *m_vectorInt[size - 2];
     }
 
     AST::NativeTypeDeclaration& samplerType() const
@@ -82,6 +124,12 @@ public:
         return *m_floatType;
     }
 
+    AST::NativeTypeDeclaration& float2Type() const
+    {
+        ASSERT(m_vectorFloat[0]);
+        return *m_vectorFloat[0];
+    }
+
     AST::NativeTypeDeclaration& float3Type() const
     {
         ASSERT(m_vectorFloat[1]);
@@ -94,34 +142,36 @@ public:
         return *m_vectorFloat[2];
     }
 
-    AST::NativeFunctionDeclaration& ddx() const
+    AST::NativeTypeDeclaration& floatVectorTypeForSize(unsigned size) const
     {
-        ASSERT(m_ddx);
-        return *m_ddx;
+        RELEASE_ASSERT(size == 2 || size == 3 || size == 4);
+        return *m_vectorFloat[size - 2];
     }
 
-    AST::NativeFunctionDeclaration& ddy() const
+    // These functions may have been pruned from the AST if they are unused.
+    AST::NativeFunctionDeclaration* ddx() const
     {
-        ASSERT(m_ddy);
-        return *m_ddy;
+        return m_ddx;
     }
 
-    AST::NativeFunctionDeclaration& allMemoryBarrier() const
+    AST::NativeFunctionDeclaration* ddy() const
     {
-        ASSERT(m_allMemoryBarrier);
-        return *m_allMemoryBarrier;
+        return m_ddy;
     }
 
-    AST::NativeFunctionDeclaration& deviceMemoryBarrier() const
+    AST::NativeFunctionDeclaration* allMemoryBarrier() const
     {
-        ASSERT(m_deviceMemoryBarrier);
-        return *m_deviceMemoryBarrier;
+        return m_allMemoryBarrier;
     }
 
-    AST::NativeFunctionDeclaration& groupMemoryBarrier() const
+    AST::NativeFunctionDeclaration* deviceMemoryBarrier() const
     {
-        ASSERT(m_groupMemoryBarrier);
-        return *m_groupMemoryBarrier;
+        return m_deviceMemoryBarrier;
+    }
+
+    AST::NativeFunctionDeclaration* groupMemoryBarrier() const
+    {
+        return m_groupMemoryBarrier;
     }
 
 private:
@@ -129,50 +179,35 @@ private:
     bool addVector(AST::NativeTypeDeclaration&);
     bool addMatrix(AST::NativeTypeDeclaration&);
     bool addFullTexture(AST::NativeTypeDeclaration&, AST::TypeReference&);
-    bool addDepthTexture(AST::NativeTypeDeclaration&, AST::TypeReference&);
+    void addDepthTexture(AST::NativeTypeDeclaration&, AST::TypeReference&);
     void addTexture(AST::NativeTypeDeclaration&);
 
     HashSet<const AST::NativeTypeDeclaration*> m_textureSet;
 
     AST::NativeTypeDeclaration* m_voidType { nullptr };
     AST::NativeTypeDeclaration* m_boolType { nullptr };
-    AST::NativeTypeDeclaration* m_ucharType { nullptr };
-    AST::NativeTypeDeclaration* m_ushortType { nullptr };
     AST::NativeTypeDeclaration* m_uintType { nullptr };
-    AST::NativeTypeDeclaration* m_charType { nullptr };
-    AST::NativeTypeDeclaration* m_shortType { nullptr };
     AST::NativeTypeDeclaration* m_intType { nullptr };
-    AST::NativeTypeDeclaration* m_halfType { nullptr };
     AST::NativeTypeDeclaration* m_floatType { nullptr };
     AST::NativeTypeDeclaration* m_atomicIntType { nullptr };
     AST::NativeTypeDeclaration* m_atomicUintType { nullptr };
     AST::NativeTypeDeclaration* m_samplerType { nullptr };
 
     AST::NativeTypeDeclaration* m_vectorBool[3] { 0 };
-    AST::NativeTypeDeclaration* m_vectorUchar[3] { 0 };
-    AST::NativeTypeDeclaration* m_vectorUshort[3] { 0 };
     AST::NativeTypeDeclaration* m_vectorUint[3] { 0 };
-    AST::NativeTypeDeclaration* m_vectorChar[3] { 0 };
-    AST::NativeTypeDeclaration* m_vectorShort[3] { 0 };
     AST::NativeTypeDeclaration* m_vectorInt[3] { 0 };
-    AST::NativeTypeDeclaration* m_vectorHalf[3] { 0 };
     AST::NativeTypeDeclaration* m_vectorFloat[3] { 0 };
 
-    AST::NativeTypeDeclaration* m_matrixHalf[3][3] {{ 0 }};
-    AST::NativeTypeDeclaration* m_matrixFloat[3][3] {{ 0 }};
+    static constexpr const char* m_textureTypeNames[] = { "Texture1D", "RWTexture1D", "Texture2D", "RWTexture2D", "Texture3D", "RWTexture3D", "TextureCube", "Texture1DArray", "RWTexture1DArray", "Texture2DArray", "RWTexture2DArray" };
 
-    static constexpr const char* m_textureTypeNames[] = { "Texture1D", "RWTexture1D", "Texture1DArray", "RWTexture1DArray", "Texture2D", "RWTexture2D", "Texture2DArray", "RWTexture2DArray", "Texture3D", "RWTexture3D", "TextureCube" };
-
-    static constexpr const char* m_textureInnerTypeNames[] = { "uchar", "ushort",  "uint", "char", "short", "int", "half", "float" };
+    static constexpr const char* m_textureInnerTypeNames[] = { "uint", "int", "float" };
 
     AST::NativeTypeDeclaration* m_fullTextures[WTF_ARRAY_LENGTH(m_textureTypeNames)][WTF_ARRAY_LENGTH(m_textureInnerTypeNames)][4] {{{ 0 }}};
 
-    static constexpr const char* m_depthTextureInnerTypes[] =  { "half", "float" };
+    static constexpr const char* m_depthTextureInnerTypes[] =  { "float" };
 
     AST::NativeTypeDeclaration* m_textureDepth2D[WTF_ARRAY_LENGTH(m_depthTextureInnerTypes)] { 0 };
-    AST::NativeTypeDeclaration* m_rwTextureDepth2D[WTF_ARRAY_LENGTH(m_depthTextureInnerTypes)] { 0 };
     AST::NativeTypeDeclaration* m_textureDepth2DArray[WTF_ARRAY_LENGTH(m_depthTextureInnerTypes)] { 0 };
-    AST::NativeTypeDeclaration* m_rwTextureDepth2DArray[WTF_ARRAY_LENGTH(m_depthTextureInnerTypes)] { 0 };
     AST::NativeTypeDeclaration* m_textureDepthCube[WTF_ARRAY_LENGTH(m_depthTextureInnerTypes)] { 0 };
 
     AST::NativeFunctionDeclaration* m_ddx { nullptr };
@@ -186,4 +221,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGPU)
+#endif // ENABLE(WHLSL_COMPILER)

@@ -27,41 +27,52 @@
 
 #if ENABLE(WEBGPU)
 
+#include "GPUPlatformTypes.h"
 #include "GPUTexture.h"
+#include "PlatformLayer.h"
+#include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
 
-OBJC_CLASS CALayer;
-OBJC_CLASS CAMetalDrawable;
-OBJC_CLASS WebGPULayer;
+// PlatformLayer implementation needed otherwise compiling derived sources will fail.
+#if USE(NICOSIA)
+#include "NicosiaPlatformLayer.h"
+#elif USE(COORDINATED_GRAPHICS)
+#include "TextureMapperPlatformLayerProxyProvider.h"
+#elif USE(TEXTURE_MAPPER)
+#include "TextureMapperPlatformLayer.h"
+#endif
 
 namespace WebCore {
 
 class GPUDevice;
 
-enum class GPUTextureFormat;
+struct GPUSwapChainDescriptor;
 
-using PlatformDrawableSmartPtr = RetainPtr<CAMetalDrawable>;
-using PlatformLayer = CALayer;
-using PlatformSwapLayerSmartPtr = RetainPtr<WebGPULayer>;
+enum class GPUTextureFormat;
 
 class GPUSwapChain : public RefCounted<GPUSwapChain> {
 public:
-    static RefPtr<GPUSwapChain> create();
+    static RefPtr<GPUSwapChain> tryCreate(const GPUSwapChainDescriptor&, int width, int height);
 
-    void setDevice(const GPUDevice&);
-    void setFormat(GPUTextureFormat);
-    void reshape(int width, int height);
-    RefPtr<GPUTexture> getNextTexture();
-    void present();
+    RefPtr<GPUTexture> tryGetCurrentTexture();
 
+#if USE(METAL)
+    RetainPtr<CAMetalDrawable> takeDrawable();
+#endif
+
+    // For GPUCanvasContext.
     PlatformLayer* platformLayer() const;
 
+    void present();
+    void reshape(int width, int height);
+    void destroy() { m_currentDrawable = nullptr; }
+
 private:
-    GPUSwapChain(PlatformSwapLayerSmartPtr&&);
+    GPUSwapChain(PlatformSwapLayerSmartPtr&&, OptionSet<GPUTextureUsage::Flags>);
 
     PlatformSwapLayerSmartPtr m_platformSwapLayer;
     PlatformDrawableSmartPtr m_currentDrawable;
+    OptionSet<GPUTextureUsage::Flags> m_usage;
 };
 
 } // namespace WebCore

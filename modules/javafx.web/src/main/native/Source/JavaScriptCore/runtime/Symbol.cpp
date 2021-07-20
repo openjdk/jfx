@@ -27,8 +27,7 @@
 #include "config.h"
 #include "Symbol.h"
 
-#include "Error.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "SymbolObject.h"
 
 namespace JSC {
@@ -68,28 +67,21 @@ inline SymbolObject* SymbolObject::create(VM& vm, JSGlobalObject* globalObject, 
     return object;
 }
 
-JSValue Symbol::toPrimitive(ExecState*, PreferredPrimitiveType) const
+JSValue Symbol::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
 {
     return const_cast<Symbol*>(this);
 }
 
-bool Symbol::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
+JSObject* Symbol::toObject(JSGlobalObject* globalObject) const
 {
-    result = this;
-    number = toNumber(exec);
-    return true;
+    return SymbolObject::create(globalObject->vm(), globalObject, const_cast<Symbol*>(this));
 }
 
-JSObject* Symbol::toObject(ExecState* exec, JSGlobalObject* globalObject) const
+double Symbol::toNumber(JSGlobalObject* globalObject) const
 {
-    return SymbolObject::create(exec->vm(), globalObject, const_cast<Symbol*>(this));
-}
-
-double Symbol::toNumber(ExecState* exec) const
-{
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    throwTypeError(exec, scope, "Cannot convert a symbol to a number"_s);
+    throwTypeError(globalObject, scope, "Cannot convert a symbol to a number"_s);
     return 0.0;
 }
 
@@ -100,12 +92,12 @@ void Symbol::destroy(JSCell* cell)
 
 String Symbol::descriptiveString() const
 {
-    return makeString("Symbol(", String(privateName().uid()), ')');
+    return makeString("Symbol(", String(m_privateName.uid()), ')');
 }
 
 String Symbol::description() const
 {
-    auto& uid = privateName().uid();
+    auto& uid = m_privateName.uid();
     return uid.isNullSymbol() ? String() : uid;
 }
 

@@ -34,6 +34,24 @@ G_BEGIN_DECLS
  */
 #define GST_PROTECTION_SYSTEM_ID_CAPS_FIELD "protection-system"
 
+/**
+ * GST_PROTECTION_UNSPECIFIED_SYSTEM_ID:
+ *
+ * The protection system value of the unspecified UUID.
+ * In some cases the system protection ID is not present in the contents or in their
+ * metadata, as encrypted WebM.
+ * This define is used to set the value of the "system_id" field in GstProtectionEvent,
+ * with this value, the application will use an external information to choose which
+ * protection system to use.
+ *
+ * Example: The matroskademux uses this value in the case of encrypted WebM,
+ * the application will choose the appropriate protection system based on the information
+ * received through EME API.
+ *
+ * Since: 1.16
+ */
+#define GST_PROTECTION_UNSPECIFIED_SYSTEM_ID "unspecified-system-id"
+
 typedef struct _GstProtectionMeta GstProtectionMeta;
 /**
  * GstProtectionMeta:
@@ -52,6 +70,9 @@ struct _GstProtectionMeta
   GstStructure *info;
 };
 
+/**
+ * gst_protection_meta_api_get_type: (attributes doc.skip=true)
+ */
 GST_API
 GType gst_protection_meta_api_get_type (void);
 

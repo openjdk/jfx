@@ -42,14 +42,14 @@ public:
 private:
     HTMLOptGroupElement(const QualifiedName&, Document&);
 
-    const AtomicString& formControlType() const;
+    const AtomString& formControlType() const;
     bool isFocusable() const final;
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
 
     void childrenChanged(const ChildChange&) final;
 
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
     void recalcSelectOptions();
 };

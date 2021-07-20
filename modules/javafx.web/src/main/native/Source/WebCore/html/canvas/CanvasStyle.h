@@ -29,31 +29,29 @@
 #include "CanvasGradient.h"
 #include "CanvasPattern.h"
 #include "Color.h"
+#include "ColorSerialization.h"
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
 class Document;
 class GraphicsContext;
-class HTMLCanvasElement;
+class CanvasBase;
 
 class CanvasStyle {
 public:
     CanvasStyle();
     CanvasStyle(Color);
-    CanvasStyle(float grayLevel, float alpha);
-    CanvasStyle(float r, float g, float b, float alpha);
-    CanvasStyle(float c, float m, float y, float k, float alpha);
+    CanvasStyle(const SRGBA<float>&);
     CanvasStyle(CanvasGradient&);
     CanvasStyle(CanvasPattern&);
 
-    static CanvasStyle createFromString(const String& color);
-    static CanvasStyle createFromStringWithOverrideAlpha(const String& color, float alpha);
+    static CanvasStyle createFromString(const String& color, CanvasBase&);
+    static CanvasStyle createFromStringWithOverrideAlpha(const String& color, float alpha, CanvasBase&);
 
     bool isValid() const { return !WTF::holds_alternative<Invalid>(m_style); }
     bool isCurrentColor() const { return WTF::holds_alternative<CurrentColor>(m_style); }
-    bool hasOverrideAlpha() const { return isCurrentColor() && WTF::get<CurrentColor>(m_style).overrideAlpha; }
-    float overrideAlpha() const { return WTF::get<CurrentColor>(m_style).overrideAlpha.value(); }
+    Optional<float> overrideAlpha() const { return WTF::get<CurrentColor>(m_style).overrideAlpha; }
 
     String color() const;
     RefPtr<CanvasGradient> canvasGradient() const;
@@ -63,22 +61,10 @@ public:
     void applyStrokeColor(GraphicsContext&) const;
 
     bool isEquivalentColor(const CanvasStyle&) const;
-    bool isEquivalentRGBA(float red, float green, float blue, float alpha) const;
-    bool isEquivalentCMYKA(float cyan, float magenta, float yellow, float black, float alpha) const;
+    bool isEquivalent(const SRGBA<float>&) const;
 
 private:
     struct Invalid { };
-
-    struct CMYKAColor {
-        Color color;
-        float c { 0 };
-        float m { 0 };
-        float y { 0 };
-        float k { 0 };
-        float a { 0 };
-
-        CMYKAColor(const CMYKAColor&) = default;
-    };
 
     struct CurrentColor {
         Optional<float> overrideAlpha;
@@ -86,11 +72,14 @@ private:
 
     CanvasStyle(CurrentColor);
 
-    Variant<Invalid, Color, CMYKAColor, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>, CurrentColor> m_style;
+    Variant<Invalid, Color, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>, CurrentColor> m_style;
 };
 
-Color currentColor(HTMLCanvasElement*);
-Color parseColorOrCurrentColor(const String& colorString, HTMLCanvasElement*);
+bool isCurrentColorString(const String& colorString);
+
+Color currentColor(CanvasBase&);
+Color parseColor(const String& colorString, CanvasBase&);
+Color parseColorOrCurrentColor(const String& colorString, CanvasBase&);
 
 inline CanvasStyle::CanvasStyle()
     : m_style(Invalid { })
@@ -113,8 +102,7 @@ inline RefPtr<CanvasPattern> CanvasStyle::canvasPattern() const
 
 inline String CanvasStyle::color() const
 {
-    auto& color = WTF::holds_alternative<Color>(m_style) ? WTF::get<Color>(m_style) : WTF::get<CMYKAColor>(m_style).color;
-    return color.serialized();
+    return serializationForHTML(WTF::get<Color>(m_style));
 }
 
 } // namespace WebCore

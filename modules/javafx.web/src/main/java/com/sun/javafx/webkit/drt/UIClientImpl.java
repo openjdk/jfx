@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,6 +78,8 @@ final class UIClientImpl implements UIClient {
             public void dispatchResourceLoadEvent(long frame, int state, String url, String contentType, double progress, int errorCode) {
             }
         });
+
+        page.resetToConsistentStateBeforeTesting();
 
         // This call is needed to add the main frame to WebPage.frames list.
         // TODO: investigate why it's not added automatically (via WebPage.fwkFrameCreated) and fix.

@@ -13,6 +13,7 @@
 U_NAMESPACE_BEGIN
 
 class ByteSink;
+class CharString;
 class Edits;
 
 class U_COMMON_API ByteSinkUtil {
@@ -44,9 +45,9 @@ public:
     static UBool appendUnchanged(const uint8_t *s, int32_t length,
                                  ByteSink &sink, uint32_t options, Edits *edits,
                                  UErrorCode &errorCode) {
-        if (U_FAILURE(errorCode)) { return FALSE; }
+        if (U_FAILURE(errorCode)) { return false; }
         if (length > 0) { appendNonEmptyUnchanged(s, length, sink, options, edits); }
-        return TRUE;
+        return true;
     }
 
     static UBool appendUnchanged(const uint8_t *s, const uint8_t *limit,
@@ -56,6 +57,27 @@ public:
 private:
     static void appendNonEmptyUnchanged(const uint8_t *s, int32_t length,
                                         ByteSink &sink, uint32_t options, Edits *edits);
+};
+
+class U_COMMON_API CharStringByteSink : public ByteSink {
+public:
+    CharStringByteSink(CharString* dest);
+    ~CharStringByteSink() override;
+
+    CharStringByteSink() = delete;
+    CharStringByteSink(const CharStringByteSink&) = delete;
+    CharStringByteSink& operator=(const CharStringByteSink&) = delete;
+
+    void Append(const char* bytes, int32_t n) override;
+
+    char* GetAppendBuffer(int32_t min_capacity,
+                          int32_t desired_capacity_hint,
+                          char* scratch,
+                          int32_t scratch_capacity,
+                          int32_t* result_capacity) override;
+
+private:
+    CharString& dest_;
 };
 
 U_NAMESPACE_END

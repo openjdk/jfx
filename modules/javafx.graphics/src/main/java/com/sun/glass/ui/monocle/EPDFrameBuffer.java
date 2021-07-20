@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,11 @@ class EPDFrameBuffer {
      * supplies.
      */
     private static final int POWERDOWN_DELAY = 1_000;
+
+    /**
+     * Linux system error: ENOTTY 25 Inappropriate ioctl for device.
+     */
+    private static final int ENOTTY = 25;
 
     private final PlatformLogger logger = Logging.getJavaFXLogger();
     private final EPDSettings settings;
@@ -296,6 +301,16 @@ class EPDFrameBuffer {
      * <li>{@link EPDSystem#WAVEFORM_MODE_A2}</li>
      * </ul>
      *
+     * @implNote This method fails on the Kobo Glo HD Model N437 with the error
+     * ENOTTY (25), "Inappropriate ioctl for device." The driver on that device
+     * uses an extended structure with four additional integers, changing its
+     * size and its corresponding request code. This method could use the
+     * extended structure, but the driver on the Kobo Glo HD ignores it and
+     * returns immediately, anyway. Furthermore, newer devices support both the
+     * current structure and the extended one, but define the extra fields in a
+     * different order. Therefore, simply use the current structure and ignore
+     * an error of ENOTTY, picking up the default values for any extra fields.
+     *
      * @param init the initialization mode for clearing the screen to all white
      * @param du the direct update mode for changing any gray values to either
      * all black or all white
@@ -308,7 +323,7 @@ class EPDFrameBuffer {
         var modes = new MxcfbWaveformModes();
         modes.setModes(modes.p, init, du, gc4, gc8, gc16, gc32);
         int rc = system.ioctl(fd, driver.MXCFB_SET_WAVEFORM_MODES, modes.p);
-        if (rc != 0) {
+        if (rc != 0 && system.errno() != ENOTTY) {
             logger.severe("Failed setting waveform modes: {0} ({1})",
                     system.getErrorMessage(), system.errno());
         }
@@ -325,7 +340,7 @@ class EPDFrameBuffer {
     private void setTemperature(int temp) {
         int rc = driver.ioctl(fd, driver.MXCFB_SET_TEMPERATURE, temp);
         if (rc != 0) {
-            logger.severe("Failed setting temperature to {2} °C: {0} ({1})",
+            logger.severe("Failed setting temperature to {2} degrees Celsius: {0} ({1})",
                     system.getErrorMessage(), system.errno(), temp);
         }
     }
@@ -421,7 +436,7 @@ class EPDFrameBuffer {
             logger.severe("Failed sending update {2}: {0} ({1})",
                     system.getErrorMessage(), system.errno(), Integer.toUnsignedLong(updateMarker));
         } else if (logger.isLoggable(Level.FINER)) {
-            logger.finer("Sent update: {0} × {1}, waveform {2}, selected {3}, flags 0x{4}, marker {5}",
+            logger.finer("Sent update: {0} x {1}, waveform {2}, selected {3}, flags 0x{4}, marker {5}",
                     update.getUpdateRegionWidth(update.p), update.getUpdateRegionHeight(update.p),
                     waveformMode, update.getWaveformMode(update.p),
                     Integer.toHexString(update.getFlags(update.p)).toUpperCase(),
@@ -482,7 +497,7 @@ class EPDFrameBuffer {
             logger.severe("Failed getting power-down delay: {0} ({1})",
                     system.getErrorMessage(), system.errno());
         }
-        return integer.getInteger(integer.p);
+        return integer.get(integer.p);
     }
 
     /**
@@ -567,24 +582,63 @@ class EPDFrameBuffer {
      */
     ByteBuffer getOffscreenBuffer() {
         /*
-         * Allocates a direct byte buffer to avoid bug JDK-8201567,
-         * "QuantumRenderer modifies buffer in use by JavaFX Application Thread"
-         * <https://bugs.openjdk.java.net/browse/JDK-8201567>.
+         * In this case, a direct byte buffer outside of the normal heap is
+         * faster than a non-direct byte buffer on the heap. The frame rate is
+         * roughly 10 to 40 percent faster for a framebuffer with 8 bits per
+         * pixel and 40 to 60 percent faster for a framebuffer with 16 bits per
+         * pixel, depending on the device processor and screen size.
          */
-        int size = xresVirtual * yresVirtual * Integer.SIZE;
+        int size = xresVirtual * yres * Integer.BYTES;
         return ByteBuffer.allocateDirect(size);
     }
 
     /**
      * Creates a new mapping of the Linux frame buffer device into memory.
      *
+     * @implNote The virtual y-resolution reported by the device driver can be
+     * wrong, as shown by the following example on the Kobo Glo HD Model N437
+     * which reports 2,304 pixels when the correct value is 1,152 pixels
+     * (6,782,976 / 5,888). Therefore, this method cannot use the frame buffer
+     * virtual resolution to calculate its size.
+     *
+     * <pre>{@code
+     * $ sudo fbset -i
+     *
+     * mode "1448x1072-46"
+     * # D: 80.000 MHz, H: 50.188 kHz, V: 46.385 Hz
+     * geometry 1448 1072 1472 2304 32
+     * timings 12500 16 102 4 4 28 2
+     * rgba 8/16,8/8,8/0,8/24
+     * endmode
+     *
+     * Frame buffer device information:
+     * Name        : mxc_epdc_fb
+     * Address     : 0x88000000
+     * Size        : 6782976
+     * Type        : PACKED PIXELS
+     * Visual      : TRUECOLOR
+     * XPanStep    : 1
+     * YPanStep    : 1
+     * YWrapStep   : 0
+     * LineLength  : 5888
+     * Accelerator : No
+     * }</pre>
+     *
      * @return a byte buffer containing the mapping of the Linux frame buffer
-     * device
+     * device if successful; otherwise {@code null}
      */
     ByteBuffer getMappedBuffer() {
-        int size = xresVirtual * yresVirtual * bytesPerPixel;
+        ByteBuffer buffer = null;
+        int size = xresVirtual * yres * bytesPerPixel;
+        logger.fine("Mapping frame buffer: {0} bytes", size);
         long addr = system.mmap(0l, size, LinuxSystem.PROT_WRITE, LinuxSystem.MAP_SHARED, fd, 0);
-        return addr == LinuxSystem.MAP_FAILED ? null : C.getC().NewDirectByteBuffer(addr, size);
+        if (addr == LinuxSystem.MAP_FAILED) {
+            logger.severe("Failed mapping {2} bytes of frame buffer: {0} ({1})",
+                    system.getErrorMessage(), system.errno(), size);
+        } else {
+            buffer = C.getC().NewDirectByteBuffer(addr, size);
+        }
+        return buffer;
     }
 
     /**
@@ -594,7 +648,13 @@ class EPDFrameBuffer {
      * buffer device
      */
     void releaseMappedBuffer(ByteBuffer buffer) {
-        system.munmap(C.getC().GetDirectBufferAddress(buffer), buffer.capacity());
+        int size = buffer.capacity();
+        logger.fine("Unmapping frame buffer: {0} bytes", size);
+        int rc = system.munmap(C.getC().GetDirectBufferAddress(buffer), size);
+        if (rc != 0) {
+            logger.severe("Failed unmapping {2} bytes of frame buffer: {0} ({1})",
+                    system.getErrorMessage(), system.errno(), size);
+        }
     }
 
     /**
@@ -614,26 +674,31 @@ class EPDFrameBuffer {
     }
 
     /**
-     * Gets the virtual horizontal resolution of the frame buffer. See the notes
-     * for the {@linkplain EPDFrameBuffer#EPDFrameBuffer constructor} above.
+     * Gets the frame buffer width in pixels. See the notes for the
+     * {@linkplain EPDFrameBuffer#EPDFrameBuffer constructor} above.
      *
-     * @return the virtual width in pixels
+     * @implNote When using an 8-bit, unrotated, and uninverted frame buffer in
+     * the Y8 pixel format, the Kobo Clara HD Model N249 works only when this
+     * method returns the visible x-resolution ({@code xres}) instead of the
+     * normal virtual x-resolution ({@code xresVirtual}).
+     *
+     * @return the width in pixels
      */
     int getWidth() {
-        return xresVirtual;
+        return settings.getWidthVisible ? xres : xresVirtual;
     }
 
     /**
-     * Gets the visible vertical resolution of the frame buffer.
+     * Gets the frame buffer height in pixels.
      *
-     * @return the visible height in pixels
+     * @return the height in pixels
      */
     int getHeight() {
         return yres;
     }
 
     /**
-     * Gets the color depth of the frame buffer.
+     * Gets the frame buffer color depth in bits per pixel.
      *
      * @return the color depth in bits per pixel
      */

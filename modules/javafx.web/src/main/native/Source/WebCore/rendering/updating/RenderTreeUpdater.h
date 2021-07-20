@@ -28,6 +28,7 @@
 #include "RenderTreeBuilder.h"
 #include "RenderTreePosition.h"
 #include "StyleChange.h"
+#include "StyleTreeResolver.h"
 #include "StyleUpdate.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -43,7 +44,7 @@ class Text;
 
 class RenderTreeUpdater {
 public:
-    RenderTreeUpdater(Document&);
+    RenderTreeUpdater(Document&, Style::PostResolutionCallbackDisabler&);
     ~RenderTreeUpdater();
 
     void commit(std::unique_ptr<const Style::Update>);
@@ -57,7 +58,7 @@ private:
     void updateRenderTree(ContainerNode& root);
     void updateTextRenderer(Text&, const Style::TextUpdate*);
     void createTextRenderer(Text&, const Style::TextUpdate*);
-    void updateElementRenderer(Element&, const Style::ElementUpdate&);
+    void updateElementRenderer(Element&, const Style::ElementUpdates&);
     void updateRendererStyle(RenderElement&, RenderStyle&&, StyleDifference);
     void createRenderer(Element&, RenderStyle&&);
     void updateBeforeDescendants(Element&, const Style::ElementUpdates*);

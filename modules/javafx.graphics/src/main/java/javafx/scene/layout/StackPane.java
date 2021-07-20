@@ -67,7 +67,7 @@ import javafx.util.Callback;
  * StackPane may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} for details.</p>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  *
  * <p>
  * A stackpane's parent will resize the stackpane within the stackpane's resizable range
@@ -106,7 +106,7 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the stackpane.</p>
  *
- * <h3>Optional Layout Constraints</h3>
+ * <h2>Optional Layout Constraints</h2>
  *
  * <p>
  * An application may set constraints on individual children to customize StackPane's layout.

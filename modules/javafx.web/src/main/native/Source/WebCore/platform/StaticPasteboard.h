@@ -32,49 +32,53 @@
 
 namespace WebCore {
 
+class SharedBuffer;
+
 class StaticPasteboard final : public Pasteboard {
 public:
     StaticPasteboard();
+    ~StaticPasteboard();
 
     PasteboardCustomData takeCustomData();
 
+    bool hasNonDefaultData() const;
     bool isStatic() const final { return true; }
 
     bool hasData() final;
-    Vector<String> typesSafeForBindings(const String&) final { return m_types; }
-    Vector<String> typesForLegacyUnsafeBindings() final { return m_types; }
+    Vector<String> typesSafeForBindings(const String&) final;
+    Vector<String> typesForLegacyUnsafeBindings() final;
     String readOrigin() final { return { }; }
     String readString(const String& type) final;
     String readStringInCustomData(const String& type) final;
 
     void writeString(const String& type, const String& data) final;
+    void writeData(const String& type, Ref<SharedBuffer>&& data);
     void writeStringInCustomData(const String& type, const String& data);
     void clear() final;
     void clear(const String& type) final;
 
-    void read(PasteboardPlainText&) final { }
-    void read(PasteboardWebContentReader&, WebContentReadingPolicy) final { }
+    void read(PasteboardPlainText&, PlainTextURLReadingPolicy = PlainTextURLReadingPolicy::AllowURL, Optional<size_t> = WTF::nullopt) final { }
+    void read(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t> = WTF::nullopt) final { }
 
-    void write(const PasteboardURL&) final { }
-    void write(const PasteboardImage&) final { }
-    void write(const PasteboardWebContent&) final { }
+    void write(const PasteboardURL&) final;
+    void write(const PasteboardImage&) final;
+    void write(const PasteboardWebContent&) final;
+    void writeMarkup(const String&) final;
+    void writePlainText(const String&, SmartReplaceOption) final;
 
-    void writeCustomData(const PasteboardCustomData&) final { }
+    void writeCustomData(const Vector<PasteboardCustomData>&) final { }
 
-    Pasteboard::FileContentState fileContentState() final { return FileContentState::NoFileOrImageData; }
+    Pasteboard::FileContentState fileContentState() final { return m_fileContentState; }
     bool canSmartReplace() final { return false; }
-
-    void writeMarkup(const String&) final { }
-    void writePlainText(const String&, SmartReplaceOption) final { }
 
 #if ENABLE(DRAG_SUPPORT)
     void setDragImage(DragImage, const IntPoint&) final { }
 #endif
 
 private:
-    Vector<String> m_types;
-    HashMap<String, String> m_platformData;
-    HashMap<String, String> m_customData;
+    PasteboardCustomData m_customData;
+    HashSet<String> m_nonDefaultDataTypes;
+    Pasteboard::FileContentState m_fileContentState { Pasteboard::FileContentState::NoFileOrImageData };
 };
 
 }

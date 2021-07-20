@@ -56,7 +56,6 @@ static const uint32_t offsetsFromUTF8[5] = {0,
 static UBool hasCESU8Data(const UConverter *cnv)
 {
 #if UCONFIG_ONLY_HTML_CONVERSION
-    (void) (cnv);
     return FALSE;
 #else
     return (UBool)(cnv->sharedData == &_CESU8Data);
@@ -109,7 +108,7 @@ morebytes:
                 if (mySource < sourceLimit)
                 {
                     toUBytes[i] = (char) (ch2 = *mySource);
-                    if (!icu::UTF8::isValidTrail(ch, ch2, i, inBytes) &&
+                    if (!icu::UTF8::isValidTrail(ch, static_cast<uint8_t>(ch2), i, inBytes) &&
                             !(isCESU8 && i == 1 && ch == 0xed && U8_IS_TRAIL(ch2)))
                     {
                         break; /* i < inBytes */
@@ -226,7 +225,7 @@ morebytes:
                 if (mySource < sourceLimit)
                 {
                     toUBytes[i] = (char) (ch2 = *mySource);
-                    if (!icu::UTF8::isValidTrail(ch, ch2, i, inBytes) &&
+                    if (!icu::UTF8::isValidTrail(ch, static_cast<uint8_t>(ch2), i, inBytes) &&
                             !(isCESU8 && i == 1 && ch == 0xed && U8_IS_TRAIL(ch2)))
                     {
                         break; /* i < inBytes */
@@ -708,9 +707,9 @@ ucnv_UTF8FromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
 
         // Do not go back into the bytes that will be read for finishing a partial
         // sequence from the previous buffer.
-        int32_t length=count-toULimit;
+        int32_t length=count-toULength;
         U8_TRUNCATE_IF_INCOMPLETE(source, 0, length);
-        count=toULimit+length;
+        count=toULength+length;
     }
 
     if(c!=0) {

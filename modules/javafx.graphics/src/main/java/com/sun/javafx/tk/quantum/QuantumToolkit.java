@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,7 +125,7 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
@@ -133,15 +133,19 @@ import com.sun.scenario.effect.impl.prism.PrImage;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.input.DragboardHelper;
+import java.util.Optional;
 
 public final class QuantumToolkit extends Toolkit {
 
+    @SuppressWarnings("removal")
     public static final boolean verbose =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.verbose"));
 
+    @SuppressWarnings("removal")
     public static final boolean pulseDebug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.pulse"));
 
+    @SuppressWarnings("removal")
     private static final boolean multithreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 // If it is not specified, or it is true, then it should
@@ -155,12 +159,15 @@ public final class QuantumToolkit extends Toolkit {
                 return result;
             });
 
+    @SuppressWarnings("removal")
     private static boolean debug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.debug"));
 
+    @SuppressWarnings("removal")
     private static Integer pulseHZ =
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.animation.pulse"));
 
+    @SuppressWarnings("removal")
     static final boolean liveResize =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
@@ -168,12 +175,14 @@ public final class QuantumToolkit extends Toolkit {
                 return "true".equals(System.getProperty("javafx.live.resize", result));
             });
 
+    @SuppressWarnings("removal")
     static final boolean drawInPaint =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                 String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
                 return "true".equals(System.getProperty("javafx.draw.in.paint", result));});
 
+    @SuppressWarnings("removal")
     private static boolean singleThreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 Boolean result = Boolean.getBoolean("quantum.singlethreaded");
@@ -183,6 +192,7 @@ public final class QuantumToolkit extends Toolkit {
                 return result;
             });
 
+    @SuppressWarnings("removal")
     private static boolean noRenderJobs =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 Boolean result = Boolean.getBoolean("quantum.norenderjobs");
@@ -253,7 +263,8 @@ public final class QuantumToolkit extends Toolkit {
                 dispose();
             }
         };
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             return null;
         });
@@ -355,7 +366,8 @@ public final class QuantumToolkit extends Toolkit {
                 }
 
                 @Override public boolean handleThemeChanged(String themeName) {
-                    return PlatformImpl.setAccessibilityTheme(themeName);
+                    String highContrastSchemeName = Application.GetApplication().getHighContrastScheme(themeName);
+                    return PlatformImpl.setAccessibilityTheme(highContrastSchemeName);
                 }
             });
         }
@@ -365,7 +377,7 @@ public final class QuantumToolkit extends Toolkit {
         try {
             Application.invokeAndWait(this.userRunnable);
 
-            if (getMasterTimer().isFullspeed()) {
+            if (getPrimaryTimer().isFullspeed()) {
                 /*
                  * FULLSPEED_INTVERVAL workaround
                  *
@@ -595,7 +607,7 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
+    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
         WindowStage stage = new WindowStage(peerWindow, securityDialog, stageStyle, modality, owner);
         stage.setSecurityContext(acc);
@@ -668,7 +680,7 @@ public final class QuantumToolkit extends Toolkit {
     @Override public TKStage createTKPopupStage(Window peerWindow,
                                                 StageStyle popupStyle,
                                                 TKStage owner,
-                                                AccessControlContext acc) {
+                                                @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
         boolean securityDialog = owner instanceof WindowStage ?
                 ((WindowStage)owner).isSecurityDialog() : false;
@@ -679,7 +691,7 @@ public final class QuantumToolkit extends Toolkit {
         return stage;
     }
 
-    @Override public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
+    @Override public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
         EmbeddedStage stage = new EmbeddedStage(host);
         stage.setSecurityContext(acc);
@@ -837,6 +849,7 @@ public final class QuantumToolkit extends Toolkit {
         super.exit();
     }
 
+    @SuppressWarnings("removal")
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
             pulseTimer.stop();
@@ -1129,8 +1142,8 @@ public final class QuantumToolkit extends Toolkit {
         return PrFilterContext.getInstance(screen);
     }
 
-    @Override public AbstractMasterTimer getMasterTimer() {
-        return MasterTimer.getInstance();
+    @Override public AbstractPrimaryTimer getPrimaryTimer() {
+        return PrimaryTimer.getInstance();
     }
 
     @Override public FontLoader getFontLoader() {
@@ -1234,6 +1247,24 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public boolean isMSAASupported() {
         return  GraphicsPipeline.getPipeline().isMSAASupported();
+    }
+
+    // Returns the glass keycode for the given JavaFX KeyCode.
+    // This method only converts lock state KeyCode values
+    private int toGlassKeyCode(KeyCode keyCode) {
+        switch (keyCode) {
+            case CAPS:
+                return com.sun.glass.events.KeyEvent.VK_CAPS_LOCK;
+            case NUM_LOCK:
+                return com.sun.glass.events.KeyEvent.VK_NUM_LOCK;
+            default:
+                return com.sun.glass.events.KeyEvent.VK_UNDEFINED;
+        }
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        return Application.GetApplication().isKeyLocked(toGlassKeyCode(keyCode));
     }
 
     static TransferMode clipboardActionToTransferMode(final int action) {
@@ -1401,8 +1432,17 @@ public final class QuantumToolkit extends Toolkit {
         public double getHeight() { return image.getHeight(); }
         @Override
         public void factoryReset() { dispose(); }
+
         @Override
-        public void factoryReleased() { dispose(); }
+        public void factoryReleased() {
+            dispose();
+
+            // ResourceFactory is being disposed; clear reference to avoid leak
+            if (rf != null) {
+                rf.removeFactoryListener(this);
+                rf = null;
+            }
+        }
     }
 
     @Override public ImageLoader loadPlatformImage(Object platformImage) {
@@ -1478,6 +1518,62 @@ public final class QuantumToolkit extends Toolkit {
 
             }
 
+            private void renderTile(int x, int xOffset, int y, int yOffset, int w, int h,
+                                    IntBuffer buffer, ResourceFactory rf, QuantumImage tileImg, QuantumImage targetImg) {
+                RTTexture rt = tileImg.getRT(w, h, rf);
+                if (rt == null) {
+                    return;
+                }
+                Graphics g = rt.createGraphics();
+                draw(g, x + xOffset, y + yOffset, w, h);
+                int[] pixels = rt.getPixels();
+                if (pixels != null) {
+                    buffer.put(pixels);
+                } else {
+                    rt.readPixels(buffer, rt.getContentX(), rt.getContentY(), w, h);
+                }
+                //Copy tile's pixels into the target image
+                targetImg.image.setPixels(xOffset, yOffset, w, h,
+                        javafx.scene.image.PixelFormat.getIntArgbPreInstance(), buffer, w);
+                rt.unlock();
+            }
+
+            private void renderWholeImage(int x, int y, int w, int h, ResourceFactory rf, QuantumImage pImage) {
+                RTTexture rt = pImage.getRT(w, h, rf);
+                if (rt == null) {
+                    return;
+                }
+                Graphics g = rt.createGraphics();
+                draw(g, x, y, w, h);
+                int[] pixels = rt.getPixels();
+                if (pixels != null) {
+                    pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(pixels, w, h));
+                } else {
+                    IntBuffer ib = IntBuffer.allocate(w * h);
+                    if (rt.readPixels(ib, rt.getContentX(), rt.getContentY(), w, h)) {
+                        pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(ib, w, h));
+                    } else {
+                        pImage.dispose();
+                        pImage = null;
+                    }
+                }
+                rt.unlock();
+            }
+
+
+            private int computeTileSize(int size, int maxSize) {
+                // If 'size' divided by either 2 or 3 produce an exact result
+                // and is lesser that the specified maxSize, then use this value
+                // as the tile size, as this makes the tiling process more efficient.
+                for (int n = 1; n <= 3; n++) {
+                    int optimumSize = size / n;
+                    if (optimumSize <= maxSize && optimumSize * n == size) {
+                        return optimumSize;
+                    }
+                }
+                return maxSize;
+            }
+
             @Override
             public void run() {
 
@@ -1497,44 +1593,87 @@ public final class QuantumToolkit extends Toolkit {
                 }
 
                 boolean errored = false;
+                // A temp QuantumImage used only as a RTT cache for rendering tiles.
+                QuantumImage tileRttCache = null;
                 try {
                     QuantumImage pImage = (params.platformImage instanceof QuantumImage) ?
-                            (QuantumImage)params.platformImage : new QuantumImage((com.sun.prism.Image)null);
+                            (QuantumImage) params.platformImage : new QuantumImage((com.sun.prism.Image) null);
 
-                    com.sun.prism.RTTexture rt = pImage.getRT(w, h, rf);
+                    int maxTextureSize = rf.getMaximumTextureSize();
+                    if (h > maxTextureSize || w > maxTextureSize) {
+                        tileRttCache = new QuantumImage((com.sun.prism.Image) null);
+                        // The requested size for the snapshot is too big to fit a single texture,
+                        // so we need to take several snapshot tiles and merge them into pImage
+                        if (pImage.image == null) {
+                            pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(IntBuffer.allocate(w * h), w, h));
+                        }
 
-                    if (rt == null) {
-                        return;
-                    }
-
-                    Graphics g = rt.createGraphics();
-
-                    draw(g, x, y, w, h);
-
-                    int[] pixels = pImage.rt.getPixels();
-
-                    if (pixels != null) {
-                        pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(pixels, w, h));
-                    } else {
-                        IntBuffer ib = IntBuffer.allocate(w*h);
-                        if (pImage.rt.readPixels(ib, pImage.rt.getContentX(),
-                                pImage.rt.getContentY(), w, h))
-                        {
-                            pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(ib, w, h));
-                        } else {
-                            pImage.dispose();
-                            pImage = null;
+                        // M represents the middle set of tiles each with a size of tileW x tileH.
+                        // R is the right hand column of tiles,
+                        // B is the bottom row,
+                        // C is the corner:
+                        // +-----------+-----------+  .  +-------+
+                        // |           |           |  .  |       |
+                        // |     M     |     M     |  .  |   R   |
+                        // |           |           |  .  |       |
+                        // +-----------+-----------+  .  +-------+
+                        // |           |           |  .  |       |
+                        // |     M     |     M     |  .  |   R   |
+                        // |           |           |  .  |       |
+                        // +-----------+-----------+  .  +-------+
+                        //       .           .        .      .
+                        // +-----------+-----------+  .  +-------+
+                        // |     B     |     B     |  .  |   C   |
+                        // +-----------+-----------+  .  +-------+
+                        final int mTileWidth = computeTileSize(w, maxTextureSize);
+                        final int mTileHeight = computeTileSize(h, maxTextureSize);
+                        IntBuffer buffer = IntBuffer.allocate(mTileWidth * mTileHeight);
+                        // Walk through all same-size "M" tiles
+                        int mTileXOffset = 0;
+                        int mTileYOffset = 0;
+                        for (mTileXOffset = 0; (mTileXOffset + mTileWidth) <= w; mTileXOffset += mTileWidth) {
+                            for (mTileYOffset = 0; (mTileYOffset + mTileHeight) <= h; mTileYOffset += mTileHeight) {
+                                renderTile(x, mTileXOffset, y, mTileYOffset, mTileWidth, mTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                            }
+                        }
+                        // Walk through remaining same-height "R" tiles, if any
+                        final int rTileXOffset = mTileXOffset;
+                        final int rTileWidth = w - rTileXOffset;
+                        if (rTileWidth > 0) {
+                            for (int rTileYOffset = 0; (rTileYOffset + mTileHeight) <= h; rTileYOffset += mTileHeight) {
+                                renderTile(x, rTileXOffset, y, rTileYOffset, rTileWidth, mTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                            }
+                        }
+                        // Walk through remaining same-width "B" tiles, if any
+                        final int bTileYOffset = mTileYOffset;
+                        final int bTileHeight = h - bTileYOffset;
+                        if (bTileHeight > 0) {
+                            for (int bTileXOffset = 0; (bTileXOffset + mTileWidth) <= w; bTileXOffset += mTileWidth) {
+                                renderTile(x, bTileXOffset, y, bTileYOffset, mTileWidth, bTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                            }
+                        }
+                        // Render corner "C" tile if needed
+                        if (rTileWidth > 0 &&  bTileHeight > 0) {
+                            renderTile(x, rTileXOffset, y, bTileYOffset, rTileWidth, bTileHeight,
+                                    buffer, rf, tileRttCache, pImage);
                         }
                     }
-
-                    rt.unlock();
-
+                    else {
+                        // The requested size for the snapshot fits max texture size,
+                        // so we can directly render it in the target image.
+                        renderWholeImage(x, y, w, h, rf, pImage);
+                    }
                     params.platformImage = pImage;
-
                 } catch (Throwable t) {
                     errored = true;
                     t.printStackTrace(System.err);
                 } finally {
+                    if (tileRttCache != null) {
+                        tileRttCache.dispose();
+                    }
                     Disposer.cleanUp();
                     rf.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
                 }

@@ -42,13 +42,19 @@
  *
  * The #GTree structure and its associated functions provide a sorted
  * collection of key/value pairs optimized for searching and traversing
- * in order.
+ * in order. This means that most of the operations  (access, search,
+ * insertion, deletion, ...) on #GTree are O(log(n)) in average and O(n)
+ * in worst case for time complexity. But, note that maintaining a
+ * balanced sorted #GTree of n elements is done in time O(n log(n)).
  *
  * To create a new #GTree use g_tree_new().
  *
- * To insert a key/value pair into a #GTree use g_tree_insert().
+ * To insert a key/value pair into a #GTree use g_tree_insert()
+ * (O(n log(n))).
  *
- * To lookup the value corresponding to a given key, use
+ * To remove a key/value pair use g_tree_remove() (O(n log(n))).
+ *
+ * To look up the value corresponding to a given key, use
  * g_tree_lookup() and g_tree_lookup_extended().
  *
  * To find out the number of nodes in a #GTree, use g_tree_nnodes(). To
@@ -56,8 +62,6 @@
  *
  * To traverse a #GTree, calling a function for each node visited in
  * the traversal, use g_tree_foreach().
- *
- * To remove a key/value pair use g_tree_remove().
  *
  * To destroy a #GTree, use g_tree_destroy().
  **/
@@ -390,6 +394,9 @@ g_tree_destroy (GTree *tree)
  *
  * The tree is automatically 'balanced' as new key/value pairs are added,
  * so that the distance from the root to every leaf is as small as possible.
+ * The cost of maintaining a balanced tree while inserting new key/value
+ * result in a O(n log(n)) operation where most of the other operations
+ * are O(log(n)).
  */
 void
 g_tree_insert (GTree    *tree,
@@ -586,6 +593,10 @@ g_tree_insert_internal (GTree    *tree,
  * are freed using the supplied destroy functions, otherwise you have to
  * make sure that any dynamically allocated values are freed yourself.
  * If the key does not exist in the #GTree, the function does nothing.
+ *
+ * The cost of maintaining a balanced tree while removing a key/value
+ * result in a O(n log(n)) operation where most of the other operations
+ * are O(log(n)).
  *
  * Returns: %TRUE if the key was found (prior to 2.8, this function
  *     returned nothing)
@@ -873,8 +884,8 @@ g_tree_lookup (GTree         *tree,
  * g_tree_lookup_extended:
  * @tree: a #GTree
  * @lookup_key: the key to look up
- * @orig_key: (optional) (nullable): returns the original key
- * @value: (optional) (nullable): returns the value associated with the key
+ * @orig_key: (out) (optional) (nullable): returns the original key
+ * @value: (out) (optional) (nullable): returns the value associated with the key
  *
  * Looks up a key in the #GTree, returning the original key and the
  * associated value. This is useful if you need to free the memory

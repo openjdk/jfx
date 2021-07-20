@@ -29,19 +29,22 @@
 #if ENABLE(JIT)
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include "StructureStubInfo.h"
 
 namespace JSC {
 
-void StructureStubClearingWatchpoint::fireInternal(VM& vm, const FireDetail&)
+void StructureTransitionStructureStubClearingWatchpoint::fireInternal(VM& vm, const FireDetail&)
 {
+    if (!m_holder->isValid())
+        return;
+
     if (!m_key || !m_key.isWatchable(PropertyCondition::EnsureWatchability)) {
         // This will implicitly cause my own demise: stub reset removes all watchpoints.
         // That works, because deleting a watchpoint removes it from the set's list, and
         // the set's list traversal for firing is robust against the set changing.
-        ConcurrentJSLocker locker(m_holder.codeBlock()->m_lock);
-        m_holder.stubInfo()->reset(m_holder.codeBlock());
+        ConcurrentJSLocker locker(m_holder->codeBlock()->m_lock);
+        m_holder->stubInfo()->reset(locker, m_holder->codeBlock());
         return;
     }
 
@@ -54,23 +57,65 @@ void StructureStubClearingWatchpoint::fireInternal(VM& vm, const FireDetail&)
     m_key.object()->structure(vm)->addTransitionWatchpoint(this);
 }
 
-StructureStubClearingWatchpoint* WatchpointsOnStructureStubInfo::addWatchpoint(const ObjectPropertyCondition& key)
+inline bool WatchpointsOnStructureStubInfo::isValid() const
 {
-    return m_watchpoints.add(key, *this);
+    return m_codeBlock->isLive();
 }
 
-StructureStubClearingWatchpoint* WatchpointsOnStructureStubInfo::ensureReferenceAndAddWatchpoint(
+WatchpointsOnStructureStubInfo::Node& WatchpointsOnStructureStubInfo::addWatchpoint(const ObjectPropertyCondition& key)
+{
+    if (!key || key.condition().kind() != PropertyCondition::Equivalence)
+        return *m_watchpoints.add(WTF::in_place<StructureTransitionStructureStubClearingWatchpoint>, key, *this);
+    ASSERT(key.condition().kind() == PropertyCondition::Equivalence);
+    return *m_watchpoints.add(WTF::in_place<AdaptiveValueStructureStubClearingWatchpoint>, key, *this);
+}
+
+void WatchpointsOnStructureStubInfo::ensureReferenceAndInstallWatchpoint(
     std::unique_ptr<WatchpointsOnStructureStubInfo>& holderRef, CodeBlock* codeBlock,
     StructureStubInfo* stubInfo, const ObjectPropertyCondition& key)
 {
     if (!holderRef)
-        holderRef = std::make_unique<WatchpointsOnStructureStubInfo>(codeBlock, stubInfo);
+        holderRef = makeUnique<WatchpointsOnStructureStubInfo>(codeBlock, stubInfo);
     else {
         ASSERT(holderRef->m_codeBlock == codeBlock);
         ASSERT(holderRef->m_stubInfo == stubInfo);
     }
 
-    return holderRef->addWatchpoint(key);
+    ASSERT(!!key);
+    auto& watchpointVariant = holderRef->addWatchpoint(key);
+    if (key.kind() == PropertyCondition::Equivalence) {
+        auto& adaptiveWatchpoint = WTF::get<AdaptiveValueStructureStubClearingWatchpoint>(watchpointVariant);
+        adaptiveWatchpoint.install(codeBlock->vm());
+    } else {
+        auto* structureTransitionWatchpoint = &WTF::get<StructureTransitionStructureStubClearingWatchpoint>(watchpointVariant);
+        key.object()->structure()->addTransitionWatchpoint(structureTransitionWatchpoint);
+    }
+}
+
+Watchpoint* WatchpointsOnStructureStubInfo::ensureReferenceAndAddWatchpoint(
+    std::unique_ptr<WatchpointsOnStructureStubInfo>& holderRef, CodeBlock* codeBlock,
+    StructureStubInfo* stubInfo)
+{
+    if (!holderRef)
+        holderRef = makeUnique<WatchpointsOnStructureStubInfo>(codeBlock, stubInfo);
+    else {
+        ASSERT(holderRef->m_codeBlock == codeBlock);
+        ASSERT(holderRef->m_stubInfo == stubInfo);
+    }
+
+    return &WTF::get<StructureTransitionStructureStubClearingWatchpoint>(holderRef->addWatchpoint(ObjectPropertyCondition()));
+}
+
+void AdaptiveValueStructureStubClearingWatchpoint::handleFire(VM&, const FireDetail&)
+{
+    if (!m_holder->isValid())
+        return;
+
+    // This will implicitly cause my own demise: stub reset removes all watchpoints.
+    // That works, because deleting a watchpoint removes it from the set's list, and
+    // the set's list traversal for firing is robust against the set changing.
+    ConcurrentJSLocker locker(m_holder->codeBlock()->m_lock);
+    m_holder->stubInfo()->reset(locker, m_holder->codeBlock());
 }
 
 } // namespace JSC

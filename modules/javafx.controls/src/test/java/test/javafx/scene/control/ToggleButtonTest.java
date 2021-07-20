@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import test.util.memory.JMemoryBuddy;
 
 /**
  *
@@ -142,6 +143,70 @@ public class ToggleButtonTest {
         assertPseudoClassDoesNotExist(toggle, "selected");
     }
 
+    /*********************************************************************
+     * Toggle group Tests                                                *
+     ********************************************************************/
+    @Test public void setToggleGroupAndSeeValueIsReflectedInModel() {
+        toggle.setToggleGroup(toggleGroup);
+        assertSame(toggle.toggleGroupProperty().getValue(), toggleGroup);
+    }
+
+    @Test public void setToggleGroupAndSeeValue() {
+        toggle.setToggleGroup(toggleGroup);
+        assertSame(toggle.getToggleGroup(), toggleGroup);
+    }
+
+    @Test public void toggleGroupViaGroupAddAndRemoveClearsReference() {
+        JMemoryBuddy.memoryTest(checker -> {
+            toggleGroup.getToggles().add(toggle);
+            toggleGroup.getToggles().clear();
+
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
+    }
+
+    @Test public void toggleGroupViaToggleSetClearsReference() {
+        JMemoryBuddy.memoryTest(checker -> {
+            toggle.setToggleGroup(toggleGroup);
+            toggle.setToggleGroup(null);
+
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
+    }
+
+    @Test public void toggleGroupViaToggleThenGroupClearsReference() {
+        JMemoryBuddy.memoryTest(checker -> {
+            toggle.setToggleGroup(toggleGroup);
+            toggleGroup.getToggles().clear();
+
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
+    }
+
+    @Test public void toggleGroupViaGroupThenToggleClearsReference() {
+        JMemoryBuddy.memoryTest(checker -> {
+            toggleGroup.getToggles().add(toggle);
+            toggle.setToggleGroup(null);
+
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
+    }
+
+    @Test public void toggleGroupSwitchingClearsReference() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ToggleGroup anotherToggleGroup = new ToggleGroup();
+            toggle.setToggleGroup(toggleGroup);
+            toggle.setToggleGroup(anotherToggleGroup);
+            toggle.setToggleGroup(null);
+
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
+    }
 
     /*********************************************************************
      * Miscellaneous Tests                                         *
@@ -154,16 +219,6 @@ public class ToggleButtonTest {
     @Test public void setSelectedAndSeeValue() {
         toggle.setSelected(false);
         assertFalse(toggle.isSelected());
-    }
-
-    @Test public void setToggleGroupAndSeeValueIsReflectedInModel() {
-        toggle.setToggleGroup(toggleGroup);
-        assertSame(toggle.toggleGroupProperty().getValue(), toggleGroup);
-    }
-
-    @Test public void setToggleGroupAndSeeValue() {
-        toggle.setToggleGroup(toggleGroup);
-        assertSame(toggle.getToggleGroup(), toggleGroup);
     }
 
     @Test public void fireAndCheckSelectionToggled() {
@@ -189,5 +244,4 @@ public class ToggleButtonTest {
         }
         assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
     }
-
 }

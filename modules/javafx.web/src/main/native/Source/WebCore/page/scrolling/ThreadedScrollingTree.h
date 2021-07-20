@@ -25,11 +25,13 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
+#include <wtf/Condition.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RunLoop.h>
 
 namespace WebCore {
 
@@ -43,26 +45,32 @@ class ThreadedScrollingTree : public ScrollingTree {
 public:
     virtual ~ThreadedScrollingTree();
 
-    void commitTreeState(std::unique_ptr<ScrollingStateTree>) override;
+    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>) override;
 
-    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override;
+    bool handleWheelEventAfterMainThread(const PlatformWheelEvent&, ScrollingNodeID, Optional<WheelScrollGestureState>);
+    void wheelEventWasProcessedByMainThread(const PlatformWheelEvent&, Optional<WheelScrollGestureState>);
 
-    // Can be called from any thread. Will try to handle the wheel event on the scrolling thread.
-    // Returns true if the wheel event can be handled on the scrolling thread and false if the
-    // event must be sent again to the WebCore event handler.
-    ScrollingEventResult tryToHandleWheelEvent(const PlatformWheelEvent&) override;
+    WEBCORE_EXPORT void willSendEventToMainThread(const PlatformWheelEvent&) final;
+    WEBCORE_EXPORT void waitForEventToBeProcessedByMainThread(const PlatformWheelEvent&) final;
 
     void invalidate() override;
+
+    WEBCORE_EXPORT void displayDidRefresh(PlatformDisplayID);
+
+    void willStartRenderingUpdate();
+    void didCompleteRenderingUpdate();
+
+    Lock& treeMutex() { return m_treeMutex; }
+
+    bool scrollAnimatorEnabled() const { return m_scrollAnimatorEnabled; }
 
 protected:
     explicit ThreadedScrollingTree(AsyncScrollingCoordinator&);
 
-    void scrollingTreeNodeDidScroll(ScrollingNodeID, const FloatPoint& scrollPosition, const Optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
+    void scrollingTreeNodeDidScroll(ScrollingTreeScrollingNode&, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
 #if PLATFORM(MAC)
-    void handleWheelEventPhase(PlatformWheelEventPhase) override;
+    void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) override;
     void setActiveScrollSnapIndices(ScrollingNodeID, unsigned horizontalIndex, unsigned verticalIndex) override;
-    void deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) override;
-    void removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) override;
 #endif
 
 #if PLATFORM(COCOA)
@@ -70,16 +78,46 @@ protected:
 #endif
 
     void reportExposedUnfilledArea(MonotonicTime, unsigned unfilledArea) override;
-    void reportSynchronousScrollingReasonsChanged(MonotonicTime, SynchronousScrollingReasons) override;
+    void reportSynchronousScrollingReasonsChanged(MonotonicTime, OptionSet<SynchronousScrollingReason>) override;
+
+    RefPtr<AsyncScrollingCoordinator> m_scrollingCoordinator;
 
 private:
     bool isThreadedScrollingTree() const override { return true; }
+    void propagateSynchronousScrollingReasons(const HashSet<ScrollingNodeID>&) override;
 
-    RefPtr<AsyncScrollingCoordinator> m_scrollingCoordinator;
+    void displayDidRefreshOnScrollingThread();
+    void waitForRenderingUpdateCompletionOrTimeout();
+
+    bool canUpdateLayersOnScrollingThread() const;
+
+    void scheduleDelayedRenderingUpdateDetectionTimer(Seconds);
+    void delayedRenderingUpdateDetectionTimerFired();
+
+    Seconds maxAllowableRenderingUpdateDurationForSynchronization();
+
+    enum class SynchronizationState : uint8_t {
+        Idle,
+        WaitingForRenderingUpdate,
+        InRenderingUpdate,
+        Desynchronized,
+    };
+
+    SynchronizationState m_state { SynchronizationState::Idle };
+    Condition m_stateCondition;
+
+    bool m_receivedBeganEventFromMainThread { false };
+    Condition m_waitingForBeganEventCondition;
+
+    // Dynamically allocated because it has to use the ScrollingThread's runloop.
+    std::unique_ptr<RunLoop::Timer<ThreadedScrollingTree>> m_delayedRenderingUpdateDetectionTimer;
+
+    bool m_scrollAnimatorEnabled { false };
+    bool m_hasNodesWithSynchronousScrollingReasons { false };
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_SCROLLING_TREE(WebCore::ThreadedScrollingTree, isThreadedScrollingTree())
 
-#endif // ENABLE(ASYNC_SCROLLING)
+#endif // ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)

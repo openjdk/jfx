@@ -40,7 +40,7 @@ namespace bmalloc {
 Deallocator::Deallocator(Heap& heap)
     : m_heap(heap)
 {
-    BASSERT(!PerProcess<Environment>::get()->isDebugHeapEnabled());
+    BASSERT(!Environment::get()->isDebugHeapEnabled());
 }
 
 Deallocator::~Deallocator()
@@ -50,13 +50,13 @@ Deallocator::~Deallocator()
 
 void Deallocator::scavenge()
 {
-    std::unique_lock<Mutex> lock(Heap::mutex());
+    UniqueLockHolder lock(Heap::mutex());
 
     processObjectLog(lock);
     m_heap.deallocateLineCache(lock, lineCache(lock));
 }
 
-void Deallocator::processObjectLog(std::unique_lock<Mutex>& lock)
+void Deallocator::processObjectLog(UniqueLockHolder& lock)
 {
     for (Object object : m_objectLog)
         m_heap.derefSmallLine(lock, object, lineCache(lock));
@@ -68,14 +68,16 @@ void Deallocator::deallocateSlowCase(void* object)
     if (!object)
         return;
 
-    std::unique_lock<Mutex> lock(Heap::mutex());
-    if (m_heap.isLarge(lock, object)) {
+    if (m_heap.isLarge(object)) {
+        UniqueLockHolder lock(Heap::mutex());
         m_heap.deallocateLarge(lock, object);
         return;
     }
 
-    if (m_objectLog.size() == m_objectLog.capacity())
+    if (m_objectLog.size() == m_objectLog.capacity()) {
+        UniqueLockHolder lock(Heap::mutex());
         processObjectLog(lock);
+    }
 
     m_objectLog.push(object);
 }

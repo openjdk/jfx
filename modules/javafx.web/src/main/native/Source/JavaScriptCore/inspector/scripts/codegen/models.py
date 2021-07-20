@@ -38,6 +38,27 @@ def find_duplicates(l):
     return [key for key, count in list(collections.Counter(l).items()) if count > 1]
 
 
+def validate_target_types(debuggable_types, target_types):
+    for target_type in target_types:
+        required_debuggable_types = set()
+        if target_type == 'itml':
+            if 'itml' not in debuggable_types:
+                return False
+        elif target_type == 'javascript':
+            if 'javascript' not in debuggable_types:
+                return False
+        elif target_type == 'page' or target_type == 'worker':
+            if 'page' not in debuggable_types:
+                return False
+        elif target_type == 'service-worker':
+            if 'service-worker' not in debuggable_types:
+                return False
+        elif target_type == 'web-page':
+            if 'web-page' not in debuggable_types:
+                return False
+    return True
+
+
 _FRAMEWORK_CONFIG_MAP = {
     "Global": {
     },
@@ -65,6 +86,9 @@ _FRAMEWORK_CONFIG_MAP = {
         "objc_prefix": "Test",
     }
 }
+
+_ALLOWED_DEBUGGABLE_TYPE_STRINGS = frozenset(['itml', 'javascript', 'page', 'service-worker', 'web-page'])
+_ALLOWED_TARGET_TYPE_STRINGS = frozenset(['itml', 'javascript', 'page', 'service-worker', 'web-page', 'worker'])
 
 
 class ParseException(Exception):
@@ -114,41 +138,6 @@ class Frameworks:
     WebInspectorUI = Framework("WebInspectorUI")
     Test = Framework("Test")
 
-
-class Platform:
-    def __init__(self, name):
-        self.name = name
-
-    @staticmethod
-    def fromString(platformString):
-        platformString = platformString.lower()
-        if platformString == "ios":
-            return Platforms.iOS
-
-        if platformString == "macos":
-            return Platforms.macOS
-
-        if platformString == "all":
-            return Platforms.All
-
-        if platformString == "generic" or not platformString:
-            return Platforms.Generic
-
-        raise ParseException("Unknown platform: %s" % platformString)
-
-
-class Platforms:
-    All = Platform("all")
-    Generic = Platform("generic")
-    iOS = Platform("ios")
-    macOS = Platform("macos")
-
-    # Allow iteration over all platforms. See <http://stackoverflow.com/questions/5434400/>.
-    class __metaclass__(type):
-        def __iter__(self):
-            for attr in dir(Platforms):
-                if not attr.startswith("__"):
-                    yield getattr(Platforms, attr)
 
 class TypeReference:
     def __init__(self, type_kind, referenced_type_name, enum_values, array_items):
@@ -368,10 +357,35 @@ class Protocol:
         check_for_required_properties(['domain'], json, "domain")
         log.debug("parse domain " + json['domain'])
 
+        debuggable_types = None
+        target_types = None
         version = None
         types = []
         commands = []
         events = []
+
+        if 'debuggableTypes' in json:
+            if not isinstance(json['debuggableTypes'], list):
+                raise ParseException("Malformed domain specification: debuggableTypes for domain %s is not an array" % json['domain'])
+
+            for debuggable_types in json['debuggableTypes']:
+                if debuggable_types not in _ALLOWED_DEBUGGABLE_TYPE_STRINGS:
+                    raise ParseException('Malformed domain specification: debuggableTypes for domain %s is an unsupported string. Was: "%s", Allowed values: %s' % (json['domain'], json['debuggableTypes'], ', '.join(_ALLOWED_DEBUGGABLE_TYPE_STRINGS)))
+
+            debuggable_types = json.get('debuggableTypes')
+
+        if 'targetTypes' in json:
+            if not isinstance(json['targetTypes'], list):
+                raise ParseException("Malformed domain specification: targetTypes for domain %s is not an array" % json['domain'])
+
+            for target_types in json['targetTypes']:
+                if target_types not in _ALLOWED_TARGET_TYPE_STRINGS:
+                    raise ParseException('Malformed domain specification: targetTypes for domain %s is an unsupported string. Was: "%s", Allowed values: %s' % (json['domain'], json['targetTypes'], ', '.join(_ALLOWED_TARGET_TYPE_STRINGS)))
+
+            target_types = json.get('targetTypes')
+
+            if debuggable_types and not validate_target_types(debuggable_types, target_types):
+                raise ParseException('Malformed domain specification: domain %s has an item in targetTypes "%s" that is not supported by any value in debuggableTypes "%s".' % (json['domain'], target_types, debuggable_types))
 
         if 'version' in json:
             if not isinstance(json['version'], int):
@@ -386,22 +400,14 @@ class Protocol:
         if 'commands' in json:
             if not isinstance(json['commands'], list):
                 raise ParseException("Malformed domain specification: commands is not an array")
-            commands.extend([self.parse_command(command) for command in json['commands']])
+            commands.extend([self.parse_command(command, debuggable_types) for command in json['commands']])
 
         if 'events' in json:
             if not isinstance(json['events'], list):
                 raise ParseException("Malformed domain specification: events is not an array")
-            events.extend([self.parse_event(event) for event in json['events']])
+            events.extend([self.parse_event(event, debuggable_types) for event in json['events']])
 
-        if 'availability' in json:
-            if not isinstance(json['availability'], list):
-                raise ParseException("Malformed domain specification: availability is not an array")
-            allowed_activation_strings = set(['javascript', 'web', 'worker', 'service-worker'])
-            for availability_type in json['availability']:
-                if availability_type not in allowed_activation_strings:
-                    raise ParseException('Malformed domain specification: availability is an unsupported string. Was: "%s", Allowed values: %s' % (json['availability'], ', '.join(allowed_activation_strings)))
-
-        self.domains.append(Domain(json['domain'], json.get('description', ''), json.get('featureGuard'), json.get('availability'), isSupplemental, version, types, commands, events))
+        self.domains.append(Domain(json['domain'], json.get('description', ''), json.get('condition'), debuggable_types, target_types, isSupplemental, version, types, commands, events))
 
     def parse_type_declaration(self, json):
         check_for_required_properties(['id', 'type'], json, "type")
@@ -419,8 +425,7 @@ class Protocol:
             raise ParseException("Malformed domain specification: type declaration for %s has duplicate member names" % json['id'])
 
         type_ref = TypeReference(json['type'], json.get('$ref'), json.get('enum'), json.get('items'))
-        platform = Platform.fromString(json.get('platform', 'generic'))
-        return TypeDeclaration(json['id'], type_ref, json.get("description", ""), platform, type_members)
+        return TypeDeclaration(json['id'], type_ref, json.get("description", ""), json.get('condition'), type_members)
 
     def parse_type_member(self, json):
         check_for_required_properties(['name'], json, "type member")
@@ -429,12 +434,29 @@ class Protocol:
         type_ref = TypeReference(json.get('type'), json.get('$ref'), json.get('enum'), json.get('items'))
         return TypeMember(json['name'], type_ref, json.get('optional', False), json.get('description', ""))
 
-    def parse_command(self, json):
+    def parse_command(self, json, debuggable_types):
         check_for_required_properties(['name'], json, "command")
         log.debug("parse command %s" % json['name'])
 
+        target_types = None
         call_parameters = []
         return_parameters = []
+
+        if 'targetTypes' in json:
+            if not isinstance(json['targetTypes'], list):
+                raise ParseException("Malformed domain specification: targetTypes list for command %s is not an array" % json['name'])
+            target_types = json['targetTypes']
+
+            for target_type in target_types:
+                if target_type not in _ALLOWED_TARGET_TYPE_STRINGS:
+                    raise ParseException('Malformed domain specification: targetTypes list for command %s is an unsupported string. Was: "%s", Allowed values: %s' % (json['name'], json['targetTypes'], ', '.join(_ALLOWED_TARGET_TYPE_STRINGS)))
+
+            duplicate_types = find_duplicates(target_types)
+            if len(duplicate_types) > 0:
+                raise ParseException("Malformed domain specification: targetTypes list for command %s has duplicate items" % json['name'])
+
+            if debuggable_types and not validate_target_types(debuggable_types, target_types):
+                raise ParseException('Malformed domain specification: command %s has an item in targetTypes "%s" that is not supported by any value in debuggableTypes "%s".' % (json['name'], target_types, debuggable_types))
 
         if 'parameters' in json:
             if not isinstance(json['parameters'], list):
@@ -454,14 +476,30 @@ class Protocol:
             if len(duplicate_names) > 0:
                 raise ParseException("Malformed domain specification: return parameter list for command %s has duplicate parameter names" % json['name'])
 
-        platform = Platform.fromString(json.get('platform', 'generic'))
-        return Command(json['name'], call_parameters, return_parameters, json.get('description', ""), platform, json.get('async', False))
+        return Command(json['name'], target_types, call_parameters, return_parameters, json.get('description', ""), json.get('condition'), json.get('async', False))
 
-    def parse_event(self, json):
+    def parse_event(self, json, debuggable_types):
         check_for_required_properties(['name'], json, "event")
         log.debug("parse event %s" % json['name'])
 
+        target_types = None
         event_parameters = []
+
+        if 'targetTypes' in json:
+            if not isinstance(json['targetTypes'], list):
+                raise ParseException("Malformed domain specification: targetTypes for event %s is not an array" % json['name'])
+            target_types = json['targetTypes']
+
+            for target_type in target_types:
+                if target_type not in _ALLOWED_TARGET_TYPE_STRINGS:
+                    raise ParseException('Malformed domain specification: targetTypes for event %s is an unsupported string. Was: "%s", Allowed values: %s' % (json['name'], json['targetTypes'], ', '.join(_ALLOWED_TARGET_TYPE_STRINGS)))
+
+            duplicate_types = find_duplicates(target_types)
+            if len(duplicate_types) > 0:
+                raise ParseException("Malformed domain specification: targetTypes list for event %s has duplicate items" % json['name'])
+
+            if debuggable_types and not validate_target_types(debuggable_types, target_types):
+                raise ParseException('Malformed domain specification: event %s has an item in targetTypes "%s" that is not supported by any value in debuggableTypes "%s".' % (json['name'], target_types, debuggable_types))
 
         if 'parameters' in json:
             if not isinstance(json['parameters'], list):
@@ -472,8 +510,7 @@ class Protocol:
             if len(duplicate_names) > 0:
                 raise ParseException("Malformed domain specification: parameter list for event %s has duplicate parameter names" % json['name'])
 
-        platform = Platform.fromString(json.get('platform', 'generic'))
-        return Event(json['name'], event_parameters, json.get('description', ""), platform)
+        return Event(json['name'], target_types, event_parameters, json.get('description', ""), json.get('condition'))
 
     def parse_call_or_return_parameter(self, json):
         check_for_required_properties(['name'], json, "parameter")
@@ -571,11 +608,12 @@ class Protocol:
 
 
 class Domain:
-    def __init__(self, domain_name, description, feature_guard, availability, isSupplemental, version, type_declarations, commands, events):
+    def __init__(self, domain_name, description, condition, debuggable_types, target_types, isSupplemental, version, type_declarations, commands, events):
         self.domain_name = domain_name
         self.description = description
-        self.feature_guard = feature_guard
-        self.availability = availability
+        self.condition = condition
+        self.debuggable_types = debuggable_types
+        self.target_types = target_types
         self.is_supplemental = isSupplemental
         self._version = version
         self._type_declarations = type_declarations
@@ -609,15 +647,15 @@ class Domain:
 
 
 class Domains:
-    GLOBAL = Domain("", "The global domain, in which primitive types are implicitly declared.", None, None, False, None, [], [], [])
+    GLOBAL = Domain("", "The global domain, in which primitive types are implicitly declared.", None, None, None, False, None, [], [], [])
 
 
 class TypeDeclaration:
-    def __init__(self, type_name, type_ref, description, platform, type_members):
+    def __init__(self, type_name, type_ref, description, condition, type_members):
         self.type_name = type_name
         self.type_ref = type_ref
         self.description = description
-        self.platform = platform
+        self.condition = condition
         self.type_members = type_members
 
         if self.type_name != ucfirst(self.type_name):
@@ -661,12 +699,13 @@ class Parameter:
 
 
 class Command:
-    def __init__(self, command_name, call_parameters, return_parameters, description, platform, is_async):
+    def __init__(self, command_name, target_types, call_parameters, return_parameters, description, condition, is_async):
         self.command_name = command_name
+        self.target_types = target_types
         self.call_parameters = call_parameters
         self.return_parameters = return_parameters
         self.description = description
-        self.platform = platform
+        self.condition = condition
         self.is_async = is_async
 
     def resolve_type_references(self, protocol, domain):
@@ -680,11 +719,12 @@ class Command:
 
 
 class Event:
-    def __init__(self, event_name, event_parameters, description, platform):
+    def __init__(self, event_name, target_types, event_parameters, description, condition):
         self.event_name = event_name
+        self.target_types = target_types
         self.event_parameters = event_parameters
         self.description = description
-        self.platform = platform
+        self.condition = condition
 
     def resolve_type_references(self, protocol, domain):
         log.debug(">> Resolving type references for parameters in event: %s" % self.event_name)

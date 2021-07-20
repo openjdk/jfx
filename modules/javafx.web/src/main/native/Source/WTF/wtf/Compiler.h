@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,6 +156,20 @@
 #define SUPPRESS_ASAN
 #endif
 
+/* TSAN_ENABLED and SUPPRESS_TSAN */
+
+#ifdef __SANITIZE_THREAD__
+#define TSAN_ENABLED 1
+#else
+#define TSAN_ENABLED COMPILER_HAS_CLANG_FEATURE(thread_sanitizer)
+#endif
+
+#if TSAN_ENABLED
+#define SUPPRESS_TSAN __attribute__((no_sanitize_thread))
+#else
+#define SUPPRESS_TSAN
+#endif
+
 /* ==== Compiler-independent macros for various compiler features, in alphabetical order ==== */
 
 /* ALWAYS_INLINE */
@@ -204,8 +218,9 @@
 
 #elif !defined(FALLTHROUGH) && !defined(__cplusplus)
 
-#if COMPILER(GCC)
-#if GCC_VERSION_AT_LEAST(7, 0, 0)
+#if COMPILER(GCC_COMPATIBLE) && defined(__has_attribute)
+// Break out this #if to satisy some versions Windows compilers.
+#if __has_attribute(fallthrough)
 #define FALLTHROUGH __attribute__ ((fallthrough))
 #endif
 #endif
@@ -320,6 +335,16 @@
 #define PURE_FUNCTION
 #endif
 
+/* WK_UNUSED_INSTANCE_VARIABLE */
+
+#if !defined(WK_UNUSED_INSTANCE_VARIABLE) && COMPILER(GCC_COMPATIBLE)
+#define WK_UNUSED_INSTANCE_VARIABLE __attribute__((unused))
+#endif
+
+#if !defined(WK_UNUSED_INSTANCE_VARIABLE)
+#define WK_UNUSED_INSTANCE_VARIABLE
+#endif
+
 /* UNUSED_FUNCTION */
 
 #if !defined(UNUSED_FUNCTION) && COMPILER(GCC_COMPATIBLE)
@@ -384,7 +409,18 @@
 #define WARN_UNUSED_RETURN
 #endif
 
-#if !defined(__has_include) && (COMPILER(MSVC) || COMPILER(GCC))
+/* DEBUGGER_ANNOTATION_MARKER */
+
+#if !defined(DEBUGGER_ANNOTATION_MARKER) && COMPILER(GCC)
+#define DEBUGGER_ANNOTATION_MARKER(name) \
+    __attribute__((__no_reorder__)) void name(void) { __asm__(""); }
+#endif
+
+#if !defined(DEBUGGER_ANNOTATION_MARKER)
+#define DEBUGGER_ANNOTATION_MARKER(name)
+#endif
+
+#if !defined(__has_include) && COMPILER(MSVC)
 #define __has_include(path) 0
 #endif
 
@@ -451,6 +487,9 @@
 
 #define ALLOW_DEPRECATED_DECLARATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-declarations")
 #define ALLOW_DEPRECATED_DECLARATIONS_END IGNORE_WARNINGS_END
+
+#define ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-implementations")
+#define ALLOW_DEPRECATED_IMPLEMENTATIONS_END IGNORE_WARNINGS_END
 
 #define ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN IGNORE_CLANG_WARNINGS_BEGIN("unguarded-availability-new")
 #define ALLOW_NEW_API_WITHOUT_GUARDS_END IGNORE_CLANG_WARNINGS_END

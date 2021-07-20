@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,23 +31,25 @@
 
 #pragma once
 
+#include "CharacterRange.h"
+#include <wtf/EnumTraits.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/OptionSet.h>
-#include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 enum class TextCheckingType : uint8_t {
-    None = 0,
-    Spelling = 1 << 0,
-    Grammar = 1 << 1,
-    Link = 1 << 2,
-    Quote = 1 << 3,
-    Dash = 1 << 4,
-    Replacement = 1 << 5,
-    Correction = 1 << 6,
-    ShowCorrectionPanel = 1 << 7,
+    None                    = 0,
+    Spelling                = 1 << 0,
+    Grammar                 = 1 << 1,
+    Link                    = 1 << 2,
+    Quote                   = 1 << 3,
+    Dash                    = 1 << 4,
+    Replacement             = 1 << 5,
+    Correction              = 1 << 6,
+    ShowCorrectionPanel     = 1 << 7,
 };
 
 #if PLATFORM(MAC)
@@ -61,42 +63,47 @@ enum TextCheckingProcessType {
 };
 
 struct GrammarDetail {
-    int location;
-    int length;
+    CharacterRange range;
     Vector<String> guesses;
     String userDescription;
 };
 
 struct TextCheckingResult {
     TextCheckingType type;
-    int location;
-    int length;
+    CharacterRange range;
     Vector<GrammarDetail> details;
     String replacement;
 };
 
-const int unrequestedTextCheckingSequence = -1;
+struct TextCheckingGuesses {
+    Vector<String> guesses;
+    bool misspelled { false };
+    bool ungrammatical { false };
+};
+
+enum TextCheckingRequestIdentifierType { };
+using TextCheckingRequestIdentifier = ObjectIdentifier<TextCheckingRequestIdentifierType>;
 
 class TextCheckingRequestData {
-    friend class SpellCheckRequest; // For access to m_sequence.
+    friend class SpellCheckRequest; // For access to m_identifier.
 public:
     TextCheckingRequestData() = default;
-    TextCheckingRequestData(int sequence, const String& text, OptionSet<TextCheckingType> checkingTypes, TextCheckingProcessType processType)
+    TextCheckingRequestData(Optional<TextCheckingRequestIdentifier> identifier, const String& text, OptionSet<TextCheckingType> checkingTypes, TextCheckingProcessType processType)
         : m_text { text }
-        , m_sequence { sequence }
+        , m_identifier { identifier }
         , m_processType { processType }
         , m_checkingTypes { checkingTypes }
     {
     }
 
-    int sequence() const { return m_sequence; }
+    Optional<TextCheckingRequestIdentifier> identifier() const { return m_identifier; }
     const String& text() const { return m_text; }
     OptionSet<TextCheckingType> checkingTypes() const { return m_checkingTypes; }
     TextCheckingProcessType processType() const { return m_processType; }
 
 private:
     String m_text;
-    int m_sequence { unrequestedTextCheckingSequence };
+    Optional<TextCheckingRequestIdentifier> m_identifier;
     TextCheckingProcessType m_processType { TextCheckingProcessIncremental };
     OptionSet<TextCheckingType> m_checkingTypes;
 };
@@ -110,4 +117,31 @@ public:
     virtual void didCancel() = 0;
 };
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::TextCheckingProcessType> {
+    using values = EnumValues<
+        WebCore::TextCheckingProcessType,
+        WebCore::TextCheckingProcessType::TextCheckingProcessBatch,
+        WebCore::TextCheckingProcessType::TextCheckingProcessIncremental
+    >;
+};
+
+template<> struct EnumTraits<WebCore::TextCheckingType> {
+    using values = EnumValues<
+        WebCore::TextCheckingType,
+        WebCore::TextCheckingType::None,
+        WebCore::TextCheckingType::Spelling,
+        WebCore::TextCheckingType::Grammar,
+        WebCore::TextCheckingType::Link,
+        WebCore::TextCheckingType::Quote,
+        WebCore::TextCheckingType::Dash,
+        WebCore::TextCheckingType::Replacement,
+        WebCore::TextCheckingType::Correction,
+        WebCore::TextCheckingType::ShowCorrectionPanel
+    >;
+};
+
+} // namespace WTF

@@ -36,7 +36,8 @@ import com.sun.glass.utils.NativeLibLoader;
 class MacFontFinder {
 
     static {
-        AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(
                 (PrivilegedAction<Void>) () -> {
                     NativeLibLoader.loadLibrary("javafx_font");
                     return null;

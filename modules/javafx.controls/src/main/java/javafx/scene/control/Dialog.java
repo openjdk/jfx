@@ -152,7 +152,7 @@ import com.sun.javafx.tk.Toolkit;
  * the above is to help introduce developers to the {@link Optional} API, which
  * is new in Java 8 and may be foreign to many developers.
  *
- * <h3>Dialog Validation / Intercepting Button Actions</h3>
+ * <h2>Dialog Validation / Intercepting Button Actions</h2>
  *
  * <p>In some circumstances it is desirable to prevent a dialog from closing
  * until some aspect of the dialog becomes internally consistent (e.g. a form
@@ -175,7 +175,7 @@ import com.sun.javafx.tk.Toolkit;
  *     }
  * });}</pre>
  *
- * <h3>Dialog Closing Rules</h3>
+ * <h2>Dialog Closing Rules</h2>
  *
  * <p>It is important to understand what happens when a Dialog is closed, and
  * also how a Dialog can be closed, especially in abnormal closing situations

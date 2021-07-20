@@ -22,13 +22,14 @@
 /**
  * SECTION:gstaudiovisualizer
  * @title: GstAudioVisualizer
+ * @short_description: Base class for visualizers.
  *
  * A baseclass for scopes (visualizers). It takes care of re-fitting the
  * audio-rate to video-rate and handles renegotiation (downstream video size
  * changes).
  *
  * It also provides several background shading effects. These effects are
- * applied to a previous picture before the render() implementation can draw a
+ * applied to a previous picture before the `render()` implementation can draw a
  * new frame.
  */
 
@@ -59,6 +60,7 @@ enum
 };
 
 static GstBaseTransformClass *parent_class = NULL;
+static gint private_offset = 0;
 
 static void gst_audio_visualizer_class_init (GstAudioVisualizerClass * klass);
 static void gst_audio_visualizer_init (GstAudioVisualizer * scope,
@@ -94,9 +96,6 @@ static gboolean gst_audio_visualizer_do_bufferpool (GstAudioVisualizer * scope,
 
 static gboolean
 default_decide_allocation (GstAudioVisualizer * scope, GstQuery * query);
-
-#define GST_AUDIO_VISUALIZER_GET_PRIVATE(obj)  \
-    (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_AUDIO_VISUALIZER, GstAudioVisualizerPrivate))
 
 struct _GstAudioVisualizerPrivate
 {
@@ -519,9 +518,19 @@ gst_audio_visualizer_get_type (void)
     /* TODO: rename when exporting it as a library */
     _type = g_type_register_static (GST_TYPE_ELEMENT,
         "GstAudioVisualizer", &audio_visualizer_info, G_TYPE_FLAG_ABSTRACT);
+
+    private_offset =
+        g_type_add_instance_private (_type, sizeof (GstAudioVisualizerPrivate));
+
     g_once_init_leave (&audio_visualizer_type, _type);
   }
   return (GType) audio_visualizer_type;
+}
+
+static inline GstAudioVisualizerPrivate *
+gst_audio_visualizer_get_instance_private (GstAudioVisualizer * self)
+{
+  return (G_STRUCT_MEMBER_P (self, private_offset));
 }
 
 static void
@@ -530,7 +539,8 @@ gst_audio_visualizer_class_init (GstAudioVisualizerClass * klass)
   GObjectClass *gobject_class = (GObjectClass *) klass;
   GstElementClass *element_class = (GstElementClass *) klass;
 
-  g_type_class_add_private (klass, sizeof (GstAudioVisualizerPrivate));
+  if (private_offset != 0)
+    g_type_class_adjust_private_offset (klass, &private_offset);
 
   parent_class = g_type_class_peek_parent (klass);
 
@@ -565,7 +575,7 @@ gst_audio_visualizer_init (GstAudioVisualizer * scope,
 {
   GstPadTemplate *pad_template;
 
-  scope->priv = GST_AUDIO_VISUALIZER_GET_PRIVATE (scope);
+  scope->priv = gst_audio_visualizer_get_instance_private (scope);
 
   /* create the sink and src pads */
   pad_template =
@@ -1260,7 +1270,7 @@ gst_audio_visualizer_src_event (GstPad * pad, GstObject * parent,
       break;
     }
     case GST_EVENT_RECONFIGURE:
-      /* dont't forward */
+      /* don't forward */
       gst_event_unref (event);
       res = TRUE;
       break;
@@ -1298,7 +1308,7 @@ gst_audio_visualizer_sink_event (GstPad * pad, GstObject * parent,
     case GST_EVENT_SEGMENT:
     {
       /* the newsegment values are used to clip the input samples
-       * and to convert the incomming timestamps to running time so
+       * and to convert the incoming timestamps to running time so
        * we can do QoS */
       gst_event_copy_segment (event, &scope->priv->segment);
 

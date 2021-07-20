@@ -32,17 +32,7 @@ namespace WebCore {
 
 String CSSCubicBezierTimingFunctionValue::customCSSText() const
 {
-    StringBuilder builder;
-    builder.appendLiteral("cubic-bezier(");
-    builder.appendNumber(m_x1);
-    builder.appendLiteral(", ");
-    builder.appendNumber(m_y1);
-    builder.appendLiteral(", ");
-    builder.appendNumber(m_x2);
-    builder.appendLiteral(", ");
-    builder.appendNumber(m_y2);
-    builder.append(')');
-    return builder.toString();
+    return makeString("cubic-bezier(", m_x1, ", ", m_y1, ", ", m_x2, ", ", m_y2, ')');
 }
 
 bool CSSCubicBezierTimingFunctionValue::equals(const CSSCubicBezierTimingFunctionValue& other) const
@@ -55,29 +45,49 @@ String CSSStepsTimingFunctionValue::customCSSText() const
     StringBuilder builder;
     builder.appendLiteral("steps(");
     builder.appendNumber(m_steps);
-    if (m_stepAtStart)
-        builder.appendLiteral(", start)");
-    else
-        builder.appendLiteral(", end)");
+    if (m_stepPosition) {
+        switch (m_stepPosition.value()) {
+        case StepsTimingFunction::StepPosition::JumpStart:
+            builder.appendLiteral(", jump-start");
+            break;
+
+        case StepsTimingFunction::StepPosition::JumpNone:
+            builder.appendLiteral(", jump-none");
+            break;
+
+        case StepsTimingFunction::StepPosition::JumpBoth:
+            builder.appendLiteral(", jump-both");
+            break;
+
+        case StepsTimingFunction::StepPosition::Start:
+            builder.appendLiteral(", start");
+            break;
+
+        case StepsTimingFunction::StepPosition::JumpEnd:
+        case StepsTimingFunction::StepPosition::End:
+            break;
+        }
+    }
+    builder.appendLiteral(")");
     return builder.toString();
 }
 
 bool CSSStepsTimingFunctionValue::equals(const CSSStepsTimingFunctionValue& other) const
 {
-    return m_steps == other.m_steps && m_stepAtStart == other.m_stepAtStart;
+    return m_steps == other.m_steps && m_stepPosition == other.m_stepPosition;
 }
 
 String CSSSpringTimingFunctionValue::customCSSText() const
 {
     StringBuilder builder;
     builder.appendLiteral("spring(");
-    builder.appendNumber(m_mass);
+    builder.append(FormattedNumber::fixedPrecision(m_mass));
     builder.append(' ');
-    builder.appendNumber(m_stiffness);
+    builder.append(FormattedNumber::fixedPrecision(m_stiffness));
     builder.append(' ');
-    builder.appendNumber(m_damping);
+    builder.append(FormattedNumber::fixedPrecision(m_damping));
     builder.append(' ');
-    builder.appendNumber(m_initialVelocity);
+    builder.append(FormattedNumber::fixedPrecision(m_initialVelocity));
     builder.append(')');
     return builder.toString();
 }

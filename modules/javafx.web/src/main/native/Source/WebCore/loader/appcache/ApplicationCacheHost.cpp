@@ -62,6 +62,11 @@ ApplicationCacheHost::~ApplicationCacheHost()
         m_candidateApplicationCacheGroup->disassociateDocumentLoader(m_documentLoader);
 }
 
+ApplicationCacheGroup* ApplicationCacheHost::candidateApplicationCacheGroup() const
+{
+    return m_candidateApplicationCacheGroup.get();
+}
+
 void ApplicationCacheHost::selectCacheWithoutManifest()
 {
     ASSERT(m_documentLoader.frame());
@@ -72,6 +77,13 @@ void ApplicationCacheHost::selectCacheWithManifest(const URL& manifestURL)
 {
     ASSERT(m_documentLoader.frame());
     ApplicationCacheGroup::selectCache(*m_documentLoader.frame(), manifestURL);
+}
+
+bool ApplicationCacheHost::canLoadMainResource(const ResourceRequest& request)
+{
+    if (!isApplicationCacheEnabled() || isApplicationCacheBlockedForRequest(request))
+        return false;
+    return !!ApplicationCacheGroup::cacheForMainRequest(request, &m_documentLoader);
 }
 
 void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request, SubstituteData& substituteData)
@@ -143,7 +155,7 @@ void ApplicationCacheHost::mainResourceDataReceived(const char*, int, long long,
 
 void ApplicationCacheHost::failedLoadingMainResource()
 {
-    auto* group = m_candidateApplicationCacheGroup;
+    auto* group = m_candidateApplicationCacheGroup.get();
     if (!group && m_applicationCache) {
         if (mainResourceApplicationCache()) {
             // Even when the main resource is being loaded from an application cache, loading can fail if aborted.
@@ -233,15 +245,12 @@ bool ApplicationCacheHost::maybeLoadFallbackForError(ResourceLoader* resourceLoa
 
 URL ApplicationCacheHost::createFileURL(const String& path)
 {
-    // FIXME: Can we just use fileURLWithFileSystemPath instead?
 #if USE(CF) && PLATFORM(WIN)
-    URL url(adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), kCFURLWindowsPathStyle, false)).get());
+    // FIXME: Is this correct? Seems improbable that the passed-in paths would be in the Windows path style.
+    return adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), kCFURLWindowsPathStyle, false)).get();
 #else
-    URL url;
-    url.setProtocol("file"_s);
-    url.setPath(path);
+    return URL::fileURLWithFileSystemPath(path);
 #endif
-    return url;
 }
 
 static inline RefPtr<SharedBuffer> bufferFromResource(ApplicationCacheResource& resource)
@@ -288,7 +297,7 @@ void ApplicationCacheHost::maybeLoadFallbackSynchronously(const ResourceRequest&
     }
 }
 
-bool ApplicationCacheHost::canCacheInPageCache()
+bool ApplicationCacheHost::canCacheInBackForwardCache()
 {
     return !applicationCache() && !candidateApplicationCacheGroup();
 }
@@ -296,10 +305,10 @@ bool ApplicationCacheHost::canCacheInPageCache()
 void ApplicationCacheHost::setDOMApplicationCache(DOMApplicationCache* domApplicationCache)
 {
     ASSERT(!m_domApplicationCache || !domApplicationCache);
-    m_domApplicationCache = domApplicationCache;
+    m_domApplicationCache = makeWeakPtr(domApplicationCache);
 }
 
-void ApplicationCacheHost::notifyDOMApplicationCache(const AtomicString& eventType, int total, int done)
+void ApplicationCacheHost::notifyDOMApplicationCache(const AtomString& eventType, int total, int done)
 {
     if (eventType != eventNames().progressEvent)
         InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader.frame());
@@ -370,24 +379,25 @@ ApplicationCacheHost::CacheInfo ApplicationCacheHost::applicationCacheInfo()
     return { cache->manifestResource()->url(), 0, 0, cache->estimatedSizeInStorage() };
 }
 
-static Ref<Event> createApplicationCacheEvent(const AtomicString& eventType, int total, int done)
+static Ref<Event> createApplicationCacheEvent(const AtomString& eventType, int total, int done)
 {
     if (eventType == eventNames().progressEvent)
         return ProgressEvent::create(eventType, true, done, total);
     return Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No);
 }
 
-void ApplicationCacheHost::dispatchDOMEvent(const AtomicString& eventType, int total, int done)
+void ApplicationCacheHost::dispatchDOMEvent(const AtomString& eventType, int total, int done)
 {
-    if (!m_domApplicationCache)
+    if (!m_domApplicationCache || !m_domApplicationCache->frame())
         return;
+
     m_domApplicationCache->dispatchEvent(createApplicationCacheEvent(eventType, total, done));
 }
 
 void ApplicationCacheHost::setCandidateApplicationCacheGroup(ApplicationCacheGroup* group)
 {
     ASSERT(!m_applicationCache);
-    m_candidateApplicationCacheGroup = group;
+    m_candidateApplicationCacheGroup = makeWeakPtr(group);
 }
 
 void ApplicationCacheHost::setApplicationCache(RefPtr<ApplicationCache>&& applicationCache)
@@ -418,11 +428,11 @@ bool ApplicationCacheHost::shouldLoadResourceFromApplicationCache(const Resource
 
     // If the resource's URL is an master entry, the manifest, an explicit entry, or a fallback entry
     // in the application cache, then get the resource from the cache (instead of fetching it).
-    resource = cache->resourceForURL(request.url());
+    resource = cache->resourceForURL(request.url().string());
 
-    // Resources that match fallback namespaces or online whitelist entries are fetched from the network,
+    // Resources that match fallback namespaces or online allowlist entries are fetched from the network,
     // unless they are also cached.
-    if (!resource && (cache->allowsAllNetworkRequests() || cache->urlMatchesFallbackNamespace(request.url()) || cache->isURLInOnlineWhitelist(request.url())))
+    if (!resource && (cache->allowsAllNetworkRequests() || cache->urlMatchesFallbackNamespace(request.url()) || cache->isURLInOnlineAllowlist(request.url())))
         return false;
 
     // Resources that are not present in the manifest will always fail to load (at least, after the
@@ -445,12 +455,12 @@ bool ApplicationCacheHost::getApplicationCacheFallbackResource(const ResourceReq
         return false;
 
     URL fallbackURL;
-    if (cache->isURLInOnlineWhitelist(request.url()))
+    if (cache->isURLInOnlineAllowlist(request.url()))
         return false;
     if (!cache->urlMatchesFallbackNamespace(request.url(), &fallbackURL))
         return false;
 
-    resource = cache->resourceForURL(fallbackURL);
+    resource = cache->resourceForURL(fallbackURL.string());
     ASSERT(resource);
     return true;
 }
@@ -518,18 +528,22 @@ bool ApplicationCacheHost::swapCache()
     if (!cache)
         return false;
 
+    auto* group = cache->group();
+    if (!group)
+        return false;
+
     // If the group of application caches to which cache belongs has the lifecycle status obsolete, unassociate document from cache.
-    if (cache->group()->isObsolete()) {
-        cache->group()->disassociateDocumentLoader(m_documentLoader);
+    if (group->isObsolete()) {
+        group->disassociateDocumentLoader(m_documentLoader);
         return true;
     }
 
     // If there is no newer cache, raise an InvalidStateError exception.
-    auto* newestCache = cache->group()->newestCache();
-    if (cache == newestCache)
+    auto* newestCache = group->newestCache();
+    if (!newestCache || cache == newestCache)
         return false;
 
-    ASSERT(cache->group() == newestCache->group());
+    ASSERT(group == newestCache->group());
     setApplicationCache(newestCache);
     InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader.frame());
     return true;

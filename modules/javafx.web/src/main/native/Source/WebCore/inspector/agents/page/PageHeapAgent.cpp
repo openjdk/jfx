@@ -37,16 +37,22 @@ PageHeapAgent::PageHeapAgent(PageAgentContext& context)
 {
 }
 
-void PageHeapAgent::enable(ErrorString& errorString)
+PageHeapAgent::~PageHeapAgent() = default;
+
+Protocol::ErrorStringOr<void> PageHeapAgent::enable()
 {
-    WebHeapAgent::enable(errorString);
-    m_instrumentingAgents.setPageHeapAgent(this);
+    auto result = WebHeapAgent::enable();
+
+    m_instrumentingAgents.setEnabledPageHeapAgent(this);
+
+    return result;
 }
 
-void PageHeapAgent::disable(ErrorString& errorString)
+Protocol::ErrorStringOr<void> PageHeapAgent::disable()
 {
-    WebHeapAgent::disable(errorString);
-    m_instrumentingAgents.setPageHeapAgent(nullptr);
+    m_instrumentingAgents.setEnabledPageHeapAgent(nullptr);
+
+    return WebHeapAgent::disable();
 }
 
 void PageHeapAgent::mainFrameNavigated()

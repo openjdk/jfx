@@ -1,101 +1,73 @@
-set(WEBKIT_TESTRUNNER_SHARED_DIR "${TOOLS_DIR}/TestRunnerShared/")
-set(WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR "${TOOLS_DIR}/TestRunnerShared/UIScriptContext")
-set(DUMP_RENDER_TREE_BINDINGS_DIR "${TOOLS_DIR}/DumpRenderTree/Bindings")
+set(DumpRenderTree_DIR "${TOOLS_DIR}/DumpRenderTree")
+set(DumpRenderTree_BINDINGS_DIR "${TOOLS_DIR}/DumpRenderTree/Bindings")
+set(WebKitTestRunner_SHARED_DIR "${TOOLS_DIR}/TestRunnerShared/")
+set(WebKitTestRunner_UISCRIPTCONTEXT_DIR "${TOOLS_DIR}/TestRunnerShared/UIScriptContext")
 
-file(MAKE_DIRECTORY ${DERIVED_SOURCES_DIR}/DumpRenderTree)
+file(MAKE_DIRECTORY ${DumpRenderTree_DERIVED_SOURCES_DIR})
 
 set(DumpRenderTree_SOURCES
     AccessibilityController.cpp
     AccessibilityTextMarker.cpp
     AccessibilityUIElement.cpp
     CyclicRedundancyCheck.cpp
-    DumpRenderTreeCommon.cpp
     GCController.cpp
     JavaScriptThreading.cpp
     PixelDumpSupport.cpp
     TestOptions.cpp
     TestRunner.cpp
     WorkQueue.cpp
-    ${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}/UIScriptContext.cpp
-    ${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}/UIScriptController.cpp
-    ${WEBKIT_TESTRUNNER_SHARED_DIR}/Bindings/JSWrapper.cpp
 )
 
 set(DumpRenderTree_LIBRARIES
-    WebCoreTestSupport
-    JavaScriptCore
+    TestRunnerShared
+    WebKit::WebCoreTestSupport
+    WebKit::JavaScriptCore
 )
 
-set(DumpRenderTree_INCLUDE_DIRECTORIES
-    ${DERIVED_SOURCES_DIR}/DumpRenderTree
-    ${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}
-    ${WEBKIT_TESTRUNNER_SHARED_DIR}/Bindings
-    ${TOOLS_DIR}/DumpRenderTree
-    ${CMAKE_SOURCE_DIR}/Source
-    ${WEBCORE_DIR}/testing/js
+set(DumpRenderTree_PRIVATE_INCLUDE_DIRECTORIES
+    ${CMAKE_BINARY_DIR}
+    ${DumpRenderTree_DERIVED_SOURCES_DIR}
+    ${DumpRenderTree_DIR}
+    ${WebKitTestRunner_SHARED_DIR}
+    ${WebKitTestRunner_SHARED_DIR}/Bindings
+    ${WebKitTestRunner_UISCRIPTCONTEXT_DIR}
 )
 
-set(TestNetscapePlugIn_SOURCES
-    TestNetscapePlugIn/PluginObject.cpp
-    TestNetscapePlugIn/PluginTest.cpp
-    TestNetscapePlugIn/TestObject.cpp
-    TestNetscapePlugIn/main.cpp
-
-    TestNetscapePlugIn/Tests/DocumentOpenInDestroyStream.cpp
-    TestNetscapePlugIn/Tests/EvaluateJSAfterRemovingPluginElement.cpp
-    TestNetscapePlugIn/Tests/FormValue.cpp
-    TestNetscapePlugIn/Tests/GetURLNotifyWithURLThatFailsToLoad.cpp
-    TestNetscapePlugIn/Tests/GetURLWithJavaScriptURL.cpp
-    TestNetscapePlugIn/Tests/GetURLWithJavaScriptURLDestroyingPlugin.cpp
-    TestNetscapePlugIn/Tests/GetUserAgentWithNullNPPFromNPPNew.cpp
-    TestNetscapePlugIn/Tests/LogNPPSetWindow.cpp
-    TestNetscapePlugIn/Tests/NPDeallocateCalledBeforeNPShutdown.cpp
-    TestNetscapePlugIn/Tests/NPPNewFails.cpp
-    TestNetscapePlugIn/Tests/NPPSetWindowCalledDuringDestruction.cpp
-    TestNetscapePlugIn/Tests/NPRuntimeCallsWithNullNPP.cpp
-    TestNetscapePlugIn/Tests/NPRuntimeObjectFromDestroyedPlugin.cpp
-    TestNetscapePlugIn/Tests/NPRuntimeRemoveProperty.cpp
-    TestNetscapePlugIn/Tests/NullNPPGetValuePointer.cpp
-    TestNetscapePlugIn/Tests/PassDifferentNPPStruct.cpp
-    TestNetscapePlugIn/Tests/PluginScriptableNPObjectInvokeDefault.cpp
-    TestNetscapePlugIn/Tests/PluginScriptableObjectOverridesAllProperties.cpp
-    TestNetscapePlugIn/Tests/PrivateBrowsing.cpp
-    TestNetscapePlugIn/Tests/ToStringAndValueOfObject.cpp
-    TestNetscapePlugIn/Tests/URLRedirect.cpp
+list(APPEND DumpRenderTree_PRIVATE_INCLUDE_DIRECTORIES
+    ${PAL_FRAMEWORK_HEADERS_DIR}
+    ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
+    ${WebKitLegacy_FRAMEWORK_HEADERS_DIR}
 )
 
-set(TestNetscapePlugIn_LIBRARIES
-    JavaScriptCore
-    WTF
-    WebCoreTestSupport
+set(DumpRenderTree_WEB_PREFERENCES_TEMPLATES
+    ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp.erb
+    ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedKeys.h.erb
 )
 
-set(DumpRenderTree_IDL_FILES
-    "${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}/Bindings/UIScriptController.idl"
+set(DumpRenderTree_WEB_PREFERENCES
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml
 )
 
-GENERATE_BINDINGS(DumpRenderTreeBindings
-    OUTPUT_SOURCE DumpRenderTree_SOURCES
-    INPUT_FILES ${DumpRenderTree_IDL_FILES}
-    BASE_DIR ${DUMP_RENDER_TREE_BINDINGS_DIR}
-    IDL_INCLUDES Bindings
-    FEATURES ${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}
-    DESTINATION ${DERIVED_SOURCES_DIR}/DumpRenderTree
-    GENERATOR DumpRenderTree)
+set_source_files_properties(${DumpRenderTree_WEB_PREFERENCES} PROPERTIES GENERATED TRUE)
 
+add_custom_command(
+    OUTPUT ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedKeys.h
+    DEPENDS ${DumpRenderTree_WEB_PREFERENCES_TEMPLATES} ${DumpRenderTree_WEB_PREFERENCES} WTF_CopyPreferences
+    COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/GeneratePreferences.rb --frontend WebKitLegacy --base ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml --debug ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml --internal ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml --outputDir "${DumpRenderTree_DERIVED_SOURCES_DIR}" --template ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp.erb --template ${DumpRenderTree_DIR}/Scripts/PreferencesTemplates/TestOptionsGeneratedKeys.h.erb
+    VERBATIM)
+
+list(APPEND DumpRenderTree_SOURCES
+    ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedWebKitLegacyKeyMapping.cpp
+    ${DumpRenderTree_DERIVED_SOURCES_DIR}/TestOptionsGeneratedKeys.h
+)
+
+WEBKIT_EXECUTABLE_DECLARE(DumpRenderTree)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
-
-include_directories(${DumpRenderTree_INCLUDE_DIRECTORIES})
-
-add_executable(DumpRenderTree ${DumpRenderTree_SOURCES})
-target_link_libraries(DumpRenderTree ${DumpRenderTree_LIBRARIES})
-add_dependencies(DumpRenderTree DumpRenderTreeBindings)
+WEBKIT_EXECUTABLE(DumpRenderTree)
 
 if (ENABLE_NETSCAPE_PLUGIN_API)
-    add_library(TestNetscapePlugIn SHARED ${TestNetscapePlugIn_SOURCES})
-    target_link_libraries(TestNetscapePlugIn ${TestNetscapePlugIn_LIBRARIES})
-endif ()
-
-if (WIN32)
-    add_dependencies(DumpRenderTree DumpRenderTreeLib)
+    add_subdirectory(TestNetscapePlugIn)
 endif ()

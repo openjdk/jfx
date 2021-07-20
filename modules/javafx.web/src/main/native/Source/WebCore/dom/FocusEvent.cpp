@@ -27,8 +27,11 @@
 #include "FocusEvent.h"
 
 #include "Node.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(FocusEvent);
 
 EventInterface FocusEvent::eventInterface() const
 {
@@ -40,13 +43,13 @@ bool FocusEvent::isFocusEvent() const
     return true;
 }
 
-FocusEvent::FocusEvent(const AtomicString& type, CanBubble canBubble, IsCancelable isCancelable, RefPtr<WindowProxy>&& view, int detail, RefPtr<EventTarget>&& relatedTarget)
+FocusEvent::FocusEvent(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, RefPtr<WindowProxy>&& view, int detail, RefPtr<EventTarget>&& relatedTarget)
     : UIEvent(type, canBubble, isCancelable, IsComposed::Yes, WTFMove(view), detail)
     , m_relatedTarget(WTFMove(relatedTarget))
 {
 }
 
-FocusEvent::FocusEvent(const AtomicString& type, const Init& initializer)
+FocusEvent::FocusEvent(const AtomString& type, const Init& initializer)
     : UIEvent(type, initializer)
     , m_relatedTarget(initializer.relatedTarget)
 {

@@ -38,7 +38,7 @@ namespace JSC { namespace B3 {
 
 ValueKey ValueKey::intConstant(Type type, int64_t value)
 {
-    switch (type) {
+    switch (type.kind()) {
     case Int32:
         return ValueKey(Const32, Int32, value);
     case Int64:
@@ -116,6 +116,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
         return proc.add<ConstDoubleValue>(origin, doubleValue());
     case ConstFloat:
         return proc.add<ConstFloatValue>(origin, floatValue());
+    case BottomTuple:
+        return proc.add<BottomTupleValue>(origin, type());
     case ArgumentReg:
         return proc.add<ArgumentRegValue>(origin, Reg::fromIndex(static_cast<unsigned>(value())));
     case SlotBase:

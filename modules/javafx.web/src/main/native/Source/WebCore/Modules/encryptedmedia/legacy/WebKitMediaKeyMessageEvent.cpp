@@ -29,10 +29,13 @@
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
 #include <JavaScriptCore/Uint8Array.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomicString& type, Uint8Array* message, const String& destinationURL)
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitMediaKeyMessageEvent);
+
+WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomString& type, Uint8Array* message, const String& destinationURL)
     : Event(type, CanBubble::No, IsCancelable::No)
     , m_message(message)
     , m_destinationURL(destinationURL)
@@ -40,7 +43,7 @@ WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomicString& type,
 }
 
 
-WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_message(initializer.message)
     , m_destinationURL(initializer.destinationURL)

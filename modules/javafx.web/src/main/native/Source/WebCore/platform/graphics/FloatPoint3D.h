@@ -25,16 +25,15 @@
 
 #include "FloatPoint.h"
 
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaMath.h>
+#endif
+
 namespace WebCore {
 
 class FloatPoint3D {
 public:
-    FloatPoint3D()
-        : m_x(0)
-        , m_y(0)
-        , m_z(0)
-    {
-    }
+    FloatPoint3D() = default;
 
     FloatPoint3D(float x, float y, float z)
         : m_x(x)
@@ -46,14 +45,6 @@ public:
     FloatPoint3D(const FloatPoint& p)
         : m_x(p.x())
         , m_y(p.y())
-        , m_z(0)
-    {
-    }
-
-    FloatPoint3D(const FloatPoint3D& p)
-        : m_x(p.x())
-        , m_y(p.y())
-        , m_z(p.z())
     {
     }
 
@@ -78,12 +69,14 @@ public:
         m_y = y;
         m_z = z;
     }
-    void move(float dx, float dy, float dz)
+
+    void move(float dx, float dy, float dz = 0)
     {
         m_x += dx;
         m_y += dy;
         m_z += dz;
     }
+
     void scale(float sx, float sy, float sz)
     {
         m_x *= sx;
@@ -126,19 +119,32 @@ public:
     }
 
     float lengthSquared() const { return this->dot(*this); }
-    float length() const { return sqrtf(lengthSquared()); }
+    float length() const
+    {
+#if PLATFORM(JAVA)
+        return javamath::hypot(m_x, m_y, m_z);
+#else
+        return std::hypot(m_x, m_y, m_z);
+#endif
+    }
 
     float distanceTo(const FloatPoint3D& a) const;
 
 private:
-    float m_x;
-    float m_y;
-    float m_z;
+    float m_x { 0 };
+    float m_y { 0 };
+    float m_z { 0 };
 };
 
 inline FloatPoint3D& operator +=(FloatPoint3D& a, const FloatPoint3D& b)
 {
     a.move(b.x(), b.y(), b.z());
+    return a;
+}
+
+inline FloatPoint3D& operator +=(FloatPoint3D& a, const FloatPoint& b)
+{
+    a.move(b.x(), b.y());
     return a;
 }
 
@@ -148,14 +154,30 @@ inline FloatPoint3D& operator -=(FloatPoint3D& a, const FloatPoint3D& b)
     return a;
 }
 
+inline FloatPoint3D& operator -=(FloatPoint3D& a, const FloatPoint& b)
+{
+    a.move(-b.x(), -b.y());
+    return a;
+}
+
 inline FloatPoint3D operator+(const FloatPoint3D& a, const FloatPoint3D& b)
 {
     return FloatPoint3D(a.x() + b.x(), a.y() + b.y(), a.z() + b.z());
 }
 
+inline FloatPoint3D operator+(const FloatPoint3D& a, const FloatPoint& b)
+{
+    return FloatPoint3D(a.x() + b.x(), a.y() + b.y(), a.z());
+}
+
 inline FloatPoint3D operator-(const FloatPoint3D& a, const FloatPoint3D& b)
 {
     return FloatPoint3D(a.x() - b.x(), a.y() - b.y(), a.z() - b.z());
+}
+
+inline FloatPoint3D operator-(const FloatPoint3D& a, const FloatPoint& b)
+{
+    return FloatPoint3D(a.x() - b.x(), a.y() - b.y(), a.z());
 }
 
 inline bool operator==(const FloatPoint3D& a, const FloatPoint3D& b)

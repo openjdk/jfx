@@ -70,7 +70,7 @@ std::unique_ptr<FidoHidInitPacket> FidoHidInitPacket::createFromSerializedData(c
     auto data = Vector<uint8_t>();
     data.append(serialized.begin() + index, dataSize);
 
-    return std::make_unique<FidoHidInitPacket>(channelId, command, WTFMove(data), payloadSize);
+    return makeUnique<FidoHidInitPacket>(channelId, command, WTFMove(data), payloadSize);
 }
 
 // U2F Initialization packet is defined as:
@@ -99,7 +99,9 @@ Vector<uint8_t> FidoHidInitPacket::getSerializedData() const
     serialized.append((m_payloadLength >> 8) & 0xff);
     serialized.append(m_payloadLength & 0xff);
     serialized.append(m_data.begin(), m_data.size());
+    auto offset = serialized.size();
     serialized.grow(kHidPacketSize);
+    memset(serialized.data() + offset, 0, kHidPacketSize - offset);
 
     return serialized;
 }
@@ -123,7 +125,7 @@ std::unique_ptr<FidoHidContinuationPacket> FidoHidContinuationPacket::createFrom
     auto data = Vector<uint8_t>();
     data.append(serialized.begin() + index, dataSize);
 
-    return std::make_unique<FidoHidContinuationPacket>(channelId, sequence, WTFMove(data));
+    return makeUnique<FidoHidContinuationPacket>(channelId, sequence, WTFMove(data));
 }
 
 // U2F Continuation packet is defined as:
@@ -147,7 +149,9 @@ Vector<uint8_t> FidoHidContinuationPacket::getSerializedData() const
     serialized.append(m_channelId & 0xff);
     serialized.append(m_sequence);
     serialized.append(m_data.begin(), m_data.size());
+    auto offset = serialized.size();
     serialized.grow(kHidPacketSize);
+    memset(serialized.data() + offset, 0, kHidPacketSize - offset);
 
     return serialized;
 }

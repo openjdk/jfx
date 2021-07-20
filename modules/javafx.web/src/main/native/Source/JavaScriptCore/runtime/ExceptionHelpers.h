@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,41 +29,51 @@
 #pragma once
 
 #include "ErrorInstance.h"
+#include "Exception.h"
 #include "JSObject.h"
 #include "ThrowScope.h"
 
 namespace JSC {
 
-typedef JSObject* (*ErrorFactory)(ExecState*, const String&, ErrorInstance::SourceAppender);
+typedef JSObject* (*ErrorFactory)(JSGlobalObject*, const String&, ErrorInstance::SourceAppender);
 
 String defaultSourceAppender(const String&, const String&, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred);
 
 JSObject* createTerminatedExecutionException(VM*);
 JS_EXPORT_PRIVATE bool isTerminatedExecutionException(VM&, Exception*);
-JS_EXPORT_PRIVATE JSObject* createError(ExecState*, JSValue, const String&, ErrorInstance::SourceAppender);
-JS_EXPORT_PRIVATE JSObject* createStackOverflowError(ExecState*);
-JSObject* createStackOverflowError(ExecState*, JSGlobalObject*);
-JSObject* createUndefinedVariableError(ExecState*, const Identifier&);
-JSObject* createTDZError(ExecState*);
-JSObject* createNotAnObjectError(ExecState*, JSValue);
-JSObject* createInvalidFunctionApplyParameterError(ExecState*, JSValue);
-JSObject* createInvalidInParameterError(ExecState*, JSValue);
-JSObject* createInvalidInstanceofParameterErrorNotFunction(ExecState*, JSValue);
-JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(ExecState*, JSValue);
-JSObject* createNotAConstructorError(ExecState*, JSValue);
-JSObject* createNotAFunctionError(ExecState*, JSValue);
-JSObject* createErrorForInvalidGlobalAssignment(ExecState*, const String&);
-JSString* errorDescriptionForValue(ExecState*, JSValue);
+JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, JSValue, const String&, ErrorInstance::SourceAppender);
+JS_EXPORT_PRIVATE JSObject* createStackOverflowError(JSGlobalObject*);
+JSObject* createUndefinedVariableError(JSGlobalObject*, const Identifier&);
+JSObject* createTDZError(JSGlobalObject*);
+JSObject* createNotAnObjectError(JSGlobalObject*, JSValue);
+JSObject* createInvalidFunctionApplyParameterError(JSGlobalObject*, JSValue);
+JSObject* createInvalidInParameterError(JSGlobalObject*, JSValue);
+JSObject* createInvalidInstanceofParameterErrorNotFunction(JSGlobalObject*, JSValue);
+JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(JSGlobalObject*, JSValue);
+JSObject* createNotAConstructorError(JSGlobalObject*, JSValue);
+JSObject* createNotAFunctionError(JSGlobalObject*, JSValue);
+JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject*, const String&);
+JSObject* createInvalidPrivateNameError(JSGlobalObject*);
+JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
+String errorDescriptionForValue(JSGlobalObject*, JSValue);
 
-JS_EXPORT_PRIVATE JSObject* throwOutOfMemoryError(ExecState*, ThrowScope&);
-JS_EXPORT_PRIVATE JSObject* throwStackOverflowError(ExecState*, ThrowScope&);
-JS_EXPORT_PRIVATE JSObject* throwTerminatedExecutionException(ExecState*, ThrowScope&);
+JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&);
+JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&, const String&);
+JS_EXPORT_PRIVATE Exception* throwStackOverflowError(JSGlobalObject*, ThrowScope&);
+JS_EXPORT_PRIVATE Exception* throwTerminatedExecutionException(JSGlobalObject*, ThrowScope&);
 
 
 class TerminatedExecutionError final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(TerminatedExecutionError, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static TerminatedExecutionError* create(VM& vm)
     {
@@ -85,7 +95,7 @@ private:
     {
     }
 
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
+    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
 
 };
 

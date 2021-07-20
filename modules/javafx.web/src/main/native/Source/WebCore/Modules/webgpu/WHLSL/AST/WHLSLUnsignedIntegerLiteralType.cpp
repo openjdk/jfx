@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLUnsignedIntegerLiteralType.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLInferTypes.h"
 #include "WHLSLNativeTypeDeclaration.h"
@@ -40,17 +40,12 @@ namespace WHLSL {
 
 namespace AST {
 
-UnsignedIntegerLiteralType::UnsignedIntegerLiteralType(Lexer::Token&& origin, unsigned value)
-    : m_value(value)
-    , m_preferredType(makeUniqueRef<TypeReference>(WTFMove(origin), "uint"_str, TypeArguments()))
+UnsignedIntegerLiteralType::UnsignedIntegerLiteralType(CodeLocation location, unsigned value)
+    : ResolvableType(Kind::UnsignedIntegerLiteral)
+    , m_value(value)
+    , m_preferredType(TypeReference::create(location, "uint"_str, TypeArguments()))
 {
 }
-
-UnsignedIntegerLiteralType::~UnsignedIntegerLiteralType() = default;
-
-UnsignedIntegerLiteralType::UnsignedIntegerLiteralType(UnsignedIntegerLiteralType&&) = default;
-
-UnsignedIntegerLiteralType& UnsignedIntegerLiteralType::operator=(UnsignedIntegerLiteralType&&) = default;
 
 bool UnsignedIntegerLiteralType::canResolve(const Type& type) const
 {
@@ -76,10 +71,19 @@ unsigned UnsignedIntegerLiteralType::conversionCost(const UnnamedType& unnamedTy
     return 1;
 }
 
+UnsignedIntegerLiteralType UnsignedIntegerLiteralType::clone() const
+{
+    UnsignedIntegerLiteralType result(m_preferredType->codeLocation(), m_value);
+    if (auto* type = maybeResolvedType())
+        result.resolve(const_cast<AST::UnnamedType&>(*type));
+    result.m_preferredType = m_preferredType.copyRef();
+    return result;
+}
+
 } // namespace AST
 
 }
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

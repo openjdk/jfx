@@ -30,7 +30,6 @@
 
 #include "CodeBlock.h"
 #include "DFGCommon.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -49,6 +48,11 @@ void AdaptiveInferredPropertyValueWatchpoint::handleFire(VM&, const FireDetail& 
     auto lazyDetail = createLazyFireDetail("Adaptation of ", key(), " failed: ", detail);
 
     m_codeBlock->jettison(Profiler::JettisonDueToUnprofiledWatchpoint, CountReoptimization, &lazyDetail);
+}
+
+bool AdaptiveInferredPropertyValueWatchpoint::isValid() const
+{
+    return m_codeBlock->isLive();
 }
 
 } } // namespace JSC::DFG

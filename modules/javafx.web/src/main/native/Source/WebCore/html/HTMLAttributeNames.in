@@ -17,6 +17,8 @@ archive
 aria-activedescendant
 aria-atomic
 aria-autocomplete
+aria-braillelabel
+aria-brailleroledescription
 aria-busy
 aria-checked
 aria-colcount
@@ -66,10 +68,12 @@ aria-valuenow
 aria-valuetext
 as
 async
-adcampaignid
-addestination
+attributionsourceid
+attributionsourcenonce
+attributeon
 autocomplete
 autofocus
+autopictureinpicture
 autoplay
 autosave
 axis
@@ -115,14 +119,19 @@ dir
 direction
 dirname
 disabled
+disablepictureinpicture
+disableremoteplayback
 disposition
 download
 draggable
+dropzone
 webkitdropzone
 enctype
 end
+enterkeyhint
 event
 expanded
+exportparts
 face
 filename
 focused
@@ -144,6 +153,8 @@ hreflang
 hspace
 http_equiv
 id
+imagesizes
+imagesrcset
 incremental
 indeterminate
 inputmode
@@ -163,6 +174,7 @@ language
 leftmargin
 link
 list
+loading
 longdesc
 loop
 low
@@ -193,15 +205,7 @@ novalidate
 nowrap
 object
 onabort
-onaccessiblecontextmenu
-onaccessibleclick
-onaccessibledecrement
-onaccessibledismiss
-onaccessiblefocus
-onaccessibleincrement
-onaccessiblescrollintoview
-onaccessiblesetvalue
-onaccessibleselect
+onafterprint
 onanimationstart
 onanimationiteration
 onanimationend
@@ -213,6 +217,7 @@ onbeforecut
 onbeforeinput
 onbeforeload
 onbeforepaste
+onbeforeprint
 onbeforeunload
 onblur
 oncanplay
@@ -247,11 +252,13 @@ onkeyup
 ongesturestart
 ongesturechange
 ongestureend
+ongotpointercapture
 onlanguagechange
 onload
 onloadeddata
 onloadedmetadata
 onloadstart
+onlostpointercapture
 onmessage
 onmousedown
 onmouseenter
@@ -270,6 +277,14 @@ onpaste
 onpause
 onplay
 onplaying
+onpointerdown
+onpointermove
+onpointerup
+onpointercancel
+onpointerover
+onpointerout
+onpointerenter
+onpointerleave
 onpopstate
 onprogress
 onratechange
@@ -282,6 +297,7 @@ onseeking
 onselect
 onselectstart
 onselectionchange
+onslotchange
 onwebkitspeechchange
 onwheel
 onstalled
@@ -327,6 +343,7 @@ onwebkitwillrevealright
 onwebkitwillrevealtop
 open
 optimum
+part
 pattern
 placeholder
 playsinline
@@ -342,6 +359,7 @@ progress
 prompt
 pseudo
 readonly
+referrerpolicy
 rel
 required
 results
@@ -411,7 +429,6 @@ autocapitalize
 onwebkitcurrentplaybacktargetiswirelesschanged
 onwebkitplaybacktargetavailabilitychanged
 onwebkitpresentationmodechanged
-x-webkit-imagemenu
 webkit-playsinline
 x-webkit-airplay
 x-webkit-wirelessvideoplaybackdisabled
@@ -422,5 +439,3 @@ x-apple-data-detectors-type
 x-apple-data-detectors-result
 
 x-apple-pdf-annotation
-
-x-apple-editable-image

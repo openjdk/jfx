@@ -62,8 +62,8 @@ g_thread_abort (gint         status,
 }
 
 /* Starting with Vista and Windows 2008, we have access to the
- * CONDITION_VARIABLE and SRWLock primatives on Windows, which are
- * pretty reasonable approximations of the primatives specified in
+ * CONDITION_VARIABLE and SRWLock primitives on Windows, which are
+ * pretty reasonable approximations of the primitives specified in
  * POSIX 2001 (pthread_cond_t and pthread_mutex_t respectively).
  *
  * Both of these types are structs containing a single pointer.  That
@@ -265,7 +265,7 @@ g_cond_wait_until (GCond  *cond,
     {
       span = end_time - start_time;
 
-  if G_UNLIKELY (span < 0)
+      if G_UNLIKELY (span < 0)
         span_millis = 0;
       else if G_UNLIKELY (span > G_GINT64_CONSTANT (1000) * (DWORD) INFINITE)
         span_millis = INFINITE;
@@ -284,7 +284,7 @@ g_cond_wait_until (GCond  *cond,
       /* In case we didn't wait long enough after a timeout, wait again for the
        * remaining time */
       start_time = g_get_monotonic_time ();
-}
+    }
   while (start_time < end_time);
 
   return signalled;
@@ -373,18 +373,18 @@ g_private_replace (GPrivate *key,
   gpointer old;
 
   old = TlsGetValue (impl);
+  TlsSetValue (impl, value);
   if (old && key->notify)
     key->notify (old);
-  TlsSetValue (impl, value);
 }
 
 /* {{{1 GThread */
 
-#define win32_check_for_error(what) G_STMT_START{           \
-  if (!(what))                              \
-    g_error ("file %s: line %d (%s): error %s during %s",       \
-         __FILE__, __LINE__, G_STRFUNC,             \
-         g_win32_error_message (GetLastError ()), #what);       \
+#define win32_check_for_error(what) G_STMT_START{     \
+  if (!(what))                \
+    g_error ("file %s: line %d (%s): error %s during %s",   \
+       __FILE__, __LINE__, G_STRFUNC,       \
+       g_win32_error_message (GetLastError ()), #what);   \
   }G_STMT_END
 
 #define G_MUTEX_SIZE (sizeof (gpointer))
@@ -428,30 +428,100 @@ g_thread_win32_proxy (gpointer data)
   return 0;
 }
 
+gboolean
+g_system_thread_get_scheduler_settings (GThreadSchedulerSettings *scheduler_settings)
+{
+  HANDLE current_thread = GetCurrentThread ();
+  scheduler_settings->thread_prio = GetThreadPriority (current_thread);
+
+  return TRUE;
+}
+
 GRealThread *
-g_system_thread_new (GThreadFunc   func,
-                     gulong        stack_size,
-                     GError      **error)
+g_system_thread_new (GThreadFunc proxy,
+                     gulong stack_size,
+                     const GThreadSchedulerSettings *scheduler_settings,
+                     const char *name,
+                     GThreadFunc func,
+                     gpointer data,
+                     GError **error)
 {
   GThreadWin32 *thread;
+  GRealThread *base_thread;
   guint ignore;
+  const gchar *message = NULL;
+  int thread_prio;
 
   thread = g_slice_new0 (GThreadWin32);
-  thread->proxy = func;
+  thread->proxy = proxy;
+  thread->handle = (HANDLE) NULL;
+  base_thread = (GRealThread*)thread;
+  base_thread->ref_count = 2;
+  base_thread->ours = TRUE;
+  base_thread->thread.joinable = TRUE;
+  base_thread->thread.func = func;
+  base_thread->thread.data = data;
+  base_thread->name = g_strdup (name);
 
-  thread->handle = (HANDLE) _beginthreadex (NULL, stack_size, g_thread_win32_proxy, thread, 0, &ignore);
+  thread->handle = (HANDLE) _beginthreadex (NULL, stack_size, g_thread_win32_proxy, thread,
+                                            CREATE_SUSPENDED, &ignore);
 
   if (thread->handle == NULL)
     {
-      gchar *win_error = g_win32_error_message (GetLastError ());
-      g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
-                   "Error creating thread: %s", win_error);
-      g_free (win_error);
-      g_slice_free (GThreadWin32, thread);
-      return NULL;
+      message = "Error creating thread";
+      goto error;
+    }
+
+  /* For thread priority inheritance we need to manually set the thread
+   * priority of the new thread to the priority of the current thread. We
+   * also have to start the thread suspended and resume it after actually
+   * setting the priority here.
+   *
+   * On Windows, by default all new threads are created with NORMAL thread
+   * priority.
+   */
+
+  if (scheduler_settings)
+    {
+      thread_prio = scheduler_settings->thread_prio;
+    }
+  else
+    {
+      HANDLE current_thread = GetCurrentThread ();
+      thread_prio = GetThreadPriority (current_thread);
+    }
+
+  if (thread_prio == THREAD_PRIORITY_ERROR_RETURN)
+    {
+      message = "Error getting current thread priority";
+      goto error;
+    }
+
+  if (SetThreadPriority (thread->handle, thread_prio) == 0)
+    {
+      message = "Error setting new thread priority";
+      goto error;
+    }
+
+  if (ResumeThread (thread->handle) == -1)
+    {
+      message = "Error resuming new thread";
+      goto error;
     }
 
   return (GRealThread *) thread;
+
+error:
+  {
+    gchar *win_error = g_win32_error_message (GetLastError ());
+    g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
+                 "%s: %s", message, win_error);
+    g_free (win_error);
+    if (thread->handle)
+      CloseHandle (thread->handle);
+    g_slice_free (GThreadWin32, thread);
+    return NULL;
+  }
 }
 
 void
@@ -486,10 +556,10 @@ SetThreadName_VEH (PEXCEPTION_POINTERS ExceptionInfo)
 
 typedef struct _THREADNAME_INFO
 {
-  DWORD  dwType;    /* must be 0x1000 */
-  LPCSTR szName;    /* pointer to name (in user addr space) */
-  DWORD  dwThreadID;    /* thread ID (-1=caller thread) */
-  DWORD  dwFlags;   /* reserved for future use, must be zero */
+  DWORD  dwType;  /* must be 0x1000 */
+  LPCSTR szName;  /* pointer to name (in user addr space) */
+  DWORD  dwThreadID;  /* thread ID (-1=caller thread) */
+  DWORD  dwFlags; /* reserved for future use, must be zero */
 } THREADNAME_INFO;
 
 static void

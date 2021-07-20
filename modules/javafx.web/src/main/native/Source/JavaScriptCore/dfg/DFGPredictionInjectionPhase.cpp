@@ -28,10 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -72,7 +71,7 @@ public:
                 continue;
             const Operands<Optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
             for (size_t i = 0; i < mustHandleValues.size(); ++i) {
-                int operand = mustHandleValues.operandForIndex(i);
+                Operand operand = mustHandleValues.operandForIndex(i);
                 Optional<JSValue> value = mustHandleValues[i];
                 if (!value)
                     continue;

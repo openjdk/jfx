@@ -51,6 +51,7 @@ class Blob;
 class ThreadableWebSocketChannel;
 
 class WebSocket final : public RefCounted<WebSocket>, public EventTargetWithInlineData, public ActiveDOMObject, private WebSocketChannelClient {
+    WTF_MAKE_ISO_ALLOCATED(WebSocket);
 public:
     static const char* subprotocolSeparator();
 
@@ -105,7 +106,6 @@ private:
     void dispatchOrQueueEvent(Ref<Event>&&);
 
     void contextDestroyed() final;
-    bool canSuspendForDocumentSuspension() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
     void stop() final;
@@ -126,6 +126,8 @@ private:
     void didUpgradeURL() final;
 
     size_t getFramingOverhead(size_t payloadSize);
+
+    void failAsynchronously();
 
     enum class BinaryType { Blob, ArrayBuffer };
 

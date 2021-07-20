@@ -35,67 +35,52 @@
 
 namespace WebCore {
 
+class DOMWrapperWorld;
 class Document;
-class EventListener;
-class EventTarget;
-class InspectorOverlay;
-class InspectorPageAgent;
+class Frame;
 class Page;
-class RegisteredEventListener;
-class TimerBase;
+class UserGestureEmulationScope;
 
 class PageDebuggerAgent final : public WebDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(PageDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PageDebuggerAgent(PageAgentContext&, InspectorPageAgent*, InspectorOverlay*);
-    virtual ~PageDebuggerAgent() = default;
+    PageDebuggerAgent(PageAgentContext&);
+    ~PageDebuggerAgent();
+    bool enabled() const;
 
-    void didClearMainFrameWindowObject();
+    // DebuggerBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, Optional<bool> /* wasThrown */, Optional<int> /* savedResultIndex */>> evaluateOnCallFrame(const Inspector::Protocol::Debugger::CallFrameId&, const String& expression, const String& objectGroup, Optional<bool>&& includeCommandLineAPI, Optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, Optional<bool>&& returnByValue, Optional<bool>&& generatePreview, Optional<bool>&& saveResult, Optional<bool>&& emulateUserGesture);
 
+    // JSC::Debugger::Client
+    void debuggerWillEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+    void debuggerDidEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+
+    // JSC::Debugger::Observer
+    void breakpointActionLog(JSC::JSGlobalObject*, const String& data);
+
+    // InspectorInstrumentation
+    void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
     void mainFrameStartedLoading();
     void mainFrameStoppedLoading();
     void mainFrameNavigated();
-
     void didRequestAnimationFrame(int callbackId, Document&);
     void willFireAnimationFrame(int callbackId);
     void didCancelAnimationFrame(int callbackId);
 
-    void didAddEventListener(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
-    void willRemoveEventListener(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
-    void willHandleEvent(const RegisteredEventListener&);
-
-    void didPostMessage(const TimerBase&, JSC::ExecState&);
-    void didFailPostMessage(const TimerBase&);
-    void willDispatchPostMessage(const TimerBase&);
-    void didDispatchPostMessage(const TimerBase&);
-
-protected:
-    void enable() override;
-    void disable(bool isBeingDestroyed) override;
-
-    String sourceMapURLForScript(const Script&) override;
-
-    void didClearAsyncStackTraceData() override;
-
 private:
-    void muteConsole() override;
-    void unmuteConsole() override;
+    void internalEnable();
+    void internalDisable(bool isBeingDestroyed);
 
-    void breakpointActionLog(JSC::ExecState&, const String&) override;
+    String sourceMapURLForScript(const JSC::Debugger::Script&);
 
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
-    void setOverlayMessage(ErrorString&, const String*) final;
+    void muteConsole();
+    void unmuteConsole();
 
-    Page& m_page;
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, Optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
 
-    InspectorPageAgent* m_pageAgent;
-    InspectorOverlay* m_overlay { nullptr };
-
-    HashMap<const RegisteredEventListener*, int> m_registeredEventListeners;
-    HashMap<const TimerBase*, int> m_postMessageTimers;
-    int m_nextEventListenerIdentifier { 1 };
-    int m_nextPostMessageIdentifier { 1 };
+    Page& m_inspectedPage;
+    Vector<UniqueRef<UserGestureEmulationScope>> m_breakpointActionUserGestureEmulationScopeStack;
 };
 
 } // namespace WebCore

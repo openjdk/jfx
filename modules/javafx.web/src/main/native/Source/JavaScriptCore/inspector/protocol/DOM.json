@@ -1,7 +1,8 @@
 {
     "domain": "DOM",
     "description": "This domain exposes DOM read/write operations. Each DOM Node is represented with its mirror object that has an <code>id</code>. This <code>id</code> can be used to get additional information on the Node, resolve it into the JavaScript object wrapper, etc. It is important that client receives DOM events only for the nodes that are known to the client. Backend keeps track of the nodes that were sent to the client and never sends the same node twice. It is client's responsibility to collect information about the nodes that were sent to the client.<p>Note that <code>iframe</code> owner elements will return corresponding document elements as their child nodes.</p>",
-    "availability": ["web"],
+    "debuggableTypes": ["itml", "page", "web-page"],
+    "targetTypes": ["itml", "page"],
     "types": [
         {
             "id": "NodeId",
@@ -47,6 +48,7 @@
                 { "name": "nodeName", "type": "string", "description": "<code>Node</code>'s nodeName." },
                 { "name": "localName", "type": "string", "description": "<code>Node</code>'s localName." },
                 { "name": "nodeValue", "type": "string", "description": "<code>Node</code>'s nodeValue." },
+                { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "Identifier of the containing frame." },
                 { "name": "childNodeCount", "type": "integer", "optional": true, "description": "Child count for <code>Container</code> nodes." },
                 { "name": "children", "type": "array", "optional": true, "items": { "$ref": "Node" }, "description": "Child nodes of this node when requested with children." },
                 { "name": "attributes", "type": "array", "optional": true, "items": { "type": "string" }, "description": "Attributes of the <code>Element</code> node in the form of flat array <code>[name1, value1, name2, value2]</code>." },
@@ -60,12 +62,22 @@
                 { "name": "pseudoType", "$ref": "PseudoType", "optional": true, "description": "Pseudo element type for this node." },
                 { "name": "shadowRootType", "$ref": "ShadowRootType", "optional": true, "description": "Shadow root type." },
                 { "name": "customElementState", "$ref": "CustomElementState", "optional": true, "description": "Custom element state." },
-                { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "Frame ID for frame owner elements." },
                 { "name": "contentDocument", "$ref": "Node", "optional": true, "description": "Content document for frame owner elements." },
                 { "name": "shadowRoots", "type": "array", "optional": true, "items": { "$ref": "Node" }, "description": "Shadow root list for given element host." },
                 { "name": "templateContent", "$ref": "Node", "optional": true, "description": "Content document fragment for template elements" },
                 { "name": "pseudoElements", "type": "array", "items": { "$ref": "Node" }, "optional": true, "description": "Pseudo elements associated with this node." },
-                { "name": "contentSecurityPolicyHash", "type": "string", "optional": true, "description": "Computed SHA-256 Content Security Policy hash source for given element." }
+                { "name": "contentSecurityPolicyHash", "type": "string", "optional": true, "description": "Computed SHA-256 Content Security Policy hash source for given element." },
+                { "name": "layoutContextType", "$ref": "CSS.LayoutContextType", "optional": true, "description": "The layout context type of the node. When not provided, the <code>LayoutContextType</code> of the node is not a context for which Web Inspector has specific functionality." }
+            ]
+        },
+        {
+            "id": "DataBinding",
+            "type": "object",
+            "description": "Relationship between data that is associated with a node and the node itself.",
+            "properties": [
+                { "name": "binding", "type": "string", "description": "The binding key that is specified." },
+                { "name": "type", "optional": true, "type": "string", "description": "A more descriptive name for the type of binding that represents this paritcular data relationship" },
+                { "name": "value", "type": "string", "description": "The value that is resolved to with this data binding relationship." }
             ]
         },
         {
@@ -77,10 +89,10 @@
                 { "name": "type", "type": "string", "description": "<code>EventListener</code>'s type." },
                 { "name": "useCapture", "type": "boolean", "description": "<code>EventListener</code>'s useCapture." },
                 { "name": "isAttribute", "type": "boolean", "description": "<code>EventListener</code>'s isAttribute." },
-                { "name": "nodeId", "$ref": "NodeId", "description": "Target <code>DOMNode</code> id." },
+                { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "The target <code>DOMNode</code> id if the event listener is for a node." },
+                { "name": "onWindow", "type": "boolean", "optional": true, "description": "True if the event listener was added to the window." },
                 { "name": "location", "$ref": "Debugger.Location", "optional": true, "description": "Handler code location." },
                 { "name": "handlerName", "type": "string", "optional": true, "description": "Event handler function name." },
-                { "name": "handlerObject", "$ref": "Runtime.RemoteObject", "optional": true, "description": "Event handler function value." },
                 { "name": "passive", "type": "boolean", "optional": true, "description": "<code>EventListener</code>'s passive." },
                 { "name": "once", "type": "boolean", "optional": true, "description": "<code>EventListener</code>'s once." },
                 { "name": "disabled", "type": "boolean", "optional": true },
@@ -177,6 +189,7 @@
         {
             "name": "querySelector",
             "description": "Executes <code>querySelector</code> on a given node.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to query upon." },
                 { "name": "selector", "type": "string", "description": "Selector string." }
@@ -188,6 +201,7 @@
         {
             "name": "querySelectorAll",
             "description": "Executes <code>querySelectorAll</code> on a given node.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to query upon." },
                 { "name": "selector", "type": "string", "description": "Selector string." }
@@ -199,6 +213,7 @@
         {
             "name": "setNodeName",
             "description": "Sets node name for a node with given id.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to set name for." },
                 { "name": "name", "type": "string", "description": "New node's name." }
@@ -256,11 +271,34 @@
             ]
         },
         {
+            "name": "getDataBindingsForNode",
+            "description": "Returns all data binding relationships between data that is associated with the node and the node itself.",
+            "condition": "defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS) && ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS",
+            "targetTypes": ["itml"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get data bindings for." }
+            ],
+            "returns": [
+                { "name": "dataBindings", "type": "array", "items": { "$ref": "DataBinding"}, "description": "Array of binding relationships between data and node" }
+            ]
+        },
+        {
+            "name": "getAssociatedDataForNode",
+            "description": "Returns all data that has been associated with the node and is available for data binding.",
+            "condition": "defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS) && ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS",
+            "targetTypes": ["itml"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get associated data for." }
+            ],
+            "returns": [
+                { "name": "associatedData", "type": "string", "optional": true, "description": "Associated data bound to this node. Sent as a JSON string." }
+            ]
+        },
+        {
             "name": "getEventListenersForNode",
             "description": "Returns event listeners relevant to the node.",
             "parameters": [
-                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get listeners for." },
-                { "name": "objectGroup", "type": "string", "optional": true, "description": "Symbolic group name for handler value. Handler value is not returned without this parameter specified." }
+                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get listeners for." }
             ],
             "returns": [
                 { "name": "listeners", "type": "array", "items": { "$ref": "EventListener"}, "description": "Array of relevant listeners." }
@@ -277,13 +315,16 @@
         {
             "name": "setBreakpointForEventListener",
             "description": "Set a breakpoint on the given event listener.",
+            "targetTypes": ["page"],
             "parameters": [
-                { "name": "eventListenerId", "$ref": "EventListenerId" }
+                { "name": "eventListenerId", "$ref": "EventListenerId" },
+                { "name": "options", "$ref": "Debugger.BreakpointOptions", "optional": true, "description": "Options to apply to this breakpoint to modify its behavior." }
             ]
         },
         {
             "name": "removeBreakpointForEventListener",
             "description": "Remove any breakpoints on the given event listener.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "eventListenerId", "$ref": "EventListenerId" }
             ]
@@ -318,6 +359,7 @@
         },
         {
             "name": "insertAdjacentHTML",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId" },
                 { "name": "position", "type": "string" },
@@ -329,7 +371,8 @@
             "description": "Searches for a given string in the DOM tree. Use <code>getSearchResults</code> to access search results or <code>cancelSearch</code> to end this search session.",
             "parameters": [
                 { "name": "query", "type": "string", "description": "Plain text or query selector or XPath search query." },
-                { "name": "nodeIds", "type": "array", "items": { "$ref": "NodeId" }, "optional": true, "description": "Ids of nodes to use as starting points for the search." }
+                { "name": "nodeIds", "type": "array", "items": { "$ref": "NodeId" }, "optional": true, "description": "Ids of nodes to use as starting points for the search." },
+                { "name": "caseSensitive", "type": "boolean", "optional": true, "description": "If true, search is case sensitive." }
             ],
             "returns": [
                 { "name": "searchId", "type": "string", "description": "Unique search session identifier." },
@@ -358,6 +401,7 @@
         {
             "name": "requestNode",
             "description": "Requests that the node is sent to the caller given the JavaScript node object reference. All nodes that form the path from the node to the root are also sent to the client as a series of <code>setChildNodes</code> notifications.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "objectId", "$ref": "Runtime.RemoteObjectId", "description": "JavaScript object id to convert into node." }
             ],
@@ -368,14 +412,26 @@
         {
             "name": "setInspectModeEnabled",
             "description": "Enters the 'inspect' mode. In this mode, elements that user is hovering over are highlighted. Backend then generates 'inspect' command upon element selection.",
+            "condition": "defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY",
             "parameters": [
                 { "name": "enabled", "type": "boolean", "description": "True to enable inspection mode, false to disable it." },
                 { "name": "highlightConfig", "$ref": "HighlightConfig", "optional": true, "description": "A descriptor for the highlight appearance of hovered-over nodes. May be omitted if <code>enabled == false</code>." }
             ]
         },
         {
+            "name": "setInspectModeEnabled",
+            "description": "Enters the 'inspect' mode. In this mode, elements that user is hovering over are highlighted. Backend then generates 'inspect' command upon element selection.",
+            "condition": "!(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)",
+            "parameters": [
+                { "name": "enabled", "type": "boolean", "description": "True to enable inspection mode, false to disable it." },
+                { "name": "highlightConfig", "$ref": "HighlightConfig", "optional": true, "description": "A descriptor for the highlight appearance of hovered-over nodes. May be omitted if <code>enabled == false</code>." },
+                { "name": "showRulers", "type": "boolean", "optional": true, "description": "Whether the rulers should be shown during element selection. This overrides Page.setShowRulers." }
+            ]
+        },
+        {
             "name": "highlightRect",
             "description": "Highlights given rectangle. Coordinates are absolute with respect to the main frame viewport.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "x", "type": "integer", "description": "X coordinate" },
                 { "name": "y", "type": "integer", "description": "Y coordinate" },
@@ -389,6 +445,7 @@
         {
             "name": "highlightQuad",
             "description": "Highlights given quad. Coordinates are absolute with respect to the main frame viewport.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "quad", "$ref": "Quad", "description": "Quad to highlight" },
                 { "name": "color", "$ref": "RGBAColor", "optional": true, "description": "The highlight fill color (default: transparent)." },
@@ -399,6 +456,7 @@
         {
             "name": "highlightSelector",
             "description": "Highlights all DOM nodes that match a given selector. A string containing a CSS selector must be specified.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
                 { "name": "selectorString", "type": "string", "description": "A CSS selector for finding matching nodes to highlight." },
@@ -428,6 +486,7 @@
         },
         {
             "name": "highlightFrame",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "frameId", "$ref": "Network.FrameId", "description": "Identifier of the frame to highlight." },
                 { "name": "contentColor", "$ref": "RGBAColor", "optional": true, "description": "The content box highlight fill color (default: transparent)." },
@@ -436,8 +495,31 @@
             "description": "Highlights owner element of the frame with given id."
         },
         {
+            "name": "showGridOverlay",
+            "description": "Shows a grid overlay for a node that begins a 'grid' layout context. The command has no effect if <code>nodeId</code> is invalid or the associated node does not begin a 'grid' layout context. A node can only have one grid overlay at a time; subsequent calls with the same <code>nodeId</code> will override earlier calls.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "description": "The node for which a grid overlay should be shown." },
+                { "name": "gridColor", "$ref": "RGBAColor", "description": "The primary color to use for the grid overlay." },
+                { "name": "showLineNames", "type": "boolean", "optional": true, "description": "Show labels for grid line names. If not specified, the default value is false." },
+                { "name": "showLineNumbers", "type": "boolean", "optional": true, "description": "Show labels for grid line numbers. If not specified, the default value is false." },
+                { "name": "showExtendedGridLines", "type": "boolean", "optional": true, "description": "Show grid lines that extend beyond the bounds of the grid. If not specified, the default value is false." },
+                { "name": "showTrackSizes", "type": "boolean", "optional": true, "description": "Show grid track size information. If not specified, the default value is false." },
+                { "name": "showAreaNames", "type": "boolean", "optional": true, "description": "Show labels for grid area names. If not specified, the default value is false." }
+            ]
+        },
+        {
+            "name": "hideGridOverlay",
+            "description": "Hides a grid overlay for a node that begins a 'grid' layout context. The command has no effect if <code>nodeId</code> is specified and invalid, or if there is not currently an overlay set for the <code>nodeId</code>.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "The node for which a grid overlay should be hidden. If a <code>nodeId</code> is not specified, all grid overlays will be hidden." }
+            ]
+        },
+        {
             "name": "pushNodeByPathToFrontend",
             "description": "Requests that the node is sent to the caller given its path.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "path", "type": "string", "description": "Path to node in the proprietary format." }
             ],
@@ -448,6 +530,7 @@
         {
             "name": "resolveNode",
             "description": "Resolves JavaScript node object for given node id.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to resolve." },
                 { "name": "objectGroup", "type": "string", "optional": true, "description": "Symbolic group name that can be used to release multiple objects." }
@@ -480,19 +563,23 @@
         },
         {
             "name": "undo",
-            "description": "Undoes the last performed action."
+            "description": "Undoes the last performed action.",
+            "targetTypes": ["page"]
         },
         {
             "name": "redo",
-            "description": "Re-does the last undone action."
+            "description": "Re-does the last undone action.",
+            "targetTypes": ["page"]
         },
         {
             "name": "markUndoableState",
-            "description": "Marks last undoable state."
+            "description": "Marks last undoable state.",
+            "targetTypes": ["page"]
         },
         {
             "name": "focus",
             "description": "Focuses the given element.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to focus." }
             ]
@@ -500,8 +587,17 @@
         {
             "name": "setInspectedNode",
             "description": "Enables console to refer to the node with given id via $0 (see Command Line API for more details).",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "DOM node id to be accessible by means of $0 command line API." }
+            ]
+        },
+        {
+            "name": "setAllowEditingUserAgentShadowTrees",
+            "description": "Controls whether any DOM commands work for nodes inside a UserAgent shadow tree.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "allow", "type": "boolean" }
             ]
         }
     ],
@@ -585,6 +681,7 @@
         {
             "name": "shadowRootPushed",
             "description": "Called when shadow root is pushed into the element.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "hostId", "$ref": "NodeId", "description": "Host element id." },
                 { "name": "root", "$ref": "Node", "description": "Shadow root." }
@@ -593,6 +690,7 @@
         {
             "name": "shadowRootPopped",
             "description": "Called when shadow root is popped from the element.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "hostId", "$ref": "NodeId", "description": "Host element id." },
                 { "name": "rootId", "$ref": "NodeId", "description": "Shadow root id." }
@@ -601,6 +699,7 @@
         {
             "name": "customElementStateChanged",
             "description": "Called when the custom element state is changed.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Element id." },
                 { "name": "customElementState", "$ref": "CustomElementState", "description": "Custom element state." }
@@ -609,6 +708,7 @@
         {
             "name": "pseudoElementAdded",
             "description": "Called when a pseudo element is added to an element.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "parentId", "$ref": "NodeId", "description": "Pseudo element's parent element id." },
                 { "name": "pseudoElement", "$ref": "Node", "description": "The added pseudo element." }
@@ -617,6 +717,7 @@
         {
             "name": "pseudoElementRemoved",
             "description": "Called when a pseudo element is removed from an element.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "parentId", "$ref": "NodeId", "description": "Pseudo element's parent element id." },
                 { "name": "pseudoElementId", "$ref": "NodeId", "description": "The removed pseudo element id." }
@@ -639,6 +740,7 @@
         {
             "name": "didFireEvent",
             "description": "Called when an event is fired on a node.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId" },
                 { "name": "eventName", "type": "string" },
@@ -647,12 +749,14 @@
             ]
         },
         {
-            "name": "videoLowPowerChanged",
-            "description": "Called when a video element enters/exits low power mode.",
+            "name": "powerEfficientPlaybackStateChanged",
+            "description": "Called when an element enters/exits a power efficient playback state.",
+            "condition": "defined(ENABLE_VIDEO) && ENABLE_VIDEO",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId" },
-                { "name": "timestamp", "$ref": "Network.Timestamp", "description": "Time when the video element entered/exited low power mode" },
-                { "name": "isLowPower", "type": "boolean" }
+                { "name": "timestamp", "$ref": "Network.Timestamp" },
+                { "name": "isPowerEfficient", "type": "boolean" }
             ]
         }
     ]

@@ -29,8 +29,8 @@
 #include "JIT.h"
 
 #include "ArithProfile.h"
+#include "BytecodeGenerator.h"
 #include "CodeBlock.h"
-#include "JITAddGenerator.h"
 #include "JITBitAndGenerator.h"
 #include "JITBitOrGenerator.h"
 #include "JITBitXorGenerator.h"
@@ -38,15 +38,7 @@
 #include "JITInlines.h"
 #include "JITLeftShiftGenerator.h"
 #include "JITMathIC.h"
-#include "JITMulGenerator.h"
-#include "JITNegGenerator.h"
 #include "JITOperations.h"
-#include "JITSubGenerator.h"
-#include "JSArray.h"
-#include "JSFunction.h"
-#include "Interpreter.h"
-#include "JSCInlines.h"
-#include "LinkBuffer.h"
 #include "ResultType.h"
 #include "SlowPathCall.h"
 
@@ -94,22 +86,22 @@ void JIT::emit_op_jngreatereq(const Instruction* currentInstruction)
 
 void JIT::emitSlow_op_jless(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    emit_compareAndJumpSlow<OpJless>(currentInstruction, DoubleLessThan, operationCompareLess, false, iter);
+    emit_compareAndJumpSlow<OpJless>(currentInstruction, DoubleLessThanAndOrdered, operationCompareLess, false, iter);
 }
 
 void JIT::emitSlow_op_jlesseq(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    emit_compareAndJumpSlow<OpJlesseq>(currentInstruction, DoubleLessThanOrEqual, operationCompareLessEq, false, iter);
+    emit_compareAndJumpSlow<OpJlesseq>(currentInstruction, DoubleLessThanOrEqualAndOrdered, operationCompareLessEq, false, iter);
 }
 
 void JIT::emitSlow_op_jgreater(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    emit_compareAndJumpSlow<OpJgreater>(currentInstruction, DoubleGreaterThan, operationCompareGreater, false, iter);
+    emit_compareAndJumpSlow<OpJgreater>(currentInstruction, DoubleGreaterThanAndOrdered, operationCompareGreater, false, iter);
 }
 
 void JIT::emitSlow_op_jgreatereq(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    emit_compareAndJumpSlow<OpJgreatereq>(currentInstruction, DoubleGreaterThanOrEqual, operationCompareGreaterEq, false, iter);
+    emit_compareAndJumpSlow<OpJgreatereq>(currentInstruction, DoubleGreaterThanOrEqualAndOrdered, operationCompareGreaterEq, false, iter);
 }
 
 void JIT::emitSlow_op_jnless(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
@@ -157,8 +149,8 @@ void JIT::emit_op_jbeloweq(const Instruction* currentInstruction)
 void JIT::emit_op_unsigned(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpUnsigned>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_operand.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_operand;
 
     emitGetVirtualRegister(op1, regT0);
     emitJumpSlowCaseIfNotInt(regT0);
@@ -170,15 +162,20 @@ void JIT::emit_op_unsigned(const Instruction* currentInstruction)
 template<typename Op>
 void JIT::emit_compareAndJump(const Instruction* instruction, RelationalCondition condition)
 {
+    auto bytecode = instruction->as<Op>();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+    unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
+    emit_compareAndJumpImpl(op1, op2, target, condition);
+}
+
+void JIT::emit_compareAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition condition)
+{
     // We generate inline code for the following cases in the fast path:
     // - int immediate to constant int immediate
     // - constant int immediate to int immediate
     // - int immediate to int immediate
 
-    auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
-    unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
     bool disallowAllocation = false;
     if (isOperandConstantChar(op1)) {
         emitGetVirtualRegister(op2, regT0);
@@ -224,9 +221,14 @@ template<typename Op>
 void JIT::emit_compareUnsignedAndJump(const Instruction* instruction, RelationalCondition condition)
 {
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
+    emit_compareUnsignedAndJumpImpl(op1, op2, target, condition);
+}
+
+void JIT::emit_compareUnsignedAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition condition)
+{
     if (isOperandConstantInt(op2)) {
         emitGetVirtualRegister(op1, regT0);
         int32_t op2imm = getOperandConstantInt(op2);
@@ -245,9 +247,14 @@ template<typename Op>
 void JIT::emit_compareUnsigned(const Instruction* instruction, RelationalCondition condition)
 {
     auto bytecode = instruction->as<Op>();
-    int dst = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+    emit_compareUnsignedImpl(dst, op1, op2, condition);
+}
+
+void JIT::emit_compareUnsignedImpl(VirtualRegister dst, VirtualRegister op1, VirtualRegister op2, RelationalCondition condition)
+{
     if (isOperandConstantInt(op2)) {
         emitGetVirtualRegister(op1, regT0);
         int32_t op2imm = getOperandConstantInt(op2);
@@ -264,13 +271,19 @@ void JIT::emit_compareUnsigned(const Instruction* instruction, RelationalConditi
     emitPutVirtualRegister(dst);
 }
 
-template<typename Op>
-void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleCondition condition, size_t (JIT_OPERATION *operation)(ExecState*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator& iter)
+template<typename Op, typename SlowOperation>
+void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleCondition condition, SlowOperation operation, bool invert, Vector<SlowCaseEntry>::iterator& iter)
 {
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
+    emit_compareAndJumpSlowImpl(op1, op2, target, instruction->size(), condition, operation, invert, iter);
+}
+
+template<typename SlowOperation>
+void JIT::emit_compareAndJumpSlowImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, size_t instructionSize, DoubleCondition condition, SlowOperation operation, bool invert, Vector<SlowCaseEntry>::iterator& iter)
+{
 
     // We generate inline code for the following cases in the slow path:
     // - floating-point number to constant int immediate
@@ -281,7 +294,7 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
 
         emitGetVirtualRegister(op1, argumentGPR0);
         emitGetVirtualRegister(op2, argumentGPR1);
-        callOperation(operation, argumentGPR0, argumentGPR1);
+        callOperation(operation, TrustedImmPtr(m_codeBlock->globalObject()), argumentGPR0, argumentGPR1);
         emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
         return;
     }
@@ -291,7 +304,7 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
 
         if (supportsFloatingPoint()) {
             Jump fail1 = branchIfNotNumber(regT0);
-            add64(tagTypeNumberRegister, regT0);
+            add64(numberTagRegister, regT0);
             move64ToDouble(regT0, fpRegT0);
 
             int32_t op2imm = getConstantOperand(op2).asInt32();
@@ -301,13 +314,13 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
 
             emitJumpSlowToHot(branchDouble(condition, fpRegT0, fpRegT1), target);
 
-            emitJumpSlowToHot(jump(), instruction->size());
+            emitJumpSlowToHot(jump(), instructionSize);
 
             fail1.link(this);
         }
 
         emitGetVirtualRegister(op2, regT1);
-        callOperation(operation, regT0, regT1);
+        callOperation(operation, TrustedImmPtr(m_codeBlock->globalObject()), regT0, regT1);
         emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
         return;
     }
@@ -317,7 +330,7 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
 
         if (supportsFloatingPoint()) {
             Jump fail1 = branchIfNotNumber(regT1);
-            add64(tagTypeNumberRegister, regT1);
+            add64(numberTagRegister, regT1);
             move64ToDouble(regT1, fpRegT1);
 
             int32_t op1imm = getConstantOperand(op1).asInt32();
@@ -327,13 +340,13 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
 
             emitJumpSlowToHot(branchDouble(condition, fpRegT0, fpRegT1), target);
 
-            emitJumpSlowToHot(jump(), instruction->size());
+            emitJumpSlowToHot(jump(), instructionSize);
 
             fail1.link(this);
         }
 
         emitGetVirtualRegister(op1, regT2);
-        callOperation(operation, regT2, regT1);
+        callOperation(operation, TrustedImmPtr(m_codeBlock->globalObject()), regT2, regT1);
         emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
         return;
     }
@@ -344,14 +357,14 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
         Jump fail1 = branchIfNotNumber(regT0);
         Jump fail2 = branchIfNotNumber(regT1);
         Jump fail3 = branchIfInt32(regT1);
-        add64(tagTypeNumberRegister, regT0);
-        add64(tagTypeNumberRegister, regT1);
+        add64(numberTagRegister, regT0);
+        add64(numberTagRegister, regT1);
         move64ToDouble(regT0, fpRegT0);
         move64ToDouble(regT1, fpRegT1);
 
         emitJumpSlowToHot(branchDouble(condition, fpRegT0, fpRegT1), target);
 
-        emitJumpSlowToHot(jump(), instruction->size());
+        emitJumpSlowToHot(jump(), instructionSize);
 
         fail1.link(this);
         fail2.link(this);
@@ -359,14 +372,14 @@ void JIT::emit_compareAndJumpSlow(const Instruction* instruction, DoubleConditio
     }
 
     linkSlowCase(iter); // RHS is not Int.
-    callOperation(operation, regT0, regT1);
+    callOperation(operation, TrustedImmPtr(m_codeBlock->globalObject()), regT0, regT1);
     emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
 }
 
 void JIT::emit_op_inc(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpInc>();
-    int srcDst = bytecode.m_srcDst.offset();
+    VirtualRegister srcDst = bytecode.m_srcDst;
 
     emitGetVirtualRegister(srcDst, regT0);
     emitJumpSlowCaseIfNotInt(regT0);
@@ -378,7 +391,7 @@ void JIT::emit_op_inc(const Instruction* currentInstruction)
 void JIT::emit_op_dec(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpDec>();
-    int srcDst = bytecode.m_srcDst.offset();
+    VirtualRegister srcDst = bytecode.m_srcDst;
 
     emitGetVirtualRegister(srcDst, regT0);
     emitJumpSlowCaseIfNotInt(regT0);
@@ -394,9 +407,9 @@ void JIT::emit_op_dec(const Instruction* currentInstruction)
 void JIT::emit_op_mod(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpMod>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
     // Make sure registers are correct for x86 IDIV instructions.
     ASSERT(regT0 == X86Registers::eax);
@@ -448,13 +461,266 @@ void JIT::emitSlow_op_mod(const Instruction*, Vector<SlowCaseEntry>::iterator&)
 
 /* ------------------------------ END: OP_MOD ------------------------------ */
 
+#else // USE(JSVALUE64)
+
+template <typename Op>
+void JIT::emit_compareAndJump(const Instruction* instruction, RelationalCondition condition)
+{
+    JumpList notInt32Op1;
+    JumpList notInt32Op2;
+
+    auto bytecode = instruction->as<Op>();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+    unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
+
+    // Character less.
+    if (isOperandConstantChar(op1)) {
+        emitLoad(op2, regT1, regT0);
+        addSlowCase(branchIfNotCell(regT1));
+        JumpList failures;
+        emitLoadCharacterString(regT0, regT0, failures);
+        addSlowCase(failures);
+        addJump(branch32(commute(condition), regT0, Imm32(asString(getConstantOperand(op1))->tryGetValue()[0])), target);
+        return;
+    }
+    if (isOperandConstantChar(op2)) {
+        emitLoad(op1, regT1, regT0);
+        addSlowCase(branchIfNotCell(regT1));
+        JumpList failures;
+        emitLoadCharacterString(regT0, regT0, failures);
+        addSlowCase(failures);
+        addJump(branch32(condition, regT0, Imm32(asString(getConstantOperand(op2))->tryGetValue()[0])), target);
+        return;
+    }
+    if (isOperandConstantInt(op1)) {
+        emitLoad(op2, regT3, regT2);
+        notInt32Op2.append(branchIfNotInt32(regT3));
+        addJump(branch32(commute(condition), regT2, Imm32(getConstantOperand(op1).asInt32())), target);
+    } else if (isOperandConstantInt(op2)) {
+        emitLoad(op1, regT1, regT0);
+        notInt32Op1.append(branchIfNotInt32(regT1));
+        addJump(branch32(condition, regT0, Imm32(getConstantOperand(op2).asInt32())), target);
+    } else {
+        emitLoad2(op1, regT1, regT0, op2, regT3, regT2);
+        notInt32Op1.append(branchIfNotInt32(regT1));
+        notInt32Op2.append(branchIfNotInt32(regT3));
+        addJump(branch32(condition, regT0, regT2), target);
+    }
+
+    if (!supportsFloatingPoint()) {
+        addSlowCase(notInt32Op1);
+        addSlowCase(notInt32Op2);
+        return;
+    }
+    Jump end = jump();
+
+    // Double less.
+    emitBinaryDoubleOp<Op>(instruction, OperandTypes(), notInt32Op1, notInt32Op2, !isOperandConstantInt(op1), isOperandConstantInt(op1) || !isOperandConstantInt(op2));
+    end.link(this);
+}
+
+template <typename Op>
+void JIT::emit_compareUnsignedAndJump(const Instruction* instruction, RelationalCondition condition)
+{
+    auto bytecode = instruction->as<Op>();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+    unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
+
+    if (isOperandConstantInt(op1)) {
+        emitLoad(op2, regT3, regT2);
+        addJump(branch32(commute(condition), regT2, Imm32(getConstantOperand(op1).asInt32())), target);
+    } else if (isOperandConstantInt(op2)) {
+        emitLoad(op1, regT1, regT0);
+        addJump(branch32(condition, regT0, Imm32(getConstantOperand(op2).asInt32())), target);
+    } else {
+        emitLoad2(op1, regT1, regT0, op2, regT3, regT2);
+        addJump(branch32(condition, regT0, regT2), target);
+    }
+}
+
+template <typename Op>
+void JIT::emit_compareUnsigned(const Instruction* instruction, RelationalCondition condition)
+{
+    auto bytecode = instruction->as<Op>();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+
+    if (isOperandConstantInt(op1)) {
+        emitLoad(op2, regT3, regT2);
+        compare32(commute(condition), regT2, Imm32(getConstantOperand(op1).asInt32()), regT0);
+    } else if (isOperandConstantInt(op2)) {
+        emitLoad(op1, regT1, regT0);
+        compare32(condition, regT0, Imm32(getConstantOperand(op2).asInt32()), regT0);
+    } else {
+        emitLoad2(op1, regT1, regT0, op2, regT3, regT2);
+        compare32(condition, regT0, regT2, regT0);
+    }
+    emitStoreBool(dst, regT0);
+}
+
+template <typename Op, typename SlowOperation>
+void JIT::emit_compareAndJumpSlow(const Instruction *instruction, DoubleCondition, SlowOperation operation, bool invert, Vector<SlowCaseEntry>::iterator& iter)
+{
+    auto bytecode = instruction->as<Op>();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+    unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
+
+    linkAllSlowCases(iter);
+
+    emitLoad(op1, regT1, regT0);
+    emitLoad(op2, regT3, regT2);
+    callOperation(operation, m_codeBlock->globalObject(), JSValueRegs(regT1, regT0), JSValueRegs(regT3, regT2));
+    emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
+}
+
+template <typename Op>
+void JIT::emitBinaryDoubleOp(const Instruction *instruction, OperandTypes types, JumpList& notInt32Op1, JumpList& notInt32Op2, bool op1IsInRegisters, bool op2IsInRegisters)
+{
+    JumpList end;
+
+    auto bytecode = instruction->as<Op>();
+    int opcodeID = Op::opcodeID;
+    int target = jumpTarget(instruction, bytecode.m_targetLabel);
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
+
+    if (!notInt32Op1.empty()) {
+        // Double case 1: Op1 is not int32; Op2 is unknown.
+        notInt32Op1.link(this);
+
+        ASSERT(op1IsInRegisters);
+
+        // Verify Op1 is double.
+        if (!types.first().definitelyIsNumber())
+            addSlowCase(branch32(Above, regT1, TrustedImm32(JSValue::LowestTag)));
+
+        if (!op2IsInRegisters)
+            emitLoad(op2, regT3, regT2);
+
+        Jump doubleOp2 = branch32(Below, regT3, TrustedImm32(JSValue::LowestTag));
+
+        if (!types.second().definitelyIsNumber())
+            addSlowCase(branchIfNotInt32(regT3));
+
+        convertInt32ToDouble(regT2, fpRegT0);
+        Jump doTheMath = jump();
+
+        // Load Op2 as double into double register.
+        doubleOp2.link(this);
+        emitLoadDouble(op2, fpRegT0);
+
+        // Do the math.
+        doTheMath.link(this);
+        switch (opcodeID) {
+        case op_jless:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleLessThanAndOrdered, fpRegT2, fpRegT0), target);
+            break;
+        case op_jlesseq:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleLessThanOrEqualAndOrdered, fpRegT2, fpRegT0), target);
+            break;
+        case op_jgreater:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleGreaterThanAndOrdered, fpRegT2, fpRegT0), target);
+            break;
+        case op_jgreatereq:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleGreaterThanOrEqualAndOrdered, fpRegT2, fpRegT0), target);
+            break;
+        case op_jnless:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleLessThanOrEqualOrUnordered, fpRegT0, fpRegT2), target);
+            break;
+        case op_jnlesseq:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleLessThanOrUnordered, fpRegT0, fpRegT2), target);
+            break;
+        case op_jngreater:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleGreaterThanOrEqualOrUnordered, fpRegT0, fpRegT2), target);
+            break;
+        case op_jngreatereq:
+            emitLoadDouble(op1, fpRegT2);
+            addJump(branchDouble(DoubleGreaterThanOrUnordered, fpRegT0, fpRegT2), target);
+            break;
+        default:
+                RELEASE_ASSERT_NOT_REACHED();
+        }
+
+        if (!notInt32Op2.empty())
+            end.append(jump());
+    }
+
+    if (!notInt32Op2.empty()) {
+        // Double case 2: Op1 is int32; Op2 is not int32.
+        notInt32Op2.link(this);
+
+        ASSERT(op2IsInRegisters);
+
+        if (!op1IsInRegisters)
+            emitLoadPayload(op1, regT0);
+
+        convertInt32ToDouble(regT0, fpRegT0);
+
+        // Verify op2 is double.
+        if (!types.second().definitelyIsNumber())
+            addSlowCase(branch32(Above, regT3, TrustedImm32(JSValue::LowestTag)));
+
+        // Do the math.
+        switch (opcodeID) {
+        case op_jless:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleLessThanAndOrdered, fpRegT0, fpRegT1), target);
+            break;
+        case op_jlesseq:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleLessThanOrEqualAndOrdered, fpRegT0, fpRegT1), target);
+            break;
+        case op_jgreater:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleGreaterThanAndOrdered, fpRegT0, fpRegT1), target);
+            break;
+        case op_jgreatereq:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleGreaterThanOrEqualAndOrdered, fpRegT0, fpRegT1), target);
+            break;
+        case op_jnless:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleLessThanOrEqualOrUnordered, fpRegT1, fpRegT0), target);
+            break;
+        case op_jnlesseq:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleLessThanOrUnordered, fpRegT1, fpRegT0), target);
+            break;
+        case op_jngreater:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleGreaterThanOrEqualOrUnordered, fpRegT1, fpRegT0), target);
+            break;
+        case op_jngreatereq:
+            emitLoadDouble(op2, fpRegT1);
+            addJump(branchDouble(DoubleGreaterThanOrUnordered, fpRegT1, fpRegT0), target);
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    }
+
+    end.link(this);
+}
+
 #endif // USE(JSVALUE64)
 
 void JIT::emit_op_negate(const Instruction* currentInstruction)
 {
-    ArithProfile* arithProfile = &currentInstruction->as<OpNegate>().metadata(m_codeBlock).m_arithProfile;
-    JITNegIC* negateIC = m_codeBlock->addJITNegIC(arithProfile, currentInstruction);
+    UnaryArithProfile* arithProfile = &currentInstruction->as<OpNegate>().metadata(m_codeBlock).m_arithProfile;
+    JITNegIC* negateIC = m_codeBlock->addJITNegIC(arithProfile);
     m_instructionToMathIC.add(currentInstruction, negateIC);
+    // FIXME: it would be better to call those operationValueNegate, since the operand can be a BigInt
     emitMathICFast<OpNegate>(negateIC, currentInstruction, operationArithNegateProfiled, operationArithNegate);
 }
 
@@ -463,6 +729,7 @@ void JIT::emitSlow_op_negate(const Instruction* currentInstruction, Vector<SlowC
     linkAllSlowCases(iter);
 
     JITNegIC* negIC = bitwise_cast<JITNegIC*>(m_instructionToMathIC.get(currentInstruction));
+    // FIXME: it would be better to call those operationValueNegate, since the operand can be a BigInt
     emitMathICSlow<OpNegate>(negIC, currentInstruction, operationArithNegateProfiledOptimize, operationArithNegateProfiled, operationArithNegateOptimize);
 }
 
@@ -470,9 +737,9 @@ template<typename Op, typename SnippetGenerator>
 void JIT::emitBitBinaryOpFastPath(const Instruction* currentInstruction, ProfilingPolicy profilingPolicy)
 {
     auto bytecode = currentInstruction->as<Op>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
 #if USE(JSVALUE64)
     JSValueRegs leftRegs = JSValueRegs(regT0);
@@ -517,8 +784,8 @@ void JIT::emitBitBinaryOpFastPath(const Instruction* currentInstruction, Profili
 void JIT::emit_op_bitnot(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpBitnot>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_operand.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_operand;
 
 #if USE(JSVALUE64)
     JSValueRegs leftRegs = JSValueRegs(regT0);
@@ -578,9 +845,9 @@ template<typename Op>
 void JIT::emitRightShiftFastPath(const Instruction* currentInstruction, JITRightShiftGenerator::ShiftType snippetShiftType)
 {
     auto bytecode = currentInstruction->as<Op>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
 #if USE(JSVALUE64)
     JSValueRegs leftRegs = JSValueRegs(regT0);
@@ -633,15 +900,10 @@ void JIT::emit_op_urshift(const Instruction* currentInstruction)
     emitRightShiftFastPath(currentInstruction, op_urshift);
 }
 
-ALWAYS_INLINE static OperandTypes getOperandTypes(const ArithProfile& arithProfile)
-{
-    return OperandTypes(arithProfile.lhsResultType(), arithProfile.rhsResultType());
-}
-
 void JIT::emit_op_add(const Instruction* currentInstruction)
 {
-    ArithProfile* arithProfile = &currentInstruction->as<OpAdd>().metadata(m_codeBlock).m_arithProfile;
-    JITAddIC* addIC = m_codeBlock->addJITAddIC(arithProfile, currentInstruction);
+    BinaryArithProfile* arithProfile = &currentInstruction->as<OpAdd>().metadata(m_codeBlock).m_arithProfile;
+    JITAddIC* addIC = m_codeBlock->addJITAddIC(arithProfile);
     m_instructionToMathIC.add(currentInstruction, addIC);
     emitMathICFast<OpAdd>(addIC, currentInstruction, operationValueAddProfiled, operationValueAdd);
 }
@@ -658,8 +920,8 @@ template <typename Op, typename Generator, typename ProfiledFunction, typename N
 void JIT::emitMathICFast(JITUnaryMathIC<Generator>* mathIC, const Instruction* currentInstruction, ProfiledFunction profiledFunction, NonProfiledFunction nonProfiledFunction)
 {
     auto bytecode = currentInstruction->as<Op>();
-    int result = bytecode.m_dst.offset();
-    int operand = bytecode.m_operand.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister operand = bytecode.m_operand;
 
 #if USE(JSVALUE64)
     // ArithNegate benefits from using the same register as src and dst.
@@ -685,11 +947,11 @@ void JIT::emitMathICFast(JITUnaryMathIC<Generator>* mathIC, const Instruction* c
 
     bool generatedInlineCode = mathIC->generateInline(*this, mathICGenerationState);
     if (!generatedInlineCode) {
-        ArithProfile* arithProfile = mathIC->arithProfile();
+        UnaryArithProfile* arithProfile = mathIC->arithProfile();
         if (arithProfile && shouldEmitProfiling())
-            callOperationWithResult(profiledFunction, resultRegs, srcRegs, arithProfile);
+            callOperationWithResult(profiledFunction, resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), srcRegs, arithProfile);
         else
-            callOperationWithResult(nonProfiledFunction, resultRegs, srcRegs);
+            callOperationWithResult(nonProfiledFunction, resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), srcRegs);
     } else
         addSlowCase(mathICGenerationState.slowPathJumps);
 
@@ -708,10 +970,9 @@ template <typename Op, typename Generator, typename ProfiledFunction, typename N
 void JIT::emitMathICFast(JITBinaryMathIC<Generator>* mathIC, const Instruction* currentInstruction, ProfiledFunction profiledFunction, NonProfiledFunction nonProfiledFunction)
 {
     auto bytecode = currentInstruction->as<Op>();
-    OperandTypes types = getOperandTypes(copiedArithProfile(bytecode));
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
 #if USE(JSVALUE64)
     JSValueRegs leftRegs = JSValueRegs(regT1);
@@ -727,8 +988,8 @@ void JIT::emitMathICFast(JITBinaryMathIC<Generator>* mathIC, const Instruction* 
     FPRReg scratchFPR = fpRegT2;
 #endif
 
-    SnippetOperand leftOperand(types.first());
-    SnippetOperand rightOperand(types.second());
+    SnippetOperand leftOperand(bytecode.m_operandTypes.first());
+    SnippetOperand rightOperand(bytecode.m_operandTypes.second());
 
     if (isOperandConstantInt(op1))
         leftOperand.setConstInt32(getOperandConstantInt(op1));
@@ -758,11 +1019,11 @@ void JIT::emitMathICFast(JITBinaryMathIC<Generator>* mathIC, const Instruction* 
             emitGetVirtualRegister(op1, leftRegs);
         else if (rightOperand.isConst())
             emitGetVirtualRegister(op2, rightRegs);
-        ArithProfile* arithProfile = mathIC->arithProfile();
+        BinaryArithProfile* arithProfile = mathIC->arithProfile();
         if (arithProfile && shouldEmitProfiling())
-            callOperationWithResult(profiledFunction, resultRegs, leftRegs, rightRegs, arithProfile);
+            callOperationWithResult(profiledFunction, resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), leftRegs, rightRegs, arithProfile);
         else
-            callOperationWithResult(nonProfiledFunction, resultRegs, leftRegs, rightRegs);
+            callOperationWithResult(nonProfiledFunction, resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), leftRegs, rightRegs);
     } else
         addSlowCase(mathICGenerationState.slowPathJumps);
 
@@ -784,7 +1045,7 @@ void JIT::emitMathICSlow(JITUnaryMathIC<Generator>* mathIC, const Instruction* c
     mathICGenerationState.slowPathStart = label();
 
     auto bytecode = currentInstruction->as<Op>();
-    int result = bytecode.m_dst.offset();
+    VirtualRegister result = bytecode.m_dst;
 
 #if USE(JSVALUE64)
     JSValueRegs srcRegs = JSValueRegs(regT1);
@@ -798,14 +1059,14 @@ void JIT::emitMathICSlow(JITUnaryMathIC<Generator>* mathIC, const Instruction* c
     auto slowPathStart = label();
 #endif
 
-    ArithProfile* arithProfile = mathIC->arithProfile();
+    UnaryArithProfile* arithProfile = mathIC->arithProfile();
     if (arithProfile && shouldEmitProfiling()) {
         if (mathICGenerationState.shouldSlowPathRepatch)
-            mathICGenerationState.slowPathCall = callOperationWithResult(reinterpret_cast<J_JITOperation_EJMic>(profiledRepatchFunction), resultRegs, srcRegs, TrustedImmPtr(mathIC));
+            mathICGenerationState.slowPathCall = callOperationWithResult(reinterpret_cast<J_JITOperation_GJMic>(profiledRepatchFunction), resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), srcRegs, TrustedImmPtr(mathIC));
         else
-            mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, srcRegs, arithProfile);
+            mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), srcRegs, arithProfile);
     } else
-        mathICGenerationState.slowPathCall = callOperationWithResult(reinterpret_cast<J_JITOperation_EJMic>(repatchFunction), resultRegs, srcRegs, TrustedImmPtr(mathIC));
+        mathICGenerationState.slowPathCall = callOperationWithResult(reinterpret_cast<J_JITOperation_GJMic>(repatchFunction), resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), srcRegs, TrustedImmPtr(mathIC));
 
 #if ENABLE(MATH_IC_STATS)
     auto slowPathEnd = label();
@@ -830,10 +1091,9 @@ void JIT::emitMathICSlow(JITBinaryMathIC<Generator>* mathIC, const Instruction* 
     mathICGenerationState.slowPathStart = label();
 
     auto bytecode = currentInstruction->as<Op>();
-    OperandTypes types = getOperandTypes(copiedArithProfile(bytecode));
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
 #if USE(JSVALUE64)
     JSValueRegs leftRegs = JSValueRegs(regT1);
@@ -845,8 +1105,8 @@ void JIT::emitMathICSlow(JITBinaryMathIC<Generator>* mathIC, const Instruction* 
     JSValueRegs resultRegs = leftRegs;
 #endif
 
-    SnippetOperand leftOperand(types.first());
-    SnippetOperand rightOperand(types.second());
+    SnippetOperand leftOperand(bytecode.m_operandTypes.first());
+    SnippetOperand rightOperand(bytecode.m_operandTypes.second());
 
     if (isOperandConstantInt(op1))
         leftOperand.setConstInt32(getOperandConstantInt(op1));
@@ -864,14 +1124,14 @@ void JIT::emitMathICSlow(JITBinaryMathIC<Generator>* mathIC, const Instruction* 
     auto slowPathStart = label();
 #endif
 
-    ArithProfile* arithProfile = mathIC->arithProfile();
+    BinaryArithProfile* arithProfile = mathIC->arithProfile();
     if (arithProfile && shouldEmitProfiling()) {
         if (mathICGenerationState.shouldSlowPathRepatch)
-            mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_EJJMic>(profiledRepatchFunction), resultRegs, leftRegs, rightRegs, TrustedImmPtr(mathIC));
+            mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_GJJMic>(profiledRepatchFunction), resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), leftRegs, rightRegs, TrustedImmPtr(mathIC));
         else
-            mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, leftRegs, rightRegs, arithProfile);
+            mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), leftRegs, rightRegs, arithProfile);
     } else
-        mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_EJJMic>(repatchFunction), resultRegs, leftRegs, rightRegs, TrustedImmPtr(mathIC));
+        mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_GJJMic>(repatchFunction), resultRegs, TrustedImmPtr(m_codeBlock->globalObject()), leftRegs, rightRegs, TrustedImmPtr(mathIC));
 
 #if ENABLE(MATH_IC_STATS)
     auto slowPathEnd = label();
@@ -892,19 +1152,16 @@ void JIT::emitMathICSlow(JITBinaryMathIC<Generator>* mathIC, const Instruction* 
 void JIT::emit_op_div(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpDiv>();
-    auto& metadata = bytecode.metadata(m_codeBlock);
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
 #if USE(JSVALUE64)
-    OperandTypes types = getOperandTypes(metadata.m_arithProfile);
     JSValueRegs leftRegs = JSValueRegs(regT0);
     JSValueRegs rightRegs = JSValueRegs(regT1);
     JSValueRegs resultRegs = leftRegs;
     GPRReg scratchGPR = regT2;
 #else
-    OperandTypes types = getOperandTypes(metadata.m_arithProfile);
     JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
     JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
     JSValueRegs resultRegs = leftRegs;
@@ -912,12 +1169,12 @@ void JIT::emit_op_div(const Instruction* currentInstruction)
 #endif
     FPRReg scratchFPR = fpRegT2;
 
-    ArithProfile* arithProfile = nullptr;
+    BinaryArithProfile* arithProfile = nullptr;
     if (shouldEmitProfiling())
         arithProfile = &currentInstruction->as<OpDiv>().metadata(m_codeBlock).m_arithProfile;
 
-    SnippetOperand leftOperand(types.first());
-    SnippetOperand rightOperand(types.second());
+    SnippetOperand leftOperand(bytecode.m_operandTypes.first());
+    SnippetOperand rightOperand(bytecode.m_operandTypes.second());
 
     if (isOperandConstantInt(op1))
         leftOperand.setConstInt32(getOperandConstantInt(op1));
@@ -959,8 +1216,8 @@ void JIT::emit_op_div(const Instruction* currentInstruction)
 
 void JIT::emit_op_mul(const Instruction* currentInstruction)
 {
-    ArithProfile* arithProfile = &currentInstruction->as<OpMul>().metadata(m_codeBlock).m_arithProfile;
-    JITMulIC* mulIC = m_codeBlock->addJITMulIC(arithProfile, currentInstruction);
+    BinaryArithProfile* arithProfile = &currentInstruction->as<OpMul>().metadata(m_codeBlock).m_arithProfile;
+    JITMulIC* mulIC = m_codeBlock->addJITMulIC(arithProfile);
     m_instructionToMathIC.add(currentInstruction, mulIC);
     emitMathICFast<OpMul>(mulIC, currentInstruction, operationValueMulProfiled, operationValueMul);
 }
@@ -975,8 +1232,8 @@ void JIT::emitSlow_op_mul(const Instruction* currentInstruction, Vector<SlowCase
 
 void JIT::emit_op_sub(const Instruction* currentInstruction)
 {
-    ArithProfile* arithProfile = &currentInstruction->as<OpSub>().metadata(m_codeBlock).m_arithProfile;
-    JITSubIC* subIC = m_codeBlock->addJITSubIC(arithProfile, currentInstruction);
+    BinaryArithProfile* arithProfile = &currentInstruction->as<OpSub>().metadata(m_codeBlock).m_arithProfile;
+    JITSubIC* subIC = m_codeBlock->addJITSubIC(arithProfile);
     m_instructionToMathIC.add(currentInstruction, subIC);
     emitMathICFast<OpSub>(subIC, currentInstruction, operationValueSubProfiled, operationValueSub);
 }

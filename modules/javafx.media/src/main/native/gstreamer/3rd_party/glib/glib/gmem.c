@@ -66,10 +66,14 @@ static GMemVTable glib_mem_vtable = {
  * If any call to allocate memory using functions g_new(), g_new0(), g_renew(),
  * g_malloc(), g_malloc0(), g_malloc0_n(), g_realloc(), and g_realloc_n()
  * fails, the application is terminated. This also means that there is no
- * need to check if the call succeeded. On the other hand, g_try_...() family
+ * need to check if the call succeeded. On the other hand, the `g_try_...()` family
  * of functions returns %NULL on failure that can be used as a check
  * for unsuccessful memory allocation. The application is not terminated
  * in this case.
+ *
+ * As all GLib functions and data structures use `g_malloc()` internally, unless
+ * otherwise specified, any allocation failure will result in the application
+ * being terminated.
  *
  * It's important to match g_malloc() (and wrappers such as g_new()) with
  * g_free(), g_slice_alloc() (and wrappers such as g_slice_new()) with
@@ -77,6 +81,9 @@ static GMemVTable glib_mem_vtable = {
  * new with delete and new[] with delete[]. Otherwise bad things can happen,
  * since these allocators may use different memory pools (and new/delete call
  * constructors and destructors).
+ *
+ * Since GLib 2.46 g_malloc() is hardcoded to always use the system malloc
+ * implementation.
  */
 
 /* --- functions --- */
@@ -99,7 +106,7 @@ g_malloc (gsize n_bytes)
       mem = malloc (n_bytes);
       TRACE (GLIB_MEM_ALLOC((void*) mem, (unsigned int) n_bytes, 0, 0));
       if (mem)
-    return mem;
+  return mem;
 
       g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
                G_STRLOC, n_bytes);
@@ -129,7 +136,7 @@ g_malloc0 (gsize n_bytes)
       mem = calloc (1, n_bytes);
       TRACE (GLIB_MEM_ALLOC((void*) mem, (unsigned int) n_bytes, 1, 0));
       if (mem)
-    return mem;
+  return mem;
 
       g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
                G_STRLOC, n_bytes);
@@ -155,7 +162,7 @@ g_malloc0 (gsize n_bytes)
  */
 gpointer
 g_realloc (gpointer mem,
-       gsize    n_bytes)
+     gsize    n_bytes)
 {
   gpointer newmem;
 
@@ -164,14 +171,13 @@ g_realloc (gpointer mem,
       newmem = realloc (mem, n_bytes);
       TRACE (GLIB_MEM_REALLOC((void*) newmem, (void*)mem, (unsigned int) n_bytes, 0));
       if (newmem)
-    return newmem;
+  return newmem;
 
       g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
                G_STRLOC, n_bytes);
     }
 
-  if (mem)
-    free (mem);
+  free (mem);
 
   TRACE (GLIB_MEM_REALLOC((void*) NULL, (void*)mem, 0, 0));
 
@@ -190,8 +196,7 @@ g_realloc (gpointer mem,
 void
 g_free (gpointer mem)
 {
-  if (G_LIKELY (mem))
-    free (mem);
+  free (mem);
   TRACE(GLIB_MEM_FREE((void*) mem));
 }
 
@@ -295,7 +300,7 @@ g_try_malloc0 (gsize n_bytes)
  */
 gpointer
 g_try_realloc (gpointer mem,
-           gsize    n_bytes)
+         gsize    n_bytes)
 {
   gpointer newmem;
 
@@ -304,8 +309,7 @@ g_try_realloc (gpointer mem,
   else
     {
       newmem = NULL;
-      if (mem)
-    free (mem);
+      free (mem);
     }
 
   TRACE (GLIB_MEM_REALLOC((void*) newmem, (void*)mem, (unsigned int) n_bytes, 1));
@@ -329,7 +333,7 @@ g_try_realloc (gpointer mem,
  */
 gpointer
 g_malloc_n (gsize n_blocks,
-        gsize n_block_bytes)
+      gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     {
@@ -353,7 +357,7 @@ g_malloc_n (gsize n_blocks,
  */
 gpointer
 g_malloc0_n (gsize n_blocks,
-         gsize n_block_bytes)
+       gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     {
@@ -378,8 +382,8 @@ g_malloc0_n (gsize n_blocks,
  */
 gpointer
 g_realloc_n (gpointer mem,
-         gsize    n_blocks,
-         gsize    n_block_bytes)
+       gsize    n_blocks,
+       gsize    n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     {
@@ -403,7 +407,7 @@ g_realloc_n (gpointer mem,
  */
 gpointer
 g_try_malloc_n (gsize n_blocks,
-        gsize n_block_bytes)
+    gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     return NULL;
@@ -424,7 +428,7 @@ g_try_malloc_n (gsize n_blocks,
  */
 gpointer
 g_try_malloc0_n (gsize n_blocks,
-         gsize n_block_bytes)
+     gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     return NULL;
@@ -446,8 +450,8 @@ g_try_malloc0_n (gsize n_blocks,
  */
 gpointer
 g_try_realloc_n (gpointer mem,
-         gsize    n_blocks,
-         gsize    n_block_bytes)
+     gsize    n_blocks,
+     gsize    n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     return NULL;
@@ -460,7 +464,7 @@ g_try_realloc_n (gpointer mem,
  *
  * Checks whether the allocator used by g_malloc() is the system's
  * malloc implementation. If it returns %TRUE memory allocated with
- * malloc() can be used interchangeable with memory allocated using g_malloc().
+ * malloc() can be used interchangeably with memory allocated using g_malloc().
  * This function is useful for avoiding an extra copy of allocated memory returned
  * by a non-GLib-based API.
  *
@@ -491,7 +495,7 @@ void
 g_mem_set_vtable (GMemVTable *vtable)
 {
   g_warning (G_STRLOC ": custom memory allocation vtable not supported");
-    }
+}
 
 
 /**
@@ -517,4 +521,4 @@ void
 g_mem_profile (void)
 {
   g_warning (G_STRLOC ": memory profiling not supported");
-    }
+}

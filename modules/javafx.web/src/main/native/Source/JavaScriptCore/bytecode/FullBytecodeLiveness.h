@@ -25,31 +25,47 @@
 
 #pragma once
 
+#include "BytecodeLivenessAnalysis.h"
+#include "Operands.h"
 #include <wtf/FastBitVector.h>
 
 namespace JSC {
 
 class BytecodeLivenessAnalysis;
+class CodeBlock;
 
-typedef HashMap<unsigned, FastBitVector, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BytecodeToBitmapMap;
-
+// Note: Full bytecode liveness does not track any information about the liveness of temps.
+// If you want tmp liveness for a checkpoint ask tmpLivenessForCheckpoint.
 class FullBytecodeLiveness {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    const FastBitVector& getLiveness(unsigned bytecodeIndex) const
+    const FastBitVector& getLiveness(BytecodeIndex bytecodeIndex, LivenessCalculationPoint point) const
     {
-        return m_map[bytecodeIndex];
+        // We don't have to worry about overflowing into the next bytecodeoffset in our vectors because we
+        // static assert that bytecode length is greater than the number of checkpoints in BytecodeStructs.h
+        switch (point) {
+        case LivenessCalculationPoint::BeforeUse:
+            return m_usesBefore[toIndex(bytecodeIndex)];
+        case LivenessCalculationPoint::AfterUse:
+            return m_usesAfter[toIndex(bytecodeIndex)];
+        }
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
-    bool operandIsLive(int operand, unsigned bytecodeIndex) const
+    bool virtualRegisterIsLive(VirtualRegister reg, BytecodeIndex bytecodeIndex, LivenessCalculationPoint point) const
     {
-        return operandIsAlwaysLive(operand) || operandThatIsNotAlwaysLiveIsLive(getLiveness(bytecodeIndex), operand);
+        return virtualRegisterIsAlwaysLive(reg) || virtualRegisterThatIsNotAlwaysLiveIsLive(getLiveness(bytecodeIndex, point), reg);
     }
 
 private:
     friend class BytecodeLivenessAnalysis;
 
-    Vector<FastBitVector, 0, UnsafeVectorOverflow> m_map;
+    static size_t toIndex(BytecodeIndex bytecodeIndex) { return bytecodeIndex.offset() + bytecodeIndex.checkpoint(); }
+
+    // FIXME: Use FastBitVector's view mechanism to make them compact.
+    // https://bugs.webkit.org/show_bug.cgi?id=204427
+    Vector<FastBitVector, 0, UnsafeVectorOverflow> m_usesBefore;
+    Vector<FastBitVector, 0, UnsafeVectorOverflow> m_usesAfter;
 };
 
 } // namespace JSC

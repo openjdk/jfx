@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +82,7 @@ public:
     }
 
     void dump(PrintStream&) const;
-    JSValue toJS(ExecState*) const;
+    JSValue toJS(JSGlobalObject*) const;
 
 private:
     uint64_t m_uid;
@@ -91,7 +91,7 @@ private:
 struct UIDHash {
     static unsigned hash(const UID& key) { return key.hash(); }
     static bool equal(const UID& a, const UID& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::Profiler
@@ -99,9 +99,7 @@ struct UIDHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::Profiler::UID> {
-    typedef JSC::Profiler::UIDHash Hash;
-};
+template<> struct DefaultHash<JSC::Profiler::UID> : JSC::Profiler::UIDHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::Profiler::UID> : SimpleClassHashTraits<JSC::Profiler::UID> { };

@@ -27,20 +27,22 @@
 
 namespace bmalloc {
 
-AllIsoHeaps::AllIsoHeaps(const std::lock_guard<Mutex>&)
+DEFINE_STATIC_PER_PROCESS_STORAGE(AllIsoHeaps);
+
+AllIsoHeaps::AllIsoHeaps(const LockHolder&)
 {
 }
 
 void AllIsoHeaps::add(IsoHeapImplBase* heap)
 {
-    std::lock_guard<Mutex> locker(m_lock);
+    LockHolder locker(mutex());
     heap->m_next = m_head;
     m_head = heap;
 }
 
 IsoHeapImplBase* AllIsoHeaps::head()
 {
-    std::lock_guard<Mutex> locker(m_lock);
+    LockHolder locker(mutex());
     return m_head;
 }
 

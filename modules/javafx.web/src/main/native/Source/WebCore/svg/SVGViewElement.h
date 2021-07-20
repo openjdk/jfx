@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,15 +22,14 @@
 #pragma once
 
 #include "SVGElement.h"
-#include "SVGExternalResourcesRequired.h"
 #include "SVGFitToViewBox.h"
+#include "SVGSVGElement.h"
+#include "SVGStringList.h"
 #include "SVGZoomAndPan.h"
 
 namespace WebCore {
 
-class SVGStringList;
-
-class SVGViewElement final : public SVGElement, public SVGExternalResourcesRequired, public SVGFitToViewBox, public SVGZoomAndPan {
+class SVGViewElement final : public SVGElement, public SVGFitToViewBox, public SVGZoomAndPan {
     WTF_MAKE_ISO_ALLOCATED(SVGViewElement);
 public:
     static Ref<SVGViewElement> create(const QualifiedName&, Document&);
@@ -38,20 +37,23 @@ public:
     using SVGElement::ref;
     using SVGElement::deref;
 
-    Ref<SVGStringList> viewTarget();
+    const SVGSVGElement* targetElement() const { return m_targetElement.get(); }
+    void setTargetElement(const SVGSVGElement& targetElement) { m_targetElement = makeWeakPtr(targetElement); }
+    void resetTargetElement() { m_targetElement = nullptr; }
 
 private:
     SVGViewElement(const QualifiedName&, Document&);
 
-    // FIXME: svgAttributeChanged missing.
-    using AttributeOwnerProxy = SVGAttributeOwnerProxyImpl<SVGViewElement, SVGElement, SVGExternalResourcesRequired, SVGFitToViewBox, SVGZoomAndPan>;
-    const SVGAttributeOwnerProxy& attributeOwnerProxy() const final { return m_attributeOwnerProxy; }
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGViewElement, SVGElement, SVGFitToViewBox>;
+    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
+
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void svgAttributeChanged(const QualifiedName&) override;
 
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
 
-    AttributeOwnerProxy m_attributeOwnerProxy { *this };
-    SVGStringListValues m_viewTarget;
+    PropertyRegistry m_propertyRegistry { *this };
+    WeakPtr<SVGSVGElement> m_targetElement { nullptr };
 };
 
 } // namespace WebCore

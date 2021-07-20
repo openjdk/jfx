@@ -55,9 +55,9 @@ Ref<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, D
     return adoptRef(*new HTMLOutputElement(tagName, document, form));
 }
 
-const AtomicString& HTMLOutputElement::formControlType() const
+const AtomString& HTMLOutputElement::formControlType() const
 {
-    static NeverDestroyed<const AtomicString> output("output", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> output("output", AtomString::ConstructFromLiteral);
     return output;
 }
 
@@ -66,7 +66,7 @@ bool HTMLOutputElement::supportsFocus() const
     return HTMLElement::supportsFocus();
 }
 
-void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == forAttr) {
         if (m_tokens)
@@ -79,7 +79,7 @@ void HTMLOutputElement::childrenChanged(const ChildChange& change)
 {
     HTMLFormControlElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser || m_isSetTextContentInProgress) {
+    if (change.source == ChildChange::Source::Parser || m_isSetTextContentInProgress) {
         m_isSetTextContentInProgress = false;
         return;
     }
@@ -132,7 +132,7 @@ void HTMLOutputElement::setDefaultValue(const String& value)
 DOMTokenList& HTMLOutputElement::htmlFor()
 {
     if (!m_tokens)
-        m_tokens = std::make_unique<DOMTokenList>(*this, forAttr);
+        m_tokens = makeUnique<DOMTokenList>(*this, forAttr);
     return *m_tokens;
 }
 

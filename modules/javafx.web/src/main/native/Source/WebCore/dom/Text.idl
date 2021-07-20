@@ -18,12 +18,13 @@
  */
 
 [
-    Constructor(optional DOMString data = ""),
-    ConstructorCallWith=Document,
     CustomToJSObject,
+    Exposed=Window
 ] interface Text : CharacterData {
+    [CallWith=Document] constructor(optional DOMString data = "");
+
     [MayThrowException] Text splitText(unsigned long offset);
     readonly attribute DOMString wholeText;
 };
 
-Text implements Slotable;
+Text includes Slotable;

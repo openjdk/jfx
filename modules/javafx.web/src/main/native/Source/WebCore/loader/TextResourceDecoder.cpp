@@ -37,29 +37,15 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static inline bool bytesEqual(const char* p, char b0, char b1)
+static constexpr bool bytesEqual(const char* p, char b)
 {
-    return p[0] == b0 && p[1] == b1;
+    return *p == b;
 }
 
-static inline bool bytesEqual(const char* p, char b0, char b1, char b2, char b3, char b4)
+template<typename... T>
+static constexpr bool bytesEqual(const char* p, char b, T... bs)
 {
-    return p[0] == b0 && p[1] == b1 && p[2] == b2 && p[3] == b3 && p[4] == b4;
-}
-
-static inline bool bytesEqual(const char* p, char b0, char b1, char b2, char b3, char b4, char b5)
-{
-    return p[0] == b0 && p[1] == b1 && p[2] == b2 && p[3] == b3 && p[4] == b4 && p[5] == b5;
-}
-
-static inline bool bytesEqual(const char* p, char b0, char b1, char b2, char b3, char b4, char b5, char b6, char b7)
-{
-    return p[0] == b0 && p[1] == b1 && p[2] == b2 && p[3] == b3 && p[4] == b4 && p[5] == b5 && p[6] == b6 && p[7] == b7;
-}
-
-static inline bool bytesEqual(const char* p, char b0, char b1, char b2, char b3, char b4, char b5, char b6, char b7, char b8, char b9)
-{
-    return p[0] == b0 && p[1] == b1 && p[2] == b2 && p[3] == b3 && p[4] == b4 && p[5] == b5 && p[6] == b6 && p[7] == b7 && p[8] == b8 && p[9] == b9;
+    return *p == b && bytesEqual(p + 1, bs...);
 }
 
 // You might think we should put these find functions elsewhere, perhaps with the
@@ -334,6 +320,22 @@ Ref<TextResourceDecoder> TextResourceDecoder::create(const String& mimeType, con
 
 TextResourceDecoder::~TextResourceDecoder() = default;
 
+static inline bool shouldPrependBOM(const unsigned char* data, unsigned length)
+{
+    if (length < 3)
+        return true;
+    return data[0] != 0xef || data[1] != 0xbb || data[2] != 0xbf;
+}
+
+// https://encoding.spec.whatwg.org/#utf-8-decode
+String TextResourceDecoder::textFromUTF8(const unsigned char* data, unsigned length)
+{
+    auto decoder = TextResourceDecoder::create("text/plain", "UTF-8");
+    if (shouldPrependBOM(data, length))
+        decoder->decode("\xef\xbb\xbf", 3);
+    return decoder->decodeAndFlush(reinterpret_cast<const char*>(data), length);
+}
+
 void TextResourceDecoder::setEncoding(const TextEncoding& encoding, EncodingSource source)
 {
     // In case the encoding didn't exist, we keep the old one (helps some sites specifying invalid encodings).
@@ -535,7 +537,7 @@ bool TextResourceDecoder::checkForHeadCharset(const char* data, size_t len, bool
     if (m_contentType == XML)
         return true;
 
-    m_charsetParser = std::make_unique<HTMLMetaCharsetParser>();
+    m_charsetParser = makeUnique<HTMLMetaCharsetParser>();
     return checkForMetaCharset(data, len);
 }
 

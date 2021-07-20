@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,36 +22,37 @@
 
 #include "FloatPoint.h"
 #include "SVGPathSeg.h"
-#include "SVGPathSegListValues.h"
 #include "SVGPathSource.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
+class SVGPathSegList;
+
 class SVGPathSegListSource final : public SVGPathSource {
 public:
-    explicit SVGPathSegListSource(const SVGPathSegListValues&);
+    explicit SVGPathSegListSource(const SVGPathSegList&);
 
 private:
     bool hasMoreData() const final;
     bool moveToNextToken() final { return true; }
-    bool parseSVGSegmentType(SVGPathSegType&) final;
     SVGPathSegType nextCommand(SVGPathSegType) final;
 
-    bool parseMoveToSegment(FloatPoint&) final;
-    bool parseLineToSegment(FloatPoint&) final;
-    bool parseLineToHorizontalSegment(float&) final;
-    bool parseLineToVerticalSegment(float&) final;
-    bool parseCurveToCubicSegment(FloatPoint&, FloatPoint&, FloatPoint&) final;
-    bool parseCurveToCubicSmoothSegment(FloatPoint&, FloatPoint&) final;
-    bool parseCurveToQuadraticSegment(FloatPoint&, FloatPoint&) final;
-    bool parseCurveToQuadraticSmoothSegment(FloatPoint&) final;
-    bool parseArcToSegment(float&, float&, float&, bool&, bool&, FloatPoint&) final;
+    Optional<SVGPathSegType> parseSVGSegmentType() final;
+    Optional<MoveToSegment> parseMoveToSegment() final;
+    Optional<LineToSegment> parseLineToSegment() final;
+    Optional<LineToHorizontalSegment> parseLineToHorizontalSegment() final;
+    Optional<LineToVerticalSegment> parseLineToVerticalSegment() final;
+    Optional<CurveToCubicSegment> parseCurveToCubicSegment() final;
+    Optional<CurveToCubicSmoothSegment> parseCurveToCubicSmoothSegment() final;
+    Optional<CurveToQuadraticSegment> parseCurveToQuadraticSegment() final;
+    Optional<CurveToQuadraticSmoothSegment> parseCurveToQuadraticSmoothSegment() final;
+    Optional<ArcToSegment> parseArcToSegment() final;
 
-    const SVGPathSegListValues& m_pathSegList;
+    const SVGPathSegList& m_pathSegList;
     RefPtr<SVGPathSeg> m_segment;
-    int m_itemCurrent;
-    int m_itemEnd;
+    size_t m_itemCurrent;
+    size_t m_itemEnd;
 };
 
 } // namespace WebCore

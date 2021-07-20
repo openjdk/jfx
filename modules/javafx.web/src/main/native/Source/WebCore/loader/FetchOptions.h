@@ -30,12 +30,13 @@
 
 #include "DocumentIdentifier.h"
 #include "ReferrerPolicy.h"
+#include <wtf/Markable.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct FetchOptions {
-    enum class Destination : uint8_t { EmptyString, Audio, Document, Embed, Font, Image, Manifest, Object, Report, Script, Serviceworker, Sharedworker, Style, Track, Video, Worker, Xslt };
+    enum class Destination : uint8_t { EmptyString, Audio, Audioworklet, Document, Embed, Font, Image, Manifest, Model, Object, Paintworklet, Report, Script, Serviceworker, Sharedworker, Style, Track, Video, Worker, Xslt };
     enum class Mode : uint8_t { Navigate, SameOrigin, NoCors, Cors };
     enum class Credentials : uint8_t { Omit, SameOrigin, Include };
     enum class Cache : uint8_t { Default, NoStore, Reload, NoCache, ForceCache, OnlyIfCached };
@@ -46,7 +47,7 @@ struct FetchOptions {
     FetchOptions isolatedCopy() const { return { destination, mode, credentials, cache, redirect, referrerPolicy, integrity.isolatedCopy(), keepAlive }; }
 
     template<class Encoder> void encodePersistent(Encoder&) const;
-    template<class Decoder> static bool decodePersistent(Decoder&, FetchOptions&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decodePersistent(Decoder&, FetchOptions&);
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<FetchOptions> decode(Decoder&);
 
@@ -58,7 +59,7 @@ struct FetchOptions {
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
     bool keepAlive { false };
     String integrity;
-    Optional<DocumentIdentifier> clientIdentifier;
+    Markable<DocumentIdentifier, DocumentIdentifier::MarkableTraits> clientIdentifier;
 };
 
 inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credentials credentials, Cache cache, Redirect redirect, ReferrerPolicy referrerPolicy, String&& integrity, bool keepAlive)
@@ -90,7 +91,9 @@ inline bool isNonSubresourceRequest(FetchOptions::Destination destination)
 
 inline bool isScriptLikeDestination(FetchOptions::Destination destination)
 {
-    return destination == FetchOptions::Destination::Script
+    return destination == FetchOptions::Destination::Audioworklet
+        || destination == FetchOptions::Destination::Paintworklet
+        || destination == FetchOptions::Destination::Script
         || destination == FetchOptions::Destination::Serviceworker
         || destination == FetchOptions::Destination::Worker;
 }
@@ -104,12 +107,15 @@ template<> struct EnumTraits<WebCore::FetchOptions::Destination> {
         WebCore::FetchOptions::Destination,
         WebCore::FetchOptions::Destination::EmptyString,
         WebCore::FetchOptions::Destination::Audio,
+        WebCore::FetchOptions::Destination::Audioworklet,
         WebCore::FetchOptions::Destination::Document,
         WebCore::FetchOptions::Destination::Embed,
         WebCore::FetchOptions::Destination::Font,
         WebCore::FetchOptions::Destination::Image,
         WebCore::FetchOptions::Destination::Manifest,
+        WebCore::FetchOptions::Destination::Model,
         WebCore::FetchOptions::Destination::Object,
+        WebCore::FetchOptions::Destination::Paintworklet,
         WebCore::FetchOptions::Destination::Report,
         WebCore::FetchOptions::Destination::Script,
         WebCore::FetchOptions::Destination::Serviceworker,
@@ -166,7 +172,8 @@ template<> struct EnumTraits<WebCore::FetchOptions::Redirect> {
 
 namespace WebCore {
 
-template<class Encoder> inline void FetchOptions::encodePersistent(Encoder& encoder) const
+template<class Encoder>
+inline void FetchOptions::encodePersistent(Encoder& encoder) const
 {
     // Changes to encoding here should bump NetworkCache Storage format version.
     encoder << destination;
@@ -179,59 +186,70 @@ template<class Encoder> inline void FetchOptions::encodePersistent(Encoder& enco
     encoder << keepAlive;
 }
 
-template<class Decoder> inline bool FetchOptions::decodePersistent(Decoder& decoder, FetchOptions& options)
+template<class Decoder>
+inline bool FetchOptions::decodePersistent(Decoder& decoder, FetchOptions& options)
 {
-    FetchOptions::Destination destination;
-    if (!decoder.decode(destination))
+    Optional<FetchOptions::Destination> destination;
+    decoder >> destination;
+    if (!destination)
         return false;
 
-    FetchOptions::Mode mode;
-    if (!decoder.decode(mode))
+    Optional<FetchOptions::Mode> mode;
+    decoder >> mode;
+    if (!mode)
         return false;
 
-    FetchOptions::Credentials credentials;
-    if (!decoder.decode(credentials))
+    Optional<FetchOptions::Credentials> credentials;
+    decoder >> credentials;
+    if (!credentials)
         return false;
 
-    FetchOptions::Cache cache;
-    if (!decoder.decode(cache))
+    Optional<FetchOptions::Cache> cache;
+    decoder >> cache;
+    if (!cache)
         return false;
 
-    FetchOptions::Redirect redirect;
-    if (!decoder.decode(redirect))
+    Optional<FetchOptions::Redirect> redirect;
+    decoder >> redirect;
+    if (!redirect)
         return false;
 
-    ReferrerPolicy referrerPolicy;
-    if (!decoder.decode(referrerPolicy))
+    Optional<ReferrerPolicy> referrerPolicy;
+    decoder >> referrerPolicy;
+    if (!referrerPolicy)
         return false;
 
-    String integrity;
-    if (!decoder.decode(integrity))
+    Optional<String> integrity;
+    decoder >> integrity;
+    if (!integrity)
         return false;
 
-    bool keepAlive;
-    if (!decoder.decode(keepAlive))
+    Optional<bool> keepAlive;
+    decoder >> keepAlive;
+    if (!keepAlive)
         return false;
 
-    options.destination = destination;
-    options.mode = mode;
-    options.credentials = credentials;
-    options.cache = cache;
-    options.redirect = redirect;
-    options.referrerPolicy = referrerPolicy;
-    options.integrity = WTFMove(integrity);
-    options.keepAlive = keepAlive;
+    options.destination = *destination;
+    options.mode = *mode;
+    options.credentials = *credentials;
+    options.cache = *cache;
+    options.redirect = *redirect;
+    options.referrerPolicy = *referrerPolicy;
+    options.integrity = WTFMove(*integrity);
+    options.keepAlive = *keepAlive;
 
     return true;
 }
 
-template<class Encoder> inline void FetchOptions::encode(Encoder& encoder) const
+template<class Encoder>
+inline void FetchOptions::encode(Encoder& encoder) const
 {
     encodePersistent(encoder);
-    encoder << clientIdentifier;
+    encoder << clientIdentifier.asOptional();
 }
 
-template<class Decoder> inline Optional<FetchOptions> FetchOptions::decode(Decoder& decoder)
+template<class Decoder>
+inline Optional<FetchOptions> FetchOptions::decode(Decoder& decoder)
 {
     FetchOptions options;
     if (!decodePersistent(decoder, options))
@@ -243,7 +261,7 @@ template<class Decoder> inline Optional<FetchOptions> FetchOptions::decode(Decod
         return WTF::nullopt;
     options.clientIdentifier = WTFMove(clientIdentifier.value());
 
-    return WTFMove(options);
+    return options;
 }
 
 } // namespace WebCore

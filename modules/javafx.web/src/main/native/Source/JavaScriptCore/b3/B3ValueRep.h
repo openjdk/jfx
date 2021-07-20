@@ -34,6 +34,9 @@
 #include "RegisterSet.h"
 #include "ValueRecovery.h"
 #include <wtf/PrintStream.h>
+#if ENABLE(WEBASSEMBLY)
+#include "WasmValueLocation.h"
+#endif
 
 namespace JSC {
 
@@ -47,8 +50,9 @@ namespace B3 {
 // output.
 
 class ValueRep {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    enum Kind {
+    enum Kind : uint8_t {
         // As an input representation, this means that B3 can pick any representation. As an output
         // representation, this means that we don't know. This will only arise as an output
         // representation for the active arguments of Check/CheckAdd/CheckSub/CheckMul.
@@ -75,6 +79,10 @@ public:
         // the result constraint of a Patchpoint.
         SomeEarlyRegister,
 
+        // As an input representation, this tells us that B3 should pick some register, but implies
+        // the use happens after any defs. This is only works for patchpoints.
+        SomeLateRegister,
+
         // As an input representation, this forces a particular register. As an output
         // representation, this tells us what register B3 picked.
         Register,
@@ -90,7 +98,7 @@ public:
         Stack,
 
         // As an input representation, this forces the value to end up in the argument area at some
-        // offset.
+        // offset. As an output representation this tells us what offset from SP B3 picked.
         StackArgument,
 
         // As an output representation, this tells us that B3 constant-folded the value.
@@ -108,11 +116,35 @@ public:
         u.reg = reg;
     }
 
+    ValueRep(const ValueRep&) = default;
+
     ValueRep(Kind kind)
         : m_kind(kind)
     {
-        ASSERT(kind == WarmAny || kind == ColdAny || kind == LateColdAny || kind == SomeRegister || kind == SomeRegisterWithClobber || kind == SomeEarlyRegister);
+        ASSERT(kind == WarmAny || kind == ColdAny || kind == LateColdAny || kind == SomeRegister || kind == SomeRegisterWithClobber || kind == SomeEarlyRegister || kind == SomeLateRegister);
     }
+
+#if ENABLE(WEBASSEMBLY)
+    ValueRep(Wasm::ValueLocation location)
+    {
+        switch (location.kind()) {
+        case Wasm::ValueLocation::Kind::Register:
+            m_kind = Register;
+            u.reg = location.reg();
+            break;
+        case Wasm::ValueLocation::Kind::Stack:
+            m_kind = Stack;
+            u.offsetFromFP = location.offsetFromFP();
+            break;
+        case Wasm::ValueLocation::Kind::StackArgument:
+            m_kind = StackArgument;
+            u.offsetFromSP = location.offsetFromSP();
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    }
+#endif
 
     static ValueRep reg(Reg reg)
     {
@@ -155,6 +187,11 @@ public:
         return ValueRep::constant(bitwise_cast<int64_t>(value));
     }
 
+    static ValueRep constantFloat(float value)
+    {
+        return ValueRep::constant(static_cast<uint64_t>(bitwise_cast<uint32_t>(value)));
+    }
+
     Kind kind() const { return m_kind; }
 
     bool operator==(const ValueRep& other) const
@@ -185,7 +222,7 @@ public:
 
     bool isAny() const { return kind() == WarmAny || kind() == ColdAny || kind() == LateColdAny; }
 
-    bool isReg() const { return kind() == Register || kind() == LateRegister; }
+    bool isReg() const { return kind() == Register || kind() == LateRegister || kind() == SomeLateRegister; }
 
     Reg reg() const
     {
@@ -228,6 +265,11 @@ public:
         return bitwise_cast<double>(value());
     }
 
+    float floatValue() const
+    {
+        return bitwise_cast<float>(static_cast<uint32_t>(static_cast<uint64_t>(value())));
+    }
+
     ValueRep withOffset(intptr_t offset) const
     {
         switch (kind()) {
@@ -267,7 +309,6 @@ public:
     ValueRecovery recoveryForJSValue() const;
 
 private:
-    Kind m_kind;
     union U {
         Reg reg;
         intptr_t offsetFromFP;
@@ -276,9 +317,10 @@ private:
 
         U()
         {
-            memset(this, 0, sizeof(*this));
+            memset(static_cast<void*>(this), 0, sizeof(*this));
         }
     } u;
+    Kind m_kind;
 };
 
 } } // namespace JSC::B3

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "DFGCommon.h"
 #include <wtf/HashMap.h>
+#include <wtf/Packed.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC { namespace DFG {
@@ -38,52 +39,47 @@ struct Node;
 
 class MinifiedID {
 public:
-    MinifiedID() : m_id(invalidID()) { }
-    MinifiedID(WTF::HashTableDeletedValueType) : m_id(otherInvalidID()) { }
-    explicit MinifiedID(Node* node) : m_id(bitwise_cast<uintptr_t>(node)) { }
+    MinifiedID() = default;
+    MinifiedID(WTF::HashTableDeletedValueType) : m_index(otherInvalidIndex()) { }
+    explicit MinifiedID(Node* node);
 
-    bool operator!() const { return m_id == invalidID(); }
+    bool operator!() const { return m_index.get() == invalidIndex(); }
 
-    // This takes Graph& to remind you, that you should only be calling this method
-    // when you're in the main compilation pass (i.e. you have a graph) and not later,
-    // like during OSR exit compilation.
-    Node* node(const Graph&) const { return bitwise_cast<Node*>(m_id); }
+    bool operator==(const MinifiedID& other) const { return m_index.get() == other.m_index.get(); }
+    bool operator!=(const MinifiedID& other) const { return m_index.get() != other.m_index.get(); }
+    bool operator<(const MinifiedID& other) const { return m_index.get() < other.m_index.get(); }
+    bool operator>(const MinifiedID& other) const { return m_index.get() > other.m_index.get(); }
+    bool operator<=(const MinifiedID& other) const { return m_index.get() <= other.m_index.get(); }
+    bool operator>=(const MinifiedID& other) const { return m_index.get() >= other.m_index.get(); }
 
-    bool operator==(const MinifiedID& other) const { return m_id == other.m_id; }
-    bool operator!=(const MinifiedID& other) const { return m_id != other.m_id; }
-    bool operator<(const MinifiedID& other) const { return m_id < other.m_id; }
-    bool operator>(const MinifiedID& other) const { return m_id > other.m_id; }
-    bool operator<=(const MinifiedID& other) const { return m_id <= other.m_id; }
-    bool operator>=(const MinifiedID& other) const { return m_id >= other.m_id; }
+    unsigned hash() const { return WTF::IntHash<unsigned>::hash(m_index.get()); }
 
-    unsigned hash() const { return WTF::IntHash<uintptr_t>::hash(m_id); }
+    void dump(PrintStream& out) const { out.print(m_index.get()); }
 
-    void dump(PrintStream& out) const { out.print(RawPointer(reinterpret_cast<void*>(m_id))); }
+    bool isHashTableDeletedValue() const { return m_index.get() == otherInvalidIndex(); }
 
-    bool isHashTableDeletedValue() const { return m_id == otherInvalidID(); }
-
-    static MinifiedID fromBits(uintptr_t value)
+    static MinifiedID fromBits(unsigned value)
     {
         MinifiedID result;
-        result.m_id = value;
+        result.m_index = value;
         return result;
     }
 
-    uintptr_t bits() const { return m_id; }
+    unsigned bits() const { return m_index.get(); }
 
 private:
     friend class MinifiedNode;
 
-    static uintptr_t invalidID() { return static_cast<uintptr_t>(static_cast<intptr_t>(-1)); }
-    static uintptr_t otherInvalidID() { return static_cast<uintptr_t>(static_cast<intptr_t>(-2)); }
+    static constexpr unsigned invalidIndex() { return static_cast<unsigned>(-1); }
+    static constexpr unsigned otherInvalidIndex() { return static_cast<unsigned>(-2); }
 
-    uintptr_t m_id;
+    Packed<unsigned> m_index { invalidIndex() };
 };
 
 struct MinifiedIDHash {
     static unsigned hash(const MinifiedID& key) { return key.hash(); }
     static bool equal(const MinifiedID& a, const MinifiedID& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::DFG
@@ -91,13 +87,11 @@ struct MinifiedIDHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::MinifiedID> {
-    typedef JSC::DFG::MinifiedIDHash Hash;
-};
+template<> struct DefaultHash<JSC::DFG::MinifiedID> : JSC::DFG::MinifiedIDHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::MinifiedID> : SimpleClassHashTraits<JSC::DFG::MinifiedID> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

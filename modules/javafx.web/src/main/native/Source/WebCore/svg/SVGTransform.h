@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,51 +25,72 @@
 
 #pragma once
 
+#include "DOMMatrix2DInit.h"
 #include "SVGMatrix.h"
-#include "SVGPropertyTearOff.h"
 #include "SVGTransformValue.h"
+#include "SVGValueProperty.h"
 
 namespace WebCore {
 
-class SVGTransform : public SVGPropertyTearOff<SVGTransformValue> {
+class SVGTransform : public SVGValueProperty<SVGTransformValue>, public SVGPropertyOwner {
 public:
-    static Ref<SVGTransform> create(SVGAnimatedProperty& animatedProperty, SVGPropertyRole role, SVGTransformValue& value)
+    static Ref<SVGTransform> create(SVGTransformValue::SVGTransformType type)
     {
-        return adoptRef(*new SVGTransform(animatedProperty, role, value));
+        return adoptRef(*new SVGTransform(type));
     }
 
-    static Ref<SVGTransform> create(const SVGTransformValue& initialValue = { })
+    static Ref<SVGTransform> create(const AffineTransform& transform = { })
     {
-        return adoptRef(*new SVGTransform(initialValue));
+        return adoptRef(*new SVGTransform(SVGTransformValue::SVG_TRANSFORM_MATRIX, transform));
     }
 
-    template<typename T> static ExceptionOr<Ref<SVGTransform>> create(ExceptionOr<T>&& initialValue)
+    static Ref<SVGTransform> create(const SVGTransformValue& value)
     {
-        if (initialValue.hasException())
-            return initialValue.releaseException();
-        return create(initialValue.releaseReturnValue());
+        return adoptRef(*new SVGTransform(value.type(), value.matrix()->value(), value.angle(), value.rotationCenter()));
     }
 
-    unsigned short type()
+    template<typename T>
+    static ExceptionOr<Ref<SVGTransform>> create(ExceptionOr<T>&& value)
     {
-        return propertyReference().type();
+        if (value.hasException())
+            return value.releaseException();
+        return create(value.releaseReturnValue());
     }
 
-    Ref<SVGMatrix> matrix();
-
-    float angle()
+    ~SVGTransform()
     {
-        return propertyReference().angle();
+        m_value.matrix()->detach();
     }
 
-    ExceptionOr<void> setMatrix(SVGMatrix& matrix)
+    Ref<SVGTransform> clone() const
+    {
+        return SVGTransform::create(m_value);
+    }
+
+    unsigned short type() { return m_value.type(); }
+    float angle() { return m_value.angle(); }
+    const Ref<SVGMatrix>& matrix() { return m_value.matrix(); }
+
+    ExceptionOr<void> setMatrix(DOMMatrix2DInit&& matrixInit)
     {
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setMatrix(matrix.propertyReference());
+        AffineTransform transform;
+        if (matrixInit.a.hasValue())
+            transform.setA(matrixInit.a.value());
+        if (matrixInit.b.hasValue())
+            transform.setB(matrixInit.b.value());
+        if (matrixInit.c.hasValue())
+            transform.setC(matrixInit.c.value());
+        if (matrixInit.d.hasValue())
+            transform.setD(matrixInit.d.value());
+        if (matrixInit.e.hasValue())
+            transform.setE(matrixInit.e.value());
+        if (matrixInit.f.hasValue())
+            transform.setF(matrixInit.f.value());
+        m_value.setMatrix(transform);
         commitChange();
-
         return { };
     }
 
@@ -78,9 +99,8 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setTranslate(tx, ty);
+        m_value.setTranslate(tx, ty);
         commitChange();
-
         return { };
     }
 
@@ -89,9 +109,8 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setScale(sx, sy);
+        m_value.setScale(sx, sy);
         commitChange();
-
         return { };
     }
 
@@ -100,9 +119,8 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setRotate(angle, cx, cy);
+        m_value.setRotate(angle, cx, cy);
         commitChange();
-
         return { };
     }
 
@@ -111,9 +129,8 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setSkewX(angle);
+        m_value.setSkewX(angle);
         commitChange();
-
         return { };
     }
 
@@ -122,21 +139,46 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setSkewY(angle);
+        m_value.setSkewY(angle);
         commitChange();
-
         return { };
     }
 
+    void attach(SVGPropertyOwner* owner, SVGPropertyAccess access) override
+    {
+        Base::attach(owner, access);
+        // Reattach the SVGMatrix to the SVGTransformValue with the new SVGPropertyAccess.
+        m_value.matrix()->reattach(this, access);
+    }
+
+    void detach() override
+    {
+        Base::detach();
+        // Reattach the SVGMatrix to the SVGTransformValue with the SVGPropertyAccess::ReadWrite.
+        m_value.matrix()->reattach(this, access());
+    }
+
 private:
-    SVGTransform(SVGAnimatedProperty& animatedProperty, SVGPropertyRole role, SVGTransformValue& value)
-        : SVGPropertyTearOff<SVGTransformValue>(&animatedProperty, role, value)
+    using Base = SVGValueProperty<SVGTransformValue>;
+
+    SVGTransform(SVGTransformValue::SVGTransformType type, const AffineTransform& transform = { }, float angle = 0, const FloatPoint& rotationCenter = { })
+        : Base(SVGTransformValue(type, SVGMatrix::create(this, SVGPropertyAccess::ReadWrite, transform), angle, rotationCenter))
     {
     }
 
-    explicit SVGTransform(const SVGTransformValue& initialValue)
-        : SVGPropertyTearOff<SVGTransformValue>(initialValue)
+    SVGPropertyOwner* owner() const override { return m_owner; }
+
+    void commitPropertyChange(SVGProperty* property) override
     {
+        ASSERT_UNUSED(property, property == m_value.matrix().ptr());
+        if (owner())
+            owner()->commitPropertyChange(this);
+        m_value.matrixDidChange();
+    }
+
+    String valueAsString() const override
+    {
+        return m_value.valueAsString();
     }
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,38 +39,45 @@ namespace JSC {
 // caller/callee/@@iterator properties unless someone asks for them.
 class ClonedArguments final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        static_assert(!CellType::needsDestruction, "");
+        return &vm.clonedArgumentsSpace;
+    }
 
 private:
     ClonedArguments(VM&, Structure*, Butterfly*);
 
 public:
     static ClonedArguments* createEmpty(VM&, Structure*, JSFunction* callee, unsigned length);
-    static ClonedArguments* createEmpty(ExecState*, JSFunction* callee, unsigned length);
-    static ClonedArguments* createWithInlineFrame(ExecState* myFrame, ExecState* targetFrame, InlineCallFrame*, ArgumentsMode);
-    static ClonedArguments* createWithMachineFrame(ExecState* myFrame, ExecState* targetFrame, ArgumentsMode);
-    static ClonedArguments* createByCopyingFrom(ExecState*, Structure*, Register* argumentsStart, unsigned length, JSFunction* callee);
+    static ClonedArguments* createEmpty(JSGlobalObject*, JSFunction* callee, unsigned length);
+    static ClonedArguments* createWithInlineFrame(JSGlobalObject*, CallFrame* targetFrame, InlineCallFrame*, ArgumentsMode);
+    static ClonedArguments* createWithMachineFrame(JSGlobalObject*, CallFrame* targetFrame, ArgumentsMode);
+    static ClonedArguments* createByCopyingFrom(JSGlobalObject*, Structure*, Register* argumentsStart, unsigned length, JSFunction* callee);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
     static Structure* createSlowPutStructure(VM&, JSGlobalObject*, JSValue prototype);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_INFO;
 
 private:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype, IndexingType);
 
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static void getOwnPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
+    static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     bool specialsMaterialized() const { return !m_callee; }
-    void materializeSpecials(ExecState*);
-    void materializeSpecialsIfNecessary(ExecState*);
+    void materializeSpecials(JSGlobalObject*);
+    void materializeSpecialsIfNecessary(JSGlobalObject*);
 
     WriteBarrier<JSFunction> m_callee; // Set to nullptr when we materialize all of our special properties.
 };

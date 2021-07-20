@@ -39,11 +39,12 @@ struct Node;
 // and the FTL.
 
 struct OSRExitBase {
-    OSRExitBase(ExitKind kind, CodeOrigin origin, CodeOrigin originForProfile, bool wasHoisted)
+    OSRExitBase(ExitKind kind, CodeOrigin origin, CodeOrigin originForProfile, bool wasHoisted, uint32_t dfgNodeIndex)
         : m_kind(kind)
         , m_wasHoisted(wasHoisted)
         , m_codeOrigin(origin)
         , m_codeOriginForExitProfile(originForProfile)
+        , m_dfgNodeIndex(dfgNodeIndex)
     {
         ASSERT(m_codeOrigin.isSet());
         ASSERT(m_codeOriginForExitProfile.isSet());
@@ -56,6 +57,7 @@ struct OSRExitBase {
     CodeOrigin m_codeOrigin;
     CodeOrigin m_codeOriginForExitProfile;
     CallSiteIndex m_exceptionHandlerCallSiteIndex;
+    uint32_t m_dfgNodeIndex;
 
     ALWAYS_INLINE bool isExceptionHandler() const
     {
@@ -68,6 +70,11 @@ struct OSRExitBase {
     ALWAYS_INLINE bool isGenericUnwindHandler() const
     {
         return m_kind == GenericUnwind;
+    }
+
+    ALWAYS_INLINE bool isExitingToCheckpointHandler() const
+    {
+        return m_codeOrigin.bytecodeIndex().checkpoint();
     }
 
 protected:

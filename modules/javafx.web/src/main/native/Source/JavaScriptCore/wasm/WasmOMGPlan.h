@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
 #include "WasmContext.h"
 #include "WasmModule.h"
@@ -41,21 +41,19 @@ class OMGPlan final : public Plan {
 public:
     using Base = Plan;
 
-    bool hasWork() const override { return !m_completed; }
-    void work(CompilationEffort) override;
-    bool multiThreaded() const override { return false; }
+    bool hasWork() const final { return !m_completed; }
+    void work(CompilationEffort) final;
+    bool multiThreaded() const final { return false; }
 
-    static void runForIndex(Instance*, uint32_t functionIndex);
+    // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
+    OMGPlan(Context*, Ref<Module>&&, uint32_t functionIndex, MemoryMode, CompletionTask&&);
 
 private:
     // For some reason friendship doesn't extend to parent classes...
     using Base::m_lock;
 
-    // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    OMGPlan(Context*, Ref<Module>&&, uint32_t functionIndex, MemoryMode, CompletionTask&&);
-
-    bool isComplete() const override { return m_completed; }
-    void complete(const AbstractLocker& locker) override
+    bool isComplete() const final { return m_completed; }
+    void complete(const AbstractLocker& locker) final
     {
         m_completed = true;
         runCompletionTasks(locker);
@@ -69,4 +67,4 @@ private:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

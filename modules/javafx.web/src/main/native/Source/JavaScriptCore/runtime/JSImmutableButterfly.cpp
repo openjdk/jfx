@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,16 @@
 #include "config.h"
 #include "JSImmutableButterfly.h"
 
-#include "CodeBlock.h"
+#include "ButterflyInlines.h"
 
 namespace JSC {
 
 const ClassInfo JSImmutableButterfly::s_info = { "Immutable Butterfly", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSImmutableButterfly) };
 
-void JSImmutableButterfly::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSImmutableButterfly::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
+    ASSERT_GC_OBJECT_INHERITS(cell, info());
     Base::visitChildren(cell, visitor);
     if (!hasContiguous(cell->indexingType())) {
         ASSERT(hasDouble(cell->indexingType()) || hasInt32(cell->indexingType()));
@@ -44,13 +46,15 @@ void JSImmutableButterfly::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.appendValuesHidden(butterfly->contiguous().data(), butterfly->publicLength());
 }
 
-void JSImmutableButterfly::copyToArguments(ExecState* exec, VirtualRegister firstElementDest, unsigned offset, unsigned length)
+DEFINE_VISIT_CHILDREN(JSImmutableButterfly);
+
+void JSImmutableButterfly::copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length)
 {
     for (unsigned i = 0; i < length; ++i) {
         if ((i + offset) < publicLength())
-            exec->r(firstElementDest + i) = get(i + offset);
+            firstElementDest[i] = get(i + offset);
         else
-            exec->r(firstElementDest + i) = jsUndefined();
+            firstElementDest[i] = jsUndefined();
     }
 }
 

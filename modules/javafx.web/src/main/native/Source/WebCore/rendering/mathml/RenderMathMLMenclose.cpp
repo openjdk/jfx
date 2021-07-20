@@ -59,7 +59,7 @@ RenderMathMLMenclose::RenderMathMLMenclose(MathMLMencloseElement& element, Rende
 // See https://bugs.webkit.org/show_bug.cgi?id=122297
 LayoutUnit RenderMathMLMenclose::ruleThickness() const
 {
-    return 0.05f * style().fontCascade().size();
+    return LayoutUnit(0.05f * style().fontCascade().size());
 }
 
 RenderMathMLMenclose::SpaceAroundContent RenderMathMLMenclose::spaceAroundContent(LayoutUnit contentWidth, LayoutUnit contentHeight) const
@@ -139,7 +139,7 @@ RenderMathMLMenclose::SpaceAroundContent RenderMathMLMenclose::spaceAroundConten
     // - We add extra margin of \xi_8
     // Then for example the top space is \sqrt{2}contentHeight/2 - contentHeight/2 + \xi_8/2 + \xi_8.
     if (hasNotation(MathMLMencloseElement::Circle)) {
-        LayoutUnit extraSpace = (contentWidth * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2;
+        LayoutUnit extraSpace { (contentWidth * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2 };
         space.left = std::max(space.left, extraSpace);
         space.right = std::max(space.right, extraSpace);
         extraSpace = (contentHeight * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2;
@@ -190,6 +190,8 @@ void RenderMathMLMenclose::layoutBlock(bool relayoutChildren, LayoutUnit)
 
     layoutPositionedObjects(relayoutChildren);
 
+    updateScrollInfoAfterLayout();
+
     clearNeedsLayout();
 }
 
@@ -219,7 +221,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     paintInfo.context().setStrokeThickness(thickness);
     paintInfo.context().setStrokeStyle(SolidStroke);
     paintInfo.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
-    paintInfo.context().setFillColor(Color::transparent);
+    paintInfo.context().setFillColor(Color::transparentBlack);
     paintInfo.applyTransform(AffineTransform().translate(paintOffset + location()));
 
     // In the MathML in HTML5 implementation note, the "left" notation is described as follows:

@@ -69,6 +69,7 @@ final class MacCommonDialogs {
         return _showFolderChooser(ownerPtr, folder, title);
     }
 
+    @SuppressWarnings("removal")
     static boolean isFileNSURLEnabled() {
         // The check is dynamic since an app may want to toggle it dynamically.
         // The performance is not critical for FileChoosers.

@@ -21,6 +21,7 @@
     ExportToWrappedFunction,
     ImplementationLacksVTable,
     JSCustomMarkFunction,
+    Exposed=Window
 ] interface XPathResult {
     const unsigned short ANY_TYPE = 0;
     const unsigned short NUMBER_TYPE = 1;
@@ -43,5 +44,5 @@
     readonly attribute unsigned long snapshotLength;
 
     [MayThrowException] Node iterateNext();
-    [MayThrowException] Node snapshotItem(optional unsigned long index = 0);
+    [MayThrowException] Node snapshotItem(unsigned long index);
 };

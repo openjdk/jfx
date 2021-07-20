@@ -27,8 +27,6 @@
 #include "CodeBlockSet.h"
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
-#include "SuperSampler.h"
 #include <wtf/CommaPrinter.h>
 
 namespace JSC {
@@ -53,6 +51,11 @@ bool CodeBlockSet::contains(const AbstractLocker&, void* candidateCodeBlock)
 void CodeBlockSet::clearCurrentlyExecuting()
 {
     m_currentlyExecuting.clear();
+}
+
+bool CodeBlockSet::isCurrentlyExecuting(CodeBlock* codeBlock)
+{
+    return m_currentlyExecuting.contains(codeBlock);
 }
 
 void CodeBlockSet::dump(PrintStream& out) const

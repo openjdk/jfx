@@ -21,38 +21,46 @@
 #include "unicode/utypes.h"
 #include "unicode/ubidi.h"
 #include "unicode/uchar.h"
+
+#if U_SHOW_CPLUSPLUS_API
 #include "unicode/localpointer.h"
+#endif   // U_SHOW_CPLUSPLUS_API
 
 /**
  * \file
  * \brief Bidi Transformations
+ */
+
+/**
+ * `UBiDiOrder` indicates the order of text.
  *
- * <code>UBiDiOrder</code> indicates the order of text.<p>
  * This bidi transformation engine supports all possible combinations (4 in
  * total) of input and output text order:
- * <ul>
- * <li><logical input, visual output>: unless the output direction is RTL, this
- * corresponds to a normal operation of the Bidi algorithm as described in the
- * Unicode Technical Report and implemented by <code>UBiDi</code> when the
- * reordering mode is set to <code>UBIDI_REORDER_DEFAULT</code>. Visual RTL
- * mode is not supported by <code>UBiDi</code> and is accomplished through
- * reversing a visual LTR string,</li>
- * <li><visual input, logical output>: unless the input direction is RTL, this
- * corresponds to an "inverse bidi algorithm" in <code>UBiDi</code> with the
- * reordering mode set to <code>UBIDI_REORDER_INVERSE_LIKE_DIRECT</code>.
- * Visual RTL mode is not not supported by <code>UBiDi</code> and is
- * accomplished through reversing a visual LTR string,</li>
- * <li><logical input, logical output>: if the input and output base directions
- * mismatch, this corresponds to the <code>UBiDi</code> implementation with the
- * reordering mode set to <code>UBIDI_REORDER_RUNS_ONLY</code>; and if the
- * input and output base directions are identical, the transformation engine
- * will only handle character mirroring and Arabic shaping operations without
- * reordering,</li>
- * <li><visual input, visual output>: this reordering mode is not supported by
- * the <code>UBiDi</code> engine; it implies character mirroring, Arabic
- * shaping, and - if the input/output base directions mismatch -  string
- * reverse operations.</li>
- * </ul>
+ *
+ *   - <logical input, visual output>: unless the output direction is RTL, this
+ *     corresponds to a normal operation of the Bidi algorithm as described in the
+ *     Unicode Technical Report and implemented by `UBiDi` when the
+ *     reordering mode is set to `UBIDI_REORDER_DEFAULT`. Visual RTL
+ *     mode is not supported by `UBiDi` and is accomplished through
+ *     reversing a visual LTR string,
+ *
+ *   - <visual input, logical output>: unless the input direction is RTL, this
+ *     corresponds to an "inverse bidi algorithm" in `UBiDi` with the
+ *     reordering mode set to `UBIDI_REORDER_INVERSE_LIKE_DIRECT`.
+ *     Visual RTL mode is not not supported by `UBiDi` and is
+ *     accomplished through reversing a visual LTR string,
+ *
+ *   - <logical input, logical output>: if the input and output base directions
+ *     mismatch, this corresponds to the `UBiDi` implementation with the
+ *     reordering mode set to `UBIDI_REORDER_RUNS_ONLY`; and if the
+ *     input and output base directions are identical, the transformation engine
+ *     will only handle character mirroring and Arabic shaping operations without
+ *     reordering,
+ *
+ *   - <visual input, visual output>: this reordering mode is not supported by
+ *     the `UBiDi` engine; it implies character mirroring, Arabic
+ *     shaping, and - if the input/output base directions mismatch -  string
+ *     reverse operations.
  * @see ubidi_setInverse
  * @see ubidi_setReorderingMode
  * @see UBIDI_REORDER_DEFAULT
@@ -142,10 +150,10 @@ typedef struct UBiDiTransform UBiDiTransform;
  * calling <code>ubidi_setPara</code> with
  * <code>paraLevel == UBIDI_DEFAULT_RTL</code>,</li>
  * <li><Visual LTR, Logical LTR>: this is equivalent to
- * calling <code>ubidi_setInverse(UBiDi*, TRUE)</code> and then
+ * calling <code>ubidi_setInverse(UBiDi*, true)</code> and then
  * <code>ubidi_setPara</code> with <code>paraLevel == UBIDI_LTR</code>,</li>
  * <li><Visual LTR, Logical RTL>: this is equivalent to
- * calling <code>ubidi_setInverse(UBiDi*, TRUE)</code> and then
+ * calling <code>ubidi_setInverse(UBiDi*, true)</code> and then
  * <code>ubidi_setPara</code> with <code>paraLevel == UBIDI_RTL</code>.</li>
  * </ul>
  * All combinations that involve the Visual RTL scheme are unsupported by
@@ -240,7 +248,7 @@ typedef struct UBiDiTransform UBiDiTransform;
  * @see u_shapeArabic
  * @stable ICU 58
  */
-U_STABLE uint32_t U_EXPORT2
+U_CAPI uint32_t U_EXPORT2
 ubiditransform_transform(UBiDiTransform *pBiDiTransform,
             const UChar *src, int32_t srcLength,
             UChar *dest, int32_t destSize,
@@ -286,14 +294,14 @@ ubiditransform_transform(UBiDiTransform *pBiDiTransform,
  * @return An empty <code>UBiDiTransform</code> object.
  * @stable ICU 58
  */
-U_STABLE UBiDiTransform* U_EXPORT2
+U_CAPI UBiDiTransform* U_EXPORT2
 ubiditransform_open(UErrorCode *pErrorCode);
 
 /**
  * Deallocates the given <code>UBiDiTransform</code> object.
  * @stable ICU 58
  */
-U_STABLE void U_EXPORT2
+U_CAPI void U_EXPORT2
 ubiditransform_close(UBiDiTransform *pBidiTransform);
 
 #if U_SHOW_CPLUSPLUS_API

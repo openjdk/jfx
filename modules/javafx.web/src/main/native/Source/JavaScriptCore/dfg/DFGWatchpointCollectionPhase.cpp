@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "ArrayPrototype.h"
-#include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 // FIXME: Remove this phase entirely by moving the addLazily() calls into either the backend or
 // into the phase that performs the optimization. Moving the calls into the backend makes the most
@@ -45,7 +43,7 @@
 namespace JSC { namespace DFG {
 
 class WatchpointCollectionPhase : public Phase {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
 public:
     WatchpointCollectionPhase(Graph& graph)
@@ -73,7 +71,7 @@ private:
     void handle()
     {
         switch (m_node->op()) {
-        case IsUndefined:
+        case TypeOfIsUndefined:
             handleMasqueradesAsUndefined();
             break;
 

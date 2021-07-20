@@ -27,37 +27,47 @@
 #include "config.h"
 #include "CanvasGradient.h"
 
+#include "CanvasBase.h"
 #include "CanvasStyle.h"
+#include "Gradient.h"
 
 namespace WebCore {
 
-CanvasGradient::CanvasGradient(const FloatPoint& p0, const FloatPoint& p1)
+CanvasGradient::CanvasGradient(const FloatPoint& p0, const FloatPoint& p1, CanvasBase& canvasBase)
     : m_gradient(Gradient::create(Gradient::LinearData { p0, p1 }))
+    , m_canvas(canvasBase)
 {
 }
 
-CanvasGradient::CanvasGradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1)
+CanvasGradient::CanvasGradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, CanvasBase& canvasBase)
     : m_gradient(Gradient::create(Gradient::RadialData { p0, p1, r0, r1, 1 }))
+    , m_canvas(canvasBase)
 {
 }
+
+Ref<CanvasGradient> CanvasGradient::create(const FloatPoint& p0, const FloatPoint& p1, CanvasBase& canvasBase)
+{
+    return adoptRef(*new CanvasGradient(p0, p1, canvasBase));
+}
+
+Ref<CanvasGradient> CanvasGradient::create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, CanvasBase& canvasBase)
+{
+    return adoptRef(*new CanvasGradient(p0, r0, p1, r1, canvasBase));
+}
+
+CanvasGradient::~CanvasGradient() = default;
 
 ExceptionOr<void> CanvasGradient::addColorStop(float value, const String& colorString)
 {
     if (!(value >= 0 && value <= 1))
         return Exception { IndexSizeError };
 
-    // Passing null for canvas ensures that currentColor is treated as black,
-    // as required by the standard.
-    Color color = parseColorOrCurrentColor(colorString, nullptr /*canvas*/);
-    if (!color.isValid()) {
-#if ENABLE(DASHBOARD_SUPPORT)
-        if (m_dashboardCompatibilityMode)
-            return { };
-#endif
+    // Treat currentColor as black, as required by the standard.
+    Color color = isCurrentColorString(colorString) ? Color::black : parseColor(colorString, m_canvas);
+    if (!color.isValid())
         return Exception { SyntaxError };
-    }
 
-    m_gradient->addColorStop(value, color);
+    m_gradient->addColorStop({ value, WTFMove(color) });
     return { };
 }
 

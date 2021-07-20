@@ -28,20 +28,31 @@
 #include "AlignedMemoryAllocator.h"
 #include <wtf/Gigacage.h>
 
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+#include <wtf/DebugHeap.h>
+#endif
+
 namespace JSC {
 
-class GigacageAlignedMemoryAllocator : public AlignedMemoryAllocator {
+class GigacageAlignedMemoryAllocator final : public AlignedMemoryAllocator {
 public:
     GigacageAlignedMemoryAllocator(Gigacage::Kind);
-    ~GigacageAlignedMemoryAllocator();
+    ~GigacageAlignedMemoryAllocator() final;
 
-    void* tryAllocateAlignedMemory(size_t alignment, size_t size) override;
-    void freeAlignedMemory(void*) override;
+    void* tryAllocateAlignedMemory(size_t alignment, size_t size) final;
+    void freeAlignedMemory(void*) final;
 
-    void dump(PrintStream&) const override;
+    void dump(PrintStream&) const final;
+
+    void* tryAllocateMemory(size_t) final;
+    void freeMemory(void*) final;
+    void* tryReallocateMemory(void*, size_t) final;
 
 private:
     Gigacage::Kind m_kind;
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    WTF::DebugHeap m_heap;
+#endif
 };
 
 } // namespace JSC

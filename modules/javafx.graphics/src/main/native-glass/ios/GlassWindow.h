@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@
 
 @end
 
-@interface GlassWindow : UIView
+@interface GlassWindow : UIView<UIKeyInput>
 {
     jobject             jWindow; // Glass java Window object
 
@@ -72,11 +72,11 @@
 }
 
 // Toplevel containers of all GlassWindows
-// once we support multiple screens on iOS - there will be one masterWindow/
-// masterWindowHost per screen; These windows are not part of FX/Glass window hierarchy, they
+// once we support multiple screens on iOS - there will be one mainWindow/
+// mainWindowHost per screen; These windows are not part of FX/Glass window hierarchy, they
 // serve us as OS containers. They allow us to easily change orientation for all GlassWindows, etc.
-+(GlassMainWindow *)  getMasterWindow;
-+(GlassMainView *) getMasterWindowHost;
++(GlassMainWindow *)  getMainWindow;
++(GlassMainView *) getMainWindowHost;
 
 - (void)setEnabled:(BOOL)enabled; // see isFocusable
 - (void)_setTransparent:(BOOL)state;

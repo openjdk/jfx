@@ -24,7 +24,7 @@
  */
 
 [
-    EnabledAtRuntime=UndoManagerAPI,
+    EnabledBySetting=UndoManagerAPI,
 ] dictionary UndoItemInit {
     required DOMString label;
     required VoidCallback undo;
@@ -32,11 +32,13 @@
 };
 
 [
-    EnabledAtRuntime=UndoManagerAPI,
+    EnabledBySetting=UndoManagerAPI,
     ImplementationLacksVTable,
     JSCustomMarkFunction,
     CustomIsReachable,
-    Constructor(UndoItemInit initDict),
+    Exposed=Window
 ] interface UndoItem {
+    constructor(UndoItemInit initDict);
+
     readonly attribute DOMString label;
 };

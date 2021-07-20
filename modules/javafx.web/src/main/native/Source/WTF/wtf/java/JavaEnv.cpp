@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
 JavaVM* jvm = 0;
 
 namespace WTF {
+JGClass comSunWebkitFileSystem;
 
 bool CheckAndClearException(JNIEnv* env)
 {
@@ -111,7 +112,11 @@ extern "C" {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
 #include <crtdbg.h>
 #endif
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_jfxwebkit(JavaVM* vm, void*)
+#else
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
+#endif
 {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
     _CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_FILE );
@@ -127,6 +132,21 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
     _CrtSetDbgFlag( tmpFlag );
 #endif
     jvm = vm;
+
+    JNIEnv* env = WTF::GetJavaEnv();
+
+    // Class com.sun.webkit.FileSystem is accessed from a newly created native
+    // thread from FileSystemJava. The class is resolved at initialization time
+    // as in the JNI_OnLoad callback the classloader used to load the native
+    // library is also used to load the target class, which is by construction
+    // the right one
+    static jclass fileSystemClass = env->FindClass("com/sun/webkit/FileSystem");
+
+    ASSERT(fileSystemClass);
+
+    static JGClass fileSystemRef(fileSystemClass);
+    WTF::comSunWebkitFileSystem = fileSystemRef;
+
     return JNI_VERSION_1_2;
 }
 

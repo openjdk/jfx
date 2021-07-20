@@ -22,16 +22,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-enum OverSampleType {
-    "none",
-    "2x",
-    "4x"
-};
-
 [
     Conditional=WEB_AUDIO,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    Exposed=Window
 ] interface WaveShaperNode : AudioNode {
-    attribute Float32Array curve;
+    [EnabledBySetting=ModernUnprefixedWebAudio] constructor(BaseAudioContext context, optional WaveShaperOptions options);
+
+    attribute Float32Array? curve;
     attribute OverSampleType oversample;
 };

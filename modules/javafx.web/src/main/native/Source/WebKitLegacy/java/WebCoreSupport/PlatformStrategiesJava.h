@@ -41,7 +41,7 @@ private:
     // PlatformStrategies
     LoaderStrategy* createLoaderStrategy() override;
     PasteboardStrategy* createPasteboardStrategy() override;
-
+    MediaStrategy* createMediaStrategy() override;
     BlobRegistry* createBlobRegistry() override;
 };
 } // namespace WebCore

@@ -154,7 +154,7 @@ DateFormat& DateFormat::operator=(const DateFormat& other)
           fCalendar = NULL;
         }
         if(other.fNumberFormat) {
-          fNumberFormat = (NumberFormat*)other.fNumberFormat->clone();
+          fNumberFormat = other.fNumberFormat->clone();
         } else {
           fNumberFormat = NULL;
         }
@@ -460,7 +460,12 @@ DateFormat::createInstanceForSkeleton(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
     }
-    DateFormat *result = createInstanceForSkeleton(skeleton, locale, status);
+    Locale localeWithCalendar = locale;
+    localeWithCalendar.setKeywordValue("calendar", calendar->getType(), status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    DateFormat *result = createInstanceForSkeleton(skeleton, localeWithCalendar, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -593,7 +598,7 @@ DateFormat::adoptNumberFormat(NumberFormat* newNumberFormat)
 void
 DateFormat::setNumberFormat(const NumberFormat& newNumberFormat)
 {
-    NumberFormat* newNumFmtClone = (NumberFormat*)newNumberFormat.clone();
+    NumberFormat* newNumFmtClone = newNumberFormat.clone();
     if (newNumFmtClone != NULL) {
         adoptNumberFormat(newNumFmtClone);
     }

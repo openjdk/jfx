@@ -45,10 +45,13 @@ void setCopyKeyState(bool _copyKeyIsDown)
     copyKeyIsDown = _copyKeyIsDown;
 }
 
-DragOperation DragController::dragOperation(const DragData& dragData)
+Optional<DragOperation> DragController::dragOperation(const DragData& dragData)
 {
     //Protects the page from opening URL by fake anchor drag.
-    return dragData.containsURL() && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
+    if (dragData.containsURL() && !m_didInitiateDrag)
+        return DragOperation::Copy;
+
+    return WTF::nullopt;
 }
 
 //uta: need to be fixed with usage of DragData pointer

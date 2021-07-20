@@ -38,6 +38,7 @@ public class SwingFXUtilsImpl {
         swFXUtilIOP = new SwingFXUtilsImplInteropN();
     }
 
+    @SuppressWarnings("removal")
     private static EventQueue getEventQueue() {
         return AccessController.doPrivileged(
                 (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());

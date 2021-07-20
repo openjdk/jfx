@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,21 +36,22 @@
 namespace WebCore {
 using namespace JSC;
 
-JSC::JSValue JSIDBCursor::key(JSC::ExecState& state) const
+JSC::JSValue JSIDBCursor::key(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(state, *this, wrapped().keyWrapper(), [&] {
-        return toJS(state, *state.lexicalGlobalObject(), wrapped().key());
+    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().keyWrapper(), [&] {
+        return toJS(lexicalGlobalObject, lexicalGlobalObject, wrapped().key());
     });
 }
 
-JSC::JSValue JSIDBCursor::primaryKey(JSC::ExecState& state) const
+JSC::JSValue JSIDBCursor::primaryKey(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(state, *this, wrapped().primaryKeyWrapper(), [&] {
-        return toJS(state, *state.lexicalGlobalObject(), wrapped().primaryKey());
+    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().primaryKeyWrapper(), [&] {
+        return toJS(lexicalGlobalObject, lexicalGlobalObject, wrapped().primaryKey());
     });
 }
 
-void JSIDBCursor::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSIDBCursor::visitAdditionalChildren(Visitor& visitor)
 {
     auto& cursor = wrapped();
     if (auto* request = cursor.request())
@@ -59,16 +60,18 @@ void JSIDBCursor::visitAdditionalChildren(SlotVisitor& visitor)
     cursor.primaryKeyWrapper().visit(visitor);
 }
 
-JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject* globalObject, Ref<IDBCursor>&& cursor)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSIDBCursor);
+
+JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<IDBCursor>&& cursor)
 {
     if (is<IDBCursorWithValue>(cursor))
         return createWrapper<IDBCursorWithValue>(globalObject, WTFMove(cursor));
     return createWrapper<IDBCursor>(globalObject, WTFMove(cursor));
 }
 
-JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, IDBCursor& cursor)
+JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, IDBCursor& cursor)
 {
-    return wrap(state, globalObject, cursor);
+    return wrap(lexicalGlobalObject, globalObject, cursor);
 }
 
 } // namespace WebCore

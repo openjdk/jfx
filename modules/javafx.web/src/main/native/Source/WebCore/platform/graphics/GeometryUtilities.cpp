@@ -32,7 +32,7 @@ namespace WebCore {
 float euclidianDistance(const FloatPoint& p1, const FloatPoint& p2)
 {
     FloatSize delta = p1 - p2;
-    return sqrt(delta.width() * delta.width() + delta.height() * delta.height());
+    return std::hypot(delta.width(), delta.height());
 }
 
 float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c)
@@ -77,22 +77,24 @@ bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoi
 IntRect unionRect(const Vector<IntRect>& rects)
 {
     IntRect result;
-
-    size_t count = rects.size();
-    for (size_t i = 0; i < count; ++i)
-        result.unite(rects[i]);
-
+    for (auto& rect : rects)
+        result.unite(rect);
     return result;
 }
 
 FloatRect unionRect(const Vector<FloatRect>& rects)
 {
     FloatRect result;
+    for (auto& rect : rects)
+        result.unite(rect);
+    return result;
+}
 
-    size_t count = rects.size();
-    for (size_t i = 0; i < count; ++i)
-        result.unite(rects[i]);
-
+FloatRect unionRectIgnoringZeroRects(const Vector<FloatRect>& rects)
+{
+    FloatRect result;
+    for (auto& rect : rects)
+        result.uniteIfNonZero(rect);
     return result;
 }
 

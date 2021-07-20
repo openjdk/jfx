@@ -28,6 +28,7 @@
 
 #include "RenderFullScreen.h"
 
+#include "FullscreenManager.h"
 #include "RenderBlockFlow.h"
 #include "RenderLayer.h"
 #include "RenderLayerCompositor.h"
@@ -66,7 +67,7 @@ static RenderStyle createFullScreenStyle()
     auto fullscreenStyle = RenderStyle::create();
 
     // Create a stacking context:
-    fullscreenStyle.setZIndex(INT_MAX);
+    fullscreenStyle.setUsedZIndex(INT_MAX);
 
     fullscreenStyle.setFontDescription({ });
     fullscreenStyle.fontCascade().update(nullptr);
@@ -77,10 +78,10 @@ static RenderStyle createFullScreenStyle()
     fullscreenStyle.setFlexDirection(FlexDirection::Column);
 
     fullscreenStyle.setPosition(PositionType::Fixed);
-    fullscreenStyle.setWidth(Length(100.0, Percent));
-    fullscreenStyle.setHeight(Length(100.0, Percent));
-    fullscreenStyle.setLeft(Length(0, WebCore::Fixed));
-    fullscreenStyle.setTop(Length(0, WebCore::Fixed));
+    fullscreenStyle.setWidth(Length(100.0, LengthType::Percent));
+    fullscreenStyle.setHeight(Length(100.0, LengthType::Percent));
+    fullscreenStyle.setLeft(Length(0, LengthType::Fixed));
+    fullscreenStyle.setTop(Length(0, LengthType::Fixed));
 
     fullscreenStyle.setBackgroundColor(Color::black);
 
@@ -99,7 +100,7 @@ RenderPtr<RenderFullScreen> RenderFullScreen::wrapNewRenderer(RenderTreeBuilder&
     builder.attach(fullscreenRenderer, WTFMove(renderer));
     fullscreenRenderer.setNeedsLayoutAndPrefWidthsRecalc();
 
-    document.setFullScreenRenderer(builder, fullscreenRenderer);
+    document.fullscreenManager().setFullscreenRenderer(builder, fullscreenRenderer);
 
     return newFullscreenRenderer;
 }
@@ -136,7 +137,7 @@ void RenderFullScreen::wrapExistingRenderer(RenderElement& renderer, Document& d
     builder.attach(fullscreenRenderer, WTFMove(toMove));
     fullscreenRenderer.setNeedsLayoutAndPrefWidthsRecalc();
 
-    document.setFullScreenRenderer(builder, fullscreenRenderer);
+    document.fullscreenManager().setFullscreenRenderer(builder, fullscreenRenderer);
 }
 
 void RenderFullScreen::unwrapRenderer(bool& requiresRenderTreeRebuild)
@@ -170,7 +171,7 @@ void RenderFullScreen::unwrapRenderer(bool& requiresRenderTreeRebuild)
             // may have set one on the child, and we don't want to leave that
             // lying around on the child.
             if (is<RenderBox>(*child))
-                downcast<RenderBox>(*child).clearOverrideContentSize();
+                downcast<RenderBox>(*child).clearOverridingContentSize();
             auto childToMove = builder.detach(*child->parent(), *child);
             builder.attach(*parent(), WTFMove(childToMove), this);
             parent()->setNeedsLayoutAndPrefWidthsRecalc();

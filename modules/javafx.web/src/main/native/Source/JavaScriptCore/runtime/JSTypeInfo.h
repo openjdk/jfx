@@ -1,6 +1,6 @@
 // -*- mode: c++; c-basic-offset: 4 -*-
 /*
- * Copyright (C) 2008, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,33 +37,40 @@ class LLIntOffsetsExtractor;
 
 // Inline flags.
 
-static const unsigned MasqueradesAsUndefined = 1; // WebCore uses MasqueradesAsUndefined to make document.all undetectable.
-static const unsigned ImplementsDefaultHasInstance = 1 << 1;
-static const unsigned OverridesGetCallData = 1 << 2; // Need this flag if you implement [[Callable]] interface, which means overriding getCallData. The object may not be callable since getCallData can say it is not callable.
-static const unsigned OverridesGetOwnPropertySlot = 1 << 3;
-static const unsigned OverridesToThis = 1 << 4; // If this is false then this returns something other than 'this'. Non-object cells that are visible to JS have this set as do some exotic objects.
-static const unsigned HasStaticPropertyTable = 1 << 5;
-static const unsigned TypeInfoPerCellBit = 1 << 7; // Unlike other inline flags, this will only be set on the cell itself and will not be set on the Structure.
+static constexpr unsigned MasqueradesAsUndefined = 1; // WebCore uses MasqueradesAsUndefined to make document.all undetectable.
+static constexpr unsigned ImplementsDefaultHasInstance = 1 << 1;
+static constexpr unsigned OverridesGetCallData = 1 << 2; // Need this flag if you implement [[Callable]] interface, which means overriding getCallData. The object may not be callable since getCallData can say it is not callable.
+static constexpr unsigned OverridesGetOwnPropertySlot = 1 << 3;
+static constexpr unsigned OverridesToThis = 1 << 4; // If this is false then this returns something other than 'this'. Non-object cells that are visible to JS have this set as do some exotic objects.
+static constexpr unsigned HasStaticPropertyTable = 1 << 5;
+static constexpr unsigned TypeInfoPerCellBit = 1 << 7; // Unlike other inline flags, this will only be set on the cell itself and will not be set on the Structure.
 
 // Out of line flags.
 
-static const unsigned ImplementsHasInstance = 1 << 8;
-static const unsigned OverridesGetPropertyNames = 1 << 9;
-static const unsigned ProhibitsPropertyCaching = 1 << 10;
-static const unsigned GetOwnPropertySlotIsImpure = 1 << 11;
-static const unsigned NewImpurePropertyFiresWatchpoints = 1 << 12;
-static const unsigned IsImmutablePrototypeExoticObject = 1 << 13;
-static const unsigned GetOwnPropertySlotIsImpureForPropertyAbsence = 1 << 14;
-static const unsigned InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero = 1 << 15;
-static const unsigned StructureIsImmortal = 1 << 16;
+static constexpr unsigned ImplementsHasInstance = 1 << 8;
+static constexpr unsigned OverridesGetOwnPropertyNames = 1 << 9;
+static constexpr unsigned OverridesGetOwnSpecialPropertyNames = 1 << 10;
+static constexpr unsigned ProhibitsPropertyCaching = 1 << 11;
+static constexpr unsigned GetOwnPropertySlotIsImpure = 1 << 12;
+static constexpr unsigned NewImpurePropertyFiresWatchpoints = 1 << 13;
+static constexpr unsigned IsImmutablePrototypeExoticObject = 1 << 14;
+static constexpr unsigned GetOwnPropertySlotIsImpureForPropertyAbsence = 1 << 15;
+static constexpr unsigned InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero = 1 << 16;
+static constexpr unsigned StructureIsImmortal = 1 << 17;
+static constexpr unsigned HasPutPropertySecurityCheck = 1 << 18;
+static constexpr unsigned OverridesGetPrototype = 1 << 19;
+static constexpr unsigned GetOwnPropertySlotMayBeWrongAboutDontEnum = 1 << 20;
+
+static constexpr unsigned numberOfInlineBits = 8;
+static constexpr unsigned OverridesGetPrototypeOutOfLine = OverridesGetPrototype >> numberOfInlineBits;
 
 class TypeInfo {
 public:
     typedef uint8_t InlineTypeFlags;
     typedef uint16_t OutOfLineTypeFlags;
 
-    TypeInfo(JSType type, unsigned flags = 0)
-        : TypeInfo(type, flags & 0xff, flags >> 8)
+    TypeInfo(JSType type, unsigned flags)
+        : TypeInfo(type, flags & 0xff, flags >> numberOfInlineBits)
     {
         ASSERT(!(flags >> 24));
     }
@@ -81,24 +88,29 @@ public:
     bool isFinalObject() const { return type() == FinalObjectType; }
     bool isNumberObject() const { return type() == NumberObjectType; }
 
-    unsigned flags() const { return (static_cast<unsigned>(m_flags2) << 8) | static_cast<unsigned>(m_flags); }
-    bool masqueradesAsUndefined() const { return isSetOnFlags1(MasqueradesAsUndefined); }
-    bool implementsHasInstance() const { return isSetOnFlags2(ImplementsHasInstance); }
-    bool implementsDefaultHasInstance() const { return isSetOnFlags1(ImplementsDefaultHasInstance); }
-    bool overridesGetCallData() const { return isSetOnFlags1(OverridesGetCallData); }
+    unsigned flags() const { return (static_cast<unsigned>(m_flags2) << numberOfInlineBits) | static_cast<unsigned>(m_flags); }
+    bool masqueradesAsUndefined() const { return isSetOnFlags1<MasqueradesAsUndefined>(); }
+    bool implementsHasInstance() const { return isSetOnFlags2<ImplementsHasInstance>(); }
+    bool implementsDefaultHasInstance() const { return isSetOnFlags1<ImplementsDefaultHasInstance>(); }
+    bool overridesGetCallData() const { return isSetOnFlags1<OverridesGetCallData>(); }
     bool overridesGetOwnPropertySlot() const { return overridesGetOwnPropertySlot(inlineTypeFlags()); }
     static bool overridesGetOwnPropertySlot(InlineTypeFlags flags) { return flags & OverridesGetOwnPropertySlot; }
     static bool hasStaticPropertyTable(InlineTypeFlags flags) { return flags & HasStaticPropertyTable; }
     static bool perCellBit(InlineTypeFlags flags) { return flags & TypeInfoPerCellBit; }
-    bool overridesToThis() const { return isSetOnFlags1(OverridesToThis); }
-    bool structureIsImmortal() const { return isSetOnFlags2(StructureIsImmortal); }
-    bool overridesGetPropertyNames() const { return isSetOnFlags2(OverridesGetPropertyNames); }
-    bool prohibitsPropertyCaching() const { return isSetOnFlags2(ProhibitsPropertyCaching); }
-    bool getOwnPropertySlotIsImpure() const { return isSetOnFlags2(GetOwnPropertySlotIsImpure); }
-    bool getOwnPropertySlotIsImpureForPropertyAbsence() const { return isSetOnFlags2(GetOwnPropertySlotIsImpureForPropertyAbsence); }
-    bool newImpurePropertyFiresWatchpoints() const { return isSetOnFlags2(NewImpurePropertyFiresWatchpoints); }
-    bool isImmutablePrototypeExoticObject() const { return isSetOnFlags2(IsImmutablePrototypeExoticObject); }
-    bool interceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero() const { return isSetOnFlags2(InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero); }
+    bool overridesToThis() const { return isSetOnFlags1<OverridesToThis>(); }
+    bool structureIsImmortal() const { return isSetOnFlags2<StructureIsImmortal>(); }
+    bool overridesGetOwnPropertyNames() const { return isSetOnFlags2<OverridesGetOwnPropertyNames>(); }
+    bool overridesGetOwnSpecialPropertyNames() const { return isSetOnFlags2<OverridesGetOwnSpecialPropertyNames>(); }
+    bool overridesAnyFormOfGetOwnPropertyNames() const { return overridesGetOwnPropertyNames() || overridesGetOwnSpecialPropertyNames(); }
+    bool overridesGetPrototype() const { return isSetOnFlags2<OverridesGetPrototype>(); }
+    bool prohibitsPropertyCaching() const { return isSetOnFlags2<ProhibitsPropertyCaching>(); }
+    bool getOwnPropertySlotIsImpure() const { return isSetOnFlags2<GetOwnPropertySlotIsImpure>(); }
+    bool getOwnPropertySlotIsImpureForPropertyAbsence() const { return isSetOnFlags2<GetOwnPropertySlotIsImpureForPropertyAbsence>(); }
+    bool getOwnPropertySlotMayBeWrongAboutDontEnum() const { return isSetOnFlags2<GetOwnPropertySlotMayBeWrongAboutDontEnum>(); }
+    bool hasPutPropertySecurityCheck() const { return isSetOnFlags2<HasPutPropertySecurityCheck>(); }
+    bool newImpurePropertyFiresWatchpoints() const { return isSetOnFlags2<NewImpurePropertyFiresWatchpoints>(); }
+    bool isImmutablePrototypeExoticObject() const { return isSetOnFlags2<IsImmutablePrototypeExoticObject>(); }
+    bool interceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero() const { return isSetOnFlags2<InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero>(); }
 
     static bool isArgumentsType(JSType type)
     {
@@ -129,10 +141,21 @@ public:
 private:
     friend class LLIntOffsetsExtractor;
 
-    bool isSetOnFlags1(unsigned flag) const { ASSERT(flag <= (1 << 7)); return m_flags & flag; }
-    bool isSetOnFlags2(unsigned flag) const { ASSERT(flag >= (1 << 8)); return m_flags2 & (flag >> 8); }
+    template<unsigned flag>
+    bool isSetOnFlags1() const
+    {
+        static_assert(flag <= (1 << 7));
+        return m_flags & flag;
+    }
 
-    uint8_t m_type;
+    template<unsigned flag>
+    bool isSetOnFlags2() const
+    {
+        static_assert(flag >= (1 << numberOfInlineBits) && flag <= (1 << 24));
+        return m_flags2 & (flag >> numberOfInlineBits);
+    }
+
+    JSType m_type;
     uint8_t m_flags;
     uint16_t m_flags2;
 };

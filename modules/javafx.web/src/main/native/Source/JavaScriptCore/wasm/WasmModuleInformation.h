@@ -29,6 +29,7 @@
 
 #include "WasmFormat.h"
 
+#include <wtf/BitVector.h>
 #include <wtf/Optional.h>
 
 namespace JSC { namespace Wasm {
@@ -64,7 +65,17 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     // Currently, our wasm implementation allows only one memory and table.
     // If we need to remove this limitation, we would have MemoryInformation and TableInformation in the Vectors.
     uint32_t memoryCount() const { return memory ? 1 : 0; }
-    uint32_t tableCount() const { return tableInformation ? 1 : 0; }
+    uint32_t tableCount() const { return tables.size(); }
+    uint32_t elementCount() const { return elements.size(); }
+    uint32_t dataSegmentsCount() const { return numberOfDataSegments; }
+
+    const TableInformation& table(unsigned index) const { return tables[index]; }
+
+    const BitVector& referencedFunctions() const { return m_referencedFunctions; }
+    void addReferencedFunction(unsigned index) const { m_referencedFunctions.set(index); }
+
+    bool isDeclaredFunction(uint32_t index) const { return m_declaredFunctions.contains(index); }
+    void addDeclaredFunction(uint32_t index) { m_declaredFunctions.set(index); }
 
     Vector<Import> imports;
     Vector<SignatureIndex> importFunctionSignatureIndices;
@@ -79,11 +90,16 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     Optional<uint32_t> startFunctionIndexSpace;
     Vector<Segment::Ptr> data;
     Vector<Element> elements;
-    TableInformation tableInformation;
-    Vector<Global> globals;
+    Vector<TableInformation> tables;
+    Vector<GlobalInformation> globals;
     unsigned firstInternalGlobal { 0 };
+    uint32_t codeSectionSize { 0 };
     Vector<CustomSection> customSections;
     Ref<NameSection> nameSection;
+    uint32_t numberOfDataSegments { 0 };
+
+    BitVector m_declaredFunctions;
+    mutable BitVector m_referencedFunctions;
 };
 
 

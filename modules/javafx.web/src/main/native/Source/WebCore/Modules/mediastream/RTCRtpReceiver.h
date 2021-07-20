@@ -35,19 +35,23 @@
 #include "MediaStreamTrack.h"
 #include "RTCRtpReceiverBackend.h"
 #include "RTCRtpSynchronizationSource.h"
+#include "RTCRtpTransform.h"
 #include "ScriptWrappable.h"
 
 namespace WebCore {
 
+class DeferredPromise;
 class PeerConnectionBackend;
 struct RTCRtpCapabilities;
 
-class RTCRtpReceiver : public RefCounted<RTCRtpReceiver>, public ScriptWrappable  {
+class RTCRtpReceiver final : public RefCounted<RTCRtpReceiver>, public ScriptWrappable  {
+    WTF_MAKE_ISO_ALLOCATED(RTCRtpReceiver);
 public:
     static Ref<RTCRtpReceiver> create(PeerConnectionBackend& connection, Ref<MediaStreamTrack>&& track, std::unique_ptr<RTCRtpReceiverBackend>&& backend)
     {
         return adoptRef(*new RTCRtpReceiver(connection, WTFMove(track), WTFMove(backend)));
     }
+    ~RTCRtpReceiver();
 
     static Optional<RTCRtpCapabilities> getCapabilities(ScriptExecutionContext&, const String& kind);
 
@@ -63,12 +67,16 @@ public:
     RTCRtpReceiverBackend* backend() { return m_backend.get(); }
     void getStats(Ref<DeferredPromise>&&);
 
+    Optional<RTCRtpTransform::Internal> transform();
+    ExceptionOr<void> setTransform(Optional<RTCRtpTransform>&&);
+
 private:
     RTCRtpReceiver(PeerConnectionBackend&, Ref<MediaStreamTrack>&&, std::unique_ptr<RTCRtpReceiverBackend>&&);
 
     Ref<MediaStreamTrack> m_track;
     std::unique_ptr<RTCRtpReceiverBackend> m_backend;
     WeakPtr<PeerConnectionBackend> m_connection;
+    Optional<RTCRtpTransform> m_transform;
 };
 
 } // namespace WebCore

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "TextPaintStyle.h"
 
+#include "ColorUtilities.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
@@ -52,13 +53,17 @@ bool TextPaintStyle::operator==(const TextPaintStyle& other) const
 #if ENABLE(LETTERPRESS)
         && useLetterpressEffect == other.useLetterpressEffect
 #endif
+#if HAVE(OS_DARK_MODE_SUPPORT)
+        && useDarkAppearance == other.useDarkAppearance
+#endif
         && lineCap == other.lineCap && miterLimit == other.miterLimit;
 }
 
 bool textColorIsLegibleAgainstBackgroundColor(const Color& textColor, const Color& backgroundColor)
 {
-    // Semi-arbitrarily chose 65025 (255^2) value here after a few tests.
-    return differenceSquared(textColor, backgroundColor) > 65025;
+    // Uses the WCAG 2.0 definition of legibility: a contrast ratio of 4.5:1 or greater.
+    // https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast
+    return contrastRatio(textColor.toSRGBALossy<float>(), backgroundColor.toSRGBALossy<float>()) > 4.5;
 }
 
 static Color adjustColorForVisibilityOnBackground(const Color& textColor, const Color& backgroundColor)
@@ -66,12 +71,9 @@ static Color adjustColorForVisibilityOnBackground(const Color& textColor, const 
     if (textColorIsLegibleAgainstBackgroundColor(textColor, backgroundColor))
         return textColor;
 
-    int distanceFromWhite = differenceSquared(textColor, Color::white);
-    int distanceFromBlack = differenceSquared(textColor, Color::black);
-    if (distanceFromWhite < distanceFromBlack)
-        return textColor.dark();
-
-    return textColor.light();
+    if (textColor.luminance() > 0.5)
+        return textColor.darkened();
+    return textColor.lightened();
 }
 
 TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& lineStyle, const PaintInfo& paintInfo)
@@ -81,6 +83,11 @@ TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& line
 #if ENABLE(LETTERPRESS)
     paintStyle.useLetterpressEffect = lineStyle.textDecorationsInEffect().contains(TextDecoration::Letterpress);
 #endif
+
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    paintStyle.useDarkAppearance = frame.document() ? frame.document()->useDarkAppearance(&lineStyle) : false;
+#endif
+
     auto viewportSize = frame.view() ? frame.view()->size() : IntSize();
     paintStyle.strokeWidth = lineStyle.computedStrokeWidth(viewportSize);
     paintStyle.paintOrder = lineStyle.paintOrder();
@@ -175,22 +182,26 @@ void updateGraphicsContext(GraphicsContext& context, const TextPaintStyle& paint
     TextDrawingModeFlags newMode = mode;
 #if ENABLE(LETTERPRESS)
     if (paintStyle.useLetterpressEffect)
-        newMode |= TextModeLetterpress;
+        newMode.add(TextDrawingMode::Letterpress);
     else
-        newMode &= ~TextModeLetterpress;
+        newMode.remove(TextDrawingMode::Letterpress);
 #endif
     if (paintStyle.strokeWidth > 0 && paintStyle.strokeColor.isVisible())
-        newMode |= TextModeStroke;
+        newMode.add(TextDrawingMode::Stroke);
     if (mode != newMode) {
         context.setTextDrawingMode(newMode);
         mode = newMode;
     }
 
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    context.setUseDarkAppearance(paintStyle.useDarkAppearance);
+#endif
+
     Color fillColor = fillColorType == UseEmphasisMarkColor ? paintStyle.emphasisMarkColor : paintStyle.fillColor;
-    if (mode & TextModeFill && (fillColor != context.fillColor()))
+    if (mode.contains(TextDrawingMode::Fill) && (fillColor != context.fillColor()))
         context.setFillColor(fillColor);
 
-    if (mode & TextModeStroke) {
+    if (mode & TextDrawingMode::Stroke) {
         if (paintStyle.strokeColor != context.strokeColor())
             context.setStrokeColor(paintStyle.strokeColor);
         if (paintStyle.strokeWidth != context.strokeThickness())

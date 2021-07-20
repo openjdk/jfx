@@ -84,6 +84,7 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
     }
 
     LinuxInputDevice addDevice(LinuxInputDevice device, String name) {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPermission(new AllPermission());
@@ -107,6 +108,7 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
     }
 
     void removeDevice(LinuxInputDevice device) {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPermission(new AllPermission());

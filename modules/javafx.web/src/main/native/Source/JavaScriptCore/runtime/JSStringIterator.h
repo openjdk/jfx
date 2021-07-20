@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,31 +26,61 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include "JSInternalFieldObjectImpl.h"
 
 namespace JSC {
 
-class JSStringIterator final : public JSNonFinalObject {
+class JSStringIterator final : public JSInternalFieldObjectImpl<2> {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSInternalFieldObjectImpl<2>;
+
+    enum class Field : uint8_t {
+        Index = 0,
+        IteratedString,
+    };
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        ASSERT_UNUSED(inlineCapacity, inlineCapacity == 0U);
+        return sizeof(JSStringIterator);
     }
 
-    static JSStringIterator* create(ExecState* exec, Structure* structure, JSString* iteratedString)
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
     {
-        VM& vm = exec->vm();
+        return vm.stringIteratorSpace<mode>();
+    }
+
+    static std::array<JSValue, numberOfInternalFields> initialValues()
+    {
+        return { {
+            jsNumber(0),
+            jsNull(),
+        } };
+    }
+
+    const WriteBarrier<Unknown>& internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
+    WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSStringIteratorType, StructureFlags), info());
+    }
+
+    static JSStringIterator* create(VM& vm, Structure* structure, JSString* iteratedString)
+    {
         JSStringIterator* instance = new (NotNull, allocateCell<JSStringIterator>(vm.heap)) JSStringIterator(vm, structure);
-        instance->finishCreation(vm, structure->globalObject(), iteratedString);
+        instance->finishCreation(vm, iteratedString);
         return instance;
     }
 
-    JSValue iteratedValue(ExecState*) const;
-    JSStringIterator* clone(ExecState*);
+    JSValue iteratedString() const { return internalField(Field::IteratedString).get(); }
+    JSValue index() const { return internalField(Field::Index).get(); }
+    JSStringIterator* clone(JSGlobalObject*);
+
+    DECLARE_VISIT_CHILDREN;
 
 private:
     JSStringIterator(VM& vm, Structure* structure)
@@ -57,7 +88,7 @@ private:
     {
     }
 
-    void finishCreation(VM&, JSGlobalObject*, JSString* iteratedString);
+    void finishCreation(VM&, JSString* iteratedString);
 };
 
 } // namespace JSC

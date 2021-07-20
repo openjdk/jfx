@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
  * Copyright (C) 2016 Canon Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,6 +38,7 @@ WEBCORE_EXPORT extern const char* const errorDomainWebKitInternal; // Used for e
 WEBCORE_EXPORT extern const char* const errorDomainWebKitServiceWorker; // Used for errors that happen when loading a resource from a service worker.
 
 class ResourceErrorBase {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT ResourceError isolatedCopy() const;
 
@@ -94,7 +96,24 @@ private:
     const ResourceError& asResourceError() const;
 };
 
+WEBCORE_EXPORT ResourceError internalError(const URL&);
+
 inline bool operator==(const ResourceError& a, const ResourceError& b) { return ResourceErrorBase::compare(a, b); }
 inline bool operator!=(const ResourceError& a, const ResourceError& b) { return !(a == b); }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ResourceErrorBase::Type> {
+    using values = EnumValues<
+        WebCore::ResourceErrorBase::Type,
+        WebCore::ResourceErrorBase::Type::Null,
+        WebCore::ResourceErrorBase::Type::General,
+        WebCore::ResourceErrorBase::Type::AccessControl,
+        WebCore::ResourceErrorBase::Type::Cancellation,
+        WebCore::ResourceErrorBase::Type::Timeout
+    >;
+};
+
+} // namespace WTF

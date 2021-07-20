@@ -31,22 +31,34 @@
 #include "HTTPHeaderMap.h"
 #include "NetworkLoadMetrics.h"
 #include "ParsedContentRange.h"
+#include <wtf/Box.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/Markable.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
 
 namespace WebCore {
 
+namespace DataURLDecoder {
+struct Result;
+}
+
 class ResourceResponse;
 
 bool isScriptAllowedByNosniff(const ResourceResponse&);
 
-// Do not use this class directly, use the class ResponseResponse instead
+enum class UsedLegacyTLS : bool { No, Yes };
+static constexpr unsigned bitWidthOfUsedLegacyTLS = 1;
+static_assert(static_cast<unsigned>(UsedLegacyTLS::Yes) <= ((1U << bitWidthOfUsedLegacyTLS) - 1));
+
+// Do not use this class directly, use the class ResourceResponse instead
 class ResourceResponseBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Type : uint8_t { Basic, Cors, Default, Error, Opaque, Opaqueredirect };
+    static constexpr unsigned bitWidthOfType = 3;
     enum class Tainting : uint8_t { Basic, Cors, Opaque, Opaqueredirect };
+    static constexpr unsigned bitWidthOfTainting = 2;
 
     static bool isRedirectionStatusCode(int code) { return code == 301 || code == 302 || code == 303 || code == 307 || code == 308; }
 
@@ -64,17 +76,18 @@ public:
         String httpStatusText;
         String httpVersion;
         HTTPHeaderMap httpHeaderFields;
-        NetworkLoadMetrics networkLoadMetrics;
+        Optional<NetworkLoadMetrics> networkLoadMetrics;
         Type type;
         Tainting tainting;
         bool isRedirected;
+        bool isRangeRequested;
     };
 
     CrossThreadData crossThreadData() const;
     static ResourceResponse fromCrossThreadData(CrossThreadData&&);
 
     bool isNull() const { return m_isNull; }
-    WEBCORE_EXPORT bool isHTTP() const;
+    WEBCORE_EXPORT bool isInHTTPFamily() const;
     WEBCORE_EXPORT bool isSuccessful() const;
 
     WEBCORE_EXPORT const URL& url() const;
@@ -127,7 +140,10 @@ public:
     WEBCORE_EXPORT static String sanitizeSuggestedFilename(const String&);
 
     WEBCORE_EXPORT void includeCertificateInfo() const;
+    void setCertificateInfo(CertificateInfo&& info) { m_certificateInfo = WTFMove(info); }
     const Optional<CertificateInfo>& certificateInfo() const { return m_certificateInfo; };
+    bool usedLegacyTLS() const { return m_usedLegacyTLS == UsedLegacyTLS::Yes; }
+    void setUsedLegacyTLS(UsedLegacyTLS used) { m_usedLegacyTLS = used; }
 
     // These functions return parsed values of the corresponding response headers.
     WEBCORE_EXPORT bool cacheControlContainsNoCache() const;
@@ -136,13 +152,17 @@ public:
     WEBCORE_EXPORT bool cacheControlContainsImmutable() const;
     WEBCORE_EXPORT bool hasCacheValidatorFields() const;
     WEBCORE_EXPORT Optional<Seconds> cacheControlMaxAge() const;
+    WEBCORE_EXPORT Optional<Seconds> cacheControlStaleWhileRevalidate() const;
     WEBCORE_EXPORT Optional<WallTime> date() const;
     WEBCORE_EXPORT Optional<Seconds> age() const;
     WEBCORE_EXPORT Optional<WallTime> expires() const;
     WEBCORE_EXPORT Optional<WallTime> lastModified() const;
     const ParsedContentRange& contentRange() const;
 
-    enum class Source : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache };
+    enum class Source : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache, DOMCache, InspectorOverride };
+    static constexpr unsigned bitWidthOfSource = 4;
+    static_assert(static_cast<unsigned>(Source::InspectorOverride) <= ((1U << bitWidthOfSource) - 1));
+
     WEBCORE_EXPORT Source source() const;
     void setSource(Source source)
     {
@@ -153,7 +173,16 @@ public:
     // FIXME: This should be eliminated from ResourceResponse.
     // Network loading metrics should be delivered via didFinishLoad
     // and should not be part of the ResourceResponse.
-    NetworkLoadMetrics& deprecatedNetworkLoadMetrics() const { return m_networkLoadMetrics; }
+    const NetworkLoadMetrics* deprecatedNetworkLoadMetricsOrNull() const
+    {
+        if (m_networkLoadMetrics)
+            return m_networkLoadMetrics.get();
+        return nullptr;
+    }
+    void setDeprecatedNetworkLoadMetrics(Box<NetworkLoadMetrics>&& metrics)
+    {
+        m_networkLoadMetrics = WTFMove(metrics);
+    }
 
     // The ResourceResponse subclass may "shadow" this method to provide platform-specific memory usage information
     unsigned memoryUsage() const
@@ -171,14 +200,22 @@ public:
     void setTainting(Tainting tainting) { m_tainting = tainting; }
     Tainting tainting() const { return m_tainting; }
 
-    static ResourceResponse filter(const ResourceResponse&);
+    enum class PerformExposeAllHeadersCheck : uint8_t { Yes, No };
+    static ResourceResponse filter(const ResourceResponse&, PerformExposeAllHeadersCheck);
 
     WEBCORE_EXPORT static ResourceResponse syntheticRedirectResponse(const URL& fromURL, const URL& toURL);
 
     static bool compare(const ResourceResponse&, const ResourceResponse&);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, ResourceResponseBase&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, ResourceResponseBase&);
+
+    bool isRangeRequested() const { return m_isRangeRequested; }
+    void setAsRangeRequested() { m_isRangeRequested = true; }
+
+    bool containsInvalidHTTPHeaders() const;
+
+    WEBCORE_EXPORT static ResourceResponse dataURLResponse(const URL&, const DataURLDecoder::Result&);
 
 protected:
     enum InitLevel {
@@ -206,13 +243,13 @@ private:
 
 protected:
     URL m_url;
-    AtomicString m_mimeType;
+    AtomString m_mimeType;
     long long m_expectedContentLength { 0 };
-    AtomicString m_textEncodingName;
-    AtomicString m_httpStatusText;
-    AtomicString m_httpVersion;
+    AtomString m_textEncodingName;
+    AtomString m_httpStatusText;
+    AtomString m_httpVersion;
     HTTPHeaderMap m_httpHeaderFields;
-    mutable NetworkLoadMetrics m_networkLoadMetrics;
+    Box<NetworkLoadMetrics> m_networkLoadMetrics;
 
     mutable Optional<CertificateInfo> m_certificateInfo;
 
@@ -231,16 +268,17 @@ private:
     mutable bool m_haveParsedLastModifiedHeader : 1;
     mutable bool m_haveParsedContentRangeHeader : 1;
     bool m_isRedirected : 1;
+    bool m_isRangeRequested : 1;
 protected:
     bool m_isNull : 1;
-
+    unsigned m_initLevel : 3; // Controlled by ResourceResponse.
+    mutable UsedLegacyTLS m_usedLegacyTLS : bitWidthOfUsedLegacyTLS;
 private:
-    Source m_source { Source::Unknown };
-    Type m_type { Type::Default };
-    Tainting m_tainting { Tainting::Basic };
-
+    Tainting m_tainting : bitWidthOfTainting;
+    Source m_source : bitWidthOfSource;
+    Type m_type : bitWidthOfType;
 protected:
-    int m_httpStatusCode { 0 };
+    short m_httpStatusCode { 0 };
 };
 
 inline bool operator==(const ResourceResponse& a, const ResourceResponse& b) { return ResourceResponseBase::compare(a, b); }
@@ -264,63 +302,176 @@ void ResourceResponseBase::encode(Encoder& encoder) const
 
     // We don't want to put the networkLoadMetrics info
     // into the disk cache, because we will never use the old info.
-    if (Encoder::isIPCEncoder)
+    if constexpr (Encoder::isIPCEncoder)
         encoder << m_networkLoadMetrics;
 
     encoder << m_httpStatusCode;
     encoder << m_certificateInfo;
-    encoder.encodeEnum(m_source);
-    encoder.encodeEnum(m_type);
-    encoder.encodeEnum(m_tainting);
+    encoder << m_source;
+    encoder << m_type;
+    encoder << m_tainting;
     encoder << m_isRedirected;
+    UsedLegacyTLS usedLegacyTLS = m_usedLegacyTLS;
+    encoder << usedLegacyTLS;
+    encoder << m_isRangeRequested;
 }
 
 template<class Decoder>
 bool ResourceResponseBase::decode(Decoder& decoder, ResourceResponseBase& response)
 {
     ASSERT(response.m_isNull);
-    bool responseIsNull;
-    if (!decoder.decode(responseIsNull))
+    Optional<bool> responseIsNull;
+    decoder >> responseIsNull;
+    if (!responseIsNull)
         return false;
-    if (responseIsNull)
+    if (*responseIsNull)
         return true;
 
-    if (!decoder.decode(response.m_url))
-        return false;
-    if (!decoder.decode(response.m_mimeType))
-        return false;
-    int64_t expectedContentLength;
-    if (!decoder.decode(expectedContentLength))
-        return false;
-    response.m_expectedContentLength = expectedContentLength;
-    if (!decoder.decode(response.m_textEncodingName))
-        return false;
-    if (!decoder.decode(response.m_httpStatusText))
-        return false;
-    if (!decoder.decode(response.m_httpVersion))
-        return false;
-    if (!decoder.decode(response.m_httpHeaderFields))
-        return false;
-    // The networkLoadMetrics info is only send over IPC and not stored in disk cache.
-    if (Decoder::isIPCDecoder && !decoder.decode(response.m_networkLoadMetrics))
-        return false;
-    if (!decoder.decode(response.m_httpStatusCode))
-        return false;
-    if (!decoder.decode(response.m_certificateInfo))
-        return false;
-    if (!decoder.decodeEnum(response.m_source))
-        return false;
-    if (!decoder.decodeEnum(response.m_type))
-        return false;
-    if (!decoder.decodeEnum(response.m_tainting))
-        return false;
-    bool isRedirected = false;
-    if (!decoder.decode(isRedirected))
-        return false;
-    response.m_isRedirected = isRedirected;
     response.m_isNull = false;
+
+    Optional<URL> url;
+    decoder >> url;
+    if (!url)
+        return false;
+    response.m_url = WTFMove(*url);
+
+    Optional<String> mimeType;
+    decoder >> mimeType;
+    if (!mimeType)
+        return false;
+    response.m_mimeType = WTFMove(*mimeType);
+
+    Optional<int64_t> expectedContentLength;
+    decoder >> expectedContentLength;
+    if (!expectedContentLength)
+        return false;
+    response.m_expectedContentLength = *expectedContentLength;
+
+    Optional<AtomString> textEncodingName;
+    decoder >> textEncodingName;
+    if (!textEncodingName)
+        return false;
+    response.m_textEncodingName = WTFMove(*textEncodingName);
+
+    Optional<AtomString> httpStatusText;
+    decoder >> httpStatusText;
+    if (!httpStatusText)
+        return false;
+    response.m_httpStatusText = WTFMove(*httpStatusText);
+
+    Optional<AtomString> httpVersion;
+    decoder >> httpVersion;
+    if (!httpVersion)
+        return false;
+    response.m_httpVersion = WTFMove(*httpVersion);
+
+    Optional<HTTPHeaderMap> httpHeaderFields;
+    decoder >> httpHeaderFields;
+    if (!httpHeaderFields)
+        return false;
+    response.m_httpHeaderFields = WTFMove(*httpHeaderFields);
+
+    // The networkLoadMetrics info is only send over IPC and not stored in disk cache.
+    if constexpr (Decoder::isIPCDecoder) {
+        Optional<Box<NetworkLoadMetrics>> networkLoadMetrics;
+        decoder >> networkLoadMetrics;
+        if (!networkLoadMetrics)
+        return false;
+        response.m_networkLoadMetrics = WTFMove(*networkLoadMetrics);
+    }
+
+    Optional<short> httpStatusCode;
+    decoder >> httpStatusCode;
+    if (!httpStatusCode)
+        return false;
+    response.m_httpStatusCode = WTFMove(*httpStatusCode);
+
+    Optional<Optional<CertificateInfo>> certificateInfo;
+    decoder >> certificateInfo;
+    if (!certificateInfo)
+        return false;
+    response.m_certificateInfo = WTFMove(*certificateInfo);
+
+    Optional<Source> source;
+    decoder >> source;
+    if (!source)
+        return false;
+    response.m_source = WTFMove(*source);
+
+    Optional<Type> type;
+    decoder >> type;
+    if (!type)
+        return false;
+    response.m_type = WTFMove(*type);
+
+    Optional<Tainting> tainting;
+    decoder >> tainting;
+    if (!tainting)
+        return false;
+    response.m_tainting = WTFMove(*tainting);
+
+    Optional<bool> isRedirected;
+    decoder >> isRedirected;
+    if (!isRedirected)
+        return false;
+    response.m_isRedirected = WTFMove(*isRedirected);
+
+    Optional<UsedLegacyTLS> usedLegacyTLS;
+    decoder >> usedLegacyTLS;
+    if (!usedLegacyTLS)
+        return false;
+    response.m_usedLegacyTLS = WTFMove(*usedLegacyTLS);
+
+    Optional<bool> isRangeRequested;
+    decoder >> isRangeRequested;
+    if (!isRangeRequested)
+        return false;
+    response.m_isRangeRequested = WTFMove(*isRangeRequested);
 
     return true;
 }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ResourceResponseBase::Type> {
+    using values = EnumValues<
+        WebCore::ResourceResponseBase::Type,
+        WebCore::ResourceResponseBase::Type::Basic,
+        WebCore::ResourceResponseBase::Type::Cors,
+        WebCore::ResourceResponseBase::Type::Default,
+        WebCore::ResourceResponseBase::Type::Error,
+        WebCore::ResourceResponseBase::Type::Opaque,
+        WebCore::ResourceResponseBase::Type::Opaqueredirect
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ResourceResponseBase::Tainting> {
+    using values = EnumValues<
+        WebCore::ResourceResponseBase::Tainting,
+        WebCore::ResourceResponseBase::Tainting::Basic,
+        WebCore::ResourceResponseBase::Tainting::Cors,
+        WebCore::ResourceResponseBase::Tainting::Opaque,
+        WebCore::ResourceResponseBase::Tainting::Opaqueredirect
+    >;
+};
+
+
+template<> struct EnumTraits<WebCore::ResourceResponseBase::Source> {
+    using values = EnumValues<
+        WebCore::ResourceResponseBase::Source,
+        WebCore::ResourceResponseBase::Source::Unknown,
+        WebCore::ResourceResponseBase::Source::Network,
+        WebCore::ResourceResponseBase::Source::DiskCache,
+        WebCore::ResourceResponseBase::Source::DiskCacheAfterValidation,
+        WebCore::ResourceResponseBase::Source::MemoryCache,
+        WebCore::ResourceResponseBase::Source::MemoryCacheAfterValidation,
+        WebCore::ResourceResponseBase::Source::ServiceWorker,
+        WebCore::ResourceResponseBase::Source::ApplicationCache,
+        WebCore::ResourceResponseBase::Source::DOMCache,
+        WebCore::ResourceResponseBase::Source::InspectorOverride
+    >;
+};
+
+} // namespace WTF

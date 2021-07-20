@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ public class CellTest {
     }
 
     @Before public void setup() throws Exception {
-        cell = (Cell<String>) type.newInstance();
+        cell = (Cell<String>) type.getDeclaredConstructor().newInstance();
 
         // Empty TableCells can be selected, as long as the row they exist in
         // is not empty, so here we set a TableRow to ensure testing works
@@ -224,10 +224,17 @@ public class CellTest {
         assertTrue(cell.isEditable());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyEditableViaCSS() {
-//        cell.impl_cssSet("-fx-editable", false);
+        cell.setStyle("-fx-editable: false;");
+        cell.applyCss();
         assertTrue(cell.isEditable());
+
+        cell.setEditable(false);
+        assertFalse(cell.isEditable());
+
+        cell.setStyle("-fx-editable: true;");
+        cell.applyCss();
+        assertFalse(cell.isEditable());
     }
 
     /*********************************************************************

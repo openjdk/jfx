@@ -25,9 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLFunctionDeclaration.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -36,6 +37,7 @@ namespace WHLSL {
 namespace AST {
 
 class NativeFunctionDeclaration : public FunctionDeclaration {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     NativeFunctionDeclaration(FunctionDeclaration&& functionDeclaration)
         : FunctionDeclaration(WTFMove(functionDeclaration))
@@ -60,4 +62,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_FUNCTION_DECLARATION(NativeFunctionDeclaration, isNativeFunctionDeclaration())
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

@@ -25,8 +25,12 @@
 
 #include "ElementIterator.h"
 #include "NodeRareData.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(EmptyNodeList);
+WTF_MAKE_ISO_ALLOCATED_IMPL(ChildNodeList);
 
 EmptyNodeList::~EmptyNodeList()
 {
@@ -35,7 +39,6 @@ EmptyNodeList::~EmptyNodeList()
 
 ChildNodeList::ChildNodeList(ContainerNode& parent)
     : m_parent(parent)
-    , m_indexCache(*this)
 {
 }
 
@@ -83,7 +86,7 @@ void ChildNodeList::collectionTraverseBackward(Node*& current, unsigned count) c
 
 void ChildNodeList::invalidateCache()
 {
-    m_indexCache.invalidate(*this);
+    m_indexCache.invalidate();
 }
 
 } // namespace WebCore

@@ -21,11 +21,14 @@
 #pragma once
 
 #include <wtf/Optional.h>
+#include <wtf/RetainPtr.h>
 #include <wtf/spi/cf/CFStringSPI.h>
+#include <wtf/text/StringView.h>
 
 namespace WTF {
 
 class TextBreakIteratorCF {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Mode {
         Caret,

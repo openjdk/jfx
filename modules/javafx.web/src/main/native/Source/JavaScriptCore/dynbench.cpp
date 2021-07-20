@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "JSObject.h"
 #include "VM.h"
 #include <wtf/MainThread.h>
+#include <wtf/text/StringCommon.h>
 
 using namespace JSC;
 
@@ -54,7 +55,7 @@ unsigned requestedIterationCount;
 template<typename Callback>
 NEVER_INLINE void benchmarkImpl(const char* name, unsigned iterationCount, const Callback& callback)
 {
-    if (nameFilter && !strcasestr(name, nameFilter))
+    if (nameFilter && WTF::findIgnoringASCIICaseWithoutLength(name, nameFilter) == WTF::notFound)
         return;
 
     if (requestedIterationCount)
@@ -87,53 +88,52 @@ int main(int argc, char** argv)
     }
 
     WTF::initializeMainThread();
-    JSC::initializeThreading();
+    JSC::initialize();
 
-    VM* vm = &VM::create(LargeHeap).leakRef();
+    VM& vm = VM::create(LargeHeap).leakRef();
     {
         JSLockHolder locker(vm);
 
         JSGlobalObject* globalObject =
-            JSGlobalObject::create(*vm, JSGlobalObject::createStructure(*vm, jsNull()));
-        ExecState* exec = globalObject->globalExec();
+            JSGlobalObject::create(vm, JSGlobalObject::createStructure(vm, jsNull()));
 
-        Identifier identF = Identifier::fromString(exec, "f");
-        Identifier identG = Identifier::fromString(exec, "g");
+        Identifier identF = Identifier::fromString(vm, "f");
+        Identifier identG = Identifier::fromString(vm, "g");
 
         Structure* objectStructure =
-            JSFinalObject::createStructure(*vm, globalObject, globalObject->objectPrototype(), 2);
+            JSFinalObject::createStructure(vm, globalObject, globalObject->objectPrototype(), 2);
 
         // Non-strict dynamic get by id:
-        JSValue object = JSFinalObject::create(*vm, objectStructure);
+        JSValue object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-            object.putInline(exec, identF, jsNumber(42), slot);
+            object.putInline(globalObject, identF, jsNumber(42), slot);
         }
         {
             PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-            object.putInline(exec, identG, jsNumber(43), slot);
+            object.putInline(globalObject, identG, jsNumber(43), slot);
         }
         benchmarkImpl(
             "Non Strict Dynamic Get By Id",
             1000000,
             [&] (unsigned iterationCount) {
                 for (unsigned i = iterationCount; i--;) {
-                    JSValue result = object.get(exec, identF);
+                    JSValue result = object.get(globalObject, identF);
                     CHECK(result == jsNumber(42));
-                    result = object.get(exec, identG);
+                    result = object.get(globalObject, identG);
                     CHECK(result == jsNumber(43));
                 }
             });
 
         // Non-strict dynamic put by id replace:
-        object = JSFinalObject::create(*vm, objectStructure);
+        object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-            object.putInline(exec, identF, jsNumber(42), slot);
+            object.putInline(globalObject, identF, jsNumber(42), slot);
         }
         {
             PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-            object.putInline(exec, identG, jsNumber(43), slot);
+            object.putInline(globalObject, identG, jsNumber(43), slot);
         }
         benchmarkImpl(
             "Non Strict Dynamic Put By Id Replace",
@@ -142,11 +142,11 @@ int main(int argc, char** argv)
                 for (unsigned i = iterationCount; i--;) {
                     {
                         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-                        object.putInline(exec, identF, jsNumber(i), slot);
+                        object.putInline(globalObject, identF, jsNumber(i), slot);
                     }
                     {
                         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-                        object.putInline(exec, identG, jsNumber(i), slot);
+                        object.putInline(globalObject, identG, jsNumber(i), slot);
                     }
                 }
             });
@@ -157,49 +157,49 @@ int main(int argc, char** argv)
             1000000,
             [&] (unsigned iterationCount) {
                 for (unsigned i = iterationCount; i--;) {
-                    JSValue object = JSFinalObject::create(*vm, objectStructure);
+                    JSValue object = JSFinalObject::create(vm, objectStructure);
                     {
                         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-                        object.putInline(exec, identF, jsNumber(i), slot);
+                        object.putInline(globalObject, identF, jsNumber(i), slot);
                     }
                     {
                         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
-                        object.putInline(exec, identG, jsNumber(i), slot);
+                        object.putInline(globalObject, identG, jsNumber(i), slot);
                     }
                 }
             });
 
         // Non-strict dynamic get by id with dynamic store context:
-        object = JSFinalObject::create(*vm, objectStructure);
+        object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false);
-            object.putInline(exec, identF, jsNumber(42), slot);
+            object.putInline(globalObject, identF, jsNumber(42), slot);
         }
         {
             PutPropertySlot slot(object, false);
-            object.putInline(exec, identG, jsNumber(43), slot);
+            object.putInline(globalObject, identG, jsNumber(43), slot);
         }
         benchmarkImpl(
             "Non Strict Dynamic Get By Id With Dynamic Store Context",
             1000000,
             [&] (unsigned iterationCount) {
                 for (unsigned i = iterationCount; i--;) {
-                    JSValue result = object.get(exec, identF);
+                    JSValue result = object.get(globalObject, identF);
                     CHECK(result == jsNumber(42));
-                    result = object.get(exec, identG);
+                    result = object.get(globalObject, identG);
                     CHECK(result == jsNumber(43));
                 }
             });
 
         // Non-strict dynamic put by id replace with dynamic store context:
-        object = JSFinalObject::create(*vm, objectStructure);
+        object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false);
-            object.putInline(exec, identF, jsNumber(42), slot);
+            object.putInline(globalObject, identF, jsNumber(42), slot);
         }
         {
             PutPropertySlot slot(object, false);
-            object.putInline(exec, identG, jsNumber(43), slot);
+            object.putInline(globalObject, identG, jsNumber(43), slot);
         }
         benchmarkImpl(
             "Non Strict Dynamic Put By Id Replace With Dynamic Store Context",
@@ -208,11 +208,11 @@ int main(int argc, char** argv)
                 for (unsigned i = iterationCount; i--;) {
                     {
                         PutPropertySlot slot(object, false);
-                        object.putInline(exec, identF, jsNumber(i), slot);
+                        object.putInline(globalObject, identF, jsNumber(i), slot);
                     }
                     {
                         PutPropertySlot slot(object, false);
-                        object.putInline(exec, identG, jsNumber(i), slot);
+                        object.putInline(globalObject, identG, jsNumber(i), slot);
                     }
                 }
             });
@@ -223,14 +223,14 @@ int main(int argc, char** argv)
             1000000,
             [&] (unsigned iterationCount) {
                 for (unsigned i = iterationCount; i--;) {
-                    JSValue object = JSFinalObject::create(*vm, objectStructure);
+                    JSValue object = JSFinalObject::create(vm, objectStructure);
                     {
                         PutPropertySlot slot(object, false);
-                        object.putInline(exec, identF, jsNumber(i), slot);
+                        object.putInline(globalObject, identF, jsNumber(i), slot);
                     }
                     {
                         PutPropertySlot slot(object, false);
-                        object.putInline(exec, identG, jsNumber(i), slot);
+                        object.putInline(globalObject, identG, jsNumber(i), slot);
                     }
                 }
             });

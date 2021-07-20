@@ -218,11 +218,19 @@ do {                                                                            
 }
 
 
-// retrieve main thread Java env asserting the call originated on main thread
+// Retrieve Java env, asserting the call originated on main thread.
+// Warn if the JVM has already been detached.
 #define GET_MAIN_JENV \
     assert(pthread_main_np() == 1); \
     if (jEnv == NULL) \
         GLASS_CALLSTACK("Java has been detached already, but someone is still trying to use it at ") \
+    JNIEnv *env = jEnv;
+
+// Retrieve Java env, asserting the call originated on main thread.
+// This variant is silent if the JVM has been detached, making it suitable
+// for use by dealloc methods, which are called by the auto-release mechanism.
+#define GET_MAIN_JENV_NOWARN \
+    assert(pthread_main_np() == 1); \
     JNIEnv *env = jEnv;
 
 #endif

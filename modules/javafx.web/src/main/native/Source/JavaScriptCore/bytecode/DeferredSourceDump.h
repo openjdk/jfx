@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CodeOrigin.h"
 #include "JITCode.h"
 #include "Strong.h"
 
@@ -34,17 +33,18 @@ namespace JSC {
 class CodeBlock;
 
 class DeferredSourceDump {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DeferredSourceDump(CodeBlock*);
-    DeferredSourceDump(CodeBlock*, CodeBlock* rootCodeBlock, JITCode::JITType rootJITType, unsigned callerBytecodeIndex);
+    DeferredSourceDump(CodeBlock*, CodeBlock* rootCodeBlock, JITType rootJITType, BytecodeIndex callerBytecodeIndex);
 
     void dump();
 
 private:
     Strong<CodeBlock> m_codeBlock;
     Strong<CodeBlock> m_rootCodeBlock;
-    JITCode::JITType m_rootJITType;
-    unsigned m_callerBytecodeIndex { UINT_MAX };
+    JITType m_rootJITType;
+    BytecodeIndex m_callerBytecodeIndex;
 };
 
 } // namespace JSC

@@ -61,19 +61,57 @@ G_BEGIN_DECLS
 #define GST_PARAM_MUTABLE_PLAYING  (1 << (G_PARAM_USER_SHIFT + 4))
 
 /**
+ * GST_PARAM_DOC_SHOW_DEFAULT: (value 8192)
+ *
+ * Use this flag on GObject properties of GstObject to indicate that
+ * during `gst-inspect` and friends, the default value should be used
+ * as default instead of the current value.
+ *
+ * Since: 1.18
+ */
+#define GST_PARAM_DOC_SHOW_DEFAULT  (1 << (G_PARAM_USER_SHIFT + 5))
+
+/**
+ * GST_PARAM_CONDITIONALLY_AVAILABLE: (value 16384)
+ *
+ * Use this flag on GObject properties of GstObject to indicate that
+ * they might not be available depending on environment such as OS, device, etc,
+ * so such properties will be installed conditionally only if the GstObject is
+ * able to support it.
+ *
+ * Since: 1.18
+ */
+#define GST_PARAM_CONDITIONALLY_AVAILABLE  (1 << (G_PARAM_USER_SHIFT + 6))
+
+/**
  * GST_PARAM_USER_SHIFT: (value 65536)
  *
  * Bits based on GST_PARAM_USER_SHIFT can be used by 3rd party applications.
  */
-#define GST_PARAM_USER_SHIFT    (1 << (G_PARAM_USER_SHIFT + 8))
+#define GST_PARAM_USER_SHIFT  (1 << (G_PARAM_USER_SHIFT + 8))
 
 
 /* --- type macros --- */
+
+/**
+ * GstParamFraction:
+ *
+ * A fundamental type that describes a #GParamSpec for fractional
+ * properties
+ */
 
 #define GST_TYPE_PARAM_FRACTION           (gst_param_spec_fraction_get_type ())
 #define GST_IS_PARAM_SPEC_FRACTION(pspec) (G_TYPE_CHECK_INSTANCE_TYPE ((pspec), GST_TYPE_PARAM_FRACTION))
 #define GST_PARAM_SPEC_FRACTION(pspec)    (G_TYPE_CHECK_INSTANCE_CAST ((pspec), GST_TYPE_PARAM_FRACTION, GstParamSpecFraction))
 
+/**
+ * GstParamArray:
+ *
+ * A fundamental type that describes a #GParamSpec for arrays of
+ * values
+ *
+ * Since: 1.12
+ */
 
 #define GST_TYPE_PARAM_ARRAY_LIST           (gst_param_spec_array_get_type ())
 #define GST_IS_PARAM_SPEC_ARRAY_LIST(pspec) (G_TYPE_CHECK_INSTANCE_TYPE ((pspec), GST_TYPE_PARAM_ARRAY_LIST))
@@ -118,10 +156,9 @@ struct _GstParamSpecFraction {
 /**
  * GstParamSpecArray:
  * @parent_instance: super class
- * @value_array: the array of values
+ * @element_spec: the #GParamSpec of the type of values in the array
  *
- * A GParamSpec derived structure that contains the meta data for fractional
- * properties.
+ * A GParamSpec derived structure for arrays of values.
  */
 struct _GstParamSpecArray {
   GParamSpec    parent_instance;

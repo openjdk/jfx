@@ -148,9 +148,9 @@ class ClockMath {
 class Grego {
  public:
     /**
-     * Return TRUE if the given year is a leap year.
+     * Return true if the given year is a leap year.
      * @param year Gregorian year, with 0 == 1 BCE, -1 == 2 BCE, etc.
-     * @return TRUE if the year is a leap year
+     * @return true if the year is a leap year
      */
     static inline UBool isLeapYear(int32_t year);
 
@@ -299,8 +299,8 @@ inline int32_t Grego::millisToJulianDay(double millis) {
 }
 
 inline int32_t Grego::gregorianShift(int32_t eyear) {
-  int32_t y = eyear-1;
-  int32_t gregShift = ClockMath::floorDivide(y, 400) - ClockMath::floorDivide(y, 100) + 2;
+  int64_t y = (int64_t)eyear-1;
+  int32_t gregShift = static_cast<int32_t>(ClockMath::floorDivide(y, (int64_t)400) - ClockMath::floorDivide(y, (int64_t)100) + 2);
   return gregShift;
 }
 

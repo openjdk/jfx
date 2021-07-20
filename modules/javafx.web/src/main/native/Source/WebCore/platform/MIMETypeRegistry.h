@@ -31,17 +31,37 @@
 
 namespace WebCore {
 
+struct TypeExtensionPair {
+    ASCIILiteral type;
+    ASCIILiteral extension;
+};
+
+WEBCORE_EXPORT const std::initializer_list<TypeExtensionPair>& commonMediaTypes();
+
+struct MIMETypeRegistryThreadGlobalData {
+    WTF_MAKE_NONCOPYABLE(MIMETypeRegistryThreadGlobalData);
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    MIMETypeRegistryThreadGlobalData(HashSet<String, ASCIICaseInsensitiveHash>&& supportedImageMIMETypesForEncoding)
+        : m_supportedImageMIMETypesForEncoding(supportedImageMIMETypesForEncoding)
+    { }
+
+    const HashSet<String, ASCIICaseInsensitiveHash>& supportedImageMIMETypesForEncoding() const { return m_supportedImageMIMETypesForEncoding; }
+
+private:
+    HashSet<String, ASCIICaseInsensitiveHash> m_supportedImageMIMETypesForEncoding;
+};
+
 class MIMETypeRegistry {
 public:
-    WEBCORE_EXPORT static String getMIMETypeForExtension(const String& extension);
+    WEBCORE_EXPORT static String mimeTypeForExtension(const String& extension);
+    WEBCORE_EXPORT static Vector<String> extensionsForMIMEType(const String& type);
+    WEBCORE_EXPORT static String preferredExtensionForMIMEType(const String& type);
+    WEBCORE_EXPORT static String mediaMIMETypeForExtension(const String& extension);
 
-    // FIXME: WebKit coding style says we should not have the word "get" in the names of these functions.
-    static Vector<String> getExtensionsForMIMEType(const String& type);
-    WEBCORE_EXPORT static String getPreferredExtensionForMIMEType(const String& type);
-    static String getMediaMIMETypeForExtension(const String& extension);
-    static Vector<String> getMediaMIMETypesForExtension(const String& extension);
+    WEBCORE_EXPORT static String mimeTypeForPath(const String& path);
 
-    static String getMIMETypeForPath(const String& path);
+    static std::unique_ptr<MIMETypeRegistryThreadGlobalData> createMIMETypeRegistryThreadGlobalData();
 
     // Check to see if a MIME type is suitable for being loaded inline as an
     // image (e.g., <img> tags).
@@ -100,6 +120,9 @@ public:
     // rather than an HTML document.
     WEBCORE_EXPORT static bool isXMLMIMEType(const String& mimeType);
 
+    // Check to see if a MIME type is for an XML external entity resource.
+    WEBCORE_EXPORT static bool isXMLEntityMIMEType(StringView mimeType);
+
     // Used in page load algorithm to decide whether to display as a text
     // document in a frame. Not a good idea to use elsewhere, because that code
     // makes this test is after many other tests are done on the MIME type.
@@ -114,11 +137,15 @@ public:
     WEBCORE_EXPORT static const HashSet<String, ASCIICaseInsensitiveHash>& unsupportedTextMIMETypes();
     WEBCORE_EXPORT static const HashSet<String, ASCIICaseInsensitiveHash>& systemPreviewMIMETypes();
 
-    // FIXME: WebKit coding style says we should not have the word "get" in the name of this function.
     // FIXME: Unclear what the concept of a normalized MIME type is; currently it's a platform-specific notion.
-    static String getNormalizedMIMEType(const String&);
+    static String normalizedMIMEType(const String&);
 
     WEBCORE_EXPORT static String appendFileExtensionIfNecessary(const String& filename, const String& mimeType);
+
+    WEBCORE_EXPORT static String preferredImageMIMETypeForEncoding(const Vector<String>& mimeTypes, const Vector<String>& extensions);
+    WEBCORE_EXPORT static bool containsImageMIMETypeForEncoding(const Vector<String>& mimeTypes, const Vector<String>& extensions);
+    WEBCORE_EXPORT static Vector<String> allowedMIMETypes(const Vector<String>& mimeTypes, const Vector<String>& extensions);
+    WEBCORE_EXPORT static Vector<String> allowedFileExtensions(const Vector<String>& mimeTypes, const Vector<String>& extensions);
 
 private:
     // Check to see if the MIME type is not suitable for being loaded as a text

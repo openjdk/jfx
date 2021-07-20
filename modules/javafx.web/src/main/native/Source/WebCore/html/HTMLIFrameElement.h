@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2004, 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,11 +23,13 @@
 
 #pragma once
 
+#include "FeaturePolicy.h"
 #include "HTMLFrameElementBase.h"
 
 namespace WebCore {
 
 class DOMTokenList;
+class LazyLoadFrameObserver;
 class RenderIFrame;
 
 class HTMLIFrameElement final : public HTMLFrameElementBase {
@@ -38,24 +40,39 @@ public:
     DOMTokenList& sandbox();
 
     RenderIFrame* renderer() const;
-    const String& allow() const { return m_allow; }
+
+    void setReferrerPolicyForBindings(const AtomString&);
+    String referrerPolicyForBindings() const;
+    ReferrerPolicy referrerPolicy() const final;
+
+    const FeaturePolicy& featurePolicy() const;
+
+    const AtomString& loadingForBindings() const;
+    void setLoadingForBindings(const AtomString&);
+
+    LazyLoadFrameObserver& lazyLoadFrameObserver();
+
+    void loadDeferredFrame();
 
 private:
     HTMLIFrameElement(const QualifiedName&, Document&);
 
-#if PLATFORM(IOS_FAMILY)
-    bool isKeyboardFocusable(KeyboardEvent*) const final { return false; }
-#endif
-
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    int defaultTabIndex() const final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+
+    bool isInteractiveContent() const final { return true; }
 
     bool rendererIsNeeded(const RenderStyle&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
+    bool shouldLoadFrameLazily() final;
+    bool isLazyLoadObserverActive() const final;
+
     std::unique_ptr<DOMTokenList> m_sandbox;
-    String m_allow;
+    mutable Optional<FeaturePolicy> m_featurePolicy;
+    std::unique_ptr<LazyLoadFrameObserver> m_lazyLoadFrameObserver;
 };
 
 } // namespace WebCore

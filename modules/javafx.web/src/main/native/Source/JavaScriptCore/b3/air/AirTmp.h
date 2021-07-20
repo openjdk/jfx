@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -322,7 +322,7 @@ private:
 struct TmpHash {
     static unsigned hash(const Tmp& key) { return key.hash(); }
     static bool equal(const Tmp& a, const Tmp& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } } // namespace JSC::B3::Air
@@ -330,9 +330,7 @@ struct TmpHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::Air::Tmp> {
-    typedef JSC::B3::Air::TmpHash Hash;
-};
+template<> struct DefaultHash<JSC::B3::Air::Tmp> : JSC::B3::Air::TmpHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Air::Tmp> : SimpleClassHashTraits<JSC::B3::Air::Tmp> { };

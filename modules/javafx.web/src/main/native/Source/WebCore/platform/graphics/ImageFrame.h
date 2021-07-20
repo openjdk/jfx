@@ -27,7 +27,6 @@
 
 #include "Color.h"
 #include "DecodingOptions.h"
-#include "ImageBackingStore.h"
 #include "ImageOrientation.h"
 #include "ImageTypes.h"
 #include "IntSize.h"
@@ -61,14 +60,16 @@ public:
     bool isComplete() const { return m_decodingStatus == DecodingStatus::Complete; }
 
     IntSize size() const;
-    IntSize sizeRespectingOrientation() const { return !m_orientation.usesWidthAsHeight() ? size() : size().transposedSize(); }
     unsigned frameBytes() const { return hasNativeImage() ? (size().area() * sizeof(uint32_t)).unsafeGet() : 0; }
     SubsamplingLevel subsamplingLevel() const { return m_subsamplingLevel; }
 
-    NativeImagePtr nativeImage() const { return m_nativeImage; }
+    RefPtr<NativeImage> nativeImage() const { return m_nativeImage; }
 
     void setOrientation(ImageOrientation orientation) { m_orientation = orientation; };
     ImageOrientation orientation() const { return m_orientation; }
+
+    void setDensityCorrectedSize(const IntSize& size) { m_densityCorrectedSize = size; }
+    Optional<IntSize> densityCorrectedSize() const { return m_densityCorrectedSize; }
 
     void setDuration(const Seconds& duration) { m_duration = duration; }
     Seconds duration() const { return m_duration; }
@@ -87,11 +88,12 @@ private:
     DecodingStatus m_decodingStatus { DecodingStatus::Invalid };
     IntSize m_size;
 
-    NativeImagePtr m_nativeImage;
+    RefPtr<NativeImage> m_nativeImage;
     SubsamplingLevel m_subsamplingLevel { SubsamplingLevel::Default };
     DecodingOptions m_decodingOptions;
 
-    ImageOrientation m_orientation { DefaultImageOrientation };
+    ImageOrientation m_orientation { ImageOrientation::None };
+    Optional<IntSize> m_densityCorrectedSize;
     Seconds m_duration;
     bool m_hasAlpha { true };
 };

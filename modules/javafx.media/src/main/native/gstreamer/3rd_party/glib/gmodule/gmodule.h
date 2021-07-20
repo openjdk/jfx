@@ -73,7 +73,7 @@ gboolean    g_module_supported     (void) G_GNUC_CONST;
 /* open a module 'file_name' and return handle, which is NULL on error */
 GLIB_AVAILABLE_IN_ALL
 GModule*              g_module_open          (const gchar  *file_name,
-                          GModuleFlags  flags);
+                GModuleFlags  flags);
 
 /* close a previously opened module, returns TRUE on success */
 GLIB_AVAILABLE_IN_ALL
@@ -90,8 +90,8 @@ const gchar *         g_module_error         (void);
 /* retrieve a symbol pointer from 'module', returns TRUE on success */
 GLIB_AVAILABLE_IN_ALL
 gboolean              g_module_symbol        (GModule      *module,
-                          const gchar  *symbol_name,
-                          gpointer     *symbol);
+                const gchar  *symbol_name,
+                gpointer     *symbol);
 
 /* retrieve the file name from an existing module */
 GLIB_AVAILABLE_IN_ALL
@@ -101,7 +101,7 @@ const gchar *         g_module_name          (GModule      *module);
  * directory where the module file is supposed to be, or NULL or empty
  * in which case it should either be in the current directory or, on
  * some operating systems, in some standard place, for instance on the
- * PATH. Hence, to be absoultely sure to get the correct module,
+ * PATH. Hence, to be absolutely sure to get the correct module,
  * always pass in a directory. The file name consists of the directory,
  * if supplied, and 'module_name' suitably decorated according to
  * the operating system's conventions (for instance lib*.so or *.dll).
@@ -110,7 +110,7 @@ const gchar *         g_module_name          (GModule      *module);
  */
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_module_build_path    (const gchar  *directory,
-                          const gchar  *module_name);
+                const gchar  *module_name);
 
 G_END_DECLS
 

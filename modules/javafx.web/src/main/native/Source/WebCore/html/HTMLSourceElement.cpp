@@ -28,6 +28,7 @@
 
 #include "Event.h"
 #include "EventNames.h"
+#include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "HTMLPictureElement.h"
 #include "Logging.h"
@@ -37,6 +38,10 @@
 
 #if ENABLE(VIDEO)
 #include "HTMLMediaElement.h"
+#endif
+
+#if ENABLE(MODEL_ELEMENT)
+#include "HTMLModelElement.h"
 #endif
 
 namespace WebCore {
@@ -76,8 +81,21 @@ Node::InsertedIntoAncestorResult HTMLSourceElement::insertedIntoAncestor(Inserti
             downcast<HTMLMediaElement>(*parent).sourceWasAdded(*this);
         else
 #endif
-        if (is<HTMLPictureElement>(*parent))
-            downcast<HTMLPictureElement>(*parent).sourcesChanged();
+#if ENABLE(MODEL_ELEMENT)
+        if (is<HTMLModelElement>(*parent))
+            downcast<HTMLModelElement>(*parent).sourcesChanged();
+        else
+#endif
+        if (is<HTMLPictureElement>(*parent)) {
+            // The new source element only is a relevant mutation if it precedes any img element.
+            m_shouldCallSourcesChanged = true;
+            for (const Node* node = previousSibling(); node; node = node->previousSibling()) {
+                if (is<HTMLImageElement>(*node))
+                    m_shouldCallSourcesChanged = false;
+            }
+            if (m_shouldCallSourcesChanged)
+                downcast<HTMLPictureElement>(*parent).sourcesChanged();
+        }
     }
     return InsertedIntoAncestorResult::Done;
 }
@@ -91,8 +109,15 @@ void HTMLSourceElement::removedFromAncestor(RemovalType removalType, ContainerNo
             downcast<HTMLMediaElement>(oldParentOfRemovedTree).sourceWasRemoved(*this);
         else
 #endif
-        if (is<HTMLPictureElement>(oldParentOfRemovedTree))
+#if ENABLE(MODEL_ELEMENT)
+        if (is<HTMLModelElement>(oldParentOfRemovedTree))
+            downcast<HTMLModelElement>(oldParentOfRemovedTree).sourcesChanged();
+        else
+#endif
+        if (m_shouldCallSourcesChanged) {
             downcast<HTMLPictureElement>(oldParentOfRemovedTree).sourcesChanged();
+            m_shouldCallSourcesChanged = false;
+        }
     }
 }
 
@@ -127,15 +152,10 @@ const char* HTMLSourceElement::activeDOMObjectName() const
     return "HTMLSourceElement";
 }
 
-bool HTMLSourceElement::canSuspendForDocumentSuspension() const
-{
-    return true;
-}
-
 void HTMLSourceElement::suspend(ReasonForSuspension reason)
 {
     // FIXME: Shouldn't this also stop the timer for PageWillBeSuspended?
-    if (reason == ReasonForSuspension::PageCache) {
+    if (reason == ReasonForSuspension::BackForwardCache) {
         m_shouldRescheduleErrorEventOnResume = m_errorEventTimer.isActive();
         m_errorEventTimer.stop();
     }
@@ -154,16 +174,23 @@ void HTMLSourceElement::stop()
     cancelPendingErrorEvent();
 }
 
-void HTMLSourceElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLSourceElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     HTMLElement::parseAttribute(name, value);
     if (name == srcsetAttr || name == sizesAttr || name == mediaAttr || name == typeAttr) {
         if (name == mediaAttr)
             m_cachedParsedMediaAttribute = WTF::nullopt;
         auto parent = makeRefPtr(parentNode());
-        if (is<HTMLPictureElement>(parent))
+        if (m_shouldCallSourcesChanged)
             downcast<HTMLPictureElement>(*parent).sourcesChanged();
     }
+#if ENABLE(MODEL_ELEMENT)
+    if (name == srcAttr ||  name == typeAttr) {
+        RefPtr<Element> parent = parentElement();
+        if (is<HTMLModelElement>(parent))
+            downcast<HTMLModelElement>(*parent).sourcesChanged();
+    }
+#endif
 }
 
 const MediaQuerySet* HTMLSourceElement::parsedMediaAttribute(Document& document) const

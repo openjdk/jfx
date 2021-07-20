@@ -26,17 +26,19 @@
 #pragma once
 
 #if ENABLE(WEB_AUTHN)
-
+#include "AttestationConveyancePreference.h"
+#include "AuthenticationExtensionsClientInputs.h"
 #include "BufferSource.h"
 #include "PublicKeyCredentialDescriptor.h"
 #include "PublicKeyCredentialType.h"
 #include "UserVerificationRequirement.h"
-#include <wtf/CrossThreadCopier.h>
 #include <wtf/Forward.h>
+#endif // ENABLE(WEB_AUTHN)
 
 namespace WebCore {
 
 struct PublicKeyCredentialCreationOptions {
+#if ENABLE(WEB_AUTHN)
     enum class AuthenticatorAttachment {
         Platform,
         CrossPlatform
@@ -83,11 +85,15 @@ struct PublicKeyCredentialCreationOptions {
     Optional<unsigned> timeout;
     Vector<PublicKeyCredentialDescriptor> excludeCredentials;
     Optional<AuthenticatorSelectionCriteria> authenticatorSelection;
+    AttestationConveyancePreference attestation;
+    mutable Optional<AuthenticationExtensionsClientInputs> extensions;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<PublicKeyCredentialCreationOptions> decode(Decoder&);
+#endif // ENABLE(WEB_AUTHN)
 };
 
+#if ENABLE(WEB_AUTHN)
 template<class Encoder>
 void PublicKeyCredentialCreationOptions::Parameters::encode(Encoder& encoder) const
 {
@@ -98,7 +104,7 @@ template<class Decoder>
 Optional<PublicKeyCredentialCreationOptions::Parameters> PublicKeyCredentialCreationOptions::Parameters::decode(Decoder& decoder)
 {
     PublicKeyCredentialCreationOptions::Parameters result;
-    if (!decoder.decodeEnum(result.type))
+    if (!decoder.decode(result.type))
         return WTF::nullopt;
     if (!decoder.decode(result.alg))
         return WTF::nullopt;
@@ -128,7 +134,7 @@ Optional<PublicKeyCredentialCreationOptions::AuthenticatorSelectionCriteria> Pub
         return WTF::nullopt;
     result.requireResidentKey = *requireResidentKey;
 
-    if (!decoder.decodeEnum(result.userVerification))
+    if (!decoder.decode(result.userVerification))
         return WTF::nullopt;
     return result;
 }
@@ -140,7 +146,7 @@ void PublicKeyCredentialCreationOptions::encode(Encoder& encoder) const
     encoder << rp.id << rp.name << rp.icon;
     encoder << static_cast<uint64_t>(user.id.length());
     encoder.encodeFixedLengthData(user.id.data(), user.id.length(), 1);
-    encoder << user.displayName << user.name << user.icon << pubKeyCredParams << timeout << excludeCredentials << authenticatorSelection;
+    encoder << user.displayName << user.name << user.icon << pubKeyCredParams << timeout << excludeCredentials << authenticatorSelection << attestation << extensions;
 }
 
 template<class Decoder>
@@ -179,29 +185,26 @@ Optional<PublicKeyCredentialCreationOptions> PublicKeyCredentialCreationOptions:
         return WTF::nullopt;
     result.authenticatorSelection = WTFMove(*authenticatorSelection);
 
+    Optional<AttestationConveyancePreference> attestation;
+    decoder >> attestation;
+    if (!attestation)
+        return WTF::nullopt;
+    result.attestation = WTFMove(*attestation);
+
+    Optional<Optional<AuthenticationExtensionsClientInputs>> extensions;
+    decoder >> extensions;
+    if (!extensions)
+        return WTF::nullopt;
+    result.extensions = WTFMove(*extensions);
+
     return result;
 }
+#endif // ENABLE(WEB_AUTHN)
 
 } // namespace WebCore
 
+#if ENABLE(WEB_AUTHN)
 namespace WTF {
-// Not every member is copied.
-template<> struct CrossThreadCopierBase<false, false, WebCore::PublicKeyCredentialCreationOptions> {
-    typedef WebCore::PublicKeyCredentialCreationOptions Type;
-    static Type copy(const Type& source)
-    {
-        Type result;
-        result.rp.name = source.rp.name.isolatedCopy();
-        result.rp.icon = source.rp.icon.isolatedCopy();
-        result.rp.id = source.rp.id.isolatedCopy();
-
-        result.user.name = source.user.name.isolatedCopy();
-        result.user.icon = source.user.icon.isolatedCopy();
-        result.user.displayName = source.user.displayName.isolatedCopy();
-        result.user.idVector = source.user.idVector;
-        return result;
-    }
-};
 
 template<> struct EnumTraits<WebCore::PublicKeyCredentialCreationOptions::AuthenticatorAttachment> {
     using values = EnumValues<
@@ -212,5 +215,4 @@ template<> struct EnumTraits<WebCore::PublicKeyCredentialCreationOptions::Authen
 };
 
 } // namespace WTF
-
 #endif // ENABLE(WEB_AUTHN)

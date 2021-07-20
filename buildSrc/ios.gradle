@@ -74,8 +74,6 @@ IOS.jfxrtJarExcludes = [
     "com/sun/glass/ui/gtk",
 
     "com/sun/glass/ui/lens",
-    "com/sun/prism/es2/gl/eglfb",
-    "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
 
     "com/sun/glass/ui/swt", // SWT glass
@@ -380,7 +378,7 @@ IOS.font.x86_64.linkFlags = ["-arch_only", archX86_64, "-syslibroot", sdkPath(iP
 IOS.font.x86_64.lib = "javafx_font_${archX86_64}"
 
 IOS.webview = [:]
-IOS.webview.lib = "javafx_ios_webnode"
+IOS.webview.lib = "webview"
 IOS.webview.javahInclude = ["javafx/scene/web/*"]
 IOS.webview.variants = ["arm", "arm64", "x86", "x86_64"];
 
@@ -390,7 +388,7 @@ IOS.webview.arm.compiler = compiler
 IOS.webview.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm.linker = linker
 IOS.webview.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.webview.arm.lib = "javafx_ios_webnode_${archArm}"
+IOS.webview.arm.lib = "webview_${archArm}"
 
 IOS.webview.arm64 = [:]
 IOS.webview.arm64.nativeSource = file("${project("web").projectDir}/src/ios/native")
@@ -398,7 +396,7 @@ IOS.webview.arm64.compiler = compiler
 IOS.webview.arm64.ccFlags = [ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm64.linker = linker
 IOS.webview.arm64.linkFlags = ["-arch_only", archArm64, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.webview.arm64.lib = "javafx_ios_webnode_${archArm64}"
+IOS.webview.arm64.lib = "webview_${archArm64}"
 
 IOS.webview.x86 = [:]
 IOS.webview.x86.nativeSource = [IOS.webview.arm.nativeSource].flatten()
@@ -406,7 +404,7 @@ IOS.webview.x86.compiler = compiler
 IOS.webview.x86.ccFlags = [ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.webview.x86.linker = linker
 IOS.webview.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.webview.x86.lib = "javafx_ios_webnode_${archX86}"
+IOS.webview.x86.lib = "webview_${archX86}"
 
 IOS.webview.x86_64 = [:]
 IOS.webview.x86_64.nativeSource = [IOS.webview.arm.nativeSource].flatten()
@@ -414,7 +412,7 @@ IOS.webview.x86_64.compiler = compiler
 IOS.webview.x86_64.ccFlags = [ccFlags, "-arch", archX86_64, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.webview.x86_64.linker = linker
 IOS.webview.x86_64.linkFlags = ["-arch_only", archX86_64, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.webview.x86_64.lib = "javafx_ios_webnode_${archX86_64}"
+IOS.webview.x86_64.lib = "webview_${archX86_64}"
 
 IOS.media = [:]
 IOS.media.lib = "jfxmedia"

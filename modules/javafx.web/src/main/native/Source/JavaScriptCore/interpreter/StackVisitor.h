@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
 #include "CalleeBits.h"
 #include "WasmIndexOrName.h"
 #include <wtf/Function.h>
@@ -33,19 +34,17 @@
 
 namespace JSC {
 
-struct CodeOrigin;
 struct EntryFrame;
 struct InlineCallFrame;
 
+class CallFrame;
 class CodeBlock;
-class ExecState;
+class CodeOrigin;
 class JSCell;
 class JSFunction;
 class ClonedArguments;
 class Register;
 class RegisterAtOffsetList;
-
-typedef ExecState CallFrame;
 
 class StackVisitor {
 public:
@@ -66,7 +65,7 @@ public:
         CallFrame* callerFrame() const { return m_callerFrame; }
         CalleeBits callee() const { return m_callee; }
         CodeBlock* codeBlock() const { return m_codeBlock; }
-        unsigned bytecodeOffset() const { return m_bytecodeOffset; }
+        BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
         InlineCallFrame* inlineCallFrame() const {
 #if ENABLE(DFG_JIT)
             return m_inlineCallFrame;
@@ -94,9 +93,11 @@ public:
         bool hasLineAndColumnInfo() const;
         JS_EXPORT_PRIVATE void computeLineAndColumn(unsigned& line, unsigned& column) const;
 
-        const RegisterAtOffsetList* calleeSaveRegisters();
+#if ENABLE(ASSEMBLER)
+        Optional<RegisterAtOffsetList> calleeSaveRegistersForUnwinding();
+#endif
 
-        ClonedArguments* createArguments();
+        ClonedArguments* createArguments(VM&);
         CallFrame* callFrame() const { return m_callFrame; }
 
         void dump(PrintStream&, Indenter = Indenter()) const;
@@ -120,7 +121,7 @@ public:
         CodeBlock* m_codeBlock;
         size_t m_index;
         size_t m_argumentCountIncludingThis;
-        unsigned m_bytecodeOffset;
+        BytecodeIndex m_bytecodeIndex;
         bool m_callerIsEntryFrame : 1;
         bool m_isWasmFrame : 1;
         Wasm::IndexOrName m_wasmFunctionIndexOrName;
@@ -142,7 +143,7 @@ public:
     };
 
     template <EmptyEntryFrameAction action = ContinueIfTopEntryFrameIsEmpty, typename Functor>
-    static void visit(CallFrame* startFrame, VM* vm, const Functor& functor)
+    static void visit(CallFrame* startFrame, VM& vm, const Functor& functor)
     {
         StackVisitor visitor(startFrame, vm);
         if (action == TerminateIfTopEntryFrameIsEmpty && visitor.topEntryFrameIsEmpty())
@@ -162,12 +163,12 @@ public:
     bool topEntryFrameIsEmpty() const { return m_topEntryFrameIsEmpty; }
 
 private:
-    JS_EXPORT_PRIVATE StackVisitor(CallFrame* startFrame, VM*);
+    JS_EXPORT_PRIVATE StackVisitor(CallFrame* startFrame, VM&);
 
     JS_EXPORT_PRIVATE void gotoNextFrame();
 
     void readFrame(CallFrame*);
-    void readNonInlinedFrame(CallFrame*, CodeOrigin* = 0);
+    void readNonInlinedFrame(CallFrame*, CodeOrigin* = nullptr);
 #if ENABLE(DFG_JIT)
     void readInlinedFrame(CallFrame*, CodeOrigin*);
 #endif
@@ -180,7 +181,7 @@ class CallerFunctor {
 public:
     CallerFunctor()
         : m_hasSkippedFirstFrame(false)
-        , m_callerFrame(0)
+        , m_callerFrame(nullptr)
     {
     }
 

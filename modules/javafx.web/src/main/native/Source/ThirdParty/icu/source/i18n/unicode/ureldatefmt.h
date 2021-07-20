@@ -16,7 +16,11 @@
 
 #include "unicode/unum.h"
 #include "unicode/udisplaycontext.h"
+#include "unicode/uformattedvalue.h"
+
+#if U_SHOW_CPLUSPLUS_API
 #include "unicode/localpointer.h"
+#endif   // U_SHOW_CPLUSPLUS_API
 
 /**
  * \file
@@ -175,6 +179,25 @@ typedef enum URelativeDateTimeUnit {
 } URelativeDateTimeUnit;
 
 /**
+ * FieldPosition and UFieldPosition selectors for format fields
+ * defined by RelativeDateTimeFormatter.
+ * @stable ICU 64
+ */
+typedef enum URelativeDateTimeFormatterField {
+    /**
+     * Represents a literal text string, like "tomorrow" or "days ago".
+     * @stable ICU 64
+     */
+    UDAT_REL_LITERAL_FIELD,
+    /**
+     * Represents a number quantity, like "3" in "3 days ago".
+     * @stable ICU 64
+     */
+    UDAT_REL_NUMERIC_FIELD,
+} URelativeDateTimeFormatterField;
+
+
+/**
  * Opaque URelativeDateTimeFormatter object for use in C programs.
  * @stable ICU 57
  */
@@ -214,7 +237,7 @@ typedef struct URelativeDateTimeFormatter URelativeDateTimeFormatter;  /**< C ty
  *          or NULL if an error occurred.
  * @stable ICU 57
  */
-U_STABLE URelativeDateTimeFormatter* U_EXPORT2
+U_CAPI URelativeDateTimeFormatter* U_EXPORT2
 ureldatefmt_open( const char*          locale,
                   UNumberFormat*       nfToAdopt,
                   UDateRelativeDateTimeFormatterStyle width,
@@ -227,8 +250,54 @@ ureldatefmt_open( const char*          locale,
  *            The URelativeDateTimeFormatter object to close.
  * @stable ICU 57
  */
-U_STABLE void U_EXPORT2
+U_CAPI void U_EXPORT2
 ureldatefmt_close(URelativeDateTimeFormatter *reldatefmt);
+
+struct UFormattedRelativeDateTime;
+/**
+ * Opaque struct to contain the results of a URelativeDateTimeFormatter operation.
+ * @stable ICU 64
+ */
+typedef struct UFormattedRelativeDateTime UFormattedRelativeDateTime;
+
+/**
+ * Creates an object to hold the result of a URelativeDateTimeFormatter
+ * operation. The object can be used repeatedly; it is cleared whenever
+ * passed to a format function.
+ *
+ * @param ec Set if an error occurs.
+ * @return A pointer needing ownership.
+ * @stable ICU 64
+ */
+U_CAPI UFormattedRelativeDateTime* U_EXPORT2
+ureldatefmt_openResult(UErrorCode* ec);
+
+/**
+ * Returns a representation of a UFormattedRelativeDateTime as a UFormattedValue,
+ * which can be subsequently passed to any API requiring that type.
+ *
+ * The returned object is owned by the UFormattedRelativeDateTime and is valid
+ * only as long as the UFormattedRelativeDateTime is present and unchanged in memory.
+ *
+ * You can think of this method as a cast between types.
+ *
+ * @param ufrdt The object containing the formatted string.
+ * @param ec Set if an error occurs.
+ * @return A UFormattedValue owned by the input object.
+ * @stable ICU 64
+ */
+U_CAPI const UFormattedValue* U_EXPORT2
+ureldatefmt_resultAsValue(const UFormattedRelativeDateTime* ufrdt, UErrorCode* ec);
+
+/**
+ * Releases the UFormattedRelativeDateTime created by ureldatefmt_openResult.
+ *
+ * @param ufrdt The object to release.
+ * @stable ICU 64
+ */
+U_CAPI void U_EXPORT2
+ureldatefmt_closeResult(UFormattedRelativeDateTime* ufrdt);
+
 
 #if U_SHOW_CPLUSPLUS_API
 
@@ -244,6 +313,17 @@ U_NAMESPACE_BEGIN
  * @stable ICU 57
  */
 U_DEFINE_LOCAL_OPEN_POINTER(LocalURelativeDateTimeFormatterPointer, URelativeDateTimeFormatter, ureldatefmt_close);
+
+/**
+ * \class LocalUFormattedRelativeDateTimePointer
+ * "Smart pointer" class, closes a UFormattedRelativeDateTime via ureldatefmt_closeResult().
+ * For most methods see the LocalPointerBase base class.
+ *
+ * @see LocalPointerBase
+ * @see LocalPointer
+ * @stable ICU 64
+ */
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUFormattedRelativeDateTimePointer, UFormattedRelativeDateTime, ureldatefmt_closeResult);
 
 U_NAMESPACE_END
 
@@ -277,13 +357,44 @@ U_NAMESPACE_END
  *          than resultCapacity, in which case an error is returned.
  * @stable ICU 57
  */
-U_STABLE int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 ureldatefmt_formatNumeric( const URelativeDateTimeFormatter* reldatefmt,
                     double                offset,
                     URelativeDateTimeUnit unit,
                     UChar*                result,
                     int32_t               resultCapacity,
                     UErrorCode*           status);
+
+/**
+ * Format a combination of URelativeDateTimeUnit and numeric
+ * offset using a numeric style, e.g. "1 week ago", "in 1 week",
+ * "5 weeks ago", "in 5 weeks".
+ *
+ * @param reldatefmt
+ *          The URelativeDateTimeFormatter object specifying the
+ *          format conventions.
+ * @param offset
+ *          The signed offset for the specified unit. This will
+ *          be formatted according to this object's UNumberFormat
+ *          object.
+ * @param unit
+ *          The unit to use when formatting the relative
+ *          date, e.g. UDAT_REL_UNIT_WEEK, UDAT_REL_UNIT_FRIDAY.
+ * @param result
+ *          A pointer to a UFormattedRelativeDateTime to populate.
+ * @param status
+ *          A pointer to a UErrorCode to receive any errors. In
+ *          case of error status, the contents of result are
+ *          undefined.
+ * @stable ICU 64
+ */
+U_CAPI void U_EXPORT2
+ureldatefmt_formatNumericToResult(
+    const URelativeDateTimeFormatter* reldatefmt,
+    double                            offset,
+    URelativeDateTimeUnit             unit,
+    UFormattedRelativeDateTime*       result,
+    UErrorCode*                       status);
 
 /**
  * Format a combination of URelativeDateTimeUnit and numeric offset
@@ -313,13 +424,47 @@ ureldatefmt_formatNumeric( const URelativeDateTimeFormatter* reldatefmt,
  *          than resultCapacity, in which case an error is returned.
  * @stable ICU 57
  */
-U_STABLE int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 ureldatefmt_format( const URelativeDateTimeFormatter* reldatefmt,
                     double                offset,
                     URelativeDateTimeUnit unit,
                     UChar*                result,
                     int32_t               resultCapacity,
                     UErrorCode*           status);
+
+/**
+ * Format a combination of URelativeDateTimeUnit and numeric offset
+ * using a text style if possible, e.g. "last week", "this week",
+ * "next week", "yesterday", "tomorrow". Falls back to numeric
+ * style if no appropriate text term is available for the specified
+ * offset in the object's locale.
+ *
+ * This method populates a UFormattedRelativeDateTime, which exposes more
+ * information than the string populated by format().
+ *
+ * @param reldatefmt
+ *          The URelativeDateTimeFormatter object specifying the
+ *          format conventions.
+ * @param offset
+ *          The signed offset for the specified unit.
+ * @param unit
+ *          The unit to use when formatting the relative
+ *          date, e.g. UDAT_REL_UNIT_WEEK, UDAT_REL_UNIT_FRIDAY.
+ * @param result
+ *          A pointer to a UFormattedRelativeDateTime to populate.
+ * @param status
+ *          A pointer to a UErrorCode to receive any errors. In
+ *          case of error status, the contents of result are
+ *          undefined.
+ * @stable ICU 64
+ */
+U_CAPI void U_EXPORT2
+ureldatefmt_formatToResult(
+    const URelativeDateTimeFormatter* reldatefmt,
+    double                            offset,
+    URelativeDateTimeUnit             unit,
+    UFormattedRelativeDateTime*       result,
+    UErrorCode*                       status);
 
 /**
  * Combines a relative date string and a time string in this object's
@@ -350,7 +495,7 @@ ureldatefmt_format( const URelativeDateTimeFormatter* reldatefmt,
  *          in which case an error is returned.
  * @stable ICU 57
  */
-U_STABLE int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 ureldatefmt_combineDateAndTime( const URelativeDateTimeFormatter* reldatefmt,
                     const UChar *     relativeDateString,
                     int32_t           relativeDateStringLen,

@@ -35,9 +35,9 @@ Ref<SourceAlpha> SourceAlpha::create(FilterEffect& sourceEffect)
     return adoptRef(*new SourceAlpha(sourceEffect));
 }
 
-const AtomicString& SourceAlpha::effectName()
+const AtomString& SourceAlpha::effectName()
 {
-    static NeverDestroyed<const AtomicString> s_effectName("SourceAlpha", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> s_effectName("SourceAlpha", AtomString::ConstructFromLiteral);
     return s_effectName;
 }
 
@@ -60,7 +60,7 @@ void SourceAlpha::platformApplySoftware()
 
     FloatRect imageRect(FloatPoint(), absolutePaintRect().size());
     filterContext.fillRect(imageRect, Color::black);
-    filterContext.drawImageBuffer(*imageBuffer, IntPoint(), CompositeDestinationIn);
+    filterContext.drawImageBuffer(*imageBuffer, IntPoint(), CompositeOperator::DestinationIn);
 }
 
 TextStream& SourceAlpha::externalRepresentation(TextStream& ts, RepresentationType) const
@@ -70,7 +70,7 @@ TextStream& SourceAlpha::externalRepresentation(TextStream& ts, RepresentationTy
 }
 
 SourceAlpha::SourceAlpha(FilterEffect& sourceEffect)
-    : FilterEffect(sourceEffect.filter())
+    : FilterEffect(sourceEffect.filter(), Type::SourceAlpha)
 {
     setOperatingColorSpace(sourceEffect.operatingColorSpace());
     inputEffects().append(&sourceEffect);

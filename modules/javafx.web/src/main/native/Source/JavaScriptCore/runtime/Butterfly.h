@@ -43,7 +43,7 @@ struct ContiguousData {
     ContiguousData() = default;
     ContiguousData(T* data, size_t length)
         : m_data(data)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         , m_length(length)
 #endif
     {
@@ -53,7 +53,7 @@ struct ContiguousData {
     struct Data {
         Data(T& location, IndexingType indexingMode)
             : m_data(location)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             , m_isWritable(!isCopyOnWrite(indexingMode))
 #endif
         {
@@ -103,7 +103,7 @@ struct ContiguousData {
 
 
         T& m_data;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         bool m_isWritable;
 #endif
     };
@@ -114,19 +114,21 @@ struct ContiguousData {
     T& atUnsafe(size_t index) { ASSERT(index < m_length); return m_data[index]; }
 
     T* data() const { return m_data; }
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     size_t length() const { return m_length; }
 #endif
 
 private:
     T* m_data { nullptr };
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     size_t m_length { 0 };
 #endif
 };
 
-typedef ContiguousData<double> ContiguousDoubles;
-typedef ContiguousData<WriteBarrier<Unknown>> ContiguousJSValues;
+using ContiguousDoubles = ContiguousData<double>;
+using ContiguousJSValues = ContiguousData<WriteBarrier<Unknown>>;
+using ConstContiguousDoubles = ContiguousData<const double>;
+using ConstContiguousJSValues = ContiguousData<const WriteBarrier<Unknown>>;
 
 class Butterfly {
     WTF_MAKE_NONCOPYABLE(Butterfly);
@@ -190,6 +192,13 @@ public:
     ContiguousDoubles contiguousDouble() { return ContiguousDoubles(indexingPayload<double>(), vectorLength()); }
     ContiguousJSValues contiguous() { return ContiguousJSValues(indexingPayload<WriteBarrier<Unknown>>(), vectorLength()); }
 
+    template<typename T>
+    const T* indexingPayload() const { return reinterpret_cast_ptr<const T*>(this); }
+    const ArrayStorage* arrayStorage() const { return indexingPayload<ArrayStorage>(); }
+    ConstContiguousJSValues contiguousInt32() const { return ConstContiguousJSValues(indexingPayload<WriteBarrier<Unknown>>(), vectorLength()); }
+    ConstContiguousDoubles contiguousDouble() const { return ConstContiguousDoubles(indexingPayload<double>(), vectorLength()); }
+    ConstContiguousJSValues contiguous() const { return ConstContiguousJSValues(indexingPayload<WriteBarrier<Unknown>>(), vectorLength()); }
+
     static Butterfly* fromContiguous(WriteBarrier<Unknown>* contiguous)
     {
         return reinterpret_cast<Butterfly*>(contiguous);
@@ -222,6 +231,9 @@ public:
     static Butterfly* createOrGrowPropertyStorage(Butterfly*, VM&, JSObject* intendedOwner, Structure*, size_t oldPropertyCapacity, size_t newPropertyCapacity);
     Butterfly* growArrayRight(VM&, JSObject* intendedOwner, Structure* oldStructure, size_t propertyCapacity, bool hadIndexingHeader, size_t oldIndexingPayloadSizeInBytes, size_t newIndexingPayloadSizeInBytes); // Assumes that preCapacity is zero, and asserts as much.
     Butterfly* growArrayRight(VM&, JSObject* intendedOwner, Structure*, size_t newIndexingPayloadSizeInBytes);
+
+    Butterfly* reallocArrayRightIfPossible(VM&, GCDeferralContext&, JSObject* intendedOwner, Structure* oldStructure, size_t propertyCapacity, bool hadIndexingHeader, size_t oldIndexingPayloadSizeInBytes, size_t newIndexingPayloadSizeInBytes); // Assumes that preCapacity is zero, and asserts as much.
+
     Butterfly* resizeArray(VM&, JSObject* intendedOwner, size_t propertyCapacity, bool oldHasIndexingHeader, size_t oldIndexingPayloadSizeInBytes, size_t newPreCapacity, bool newHasIndexingHeader, size_t newIndexingPayloadSizeInBytes);
     Butterfly* resizeArray(VM&, JSObject* intendedOwner, Structure*, size_t newPreCapacity, size_t newIndexingPayloadSizeInBytes); // Assumes that you're not changing whether or not the object has an indexing header.
     Butterfly* unshift(Structure*, size_t numberOfSlots);

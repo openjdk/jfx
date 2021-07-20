@@ -100,14 +100,14 @@ LayoutUnit RenderMathMLOperator::trailingSpace() const
 
 LayoutUnit RenderMathMLOperator::minSize() const
 {
-    LayoutUnit minSize = style().fontCascade().size(); // Default minsize is "1em".
+    LayoutUnit minSize { style().fontCascade().size() }; // Default minsize is "1em".
     minSize = toUserUnits(element().minSize(), style(), minSize);
     return std::max<LayoutUnit>(0, minSize);
 }
 
 LayoutUnit RenderMathMLOperator::maxSize() const
 {
-    LayoutUnit maxSize = intMaxForLayoutUnit; // Default maxsize is "infinity".
+    LayoutUnit maxSize = intMaxForLayoutUnit; // Default maxsize is ∞.
     maxSize = toUserUnits(element().maxSize(), style(), maxSize);
     return std::max<LayoutUnit>(0, maxSize);
 }
@@ -243,6 +243,8 @@ void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLog
             child->setLocation(child->location() + horizontalShift);
     }
 
+    updateScrollInfoAfterLayout();
+
     clearNeedsLayout();
 }
 
@@ -285,6 +287,10 @@ void RenderMathMLOperator::styleDidChange(StyleDifference diff, const RenderStyl
 {
     RenderMathMLBlock::styleDidChange(diff, oldStyle);
     m_mathOperator.reset(style());
+
+    // MathML displaystyle can affect isLargeOperatorInDisplayStyle()
+    if (oldStyle && style().mathStyle() != oldStyle->mathStyle() && !isAnonymous())
+        updateTokenContent();
 }
 
 LayoutUnit RenderMathMLOperator::verticalStretchedOperatorShift() const

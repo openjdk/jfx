@@ -29,15 +29,12 @@
 #include "ConsoleMessage.h"
 #include "InjectedScriptManager.h"
 #include "InspectorConsoleAgent.h"
-#include "JSGlobalObject.h"
-#include "JSGlobalObjectScriptDebugServer.h"
-#include "ScriptArguments.h"
-#include "ScriptCallStack.h"
+#include "JSGlobalObjectDebugger.h"
 #include "ScriptCallStackFactory.h"
 
-using namespace JSC;
-
 namespace Inspector {
+
+using namespace JSC;
 
 JSGlobalObjectDebuggerAgent::JSGlobalObjectDebuggerAgent(JSAgentContext& context, InspectorConsoleAgent* consoleAgent)
     : InspectorDebuggerAgent(context)
@@ -45,20 +42,22 @@ JSGlobalObjectDebuggerAgent::JSGlobalObjectDebuggerAgent(JSAgentContext& context
 {
 }
 
-InjectedScript JSGlobalObjectDebuggerAgent::injectedScriptForEval(ErrorString& error, const int* executionContextId)
+JSGlobalObjectDebuggerAgent::~JSGlobalObjectDebuggerAgent() = default;
+
+InjectedScript JSGlobalObjectDebuggerAgent::injectedScriptForEval(Protocol::ErrorString& errorString, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId) {
-        error = "Execution context id is not supported for JSContext inspection as there is only one execution context."_s;
+        errorString = "executionContextId is not supported for JSContexts as there is only one execution context"_s;
         return InjectedScript();
     }
 
-    ExecState* exec = static_cast<JSGlobalObjectScriptDebugServer&>(scriptDebugServer()).globalObject().globalExec();
-    return injectedScriptManager().injectedScriptFor(exec);
+    JSGlobalObject& globalObject = static_cast<JSGlobalObjectDebugger&>(debugger()).globalObject();
+    return injectedScriptManager().injectedScriptFor(&globalObject);
 }
 
-void JSGlobalObjectDebuggerAgent::breakpointActionLog(JSC::ExecState& state, const String& message)
+void JSGlobalObjectDebuggerAgent::breakpointActionLog(JSC::JSGlobalObject* globalObject, const String& message)
 {
-    m_consoleAgent->addMessageToConsole(std::make_unique<ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Log, message, createScriptCallStack(&state), 0));
+    m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Log, message, createScriptCallStack(globalObject), 0));
 }
 
 } // namespace Inspector

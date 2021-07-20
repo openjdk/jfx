@@ -21,12 +21,15 @@
 #include "unicode/strenum.h"
 #include "unicode/vtzone.h"
 
+#include "bytesinkutil.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "mutex.h"
 #include "uhash.h"
 #include "uassert.h"
 #include "umutex.h"
+#include "ulocimp.h"
 #include "uresimp.h"
 #include "ureslocs.h"
 #include "zonemeta.h"
@@ -269,7 +272,7 @@ GNameSearchHandler::getMatches(int32_t& maxMatchLen) {
     return results;
 }
 
-static UMutex gLock = U_MUTEX_INITIALIZER;
+static UMutex gLock;
 
 class TZGNCore : public UMemory {
 public:
@@ -407,12 +410,15 @@ TZGNCore::initialize(const Locale& locale, UErrorCode& status) {
 
     // target region
     const char* region = fLocale.getCountry();
-    int32_t regionLen = uprv_strlen(region);
+    int32_t regionLen = static_cast<int32_t>(uprv_strlen(region));
     if (regionLen == 0) {
-        char loc[ULOC_FULLNAME_CAPACITY];
-        uloc_addLikelySubtags(fLocale.getName(), loc, sizeof(loc), &status);
+        CharString loc;
+        {
+            CharStringByteSink sink(&loc);
+            ulocimp_addLikelySubtags(fLocale.getName(), sink, &status);
+        }
 
-        regionLen = uloc_getCountry(loc, fTargetRegion, sizeof(fTargetRegion), &status);
+        regionLen = uloc_getCountry(loc.data(), fTargetRegion, sizeof(fTargetRegion), &status);
         if (U_SUCCESS(status)) {
             fTargetRegion[regionLen] = 0;
         } else {
@@ -1112,7 +1118,7 @@ typedef struct TZGNCoreRef {
 } TZGNCoreRef;
 
 // TZGNCore object cache handling
-static UMutex gTZGNLock = U_MUTEX_INITIALIZER;
+static UMutex gTZGNLock;
 static UHashtable *gTZGNCoreCache = NULL;
 static UBool gTZGNCoreCacheInitialized = FALSE;
 

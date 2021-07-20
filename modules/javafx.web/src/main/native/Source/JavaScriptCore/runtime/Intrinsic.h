@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include "IterationKind.h"
+#include <wtf/Optional.h>
+
 namespace JSC {
 
 enum Intrinsic : uint8_t {
@@ -52,8 +55,30 @@ enum Intrinsic : uint8_t {
     ArrayPopIntrinsic,
     ArraySliceIntrinsic,
     ArrayIndexOfIntrinsic,
+    ArrayValuesIntrinsic,
+    ArrayKeysIntrinsic,
+    ArrayEntriesIntrinsic,
     CharCodeAtIntrinsic,
     CharAtIntrinsic,
+    DatePrototypeGetTimeIntrinsic,
+    DatePrototypeGetFullYearIntrinsic,
+    DatePrototypeGetUTCFullYearIntrinsic,
+    DatePrototypeGetMonthIntrinsic,
+    DatePrototypeGetUTCMonthIntrinsic,
+    DatePrototypeGetDateIntrinsic,
+    DatePrototypeGetUTCDateIntrinsic,
+    DatePrototypeGetDayIntrinsic,
+    DatePrototypeGetUTCDayIntrinsic,
+    DatePrototypeGetHoursIntrinsic,
+    DatePrototypeGetUTCHoursIntrinsic,
+    DatePrototypeGetMinutesIntrinsic,
+    DatePrototypeGetUTCMinutesIntrinsic,
+    DatePrototypeGetSecondsIntrinsic,
+    DatePrototypeGetUTCSecondsIntrinsic,
+    DatePrototypeGetMillisecondsIntrinsic,
+    DatePrototypeGetUTCMillisecondsIntrinsic,
+    DatePrototypeGetTimezoneOffsetIntrinsic,
+    DatePrototypeGetYearIntrinsic,
     FromCharCodeIntrinsic,
     PowIntrinsic,
     FloorIntrinsic,
@@ -70,10 +95,12 @@ enum Intrinsic : uint8_t {
     RegExpTestFastIntrinsic,
     RegExpMatchFastIntrinsic,
     ObjectCreateIntrinsic,
+    ObjectGetOwnPropertyNamesIntrinsic,
     ObjectGetPrototypeOfIntrinsic,
     ObjectIsIntrinsic,
     ObjectKeysIntrinsic,
     ReflectGetPrototypeOfIntrinsic,
+    StringPrototypeCodePointAtIntrinsic,
     StringPrototypeValueOfIntrinsic,
     StringPrototypeReplaceIntrinsic,
     StringPrototypeReplaceRegExpIntrinsic,
@@ -85,17 +112,25 @@ enum Intrinsic : uint8_t {
     RandomIntrinsic,
     FRoundIntrinsic,
     TruncIntrinsic,
+    TypedArrayValuesIntrinsic,
+    TypedArrayKeysIntrinsic,
+    TypedArrayEntriesIntrinsic,
     IsTypedArrayViewIntrinsic,
-    BoundThisNoArgsFunctionCallIntrinsic,
+    BoundFunctionCallIntrinsic,
     JSMapGetIntrinsic,
     JSMapHasIntrinsic,
     JSMapSetIntrinsic,
+    JSMapValuesIntrinsic,
+    JSMapKeysIntrinsic,
+    JSMapEntriesIntrinsic,
     JSMapBucketHeadIntrinsic,
     JSMapBucketNextIntrinsic,
     JSMapBucketKeyIntrinsic,
     JSMapBucketValueIntrinsic,
     JSSetHasIntrinsic,
     JSSetAddIntrinsic,
+    JSSetValuesIntrinsic,
+    JSSetEntriesIntrinsic,
     JSSetBucketHeadIntrinsic,
     JSSetBucketNextIntrinsic,
     JSSetBucketKeyIntrinsic,
@@ -111,11 +146,11 @@ enum Intrinsic : uint8_t {
     AtomicsExchangeIntrinsic,
     AtomicsIsLockFreeIntrinsic,
     AtomicsLoadIntrinsic,
+    AtomicsNotifyIntrinsic,
     AtomicsOrIntrinsic,
     AtomicsStoreIntrinsic,
     AtomicsSubIntrinsic,
     AtomicsWaitIntrinsic,
-    AtomicsWakeIntrinsic,
     AtomicsXorIntrinsic,
     ParseIntIntrinsic,
 
@@ -157,7 +192,11 @@ enum Intrinsic : uint8_t {
     DataViewSetUint32,
     DataViewSetFloat32,
     DataViewSetFloat64,
+
+    WasmFunctionIntrinsic,
 };
+
+Optional<IterationKind> interationKindForIntrinsic(Intrinsic);
 
 const char* intrinsicName(Intrinsic);
 

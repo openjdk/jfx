@@ -14,6 +14,7 @@
 #include "ucurrimp.h"
 #include "unicode/errorcode.h"
 #include "numparse_utils.h"
+#include "string_segment.h"
 
 using namespace icu;
 using namespace icu::numparse;
@@ -111,7 +112,9 @@ bool CombinedCurrencyMatcher::matchCurrency(StringSegment& segment, ParsedNumber
 
     int32_t overlap2;
     if (!fCurrency2.isEmpty()) {
-        overlap2 = segment.getCaseSensitivePrefixLength(fCurrency2);
+        // ISO codes should be accepted case-insensitive.
+        // https://unicode-org.atlassian.net/browse/ICU-13696
+        overlap2 = segment.getCommonPrefixLength(fCurrency2);
     } else {
         overlap2 = -1;
     }

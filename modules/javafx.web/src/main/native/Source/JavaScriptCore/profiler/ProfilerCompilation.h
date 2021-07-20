@@ -78,13 +78,11 @@ public:
     UID uid() const { return m_uid; }
 
     void dump(PrintStream&) const;
-    JSValue toJS(ExecState*) const;
+    JSValue toJS(JSGlobalObject*) const;
 
 private:
-    Bytecodes* m_bytecodes;
     CompilationKind m_kind;
-    JettisonReason m_jettisonReason;
-    CString m_additionalJettisonReason;
+    Bytecodes* m_bytecodes;
     Vector<ProfiledBytecodes> m_profiledBytecodes;
     Vector<CompiledBytecode> m_descriptions;
     HashMap<OriginStack, std::unique_ptr<ExecutionCounter>> m_counters;
@@ -93,6 +91,8 @@ private:
     unsigned m_numInlinedGetByIds;
     unsigned m_numInlinedPutByIds;
     unsigned m_numInlinedCalls;
+    JettisonReason m_jettisonReason;
+    CString m_additionalJettisonReason;
     UID m_uid;
 };
 

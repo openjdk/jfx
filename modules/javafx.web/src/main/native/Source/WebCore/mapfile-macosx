@@ -2,19 +2,23 @@
                _JNI_OnUnload
                _WTFReportBacktrace
                _WTFReportAssertionFailure
+               _WTFReportAssertionFailureWithMessage
                _WTFCrashWithSecurityImplication
                _WTFReportArgumentAssertionFailure
                _WTFCrash
                __ZN3WTF10fastMallocEm
                __ZN3WTF6StringC1EPKc
-               __ZN3WTF6StringC1EPKtj
+               __ZN3WTF6StringC1EPKDsj
                __ZN3WTF7RunLoop4mainEv
+               __ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE
                __ZN3WTF8fastFreeEPv
                __ZN3WTF4Lock10unlockSlowEv
                __ZN3WTF4Lock8lockSlowEv
                __ZN3WTF8WallTime3nowEv
                __ZN3WTF10fastMallocEm
                __ZN3WTF10StringImpl7destroyEPS0_
+               __ZN3WTF12isMainThreadEv
+               __ZN3WTF14RefCountedBase33areThreadingChecksEnabledGloballyE
                __ZN3WTF16fastZeroedMallocEm
                __ZN3WTF26getAndResetAccumulatedLogsEv
                __ZNK3WTF6String4utf8Ev
@@ -112,6 +116,8 @@
                _JSValueToObject
                _JSValueToStringCopy
                _JSValueUnprotect
+               __ZN3JSC6Config23enableRestrictedOptionsEv
+               __ZN3JSC6Config25disableFreezingForTestingEv
                __ZN3JSC16slowValidateCellEPNS_6JSCellE
                __ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue
                __ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue
@@ -821,7 +827,6 @@
                _Java_com_sun_webkit_dom_HTMLElementImpl_getLangImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getOuterTextImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getSpellcheckImpl
-               _Java_com_sun_webkit_dom_HTMLElementImpl_getTabIndexImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getTitleImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getTranslateImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getWebkitdropzoneImpl
@@ -837,7 +842,6 @@
                _Java_com_sun_webkit_dom_HTMLElementImpl_setLangImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setSpellcheckImpl
-               _Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTranslateImpl
@@ -1756,6 +1760,7 @@
                _Java_com_sun_webkit_WebPage_twkStop
                _Java_com_sun_webkit_WebPage_twkStopAll
                _Java_com_sun_webkit_WebPage_twkUpdateContent
+               _Java_com_sun_webkit_WebPage_twkUpdateRendering
                _Java_com_sun_webkit_WebPage_twkWorkerThreadCount
                _Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
                _Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer
@@ -1786,9 +1791,9 @@
                _Java_com_sun_webkit_network_SocketStreamHandle_twkDidFail
                _Java_com_sun_webkit_network_SocketStreamHandle_twkDidOpen
                _Java_com_sun_webkit_network_SocketStreamHandle_twkDidReceiveData
-               _Java_com_sun_webkit_network_URLLoader_twkDidFail
-               _Java_com_sun_webkit_network_URLLoader_twkDidFinishLoading
-               _Java_com_sun_webkit_network_URLLoader_twkDidReceiveData
-               _Java_com_sun_webkit_network_URLLoader_twkDidReceiveResponse
-               _Java_com_sun_webkit_network_URLLoader_twkDidSendData
-               _Java_com_sun_webkit_network_URLLoader_twkWillSendRequest
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidFail
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveResponse
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidSendData
+               _Java_com_sun_webkit_network_URLLoaderBase_twkWillSendRequest

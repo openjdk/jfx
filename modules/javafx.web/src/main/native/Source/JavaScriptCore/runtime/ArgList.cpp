@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -21,9 +21,7 @@
 #include "config.h"
 #include "ArgList.h"
 
-#include "JSCJSValue.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 using std::min;
 
@@ -53,7 +51,8 @@ void ArgList::getSlice(int startIndex, ArgList& result) const
     result.m_argCount =  m_argCount - startIndex;
 }
 
-void MarkedArgumentBuffer::markLists(SlotVisitor& visitor, ListSet& markSet)
+template<typename Visitor>
+void MarkedArgumentBuffer::markLists(Visitor& visitor, ListSet& markSet)
 {
     ListSet::iterator end = markSet.end();
     for (ListSet::iterator it = markSet.begin(); it != end; ++it) {
@@ -62,6 +61,9 @@ void MarkedArgumentBuffer::markLists(SlotVisitor& visitor, ListSet& markSet)
             visitor.appendUnbarriered(JSValue::decode(list->slotFor(i)));
     }
 }
+
+template void MarkedArgumentBuffer::markLists(AbstractSlotVisitor&, ListSet&);
+template void MarkedArgumentBuffer::markLists(SlotVisitor&, ListSet&);
 
 void MarkedArgumentBuffer::slowEnsureCapacity(size_t requestedCapacity)
 {
@@ -85,7 +87,7 @@ void MarkedArgumentBuffer::expandCapacity(int newCapacity)
 {
     setNeedsOverflowCheck();
     ASSERT(m_capacity < newCapacity);
-    auto checkedSize = Checked<size_t, RecordOverflow>(newCapacity) * sizeof(EncodedJSValue);
+    auto checkedSize = CheckedSize(newCapacity) * sizeof(EncodedJSValue);
     if (UNLIKELY(checkedSize.hasOverflowed()))
         return this->overflowed();
     EncodedJSValue* newBuffer = static_cast<EncodedJSValue*>(Gigacage::malloc(Gigacage::JSValue, checkedSize.unsafeGet()));

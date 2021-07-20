@@ -30,9 +30,12 @@
 #include "IDBBackingStore.h"
 #include "IDBDatabaseIdentifier.h"
 #include "IDBDatabaseInfo.h"
+#include "IDBDatabaseNameAndVersion.h"
 #include "IDBResourceIdentifier.h"
 #include "SQLiteIDBTransaction.h"
+#include "SQLiteStatementAutoResetScope.h"
 #include <JavaScriptCore/Strong.h>
+#include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -43,12 +46,15 @@ class SQLiteStatement;
 
 namespace IDBServer {
 
+enum class IsSchemaUpgraded : bool { No, Yes };
+
+class IDBSerializationContext;
 class SQLiteIDBCursor;
 
-class SQLiteIDBBackingStore : public IDBBackingStore {
+class SQLiteIDBBackingStore final : public IDBBackingStore {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    SQLiteIDBBackingStore(const IDBDatabaseIdentifier&, const String& databaseRootDirectory, IDBBackingStoreTemporaryFileHandler&, uint64_t quota);
+    SQLiteIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&, const String& databaseRootDirectory);
 
     ~SQLiteIDBBackingStore() final;
 
@@ -66,7 +72,7 @@ public:
     IDBError renameIndex(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName) final;
     IDBError keyExistsInObjectStore(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyData&, bool& keyExists) final;
     IDBError deleteRange(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyRangeData&) final;
-    IDBError addRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo&, const IDBKeyData&, const IDBValue&) final;
+    IDBError addRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo&, const IDBKeyData&, const IndexIDToIndexKeyMap&, const IDBValue&) final;
     IDBError getRecord(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyRangeData&, IDBGetRecordDataType, IDBGetResult& outValue) final;
     IDBError getAllRecords(const IDBResourceIdentifier& transactionIdentifier, const IDBGetAllRecordsData&, IDBGetAllResult& outValue) final;
     IDBError getIndexRecord(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, IndexedDB::IndexRecordType, const IDBKeyRangeData&, IDBGetResult& outValue) final;
@@ -76,37 +82,40 @@ public:
     IDBError maybeUpdateKeyGeneratorNumber(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, double newKeyNumber) final;
     IDBError openCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&, IDBGetResult& outResult) final;
     IDBError iterateCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&, IDBGetResult& outResult) final;
-    bool prefetchCursor(const IDBResourceIdentifier&, const IDBResourceIdentifier&) final;
+
+    IDBSerializationContext& serializationContext() final;
 
     IDBObjectStoreInfo* infoForObjectStore(uint64_t objectStoreIdentifier) final;
     void deleteBackingStore() final;
 
-    void setQuota(uint64_t quota) final { m_quota = quota; }
-
     bool supportsSimultaneousTransactions() final { return false; }
     bool isEphemeral() final { return false; }
 
+    bool hasTransaction(const IDBResourceIdentifier&) const final;
+
     void unregisterCursor(SQLiteIDBCursor&);
 
-    String fullDatabaseDirectory() const;
+    IDBError getBlobRecordsForObjectStoreRecord(int64_t objectStoreRecord, Vector<String>& blobURLs, Vector<String>& blobFilePaths);
 
-    IDBBackingStoreTemporaryFileHandler& temporaryFileHandler() const { return m_temporaryFileHandler; }
+    static uint64_t databasesSizeForDirectory(const String& directory);
 
-    IDBError getBlobRecordsForObjectStoreRecord(int64_t objectStoreRecord, Vector<String>& blobURLs, PAL::SessionID&, Vector<String>& blobFilePaths);
+    String databaseDirectory() const { return m_databaseDirectory; };
+    static String fullDatabasePathForDirectory(const String&);
+    static Optional<IDBDatabaseNameAndVersion> databaseNameAndVersionFromFile(const String&);
 
-    static String databaseNameFromEncodedFilename(const String&);
+    PAL::SessionID sessionID() const { return m_sessionID; }
 
 private:
     String filenameForDatabaseName() const;
     String fullDatabasePath() const;
-
-    uint64_t quotaForOrigin() const;
-    uint64_t maximumSize() const;
+    String fullDatabaseDirectoryWithUpgrade();
 
     bool ensureValidRecordsTable();
     bool ensureValidIndexRecordsTable();
     bool ensureValidIndexRecordsIndex();
+    bool ensureValidIndexRecordsRecordIndex();
     bool ensureValidBlobTables();
+    Optional<IsSchemaUpgraded> ensureValidObjectStoreInfoTable();
     std::unique_ptr<IDBDatabaseInfo> createAndPopulateInitialDatabaseInfo();
     std::unique_ptr<IDBDatabaseInfo> extractExistingDatabaseInfo();
 
@@ -114,8 +123,8 @@ private:
     IDBError uncheckedGetKeyGeneratorValue(int64_t objectStoreID, uint64_t& outValue);
     IDBError uncheckedSetKeyGeneratorValue(int64_t objectStoreID, uint64_t value);
 
-    IDBError updateAllIndexesForAddRecord(const IDBObjectStoreInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
-    IDBError updateOneIndexForAddRecord(const IDBIndexInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
+    IDBError updateAllIndexesForAddRecord(const IDBObjectStoreInfo&, const IDBKeyData&, const IndexIDToIndexKeyMap&, int64_t recordID);
+    IDBError updateOneIndexForAddRecord(IDBObjectStoreInfo&, const IDBIndexInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
     IDBError uncheckedPutIndexKey(const IDBIndexInfo&, const IDBKeyData& keyValue, const IndexKey&, int64_t recordID);
     IDBError uncheckedPutIndexRecord(int64_t objectStoreID, int64_t indexID, const IDBKeyData& keyValue, const IDBKeyData& indexKey, int64_t recordID);
     IDBError uncheckedHasIndexRecord(const IDBIndexInfo&, const IDBKeyData&, bool& hasRecord);
@@ -127,6 +136,14 @@ private:
     IDBError getAllIndexRecords(const IDBResourceIdentifier& transactionIdentifier, const IDBGetAllRecordsData&, IDBGetAllResult& outValue);
 
     void closeSQLiteDB();
+    void close() final;
+
+    bool migrateIndexInfoTableForIDUpdate(const HashMap<std::pair<uint64_t, uint64_t>, uint64_t>& indexIDMap);
+    bool migrateIndexRecordsTableForIDUpdate(const HashMap<std::pair<uint64_t, uint64_t>, uint64_t>& indexIDMap);
+
+    bool removeExistingIndex(uint64_t indexID);
+    bool addExistingIndex(IDBObjectStoreInfo&, const IDBIndexInfo&);
+    bool handleDuplicateIndexIDs(const HashMap<uint64_t, Vector<IDBIndexInfo>>&, IDBDatabaseInfo&);
 
     enum class SQL : size_t {
         CreateObjectStoreInfo,
@@ -141,16 +158,19 @@ private:
         ClearObjectStoreRecords,
         ClearObjectStoreIndexRecords,
         CreateIndexInfo,
+        CreateTempIndexInfo,
         DeleteIndexInfo,
+        RemoveIndexInfo,
         HasIndexRecord,
         PutIndexRecord,
+        PutTempIndexRecord,
         GetIndexRecordForOneKey,
         DeleteIndexRecords,
         RenameIndex,
         KeyExistsInObjectStore,
         GetUnusedBlobFilenames,
         DeleteUnusedBlobs,
-        GetObjectStoreRecordID,
+        GetObjectStoreRecord,
         DeleteBlobRecord,
         DeleteObjectStoreRecord,
         DeleteObjectStoreIndexRecord,
@@ -161,6 +181,7 @@ private:
         GetBlobURL,
         GetKeyGeneratorValue,
         SetKeyGeneratorValue,
+        GetObjectStoreRecords,
         GetAllKeyRecordsLowerOpenUpperOpen,
         GetAllKeyRecordsLowerOpenUpperClosed,
         GetAllKeyRecordsLowerClosedUpperOpen,
@@ -173,18 +194,23 @@ private:
         GetKeyRecordsLowerOpenUpperClosed,
         GetKeyRecordsLowerClosedUpperOpen,
         GetKeyRecordsLowerClosedUpperClosed,
-        Count
+        CountRecordsLowerOpenUpperOpen,
+        CountRecordsLowerOpenUpperClosed,
+        CountRecordsLowerClosedUpperOpen,
+        CountRecordsLowerClosedUpperClosed,
+        CountIndexRecordsLowerOpenUpperOpen,
+        CountIndexRecordsLowerOpenUpperClosed,
+        CountIndexRecordsLowerClosedUpperOpen,
+        CountIndexRecordsLowerClosedUpperClosed,
+        Invalid,
     };
 
-    SQLiteStatement* cachedStatement(SQL, const char*);
-    SQLiteStatement* cachedStatementForGetAllObjectStoreRecords(const IDBGetAllRecordsData&);
+    SQLiteStatementAutoResetScope cachedStatement(SQL, const char*);
+    SQLiteStatementAutoResetScope cachedStatementForGetAllObjectStoreRecords(const IDBGetAllRecordsData&);
 
-    std::unique_ptr<SQLiteStatement> m_cachedStatements[static_cast<int>(SQL::Count)];
+    std::unique_ptr<SQLiteStatement> m_cachedStatements[static_cast<int>(SQL::Invalid)];
 
-    JSC::VM& vm();
-    JSC::JSGlobalObject& globalObject();
-    void initializeVM();
-
+    PAL::SessionID m_sessionID;
     IDBDatabaseIdentifier m_identifier;
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfoBeforeVersionChange;
@@ -194,14 +220,10 @@ private:
     HashMap<IDBResourceIdentifier, std::unique_ptr<SQLiteIDBTransaction>> m_transactions;
     HashMap<IDBResourceIdentifier, SQLiteIDBCursor*> m_cursors;
 
-    String m_absoluteDatabaseDirectory;
+    String m_databaseRootDirectory;
+    String m_databaseDirectory;
 
-    RefPtr<JSC::VM> m_vm;
-    JSC::Strong<JSC::JSGlobalObject> m_globalObject;
-
-    IDBBackingStoreTemporaryFileHandler& m_temporaryFileHandler;
-
-    uint64_t m_quota;
+    Ref<IDBSerializationContext> m_serializationContext;
 };
 
 } // namespace IDBServer

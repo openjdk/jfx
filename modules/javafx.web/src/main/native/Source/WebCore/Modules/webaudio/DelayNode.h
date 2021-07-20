@@ -28,14 +28,17 @@
 
 namespace WebCore {
 
-class DelayNode final : public AudioBasicProcessorNode {
-public:
-    static ExceptionOr<Ref<DelayNode>> create(AudioContext&, float sampleRate, double maxDelayTime);
+struct DelayOptions;
 
-    AudioParam* delayTime();
+class DelayNode final : public AudioBasicProcessorNode {
+    WTF_MAKE_ISO_ALLOCATED(DelayNode);
+public:
+    static ExceptionOr<Ref<DelayNode>> create(BaseAudioContext&, const DelayOptions&);
+
+    AudioParam& delayTime();
 
 private:
-    DelayNode(AudioContext&, float sampleRate, double maxDelayTime);
+    DelayNode(BaseAudioContext&, double maxDelayTime);
 };
 
 } // namespace WebCore

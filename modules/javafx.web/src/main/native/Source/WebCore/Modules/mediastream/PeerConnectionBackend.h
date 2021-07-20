@@ -33,7 +33,7 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
 #include "LibWebRTCProvider.h"
 #include "RTCRtpSendParameters.h"
 #include "RTCSessionDescription.h"
@@ -43,6 +43,7 @@
 
 namespace WebCore {
 
+class DeferredPromise;
 class Document;
 class MediaStream;
 class MediaStreamTrack;
@@ -56,6 +57,7 @@ class RTCRtpSender;
 class RTCRtpTransceiver;
 class RTCSessionDescription;
 class RTCStatsReport;
+class ScriptExecutionContext;
 
 struct MediaEndpointConfiguration;
 struct RTCAnswerOptions;
@@ -63,8 +65,10 @@ struct RTCDataChannelInit;
 struct RTCOfferOptions;
 struct RTCRtpTransceiverInit;
 
+template<typename IDLType> class DOMPromiseDeferred;
+
 namespace PeerConnection {
-using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescription::Init>>;
+using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescriptionInit>>;
 using StatsPromise = DOMPromiseDeferred<IDLInterface<RTCStatsReport>>;
 }
 
@@ -83,17 +87,19 @@ public:
     static Optional<RTCRtpCapabilities> senderCapabilities(ScriptExecutionContext&, const String& kind);
 
     explicit PeerConnectionBackend(RTCPeerConnection&);
-    virtual ~PeerConnectionBackend() = default;
+    virtual ~PeerConnectionBackend();
 
     void createOffer(RTCOfferOptions&&, PeerConnection::SessionDescriptionPromise&&);
     void createAnswer(RTCAnswerOptions&&, PeerConnection::SessionDescriptionPromise&&);
-    void setLocalDescription(RTCSessionDescription&, DOMPromiseDeferred<void>&&);
-    void setRemoteDescription(RTCSessionDescription&, DOMPromiseDeferred<void>&&);
+    void setLocalDescription(const RTCSessionDescription*, DOMPromiseDeferred<void>&&);
+    void setRemoteDescription(const RTCSessionDescription&, DOMPromiseDeferred<void>&&);
     void addIceCandidate(RTCIceCandidate*, DOMPromiseDeferred<void>&&);
 
     virtual std::unique_ptr<RTCDataChannelHandler> createDataChannelHandler(const String&, const RTCDataChannelInit&) = 0;
 
     void stop();
+
+    virtual void close() = 0;
 
     virtual RefPtr<RTCSessionDescription> localDescription() const = 0;
     virtual RefPtr<RTCSessionDescription> currentLocalDescription() const = 0;
@@ -103,6 +109,7 @@ public:
     virtual RefPtr<RTCSessionDescription> currentRemoteDescription() const = 0;
     virtual RefPtr<RTCSessionDescription> pendingRemoteDescription() const = 0;
 
+    virtual void restartIce() = 0;
     virtual bool setConfiguration(MediaEndpointConfiguration&&) = 0;
 
     virtual void getStats(Ref<DeferredPromise>&&) = 0;
@@ -169,6 +176,11 @@ public:
 
     virtual void collectTransceivers() { };
 
+    ScriptExecutionContext* context() const;
+
+    virtual void suspend() { }
+    virtual void resume() { }
+
 protected:
     void fireICECandidateEvent(RefPtr<RTCIceCandidate>&&, String&& url);
     void doneGatheringCandidates();
@@ -192,13 +204,21 @@ protected:
 
     String filterSDP(String&&) const;
 
+    struct PendingTrackEvent {
+        Ref<RTCRtpReceiver> receiver;
+        Ref<MediaStreamTrack> track;
+        Vector<RefPtr<MediaStream>> streams;
+        RefPtr<RTCRtpTransceiver> transceiver;
+    };
+    void addPendingTrackEvent(PendingTrackEvent&&);
+
 private:
     virtual void doCreateOffer(RTCOfferOptions&&) = 0;
     virtual void doCreateAnswer(RTCAnswerOptions&&) = 0;
-    virtual void doSetLocalDescription(RTCSessionDescription&) = 0;
-    virtual void doSetRemoteDescription(RTCSessionDescription&) = 0;
+    virtual void doSetLocalDescription(const RTCSessionDescription*) = 0;
+    virtual void doSetRemoteDescription(const RTCSessionDescription&) = 0;
     virtual void doAddIceCandidate(RTCIceCandidate&) = 0;
-    virtual void endOfIceCandidates(DOMPromiseDeferred<void>&& promise) { promise.resolve(); }
+    virtual void endOfIceCandidates(DOMPromiseDeferred<void>&&);
     virtual void doStop() = 0;
 
     void registerMDNSName(const String& ipAddress);
@@ -207,10 +227,9 @@ protected:
     RTCPeerConnection& m_peerConnection;
 
 private:
-    Optional<PeerConnection::SessionDescriptionPromise> m_offerAnswerPromise;
-    Optional<DOMPromiseDeferred<void>> m_setDescriptionPromise;
-    Optional<DOMPromiseDeferred<void>> m_addIceCandidatePromise;
-    Optional<DOMPromiseDeferred<void>> m_endOfIceCandidatePromise;
+    std::unique_ptr<PeerConnection::SessionDescriptionPromise> m_offerAnswerPromise;
+    std::unique_ptr<DOMPromiseDeferred<void>> m_setDescriptionPromise;
+    std::unique_ptr<DOMPromiseDeferred<void>> m_addIceCandidatePromise;
 
     bool m_shouldFilterICECandidates { true };
     struct PendingICECandidate {
@@ -222,6 +241,9 @@ private:
     };
     Vector<PendingICECandidate> m_pendingICECandidates;
 
+    Vector<PendingTrackEvent> m_pendingTrackEvents;
+
+    HashMap<String, String> m_ipAddressToMDNSNameMap;
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
@@ -229,11 +251,6 @@ private:
     bool m_negotiationNeeded { false };
     bool m_finishedGatheringCandidates { false };
     uint64_t m_waitingForMDNSRegistration { 0 };
-
-    bool m_finishedReceivingCandidates { false };
-    uint64_t m_waitingForMDNSResolution { 0 };
-
-    HashMap<String, String> m_mdnsMapping;
 };
 
 } // namespace WebCore

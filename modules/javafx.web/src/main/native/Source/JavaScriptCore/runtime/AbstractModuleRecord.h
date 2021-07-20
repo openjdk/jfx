@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,9 @@
 #pragma once
 
 #include "Identifier.h"
-#include "JSDestructibleObject.h"
-#include <wtf/HashMap.h>
+#include "JSGenerator.h"
+#include "JSInternalFieldObjectImpl.h"
 #include <wtf/ListHashSet.h>
-#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -39,20 +38,48 @@ class JSMap;
 
 // Based on the Source Text Module Record
 // http://www.ecma-international.org/ecma-262/6.0/#sec-source-text-module-records
-class AbstractModuleRecord : public JSDestructibleObject {
+class AbstractModuleRecord : public JSInternalFieldObjectImpl<2> {
     friend class LLIntOffsetsExtractor;
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSInternalFieldObjectImpl<2>;
+
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess>
+    static void subspaceFor(VM&)
+    {
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    using Argument = JSGenerator::Argument;
+    using State = JSGenerator::State;
+    using ResumeMode = JSGenerator::ResumeMode;
+
+    enum class Field : uint32_t {
+        State,
+        Frame,
+    };
+
+    static_assert(numberOfInternalFields == 2);
+    static std::array<JSValue, numberOfInternalFields> initialValues()
+    {
+        return { {
+            jsNumber(static_cast<int32_t>(State::Init)),
+            jsUndefined(),
+        } };
+    }
 
     // https://tc39.github.io/ecma262/#sec-source-text-module-records
     struct ExportEntry {
         enum class Type {
             Local,
-            Indirect
+            Indirect,
+            Namespace,
         };
 
         static ExportEntry createLocal(const Identifier& exportName, const Identifier& localName);
         static ExportEntry createIndirect(const Identifier& exportName, const Identifier& importName, const Identifier& moduleName);
+        static ExportEntry createNamespace(const Identifier& exportName, const Identifier& moduleName);
 
         Type type;
         Identifier exportName;
@@ -103,12 +130,12 @@ public:
         Identifier localName;
     };
 
-    Resolution resolveExport(ExecState*, const Identifier& exportName);
-    Resolution resolveImport(ExecState*, const Identifier& localName);
+    Resolution resolveExport(JSGlobalObject*, const Identifier& exportName);
+    Resolution resolveImport(JSGlobalObject*, const Identifier& localName);
 
-    AbstractModuleRecord* hostResolveImportedModule(ExecState*, const Identifier& moduleName);
+    AbstractModuleRecord* hostResolveImportedModule(JSGlobalObject*, const Identifier& moduleName);
 
-    JSModuleNamespaceObject* getModuleNamespace(ExecState*);
+    JSModuleNamespaceObject* getModuleNamespace(JSGlobalObject*);
 
     JSModuleEnvironment* moduleEnvironment()
     {
@@ -121,21 +148,22 @@ public:
         return m_moduleEnvironment.get();
     }
 
-    void link(ExecState*, JSValue scriptFetcher);
-    JS_EXPORT_PRIVATE JSValue evaluate(ExecState*);
+    Synchronousness link(JSGlobalObject*, JSValue scriptFetcher);
+    JS_EXPORT_PRIVATE JSValue evaluate(JSGlobalObject*, JSValue sentValue, JSValue resumeMode);
+    WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
+    WriteBarrier<Unknown> internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
 
 protected:
     AbstractModuleRecord(VM&, Structure*, const Identifier&);
-    void finishCreation(ExecState*, VM&);
+    void finishCreation(JSGlobalObject*, VM&);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
-    static void destroy(JSCell*);
+    DECLARE_VISIT_CHILDREN;
 
-    WriteBarrier<JSModuleEnvironment> m_moduleEnvironment;
+    void setModuleEnvironment(JSGlobalObject*, JSModuleEnvironment*);
 
 private:
     struct ResolveQuery;
-    static Resolution resolveExportImpl(ExecState*, const ResolveQuery&);
+    static Resolution resolveExportImpl(JSGlobalObject*, const ResolveQuery&);
     Optional<Resolution> tryGetCachedResolution(UniquedStringImpl* exportName);
     void cacheResolution(UniquedStringImpl* exportName, const Resolution&);
 
@@ -171,6 +199,8 @@ private:
     WriteBarrier<JSMap> m_dependenciesMap;
 
     WriteBarrier<JSModuleNamespaceObject> m_moduleNamespaceObject;
+
+    WriteBarrier<JSModuleEnvironment> m_moduleEnvironment;
 
     // We assume that all the AbstractModuleRecord are retained by JSModuleLoader's registry.
     // So here, we don't visit each object for GC. The resolution cache map caches the once

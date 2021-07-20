@@ -40,7 +40,7 @@ namespace ContentExtensions {
 
 class PatternParser {
 public:
-    PatternParser(bool patternIsCaseSensitive)
+    explicit PatternParser(bool patternIsCaseSensitive)
         : m_patternIsCaseSensitive(patternIsCaseSensitive)
         , m_parseStatus(URLFilterParser::Ok)
     {
@@ -132,11 +132,6 @@ public:
     void atomNamedBackReference(const String&)
     {
         fail(URLFilterParser::BackReference);
-    }
-
-    bool isValidNamedForwardReference(const String&)
-    {
-        return false;
     }
 
     void atomNamedForwardReference(const String&)
@@ -249,6 +244,11 @@ public:
         fail(URLFilterParser::Disjunction);
     }
 
+    NO_RETURN_DUE_TO_CRASH void resetForReparsing()
+    {
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
 private:
     bool hasError() const
     {
@@ -358,7 +358,7 @@ URLFilterParser::ParseStatus URLFilterParser::addPattern(const String& pattern, 
 
     ParseStatus status = Ok;
     PatternParser patternParser(patternIsCaseSensitive);
-    if (!JSC::Yarr::hasError(JSC::Yarr::parse(patternParser, pattern, false, 0)))
+    if (!JSC::Yarr::hasError(JSC::Yarr::parse(patternParser, pattern, false, 0, false)))
         patternParser.finalize(patternId, m_combinedURLFilters);
     else
         status = YarrError;

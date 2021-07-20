@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +27,16 @@
 #include "config.h"
 #include "IntlNumberFormatConstructor.h"
 
-#if ENABLE(INTL)
-
-#include "Error.h"
 #include "IntlNumberFormat.h"
 #include "IntlNumberFormatPrototype.h"
-#include "IntlObject.h"
 #include "IntlObjectInlines.h"
 #include "JSCInlines.h"
-#include "Lookup.h"
 
 namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlNumberFormatConstructor);
 
-static EncodedJSValue JSC_HOST_CALL IntlNumberFormatConstructorFuncSupportedLocalesOf(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(IntlNumberFormatConstructorFuncSupportedLocalesOf);
 
 }
 
@@ -69,8 +64,8 @@ Structure* IntlNumberFormatConstructor::createStructure(VM& vm, JSGlobalObject* 
     return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
 }
 
-static EncodedJSValue JSC_HOST_CALL callIntlNumberFormat(ExecState*);
-static EncodedJSValue JSC_HOST_CALL constructIntlNumberFormat(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(callIntlNumberFormat);
+static JSC_DECLARE_HOST_FUNCTION(constructIntlNumberFormat);
 
 IntlNumberFormatConstructor::IntlNumberFormatConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure, callIntlNumberFormat, constructIntlNumberFormat)
@@ -79,71 +74,68 @@ IntlNumberFormatConstructor::IntlNumberFormatConstructor(VM& vm, Structure* stru
 
 void IntlNumberFormatConstructor::finishCreation(VM& vm, IntlNumberFormatPrototype* numberFormatPrototype)
 {
-    Base::finishCreation(vm, "NumberFormat"_s);
+    Base::finishCreation(vm, 0, "NumberFormat"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, numberFormatPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
-    numberFormatPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructIntlNumberFormat(ExecState* state)
+JSC_DEFINE_HOST_FUNCTION(constructIntlNumberFormat, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = state->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     // 11.1.2 Intl.NumberFormat ([locales [, options]]) (ECMA-402 2.0)
     // 1. If NewTarget is undefined, let newTarget be the active function object, else let newTarget be NewTarget.
     // 2. Let numberFormat be OrdinaryCreateFromConstructor(newTarget, %NumberFormatPrototype%).
     // 3. ReturnIfAbrupt(numberFormat).
-    Structure* structure = InternalFunction::createSubclassStructure(state, state->newTarget(), jsCast<IntlNumberFormatConstructor*>(state->jsCallee())->numberFormatStructure(vm));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* structure = newTarget == callFrame->jsCallee()
+        ? globalObject->numberFormatStructure()
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->numberFormatStructure());
+    RETURN_IF_EXCEPTION(scope, { });
+
     IntlNumberFormat* numberFormat = IntlNumberFormat::create(vm, structure);
     ASSERT(numberFormat);
 
     // 4. Return InitializeNumberFormat(numberFormat, locales, options).
     scope.release();
-    numberFormat->initializeNumberFormat(*state, state->argument(0), state->argument(1));
+    numberFormat->initializeNumberFormat(globalObject, callFrame->argument(0), callFrame->argument(1));
     return JSValue::encode(numberFormat);
 }
 
-static EncodedJSValue JSC_HOST_CALL callIntlNumberFormat(ExecState* state)
+JSC_DEFINE_HOST_FUNCTION(callIntlNumberFormat, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     // 11.1.2 Intl.NumberFormat ([locales [, options]]) (ECMA-402 2.0)
     // 1. If NewTarget is undefined, let newTarget be the active function object, else let newTarget be NewTarget.
     // NewTarget is always undefined when called as a function.
 
-    IntlNumberFormatConstructor* callee = jsCast<IntlNumberFormatConstructor*>(state->jsCallee());
-
     // FIXME: Workaround to provide compatibility with ECMA-402 1.0 call/apply patterns.
     // https://bugs.webkit.org/show_bug.cgi?id=153679
-    return JSValue::encode(constructIntlInstanceWithWorkaroundForLegacyIntlConstructor<IntlNumberFormat>(*state, state->thisValue(), callee, [&] (VM& vm) {
+    return JSValue::encode(constructIntlInstanceWithWorkaroundForLegacyIntlConstructor(globalObject, callFrame->thisValue(), callFrame->jsCallee(), [&] (VM& vm) {
         // 2. Let numberFormat be OrdinaryCreateFromConstructor(newTarget, %NumberFormatPrototype%).
         // 3. ReturnIfAbrupt(numberFormat).
-        IntlNumberFormat* numberFormat = IntlNumberFormat::create(vm, callee->numberFormatStructure(vm));
+        IntlNumberFormat* numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
         ASSERT(numberFormat);
 
         // 4. Return InitializeNumberFormat(numberFormat, locales, options).
-        numberFormat->initializeNumberFormat(*state, state->argument(0), state->argument(1));
+        numberFormat->initializeNumberFormat(globalObject, callFrame->argument(0), callFrame->argument(1));
         return numberFormat;
     }));
 }
 
-EncodedJSValue JSC_HOST_CALL IntlNumberFormatConstructorFuncSupportedLocalesOf(ExecState* state)
+JSC_DEFINE_HOST_FUNCTION(IntlNumberFormatConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = state->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     // 11.2.2 Intl.NumberFormat.supportedLocalesOf(locales [, options]) (ECMA-402 2.0)
 
     // 1. Let availableLocales be %NumberFormat%.[[availableLocales]].
-    JSGlobalObject* globalObject = state->jsCallee()->globalObject(vm);
-    const HashSet<String> availableLocales = globalObject->intlNumberFormatAvailableLocales();
+    const HashSet<String>& availableLocales = intlNumberFormatAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).
-    Vector<String> requestedLocales = canonicalizeLocaleList(*state, state->argument(0));
+    Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     // 3. Return SupportedLocales(availableLocales, requestedLocales, options).
-    RELEASE_AND_RETURN(scope, JSValue::encode(supportedLocales(*state, availableLocales, requestedLocales, state->argument(1))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(supportedLocales(globalObject, availableLocales, requestedLocales, callFrame->argument(1))));
 }
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

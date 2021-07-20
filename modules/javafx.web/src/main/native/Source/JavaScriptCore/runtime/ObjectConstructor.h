@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008, 2016-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,18 +26,18 @@
 
 namespace JSC {
 
-EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptor(ExecState*);
-EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptors(ExecState*);
-EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertySymbols(ExecState*);
-EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyNames(ExecState*);
-EncodedJSValue JSC_HOST_CALL objectConstructorKeys(ExecState*);
+JSC_DECLARE_HOST_FUNCTION(objectConstructorGetOwnPropertyDescriptor);
+JSC_DECLARE_HOST_FUNCTION(objectConstructorGetOwnPropertyDescriptors);
+JSC_DECLARE_HOST_FUNCTION(objectConstructorGetOwnPropertySymbols);
+JSC_DECLARE_HOST_FUNCTION(objectConstructorGetOwnPropertyNames);
+JSC_DECLARE_HOST_FUNCTION(objectConstructorKeys);
 
 class ObjectPrototype;
 
 class ObjectConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static ObjectConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ObjectPrototype* objectPrototype)
     {
@@ -53,75 +53,119 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&, JSGlobalObject*, ObjectPrototype*);
-
 private:
     ObjectConstructor(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*, ObjectPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ObjectConstructor, InternalFunction);
 
-inline JSFinalObject* constructEmptyObject(ExecState* exec, Structure* structure)
+inline JSFinalObject* constructEmptyObject(VM& vm, Structure* structure)
 {
-    return JSFinalObject::create(exec, structure);
+    return JSFinalObject::create(vm, structure);
 }
 
-inline JSFinalObject* constructEmptyObject(ExecState* exec, JSObject* prototype, unsigned inlineCapacity)
+inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject, JSObject* prototype, unsigned inlineCapacity)
 {
-    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-    StructureCache& structureCache = globalObject->vm().structureCache;
+    VM& vm = getVM(globalObject);
+    StructureCache& structureCache = vm.structureCache;
     Structure* structure = structureCache.emptyObjectStructureForPrototype(globalObject, prototype, inlineCapacity);
-    return constructEmptyObject(exec, structure);
+    return constructEmptyObject(vm, structure);
 }
 
-inline JSFinalObject* constructEmptyObject(ExecState* exec, JSObject* prototype)
+inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject, JSObject* prototype)
 {
-    return constructEmptyObject(exec, prototype, JSFinalObject::defaultInlineCapacity());
+    return constructEmptyObject(globalObject, prototype, JSFinalObject::defaultInlineCapacity());
 }
 
-inline JSFinalObject* constructEmptyObject(ExecState* exec)
+inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject)
 {
-    return constructEmptyObject(exec, exec->lexicalGlobalObject()->objectStructureForObjectConstructor());
+    return constructEmptyObject(getVM(globalObject), globalObject->objectStructureForObjectConstructor());
 }
 
-inline JSObject* constructObject(ExecState* exec, JSGlobalObject* globalObject, JSValue arg)
+inline JSObject* constructObject(JSGlobalObject* globalObject, JSValue arg)
 {
     if (arg.isUndefinedOrNull())
-        return constructEmptyObject(exec, globalObject->objectPrototype());
-    return arg.toObject(exec, globalObject);
+        return constructEmptyObject(globalObject, globalObject->objectPrototype());
+    return arg.toObject(globalObject);
 }
 
-// Section 6.2.4.4 of the ES6 specification.
-// https://tc39.github.io/ecma262/#sec-frompropertydescriptor
-inline JSObject* constructObjectFromPropertyDescriptor(ExecState* exec, const PropertyDescriptor& descriptor)
+JS_EXPORT_PRIVATE JSObject* constructObjectFromPropertyDescriptorSlow(JSGlobalObject*, const PropertyDescriptor&);
+
+static constexpr PropertyOffset dataPropertyDescriptorValuePropertyOffset = 0;
+static constexpr PropertyOffset dataPropertyDescriptorWritablePropertyOffset = 1;
+static constexpr PropertyOffset dataPropertyDescriptorEnumerablePropertyOffset = 2;
+static constexpr PropertyOffset dataPropertyDescriptorConfigurablePropertyOffset = 3;
+
+static constexpr PropertyOffset accessorPropertyDescriptorGetPropertyOffset = 0;
+static constexpr PropertyOffset accessorPropertyDescriptorSetPropertyOffset = 1;
+static constexpr PropertyOffset accessorPropertyDescriptorEnumerablePropertyOffset = 2;
+static constexpr PropertyOffset accessorPropertyDescriptorConfigurablePropertyOffset = 3;
+
+inline Structure* createDataPropertyDescriptorObjectStructure(VM& vm, JSGlobalObject& globalObject)
 {
-    VM& vm = exec->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSObject* description = constructEmptyObject(exec);
-    RETURN_IF_EXCEPTION(scope, nullptr);
+    Structure* structure = vm.structureCache.emptyObjectStructureForPrototype(&globalObject, globalObject.objectPrototype(), JSFinalObject::defaultInlineCapacity());
+    PropertyOffset offset;
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->value, 0, offset);
+    RELEASE_ASSERT(offset == dataPropertyDescriptorValuePropertyOffset);
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->writable, 0, offset);
+    RELEASE_ASSERT(offset == dataPropertyDescriptorWritablePropertyOffset);
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->enumerable, 0, offset);
+    RELEASE_ASSERT(offset == dataPropertyDescriptorEnumerablePropertyOffset);
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->configurable, 0, offset);
+    RELEASE_ASSERT(offset == dataPropertyDescriptorConfigurablePropertyOffset);
+    return structure;
+}
 
-    if (!descriptor.isAccessorDescriptor()) {
-        description->putDirect(vm, vm.propertyNames->value, descriptor.value() ? descriptor.value() : jsUndefined(), 0);
-        description->putDirect(vm, vm.propertyNames->writable, jsBoolean(descriptor.writable()), 0);
-    } else {
-        ASSERT(descriptor.getter() || descriptor.setter());
-        if (descriptor.getter())
-            description->putDirect(vm, vm.propertyNames->get, descriptor.getter(), 0);
-        if (descriptor.setter())
-            description->putDirect(vm, vm.propertyNames->set, descriptor.setter(), 0);
+inline Structure* createAccessorPropertyDescriptorObjectStructure(VM& vm, JSGlobalObject& globalObject)
+{
+    Structure* structure = vm.structureCache.emptyObjectStructureForPrototype(&globalObject, globalObject.objectPrototype(), JSFinalObject::defaultInlineCapacity());
+    PropertyOffset offset;
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->get, 0, offset);
+    RELEASE_ASSERT(offset == accessorPropertyDescriptorGetPropertyOffset);
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->set, 0, offset);
+    RELEASE_ASSERT(offset == accessorPropertyDescriptorSetPropertyOffset);
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->enumerable, 0, offset);
+    RELEASE_ASSERT(offset == accessorPropertyDescriptorEnumerablePropertyOffset);
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->configurable, 0, offset);
+    RELEASE_ASSERT(offset == accessorPropertyDescriptorConfigurablePropertyOffset);
+    return structure;
+}
+
+// https://tc39.es/ecma262/#sec-frompropertydescriptor
+inline JSObject* constructObjectFromPropertyDescriptor(JSGlobalObject* globalObject, const PropertyDescriptor& descriptor)
+{
+    VM& vm = getVM(globalObject);
+
+    if (descriptor.enumerablePresent() && descriptor.configurablePresent()) {
+        if (descriptor.value() && descriptor.writablePresent()) {
+            JSObject* result = constructEmptyObject(vm, globalObject->dataPropertyDescriptorObjectStructure());
+            result->putDirect(vm, dataPropertyDescriptorValuePropertyOffset, descriptor.value());
+            result->putDirect(vm, dataPropertyDescriptorWritablePropertyOffset, jsBoolean(descriptor.writable()));
+            result->putDirect(vm, dataPropertyDescriptorEnumerablePropertyOffset, jsBoolean(descriptor.enumerable()));
+            result->putDirect(vm, dataPropertyDescriptorConfigurablePropertyOffset, jsBoolean(descriptor.configurable()));
+            return result;
+        }
+
+        if (descriptor.getterPresent() && descriptor.setterPresent()) {
+            JSObject* result = constructEmptyObject(vm, globalObject->accessorPropertyDescriptorObjectStructure());
+            result->putDirect(vm, accessorPropertyDescriptorGetPropertyOffset, descriptor.getter());
+            result->putDirect(vm, accessorPropertyDescriptorSetPropertyOffset, descriptor.setter());
+            result->putDirect(vm, accessorPropertyDescriptorEnumerablePropertyOffset, jsBoolean(descriptor.enumerable()));
+            result->putDirect(vm, accessorPropertyDescriptorConfigurablePropertyOffset, jsBoolean(descriptor.configurable()));
+            return result;
+        }
     }
-
-    description->putDirect(vm, vm.propertyNames->enumerable, jsBoolean(descriptor.enumerable()), 0);
-    description->putDirect(vm, vm.propertyNames->configurable, jsBoolean(descriptor.configurable()), 0);
-
-    return description;
+    return constructObjectFromPropertyDescriptorSlow(globalObject, descriptor);
 }
 
 
-JS_EXPORT_PRIVATE JSObject* objectConstructorFreeze(ExecState*, JSObject*);
-JS_EXPORT_PRIVATE JSObject* objectConstructorSeal(ExecState*, JSObject*);
-JSValue objectConstructorGetOwnPropertyDescriptor(ExecState*, JSObject*, const Identifier&);
-JSValue objectConstructorGetOwnPropertyDescriptors(ExecState*, JSObject*);
-JSArray* ownPropertyKeys(ExecState*, JSObject*, PropertyNameMode, DontEnumPropertiesMode);
-bool toPropertyDescriptor(ExecState*, JSValue, PropertyDescriptor&);
+JS_EXPORT_PRIVATE JSObject* objectConstructorFreeze(JSGlobalObject*, JSObject*);
+JS_EXPORT_PRIVATE JSObject* objectConstructorSeal(JSGlobalObject*, JSObject*);
+JSValue objectConstructorGetOwnPropertyDescriptor(JSGlobalObject*, JSObject*, const Identifier&);
+JSValue objectConstructorGetOwnPropertyDescriptors(JSGlobalObject*, JSObject*);
+JSArray* ownPropertyKeys(JSGlobalObject*, JSObject*, PropertyNameMode, DontEnumPropertiesMode, Optional<CachedPropertyNamesKind>);
+bool toPropertyDescriptor(JSGlobalObject*, JSValue, PropertyDescriptor&);
+
+JSC_DECLARE_HOST_FUNCTION(objectConstructorIs);
 
 } // namespace JSC

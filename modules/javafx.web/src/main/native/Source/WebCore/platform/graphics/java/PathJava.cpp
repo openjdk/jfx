@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 #include "Path.h"
 #include "FloatRect.h"
 #include "StrokeStyleApplier.h"
+#include "PlatformContextJava.h"
 #include "PlatformJavaClasses.h"
 #include "NotImplemented.h"
 #include "GraphicsContextJava.h"
@@ -45,7 +46,7 @@ namespace WebCore {
 
 static GraphicsContext& scratchContext()
 {
-    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f), Unaccelerated);
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -82,7 +83,10 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
     return RQRef::create(ref);
 }
 
-
+bool Path::isNull() const
+{
+    return !m_path;
+}
 
 Path::Path()
     : m_path(createEmptyPath())
@@ -136,9 +140,14 @@ bool Path::contains(const FloatPoint& p, WindRule rule) const
     return jbool_to_bool(res);
 }
 
-FloatRect Path::boundingRect() const
+FloatRect Path::boundingRectSlowCase() const
 {
     return strokeBoundingRect(0);
+}
+
+FloatRect Path::fastBoundingRectSlowCase() const
+{
+    return boundingRect();
 }
 
 FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
@@ -199,7 +208,7 @@ void Path::clear()
     WTF::CheckAndClearException(env);
 }
 
-bool Path::isEmpty() const
+bool Path::isEmptySlowCase() const
 {
     ASSERT(m_path);
 
@@ -215,30 +224,14 @@ bool Path::isEmpty() const
     return jbool_to_bool(res);
 }
 
-bool Path::hasCurrentPoint() const
-{
-    ASSERT(m_path);
-
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
-                                            "hasCurrentPoint", "()Z");
-    ASSERT(mid);
-
-    jboolean res = env->CallBooleanMethod(*m_path, mid);
-    WTF::CheckAndClearException(env);
-
-    return jbool_to_bool(res);
-}
-
-FloatPoint Path::currentPoint() const
+FloatPoint Path::currentPointSlowCase() const
 {
     //utatodo: return current point of subpath.
     float quietNaN = std::numeric_limits<float>::quiet_NaN();
     return FloatPoint(quietNaN, quietNaN);
 }
 
-void Path::moveTo(const FloatPoint &p)
+void Path::moveToSlowCase(const FloatPoint &p)
 {
     ASSERT(m_path);
 
@@ -252,7 +245,7 @@ void Path::moveTo(const FloatPoint &p)
     WTF::CheckAndClearException(env);
 }
 
-void Path::addLineTo(const FloatPoint &p)
+void Path::addLineToSlowCase(const FloatPoint &p)
 {
     ASSERT(m_path);
 
@@ -266,7 +259,7 @@ void Path::addLineTo(const FloatPoint &p)
     WTF::CheckAndClearException(env);
 }
 
-void Path::addQuadCurveTo(const FloatPoint &cp, const FloatPoint &p)
+void Path::addQuadCurveToSlowCase(const FloatPoint &cp, const FloatPoint &p)
 {
     ASSERT(m_path);
 
@@ -280,7 +273,7 @@ void Path::addQuadCurveTo(const FloatPoint &cp, const FloatPoint &p)
     WTF::CheckAndClearException(env);
 }
 
-void Path::addBezierCurveTo(const FloatPoint & controlPoint1,
+void Path::addBezierCurveToSlowCase(const FloatPoint & controlPoint1,
                             const FloatPoint & controlPoint2,
                             const FloatPoint & controlPoint3)
 {
@@ -329,7 +322,7 @@ void Path::closeSubpath()
     WTF::CheckAndClearException(env);
 }
 
-void Path::addArc(const FloatPoint & p, float radius, float startAngle,
+void Path::addArcSlowCase(const FloatPoint & p, float radius, float startAngle,
                   float endAngle, bool clockwise)
 {
     ASSERT(m_path);
@@ -417,7 +410,7 @@ void Path::transform(const AffineTransform &at)
     WTF::CheckAndClearException(env);
 }
 
-void Path::apply(const PathApplierFunction& function) const
+void Path::applySlowCase(const PathApplierFunction& function) const
 {
     ASSERT(m_path);
 
@@ -443,9 +436,7 @@ void Path::apply(const PathApplierFunction& function) const
             "currentSegment", "([D)I");
         ASSERT(midCurrentSegment);
 
-        PathElement pelement;
-        FloatPoint points[3];
-        pelement.points = points;
+        PathElement pathElement;
 
         JLocalRef<jdoubleArray> coords(env->NewDoubleArray(6));
         while(JNI_FALSE == env->CallBooleanMethod(iter, midIsDone)) {
@@ -457,31 +448,31 @@ void Path::apply(const PathApplierFunction& function) const
             jdouble *data = env->GetDoubleArrayElements(coords, &isCopy);
             switch (type) {
             case com_sun_webkit_graphics_WCPathIterator_SEG_MOVETO:
-                pelement.type = PathElementMoveToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                function(pelement);
+                pathElement.type = PathElement::Type::MoveToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_LINETO:
-                pelement.type = PathElementAddLineToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                function(pelement);
+                pathElement.type = PathElement::Type::AddLineToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_QUADTO:
-                pelement.type = PathElementAddQuadCurveToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                pelement.points[1] = FloatPoint(data[2],data[3]);
-                function(pelement);
+                pathElement.type = PathElement::Type::AddQuadCurveToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                pathElement.points[1] = FloatPoint(data[2],data[3]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_CUBICTO:
-                pelement.type = PathElementAddCurveToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                pelement.points[1] = FloatPoint(data[2],data[3]);
-                pelement.points[2] = FloatPoint(data[4],data[5]);
-                function(pelement);
+                pathElement.type = PathElement::Type::AddCurveToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                pathElement.points[1] = FloatPoint(data[2],data[3]);
+                pathElement.points[2] = FloatPoint(data[4],data[5]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_CLOSE:
-                pelement.type = PathElementCloseSubpath;
-                function(pelement);
+                pathElement.type = PathElement::Type::CloseSubpath;
+                function(pathElement);
                 break;
             }
             env->ReleaseDoubleArrayElements(coords, data, JNI_ABORT);
@@ -491,7 +482,7 @@ void Path::apply(const PathApplierFunction& function) const
     }
 }
 
-bool Path::strokeContains(StrokeStyleApplier *applier, const FloatPoint& p) const
+bool Path::strokeContains(StrokeStyleApplier& applier, const FloatPoint& p) const
 {
     ASSERT(m_path);
 
@@ -501,10 +492,7 @@ bool Path::strokeContains(StrokeStyleApplier *applier, const FloatPoint& p) cons
     // Stroke style is set to SolidStroke if the path is not dashed, else it
     // is unchanged. Setting it to NoStroke enables us to detect the switch.
     gc.setStrokeStyle(NoStroke);
-
-    if (applier) {
-        applier->strokeStyle(&gc);
-    }
+    applier.strokeStyle(&gc);
 
     float thickness = gc.strokeThickness();
     StrokeStyle strokeStyle = gc.strokeStyle();

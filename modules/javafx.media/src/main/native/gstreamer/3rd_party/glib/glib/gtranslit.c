@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Limited
+ * Copyright (C) 2014 Canonical Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -399,11 +399,6 @@ g_str_to_ascii (const gchar *str,
             }
           else /* no match found */
             g_string_append_c (result, '?');
-        }
-      else if (*str & 0x80) /* Out-of-range non-ASCII case */
-        {
-          g_string_append_c (result, '?');
-          str = g_utf8_next_char (str);
         }
       else /* ASCII case */
         g_string_append_c (result, *str++);

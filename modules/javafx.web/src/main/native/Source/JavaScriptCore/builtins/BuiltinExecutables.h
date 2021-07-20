@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExecutableInfo.h"
 #include "JSCBuiltins.h"
 #include "ParserModes.h"
 #include "SourceCode.h"
@@ -37,35 +38,39 @@ class UnlinkedFunctionExecutable;
 class Identifier;
 class VM;
 
-class BuiltinExecutables final: private WeakHandleOwner {
+#define BUILTIN_NAME_ONLY(name, functionName, overriddenName, length) name,
+enum class BuiltinCodeIndex {
+    JSC_FOREACH_BUILTIN_CODE(BUILTIN_NAME_ONLY)
+    NumberOfBuiltinCodes
+};
+#undef BUILTIN_NAME_ONLY
+
+class BuiltinExecutables {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit BuiltinExecutables(VM&);
 
 #define EXPOSE_BUILTIN_EXECUTABLES(name, functionName, overriddenName, length) \
 UnlinkedFunctionExecutable* name##Executable(); \
-const SourceCode& name##Source() { return m_##name##Source; }
+SourceCode name##Source();
 
     JSC_FOREACH_BUILTIN_CODE(EXPOSE_BUILTIN_EXECUTABLES)
 #undef EXPOSE_BUILTIN_EXECUTABLES
 
     static SourceCode defaultConstructorSourceCode(ConstructorKind);
-    UnlinkedFunctionExecutable* createDefaultConstructor(ConstructorKind, const Identifier& name);
+    UnlinkedFunctionExecutable* createDefaultConstructor(ConstructorKind, const Identifier& name, NeedsClassFieldInitializer, PrivateBrandRequirement);
 
-    static UnlinkedFunctionExecutable* createExecutable(VM&, const SourceCode&, const Identifier&, ConstructorKind, ConstructAbility);
+    static UnlinkedFunctionExecutable* createExecutable(VM&, const SourceCode&, const Identifier&, ConstructorKind, ConstructAbility, NeedsClassFieldInitializer, PrivateBrandRequirement = PrivateBrandRequirement::None);
+
+    void finalizeUnconditionally();
+
 private:
-    void finalize(Handle<Unknown>, void* context) override;
-
     VM& m_vm;
 
-    UnlinkedFunctionExecutable* createBuiltinExecutable(const SourceCode&, const Identifier&, ConstructAbility);
+    UnlinkedFunctionExecutable* createBuiltinExecutable(const SourceCode&, const Identifier&, ConstructorKind, ConstructAbility);
 
     Ref<StringSourceProvider> m_combinedSourceProvider;
-#define DECLARE_BUILTIN_SOURCE_MEMBERS(name, functionName, overriddenName, length)\
-    SourceCode m_##name##Source; \
-    Weak<UnlinkedFunctionExecutable> m_##name##Executable;
-    JSC_FOREACH_BUILTIN_CODE(DECLARE_BUILTIN_SOURCE_MEMBERS)
-#undef DECLARE_BUILTIN_SOURCE_MEMBERS
+    UnlinkedFunctionExecutable* m_unlinkedExecutables[static_cast<unsigned>(BuiltinCodeIndex::NumberOfBuiltinCodes)] { };
 };
 
 }

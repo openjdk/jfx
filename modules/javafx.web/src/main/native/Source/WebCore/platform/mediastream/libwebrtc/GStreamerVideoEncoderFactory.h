@@ -28,17 +28,18 @@
 namespace WebCore {
 
 class GStreamerVideoEncoderFactory final : public webrtc::VideoEncoderFactory {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     GStreamerVideoEncoderFactory();
 
 private:
     std::vector<webrtc::SdpVideoFormat> GetSupportedFormats() const override;
     std::unique_ptr<webrtc::VideoEncoder> CreateVideoEncoder(const webrtc::SdpVideoFormat&) final;
-    CodecInfo QueryVideoEncoder(const webrtc::SdpVideoFormat&) const
+    CodecInfo QueryVideoEncoder(const webrtc::SdpVideoFormat&) const override
     {
-        GST_FIXME("Detect wether the decoder is HW accelerated");
+        GST_FIXME("Detect whether the decoder is HW accelerated");
 
-        return { false, false };
+        return { false };
     }
 };
 }

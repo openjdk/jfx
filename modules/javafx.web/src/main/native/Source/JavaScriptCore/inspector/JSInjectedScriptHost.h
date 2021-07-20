@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,23 @@
 
 #pragma once
 
-#include "JSDestructibleObject.h"
+#include "JSObject.h"
 
 namespace Inspector {
 
 class InjectedScriptHost;
 
-class JSInjectedScriptHost final : public JSC::JSDestructibleObject {
+class JSInjectedScriptHost final : public JSC::JSNonFinalObject {
 public:
-    typedef JSC::JSDestructibleObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags;
+    using Base = JSC::JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, JSC::SubspaceAccess mode>
+    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        return vm.injectedScriptHostSpace<mode>();
+    }
 
     DECLARE_INFO;
 
@@ -56,28 +63,29 @@ public:
     InjectedScriptHost& impl() const { return m_wrapped; }
 
     // Attributes.
-    JSC::JSValue evaluate(JSC::ExecState*) const;
+    JSC::JSValue evaluate(JSC::JSGlobalObject*) const;
+    JSC::JSValue savedResultAlias(JSC::JSGlobalObject*) const;
 
     // Functions.
-    JSC::JSValue evaluateWithScopeExtension(JSC::ExecState*);
-    JSC::JSValue internalConstructorName(JSC::ExecState*);
-    JSC::JSValue isHTMLAllCollection(JSC::ExecState*);
-    JSC::JSValue subtype(JSC::ExecState*);
-    JSC::JSValue functionDetails(JSC::ExecState*);
-    JSC::JSValue getInternalProperties(JSC::ExecState*);
-    JSC::JSValue proxyTargetValue(JSC::ExecState*);
-    JSC::JSValue weakMapSize(JSC::ExecState*);
-    JSC::JSValue weakMapEntries(JSC::ExecState*);
-    JSC::JSValue weakSetSize(JSC::ExecState*);
-    JSC::JSValue weakSetEntries(JSC::ExecState*);
-    JSC::JSValue iteratorEntries(JSC::ExecState*);
-    JSC::JSValue queryObjects(JSC::ExecState*);
-
-protected:
-    void finishCreation(JSC::VM&);
+    JSC::JSValue evaluateWithScopeExtension(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue internalConstructorName(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue isHTMLAllCollection(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue isPromiseRejectedWithNativeGetterTypeError(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue subtype(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue functionDetails(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue getInternalProperties(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue proxyTargetValue(JSC::VM&, JSC::CallFrame*);
+    JSC::JSValue weakMapSize(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue weakMapEntries(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue weakSetSize(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue weakSetEntries(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue iteratorEntries(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue queryInstances(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue queryHolders(JSC::JSGlobalObject*, JSC::CallFrame*);
 
 private:
     JSInjectedScriptHost(JSC::VM&, JSC::Structure*, Ref<InjectedScriptHost>&&);
+    void finishCreation(JSC::VM&);
 
     Ref<InjectedScriptHost> m_wrapped;
 };

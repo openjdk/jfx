@@ -80,7 +80,7 @@ static inline bool isStrongPasswordTextField(const Element* element)
     return is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element)->hasAutoFillStrongPasswordButton();
 }
 
-Optional<ElementStyle> TextControlInnerContainer::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+Optional<Style::ElementStyle> TextControlInnerContainer::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
 {
     auto elementStyle = resolveStyle(&parentStyle);
     if (isStrongPasswordTextField(shadowHost())) {
@@ -88,7 +88,7 @@ Optional<ElementStyle> TextControlInnerContainer::resolveCustomStyle(const Rende
         elementStyle.renderStyle->setOverflowX(Overflow::Hidden);
         elementStyle.renderStyle->setOverflowY(Overflow::Hidden);
     }
-    return WTFMove(elementStyle);
+    return elementStyle;
 }
 
 TextControlInnerElement::TextControlInnerElement(Document& document)
@@ -102,12 +102,12 @@ Ref<TextControlInnerElement> TextControlInnerElement::create(Document& document)
     return adoptRef(*new TextControlInnerElement(document));
 }
 
-Optional<ElementStyle> TextControlInnerElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
+Optional<Style::ElementStyle> TextControlInnerElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
 {
     auto newStyle = RenderStyle::createPtr();
     newStyle->inheritFrom(*shadowHostStyle);
     newStyle->setFlexGrow(1);
-    newStyle->setMinWidth(Length { 0, Fixed }); // Needed for correct shrinking.
+    newStyle->setMinWidth(Length { 0, LengthType::Fixed }); // Needed for correct shrinking.
     newStyle->setDisplay(DisplayType::Block);
     newStyle->setDirection(TextDirection::LTR);
     // We don't want the shadow DOM to be editable, so we set this block to read-only in case the input itself is editable.
@@ -121,13 +121,13 @@ Optional<ElementStyle> TextControlInnerElement::resolveCustomStyle(const RenderS
 
         // Set "flex-basis: 1em". Note that CSSPrimitiveValue::computeLengthInt() only needs the element's
         // style to calculate em lengths. Since the element might not be in a document, just pass nullptr
-        // for the root element style and the render view.
-        auto emSize = CSSPrimitiveValue::create(1, CSSPrimitiveValue::CSS_EMS);
-        int pixels = emSize->computeLength<int>(CSSToLengthConversionData { newStyle.get(), nullptr, nullptr, 1.0, false });
-        newStyle->setFlexBasis(Length { pixels, Fixed });
+        // for the root element style, the parent element style, and the render view.
+        auto emSize = CSSPrimitiveValue::create(1, CSSUnitType::CSS_EMS);
+        int pixels = emSize->computeLength<int>(CSSToLengthConversionData { newStyle.get(), nullptr, nullptr, nullptr, 1.0, WTF::nullopt });
+        newStyle->setFlexBasis(Length { pixels, LengthType::Fixed });
     }
 
-    return ElementStyle { WTFMove(newStyle) };
+    return { WTFMove(newStyle) };
 }
 
 // MARK: TextControlInnerTextElement
@@ -138,9 +138,24 @@ inline TextControlInnerTextElement::TextControlInnerTextElement(Document& docume
     setHasCustomStyleResolveCallbacks();
 }
 
-Ref<TextControlInnerTextElement> TextControlInnerTextElement::create(Document& document)
+Ref<TextControlInnerTextElement> TextControlInnerTextElement::create(Document& document, bool isEditable)
 {
-    return adoptRef(*new TextControlInnerTextElement(document));
+    auto result = adoptRef(*new TextControlInnerTextElement(document));
+    constexpr bool initialization = true;
+    result->updateInnerTextElementEditabilityImpl(isEditable, initialization);
+    return result;
+}
+
+void TextControlInnerTextElement::updateInnerTextElementEditabilityImpl(bool isEditable, bool initialization)
+{
+    static MainThreadNeverDestroyed<const AtomString> plainTextOnlyName("plaintext-only", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> falseName("false", AtomString::ConstructFromLiteral);
+    const auto& value = isEditable ? plainTextOnlyName.get() : falseName.get();
+    if (initialization) {
+        Vector<Attribute> attributes { Attribute(contenteditableAttr, value) };
+        parserSetAttributes(attributes);
+    } else
+        setAttributeWithoutSynchronization(contenteditableAttr, value);
 }
 
 void TextControlInnerTextElement::defaultEventHandler(Event& event)
@@ -148,15 +163,14 @@ void TextControlInnerTextElement::defaultEventHandler(Event& event)
     // FIXME: In the future, we should add a way to have default event listeners.
     // Then we would add one to the text field's inner div, and we wouldn't need this subclass.
     // Or possibly we could just use a normal event listener.
-    if (event.isBeforeTextInsertedEvent() || event.type() == eventNames().webkitEditableContentChangedEvent) {
-        RefPtr<Element> shadowAncestor = shadowHost();
+    if (event.isBeforeTextInsertedEvent()) {
         // A TextControlInnerTextElement can have no host if its been detached,
         // but kept alive by an EditCommand. In this case, an undo/redo can
         // cause events to be sent to the TextControlInnerTextElement. To
         // prevent an infinite loop, we must check for this case before sending
         // the event up the chain.
-        if (shadowAncestor)
-            shadowAncestor->defaultEventHandler(event);
+        if (auto host = makeRefPtr(shadowHost()))
+            host->defaultEventHandler(event);
     }
     if (!event.defaultHandled())
         HTMLDivElement::defaultEventHandler(event);
@@ -172,10 +186,10 @@ RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
     return downcast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
 }
 
-Optional<ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
+Optional<Style::ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
 {
     auto style = downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
-    return ElementStyle(std::make_unique<RenderStyle>(WTFMove(style)));
+    return { makeUnique<RenderStyle>(WTFMove(style)) };
 }
 
 // MARK: TextControlPlaceholderElement
@@ -183,16 +197,18 @@ Optional<ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const Ren
 inline TextControlPlaceholderElement::TextControlPlaceholderElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setPseudo(AtomicString("placeholder", AtomicString::ConstructFromLiteral));
     setHasCustomStyleResolveCallbacks();
 }
 
 Ref<TextControlPlaceholderElement> TextControlPlaceholderElement::create(Document& document)
 {
-    return adoptRef(*new TextControlPlaceholderElement(document));
+    auto element = adoptRef(*new TextControlPlaceholderElement(document));
+    static MainThreadNeverDestroyed<const AtomString> placeholderName("placeholder", AtomString::ConstructFromLiteral);
+    element->setPseudo(placeholderName);
+    return element;
 }
 
-Optional<ElementStyle> TextControlPlaceholderElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle)
+Optional<Style::ElementStyle> TextControlPlaceholderElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle)
 {
     auto style = resolveStyle(&parentStyle);
 
@@ -203,7 +219,7 @@ Optional<ElementStyle> TextControlPlaceholderElement::resolveCustomStyle(const R
         auto& inputElement = downcast<HTMLInputElement>(controlElement);
         style.renderStyle->setTextOverflow(inputElement.shouldTruncateText(*shadowHostStyle) ? TextOverflow::Ellipsis : TextOverflow::Clip);
     }
-    return WTFMove(style);
+    return style;
 }
 
 // MARK: SearchFieldResultsButtonElement
@@ -226,6 +242,8 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
         input->focus();
         input->select();
 #if !PLATFORM(IOS_FAMILY)
+        document().updateStyleIfNeeded();
+
         if (auto* renderer = input->renderer()) {
             auto& searchFieldRenderer = downcast<RenderSearchField>(*renderer);
             if (searchFieldRenderer.popupIsVisible())
@@ -253,16 +271,28 @@ bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
 inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setPseudo(AtomicString("-webkit-search-cancel-button", AtomicString::ConstructFromLiteral));
-#if !PLATFORM(IOS_FAMILY)
-    setAttributeWithoutSynchronization(aria_labelAttr, AXSearchFieldCancelButtonText());
-#endif
-    setAttributeWithoutSynchronization(roleAttr, AtomicString("button", AtomicString::ConstructFromLiteral));
+    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)
 {
-    return adoptRef(*new SearchFieldCancelButtonElement(document));
+    auto element = adoptRef(*new SearchFieldCancelButtonElement(document));
+    static MainThreadNeverDestroyed<const AtomString> webkitSearchCancelButtonName("-webkit-search-cancel-button", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> buttonName("button", AtomString::ConstructFromLiteral);
+    element->setPseudo(webkitSearchCancelButtonName);
+#if !PLATFORM(IOS_FAMILY)
+    element->setAttributeWithoutSynchronization(aria_labelAttr, AXSearchFieldCancelButtonText());
+#endif
+    element->setAttributeWithoutSynchronization(roleAttr, buttonName);
+    return element;
+}
+
+Optional<Style::ElementStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+{
+    auto elementStyle = resolveStyle(&parentStyle);
+    auto& inputElement = downcast<HTMLInputElement>(*shadowHost());
+    elementStyle.renderStyle->setVisibility(elementStyle.renderStyle->visibility() == Visibility::Hidden || inputElement.value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
+    return elementStyle;
 }
 
 void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)

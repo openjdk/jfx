@@ -5,7 +5,8 @@
 [ "${USE_INTERNAL_SDK}" == "YES" ] || { echo "### Not running because USE_INTERNAL_SDK is not YES"; exit 0; }
 
 SCRIPT="${BUILD_SCRIPTS_DIR}/generate-xcfilelists"
+[ -f "${SCRIPT}" ] || SCRIPT="${PROJECT_DIR}/../../../${WK_ADDITIONAL_SCRIPTS_DIR}/generate-xcfilelists"
 [ -f "${SCRIPT}" ] || SCRIPT="${PROJECT_DIR}/../../Tools/Scripts/generate-xcfilelists"
 [ -f "${SCRIPT}" ] || { echo "### Cannot find generate-xcfilelists script"; exit 1; }
 
-"${SCRIPT}" generate-xcode --project WebCore --platform "${PLATFORM_NAME}" --configuration "${CONFIGURATION}"
+"${SCRIPT}" generate-xcode --project WebCore --platform "${FALLBACK_PLATFORM:-$PLATFORM_NAME}" --configuration "${CONFIGURATION}"

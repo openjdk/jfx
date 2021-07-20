@@ -53,7 +53,7 @@
  * ]|
  */
 
-
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include "gstinfo.h"
 #include "gstquery.h"
@@ -105,6 +105,7 @@ static GstQueryQuarks query_quarks[] = {
   {GST_QUERY_CAPS, "caps", 0},
   {GST_QUERY_DRAIN, "drain", 0},
   {GST_QUERY_CONTEXT, "context", 0},
+  {GST_QUERY_BITRATE, "bitrate", 0},
 
   {0, NULL, 0}
 };
@@ -195,6 +196,9 @@ _gst_query_free (GstQuery * query)
     gst_structure_set_parent_refcount (s, NULL);
     gst_structure_free (s);
   }
+#ifdef USE_POISONING
+  memset (query, 0xff, sizeof (GstQueryImpl));
+#endif
 
   g_slice_free1 (sizeof (GstQueryImpl), query);
 }
@@ -744,7 +748,7 @@ gst_query_writable_structure (GstQuery * query)
             (query)));
     gst_structure_set_parent_refcount (structure, &query->mini_object.refcount);
     GST_QUERY_STRUCTURE (query) = structure;
-}
+  }
   return structure;
 }
 
@@ -2650,4 +2654,185 @@ gst_query_parse_context_type (GstQuery * query, const gchar ** context_type)
   }
 
   return TRUE;
+}
+
+/**
+ * gst_query_new_bitrate:
+ *
+ * Constructs a new query object for querying the bitrate.
+ *
+ * Free-function: gst_query_unref()
+ *
+ * Returns: (transfer full): a new #GstQuery
+ *
+ * Since: 1.16
+ */
+GstQuery *
+gst_query_new_bitrate (void)
+{
+  GstQuery *query;
+  GstStructure *structure;
+
+  structure = gst_structure_new_id_empty (GST_QUARK (QUERY_BITRATE));
+  query = gst_query_new_custom (GST_QUERY_BITRATE, structure);
+
+  return query;
+}
+
+/**
+ * gst_query_set_bitrate:
+ * @query: a GST_QUERY_BITRATE type #GstQuery
+ * @nominal_bitrate: the nominal bitrate in bits per second
+ *
+ * Set the results of a bitrate query.  The nominal bitrate is the average
+ * bitrate expected over the length of the stream as advertised in file
+ * headers (or similar).
+ *
+ * Since: 1.16
+ */
+void
+gst_query_set_bitrate (GstQuery * query, guint nominal_bitrate)
+{
+  GstStructure *s;
+
+  g_return_if_fail (GST_QUERY_TYPE (query) == GST_QUERY_BITRATE);
+
+  s = GST_QUERY_STRUCTURE (query);
+
+  gst_structure_id_set (s,
+      GST_QUARK (NOMINAL_BITRATE), G_TYPE_UINT, nominal_bitrate, NULL);
+}
+
+/**
+ * gst_query_parse_bitrate:
+ * @query: a GST_QUERY_BITRATE type #GstQuery
+ * @nominal_bitrate: (out) (allow-none): The resulting bitrate in bits per second
+ *
+ * Get the results of a bitrate query. See also gst_query_set_bitrate().
+ *
+ * Since: 1.16
+ */
+void
+gst_query_parse_bitrate (GstQuery * query, guint * nominal_bitrate)
+{
+  GstStructure *structure;
+  const GValue *value;
+
+  g_return_if_fail (GST_QUERY_TYPE (query) == GST_QUERY_BITRATE);
+
+  structure = GST_QUERY_STRUCTURE (query);
+
+  if (nominal_bitrate) {
+    value = gst_structure_id_get_value (structure, GST_QUARK (NOMINAL_BITRATE));
+    *nominal_bitrate = g_value_get_uint (value);
+  }
+}
+
+/**
+ * gst_query_ref:
+ * @q: a #GstQuery to increase the refcount of.
+ *
+ * Increases the refcount of the given query by one.
+ *
+ * Returns: @q
+ */
+GstQuery *
+gst_query_ref (GstQuery * q)
+{
+  return GST_QUERY_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (q)));
+}
+
+/**
+ * gst_query_unref: (skip)
+ * @q: a #GstQuery to decrease the refcount of.
+ *
+ * Decreases the refcount of the query. If the refcount reaches 0, the query
+ * will be freed.
+ */
+void
+gst_query_unref (GstQuery * q)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (q));
+}
+
+/**
+ * gst_clear_query: (skip)
+ * @query_ptr: a pointer to a #GstQuery reference
+ *
+ * Clears a reference to a #GstQuery.
+ *
+ * @query_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the query is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+void
+gst_clear_query (GstQuery ** query_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) query_ptr);
+}
+
+/**
+ * gst_query_copy: (skip)
+ * @q: a #GstQuery to copy.
+ *
+ * Copies the given query using the copy function of the parent #GstStructure.
+ *
+ * Free-function: gst_query_unref
+ *
+ * Returns: (transfer full): a new copy of @q.
+ */
+GstQuery *
+gst_query_copy (const GstQuery * q)
+{
+  return GST_QUERY_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (q)));
+}
+
+/**
+ * gst_query_replace: (skip)
+ * @old_query: (inout) (transfer full) (nullable): pointer to a pointer to a
+ *     #GstQuery to be replaced.
+ * @new_query: (allow-none) (transfer none): pointer to a #GstQuery that will
+ *     replace the query pointed to by @old_query.
+ *
+ * Modifies a pointer to a #GstQuery to point to a different #GstQuery. The
+ * modification is done atomically (so this is useful for ensuring thread safety
+ * in some cases), and the reference counts are updated appropriately (the old
+ * query is unreffed, the new one is reffed).
+ *
+ * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
+ *
+ * Returns: %TRUE if @new_query was different from @old_query
+ */
+gboolean
+gst_query_replace (GstQuery ** old_query, GstQuery * new_query)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_query,
+      (GstMiniObject *) new_query);
+}
+
+/**
+ * gst_query_take:
+ * @old_query: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstQuery to be stolen.
+ * @new_query: (allow-none) (transfer full): pointer to a #GstQuery that will
+ *     replace the query pointed to by @old_query.
+ *
+ * Modifies a pointer to a #GstQuery to point to a different #GstQuery. This
+ * function is similar to gst_query_replace() except that it takes ownership of
+ * @new_query.
+ *
+ * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
+ *
+ * Returns: %TRUE if @new_query was different from @old_query
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_query_take (GstQuery ** old_query, GstQuery * new_query)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_query,
+      (GstMiniObject *) new_query);
 }

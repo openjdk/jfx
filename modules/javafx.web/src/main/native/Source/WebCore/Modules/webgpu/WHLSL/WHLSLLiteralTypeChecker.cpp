@@ -26,11 +26,10 @@
 #include "config.h"
 #include "WHLSLLiteralTypeChecker.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLIntegerLiteralType.h"
 #include "WHLSLNativeTypeDeclaration.h"
-#include "WHLSLNullLiteralType.h"
 #include "WHLSLProgram.h"
 #include "WHLSLTypeReference.h"
 #include "WHLSLVisitor.h"
@@ -39,18 +38,15 @@ namespace WebCore {
 
 namespace WHLSL {
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 static AST::NativeTypeDeclaration* getNativeTypeDeclaration(AST::ResolvableType& resolvableType)
 {
-    if (!resolvableType.resolvedType())
+    if (!is<AST::TypeReference>(resolvableType.resolvedType()))
         return nullptr;
-    if (!is<AST::TypeReference>(*resolvableType.resolvedType()))
+    auto& typeReference = downcast<AST::TypeReference>(resolvableType.resolvedType());
+    if (!is<AST::NativeTypeDeclaration>(typeReference.resolvedType()))
         return nullptr;
-    auto& typeReference = downcast<AST::TypeReference>(*resolvableType.resolvedType());
-    ASSERT(typeReference.resolvedType());
-    if (!is<AST::NativeTypeDeclaration>(*typeReference.resolvedType()))
-        return nullptr;
-    return &downcast<AST::NativeTypeDeclaration>(*typeReference.resolvedType());
+    return &downcast<AST::NativeTypeDeclaration>(typeReference.resolvedType());
 }
 
 class LiteralTypeChecker : public Visitor {
@@ -76,20 +72,15 @@ private:
         ASSERT(nativeTypeDeclaration);
         ASSERT(nativeTypeDeclaration->canRepresentUnsignedInteger()(unsignedIntegerLiteralType.value()));
     }
-
-    void visit(AST::NullLiteralType& nullLiteralType) override
-    {
-        ASSERT(nullLiteralType.resolvedType());
-    }
 };
-#endif
+#endif // ASSERT_ENABLED
 
 void checkLiteralTypes(Program& program)
 {
-#if ASSERT_DISABLED
-    UNUSED_PARAM(program);
-#else
+#if ASSERT_ENABLED
     LiteralTypeChecker().Visitor::visit(program);
+#else
+    UNUSED_PARAM(program);
 #endif
 }
 
@@ -97,4 +88,4 @@ void checkLiteralTypes(Program& program)
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGPU)
+#endif // ENABLE(WHLSL_COMPILER)

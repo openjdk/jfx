@@ -29,6 +29,7 @@
 
 #include "PolicyChecker.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/Expected.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -40,21 +41,21 @@ class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 
-class PlatformMediaResourceClient {
+class PlatformMediaResourceClient : public RefCounted<PlatformMediaResourceClient> {
 public:
     virtual ~PlatformMediaResourceClient() = default;
 
-    virtual void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinue)>&& completionHandler) { completionHandler(ShouldContinue::Yes); }
+    virtual void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinuePolicyCheck)>&& completionHandler) { completionHandler(ShouldContinuePolicyCheck::Yes); }
     virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
     virtual bool shouldCacheResponse(PlatformMediaResource&, const ResourceResponse&) { return true; }
     virtual void dataSent(PlatformMediaResource&, unsigned long long, unsigned long long) { }
     virtual void dataReceived(PlatformMediaResource&, const char*, int) { }
     virtual void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) { }
     virtual void loadFailed(PlatformMediaResource&, const ResourceError&) { }
-    virtual void loadFinished(PlatformMediaResource&) { }
+    virtual void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) { }
 };
 
-class PlatformMediaResourceLoader : public ThreadSafeRefCounted<PlatformMediaResourceLoader> {
+class PlatformMediaResourceLoader : public ThreadSafeRefCounted<PlatformMediaResourceLoader, WTF::DestructionThread::Main> {
     WTF_MAKE_NONCOPYABLE(PlatformMediaResourceLoader); WTF_MAKE_FAST_ALLOCATED;
 public:
     enum LoadOption {
@@ -66,12 +67,13 @@ public:
     virtual ~PlatformMediaResourceLoader() = default;
 
     virtual RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) = 0;
+    virtual void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) = 0;
 
 protected:
     PlatformMediaResourceLoader() = default;
 };
 
-class PlatformMediaResource : public ThreadSafeRefCounted<PlatformMediaResource> {
+class PlatformMediaResource : public ThreadSafeRefCounted<PlatformMediaResource, WTF::DestructionThread::Main> {
     WTF_MAKE_NONCOPYABLE(PlatformMediaResource); WTF_MAKE_FAST_ALLOCATED;
 public:
     PlatformMediaResource() = default;
@@ -79,11 +81,11 @@ public:
     virtual void stop() { }
     virtual bool didPassAccessControlCheck() const { return false; }
 
-    void setClient(std::unique_ptr<PlatformMediaResourceClient>&& client) { m_client = WTFMove(client); }
+    void setClient(RefPtr<PlatformMediaResourceClient>&& client) { m_client = WTFMove(client); }
     PlatformMediaResourceClient* client() { return m_client.get(); }
 
 protected:
-    std::unique_ptr<PlatformMediaResourceClient> m_client;
+    RefPtr<PlatformMediaResourceClient> m_client;
 };
 
 } // namespace WebCore

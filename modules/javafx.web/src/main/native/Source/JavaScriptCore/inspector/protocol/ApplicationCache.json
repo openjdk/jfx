@@ -1,6 +1,7 @@
 {
     "domain": "ApplicationCache",
-    "availability": ["web"],
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page"],
     "types": [
         {
             "id": "ApplicationCacheResource",
@@ -46,6 +47,10 @@
         {
             "name": "enable",
             "description": "Enables application cache domain notifications."
+        },
+        {
+            "name": "disable",
+            "description": "Disable application cache domain notifications."
         },
         {
             "name": "getManifestForFrame",

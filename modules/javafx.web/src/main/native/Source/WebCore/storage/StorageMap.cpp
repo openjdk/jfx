@@ -37,9 +37,7 @@ Ref<StorageMap> StorageMap::create(unsigned quota)
 
 StorageMap::StorageMap(unsigned quota)
     : m_iterator(m_map.end())
-    , m_iteratorIndex(UINT_MAX)
     , m_quotaSize(quota)  // quota measured in bytes
-    , m_currentLength(0)
 {
 }
 
@@ -182,19 +180,27 @@ bool StorageMap::contains(const String& key) const
     return m_map.contains(key);
 }
 
-void StorageMap::importItems(const HashMap<String, String>& items)
+void StorageMap::importItems(HashMap<String, String>&& items)
 {
+    if (m_map.isEmpty()) {
+        // Fast path.
+        m_map = WTFMove(items);
+        for (auto& pair : m_map) {
+            ASSERT(m_currentLength + pair.key.length() + pair.value.length() >= m_currentLength);
+            m_currentLength += (pair.key.length() + pair.value.length());
+        }
+        return;
+    }
+
     for (auto& item : items) {
-        const String& key = item.key;
-        const String& value = item.value;
+        auto& key = item.key;
+        auto& value = item.value;
 
-        HashMap<String, String>::AddResult result = m_map.add(key, value);
+        ASSERT(m_currentLength + key.length() + value.length() >= m_currentLength);
+        m_currentLength += (key.length() + value.length());
+
+        auto result = m_map.add(WTFMove(key), WTFMove(value));
         ASSERT_UNUSED(result, result.isNewEntry); // True if the key didn't exist previously.
-
-        ASSERT(m_currentLength + key.length() >= m_currentLength);
-        m_currentLength += key.length();
-        ASSERT(m_currentLength + value.length() >= m_currentLength);
-        m_currentLength += value.length();
     }
 }
 

@@ -29,23 +29,36 @@
 
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
+#include "Document.h"
 #include "MediaStream.h"
 #include "MediaStreamAudioSource.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
 
 namespace WebCore {
 
-Ref<MediaStreamAudioDestinationNode> MediaStreamAudioDestinationNode::create(AudioContext& context, size_t numberOfChannels)
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamAudioDestinationNode);
+
+ExceptionOr<Ref<MediaStreamAudioDestinationNode>> MediaStreamAudioDestinationNode::create(BaseAudioContext& context, const AudioNodeOptions& options)
 {
-    return adoptRef(*new MediaStreamAudioDestinationNode(context, numberOfChannels));
+    // This behavior is not part of the specification. This is done for consistency with Blink.
+    if (context.isStopped() || !context.scriptExecutionContext())
+        return Exception { NotAllowedError, "Cannot create a MediaStreamAudioDestinationNode in a detached frame"_s };
+
+    auto node = adoptRef(*new MediaStreamAudioDestinationNode(context));
+
+    auto result = node->handleAudioNodeOptions(options, { 2, ChannelCountMode::Explicit, ChannelInterpretation::Speakers });
+    if (result.hasException())
+        return result.releaseException();
+
+    return node;
 }
 
-MediaStreamAudioDestinationNode::MediaStreamAudioDestinationNode(AudioContext& context, size_t numberOfChannels)
-    : AudioBasicInspectorNode(context, context.sampleRate(), numberOfChannels)
+MediaStreamAudioDestinationNode::MediaStreamAudioDestinationNode(BaseAudioContext& context)
+    : AudioBasicInspectorNode(context, NodeTypeMediaStreamAudioDestination)
     , m_source(MediaStreamAudioSource::create(context.sampleRate()))
-    , m_stream(MediaStream::create(*context.scriptExecutionContext(), MediaStreamPrivate::create(m_source.copyRef())))
+    , m_stream(MediaStream::create(*context.document(), MediaStreamPrivate::create(context.document()->logger(), m_source.copyRef())))
 {
-    setNodeType(NodeTypeMediaStreamAudioDestination);
     initialize();
 }
 
@@ -57,10 +70,6 @@ MediaStreamAudioDestinationNode::~MediaStreamAudioDestinationNode()
 void MediaStreamAudioDestinationNode::process(size_t numberOfFrames)
 {
     m_source->consumeAudio(*input(0)->bus(), numberOfFrames);
-}
-
-void MediaStreamAudioDestinationNode::reset()
-{
 }
 
 } // namespace WebCore

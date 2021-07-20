@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,15 +27,18 @@
 
 #include "CodeSpecializationKind.h"
 #include "ConstructAbility.h"
+#include "ConstructorKind.h"
 #include "ExecutableInfo.h"
 #include "ExpressionRangeInfo.h"
 #include "Identifier.h"
 #include "Intrinsic.h"
 #include "JSCast.h"
 #include "ParserModes.h"
+#include "ParserTokens.h"
 #include "RegExp.h"
 #include "SourceCode.h"
 #include "VariableEnvironment.h"
+#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -59,7 +62,7 @@ public:
     friend class CachedFunctionExecutable;
 
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -67,18 +70,19 @@ public:
         return &vm.unlinkedFunctionExecutableSpace.space;
     }
 
-    static UnlinkedFunctionExecutable* create(VM* vm, const SourceCode& source, FunctionMetadataNode* node, UnlinkedFunctionKind unlinkedFunctionKind, ConstructAbility constructAbility, JSParserScriptMode scriptMode, CompactVariableMap::Handle parentScopeTDZVariables, DerivedContextType derivedContextType, bool isBuiltinDefaultClassConstructor = false)
+    static UnlinkedFunctionExecutable* create(VM& vm, const SourceCode& source, FunctionMetadataNode* node, UnlinkedFunctionKind unlinkedFunctionKind, ConstructAbility constructAbility, JSParserScriptMode scriptMode, RefPtr<TDZEnvironmentLink> parentScopeTDZVariables, Optional<PrivateNameEnvironment> parentPrivateNameEnvironment, DerivedContextType derivedContextType, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isBuiltinDefaultClassConstructor = false)
     {
-        UnlinkedFunctionExecutable* instance = new (NotNull, allocateCell<UnlinkedFunctionExecutable>(vm->heap))
-            UnlinkedFunctionExecutable(vm, vm->unlinkedFunctionExecutableStructure.get(), source, node, unlinkedFunctionKind, constructAbility, scriptMode, parentScopeTDZVariables, derivedContextType, isBuiltinDefaultClassConstructor);
-        instance->finishCreation(*vm);
+        UnlinkedFunctionExecutable* instance = new (NotNull, allocateCell<UnlinkedFunctionExecutable>(vm.heap))
+            UnlinkedFunctionExecutable(vm, vm.unlinkedFunctionExecutableStructure.get(), source, node, unlinkedFunctionKind, constructAbility, scriptMode, WTFMove(parentScopeTDZVariables), WTFMove(parentPrivateNameEnvironment), derivedContextType, needsClassFieldInitializer, privateBrandRequirement, isBuiltinDefaultClassConstructor);
+        instance->finishCreation(vm);
         return instance;
     }
+
+    ~UnlinkedFunctionExecutable();
 
     const Identifier& name() const { return m_name; }
     const Identifier& ecmaName() const { return m_ecmaName; }
     void setEcmaName(const Identifier& name) { m_ecmaName = name; }
-    const Identifier& inferredName() const { return m_inferredName; }
     unsigned parameterCount() const { return m_parameterCount; }; // Excluding 'this'!
     SourceParseMode parseMode() const { return static_cast<SourceParseMode>(m_sourceParseMode); };
 
@@ -112,18 +116,16 @@ public:
     unsigned typeProfilingEndOffset() const { return m_typeProfilingEndOffset; }
     void setInvalidTypeProfilingOffsets();
 
-    UnlinkedFunctionCodeBlock* unlinkedCodeBlockFor(CodeSpecializationKind);
-
     UnlinkedFunctionCodeBlock* unlinkedCodeBlockFor(
-        VM&, const SourceCode&, CodeSpecializationKind, DebuggerMode,
+        VM&, const SourceCode&, CodeSpecializationKind, OptionSet<CodeGenerationMode>,
         ParserError&, SourceParseMode);
 
     static UnlinkedFunctionExecutable* fromGlobalCode(
-        const Identifier&, ExecState&, const SourceCode&, JSObject*& exception,
+        const Identifier&, JSGlobalObject*, const SourceCode&, JSObject*& exception,
         int overrideLineNumber, Optional<int> functionConstructorParametersEndPosition);
 
     SourceCode linkedSourceCode(const SourceCode&) const;
-    JS_EXPORT_PRIVATE FunctionExecutable* link(VM&, const SourceCode& parentSource, Optional<int> overrideLineNumber = WTF::nullopt, Intrinsic = NoIntrinsic);
+    JS_EXPORT_PRIVATE FunctionExecutable* link(VM&, ScriptExecutable* topLevelExecutable, const SourceCode& parentSource, Optional<int> overrideLineNumber = WTF::nullopt, Intrinsic = NoIntrinsic, bool isInsideOrdinaryFunction = false);
 
     void clearCode(VM& vm)
     {
@@ -141,20 +143,46 @@ public:
     CodeFeatures features() const { return m_features; }
     bool hasCapturedVariables() const { return m_hasCapturedVariables; }
 
-    static const bool needsDestruction = true;
+    PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
+
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
     bool isBuiltinFunction() const { return m_isBuiltinFunction; }
     ConstructAbility constructAbility() const { return static_cast<ConstructAbility>(m_constructAbility); }
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
-    bool isClassConstructorFunction() const { return constructorKind() != ConstructorKind::None; }
+    bool isClassConstructorFunction() const
+    {
+        switch (constructorKind()) {
+        case ConstructorKind::None:
+        case ConstructorKind::Naked:
+            return false;
+        case ConstructorKind::Base:
+        case ConstructorKind::Extends:
+            return true;
+        }
+        return false;
+    }
     bool isClass() const
     {
         if (!m_rareData)
             return false;
         return !m_rareData->m_classSource.isNull();
     }
-    VariableEnvironment parentScopeTDZVariables() const { return m_parentScopeTDZVariables.environment().toVariableEnvironment(); }
+
+    RefPtr<TDZEnvironmentLink> parentScopeTDZVariables() const
+    {
+        if (!m_rareData)
+            return nullptr;
+        return m_rareData->m_parentScopeTDZVariables;
+    }
+
+    PrivateNameEnvironment parentPrivateNameEnvironment() const
+    {
+        if (!m_rareData)
+            return PrivateNameEnvironment();
+        return m_rareData->m_parentPrivateNameEnvironment;
+    }
 
     bool isArrowFunction() const { return isArrowFunctionParseMode(parseMode()); }
 
@@ -181,48 +209,93 @@ public:
         ensureRareData().m_sourceMappingURLDirective = sourceMappingURL;
     }
 
+    void finalizeUnconditionally(VM&);
+
     struct RareData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
         SourceCode m_classSource;
         String m_sourceURLDirective;
         String m_sourceMappingURLDirective;
+        RefPtr<TDZEnvironmentLink> m_parentScopeTDZVariables;
+        Vector<JSTextPosition> m_classFieldLocations;
+        PrivateNameEnvironment m_parentPrivateNameEnvironment;
     };
 
-private:
-    UnlinkedFunctionExecutable(VM*, Structure*, const SourceCode&, FunctionMetadataNode*, UnlinkedFunctionKind, ConstructAbility, JSParserScriptMode, CompactVariableMap::Handle,  JSC::DerivedContextType, bool isBuiltinDefaultClassConstructor);
-    UnlinkedFunctionExecutable(Decoder&, VariableEnvironment&, const CachedFunctionExecutable&);
+    NeedsClassFieldInitializer needsClassFieldInitializer() const { return static_cast<NeedsClassFieldInitializer>(m_needsClassFieldInitializer); }
 
-    unsigned m_firstLineOffset;
-    unsigned m_lineCount;
-    unsigned m_unlinkedFunctionNameStart;
-    unsigned m_unlinkedBodyStartColumn;
-    unsigned m_unlinkedBodyEndColumn;
-    unsigned m_startOffset;
-    unsigned m_sourceLength;
-    unsigned m_parametersStartOffset;
+    Vector<JSTextPosition>* classFieldLocations() const
+    {
+        if (m_rareData)
+            return &m_rareData->m_classFieldLocations;
+        return nullptr;
+    }
+
+    void setClassFieldLocations(Vector<JSTextPosition>&& classFieldLocations)
+    {
+        if (classFieldLocations.isEmpty())
+            return;
+        ensureRareData().m_classFieldLocations = WTFMove(classFieldLocations);
+    }
+
+private:
+    UnlinkedFunctionExecutable(VM&, Structure*, const SourceCode&, FunctionMetadataNode*, UnlinkedFunctionKind, ConstructAbility, JSParserScriptMode, RefPtr<TDZEnvironmentLink>, Optional<PrivateNameEnvironment>, JSC::DerivedContextType, JSC::NeedsClassFieldInitializer, PrivateBrandRequirement, bool isBuiltinDefaultClassConstructor);
+    UnlinkedFunctionExecutable(Decoder&, const CachedFunctionExecutable&);
+
+    DECLARE_VISIT_CHILDREN;
+
+    void decodeCachedCodeBlocks(VM&);
+
+    bool codeBlockEdgeMayBeWeak() const
+    {
+        // Currently, bytecode cache assumes that the tree of UnlinkedFunctionExecutable and UnlinkedCodeBlock will not be destroyed while the parent is live.
+        // Bytecode cache uses this asumption to avoid duplicate materialization by bookkeeping the heap cells in the offste-to-pointer map.
+        return VM::useUnlinkedCodeBlockJettisoning() && !m_isGeneratedFromCache;
+    }
+
+    unsigned m_firstLineOffset : 31;
+    unsigned m_isInStrictContext : 1;
+    unsigned m_lineCount : 31;
+    unsigned m_hasCapturedVariables : 1;
+    unsigned m_unlinkedFunctionNameStart : 31;
+    unsigned m_isBuiltinFunction : 1;
+    unsigned m_unlinkedBodyStartColumn : 31;
+    unsigned m_isBuiltinDefaultClassConstructor : 1;
+    unsigned m_unlinkedBodyEndColumn : 31;
+    unsigned m_constructAbility: 1;
+    unsigned m_startOffset : 31;
+    unsigned m_scriptMode: 1; // JSParserScriptMode
+    unsigned m_sourceLength : 31;
+    unsigned m_superBinding : 1;
+    unsigned m_parametersStartOffset : 31;
+    unsigned m_isCached : 1;
     unsigned m_typeProfilingStartOffset;
     unsigned m_typeProfilingEndOffset;
-    unsigned m_parameterCount;
+    unsigned m_parameterCount : 31;
+    unsigned m_privateBrandRequirement : 1;
     CodeFeatures m_features;
     SourceParseMode m_sourceParseMode;
-    unsigned m_isInStrictContext : 1;
-    unsigned m_hasCapturedVariables : 1;
-    unsigned m_isBuiltinFunction : 1;
-    unsigned m_isBuiltinDefaultClassConstructor : 1;
-    unsigned m_constructAbility: 1;
     unsigned m_constructorKind : 2;
     unsigned m_functionMode : 2; // FunctionMode
-    unsigned m_scriptMode: 1; // JSParserScriptMode
-    unsigned m_superBinding : 1;
     unsigned m_derivedContextType: 2;
+    unsigned m_isGeneratedFromCache : 1;
+    unsigned m_needsClassFieldInitializer : 1;
 
-    WriteBarrier<UnlinkedFunctionCodeBlock> m_unlinkedCodeBlockForCall;
-    WriteBarrier<UnlinkedFunctionCodeBlock> m_unlinkedCodeBlockForConstruct;
+    union {
+        WriteBarrier<UnlinkedFunctionCodeBlock> m_unlinkedCodeBlockForCall;
+        RefPtr<Decoder> m_decoder;
+    };
+
+    union {
+        WriteBarrier<UnlinkedFunctionCodeBlock> m_unlinkedCodeBlockForConstruct;
+        struct {
+            int32_t m_cachedCodeBlockForCallOffset;
+            int32_t m_cachedCodeBlockForConstructOffset;
+        };
+    };
 
     Identifier m_name;
     Identifier m_ecmaName;
-    Identifier m_inferredName;
 
     RareData& ensureRareData()
     {
@@ -232,11 +305,7 @@ private:
     }
     RareData& ensureRareDataSlow();
 
-    CompactVariableMap::Handle m_parentScopeTDZVariables;
     std::unique_ptr<RareData> m_rareData;
-
-protected:
-    static void visitChildren(JSCell*, SlotVisitor&);
 
 public:
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)

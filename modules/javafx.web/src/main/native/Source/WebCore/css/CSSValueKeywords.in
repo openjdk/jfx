@@ -35,7 +35,7 @@ small-caption
 -webkit-small-control
 -webkit-control
 
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+#if defined(WTF_PLATFORM_COCOA) && WTF_PLATFORM_COCOA
 -apple-system-headline
 -apple-system-body
 -apple-system-subheadline
@@ -195,6 +195,7 @@ transparent
 -webkit-activelink
 activeborder
 activecaption
+activetext
 appworkspace
 background
 buttonface
@@ -202,7 +203,11 @@ buttonhighlight
 buttonshadow
 buttontext
 activebuttontext
+canvas
+canvastext
 captiontext
+field
+fieldtext
 graytext
 highlight
 highlighttext
@@ -211,6 +216,7 @@ inactivecaption
 inactivecaptiontext
 infobackground
 infotext
+linktext
 luminance
 menutext
 scrollbar
@@ -219,25 +225,15 @@ threedface
 threedhighlight
 threedlightshadow
 threedshadow
+visitedtext
 window
 windowframe
 windowtext
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if (defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC) || (defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
 -apple-system-header-text
 -apple-system-text-background
 -apple-system-control-background
--apple-system-alternate-selected-text
--apple-system-control-accent
--apple-system-even-alternating-content-background
--apple-system-odd-alternating-content-background
--apple-system-selected-content-background
--apple-system-unemphasized-selected-content-background
--apple-system-selected-text
--apple-system-unemphasized-selected-text
--apple-system-selected-text-background
--apple-system-unemphasized-selected-text-background
 -apple-system-placeholder-text
--apple-system-find-highlight-background
 -apple-system-label
 -apple-system-secondary-label
 -apple-system-tertiary-label
@@ -245,7 +241,14 @@ windowtext
 -apple-system-grid
 -apple-system-separator
 -apple-system-container-border
-#endif
+-apple-system-background
+-apple-system-secondary-background
+-apple-system-tertiary-background
+-apple-system-grouped-background
+-apple-system-secondary-grouped-background
+-apple-system-tertiary-grouped-background
+-apple-system-selected-content-background
+-apple-system-unemphasized-selected-content-background
 -apple-wireless-playback-target-active
 -apple-system-blue
 -apple-system-brown
@@ -256,6 +259,26 @@ windowtext
 -apple-system-purple
 -apple-system-red
 -apple-system-yellow
+-apple-system-app-highlight-background
+#endif
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+-apple-system-alternate-selected-text
+-apple-system-control-accent
+-apple-system-even-alternating-content-background
+-apple-system-odd-alternating-content-background
+-apple-system-selected-text
+-apple-system-unemphasized-selected-text
+-apple-system-selected-text-background
+-apple-system-unemphasized-selected-text-background
+-apple-system-find-highlight-background
+#endif
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+-apple-system-indigo
+-apple-system-teal
+#endif
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
+-webkit-control-background
+#endif
 -webkit-focus-ring-color
 currentcolor
 //
@@ -418,7 +441,6 @@ katakana-iroha
 inline
 block
 list-item
-compact
 inline-block
 table
 inline-table
@@ -439,6 +461,7 @@ inline-flex
 contents
 grid
 inline-grid
+flow-root
 //none
 //
 // CSS_PROP_CURSOR:
@@ -757,6 +780,11 @@ keep-all
 break-word
 
 //
+// CSS_PROP_WHITE_SPACE
+//
+break-spaces
+
+//
 // CSS_PROP__KHTML_NBSP_MODE
 //
 space
@@ -769,6 +797,7 @@ loose
 // normal
 strict
 after-white-space
+anywhere
 
 // -webkit-appearance
 // The order here must match the order in the ControlPart enum in ThemeTypes.h.
@@ -824,15 +853,11 @@ searchfield-decoration
 searchfield-results-decoration
 searchfield-results-button
 searchfield-cancel-button
-snapshotted-plugin-overlay
 textfield
 relevancy-level-indicator
 continuous-capacity-level-indicator
 discrete-capacity-level-indicator
 rating-level-indicator
-#if defined(ENABLE_SERVICE_CONTROLS) && ENABLE_SERVICE_CONTROLS
-image-controls-button
-#endif
 #if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
 -apple-pay-button
 #endif
@@ -944,6 +969,9 @@ paused
 //
 flat
 preserve-3d
+#if defined(ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D) && ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D
+optimized-3d
+#endif
 
 //
 // CSS_PROP__WEBKIT_TRANSITION_TIMING_FUNCTION
@@ -956,30 +984,18 @@ ease-out
 ease-in-out
 step-start
 step-end
+jump-start
+jump-end
+jump-none
+jump-both
+// start
+// end
 
 //
 // CSS_PROP_ZOOM
 //
 document
 reset
-
-#if defined(ENABLE_CSS_DEVICE_ADAPTATION) && ENABLE_CSS_DEVICE_ADAPTATION
-//
-// CSS_PROP_USER_ZOOM
-//
-// fixed
-zoom
-
-//
-// CSS_PROP_MIN_WIDTH
-// CSS_PROP_MAX_WIDTH
-// CSS_PROP_MIN_HEIGHT
-// CSS_PROP_MAX_HEIGHT
-//
-// auto
-device-width
-device-height
-#endif
 
 //
 // CSS_PROP_POINTER_EVENTS
@@ -991,6 +1007,7 @@ visibleStroke
 painted
 fill
 stroke
+bounding-box
 //all
 //none
 
@@ -1032,7 +1049,7 @@ manual
 -webkit-letterpress
 #endif
 
-#if defined(ENABLE_ACCELERATED_OVERFLOW_SCROLLING) && ENABLE_ACCELERATED_OVERFLOW_SCROLLING
+#if defined(ENABLE_OVERFLOW_SCROLLING_TOUCH) && ENABLE_OVERFLOW_SCROLLING_TOUCH
 // -webkit-overflow-scrolling
 // auto
 touch
@@ -1122,8 +1139,8 @@ elements
 // -webkit-scroll-snap-type
 mandatory
 proximity
-x
-y
+// x
+// y
 #endif
 
 break
@@ -1136,6 +1153,7 @@ edges
 alphabetic
 
 // position
+sticky
 -webkit-sticky
 
 // (pointer:) media feature
@@ -1200,7 +1218,6 @@ repeating-conic-gradient
 -webkit-named-image
 filter
 -webkit-filter
-dashboard-region
 #if defined(ENABLE_CSS_PAINTING_API) && ENABLE_CSS_PAINTING_API
 paint
 #endif
@@ -1247,7 +1264,29 @@ rgb
 rgba
 hsl
 hsla
+hwb
+lab
+lch
 //color
+
+// relative color identifiers
+// from
+r
+g
+b
+h
+s
+l
+// h
+w
+// b
+// l
+a
+// b
+// l
+c
+// h
+// alpha
 
 // transform
 matrix
@@ -1275,6 +1314,8 @@ translate3d
 // transform-box
 // border-box
 // view-box
+// stroke-box
+// content-box
 fill-box
 
 // motion path
@@ -1284,9 +1325,11 @@ calc
 -webkit-calc
 min
 max
+clamp
+
+from-image
 
 #if defined(ENABLE_CSS_IMAGE_RESOLUTION) && ENABLE_CSS_IMAGE_RESOLUTION
-from-image
 snap
 #endif
 
@@ -1319,10 +1362,6 @@ dense
 // -webkit-column-fill
 balance
 
-// -webkit-aspect-ratio
-from-dimensions
-from-intrinsic
-
 #if defined(ENABLE_CSS_TRAILING_WORD) && ENABLE_CSS_TRAILING_WORD
 // -apple-trailing-word
 -webkit-partially-balanced
@@ -1337,10 +1376,18 @@ plain
 buy
 set-up
 donate
-#if defined(ENABLE_APPLE_PAY_SESSION_V4) && ENABLE_APPLE_PAY_SESSION_V4
 check-out
 book
 subscribe
+#if defined(ENABLE_APPLE_PAY_NEW_BUTTON_TYPES) && ENABLE_APPLE_PAY_NEW_BUTTON_TYPES
+reload
+add-money
+top-up
+order
+rent
+support
+contribute
+tip
 #endif
 #endif
 
@@ -1352,7 +1399,6 @@ style
 scroll-position
 //contents
 
-#if defined(ENABLE_POINTER_EVENTS) && ENABLE_POINTER_EVENTS
 // touch-action
 // auto
 // none
@@ -1360,7 +1406,13 @@ manipulation
 pan-x
 pan-y
 pinch-zoom
-#endif
+
+// scroll-behavior
+// auto
+smooth
+
+// overscroll-behavior
+// contain
 
 // hanging-punctuation
 allow-end
@@ -1371,10 +1423,28 @@ last
 // color-gamut
 p3
 rec2020
+sRGB
 
 // color() function
-sRGB
+a98-rgb
 display-p3
+// lab
+prophoto-rgb
+// rec2020
+// sRGB
+xyz
+
+// color-mix()
+color-mix
+shorter
+longer
+increasing
+decreasing
+specified
+lightness
+chroma
+whiteness
+blackness
 
 // prefers-default-appearance
 prefers
@@ -1384,13 +1454,19 @@ prefers
 reduce
 no-preference
 
+// prefers-contrast
+forced
+more
+less
+// no-preference
+
 #if defined(ENABLE_DARK_MODE_CSS) && ENABLE_DARK_MODE_CSS
 // prefers-color-scheme
 light
 dark
 // no-preference
 
-// supported-color-schemes
+// color-scheme
 only
 // light
 // dark
@@ -1416,3 +1492,20 @@ browser
 
 // text-decoration-thickness, text-underline-offset
 from-font
+
+// dynamic-range
+standard
+high
+
+// @supports selector()
+// https://drafts.csswg.org/css-conditional-4/#typedef-supports-selector-fn
+selector
+
+// math-style
+// normal
+compact
+
+// rotate
+x
+y
+z

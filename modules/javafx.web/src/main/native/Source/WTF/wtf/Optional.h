@@ -45,6 +45,7 @@
 # include <stdexcept>
 # include <wtf/Assertions.h>
 # include <wtf/Compiler.h>
+# include <wtf/FastMalloc.h>
 # include <wtf/StdLibExtras.h>
 
 # define TR2_OPTIONAL_REQUIRES(...) typename std::enable_if<__VA_ARGS__::value, bool>::type = false
@@ -364,6 +365,7 @@ using OptionalBase = typename std::conditional<
 template <class T>
 class Optional : private OptionalBase<T>
 {
+  WTF_MAKE_FAST_ALLOCATED;
   static_assert( !std::is_same<typename std::decay<T>::type, nullopt_t>::value, "bad T" );
   static_assert( !std::is_same<typename std::decay<T>::type, std::in_place_t>::value, "bad T" );
 
@@ -409,20 +411,26 @@ public:
   constexpr Optional() __NOEXCEPT : OptionalBase<T>()  {};
   constexpr Optional(nullopt_t) __NOEXCEPT : OptionalBase<T>() {};
 
-  Optional(const Optional& rhs)
+  constexpr Optional(const Optional& rhs)
   : OptionalBase<T>()
   {
     if (rhs.initialized()) {
-        ::new (static_cast<void*>(dataptr())) T(*rhs);
+        if constexpr (std::is_trivially_copy_assignable_v<T>)
+            OptionalBase<T>::storage_ = *rhs;
+        else
+            ::new (static_cast<void*>(dataptr())) T(*rhs);
         OptionalBase<T>::init_ = true;
     }
   }
 
-  Optional(Optional&& rhs) __NOEXCEPT_(detail_::is_nothrow_move_constructible<T>::value)
+  constexpr Optional(Optional&& rhs) __NOEXCEPT_(detail_::is_nothrow_move_constructible<T>::value)
   : OptionalBase<T>()
   {
     if (rhs.initialized()) {
-        ::new (static_cast<void*>(dataptr())) T(std::move(*rhs));
+        if constexpr (std::is_trivially_copy_assignable_v<T>)
+            OptionalBase<T>::storage_ = *rhs;
+        else
+            ::new (static_cast<void*>(dataptr())) T(std::move(*rhs));
         OptionalBase<T>::init_ = true;
         rhs.clear();
     }
@@ -580,6 +588,7 @@ public:
 template <class T>
 class Optional<T&>
 {
+  WTF_MAKE_FAST_ALLOCATED;
   static_assert( !std::is_same<T, nullopt_t>::value, "bad T" );
   static_assert( !std::is_same<T, std::in_place_t>::value, "bad T" );
   T* ref;

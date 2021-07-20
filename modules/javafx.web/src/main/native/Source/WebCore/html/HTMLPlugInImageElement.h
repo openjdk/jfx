@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,12 +25,11 @@
 namespace WebCore {
 
 class HTMLImageLoader;
-class MouseEvent;
 
 enum class CreatePlugins { No, Yes };
 
-// Base class for HTMLAppletElement, HTMLEmbedElement, and HTMLObjectElement.
-// FIXME: Perhaps HTMLAppletElement should inherit from HTMLPlugInElement directly instead.
+// Base class for HTMLEmbedElement and HTMLObjectElement.
+// FIXME: This is the only class that derives from HTMLPlugInElement, so we could merge the two classes.
 class HTMLPlugInImageElement : public HTMLPlugInElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLPlugInImageElement);
 public:
@@ -42,40 +41,12 @@ public:
 
     const String& serviceType() const { return m_serviceType; }
     const String& url() const { return m_url; }
-    const URL& loadedUrl() const { return m_loadedUrl; }
 
-    // Public for FrameView::addWidgetToUpdate()
     bool needsWidgetUpdate() const { return m_needsWidgetUpdate; }
     void setNeedsWidgetUpdate(bool needsWidgetUpdate) { m_needsWidgetUpdate = needsWidgetUpdate; }
 
-    void userDidClickSnapshot(MouseEvent&, bool forwardEvent);
-    void checkSnapshotStatus();
-    Image* snapshotImage() const { return m_snapshotImage.get(); }
-    WEBCORE_EXPORT void restartSnapshottedPlugIn();
-
-    // Plug-in URL might not be the same as url() with overriding parameters.
-    void subframeLoaderWillCreatePlugIn(const URL& plugInURL);
-    void subframeLoaderDidCreatePlugIn(const Widget&);
-
-    WEBCORE_EXPORT void setIsPrimarySnapshottedPlugIn(bool);
-    bool partOfSnapshotOverlay(const EventTarget*) const;
-
-    bool needsCheckForSizeChange() const { return m_needsCheckForSizeChange; }
-    void setNeedsCheckForSizeChange() { m_needsCheckForSizeChange = true; }
-    void checkSizeChangeForSnapshotting();
-
-    enum SnapshotDecision {
-        SnapshotNotYetDecided,
-        NeverSnapshot,
-        Snapshotted,
-        MaySnapshotWhenResized,
-        MaySnapshotWhenContentIsSet
-    };
-    SnapshotDecision snapshotDecision() const { return m_snapshotDecision; }
-
 protected:
     HTMLPlugInImageElement(const QualifiedName& tagName, Document&);
-    void finishCreating();
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
@@ -85,8 +56,8 @@ protected:
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     void updateImageLoaderWithNewURLSoon();
 
-    bool allowedToLoadFrameURL(const String& url);
-    bool wouldLoadAsPlugIn(const String& url, const String& serviceType);
+    bool canLoadURL(const String& relativeURL) const;
+    bool wouldLoadAsPlugIn(const String& relativeURL, const String& serviceType);
 
     void scheduleUpdateForAfterStyleResolution();
 
@@ -95,11 +66,10 @@ protected:
 
 private:
     bool isPlugInImageElement() const final { return true; }
-    bool isRestartedPlugin() const final { return m_isRestartedPlugin; }
 
-    bool allowedToLoadPluginContent(const String& url, const String& mimeType) const;
-
-    void didAddUserAgentShadowRoot(ShadowRoot&) final;
+    bool shouldBypassCSPForPDFPlugin(const String&) const;
+    bool canLoadPlugInContent(const String& relativeURL, const String& mimeType) const;
+    bool canLoadURL(const URL&) const;
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool childShouldCreateRenderer(const Node&) const override;
@@ -111,36 +81,10 @@ private:
     void prepareForDocumentSuspension() final;
     void resumeFromDocumentSuspension() final;
 
-    void defaultEventHandler(Event&) final;
-    void dispatchPendingMouseClick() final;
-
-    void updateSnapshot(Image*) final;
-
     void updateAfterStyleResolution();
 
-    void simulatedMouseClickTimerFired();
-
-    void restartSimilarPlugIns();
-    void removeSnapshotTimerFired();
-    bool isTopLevelFullPagePlugin(const RenderEmbeddedObject&) const;
-
-    void setDisplayState(DisplayState) final;
-
-    URL m_loadedUrl;
     bool m_needsWidgetUpdate { false };
     bool m_needsDocumentActivationCallbacks { false };
-    RefPtr<MouseEvent> m_pendingClickEventFromSnapshot;
-    DeferrableOneShotTimer m_simulatedMouseClickTimer;
-    Timer m_removeSnapshotTimer;
-    RefPtr<Image> m_snapshotImage;
-    bool m_createdDuringUserGesture { false };
-    bool m_isRestartedPlugin { false };
-    bool m_needsCheckForSizeChange { false };
-    bool m_plugInWasCreated { false };
-    bool m_deferredPromotionToPrimaryPlugIn { false };
-    IntSize m_sizeWhenSnapshotted;
-    SnapshotDecision m_snapshotDecision { SnapshotNotYetDecided };
-    bool m_plugInDimensionsSpecified { false };
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
     bool m_needsImageReload { false };
     bool m_hasUpdateScheduledForAfterStyleResolution { false };

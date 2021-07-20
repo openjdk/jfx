@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -44,7 +44,7 @@ struct CompactHashIndex {
 };
 
 // FIXME: There is no reason this get function can't be simpler.
-// ie. typedef JSValue (*GetFunction)(ExecState*, JSObject* baseObject)
+// ie. typedef JSValue (*GetFunction)(JSGlobalObject*, JSObject* baseObject)
 typedef PropertySlot::GetValueFunc GetFunction;
 typedef PutPropertySlot::PutValueFunc PutFunction;
 typedef FunctionExecutable* (*BuiltinGenerator)(VM&);
@@ -238,17 +238,18 @@ inline bool getStaticPropertySlotFromTable(VM& vm, const ClassInfo* classInfo, c
     }
 
     if (entry->attributes() & PropertyAttribute::DOMJITAttribute) {
+        ASSERT_WITH_MESSAGE(entry->attributes() & PropertyAttribute::ReadOnly, "DOMJITAttribute supports readonly attributes currently.");
         const DOMJIT::GetterSetter* domJIT = entry->domJIT();
-        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), domJIT->getter(), DOMAttributeAnnotation { classInfo, domJIT });
+        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), domJIT->getter(), nullptr, DOMAttributeAnnotation { classInfo, domJIT });
         return true;
     }
 
     if (entry->attributes() & PropertyAttribute::DOMAttribute) {
-        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), DOMAttributeAnnotation { classInfo, nullptr });
+        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), entry->propertyPutter(), DOMAttributeAnnotation { classInfo, nullptr });
         return true;
     }
 
-    slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter());
+    slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), entry->propertyPutter());
     return true;
 }
 
@@ -266,41 +267,49 @@ inline bool replaceStaticPropertySlot(VM& vm, JSObject* thisObject, PropertyName
 // 'base' means the object holding the property (possibly in the prototype chain of the object put was called on).
 // 'thisValue' is the object that put is being applied to (in the case of a proxy, the proxy target).
 // 'slot.thisValue()' is the object the put was originally performed on (in the case of a proxy, the proxy itself).
-inline bool putEntry(ExecState* exec, const ClassInfo*, const HashTableValue* entry, JSObject* base, JSObject* thisValue, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+inline bool putEntry(JSGlobalObject* globalObject, const ClassInfo*, const HashTableValue* entry, JSObject* base, JSObject* thisValue, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (entry->attributes() & PropertyAttribute::BuiltinOrFunctionOrLazyProperty) {
         if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
             // If this is a function or lazy property put then we just do the put because
             // logically the object already had the property, so this is just a replace.
+            // FIXME: thisValue may be an object with non-extensible structure we must throw for.
             if (JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue))
                 thisObject->putDirect(vm, propertyName, value);
             return true;
         }
-        return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+        return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
     }
 
     if (entry->attributes() & PropertyAttribute::Accessor)
-        return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+        return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
     if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
         ASSERT_WITH_MESSAGE(!(entry->attributes() & PropertyAttribute::DOMJITAttribute), "DOMJITAttribute supports readonly attributes currently.");
         bool isAccessor = entry->attributes() & PropertyAttribute::CustomAccessor;
-        JSValue updateThisValue = entry->attributes() & PropertyAttribute::CustomAccessor ? slot.thisValue() : JSValue(base);
+        // FIXME: We should only be caching these if we're not an uncacheable dictionary:
+        // https://bugs.webkit.org/show_bug.cgi?id=215347
         // We need to make sure that we decide to cache this property before we potentially execute aribitrary JS.
         if (isAccessor)
             slot.setCustomAccessor(base, entry->propertyPutter());
         else
             slot.setCustomValue(base, entry->propertyPutter());
 
-        bool result = callCustomSetter(exec, entry->propertyPutter(), isAccessor, updateThisValue, value);
+        auto result = callCustomSetter(globalObject, entry->propertyPutter(), isAccessor, base, slot.thisValue(), value);
         RETURN_IF_EXCEPTION(scope, false);
-        return result;
+        if (result != TriState::Indeterminate)
+            return result == TriState::True;
+
+        // FIXME: thisValue may be an object with non-extensible structure we must throw for.
+        if (JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue))
+            thisObject->putDirect(vm, propertyName, value);
+        return true;
     }
 
-    return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+    return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 }
 
 /**
@@ -308,14 +317,14 @@ inline bool putEntry(ExecState* exec, const ClassInfo*, const HashTableValue* en
  * It looks up a hash entry for the property to be set.  If an entry
  * is found it sets the value and returns true, else it returns false.
  */
-inline bool lookupPut(ExecState* exec, PropertyName propertyName, JSObject* base, JSValue value, const HashTable& table, PutPropertySlot& slot, bool& putResult)
+inline bool lookupPut(JSGlobalObject* globalObject, PropertyName propertyName, JSObject* base, JSValue value, const HashTable& table, PutPropertySlot& slot, bool& putResult)
 {
     const HashTableValue* entry = table.entry(propertyName);
 
     if (!entry)
         return false;
 
-    putResult = putEntry(exec, table.classForThis, entry, base, base, propertyName, value, slot);
+    putResult = putEntry(globalObject, table.classForThis, entry, base, base, propertyName, value, slot);
     return true;
 }
 
@@ -361,9 +370,10 @@ inline void reifyStaticProperty(VM& vm, const ClassInfo* classInfo, const Proper
     }
 
     if (value.attributes() & PropertyAttribute::ClassStructure) {
-        LazyClassStructure* structure = bitwise_cast<LazyClassStructure*>(
+        LazyClassStructure* lazyStructure = bitwise_cast<LazyClassStructure*>(
             bitwise_cast<char*>(&thisObj) + value.lazyClassStructureOffset());
-        structure->get(jsCast<JSGlobalObject*>(&thisObj));
+        JSObject* constructor = lazyStructure->constructor(jsCast<JSGlobalObject*>(&thisObj));
+        thisObj.putDirect(vm, propertyName, constructor, attributesForStructure(value.attributes()));
         return;
     }
 
@@ -399,14 +409,14 @@ inline void reifyStaticProperties(VM& vm, const ClassInfo* classInfo, const Hash
     for (auto& value : values) {
         if (!value.m_key)
             continue;
-        auto key = Identifier::fromString(&vm, reinterpret_cast<const LChar*>(value.m_key), strlen(value.m_key));
+        auto key = Identifier::fromString(vm, reinterpret_cast<const LChar*>(value.m_key), strlen(value.m_key));
         reifyStaticProperty(vm, classInfo, key, value, thisObj);
     }
 }
 
-template<RawNativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetter(ExecState* state, EncodedJSValue, PropertyName propertyName)
+template<RawNativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetterImpl(JSGlobalObject* globalObject, PropertyName propertyName)
 {
-    return JSValue::encode(JSFunction::create(state->vm(), state->lexicalGlobalObject(), length, propertyName.publicName(), nativeFunction));
+    return JSValue::encode(JSFunction::create(globalObject->vm(), globalObject, length, propertyName.publicName(), nativeFunction));
 }
 
 } // namespace JSC

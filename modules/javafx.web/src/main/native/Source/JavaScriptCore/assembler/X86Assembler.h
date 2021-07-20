@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "AssemblerBuffer.h"
 #include "AssemblerCommon.h"
 #include "JITCompilationEffort.h"
+#include "RegisterInfo.h"
 #include <limits.h>
 #include <stdint.h>
 #include <wtf/Assertions.h>
@@ -39,7 +40,7 @@ namespace JSC {
 
 inline bool CAN_SIGN_EXTEND_8_32(int32_t value) { return value == (int32_t)(signed char)value; }
 
-namespace X86Registers {
+namespace RegisterNames {
 
 #if COMPILER(MSVC)
 #define JSC_X86_ASM_REGISTER_ID_ENUM_BASE_TYPE
@@ -47,56 +48,25 @@ namespace X86Registers {
 #define JSC_X86_ASM_REGISTER_ID_ENUM_BASE_TYPE : int8_t
 #endif
 
+#define REGISTER_ID(id, name, res, cs) id,
+
 typedef enum JSC_X86_ASM_REGISTER_ID_ENUM_BASE_TYPE {
-    eax,
-    ecx,
-    edx,
-    ebx,
-    esp,
-    ebp,
-    esi,
-    edi,
-#if CPU(X86_64)
-    r8,
-    r9,
-    r10,
-    r11,
-    r12,
-    r13,
-    r14,
-    r15,
-#endif
+    FOR_EACH_GP_REGISTER(REGISTER_ID)
     InvalidGPRReg = -1,
 } RegisterID;
 
 typedef enum JSC_X86_ASM_REGISTER_ID_ENUM_BASE_TYPE {
-    eip,
-    eflags
+    FOR_EACH_SP_REGISTER(REGISTER_ID)
 } SPRegisterID;
 
 typedef enum JSC_X86_ASM_REGISTER_ID_ENUM_BASE_TYPE {
-    xmm0,
-    xmm1,
-    xmm2,
-    xmm3,
-    xmm4,
-    xmm5,
-    xmm6,
-    xmm7,
-#if CPU(X86_64)
-    xmm8,
-    xmm9,
-    xmm10,
-    xmm11,
-    xmm12,
-    xmm13,
-    xmm14,
-    xmm15,
-#endif
+    FOR_EACH_FP_REGISTER(REGISTER_ID)
     InvalidFPRReg = -1,
 } XMMRegisterID;
 
-} // namespace X86Register
+#undef REGISTER_ID
+
+} // namespace X86Registers
 
 class X86Assembler {
 public:
@@ -137,15 +107,9 @@ public:
     {
         ASSERT(id >= firstRegister() && id <= lastRegister());
         static const char* const nameForRegister[numberOfRegisters()] = {
-#if CPU(X86_64)
-            "rax", "rcx", "rdx", "rbx",
-            "rsp", "rbp", "rsi", "rdi",
-            "r8", "r9", "r10", "r11",
-            "r12", "r13", "r14", "r15"
-#else
-            "eax", "ecx", "edx", "ebx",
-            "esp", "ebp", "esi", "edi",
-#endif
+#define REGISTER_NAME(id, name, res, cs) name,
+        FOR_EACH_GP_REGISTER(REGISTER_NAME)
+#undef REGISTER_NAME
         };
         return nameForRegister[id];
     }
@@ -154,11 +118,9 @@ public:
     {
         ASSERT(id >= firstSPRegister() && id <= lastSPRegister());
         static const char* const nameForRegister[numberOfSPRegisters()] = {
-#if CPU(X86_64)
-            "rip", "rflags"
-#else
-            "eip", "eflags"
-#endif
+#define REGISTER_NAME(id, name, res, cs) name,
+        FOR_EACH_SP_REGISTER(REGISTER_NAME)
+#undef REGISTER_NAME
         };
         return nameForRegister[id];
     }
@@ -167,12 +129,9 @@ public:
     {
         ASSERT(reg >= firstFPRegister() && reg <= lastFPRegister());
         static const char* const nameForRegister[numberOfFPRegisters()] = {
-            "xmm0", "xmm1", "xmm2", "xmm3",
-            "xmm4", "xmm5", "xmm6", "xmm7",
-#if CPU(X86_64)
-            "xmm8", "xmm9", "xmm10", "xmm11",
-            "xmm12", "xmm13", "xmm14", "xmm15"
-#endif
+#define REGISTER_NAME(id, name, res, cs) name,
+        FOR_EACH_FP_REGISTER(REGISTER_NAME)
+#undef REGISTER_NAME
         };
         return nameForRegister[reg];
     }
@@ -333,8 +292,11 @@ private:
         OP2_IMUL_GvEv       = 0xAF,
         OP2_CMPXCHGb        = 0xB0,
         OP2_CMPXCHG         = 0xB1,
+        OP2_BTR             = 0xB3,
         OP2_MOVZX_GvEb      = 0xB6,
         OP2_POPCNT          = 0xB8,
+        OP2_GROUP_BT_EvIb   = 0xBA,
+        OP2_BT_EvEv         = 0xA3,
         OP2_BSF             = 0xBC,
         OP2_TZCNT           = 0xBC,
         OP2_BSR             = 0xBD,
@@ -423,6 +385,8 @@ private:
 
         ESCAPE_D9_FSTP_singleReal = 3,
         ESCAPE_DD_FSTP_doubleReal = 3,
+
+        GROUP_BT_OP_BT = 4,
     } GroupOpcodeID;
 
     class X86InstructionFormatter;
@@ -1685,6 +1649,13 @@ public:
     }
 #endif
 
+#if CPU(X86_64)
+    void btrq_rr(RegisterID src, RegisterID dst)
+    {
+        m_formatter.twoByteOp64(OP2_BTR, dst, src);
+    }
+#endif
+
     void popcnt_rr(RegisterID src, RegisterID dst)
     {
         m_formatter.prefix(PRE_SSE_F3);
@@ -2189,6 +2160,56 @@ public:
             m_formatter.oneByteOp8(OP_GROUP3_EbIb, GROUP3_OP_TEST, dst);
         m_formatter.immediate8(imm);
     }
+
+    void bt_ir(int bitOffset, RegisterID testValue)
+    {
+        ASSERT(-128 <= bitOffset && bitOffset < 128);
+        m_formatter.twoByteOp(OP2_GROUP_BT_EvIb, GROUP_BT_OP_BT, testValue);
+        m_formatter.immediate8(bitOffset);
+    }
+
+    void bt_im(int bitOffset, int offset, RegisterID base)
+    {
+        ASSERT(-128 <= bitOffset && bitOffset < 128);
+        m_formatter.twoByteOp(OP2_GROUP_BT_EvIb, GROUP_BT_OP_BT, base, offset);
+        m_formatter.immediate8(bitOffset);
+    }
+
+    void bt_ir(RegisterID bitOffset, RegisterID testValue)
+    {
+        m_formatter.twoByteOp(OP2_BT_EvEv, bitOffset, testValue);
+    }
+
+    void bt_im(RegisterID bitOffset, int offset, RegisterID base)
+    {
+        m_formatter.twoByteOp(OP2_BT_EvEv, bitOffset, base, offset);
+    }
+
+#if CPU(X86_64)
+    void btw_ir(int bitOffset, RegisterID testValue)
+    {
+        ASSERT(-128 <= bitOffset && bitOffset < 128);
+        m_formatter.twoByteOp64(OP2_GROUP_BT_EvIb, GROUP_BT_OP_BT, testValue);
+        m_formatter.immediate8(bitOffset);
+    }
+
+    void btw_im(int bitOffset, int offset, RegisterID base)
+    {
+        ASSERT(-128 <= bitOffset && bitOffset < 128);
+        m_formatter.twoByteOp64(OP2_GROUP_BT_EvIb, GROUP_BT_OP_BT, base, offset);
+        m_formatter.immediate8(bitOffset);
+    }
+
+    void btw_ir(RegisterID bitOffset, RegisterID testValue)
+    {
+        m_formatter.twoByteOp64(OP2_BT_EvEv, bitOffset, testValue);
+    }
+
+    void btw_im(RegisterID bitOffset, int offset, RegisterID base)
+    {
+        m_formatter.twoByteOp64(OP2_BT_EvEv, bitOffset, base, offset);
+    }
+#endif
 
     void setCC_r(Condition cond, RegisterID dst)
     {
@@ -3672,10 +3693,10 @@ public:
     AssemblerLabel labelForWatchpoint()
     {
         AssemblerLabel result = m_formatter.label();
-        if (static_cast<int>(result.m_offset) != m_indexOfLastWatchpoint)
+        if (static_cast<int>(result.offset()) != m_indexOfLastWatchpoint)
             result = label();
-        m_indexOfLastWatchpoint = result.m_offset;
-        m_indexOfTailOfLastWatchpoint = result.m_offset + maxJumpReplacementSize();
+        m_indexOfLastWatchpoint = result.offset();
+        m_indexOfTailOfLastWatchpoint = result.offset() + maxJumpReplacementSize();
         return result;
     }
 
@@ -3687,7 +3708,7 @@ public:
     AssemblerLabel label()
     {
         AssemblerLabel result = m_formatter.label();
-        while (UNLIKELY(static_cast<int>(result.m_offset) < m_indexOfTailOfLastWatchpoint)) {
+        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
             nop();
             result = m_formatter.label();
         }
@@ -3716,29 +3737,29 @@ public:
         ASSERT(to.isSet());
 
         char* code = reinterpret_cast<char*>(m_formatter.data());
-        ASSERT(!WTF::unalignedLoad<int32_t>(bitwise_cast<int32_t*>(code + from.m_offset) - 1));
-        setRel32(code + from.m_offset, code + to.m_offset);
+        ASSERT(!WTF::unalignedLoad<int32_t>(bitwise_cast<int32_t*>(code + from.offset()) - 1));
+        setRel32(code + from.offset(), code + to.offset());
     }
 
     static void linkJump(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(from.isSet());
 
-        setRel32(reinterpret_cast<char*>(code) + from.m_offset, to);
+        setRel32(reinterpret_cast<char*>(code) + from.offset(), to);
     }
 
     static void linkCall(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(from.isSet());
 
-        setRel32(reinterpret_cast<char*>(code) + from.m_offset, to);
+        setRel32(reinterpret_cast<char*>(code) + from.offset(), to);
     }
 
     static void linkPointer(void* code, AssemblerLabel where, void* value)
     {
         ASSERT(where.isSet());
 
-        setPointer(reinterpret_cast<char*>(code) + where.m_offset, value);
+        setPointer(reinterpret_cast<char*>(code) + where.offset(), value);
     }
 
     static void relinkJump(void* from, void* to)
@@ -3918,18 +3939,18 @@ public:
     static unsigned getCallReturnOffset(AssemblerLabel call)
     {
         ASSERT(call.isSet());
-        return call.m_offset;
+        return call.offset();
     }
 
     static void* getRelocatedAddress(void* code, AssemblerLabel label)
     {
         ASSERT(label.isSet());
-        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.m_offset);
+        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.offset());
     }
 
     static int getDifferenceBetweenLabels(AssemblerLabel a, AssemblerLabel b)
     {
-        return b.m_offset - a.m_offset;
+        return b.offset() - a.offset();
     }
 
     unsigned debugOffset() { return m_formatter.debugOffset(); }
@@ -3939,8 +3960,10 @@ public:
         m_formatter.oneByteOp(OP_NOP);
     }
 
-    template <typename CopyFunction>
-    static void fillNops(void* base, size_t size, CopyFunction copy)
+    using CopyFunction = void*(&)(void*, const void*, size_t);
+
+    template <CopyFunction copy>
+    static void fillNops(void* base, size_t size)
     {
         UNUSED_PARAM(copy);
 #if CPU(X86_64)
@@ -4014,7 +4037,7 @@ private:
     }
 
     class X86InstructionFormatter {
-        static const int maxInstructionSize = 16;
+        static constexpr int maxInstructionSize = 16;
 
     public:
         enum ModRmMode {
@@ -4683,7 +4706,7 @@ private:
 
         // Immediates:
         //
-        // An immedaite should be appended where appropriate after an op has been emitted.
+        // An immediate should be appended where appropriate after an op has been emitted.
         // The writes are unchecked since the opcode formatters above will have ensured space.
 
         void immediate8(int imm)

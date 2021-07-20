@@ -53,7 +53,7 @@ SecurityOrigin* SecurityContext::securityOrigin() const
     return &m_securityOriginPolicy->origin();
 }
 
-void SecurityContext::setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy> contentSecurityPolicy)
+void SecurityContext::setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>&& contentSecurityPolicy)
 {
     m_contentSecurityPolicy = WTFMove(contentSecurityPolicy);
 }
@@ -66,7 +66,7 @@ bool SecurityContext::isSecureTransitionTo(const URL& url) const
     if (!haveInitializedSecurityOrigin())
         return true;
 
-    return securityOriginPolicy()->origin().canAccess(SecurityOrigin::create(url).get());
+    return securityOriginPolicy()->origin().isSameOriginDomain(SecurityOrigin::create(url).get());
 }
 
 void SecurityContext::enforceSandboxFlags(SandboxFlags mask)

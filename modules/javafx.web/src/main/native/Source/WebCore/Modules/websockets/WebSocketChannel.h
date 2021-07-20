@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "ExceptionCode.h"
 #include "FileReaderLoaderClient.h"
 #include "SocketStreamHandleClient.h"
 #include "ThreadableWebSocketChannel.h"
@@ -56,31 +57,29 @@ class SocketStreamHandle;
 class SocketStreamError;
 class WebSocketChannelClient;
 
-class WebSocketChannel : public RefCounted<WebSocketChannel>, public SocketStreamHandleClient, public ThreadableWebSocketChannel, public FileReaderLoaderClient
+class WebSocketChannel final : public RefCounted<WebSocketChannel>, public SocketStreamHandleClient, public ThreadableWebSocketChannel, public FileReaderLoaderClient
 {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<WebSocketChannel> create(Document& document, WebSocketChannelClient& client, SocketProvider& provider) { return adoptRef(*new WebSocketChannel(document, client, provider)); }
     virtual ~WebSocketChannel();
 
-    bool isWebSocketChannel() const final { return true; }
-
     bool send(const char* data, int length);
 
     // ThreadableWebSocketChannel functions.
-    void connect(const URL&, const String& protocol) override;
-    String subprotocol() override;
-    String extensions() override;
-    ThreadableWebSocketChannel::SendResult send(const String& message) override;
-    ThreadableWebSocketChannel::SendResult send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) override;
-    ThreadableWebSocketChannel::SendResult send(Blob&) override;
-    unsigned bufferedAmount() const override;
-    void close(int code, const String& reason) override; // Start closing handshake.
-    void fail(const String& reason) override;
-    void disconnect() override;
+    ConnectStatus connect(const URL&, const String& protocol) final;
+    String subprotocol() final;
+    String extensions() final;
+    ThreadableWebSocketChannel::SendResult send(const String& message) final;
+    ThreadableWebSocketChannel::SendResult send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) final;
+    ThreadableWebSocketChannel::SendResult send(Blob&) final;
+    unsigned bufferedAmount() const final;
+    void close(int code, const String& reason) final; // Start closing handshake.
+    void fail(const String& reason) final;
+    void disconnect() final;
 
-    void suspend() override;
-    void resume() override;
+    void suspend() final;
+    void resume() final;
 
     // SocketStreamHandleClient functions.
     void didOpenSocketStream(SocketStreamHandle&) final;
@@ -113,23 +112,24 @@ public:
     void didStartLoading() override;
     void didReceiveData() override;
     void didFinishLoading() override;
-    void didFail(int errorCode) override;
+    void didFail(ExceptionCode errorCode) override;
 
-    unsigned identifier() const { return m_identifier; }
-    bool hasCreatedHandshake() { return !!m_handshake; }
-    ResourceRequest clientHandshakeRequest();
-    const ResourceResponse& serverHandshakeResponse() const;
-    WebSocketHandshake::Mode handshakeMode() const;
+    unsigned long progressIdentifier() const final { return m_progressIdentifier; }
+    bool hasCreatedHandshake() const final { return !!m_handshake; }
+    bool isConnected() const final { return m_handshake->mode() == WebSocketHandshake::Mode::Connected; }
+    ResourceRequest clientHandshakeRequest(const CookieGetter&) const final;
+    const ResourceResponse& serverHandshakeResponse() const final;
 
     using RefCounted<WebSocketChannel>::ref;
     using RefCounted<WebSocketChannel>::deref;
 
-protected:
-    void refThreadableWebSocketChannel() override { ref(); }
-    void derefThreadableWebSocketChannel() override { deref(); }
+    Document* document();
 
 private:
     WEBCORE_EXPORT WebSocketChannel(Document&, WebSocketChannelClient&, SocketProvider&);
+
+    void refThreadableWebSocketChannel() override { ref(); }
+    void derefThreadableWebSocketChannel() override { deref(); }
 
     bool appendToBuffer(const char* data, size_t len);
     void skipBuffer(size_t len);
@@ -193,8 +193,8 @@ private:
         BlobLoaderFailed
     };
 
-    Document* m_document;
-    WebSocketChannelClient* m_client;
+    WeakPtr<Document> m_document;
+    WeakPtr<WebSocketChannelClient> m_client;
     std::unique_ptr<WebSocketHandshake> m_handshake;
     RefPtr<SocketStreamHandle> m_handle;
     Vector<char> m_buffer;
@@ -203,12 +203,13 @@ private:
     bool m_suspended { false };
     bool m_closing { false };
     bool m_receivedClosingHandshake { false };
+    bool m_allowCookies { true };
     Timer m_closingTimer;
     bool m_closed { false };
     bool m_shouldDiscardReceivedData { false };
     unsigned m_unhandledBufferedAmount { 0 };
 
-    unsigned m_identifier { 0 }; // m_identifier == 0 means that we could not obtain a valid identifier.
+    unsigned m_progressIdentifier { 0 }; // m_progressIdentifier == 0 means that we could not obtain a progress identifier.
 
     // Private members only for hybi-10 protocol.
     bool m_hasContinuousFrame { false };
@@ -229,7 +230,3 @@ private:
 };
 
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebSocketChannel)
-    static bool isType(const WebCore::ThreadableWebSocketChannel& threadableWebSocketChannel) { return threadableWebSocketChannel.isWebSocketChannel(); }
-SPECIALIZE_TYPE_TRAITS_END()

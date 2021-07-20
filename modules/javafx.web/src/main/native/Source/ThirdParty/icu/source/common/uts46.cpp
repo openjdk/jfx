@@ -557,7 +557,10 @@ UTS46::processUnicode(const UnicodeString &src,
             destArray=dest.getBuffer();
             destLength+=newLength-labelLength;
             labelLimit=labelStart+=newLength+1;
-        } else if(0xdf<=c && c<=0x200d && (c==0xdf || c==0x3c2 || c>=0x200c)) {
+            continue;
+        } else if(c<0xdf) {
+            // pass
+        } else if(c<=0x200d && (c==0xdf || c==0x3c2 || c>=0x200c)) {
             info.isTransDiff=TRUE;
             if(doMapDevChars) {
                 destLength=mapDevChars(dest, labelStart, labelLimit, errorCode);
@@ -565,15 +568,23 @@ UTS46::processUnicode(const UnicodeString &src,
                     return dest;
                 }
                 destArray=dest.getBuffer();
-                // Do not increment labelLimit in case c was removed.
                 // All deviation characters have been mapped, no need to check for them again.
                 doMapDevChars=FALSE;
-            } else {
-                ++labelLimit;
+                // Do not increment labelLimit in case c was removed.
+                continue;
             }
-        } else {
-            ++labelLimit;
+        } else if(U16_IS_SURROGATE(c)) {
+            if(U16_IS_SURROGATE_LEAD(c) ?
+                    (labelLimit+1)==destLength || !U16_IS_TRAIL(destArray[labelLimit+1]) :
+                    labelLimit==labelStart || !U16_IS_LEAD(destArray[labelLimit-1])) {
+                // Map an unpaired surrogate to U+FFFD before normalization so that when
+                // that removes characters we do not turn two unpaired ones into a pair.
+                info.labelErrors|=UIDNA_ERROR_DISALLOWED;
+                dest.setCharAt(labelLimit, 0xfffd);
+                destArray=dest.getBuffer();
+            }
         }
+        ++labelLimit;
     }
     // Permit an empty label at the end (0<labelStart==labelLimit==destLength is ok)
     // but not an empty label elsewhere nor a completely empty domain name.
@@ -703,6 +714,16 @@ UTS46::processLabel(UnicodeString &dest,
     UBool wasPunycode;
     if(labelLength>=4 && label[0]==0x78 && label[1]==0x6e && label[2]==0x2d && label[3]==0x2d) {
         // Label starts with "xn--", try to un-Punycode it.
+        // In IDNA2008, labels like "xn--" (decodes to an empty string) and
+        // "xn--ASCII-" (decodes to just "ASCII") fail the round-trip validation from
+        // comparing the ToUnicode input with the back-to-ToASCII output.
+        // They are alternate encodings of the respective ASCII labels.
+        // Ignore "xn---" here: It will fail Punycode.decode() which logically comes before
+        // the round-trip verification.
+        if(labelLength==4 || (labelLength>5 && label[labelLength-1]==u'-')) {
+            info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
+            return markBadACELabel(dest, labelStart, labelLength, toASCII, info, errorCode);
+        }
         wasPunycode=TRUE;
         UChar *unicodeBuffer=fromPunycode.getBuffer(-1);  // capacity==-1: most labels should fit
         if(unicodeBuffer==NULL) {
@@ -914,10 +935,10 @@ UTS46::markBadACELabel(UnicodeString &dest,
     UBool isASCII=TRUE;
     UBool onlyLDH=TRUE;
     const UChar *label=dest.getBuffer()+labelStart;
-    // Ok to cast away const because we own the UnicodeString.
-    UChar *s=(UChar *)label+4;  // After the initial "xn--".
     const UChar *limit=label+labelLength;
-    do {
+    // Start after the initial "xn--".
+    // Ok to cast away const because we own the UnicodeString.
+    for(UChar *s=const_cast<UChar *>(label+4); s<limit; ++s) {
         UChar c=*s;
         if(c<=0x7f) {
             if(c==0x2e) {
@@ -934,7 +955,7 @@ UTS46::markBadACELabel(UnicodeString &dest,
         } else {
             isASCII=onlyLDH=FALSE;
         }
-    } while(++s<limit);
+    }
     if(onlyLDH) {
         dest.insert(labelStart+labelLength, (UChar)0xfffd);
         if(dest.isBogus()) {

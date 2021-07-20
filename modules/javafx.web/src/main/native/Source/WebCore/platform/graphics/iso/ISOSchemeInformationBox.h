@@ -29,13 +29,13 @@
 
 namespace WebCore {
 
-class WEBCORE_EXPORT ISOSchemeInformationBox : public ISOBox {
+class WEBCORE_EXPORT ISOSchemeInformationBox final : public ISOBox {
 public:
     static FourCC boxTypeName() { return "schi"; }
 
     const ISOBox* schemeSpecificData() const { return m_schemeSpecificData.get(); }
 
-protected:
+private:
     bool parse(JSC::DataView&, unsigned& offset) override;
 
     std::unique_ptr<ISOBox> m_schemeSpecificData;

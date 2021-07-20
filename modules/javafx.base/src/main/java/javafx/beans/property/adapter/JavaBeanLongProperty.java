@@ -96,6 +96,7 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanLongProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public long get() {
         return AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
@@ -133,6 +135,7 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final long value) {
         if (isBound()) {

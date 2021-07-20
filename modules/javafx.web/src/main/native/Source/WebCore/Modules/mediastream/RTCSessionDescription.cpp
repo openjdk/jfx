@@ -35,7 +35,12 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "RTCSessionDescriptionInit.h"
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RTCSessionDescription);
 
 inline RTCSessionDescription::RTCSessionDescription(RTCSdpType type, String&& sdp)
     : m_type(type)
@@ -43,7 +48,7 @@ inline RTCSessionDescription::RTCSessionDescription(RTCSdpType type, String&& sd
 {
 }
 
-Ref<RTCSessionDescription> RTCSessionDescription::create(Init&& dictionary)
+Ref<RTCSessionDescription> RTCSessionDescription::create(RTCSessionDescriptionInit&& dictionary)
 {
     return create(dictionary.type, WTFMove(dictionary.sdp));
 }

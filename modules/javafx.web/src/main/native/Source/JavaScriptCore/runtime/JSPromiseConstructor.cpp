@@ -27,17 +27,9 @@
 #include "JSPromiseConstructor.h"
 
 #include "BuiltinNames.h"
-#include "Error.h"
-#include "Exception.h"
-#include "GetterSetter.h"
-#include "IteratorOperations.h"
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
-#include "JSPromise.h"
 #include "JSPromisePrototype.h"
-#include "Lookup.h"
-#include "NumberObject.h"
 
 namespace JSC {
 
@@ -57,74 +49,43 @@ const ClassInfo JSPromiseConstructor::s_info = { "Function", &Base::s_info, &pro
   reject          JSBuiltin             DontEnum|Function 1
   race            JSBuiltin             DontEnum|Function 1
   all             JSBuiltin             DontEnum|Function 1
+  allSettled      JSBuiltin             DontEnum|Function 1
+  any             JSBuiltin             DontEnum|Function 1
 @end
 */
 
 JSPromiseConstructor* JSPromiseConstructor::create(VM& vm, Structure* structure, JSPromisePrototype* promisePrototype, GetterSetter* speciesSymbol)
 {
-    JSPromiseConstructor* constructor = new (NotNull, allocateCell<JSPromiseConstructor>(vm.heap)) JSPromiseConstructor(vm, structure);
+    JSGlobalObject* globalObject = structure->globalObject();
+    FunctionExecutable* executable = promiseConstructorPromiseConstructorCodeGenerator(vm);
+    JSPromiseConstructor* constructor = new (NotNull, allocateCell<JSPromiseConstructor>(vm.heap)) JSPromiseConstructor(vm, executable, globalObject, structure);
     constructor->finishCreation(vm, promisePrototype, speciesSymbol);
-    constructor->addOwnInternalSlots(vm, structure->globalObject());
+    constructor->addOwnInternalSlots(vm, globalObject);
     return constructor;
 }
 
 Structure* JSPromiseConstructor::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
 }
 
-
-static EncodedJSValue JSC_HOST_CALL callPromise(ExecState*);
-static EncodedJSValue JSC_HOST_CALL constructPromise(ExecState*);
-
-JSPromiseConstructor::JSPromiseConstructor(VM& vm, Structure* structure)
-    : Base(vm, structure, callPromise, constructPromise)
-{
-}
-
-JSPromiseConstructor::JSPromiseConstructor(VM& vm, Structure* structure, NativeFunction functionForCall, NativeFunction functionForConstruct)
-    : Base(vm, structure, functionForCall, functionForConstruct)
+JSPromiseConstructor::JSPromiseConstructor(VM& vm, FunctionExecutable* executable, JSGlobalObject* globalObject, Structure* structure)
+    : Base(vm, executable, globalObject, structure)
 {
 }
 
 void JSPromiseConstructor::finishCreation(VM& vm, JSPromisePrototype* promisePrototype, GetterSetter* speciesSymbol)
 {
-    Base::finishCreation(vm, "Promise"_s);
+    Base::finishCreation(vm);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, promisePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 void JSPromiseConstructor::addOwnInternalSlots(VM& vm, JSGlobalObject* globalObject)
 {
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().resolvePrivateName(), promiseConstructorResolveCodeGenerator, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().rejectPrivateName(), promiseConstructorRejectCodeGenerator, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-}
-
-static EncodedJSValue JSC_HOST_CALL constructPromise(ExecState* exec)
-{
-    VM& vm = exec->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSGlobalObject* globalObject = exec->jsCallee()->globalObject(vm);
-
-    JSValue newTarget = exec->newTarget();
-    if (newTarget.isUndefined())
-        return throwVMTypeError(exec, scope);
-
-    Structure* promiseStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), globalObject->promiseStructure());
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    JSPromise* promise = JSPromise::create(vm, promiseStructure);
-    promise->initialize(exec, globalObject,  exec->argument(0));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-
-    return JSValue::encode(promise);
-}
-
-static EncodedJSValue JSC_HOST_CALL callPromise(ExecState* exec)
-{
-    VM& vm = exec->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(exec, scope, "Promise"));
 }
 
 } // namespace JSC

@@ -36,20 +36,20 @@ namespace JSC {
 
 class JSArrayBufferView;
 class JSGlobalObject;
-class ExecState;
+class CallFrame;
 
 class ArrayBufferView : public RefCounted<ArrayBufferView> {
 public:
     virtual TypedArrayType getType() const = 0;
 
-    bool isNeutered() const
+    bool isDetached() const
     {
-        return !m_buffer || m_buffer->isNeutered();
+        return !m_buffer || m_buffer->isDetached();
     }
 
     RefPtr<ArrayBuffer> possiblySharedBuffer() const
     {
-        if (isNeutered())
+        if (isDetached())
             return nullptr;
         return m_buffer;
     }
@@ -63,31 +63,31 @@ public:
 
     bool isShared() const
     {
-        if (isNeutered())
+        if (isDetached())
             return false;
         return m_buffer->isShared();
     }
 
     void* baseAddress() const
     {
-        if (isNeutered())
-            return 0;
-        return m_baseAddress.getMayBeNull();
+        if (isDetached())
+            return nullptr;
+        return m_baseAddress.getMayBeNull(byteLength());
     }
 
     void* data() const { return baseAddress(); }
 
     unsigned byteOffset() const
     {
-        if (isNeutered())
+        if (isDetached())
             return 0;
         return m_byteOffset;
     }
 
-    virtual unsigned byteLength() const = 0;
+    unsigned byteLength() const { return m_byteLength; }
 
-    JS_EXPORT_PRIVATE void setNeuterable(bool flag);
-    bool isNeuterable() const { return m_isNeuterable; }
+    JS_EXPORT_PRIVATE void setDetachable(bool);
+    bool isDetachable() const { return m_isDetachable; }
 
     JS_EXPORT_PRIVATE virtual ~ArrayBufferView();
 
@@ -110,16 +110,15 @@ public:
         return true;
     }
 
-    virtual JSArrayBufferView* wrap(ExecState*, JSGlobalObject*) = 0;
+    virtual JSArrayBufferView* wrap(JSGlobalObject*, JSGlobalObject*) = 0;
 
 protected:
-    JS_EXPORT_PRIVATE ArrayBufferView(RefPtr<ArrayBuffer>&&, unsigned byteOffset);
+    JS_EXPORT_PRIVATE ArrayBufferView(RefPtr<ArrayBuffer>&&, unsigned byteOffset, unsigned byteLength);
 
     inline bool setImpl(ArrayBufferView*, unsigned byteOffset);
 
-    // Caller passes in bufferByteLength to avoid a virtual function call.
-    inline bool setRangeImpl(const void* data, size_t dataByteLength, unsigned byteOffset, unsigned bufferByteLength);
-    inline bool getRangeImpl(void* destination, size_t dataByteLength, unsigned byteOffset, unsigned bufferByteLength);
+    inline bool setRangeImpl(const void* data, size_t dataByteLength, unsigned byteOffset);
+    inline bool getRangeImpl(void* destination, size_t dataByteLength, unsigned byteOffset);
 
     inline bool zeroRangeImpl(unsigned byteOffset, size_t rangeByteLength);
 
@@ -148,11 +147,13 @@ protected:
         *numElements = std::min(remainingElements, *numElements);
     }
 
-    // This is the address of the ArrayBuffer's storage, plus the byte offset.
-    CagedPtr<Gigacage::Primitive, void> m_baseAddress;
-
     unsigned m_byteOffset : 31;
-    bool m_isNeuterable : 1;
+    bool m_isDetachable : 1;
+    unsigned m_byteLength;
+
+    using BaseAddress = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
+    // This is the address of the ArrayBuffer's storage, plus the byte offset.
+    BaseAddress m_baseAddress;
 
 private:
     friend class ArrayBuffer;
@@ -173,12 +174,10 @@ bool ArrayBufferView::setImpl(ArrayBufferView* array, unsigned byteOffset)
     return true;
 }
 
-bool ArrayBufferView::setRangeImpl(const void* data, size_t dataByteLength, unsigned byteOffset, unsigned bufferByteLength)
+bool ArrayBufferView::setRangeImpl(const void* data, size_t dataByteLength, unsigned byteOffset)
 {
-    // Do not replace with RELEASE_ASSERT; we want to avoid the virtual byteLength() function call in release.
-    ASSERT_WITH_SECURITY_IMPLICATION(bufferByteLength == byteLength());
-    if (byteOffset > bufferByteLength
-        || byteOffset + dataByteLength > bufferByteLength
+    if (byteOffset > byteLength()
+        || byteOffset + dataByteLength > byteLength()
         || byteOffset + dataByteLength < byteOffset) {
         // Out of range offset or overflow
         return false;
@@ -189,12 +188,10 @@ bool ArrayBufferView::setRangeImpl(const void* data, size_t dataByteLength, unsi
     return true;
 }
 
-bool ArrayBufferView::getRangeImpl(void* destination, size_t dataByteLength, unsigned byteOffset, unsigned bufferByteLength)
+bool ArrayBufferView::getRangeImpl(void* destination, size_t dataByteLength, unsigned byteOffset)
 {
-    // Do not replace with RELEASE_ASSERT; we want to avoid the virtual byteLength() function call in release.
-    ASSERT_WITH_SECURITY_IMPLICATION(bufferByteLength == byteLength());
-    if (byteOffset > bufferByteLength
-        || byteOffset + dataByteLength > bufferByteLength
+    if (byteOffset > byteLength()
+        || byteOffset + dataByteLength > byteLength()
         || byteOffset + dataByteLength < byteOffset) {
         // Out of range offset or overflow
         return false;

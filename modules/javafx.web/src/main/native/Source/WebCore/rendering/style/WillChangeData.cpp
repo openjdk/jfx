@@ -66,11 +66,13 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
 {
     switch (property) {
     case CSSPropertyPerspective:
+    case CSSPropertyScale:
+    case CSSPropertyRotate:
+    case CSSPropertyTranslate:
     case CSSPropertyTransform:
     case CSSPropertyTransformStyle:
     case CSSPropertyWebkitTransformStyle:
     case CSSPropertyClipPath:
-    case CSSPropertyWebkitClipPath:
     case CSSPropertyMask:
     case CSSPropertyOpacity:
     case CSSPropertyPosition:
@@ -87,7 +89,7 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
     case CSSPropertyWebkitMask:
     case CSSPropertyWebkitMaskImage:
     case CSSPropertyWebkitMaskBoxImage:
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     case CSSPropertyWebkitOverflowScrolling:
 #endif
         return true;
@@ -118,6 +120,9 @@ static bool propertyTriggersCompositingOnBoxesOnly(CSSPropertyID property)
     // Similarly, we don't want -webkit-overflow-scrolling-touch to
     // always composite if there's no scrollable overflow.
     switch (property) {
+    case CSSPropertyScale:
+    case CSSPropertyRotate:
+    case CSSPropertyTranslate:
     case CSSPropertyTransform:
         return true;
     default:

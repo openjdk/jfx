@@ -2,12 +2,10 @@
 <project name="toys" basedir="." default="jar">
 
     <target description="Build the toys" name="jar">
-        <ant dir="HelloTest" target="jar" inheritAll="true"/>
         <ant dir="Robot" target="jar" inheritAll="true"/>
     </target>
 
     <target description="Clean the toys" name="clean">
-        <ant dir="HelloTest" target="clean" inheritAll="true"/>
         <ant dir="Robot" target="clean" inheritAll="true"/>
     </target>
 

@@ -56,7 +56,7 @@ public:
 
     ScrollableArea& scrollableArea() const { return m_scrollableArea; }
 
-    virtual bool isCustomScrollbar() const { return false; }
+    bool isCustomScrollbar() const { return m_isCustomScrollbar; }
     ScrollbarOrientation orientation() const { return m_orientation; }
 
     int value() const { return lroundf(m_currentPos); }
@@ -83,13 +83,14 @@ public:
     WEBCORE_EXPORT void setProportion(int visibleSize, int totalSize);
     void setPressedPos(int p) { m_pressedPos = p; }
 
-    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin) override;
+    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) override;
 
     bool enabled() const { return m_enabled; }
     virtual void setEnabled(bool);
 
     virtual bool isOverlayScrollbar() const;
     bool shouldParticipateInHitTesting();
+    virtual bool isHiddenByStyle() const { return false; }
 
     bool isWindowActive() const;
 
@@ -132,7 +133,7 @@ public:
     bool supportsUpdateOnSecondaryThread() const;
 
 protected:
-    Scrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize, ScrollbarTheme* = nullptr);
+    Scrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize, ScrollbarTheme* = nullptr, bool isCustomScrollbar = false);
 
     void updateThumb();
     virtual void updateThumbPosition();
@@ -165,6 +166,7 @@ protected:
     int m_documentDragPos { 0 };
 
     bool m_enabled { true };
+    bool m_isCustomScrollbar { false };
 
     Timer m_scrollTimer;
 

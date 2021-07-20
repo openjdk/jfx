@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008, 2011, 2013, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -39,7 +39,7 @@ private:
     using MappedTraits = MappedTraitsArg;
 
     struct KeyValuePairTraits : KeyValuePairHashTraits<KeyTraits, MappedTraits> {
-        static const bool hasIsEmptyValueFunction = true;
+        static constexpr bool hasIsEmptyValueFunction = true;
         static bool isEmptyValue(const typename KeyValuePairHashTraits<KeyTraits, MappedTraits>::TraitType& value)
         {
             return isHashTraitsEmptyValue<KeyTraits>(value.key);
@@ -65,6 +65,11 @@ private:
     using IdentityTranslatorType = typename HashTableType::IdentityTranslatorType;
 
 public:
+    /*
+     * Since figuring out the entries of an iterator is confusing, here is a cheat sheet:
+     * const KeyType& key = iterator->key;
+     * ValueType& value = iterator->value;
+     */
     using iterator = HashTableIteratorAdapter<HashTableType, KeyValuePairType>;
     using const_iterator = HashTableConstIteratorAdapter<HashTableType, KeyValuePairType>;
 
@@ -73,6 +78,11 @@ public:
     using ValuesIteratorRange = SizedIteratorRange<HashMap, typename iterator::Values>;
     using ValuesConstIteratorRange = SizedIteratorRange<HashMap, typename const_iterator::Values>;
 
+    /*
+     * Since figuring out the entries of an AddResult is confusing, here is a cheat sheet:
+     * iterator iter = addResult.iterator;
+     * bool isNewEntry = addResult.isNewEntry;
+     */
     using AddResult = typename HashTableType::AddResult;
 
 public:
@@ -91,6 +101,8 @@ public:
     unsigned size() const;
     unsigned capacity() const;
     bool isEmpty() const;
+
+    void reserveInitialCapacity(unsigned keyCount) { m_impl.reserveInitialCapacity(keyCount); }
 
     // iterators iterate over pairs of keys and values
     iterator begin();

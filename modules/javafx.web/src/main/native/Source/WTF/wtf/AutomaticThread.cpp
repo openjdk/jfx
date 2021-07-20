@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 namespace WTF {
 
-static const bool verbose = false;
+static constexpr bool verbose = false;
 
 Ref<AutomaticThreadCondition> AutomaticThreadCondition::create()
 {
@@ -105,9 +105,15 @@ bool AutomaticThreadCondition::contains(const AbstractLocker&, AutomaticThread* 
 }
 
 AutomaticThread::AutomaticThread(const AbstractLocker& locker, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, Seconds timeout)
+    : AutomaticThread(locker, lock, WTFMove(condition), ThreadType::Unknown, timeout)
+{
+}
+
+AutomaticThread::AutomaticThread(const AbstractLocker& locker, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, ThreadType type, Seconds timeout)
     : m_lock(lock)
     , m_condition(WTFMove(condition))
     , m_timeout(timeout)
+    , m_threadType(type)
 {
     if (verbose)
         dataLog(RawPointer(this), ": Allocated AutomaticThread.\n");
@@ -171,7 +177,7 @@ void AutomaticThread::start(const AbstractLocker&)
             RefPtr<AutomaticThread> thread = preserveThisForThread;
             thread->threadDidStart();
 
-            if (!ASSERT_DISABLED) {
+            if (ASSERT_ENABLED) {
                 LockHolder locker(*m_lock);
                 ASSERT(m_condition->contains(locker, this));
             }
@@ -227,7 +233,7 @@ void AutomaticThread::start(const AbstractLocker&)
                 }
                 RELEASE_ASSERT(result == WorkResult::Continue);
             }
-        })->detach();
+        }, m_threadType)->detach();
 }
 
 void AutomaticThread::threadDidStart()

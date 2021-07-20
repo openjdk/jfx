@@ -27,21 +27,22 @@
 
 #include "FloatPoint.h"
 #include "ScrollAnimation.h"
-#include "Timer.h"
 
 #include <wtf/Optional.h>
+#include <wtf/RunLoop.h>
 
 namespace WebCore {
 
-class ScrollableArea;
+class PlatformWheelEvent;
 
-class ScrollAnimationKinetic final: public ScrollAnimation {
+class ScrollAnimationKinetic final : public ScrollAnimation {
 private:
     class PerAxisData {
     public:
         PerAxisData(double lower, double upper, double initialPosition, double initialVelocity);
 
         double position() { return m_position; }
+        double velocity() { return m_velocity; }
 
         bool animateScroll(Seconds timeDelta);
 
@@ -58,23 +59,34 @@ private:
     };
 
 public:
-    ScrollAnimationKinetic(ScrollableArea&, std::function<void(FloatPoint&&)>&& notifyPositionChangedFunction);
+    using ScrollExtentsCallback = WTF::Function<ScrollExtents(void)>;
+    using NotifyPositionChangedCallback = WTF::Function<void(FloatPoint&&)>;
+
+    ScrollAnimationKinetic(ScrollExtentsCallback&&, NotifyPositionChangedCallback&&);
     virtual ~ScrollAnimationKinetic();
 
+    void appendToScrollHistory(const PlatformWheelEvent&);
+    void clearScrollHistory();
+    FloatPoint computeVelocity();
+
     void start(const FloatPoint& initialPosition, const FloatPoint& velocity, bool mayHScroll, bool mayVScroll);
+    void stop() override;
+    bool isActive() const override;
 
 private:
-    void stop() override;
     void animationTimerFired();
+    Seconds deltaToNextFrame();
 
-    std::function<void(FloatPoint&&)> m_notifyPositionChangedFunction;
+    ScrollExtentsCallback m_scrollExtentsFunction;
+    NotifyPositionChangedCallback m_notifyPositionChangedFunction;
 
     Optional<PerAxisData> m_horizontalData;
     Optional<PerAxisData> m_verticalData;
 
     MonotonicTime m_startTime;
-    Timer m_animationTimer;
+    RunLoop::Timer<ScrollAnimationKinetic> m_animationTimer;
     FloatPoint m_position;
+    Vector<PlatformWheelEvent> m_scrollHistory;
 };
 
 } // namespace WebCore

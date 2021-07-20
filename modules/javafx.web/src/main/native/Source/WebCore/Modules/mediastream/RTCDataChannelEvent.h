@@ -29,26 +29,27 @@
 
 #include "Event.h"
 #include "RTCDataChannel.h"
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class RTCDataChannelEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(RTCDataChannelEvent);
 public:
     struct Init : EventInit {
         RefPtr<RTCDataChannel> channel;
     };
 
-    static Ref<RTCDataChannelEvent> create(const AtomicString& type, CanBubble, IsCancelable, Ref<RTCDataChannel>&&);
-    static Ref<RTCDataChannelEvent> create(const AtomicString& type, Init&&, IsTrusted = IsTrusted::No);
+    static Ref<RTCDataChannelEvent> create(const AtomString& type, CanBubble, IsCancelable, Ref<RTCDataChannel>&&);
+    static Ref<RTCDataChannelEvent> create(const AtomString& type, Init&&, IsTrusted = IsTrusted::No);
 
     RTCDataChannel& channel();
 
     virtual EventInterface eventInterface() const;
 
 private:
-    RTCDataChannelEvent(const AtomicString& type, CanBubble, IsCancelable, Ref<RTCDataChannel>&&);
-    RTCDataChannelEvent(const AtomicString& type, Init&&, IsTrusted);
+    RTCDataChannelEvent(const AtomString& type, CanBubble, IsCancelable, Ref<RTCDataChannel>&&);
+    RTCDataChannelEvent(const AtomString& type, Init&&, IsTrusted);
 
     Ref<RTCDataChannel> m_channel;
 };

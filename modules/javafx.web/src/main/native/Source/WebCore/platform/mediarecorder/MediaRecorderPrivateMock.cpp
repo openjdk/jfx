@@ -30,42 +30,84 @@
 
 #include "MediaStreamTrackPrivate.h"
 #include "SharedBuffer.h"
+#include "Timer.h"
+#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
-void MediaRecorderPrivateMock::sampleBufferUpdated(MediaStreamTrackPrivate& track, MediaSample&)
+MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 {
-    generateMockString(track);
+    auto selectedTracks = MediaRecorderPrivate::selectTracks(stream);
+    if (selectedTracks.audioTrack) {
+        m_audioTrackID = selectedTracks.audioTrack->id();
+        setAudioSource(&selectedTracks.audioTrack->source());
+    }
+    if (selectedTracks.videoTrack) {
+        m_videoTrackID = selectedTracks.videoTrack->id();
+        setVideoSource(&selectedTracks.videoTrack->source());
+    }
 }
 
-void MediaRecorderPrivateMock::audioSamplesAvailable(MediaStreamTrackPrivate& track, const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)
+MediaRecorderPrivateMock::~MediaRecorderPrivateMock()
 {
-    generateMockString(track);
 }
 
-void MediaRecorderPrivateMock::generateMockString(MediaStreamTrackPrivate& track)
+void MediaRecorderPrivateMock::stopRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::pauseRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::resumeRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::videoSampleAvailable(MediaSample&)
 {
     auto locker = holdLock(m_bufferLock);
-    if (track.type() == RealtimeMediaSource::Type::Audio)
-        m_buffer.append("Audio Track ID: ");
-    else
-        m_buffer.append("Video Track ID: ");
-    m_buffer.append(track.id());
+    m_buffer.append("Video Track ID: ");
+    m_buffer.append(m_videoTrackID);
+    generateMockCounterString();
+}
+
+void MediaRecorderPrivateMock::audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)
+{
+    auto locker = holdLock(m_bufferLock);
+    m_buffer.append("Audio Track ID: ");
+    m_buffer.append(m_audioTrackID);
+    generateMockCounterString();
+}
+
+void MediaRecorderPrivateMock::generateMockCounterString()
+{
     m_buffer.append(" Counter: ");
     m_buffer.appendNumber(++m_counter);
     m_buffer.append("\r\n---------\r\n");
 }
 
-RefPtr<SharedBuffer> MediaRecorderPrivateMock::fetchData()
+void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
 {
-    auto locker = holdLock(m_bufferLock);
-    Vector<uint8_t> value(m_buffer.length());
-    memcpy(value.data(), m_buffer.characters8(), m_buffer.length());
-    m_buffer.clear();
-    return SharedBuffer::create(WTFMove(value));
+    RefPtr<SharedBuffer> buffer;
+    {
+        auto locker = holdLock(m_bufferLock);
+        Vector<uint8_t> value(m_buffer.length());
+        memcpy(value.data(), m_buffer.characters8(), m_buffer.length());
+        m_buffer.clear();
+        buffer = SharedBuffer::create(WTFMove(value));
+    }
+
+    // Delay calling the completion handler a bit to mimick real writer behavior.
+    Timer::schedule(50_ms, [completionHandler = WTFMove(completionHandler), buffer = WTFMove(buffer), mimeType = mimeType(), timeCode = MonotonicTime::now().secondsSinceEpoch().value()]() mutable {
+        completionHandler(WTFMove(buffer), mimeType, timeCode);
+    });
 }
 
-const String& MediaRecorderPrivateMock::mimeType()
+const String& MediaRecorderPrivateMock::mimeType() const
 {
     static NeverDestroyed<const String> textPlainMimeType(MAKE_STATIC_STRING_IMPL("text/plain"));
     return textPlainMimeType;

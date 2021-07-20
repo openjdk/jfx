@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,38 +37,68 @@
 #include <wtf/PtrTag.h>
 #endif
 #include <wtf/StdLibExtras.h>
+#include <wtf/ThreadSpecific.h>
 #include <wtf/UnalignedAccess.h>
 
 namespace JSC {
+    class AssemblerData;
+
+    typedef ThreadSpecific<AssemblerData, WTF::CanBeGCThread::True> ThreadSpecificAssemblerData;
+
+    JS_EXPORT_PRIVATE ThreadSpecificAssemblerData& threadSpecificAssemblerData();
+    JS_EXPORT_PRIVATE ThreadSpecificAssemblerData& threadSpecificAssemblerHashes();
 
     class LinkBuffer;
 
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AssemblerData);
+
     struct AssemblerLabel {
-        AssemblerLabel()
-            : m_offset(std::numeric_limits<uint32_t>::max())
+        inline AssemblerLabel() { setOffset(std::numeric_limits<uint32_t>::max()); }
+        inline AssemblerLabel(const AssemblerLabel& other) { setOffset(other.offset()); }
+        inline AssemblerLabel(AssemblerLabel&& other) { setOffset(other.offset()); }
+        inline explicit AssemblerLabel(uint32_t offset) { setOffset(offset); }
+
+        AssemblerLabel& operator=(const AssemblerLabel& other) { setOffset(other.offset()); return *this; }
+        AssemblerLabel& operator=(AssemblerLabel&& other) { setOffset(other.offset()); return *this; }
+
+        bool isSet() const { return (offset() != std::numeric_limits<uint32_t>::max()); }
+
+        inline AssemblerLabel labelAtOffset(int offset) const
         {
+            return AssemblerLabel(this->offset() + offset);
         }
 
-        explicit AssemblerLabel(uint32_t offset)
-            : m_offset(offset)
+        bool operator==(const AssemblerLabel& other) const { return offset() == other.offset(); }
+
+        inline uint32_t offset() const
         {
+#if CPU(ARM64E)
+            return static_cast<uint32_t>(untagInt(m_offset, bitwise_cast<PtrTag>(this)));
+#else
+            return m_offset;
+#endif
         }
 
-        bool isSet() const { return (m_offset != std::numeric_limits<uint32_t>::max()); }
-
-        AssemblerLabel labelAtOffset(int offset) const
+    private:
+        inline void setOffset(uint32_t offset)
         {
-            return AssemblerLabel(m_offset + offset);
+#if CPU(ARM64E)
+            m_offset = tagInt(static_cast<uint64_t>(offset), bitwise_cast<PtrTag>(this));
+#else
+            m_offset = offset;
+#endif
         }
 
-        bool operator==(const AssemblerLabel& other) const { return m_offset == other.m_offset; }
-
+#if CPU(ARM64E)
+        uint64_t m_offset;
+#else
         uint32_t m_offset;
+#endif
     };
 
     class AssemblerData {
         WTF_MAKE_NONCOPYABLE(AssemblerData);
-        static const size_t InlineCapacity = 128;
+        static constexpr size_t InlineCapacity = 128;
     public:
         AssemblerData()
             : m_buffer(m_inlineBuffer)
@@ -83,7 +113,7 @@ namespace JSC {
                 m_buffer = m_inlineBuffer;
             } else {
                 m_capacity = initialCapacity;
-                m_buffer = static_cast<char*>(fastMalloc(m_capacity));
+                m_buffer = static_cast<char*>(AssemblerDataMalloc::malloc(m_capacity));
             }
         }
 
@@ -97,14 +127,14 @@ namespace JSC {
                 m_buffer = other.m_buffer;
             m_capacity = other.m_capacity;
 
-            other.m_buffer = nullptr;
-            other.m_capacity = 0;
+            other.m_buffer = other.m_inlineBuffer;
+            other.m_capacity = InlineCapacity;
         }
 
         AssemblerData& operator=(AssemblerData&& other)
         {
             if (m_buffer && !isInlineBuffer())
-                fastFree(m_buffer);
+                AssemblerDataMalloc::free(m_buffer);
 
             if (other.isInlineBuffer()) {
                 ASSERT(other.m_capacity == InlineCapacity);
@@ -114,15 +144,41 @@ namespace JSC {
                 m_buffer = other.m_buffer;
             m_capacity = other.m_capacity;
 
-            other.m_buffer = nullptr;
-            other.m_capacity = 0;
+            other.m_buffer = other.m_inlineBuffer;
+            other.m_capacity = InlineCapacity;
             return *this;
+        }
+
+        void takeBufferIfLarger(AssemblerData&& other)
+        {
+            if (other.isInlineBuffer())
+                return;
+
+            if (m_capacity >= other.m_capacity)
+                return;
+
+            if (m_buffer && !isInlineBuffer())
+                AssemblerDataMalloc::free(m_buffer);
+
+            m_buffer = other.m_buffer;
+            m_capacity = other.m_capacity;
+
+            other.m_buffer = other.m_inlineBuffer;
+            other.m_capacity = InlineCapacity;
         }
 
         ~AssemblerData()
         {
-            if (m_buffer && !isInlineBuffer())
-                fastFree(m_buffer);
+            clear();
+        }
+
+        void clear()
+        {
+            if (m_buffer && !isInlineBuffer()) {
+                AssemblerDataMalloc::free(m_buffer);
+                m_capacity = InlineCapacity;
+                m_buffer = m_inlineBuffer;
+            }
         }
 
         char* buffer() const { return m_buffer; }
@@ -133,10 +189,10 @@ namespace JSC {
         {
             m_capacity = m_capacity + m_capacity / 2 + extraCapacity;
             if (isInlineBuffer()) {
-                m_buffer = static_cast<char*>(fastMalloc(m_capacity));
+                m_buffer = static_cast<char*>(AssemblerDataMalloc::malloc(m_capacity));
                 memcpy(m_buffer, m_inlineBuffer, InlineCapacity);
             } else
-                m_buffer = static_cast<char*>(fastRealloc(m_buffer, m_capacity));
+                m_buffer = static_cast<char*>(AssemblerDataMalloc::realloc(m_buffer, m_capacity));
         }
 
     private:
@@ -149,23 +205,22 @@ namespace JSC {
 #if CPU(ARM64E)
     class ARM64EHash {
     public:
-        ARM64EHash() = default;
-        ALWAYS_INLINE void update(uint32_t value)
+        ARM64EHash(uint32_t initialHash)
+            : m_hash(initialHash)
+        {
+        }
+
+        ALWAYS_INLINE uint32_t update(uint32_t value)
         {
             uint64_t input = value ^ m_hash;
             uint64_t a = static_cast<uint32_t>(tagInt(input, static_cast<PtrTag>(0)) >> 39);
             uint64_t b = tagInt(input, static_cast<PtrTag>(0xb7e151628aed2a6a)) >> 23;
             m_hash = a ^ b;
+            return m_hash;
         }
-        uint32_t finalHash() const
-        {
-            uint64_t hash = m_hash;
-            uint64_t a = static_cast<uint32_t>(tagInt(hash, static_cast<PtrTag>(0xbf7158809cf4f3c7)) >> 39);
-            uint64_t b = tagInt(hash, static_cast<PtrTag>(0x62e7160f38b4da56)) >> 23;
-            return static_cast<uint32_t>(a ^ b);
-        }
+
     private:
-        uint32_t m_hash { 0 };
+        uint32_t m_hash;
     };
 #endif
 
@@ -174,7 +229,29 @@ namespace JSC {
         AssemblerBuffer()
             : m_storage()
             , m_index(0)
+#if CPU(ARM64E)
+            , m_hash(static_cast<uint32_t>(bitwise_cast<uint64_t>(this)))
+            , m_hashes()
+#endif
         {
+            auto& threadSpecificData = threadSpecificAssemblerData();
+            m_storage.takeBufferIfLarger(WTFMove(*threadSpecificData));
+#if CPU(ARM64E)
+            auto& threadSpecificHashes = threadSpecificAssemblerHashes();
+            m_hashes.takeBufferIfLarger(WTFMove(*threadSpecificHashes));
+            ASSERT(m_storage.capacity() == m_hashes.capacity());
+#endif
+        }
+
+        ~AssemblerBuffer()
+        {
+#if CPU(ARM64E)
+            ASSERT(m_storage.capacity() == m_hashes.capacity());
+            auto& threadSpecificHashes = threadSpecificAssemblerHashes();
+            threadSpecificHashes->takeBufferIfLarger(WTFMove(m_hashes));
+#endif
+            auto& threadSpecificData = threadSpecificAssemblerData();
+            threadSpecificData->takeBufferIfLarger(WTFMove(m_storage));
         }
 
         bool isAvailable(unsigned space)
@@ -227,7 +304,17 @@ namespace JSC {
 
         unsigned debugOffset() { return m_index; }
 
-        AssemblerData&& releaseAssemblerData() { return WTFMove(m_storage); }
+        AssemblerData&& releaseAssemblerData()
+        {
+            return WTFMove(m_storage);
+        }
+
+#if CPU(ARM64E)
+        AssemblerData&& releaseAssemblerHashes()
+        {
+            return WTFMove(m_hashes);
+        }
+#endif
 
         // LocalWriter is a trick to keep the storage buffer and the index
         // in memory while issuing multiple Stores.
@@ -245,7 +332,7 @@ namespace JSC {
                 buffer.ensureSpace(requiredSpace);
                 m_storageBuffer = buffer.m_storage.buffer();
                 m_index = buffer.m_index;
-#if !defined(NDEBUG)
+#if ASSERT_ENABLED
                 m_initialIndex = m_index;
                 m_requiredSpace = requiredSpace;
 #endif
@@ -274,21 +361,16 @@ namespace JSC {
             AssemblerBuffer& m_buffer;
             char* m_storageBuffer;
             unsigned m_index;
-#if !defined(NDEBUG)
+#if ASSERT_ENABLED
             unsigned m_initialIndex;
             unsigned m_requiredSpace;
 #endif
         };
 #endif // !CPU(ARM64)
 
-#if CPU(ARM64E)
-        ARM64EHash hash() const { return m_hash; }
-#endif
-
 #if !CPU(ARM64) // If we were to define this on arm64e, we'd need a way to update the hash as we write directly into the buffer.
         void* data() const { return m_storage.buffer(); }
 #endif
-
 
     protected:
         template<typename IntegralType>
@@ -306,7 +388,8 @@ namespace JSC {
 #if CPU(ARM64)
             static_assert(sizeof(value) == 4, "");
 #if CPU(ARM64E)
-            m_hash.update(value);
+            uint32_t hash = m_hash.update(value);
+            WTF::unalignedStore<uint32_t>(m_hashes.buffer() + m_index, hash);
 #endif
 #endif
             ASSERT(isAvailable(sizeof(IntegralType)));
@@ -318,11 +401,17 @@ namespace JSC {
         void grow(int extraCapacity = 0)
         {
             m_storage.grow(extraCapacity);
+#if CPU(ARM64E)
+            m_hashes.grow(extraCapacity);
+#endif
         }
 
         NEVER_INLINE void outOfLineGrow()
         {
             m_storage.grow();
+#if CPU(ARM64E)
+            m_hashes.grow();
+#endif
         }
 
 #if !CPU(ARM64)
@@ -334,6 +423,7 @@ namespace JSC {
         unsigned m_index;
 #if CPU(ARM64E)
         ARM64EHash m_hash;
+        AssemblerData m_hashes;
 #endif
     };
 

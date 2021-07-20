@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,27 +42,39 @@ class WebAssemblyFunction;
 class WebAssemblyModuleRecord final : public AbstractModuleRecord {
     friend class LLIntOffsetsExtractor;
 public:
-    typedef AbstractModuleRecord Base;
+    using Base = AbstractModuleRecord;
+
+    static constexpr bool needsDestruction = true;
+    static void destroy(JSCell*);
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.webAssemblyModuleRecordSpace<mode>();
+    }
 
     DECLARE_EXPORT_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
-    static WebAssemblyModuleRecord* create(ExecState*, VM&, Structure*, const Identifier&, const Wasm::ModuleInformation&);
+    static WebAssemblyModuleRecord* create(JSGlobalObject*, VM&, Structure*, const Identifier&, const Wasm::ModuleInformation&);
 
     void prepareLink(VM&, JSWebAssemblyInstance*);
-    void link(ExecState*, JSValue scriptFetcher, JSObject* importObject, Wasm::CreationMode);
-    JS_EXPORT_PRIVATE JSValue evaluate(ExecState*);
+    Synchronousness link(JSGlobalObject*, JSValue scriptFetcher, JSObject* importObject, Wasm::CreationMode);
+    JS_EXPORT_PRIVATE JSValue evaluate(JSGlobalObject*);
+
+    JSObject* exportsObject() const { return m_exportsObject.get(); }
 
 private:
+    void linkImpl(JSGlobalObject*, JSObject* importObject, Wasm::CreationMode);
     WebAssemblyModuleRecord(VM&, Structure*, const Identifier&);
 
-    void finishCreation(ExecState*, VM&, const Wasm::ModuleInformation&);
-    static void destroy(JSCell*);
+    void finishCreation(JSGlobalObject*, VM&, const Wasm::ModuleInformation&);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSWebAssemblyInstance> m_instance;
     WriteBarrier<JSObject> m_startFunction;
+    WriteBarrier<JSObject> m_exportsObject;
 };
 
 } // namespace JSC

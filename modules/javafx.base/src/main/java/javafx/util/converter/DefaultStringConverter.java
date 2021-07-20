@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class DefaultStringConverter extends StringConverter<String> {
+
+    /**
+     * Creates a default {@code DefaultStringConverter}.
+     */
+    public DefaultStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public String toString(String value) {
         return (value != null) ? value : "";

@@ -39,6 +39,7 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerRunLoop.h"
 #include "WorkerThreadableLoader.h"
+#include "WorkletGlobalScope.h"
 
 namespace WebCore {
 
@@ -100,21 +101,28 @@ ThreadableLoaderOptions ThreadableLoaderOptions::isolatedCopy() const
 }
 
 
-RefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext& context, ThreadableLoaderClient& client, ResourceRequest&& request, const ThreadableLoaderOptions& options, String&& referrer)
+RefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext& context, ThreadableLoaderClient& client, ResourceRequest&& request, const ThreadableLoaderOptions& options, String&& referrer, String&& taskMode)
 {
-    if (is<WorkerGlobalScope>(context))
-        return WorkerThreadableLoader::create(downcast<WorkerGlobalScope>(context), client, WorkerRunLoop::defaultMode(), WTFMove(request), options, WTFMove(referrer));
+    if (is<WorkerGlobalScope>(context) || (is<WorkletGlobalScope>(context) && downcast<WorkletGlobalScope>(context).workerOrWorkletThread()))
+        return WorkerThreadableLoader::create(static_cast<WorkerOrWorkletGlobalScope&>(context), client, WTFMove(taskMode), WTFMove(request), options, WTFMove(referrer));
 
-    return DocumentThreadableLoader::create(downcast<Document>(context), client, WTFMove(request), options, WTFMove(referrer));
+    Document* document = nullptr;
+    if (is<WorkletGlobalScope>(context))
+        document = downcast<WorkletGlobalScope>(context).responsibleDocument();
+    else
+        document = &downcast<Document>(context);
+
+    return DocumentThreadableLoader::create(*document, client, WTFMove(request), options, WTFMove(referrer));
 }
 
 void ThreadableLoader::loadResourceSynchronously(ScriptExecutionContext& context, ResourceRequest&& request, ThreadableLoaderClient& client, const ThreadableLoaderOptions& options)
 {
+    auto resourceURL = request.url();
     if (is<WorkerGlobalScope>(context))
         WorkerThreadableLoader::loadResourceSynchronously(downcast<WorkerGlobalScope>(context), WTFMove(request), client, options);
     else
         DocumentThreadableLoader::loadResourceSynchronously(downcast<Document>(context), WTFMove(request), client, options);
-    context.didLoadResourceSynchronously();
+    context.didLoadResourceSynchronously(resourceURL);
 }
 
 void ThreadableLoader::logError(ScriptExecutionContext& context, const ResourceError& error, const String& initiator)

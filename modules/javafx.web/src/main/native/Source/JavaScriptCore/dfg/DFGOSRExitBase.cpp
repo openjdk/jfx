@@ -28,11 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "CodeBlock.h"
-#include "DFGBasicBlock.h"
-#include "DFGNode.h"
 #include "InlineCallFrame.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -43,7 +39,7 @@ void OSRExitBase::considerAddingAsFrequentExitSiteSlow(CodeBlock* profiledCodeBl
             m_codeOriginForExitProfile, profiledCodeBlock);
     if (sourceProfiledCodeBlock) {
         ExitingInlineKind inlineKind;
-        if (m_codeOriginForExitProfile.inlineCallFrame)
+        if (m_codeOriginForExitProfile.inlineCallFrame())
             inlineKind = ExitFromInlined;
         else
             inlineKind = ExitFromNotInlined;
@@ -52,7 +48,7 @@ void OSRExitBase::considerAddingAsFrequentExitSiteSlow(CodeBlock* profiledCodeBl
         if (m_wasHoisted)
             site = FrequentExitSite(HoistingFailed, jitType, inlineKind);
         else
-            site = FrequentExitSite(m_codeOriginForExitProfile.bytecodeIndex, m_kind, jitType, inlineKind);
+            site = FrequentExitSite(m_codeOriginForExitProfile.bytecodeIndex(), m_kind, jitType, inlineKind);
         ExitProfile::add(sourceProfiledCodeBlock, site);
     }
 }

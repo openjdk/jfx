@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #include "B3MemoryValueInlines.h"
 #include "B3PatchpointValue.h"
 #include "B3PhaseScope.h"
-#include "B3ProcedureInlines.h"
 #include "B3StackmapGenerationParams.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
@@ -128,9 +127,8 @@ private:
                     break;
                 }
 
-                auto* fmodDouble = tagCFunctionPtr<double (*)(double, double)>(fmod, B3CCallPtrTag);
                 if (m_value->type() == Double) {
-                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, fmodDouble);
+                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::fmodDouble));
                     Value* result = m_insertionSet.insert<CCallValue>(m_index, Double, m_origin,
                         Effects::none(),
                         functionAddress,
@@ -141,7 +139,7 @@ private:
                 } else if (m_value->type() == Float) {
                     Value* numeratorAsDouble = m_insertionSet.insert<Value>(m_index, FloatToDouble, m_origin, m_value->child(0));
                     Value* denominatorAsDouble = m_insertionSet.insert<Value>(m_index, FloatToDouble, m_origin, m_value->child(1));
-                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, fmodDouble);
+                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::fmodDouble));
                     Value* doubleMod = m_insertionSet.insert<CCallValue>(m_index, Double, m_origin,
                         Effects::none(),
                         functionAddress,
@@ -174,6 +172,36 @@ private:
             case Div: {
                 if (m_value->isChill())
                     makeDivisionChill(Div);
+                break;
+            }
+
+            case CheckMul: {
+                if (isARM64() && m_value->child(0)->type() == Int32) {
+                    CheckValue* checkMul = m_value->as<CheckValue>();
+
+                    Value* left = m_insertionSet.insert<Value>(m_index, SExt32, m_origin, m_value->child(0));
+                    Value* right = m_insertionSet.insert<Value>(m_index, SExt32, m_origin, m_value->child(1));
+                    Value* mulResult = m_insertionSet.insert<Value>(m_index, Mul, m_origin, left, right);
+                    Value* mulResult32 = m_insertionSet.insert<Value>(m_index, Trunc, m_origin, mulResult);
+                    Value* upperResult = m_insertionSet.insert<Value>(m_index, Trunc, m_origin,
+                        m_insertionSet.insert<Value>(m_index, SShr, m_origin, mulResult, m_insertionSet.insert<Const32Value>(m_index, m_origin, 32)));
+                    Value* signBit = m_insertionSet.insert<Value>(m_index, SShr, m_origin,
+                        mulResult32,
+                        m_insertionSet.insert<Const32Value>(m_index, m_origin, 31));
+                    Value* hasOverflowed = m_insertionSet.insert<Value>(m_index, NotEqual, m_origin, upperResult, signBit);
+
+                    CheckValue* check = m_insertionSet.insert<CheckValue>(m_index, Check, m_origin, hasOverflowed);
+                    check->setGenerator(checkMul->generator());
+                    check->clobberEarly(checkMul->earlyClobbered());
+                    check->clobberLate(checkMul->lateClobbered());
+                    auto children = checkMul->constrainedChildren();
+                    auto it = children.begin();
+                    for (std::advance(it, 2); it != children.end(); ++it)
+                        check->append(*it);
+
+                    m_value->replaceWithIdentity(mulResult32);
+                    m_changed = true;
+                }
                 break;
             }
 
@@ -277,6 +305,14 @@ private:
                     }
                     if (exempt)
                         break;
+                }
+
+                if (isARM64E()) {
+                    if (m_value->opcode() == AtomicXchgSub) {
+                        m_value->setOpcodeUnsafely(AtomicXchgAdd);
+                        m_value->child(0) = m_insertionSet.insert<Value>(
+                            m_index, Neg, m_origin, m_value->child(0));
+                    }
                 }
 
                 AtomicValue* atomic = m_value->as<AtomicValue>();
@@ -388,7 +424,7 @@ private:
         zeroDenCase->setSuccessors(FrequentedBlock(m_block));
 
         int64_t badNumeratorConst = 0;
-        switch (m_value->type()) {
+        switch (m_value->type().kind()) {
         case Int32:
             badNumeratorConst = std::numeric_limits<int32_t>::min();
             break;
@@ -509,8 +545,8 @@ private:
                         GPRReg scratch = params.gpScratch(0);
 
                         jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
-                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::timesPtr()), scratch);
-                        jit.jump(scratch, JSSwitchPtrTag);
+                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::ScalePtr), scratch);
+                        jit.farJump(scratch, JSSwitchPtrTag);
 
                         // These labels are guaranteed to be populated before either late paths or
                         // link tasks run.

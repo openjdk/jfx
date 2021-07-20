@@ -56,7 +56,7 @@ void StorageEventDispatcher::dispatchSessionStorageEvents(const String& key, con
             frames.append(frame);
     }
 
-    dispatchSessionStorageEventsToFrames(*page, frames, key, oldValue, newValue, sourceFrame->document()->url(), securityOrigin);
+    dispatchSessionStorageEventsToFrames(*page, frames, key, oldValue, newValue, sourceFrame->document()->url().string(), securityOrigin);
 }
 
 void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const String& oldValue, const String& newValue, const SecurityOriginData& securityOrigin, Frame* sourceFrame)
@@ -69,7 +69,7 @@ void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const
 
     // Send events to every page.
     for (auto& pageInGroup : page->group().pages()) {
-        for (Frame* frame = &pageInGroup->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        for (auto* frame = &pageInGroup.mainFrame(); frame; frame = frame->tree().traverseNext()) {
             if (!frame->document())
                 continue;
             if (sourceFrame != frame && frame->document()->securityOrigin().equal(securityOrigin.securityOrigin().ptr()))
@@ -77,7 +77,7 @@ void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const
         }
     }
 
-    dispatchLocalStorageEventsToFrames(page->group(), frames, key, oldValue, newValue, sourceFrame->document()->url(), securityOrigin);
+    dispatchLocalStorageEventsToFrames(page->group(), frames, key, oldValue, newValue, sourceFrame->document()->url().string(), securityOrigin);
 }
 
 void StorageEventDispatcher::dispatchSessionStorageEventsToFrames(Page& page, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, const SecurityOriginData& securityOrigin)
@@ -85,25 +85,23 @@ void StorageEventDispatcher::dispatchSessionStorageEventsToFrames(Page& page, co
     InspectorInstrumentation::didDispatchDOMStorageEvent(page, key, oldValue, newValue, StorageType::Session, securityOrigin.securityOrigin().ptr());
 
     for (auto& frame : frames) {
-        auto result = frame->document()->domWindow()->sessionStorage();
-        if (!frame->document())
-            continue;
-        if (!result.hasException())
-            frame->document()->enqueueWindowEvent(StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, result.releaseReturnValue()));
+        auto document = makeRefPtr(frame->document());
+        auto result = document->domWindow()->sessionStorage();
+        if (!result.hasException()) // https://html.spec.whatwg.org/multipage/webstorage.html#the-storage-event:event-storage
+            document->queueTaskToDispatchEventOnWindow(TaskSource::DOMManipulation, StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, result.releaseReturnValue()));
     }
 }
 
 void StorageEventDispatcher::dispatchLocalStorageEventsToFrames(PageGroup& pageGroup, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, const SecurityOriginData& securityOrigin)
 {
     for (auto& page : pageGroup.pages())
-        InspectorInstrumentation::didDispatchDOMStorageEvent(*page, key, oldValue, newValue, StorageType::Local, securityOrigin.securityOrigin().ptr());
+        InspectorInstrumentation::didDispatchDOMStorageEvent(page, key, oldValue, newValue, StorageType::Local, securityOrigin.securityOrigin().ptr());
 
     for (auto& frame : frames) {
-        auto result = frame->document()->domWindow()->localStorage();
-        if (!frame->document())
-            continue;
-        if (!result.hasException())
-            frame->document()->enqueueWindowEvent(StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, result.releaseReturnValue()));
+        auto document = makeRefPtr(frame->document());
+        auto result = document->domWindow()->localStorage();
+        if (!result.hasException()) // https://html.spec.whatwg.org/multipage/webstorage.html#the-storage-event:event-storage
+            document->queueTaskToDispatchEventOnWindow(TaskSource::DOMManipulation, StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, result.releaseReturnValue()));
     }
 }
 

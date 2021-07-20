@@ -1,6 +1,7 @@
 /*
  * Copyright 2015 The Chromium Authors. All rights reserved.
  * Copyright (C) 2016 Akamai Technologies Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +27,14 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class LinkHeader {
 public:
-    template <typename CharacterType>
-    LinkHeader(CharacterType*& position, CharacterType* const end);
+    template<typename CharacterType> LinkHeader(StringParsingBuffer<CharacterType>&);
 
     const String& url() const { return m_url; }
     const String& rel() const { return m_rel; }
@@ -41,7 +42,10 @@ public:
     const String& mimeType() const { return m_mimeType; }
     const String& media() const { return m_media; }
     const String& crossOrigin() const { return m_crossOrigin; }
+    const String& imageSrcSet() const { return m_imageSrcSet; }
+    const String& imageSizes() const { return m_imageSizes; }
     bool valid() const { return m_isValid; }
+    bool isViewportDependent() const { return !media().isEmpty() || !imageSrcSet().isEmpty() || !imageSizes().isEmpty(); }
 
     enum LinkParameterName {
         LinkParameterRel,
@@ -55,10 +59,12 @@ public:
         LinkParameterUnknown,
         LinkParameterCrossOrigin,
         LinkParameterAs,
+        LinkParameterImageSrcSet,
+        LinkParameterImageSizes,
     };
 
 private:
-    void setValue(LinkParameterName, String value);
+    void setValue(LinkParameterName, String&& value);
 
     String m_url;
     String m_rel;
@@ -66,6 +72,8 @@ private:
     String m_mimeType;
     String m_media;
     String m_crossOrigin;
+    String m_imageSrcSet;
+    String m_imageSizes;
     bool m_isValid { true };
 };
 
@@ -77,9 +85,6 @@ public:
     Vector<LinkHeader>::const_iterator end() const { return m_headerSet.end(); }
 
 private:
-    template <typename CharacterType>
-    void init(CharacterType* headerValue, size_t length);
-
     Vector<LinkHeader> m_headerSet;
 };
 

@@ -25,42 +25,64 @@
 
 #pragma once
 
+#include "ColorComponents.h"
+#include "ColorConversion.h"
 #include "ColorSpace.h"
-
+#include "ColorTypes.h"
+#include <functional>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class ExtendedColor : public RefCounted<ExtendedColor> {
 public:
-    static Ref<ExtendedColor> create(float r, float g, float b, float a, ColorSpace = ColorSpace::ColorSpaceSRGB);
+    template<typename ColorType> static Ref<ExtendedColor> create(const ColorType&);
+    static Ref<ExtendedColor> create(ColorComponents<float>, ColorSpace);
 
-    float red() const { return m_red; }
-    float green() const { return m_green; }
-    float blue() const { return m_blue; }
-    float alpha() const { return m_alpha; }
+    float alpha() const { return m_components[3]; }
 
+    const ColorComponents<float>& components() const { return m_components; }
     ColorSpace colorSpace() const { return m_colorSpace; }
 
-    WEBCORE_EXPORT String cssText() const;
+    template<typename Functor> decltype(auto) callOnUnderlyingType(Functor&&) const;
 
 private:
-    ExtendedColor(float r, float g, float b, float a, ColorSpace colorSpace)
-        : m_red(r)
-        , m_green(g)
-        , m_blue(b)
-        , m_alpha(a)
-        , m_colorSpace(colorSpace)
-    { }
+    ExtendedColor(ColorComponents<float>, ColorSpace);
 
-    float m_red { 0 };
-    float m_green { 0 };
-    float m_blue { 0 };
-    float m_alpha { 0 };
-
-    ColorSpace m_colorSpace { ColorSpace::ColorSpaceSRGB };
+    ColorComponents<float> m_components;
+    ColorSpace m_colorSpace;
 };
+
+inline bool operator==(const ExtendedColor& a, const ExtendedColor& b)
+{
+    return a.colorSpace() == b.colorSpace() && a.components() == b.components();
+}
+
+inline bool operator!=(const ExtendedColor& a, const ExtendedColor& b)
+{
+    return !(a == b);
+}
+
+template<typename ColorType> inline Ref<ExtendedColor> ExtendedColor::create(const ColorType& color)
+{
+    return adoptRef(*new ExtendedColor(asColorComponents(color), ColorSpaceFor<ColorType>));
+}
+
+inline Ref<ExtendedColor> ExtendedColor::create(ColorComponents<float> components, ColorSpace colorSpace)
+{
+    return adoptRef(*new ExtendedColor(components, colorSpace));
+}
+
+inline ExtendedColor::ExtendedColor(ColorComponents<float> components, ColorSpace colorSpace)
+    : m_components(components)
+    , m_colorSpace(colorSpace)
+{
+}
+
+template<typename Functor> decltype(auto) ExtendedColor::callOnUnderlyingType(Functor&& functor) const
+{
+    return callWithColorType(m_components, m_colorSpace, std::forward<Functor>(functor));
+}
 
 }

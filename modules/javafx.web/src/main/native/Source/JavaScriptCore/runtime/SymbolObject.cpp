@@ -47,12 +47,7 @@ void SymbolObject::finishCreation(VM& vm, Symbol* symbol)
     setInternalValue(vm, symbol);
 }
 
-String SymbolObject::toStringName(const JSObject*, ExecState*)
-{
-    return "Object"_s;
-}
-
-JSValue SymbolObject::defaultValue(const JSObject* object, ExecState*, PreferredPrimitiveType)
+JSValue SymbolObject::defaultValue(const JSObject* object, JSGlobalObject*, PreferredPrimitiveType)
 {
     const SymbolObject* symbolObject = jsCast<const SymbolObject*>(object);
     return symbolObject->internalValue();

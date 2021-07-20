@@ -22,11 +22,13 @@
 
 #include <unicode/ubrk.h>
 #include <wtf/Optional.h>
+#include <wtf/text/StringView.h>
 #include <wtf/text/icu/UTextProviderLatin1.h>
 
 namespace WTF {
 
 class TextBreakIteratorICU {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Mode {
         Line,

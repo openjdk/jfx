@@ -40,6 +40,7 @@ namespace WTF {
 namespace {
 
 class ARC4Stream {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ARC4Stream();
 
@@ -137,7 +138,7 @@ uint32_t ARC4RandomNumberGenerator::getWord()
 
 uint32_t ARC4RandomNumberGenerator::randomNumber()
 {
-    std::lock_guard<Lock> lock(m_mutex);
+    auto locker = holdLock(m_mutex);
 
     m_count -= 4;
     stirIfNeeded();
@@ -146,7 +147,7 @@ uint32_t ARC4RandomNumberGenerator::randomNumber()
 
 void ARC4RandomNumberGenerator::randomValues(void* buffer, size_t length)
 {
-    std::lock_guard<Lock> lock(m_mutex);
+    auto locker = holdLock(m_mutex);
 
     unsigned char* result = reinterpret_cast<unsigned char*>(buffer);
     stirIfNeeded();

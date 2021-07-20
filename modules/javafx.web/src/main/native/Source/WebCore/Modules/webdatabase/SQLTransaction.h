@@ -35,7 +35,6 @@
 #include "SQLValue.h"
 #include <wtf/Deque.h>
 #include <wtf/Lock.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -105,6 +104,8 @@ private:
     void deliverSuccessCallback();
 
     NO_RETURN_DUE_TO_ASSERT void unreachableState();
+
+    void callErrorCallbackDueToInterruption();
 
     void getNextStatement();
     bool runCurrentStatement();

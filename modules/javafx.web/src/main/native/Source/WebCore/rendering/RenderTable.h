@@ -152,9 +152,9 @@ public:
         m_columnPos[index] = position;
     }
 
-    RenderTableSection* header() const { return m_head.get(); }
-    RenderTableSection* footer() const { return m_foot.get(); }
-    RenderTableSection* firstBody() const { return m_firstBody.get(); }
+    RenderTableSection* header() const;
+    RenderTableSection* footer() const;
+    RenderTableSection* firstBody() const;
 
     // This function returns 0 if the table has no section.
     RenderTableSection* topSection() const;
@@ -310,8 +310,8 @@ private:
     LayoutUnit convertStyleLogicalWidthToComputedWidth(const Length& styleLogicalWidth, LayoutUnit availableWidth);
     LayoutUnit convertStyleLogicalHeightToComputedHeight(const Length& styleLogicalHeight);
 
-    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) final;
-    LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) override { return RenderBox::overflowClipRect(location, fragment, relevancy); }
+    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
+    LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) const override { return RenderBox::overflowClipRect(location, fragment, relevancy); }
 
     void addOverflowFromChildren() final;
 
@@ -361,6 +361,8 @@ private:
         return false;
     }
 
+    bool shouldResetLogicalHeightBeforeLayout() const override { return true; }
+
     LayoutUnit m_hSpacing;
     LayoutUnit m_vSpacing;
     LayoutUnit m_borderStart;
@@ -369,16 +371,6 @@ private:
     mutable LayoutUnit m_columnOffsetHeight;
     bool m_inRecursiveSectionMovedWithPagination { false };
 };
-
-inline RenderTableSection* RenderTable::topSection() const
-{
-    ASSERT(!needsSectionRecalc());
-    if (m_head)
-        return m_head.get();
-    if (m_firstBody)
-        return m_firstBody.get();
-    return m_foot.get();
-}
 
 inline bool isDirectionSame(const RenderBox* tableItem, const RenderBox* otherTableItem) { return tableItem && otherTableItem ? tableItem->style().direction() == otherTableItem->style().direction() : true; }
 

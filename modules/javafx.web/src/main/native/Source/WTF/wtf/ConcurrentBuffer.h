@@ -34,10 +34,12 @@
 
 namespace WTF {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ConcurrentBuffer);
+
 // ConcurrentBuffer is suitable for when you plan to store immutable data and sometimes append to it.
 // It supports storing data that is not copy-constructable but bit-copyable.
 template<typename T>
-class ConcurrentBuffer {
+class ConcurrentBuffer final {
     WTF_MAKE_NONCOPYABLE(ConcurrentBuffer);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -53,7 +55,7 @@ public:
                 array->data[i].~T();
         }
         for (Array* array : m_allArrays)
-            fastFree(array);
+            ConcurrentBufferMalloc::free(array);
     }
 
     // Growing is not concurrent. This assumes you are holding some other lock before you do this.
@@ -64,8 +66,9 @@ public:
             return;
         Array* newArray = createArray(newSize);
         // This allows us to do ConcurrentBuffer<std::unique_ptr<>>.
+        // static_cast<void*> avoids triggering -Wclass-memaccess.
         if (array)
-            memcpy(newArray->data, array->data, sizeof(T) * array->size);
+            memcpy(static_cast<void*>(newArray->data), array->data, sizeof(T) * array->size);
         for (size_t i = array ? array->size : 0; i < newSize; ++i)
             new (newArray->data + i) T();
         WTF::storeStoreFence();
@@ -98,7 +101,7 @@ private:
         Checked<size_t> objectSize = sizeof(T);
         objectSize *= size;
         objectSize += static_cast<size_t>(OBJECT_OFFSETOF(Array, data));
-        Array* result = static_cast<Array*>(fastMalloc(objectSize.unsafeGet()));
+        Array* result = static_cast<Array*>(ConcurrentBufferMalloc::malloc(objectSize.unsafeGet()));
         result->size = size;
         return result;
     }

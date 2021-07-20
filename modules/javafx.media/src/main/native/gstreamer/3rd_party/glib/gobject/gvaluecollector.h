@@ -191,18 +191,18 @@ G_STMT_START {                                      \
  * va_list variables cannot be passed by reference.
  *
  * Note: If you are creating the @value argument just before calling this macro,
- * you should use the #G_VALUE_COLLECT_INIT variant and pass the unitialized
+ * you should use the #G_VALUE_COLLECT_INIT variant and pass the uninitialized
  * #GValue. That variant is faster than #G_VALUE_COLLECT.
  */
 #define G_VALUE_COLLECT(value, var_args, flags, __error) G_STMT_START {         \
   GValue *g_vc_value = (value);                             \
   GType g_vc_value_type = G_VALUE_TYPE (g_vc_value);                        \
   GTypeValueTable *g_vc_vtable = g_type_value_table_peek (g_vc_value_type);         \
-                                            \
+                      \
   if (g_vc_vtable->value_free)                              \
     g_vc_vtable->value_free (g_vc_value);                           \
   memset (g_vc_value->data, 0, sizeof (g_vc_value->data));                  \
-                                            \
+                      \
   G_VALUE_COLLECT_INIT(value, g_vc_value_type, var_args, flags, __error);           \
 } G_STMT_END
 
@@ -266,7 +266,7 @@ G_STMT_START {                                      \
   const gchar *g_vl_lcopy_format = g_vl_vtable->lcopy_format;                   \
   GTypeCValue g_vl_cvalues[G_VALUE_COLLECT_FORMAT_MAX_LENGTH] = { { 0, }, };        \
   guint g_vl_n_values = 0;                                  \
-                                                                                        \
+                                             \
   while (*g_vl_lcopy_format)                                \
     {                                           \
       GTypeCValue *g_vl_cvalue = g_vl_cvalues + g_vl_n_values++;                    \

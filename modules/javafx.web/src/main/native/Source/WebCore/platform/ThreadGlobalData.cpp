@@ -29,6 +29,7 @@
 
 #include "CachedResourceRequestInitiators.h"
 #include "EventNames.h"
+#include "MIMETypeRegistry.h"
 #include "QualifiedNameCache.h"
 #include "TextCodecICU.h"
 #include "ThreadTimers.h"
@@ -40,14 +41,14 @@
 namespace WebCore {
 
 ThreadGlobalData::ThreadGlobalData()
-    : m_cachedResourceRequestInitiators(std::make_unique<CachedResourceRequestInitiators>())
+    : m_cachedResourceRequestInitiators(makeUnique<CachedResourceRequestInitiators>())
     , m_eventNames(EventNames::create())
-    , m_threadTimers(std::make_unique<ThreadTimers>())
-    , m_qualifiedNameCache(std::make_unique<QualifiedNameCache>())
+    , m_threadTimers(makeUnique<ThreadTimers>())
+    , m_qualifiedNameCache(makeUnique<QualifiedNameCache>())
 #ifndef NDEBUG
     , m_isMainThread(isMainThread())
 #endif
-    , m_cachedConverterICU(std::make_unique<ICUConverterWrapper>())
+    , m_cachedConverterICU(makeUnique<ICUConverterWrapper>())
 {
     // This constructor will have been called on the main thread before being called on
     // any other thread, and is only called once per thread - this makes this a convenient
@@ -116,5 +117,12 @@ ThreadGlobalData& threadGlobalData()
 }
 
 #endif
+
+const MIMETypeRegistryThreadGlobalData& ThreadGlobalData::mimeTypeRegistryThreadGlobalData()
+{
+    if (UNLIKELY(!m_MIMETypeRegistryThreadGlobalData))
+        m_MIMETypeRegistryThreadGlobalData = MIMETypeRegistry::createMIMETypeRegistryThreadGlobalData();
+    return *m_MIMETypeRegistryThreadGlobalData;
+}
 
 } // namespace WebCore

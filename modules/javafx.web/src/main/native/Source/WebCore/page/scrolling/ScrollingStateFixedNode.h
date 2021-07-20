@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingConstraints.h"
 #include "ScrollingStateNode.h"
@@ -40,13 +40,9 @@ class ScrollingStateFixedNode final : public ScrollingStateNode {
 public:
     static Ref<ScrollingStateFixedNode> create(ScrollingStateTree&, ScrollingNodeID);
 
-    Ref<ScrollingStateNode> clone(ScrollingStateTree&) override;
+    Ref<ScrollingStateNode> clone(ScrollingStateTree&) final;
 
     virtual ~ScrollingStateFixedNode();
-
-    enum {
-        ViewportConstraints = NumStateNodeBits
-    };
 
     WEBCORE_EXPORT void updateConstraints(const FixedPositionViewportConstraints&);
     const FixedPositionViewportConstraints& viewportConstraints() const { return m_constraints; }
@@ -55,11 +51,10 @@ private:
     ScrollingStateFixedNode(ScrollingStateTree&, ScrollingNodeID);
     ScrollingStateFixedNode(const ScrollingStateFixedNode&, ScrollingStateTree&);
 
-    void setAllPropertiesChanged() override;
+    void reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction) final;
 
-    void reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction) override;
-
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const final;
+    OptionSet<ScrollingStateNode::Property> applicableProperties() const final;
 
     FixedPositionViewportConstraints m_constraints;
 };
@@ -68,4 +63,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateFixedNode, isFixedNode())
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

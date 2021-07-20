@@ -25,9 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLBaseFunctionAttribute.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -36,9 +37,10 @@ namespace WHLSL {
 namespace AST {
 
 class NumThreadsFunctionAttribute : public BaseFunctionAttribute {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    NumThreadsFunctionAttribute(Lexer::Token&& origin, unsigned width, unsigned height, unsigned depth)
-        : BaseFunctionAttribute(WTFMove(origin))
+    NumThreadsFunctionAttribute(CodeLocation location, unsigned width, unsigned height, unsigned depth)
+        : BaseFunctionAttribute(location)
         , m_width(width)
         , m_height(height)
         , m_depth(depth)
@@ -66,4 +68,4 @@ private:
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

@@ -2,7 +2,7 @@
 #*****************************************************************************
 #
 #   Copyright (C) 2016 and later: Unicode, Inc. and others.
-#   License & terms of use: http://www.unicode.org/copyright.html#License
+#   License & terms of use: http://www.unicode.org/copyright.html
 #
 #*****************************************************************************
 #*****************************************************************************
@@ -32,8 +32,8 @@
 #
 #
 #StateName:
-#   input-char           n next-state           ^push-state     action    
-#   input-char           n next-state           ^push-state     action    
+#   input-char           n next-state           ^push-state     action
+#   input-char           n next-state           ^push-state     action
 #       |                |   |                      |             |
 #       |                |   |                      |             |--- action to be performed by state machine
 #       |                |   |                      |                  See function RBBIRuleScanner::doParseActions()
@@ -53,7 +53,7 @@
 #            matches, peform the actions and go to the state specified on this line.
 #            The input character is tested sequentally, in the order written.  The characters and
 #            character classes tested for do not need to be mutually exclusive.  The first match wins.
-#            
+#
 
 
 
@@ -62,23 +62,23 @@
 #  start state, scan position is at the beginning of the rules file, or in between two rules.
 #
 start:
-    escaped                term                  ^break-rule-end    doExprStart                       
-    white_space          n start                     
+    escaped                term                  ^break-rule-end    doExprStart
+    white_space          n start
     '^'                  n start-after-caret     ^break-rule-end    doNoChain
     '$'                    scan-var-name         ^assign-or-rule    doExprStart
-    '!'                  n rev-option                             
+    '!'                  n rev-option
     ';'                  n start                                                  # ignore empty rules.
-    eof                    exit              
+    eof                    exit
     default                term                  ^break-rule-end    doExprStart
-    
+
 #
 #  break-rule-end:  Returned from doing a break-rule expression.
 #
 break-rule-end:
-    ';'	                 n start                                    doEndOfRule
+    ';'                     n start                                    doEndOfRule
     white_space          n break-rule-end
     default                errorDeath                               doRuleError
-     
+
 #
 # start of a rule, after having seen a '^' (inhibits rule chain in).
 #     Similar to the main 'start' state in most respects, except
@@ -93,33 +93,33 @@ start-after-caret:
     ';'                    errorDeath                               doRuleError    # ^ ;
     eof                    errorDeath                               doRuleError
     default                term                                     doExprStart
- 
+
 #
 #   !               We've just scanned a '!', indicating either a !!key word flag or a
 #                   !Reverse rule.
 #
 rev-option:
-    '!'                  n option-scan1   
+    '!'                  n option-scan1
     default                reverse-rule           ^break-rule-end   doReverseDir
-    
+
 option-scan1:
     name_start_char      n option-scan2                             doOptionStart
     default                errorDeath                               doRuleError
-    
+
 option-scan2:
     name_char            n option-scan2
     default                option-scan3                             doOptionEnd
-    
+
 option-scan3:
-    ';'                  n start 
-    white_space          n option-scan3 
-    default                errorDeath                               doRuleError 
-    
+    ';'                  n start
+    white_space          n option-scan3
+    default                errorDeath                               doRuleError
+
 
 reverse-rule:
     default                term                   ^break-rule-end   doExprStart
-    
-    
+
+
 #
 #  term.  Eat through a single rule character, or a composite thing, which
 #         could be a parenthesized expression, a variable name, or a Unicode Set.
@@ -133,8 +133,8 @@ term:
     '$'                    scan-var-name         ^term-var-ref
     '.'                  n expr-mod                                 doDotAny
     default                errorDeath                               doRuleError
-    
-    
+
+
 
 #
 #  term-var-ref   We've just finished scanning a reference to a $variable.
@@ -143,8 +143,8 @@ term:
 #                 so the check can't be done there.
 term-var-ref:
     default                expr-mod                                 doCheckVarDef
-    
-    
+
+
 #
 #   expr-mod      We've just finished scanning a term, now look for the optional
 #                 trailing '*', '?', '+'
@@ -154,9 +154,9 @@ expr-mod:
     '*'                  n  expr-cont                               doUnaryOpStar
     '+'                  n  expr-cont                               doUnaryOpPlus
     '?'                  n  expr-cont                               doUnaryOpQuestion
-    default                 expr-cont 
-    
-    
+    default                 expr-cont
+
+
 #
 #  expr-cont      Expression, continuation.  At a point where additional terms are
 #                                            allowed, but not required.
@@ -174,7 +174,7 @@ expr-cont:
     '|'                  n  term                                    doExprOrOperator
     ')'                  n  pop                                     doExprRParen
     default                 pop                                     doExprFinished
-    
+
 
 #
 #   look-ahead    Scanning a '/', which identifies a break point, assuming that the
@@ -215,20 +215,20 @@ tag-open:
     white_space          n  tag-open
     digit_char              tag-value                               doStartTagValue
     default                 errorDeath                              doTagExpectedError
-    
+
 tag-value:
     white_space          n  tag-close
     '}'                     tag-close
     digit_char           n  tag-value                               doTagDigit
     default                 errorDeath                              doTagExpectedError
-    
+
 tag-close:
     white_space          n  tag-close
     '}'                  n  expr-cont-no-tag                        doTagValue
     default                 errorDeath                              doTagExpectedError
-    
-    
-    
+
+
+
 #
 #  expr-cont-no-tag    Expression, continuation.  At a point where additional terms are
 #                                            allowed, but not required.  Just like
@@ -247,8 +247,8 @@ expr-cont-no-tag:
     '|'                  n  term                                    doExprOrOperator
     ')'                  n  pop                                     doExprRParen
     default                 pop                                     doExprFinished
-    
-    
+
+
 
 
 #
@@ -270,13 +270,13 @@ scan-var-name:
 scan-var-start:
     name_start_char      n scan-var-body
     default                errorDeath                               doVariableNameExpectedErr
-    
+
 scan-var-body:
     name_char            n scan-var-body
     default                pop                                      doEndVariableName
-    
-    
-    
+
+
+
 #
 #  scan-unicode-set   Unicode Sets are parsed by the the UnicodeSet class.
 #                     Within the RBBI parser, after finding the first character
@@ -290,9 +290,9 @@ scan-unicode-set:
     '['                   n pop                                      doScanUnicodeSet
     'p'                   n pop                                      doScanUnicodeSet
     'P'                   n pop                                      doScanUnicodeSet
-    default		    errorDeath 
-    
-    
+    default            errorDeath
+
+
 
 
 
@@ -323,9 +323,9 @@ assign-or-rule:
 assign-end:
     ';'                  n start                                    doEndAssign
     default                errorDeath                               doRuleErrorAssignExpr
-    
-    
-    
+
+
+
 #
 # errorDeath.   This state is specified as the next state whenever a syntax error
 #               in the source rules is detected.  Barring bugs, the state machine will never

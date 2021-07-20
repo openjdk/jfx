@@ -32,19 +32,16 @@
 #include "InjectedScriptManager.h"
 
 #include "CatchScope.h"
-#include "Completion.h"
 #include "InjectedScriptHost.h"
 #include "InjectedScriptSource.h"
-#include "JSCInlines.h"
-#include "JSInjectedScriptHost.h"
 #include "JSLock.h"
-#include "ScriptObject.h"
+#include "JSObjectInlines.h"
 #include "SourceCode.h"
 #include <wtf/JSONValues.h>
 
-using namespace JSC;
-
 namespace Inspector {
+
+using namespace JSC;
 
 InjectedScriptManager::InjectedScriptManager(InspectorEnvironment& environment, Ref<InjectedScriptHost>&& injectedScriptHost)
     : m_environment(environment)
@@ -54,6 +51,10 @@ InjectedScriptManager::InjectedScriptManager(InspectorEnvironment& environment, 
 }
 
 InjectedScriptManager::~InjectedScriptManager()
+{
+}
+
+void InjectedScriptManager::connect()
 {
 }
 
@@ -88,38 +89,44 @@ InjectedScript InjectedScriptManager::injectedScriptForId(int id)
     return InjectedScript();
 }
 
-int InjectedScriptManager::injectedScriptIdFor(ExecState* scriptState)
+int InjectedScriptManager::injectedScriptIdFor(JSGlobalObject* globalObject)
 {
-    auto it = m_scriptStateToId.find(scriptState);
+    auto it = m_scriptStateToId.find(globalObject);
     if (it != m_scriptStateToId.end())
         return it->value;
 
     int id = m_nextInjectedScriptId++;
-    m_scriptStateToId.set(scriptState, id);
+    m_scriptStateToId.set(globalObject, id);
     return id;
 }
 
 InjectedScript InjectedScriptManager::injectedScriptForObjectId(const String& objectId)
 {
-    RefPtr<JSON::Value> parsedObjectId;
-    if (!JSON::Value::parseJSON(objectId, parsedObjectId))
+    auto parsedObjectId = JSON::Value::parseJSON(objectId);
+    if (!parsedObjectId)
         return InjectedScript();
 
-    RefPtr<JSON::Object> resultObject;
-    if (!parsedObjectId->asObject(resultObject))
+    auto resultObject = parsedObjectId->asObject();
+    if (!resultObject)
         return InjectedScript();
 
-    long injectedScriptId = 0;
-    if (!resultObject->getInteger("injectedScriptId"_s, injectedScriptId))
+    auto injectedScriptId = resultObject->getInteger("injectedScriptId"_s);
+    if (!injectedScriptId)
         return InjectedScript();
 
-    return m_idToInjectedScript.get(injectedScriptId);
+    return m_idToInjectedScript.get(*injectedScriptId);
 }
 
 void InjectedScriptManager::releaseObjectGroup(const String& objectGroup)
 {
     for (auto& injectedScript : m_idToInjectedScript.values())
         injectedScript.releaseObjectGroup(objectGroup);
+}
+
+void InjectedScriptManager::clearEventValue()
+{
+    for (auto& injectedScript : m_idToInjectedScript.values())
+        injectedScript.clearEventValue();
 }
 
 void InjectedScriptManager::clearExceptionValue()
@@ -133,59 +140,73 @@ String InjectedScriptManager::injectedScriptSource()
     return StringImpl::createWithoutCopying(InjectedScriptSource_js, sizeof(InjectedScriptSource_js));
 }
 
-JSC::JSObject* InjectedScriptManager::createInjectedScript(const String& source, ExecState* scriptState, int id)
+Expected<JSObject*, NakedPtr<Exception>> InjectedScriptManager::createInjectedScript(const String& source, JSGlobalObject* globalObject, int id)
 {
-    VM& vm = scriptState->vm();
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     SourceCode sourceCode = makeSource(source, { });
-    JSGlobalObject* globalObject = scriptState->lexicalGlobalObject();
-    JSValue globalThisValue = scriptState->globalThisValue();
+    JSValue globalThisValue = globalObject->globalThis();
 
     NakedPtr<Exception> evaluationException;
     InspectorEvaluateHandler evaluateHandler = m_environment.evaluateHandler();
-    JSValue functionValue = evaluateHandler(scriptState, sourceCode, globalThisValue, evaluationException);
+    JSValue functionValue = evaluateHandler(globalObject, sourceCode, globalThisValue, evaluationException);
     if (evaluationException)
-        return nullptr;
+        return makeUnexpected(evaluationException);
 
-    CallData callData;
-    CallType callType = getCallData(vm, functionValue, callData);
-    if (callType == CallType::None)
+    auto callData = getCallData(vm, functionValue);
+    if (callData.type == CallData::Type::None)
         return nullptr;
 
     MarkedArgumentBuffer args;
-    args.append(m_injectedScriptHost->wrapper(scriptState, globalObject));
+    args.append(m_injectedScriptHost->wrapper(globalObject));
     args.append(globalThisValue);
     args.append(jsNumber(id));
     ASSERT(!args.hasOverflowed());
 
-    JSValue result = JSC::call(scriptState, functionValue, callType, callData, globalThisValue, args);
+    JSValue result = JSC::call(globalObject, functionValue, callData, globalThisValue, args);
     scope.clearException();
     return result.getObject();
 }
 
-InjectedScript InjectedScriptManager::injectedScriptFor(ExecState* inspectedExecState)
+InjectedScript InjectedScriptManager::injectedScriptFor(JSGlobalObject* globalObject)
 {
-    auto it = m_scriptStateToId.find(inspectedExecState);
+    auto it = m_scriptStateToId.find(globalObject);
     if (it != m_scriptStateToId.end()) {
         auto it1 = m_idToInjectedScript.find(it->value);
         if (it1 != m_idToInjectedScript.end())
             return it1->value;
     }
 
-    if (!m_environment.canAccessInspectedScriptState(inspectedExecState))
+    if (!m_environment.canAccessInspectedScriptState(globalObject))
         return InjectedScript();
 
-    int id = injectedScriptIdFor(inspectedExecState);
-    auto injectedScriptObject = createInjectedScript(injectedScriptSource(), inspectedExecState, id);
-    if (!injectedScriptObject) {
-        WTFLogAlways("Failed to parse/execute InjectedScriptSource.js!");
-        WTFLogAlways("%s\n", injectedScriptSource().ascii().data());
+    int id = injectedScriptIdFor(globalObject);
+    auto createResult = createInjectedScript(injectedScriptSource(), globalObject, id);
+    if (!createResult) {
+        auto& error = createResult.error();
+        ASSERT(error);
+
+        if (isTerminatedExecutionException(globalObject->vm(), error))
+            return InjectedScript();
+
+        unsigned line = 0;
+        unsigned column = 0;
+        auto& stack = error->stack();
+        if (stack.size() > 0)
+            stack[0].computeLineAndColumn(line, column);
+        WTFLogAlways("Error when creating injected script: %s (%d:%d)\n", error->value().toWTFString(globalObject).utf8().data(), line, column);
+        WTFLogAlways("%s\n", injectedScriptSource().utf8().data());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    if (!createResult.value()) {
+        WTFLogAlways("Missing injected script object");
+        WTFLogAlways("%s\n", injectedScriptSource().utf8().data());
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    InjectedScript result({ inspectedExecState, injectedScriptObject }, &m_environment);
+    InjectedScript result({ globalObject, createResult.value() }, &m_environment);
     m_idToInjectedScript.set(id, result);
     didCreateInjectedScript(result);
     return result;

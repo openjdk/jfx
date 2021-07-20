@@ -33,7 +33,9 @@
 #include "CSSTokenizer.h"
 #include "DOMCSSNamespace.h"
 #include "Document.h"
+#include "StyleBuilder.h"
 #include "StyleBuilderConverter.h"
+#include "StyleResolver.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -46,12 +48,11 @@ ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& docum
     RefPtr<CSSCustomPropertyValue> initialValue;
     if (!descriptor.initialValue.isEmpty()) {
         CSSTokenizer tokenizer(descriptor.initialValue);
-        StyleResolver styleResolver(document);
+        Style::Resolver styleResolver(document);
 
         // We need to initialize this so that we can successfully parse computationally dependent values (like em units).
         // We don't actually need the values to be accurate, since they will be rejected later anyway
-        styleResolver.applyPropertyToStyle(CSSPropertyInvalid, nullptr, styleResolver.defaultStyleForElement());
-        styleResolver.updateFont();
+        auto style = styleResolver.defaultStyleForElement(nullptr);
 
         HashSet<CSSPropertyID> dependencies;
         CSSPropertyParser::collectParsedCustomPropertyValueDependencies(descriptor.syntax, false, dependencies, tokenizer.tokenRange(), strictCSSParserContext());
@@ -59,7 +60,13 @@ ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& docum
         if (!dependencies.isEmpty())
             return Exception { SyntaxError, "The given initial value must be computationally independent." };
 
-        initialValue = CSSPropertyParser::parseTypedCustomPropertyValue(descriptor.name, descriptor.syntax, tokenizer.tokenRange(), styleResolver, strictCSSParserContext());
+
+        Style::MatchResult matchResult;
+
+        auto parentStyle = RenderStyle::clone(*style);
+        Style::Builder dummyBuilder(*style, { document, parentStyle }, matchResult, { });
+
+        initialValue = CSSPropertyParser::parseTypedCustomPropertyValue(descriptor.name, descriptor.syntax, tokenizer.tokenRange(), dummyBuilder.state(), strictCSSParserContext());
 
         if (!initialValue || !initialValue->isResolved())
             return Exception { SyntaxError, "The given initial value does not parse for the given syntax." };
@@ -84,7 +91,7 @@ DOMCSSRegisterCustomProperty* DOMCSSRegisterCustomProperty::from(DOMCSSNamespace
 {
     auto* supplement = static_cast<DOMCSSRegisterCustomProperty*>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
     if (!supplement) {
-        auto newSupplement = std::make_unique<DOMCSSRegisterCustomProperty>(css);
+        auto newSupplement = makeUnique<DOMCSSRegisterCustomProperty>(css);
         supplement = newSupplement.get();
         provideTo(&css, supplementName(), WTFMove(newSupplement));
     }

@@ -83,7 +83,7 @@ SlowPathCall callOperation(
     SlowPathCall call;
     {
         SlowPathCallContext context(usedRegisters, jit, sizeof...(ArgumentTypes) + 1, resultGPR);
-        jit.setupArguments<void(ExecState*, ArgumentTypes...)>(arguments...);
+        jit.setupArguments<void(ArgumentTypes...)>(arguments...);
         call = context.makeCall(vm, function);
     }
     if (exceptionTarget)
@@ -100,7 +100,7 @@ SlowPathCall callOperation(
     if (callSiteIndex) {
         jit.store32(
             CCallHelpers::TrustedImm32(callSiteIndex.bits()),
-            CCallHelpers::tagFor(CallFrameSlot::argumentCount));
+            CCallHelpers::tagFor(VirtualRegister(CallFrameSlot::argumentCountIncludingThis)));
     }
     return callOperation(vm, usedRegisters, jit, exceptionTarget, function, resultGPR, arguments...);
 }

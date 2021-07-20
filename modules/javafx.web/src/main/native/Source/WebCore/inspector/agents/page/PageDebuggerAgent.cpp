@@ -33,57 +33,69 @@
 #include "PageDebuggerAgent.h"
 
 #include "CachedResource.h"
+#include "DOMWrapperWorld.h"
 #include "Document.h"
-#include "EventListener.h"
-#include "EventTarget.h"
 #include "Frame.h"
-#include "InspectorOverlay.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
-#include "PageScriptDebugServer.h"
+#include "PageDebugger.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptState.h"
-#include "Timer.h"
+#include "UserGestureEmulationScope.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
 #include <wtf/NeverDestroyed.h>
-
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
-PageDebuggerAgent::PageDebuggerAgent(PageAgentContext& context, InspectorPageAgent* pageAgent, InspectorOverlay* overlay)
+PageDebuggerAgent::PageDebuggerAgent(PageAgentContext& context)
     : WebDebuggerAgent(context)
-    , m_page(context.inspectedPage)
-    , m_pageAgent(pageAgent)
-    , m_overlay(overlay)
+    , m_inspectedPage(context.inspectedPage)
 {
 }
 
-void PageDebuggerAgent::enable()
+PageDebuggerAgent::~PageDebuggerAgent() = default;
+
+bool PageDebuggerAgent::enabled() const
 {
-    WebDebuggerAgent::enable();
-    m_instrumentingAgents.setPageDebuggerAgent(this);
+    return m_instrumentingAgents.enabledPageDebuggerAgent() == this && WebDebuggerAgent::enabled();
 }
 
-void PageDebuggerAgent::disable(bool isBeingDestroyed)
+Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, Optional<bool> /* wasThrown */, Optional<int> /* savedResultIndex */>> PageDebuggerAgent::evaluateOnCallFrame(const Protocol::Debugger::CallFrameId& callFrameId, const String& expression, const String& objectGroup, Optional<bool>&& includeCommandLineAPI, Optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, Optional<bool>&& returnByValue, Optional<bool>&& generatePreview, Optional<bool>&& saveResult, Optional<bool>&& emulateUserGesture)
 {
-    WebDebuggerAgent::disable(isBeingDestroyed);
-    m_instrumentingAgents.setPageDebuggerAgent(nullptr);
+    UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture && *emulateUserGesture);
+
+    return WebDebuggerAgent::evaluateOnCallFrame(callFrameId, expression, objectGroup, WTFMove(includeCommandLineAPI), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(saveResult), WTFMove(emulateUserGesture));
 }
 
-String PageDebuggerAgent::sourceMapURLForScript(const Script& script)
+void PageDebuggerAgent::internalEnable()
+{
+    m_instrumentingAgents.setEnabledPageDebuggerAgent(this);
+
+    WebDebuggerAgent::internalEnable();
+}
+
+void PageDebuggerAgent::internalDisable(bool isBeingDestroyed)
+{
+    m_instrumentingAgents.setEnabledPageDebuggerAgent(nullptr);
+
+    WebDebuggerAgent::internalDisable(isBeingDestroyed);
+}
+
+String PageDebuggerAgent::sourceMapURLForScript(const JSC::Debugger::Script& script)
 {
     static NeverDestroyed<String> sourceMapHTTPHeader(MAKE_STATIC_STRING_IMPL("SourceMap"));
     static NeverDestroyed<String> sourceMapHTTPHeaderDeprecated(MAKE_STATIC_STRING_IMPL("X-SourceMap"));
 
     if (!script.url.isEmpty()) {
-        CachedResource* resource = m_pageAgent->cachedResource(&m_page.mainFrame(), URL({ }, script.url));
+        CachedResource* resource = InspectorPageAgent::cachedResource(&m_inspectedPage.mainFrame(), URL({ }, script.url));
         if (resource) {
             String sourceMapHeader = resource->response().httpHeaderField(sourceMapHTTPHeader);
             if (!sourceMapHeader.isEmpty())
@@ -98,14 +110,6 @@ String PageDebuggerAgent::sourceMapURLForScript(const Script& script)
     return InspectorDebuggerAgent::sourceMapURLForScript(script);
 }
 
-void PageDebuggerAgent::didClearAsyncStackTraceData()
-{
-    m_registeredEventListeners.clear();
-    m_postMessageTimers.clear();
-    m_nextEventListenerIdentifier = 1;
-    m_nextPostMessageIdentifier = 1;
-}
-
 void PageDebuggerAgent::muteConsole()
 {
     PageConsoleClient::mute();
@@ -116,32 +120,42 @@ void PageDebuggerAgent::unmuteConsole()
     PageConsoleClient::unmute();
 }
 
-void PageDebuggerAgent::breakpointActionLog(JSC::ExecState& state, const String& message)
+void PageDebuggerAgent::debuggerWillEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action& action)
 {
-    m_pageAgent->page().console().addMessage(MessageSource::JS, MessageLevel::Log, message, createScriptCallStack(&state));
+    if (action.emulateUserGesture)
+        m_breakpointActionUserGestureEmulationScopeStack.append(makeUniqueRef<UserGestureEmulationScope>(m_inspectedPage, true));
 }
 
-InjectedScript PageDebuggerAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
+void PageDebuggerAgent::debuggerDidEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action& action)
+{
+    if (action.emulateUserGesture)
+        m_breakpointActionUserGestureEmulationScopeStack.removeLast();
+}
+
+void PageDebuggerAgent::breakpointActionLog(JSC::JSGlobalObject* lexicalGlobalObject, const String& message)
+{
+    m_inspectedPage.console().addMessage(MessageSource::JS, MessageLevel::Log, message, createScriptCallStack(lexicalGlobalObject));
+}
+
+InjectedScript PageDebuggerAgent::injectedScriptForEval(Protocol::ErrorString& errorString, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (!executionContextId) {
-        JSC::ExecState* scriptState = mainWorldExecState(&m_pageAgent->mainFrame());
+        JSC::JSGlobalObject* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
         return injectedScriptManager().injectedScriptFor(scriptState);
     }
 
     InjectedScript injectedScript = injectedScriptManager().injectedScriptForId(*executionContextId);
     if (injectedScript.hasNoValue())
-        errorString = "Execution context with given id not found."_s;
+        errorString = "Missing injected script for given executionContextId."_s;
 
     return injectedScript;
 }
 
-void PageDebuggerAgent::setOverlayMessage(ErrorString&, const String* message)
+void PageDebuggerAgent::didClearWindowObjectInWorld(Frame& frame, DOMWrapperWorld& world)
 {
-    m_overlay->setPausedInDebuggerMessage(message);
-}
+    if (!frame.isMainFrame() || &world != &mainThreadNormalWorld())
+        return;
 
-void PageDebuggerAgent::didClearMainFrameWindowObject()
-{
     didClearGlobalObject();
 }
 
@@ -149,8 +163,8 @@ void PageDebuggerAgent::mainFrameStartedLoading()
 {
     if (isPaused()) {
         setSuppressAllPauses(true);
-        ErrorString unused;
-        resume(unused);
+
+        resume();
     }
 }
 
@@ -164,67 +178,16 @@ void PageDebuggerAgent::mainFrameNavigated()
     setSuppressAllPauses(false);
 }
 
-void PageDebuggerAgent::didAddEventListener(EventTarget& target, const AtomicString& eventType, EventListener& listener, bool capture)
-{
-    if (!breakpointsActive())
-        return;
-
-    auto& eventListeners = target.eventListeners(eventType);
-    auto position = eventListeners.findMatching([&](auto& registeredListener) {
-        return &registeredListener->callback() == &listener && registeredListener->useCapture() == capture;
-    });
-    if (position == notFound)
-        return;
-
-    auto& registeredListener = eventListeners.at(position);
-    if (m_registeredEventListeners.contains(registeredListener.get())) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    JSC::ExecState* scriptState = target.scriptExecutionContext()->execState();
-    if (!scriptState)
-        return;
-
-    int identifier = m_nextEventListenerIdentifier++;
-    m_registeredEventListeners.set(registeredListener.get(), identifier);
-
-    didScheduleAsyncCall(scriptState, InspectorDebuggerAgent::AsyncCallType::EventListener, identifier, registeredListener->isOnce());
-}
-
-void PageDebuggerAgent::willRemoveEventListener(EventTarget& target, const AtomicString& eventType, EventListener& listener, bool capture)
-{
-    auto& eventListeners = target.eventListeners(eventType);
-    size_t listenerIndex = eventListeners.findMatching([&](auto& registeredListener) {
-        return &registeredListener->callback() == &listener && registeredListener->useCapture() == capture;
-    });
-
-    if (listenerIndex == notFound)
-        return;
-
-    int identifier = m_registeredEventListeners.take(eventListeners[listenerIndex].get());
-    didCancelAsyncCall(InspectorDebuggerAgent::AsyncCallType::EventListener, identifier);
-}
-
-void PageDebuggerAgent::willHandleEvent(const RegisteredEventListener& listener)
-{
-    auto it = m_registeredEventListeners.find(&listener);
-    if (it == m_registeredEventListeners.end())
-        return;
-
-    willDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::EventListener, it->value);
-}
-
 void PageDebuggerAgent::didRequestAnimationFrame(int callbackId, Document& document)
 {
     if (!breakpointsActive())
         return;
 
-    JSC::ExecState* scriptState = document.execState();
-    if (!scriptState)
+    auto* globalObject = document.globalObject();
+    if (!globalObject)
         return;
 
-    didScheduleAsyncCall(scriptState, InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId, true);
+    didScheduleAsyncCall(globalObject, InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId, true);
 }
 
 void PageDebuggerAgent::willFireAnimationFrame(int callbackId)
@@ -235,53 +198,6 @@ void PageDebuggerAgent::willFireAnimationFrame(int callbackId)
 void PageDebuggerAgent::didCancelAnimationFrame(int callbackId)
 {
     didCancelAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
-}
-
-void PageDebuggerAgent::didPostMessage(const TimerBase& timer, JSC::ExecState& state)
-{
-    if (!breakpointsActive())
-        return;
-
-    if (m_postMessageTimers.contains(&timer)) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    int postMessageIdentifier = m_nextPostMessageIdentifier++;
-    m_postMessageTimers.set(&timer, postMessageIdentifier);
-
-    didScheduleAsyncCall(&state, InspectorDebuggerAgent::AsyncCallType::PostMessage, postMessageIdentifier, true);
-}
-
-void PageDebuggerAgent::didFailPostMessage(const TimerBase& timer)
-{
-    auto it = m_postMessageTimers.find(&timer);
-    if (it == m_postMessageTimers.end())
-        return;
-
-    didCancelAsyncCall(InspectorDebuggerAgent::AsyncCallType::PostMessage, it->value);
-
-    m_postMessageTimers.remove(it);
-}
-
-void PageDebuggerAgent::willDispatchPostMessage(const TimerBase& timer)
-{
-    auto it = m_postMessageTimers.find(&timer);
-    if (it == m_postMessageTimers.end())
-        return;
-
-    willDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::PostMessage, it->value);
-}
-
-void PageDebuggerAgent::didDispatchPostMessage(const TimerBase& timer)
-{
-    auto it = m_postMessageTimers.find(&timer);
-    if (it == m_postMessageTimers.end())
-        return;
-
-    didDispatchAsyncCall();
-
-    m_postMessageTimers.remove(it);
 }
 
 } // namespace WebCore

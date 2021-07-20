@@ -30,7 +30,6 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "GenericEventQueue.h"
 #include "LegacyCDMSession.h"
 #include "Timer.h"
 #include <JavaScriptCore/Uint8Array.h>
@@ -41,7 +40,8 @@ namespace WebCore {
 class WebKitMediaKeyError;
 class WebKitMediaKeys;
 
-class WebKitMediaKeySession final : public RefCounted<WebKitMediaKeySession>, public EventTargetWithInlineData, private ActiveDOMObject, private LegacyCDMSessionClient {
+class WebKitMediaKeySession final : public RefCounted<WebKitMediaKeySession>, public EventTargetWithInlineData, public ActiveDOMObject, private LegacyCDMSessionClient {
+    WTF_MAKE_ISO_ALLOCATED(WebKitMediaKeySession);
 public:
     static Ref<WebKitMediaKeySession> create(ScriptExecutionContext&, WebKitMediaKeys&, const String& keySystem);
     ~WebKitMediaKeySession();
@@ -62,8 +62,6 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
-    bool hasPendingActivity() const final;
-
 private:
     WebKitMediaKeySession(ScriptExecutionContext&, WebKitMediaKeys&, const String& keySystem);
     void keyRequestTimerFired();
@@ -76,11 +74,10 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
+    // ActiveDOMObject.
     void stop() final;
-    bool canSuspendForDocumentSuspension() const final;
     const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
 
     EventTargetInterface eventTargetInterface() const final { return WebKitMediaKeySessionEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
@@ -89,7 +86,6 @@ private:
     String m_keySystem;
     String m_sessionId;
     RefPtr<WebKitMediaKeyError> m_error;
-    GenericEventQueue m_asyncEventQueue;
     std::unique_ptr<LegacyCDMSession> m_session;
 
     struct PendingKeyRequest {

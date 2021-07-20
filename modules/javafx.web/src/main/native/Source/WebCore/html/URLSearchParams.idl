@@ -24,19 +24,19 @@
  */
 
 [
-    Constructor(optional (sequence<sequence<USVString>> or record<USVString, USVString> or USVString) init = ""),
-    ConstructorMayThrowException,
     Exposed=(Window,Worker),
     ImplementationLacksVTable,
 ] interface URLSearchParams {
-    void append(USVString name, USVString value);
-    [ImplementedAs=remove] void delete(USVString name);
+    constructor(optional (sequence<sequence<USVString>> or record<USVString, USVString> or USVString) init = "");
+
+    undefined append(USVString name, USVString value);
+    [ImplementedAs=remove] undefined delete(USVString name);
     USVString? get(USVString name);
     sequence<USVString> getAll(USVString name);
     boolean has(USVString name);
-    void set(USVString name, USVString value);
+    undefined set(USVString name, USVString value);
 
-    void sort();
+    undefined sort();
 
     iterable<USVString, USVString>;
 

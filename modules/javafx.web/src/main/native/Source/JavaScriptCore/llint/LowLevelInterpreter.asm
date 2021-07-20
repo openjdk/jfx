@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
 #   comparisons are in-order, so "if (a < b)" is written as
 #   "bilt a, b, ...".
 #
-# - "b" = byte, "h" = 16-bit word, "i" = 32-bit word, "p" = pointer.
-#   For 32-bit, "i" and "p" are interchangeable except when an op supports one
-#   but not the other.
+# - "b" = byte, "h" = 16-bit word, "i" = 32-bit word, "q" = 64-bit word,
+#   "f" = float, "d" = double, "p" = pointer. For 32-bit, "i" and "p" are
+#   interchangeable except when an op supports one but not the other.
 #
 # - In general, valid operands for macro invocations and instructions are
 #   registers (eg "t0"), addresses (eg "4[t0]"), base-index addresses
@@ -74,9 +74,7 @@
 #  - lr is defined on non-X86 architectures (ARM64, ARM64E, ARMv7, MIPS and CLOOP)
 #  and holds the return PC
 #
-#  - pc holds the (native) program counter on 32-bits ARM architectures (ARMv7)
-#
-#  - t0, t1, t2, t3, t4 and optionally t5 are temporary registers that can get trashed on
+#  - t0, t1, t2, t3, t4, and optionally t5, t6, and t7 are temporary registers that can get trashed on
 #  calls, and are pairwise distinct registers. t4 holds the JS program counter, so use
 #  with caution in opcodes (actually, don't use it in opcodes at all, except as PC).
 #
@@ -106,9 +104,9 @@
 #  - t4 and t5 are never argument registers, t3 can only be a3, t1 can only be
 #  a1; but t0 and t2 can be either a0 or a2.
 #
-#  - On 64 bits, there are callee-save registers named csr0, csr1, ... csrN.
+#  - There are callee-save registers named csr0, csr1, ... csrN.
 #  The last three csr registers are used used to store the PC base and
-#  two special tag values. Don't use them for anything else.
+#  two special tag values (on 64-bits only). Don't use them for anything else.
 #
 # Additional platform-specific details (you shouldn't rely on this remaining
 # true):
@@ -165,6 +163,7 @@ end
 
 const JSLexicalEnvironment_variables = (sizeof JSLexicalEnvironment + SlotSize - 1) & ~(SlotSize - 1)
 const DirectArguments_storage = (sizeof DirectArguments + SlotSize - 1) & ~(SlotSize - 1)
+const JSInternalFieldObjectImpl_internalFields = JSInternalFieldObjectImpl::m_internalFields
 
 const StackAlignment = constexpr (stackAlignmentBytes())
 const StackAlignmentSlots = constexpr (stackAlignmentRegisters())
@@ -176,23 +175,32 @@ const CallerFrame = 0
 const ReturnPC = CallerFrame + MachineRegisterSize
 const CodeBlock = ReturnPC + MachineRegisterSize
 const Callee = CodeBlock + SlotSize
-const ArgumentCount = Callee + SlotSize
-const ThisArgumentOffset = ArgumentCount + SlotSize
+const ArgumentCountIncludingThis = Callee + SlotSize
+const ThisArgumentOffset = ArgumentCountIncludingThis + SlotSize
 const FirstArgumentOffset = ThisArgumentOffset + SlotSize
 const CallFrameHeaderSize = ThisArgumentOffset
 
+const MetadataOffsetTable16Offset = 0
+const MetadataOffsetTable32Offset = constexpr UnlinkedMetadataTable::s_offset16TableSize
+const NumberOfJSOpcodeIDs = constexpr numOpcodeIDs
+
 # Some value representation constants.
 if JSVALUE64
-    const TagBitTypeOther = constexpr TagBitTypeOther
-    const TagBitBool      = constexpr TagBitBool
-    const TagBitUndefined = constexpr TagBitUndefined
-    const ValueEmpty      = constexpr ValueEmpty
-    const ValueFalse      = constexpr ValueFalse
-    const ValueTrue       = constexpr ValueTrue
-    const ValueUndefined  = constexpr ValueUndefined
-    const ValueNull       = constexpr ValueNull
-    const TagTypeNumber   = constexpr TagTypeNumber
-    const TagMask         = constexpr TagMask
+    const TagOther        = constexpr JSValue::OtherTag
+    const TagBool         = constexpr JSValue::BoolTag
+    const TagUndefined    = constexpr JSValue::UndefinedTag
+    const ValueEmpty      = constexpr JSValue::ValueEmpty
+    const ValueFalse      = constexpr JSValue::ValueFalse
+    const ValueTrue       = constexpr JSValue::ValueTrue
+    const ValueUndefined  = constexpr JSValue::ValueUndefined
+    const ValueNull       = constexpr JSValue::ValueNull
+    const TagNumber       = constexpr JSValue::NumberTag
+    const NotCellMask     = constexpr JSValue::NotCellMask
+    if BIGINT32
+        const TagBigInt32 = constexpr JSValue::BigInt32Tag
+        const MaskBigInt32 = constexpr JSValue::BigInt32Mask
+    end
+    const LowestOfHighBits = constexpr JSValue::LowestOfHighBits
 else
     const Int32Tag = constexpr JSValue::Int32Tag
     const BooleanTag = constexpr JSValue::BooleanTag
@@ -209,13 +217,11 @@ if JSVALUE64
     const StructureEntropyBitsShift = constexpr StructureIDTable::s_entropyBitsShiftForStructurePointer
 end
 
-const CallOpCodeSize = constexpr op_call_length
-
 const maxFrameExtentForSlowPathCall = constexpr maxFrameExtentForSlowPathCall
 
 if X86_64 or X86_64_WIN or ARM64 or ARM64E
     const CalleeSaveSpaceAsVirtualRegisters = 4
-elsif C_LOOP
+elsif C_LOOP or C_LOOP_WIN
     const CalleeSaveSpaceAsVirtualRegisters = 1
 elsif ARMv7
     const CalleeSaveSpaceAsVirtualRegisters = 1
@@ -236,62 +242,110 @@ const IsInvalidated = constexpr IsInvalidated
 # ShadowChicken data
 const ShadowChickenTailMarker = constexpr ShadowChicken::Packet::tailMarkerValue
 
-# ArithProfile data
-const ArithProfileInt = constexpr (ArithProfile::observedUnaryInt().bits())
-const ArithProfileNumber = constexpr (ArithProfile::observedUnaryNumber().bits())
-const ArithProfileIntInt = constexpr (ArithProfile::observedBinaryIntInt().bits())
-const ArithProfileNumberInt = constexpr (ArithProfile::observedBinaryNumberInt().bits())
-const ArithProfileIntNumber = constexpr (ArithProfile::observedBinaryIntNumber().bits())
-const ArithProfileNumberNumber = constexpr (ArithProfile::observedBinaryNumberNumber().bits())
+# UnaryArithProfile data
+const ArithProfileInt = constexpr (UnaryArithProfile::observedIntBits())
+const ArithProfileNumber = constexpr (UnaryArithProfile::observedNumberBits())
+
+# BinaryArithProfile data
+const ArithProfileIntInt = constexpr (BinaryArithProfile::observedIntIntBits())
+const ArithProfileNumberInt = constexpr (BinaryArithProfile::observedNumberIntBits())
+const ArithProfileIntNumber = constexpr (BinaryArithProfile::observedIntNumberBits())
+const ArithProfileNumberNumber = constexpr (BinaryArithProfile::observedNumberNumberBits())
 
 # Pointer Tags
+const AddressDiversified = 1
 const BytecodePtrTag = constexpr BytecodePtrTag
+const CustomAccessorPtrTag = constexpr CustomAccessorPtrTag
 const JSEntryPtrTag = constexpr JSEntryPtrTag
+const HostFunctionPtrTag = constexpr HostFunctionPtrTag
+const JSEntrySlowPathPtrTag = constexpr JSEntrySlowPathPtrTag
+const NativeToJITGatePtrTag = constexpr NativeToJITGatePtrTag
 const ExceptionHandlerPtrTag = constexpr ExceptionHandlerPtrTag
+const YarrEntryPtrTag = constexpr YarrEntryPtrTag
+const CSSSelectorPtrTag = constexpr CSSSelectorPtrTag
 const NoPtrTag = constexpr NoPtrTag
-const SlowPathPtrTag = constexpr SlowPathPtrTag
+
 
 # Some register conventions.
+# - We use a pair of registers to represent the PC: one register for the
+#   base of the bytecodes, and one register for the index.
+# - The PC base (or PB for short) must be stored in a callee-save register.
+# - C calls are still given the Instruction* rather than the PC index.
+#   This requires an add before the call, and a sub after.
 if JSVALUE64
-    # - Use a pair of registers to represent the PC: one register for the
-    #   base of the bytecodes, and one register for the index.
-    # - The PC base (or PB for short) must be stored in a callee-save register.
-    # - C calls are still given the Instruction* rather than the PC index.
-    #   This requires an add before the call, and a sub after.
     const PC = t4 # When changing this, make sure LLIntPC is up to date in LLIntPCRanges.h
     if ARM64 or ARM64E
         const metadataTable = csr6
         const PB = csr7
-        const tagTypeNumber = csr8
-        const tagMask = csr9
+        const numberTag = csr8
+        const notCellMask = csr9
     elsif X86_64
         const metadataTable = csr1
         const PB = csr2
-        const tagTypeNumber = csr3
-        const tagMask = csr4
+        const numberTag = csr3
+        const notCellMask = csr4
     elsif X86_64_WIN
         const metadataTable = csr3
         const PB = csr4
-        const tagTypeNumber = csr5
-        const tagMask = csr6
-    elsif C_LOOP
+        const numberTag = csr5
+        const notCellMask = csr6
+    elsif C_LOOP or C_LOOP_WIN
         const PB = csr0
-        const tagTypeNumber = csr1
-        const tagMask = csr2
+        const numberTag = csr1
+        const notCellMask = csr2
         const metadataTable = csr3
     end
 
 else
     const PC = t4 # When changing this, make sure LLIntPC is up to date in LLIntPCRanges.h
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
+        const PB = csr0
         const metadataTable = csr3
     elsif ARMv7
         const metadataTable = csr0
+        const PB = csr1
     elsif MIPS
         const metadataTable = csr0
+        const PB = csr1
     else
         error
     end
+end
+
+if GIGACAGE_ENABLED
+    const GigacagePrimitiveBasePtrOffset = constexpr Gigacage::offsetOfPrimitiveGigacageBasePtr
+    const GigacageJSValueBasePtrOffset = constexpr Gigacage::offsetOfJSValueGigacageBasePtr
+end
+
+# Opcode offsets
+const OpcodeIDNarrowSize = 1 # OpcodeID
+const OpcodeIDWide16Size = 2 # Wide16 Prefix + OpcodeID
+const OpcodeIDWide32Size = 2 # Wide32 Prefix + OpcodeID
+
+if X86_64_WIN or C_LOOP_WIN
+    const GigacageConfig = _g_gigacageConfig
+    const JSCConfig = _g_jscConfig
+else
+    const GigacageConfig = _g_config + constexpr Gigacage::startOffsetOfGigacageConfig
+    const JSCConfig = _g_config + constexpr WTF::offsetOfWTFConfigExtension
+end
+
+macro nextInstruction()
+    loadb [PB, PC, 1], t0
+    leap _g_opcodeMap, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag, AddressDiversified
+end
+
+macro nextInstructionWide16()
+    loadb OpcodeIDNarrowSize[PB, PC, 1], t0
+    leap _g_opcodeMapWide16, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag, AddressDiversified
+end
+
+macro nextInstructionWide32()
+    loadb OpcodeIDNarrowSize[PB, PC, 1], t0
+    leap _g_opcodeMapWide32, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag, AddressDiversified
 end
 
 macro dispatch(advanceReg)
@@ -303,47 +357,63 @@ macro dispatchIndirect(offsetReg)
     dispatch(offsetReg)
 end
 
-macro dispatchOp(size, opcodeName)
+macro genericDispatchOp(dispatch, size, opcodeName)
     macro dispatchNarrow()
-        dispatch(constexpr %opcodeName%_length)
+        dispatch((constexpr %opcodeName%_length - 1) * 1 + OpcodeIDNarrowSize)
     end
 
-    macro dispatchWide()
-        dispatch(constexpr %opcodeName%_length * 4 + 1)
+    macro dispatchWide16()
+        dispatch((constexpr %opcodeName%_length - 1) * 2 + OpcodeIDWide16Size)
     end
 
-    size(dispatchNarrow, dispatchWide, macro (dispatch) dispatch() end)
+    macro dispatchWide32()
+        dispatch((constexpr %opcodeName%_length - 1) * 4 + OpcodeIDWide32Size)
+    end
+
+    size(dispatchNarrow, dispatchWide16, dispatchWide32, macro (dispatch) dispatch() end)
 end
 
+macro dispatchOp(size, opcodeName)
+    genericDispatchOp(dispatch, size, opcodeName)
+end
+
+
 macro getu(size, opcodeStruct, fieldName, dst)
-    size(getuOperandNarrow, getuOperandWide, macro (getu)
+    size(getuOperandNarrow, getuOperandWide16, getuOperandWide32, macro (getu)
         getu(opcodeStruct, fieldName, dst)
     end)
 end
 
 macro get(size, opcodeStruct, fieldName, dst)
-    size(getOperandNarrow, getOperandWide, macro (get)
+    size(getOperandNarrow, getOperandWide16, getOperandWide32, macro (get)
         get(opcodeStruct, fieldName, dst)
     end)
 end
 
-macro narrow(narrowFn, wideFn, k)
+macro narrow(narrowFn, wide16Fn, wide32Fn, k)
     k(narrowFn)
 end
 
-macro wide(narrowFn, wideFn, k)
-    k(wideFn)
+macro wide16(narrowFn, wide16Fn, wide32Fn, k)
+    k(wide16Fn)
+end
+
+macro wide32(narrowFn, wide16Fn, wide32Fn, k)
+    k(wide32Fn)
 end
 
 macro metadata(size, opcode, dst, scratch)
-    loadi constexpr %opcode%::opcodeID * 4[metadataTable], dst # offset = metadataTable<unsigned*>[opcodeID]
+    loadh (constexpr %opcode%::opcodeID * 2 + MetadataOffsetTable16Offset)[metadataTable], dst # offset = metadataTable<uint16_t*>[opcodeID]
+    btinz dst, .setUpOffset
+    loadi (constexpr %opcode%::opcodeID * 4 + MetadataOffsetTable32Offset)[metadataTable], dst # offset = metadataTable<uint32_t*>[opcodeID]
+.setUpOffset:
     getu(size, opcode, m_metadataID, scratch) # scratch = bytecode.m_metadataID
     muli sizeof %opcode%::Metadata, scratch # scratch *= sizeof(Op::Metadata)
     addi scratch, dst # offset += scratch
     addp metadataTable, dst # return &metadataTable[offset]
 end
 
-macro jumpImpl(targetOffsetReg)
+macro jumpImpl(dispatchIndirect, targetOffsetReg)
     btiz targetOffsetReg, .outOfLineJumpTarget
     dispatchIndirect(targetOffsetReg)
 .outOfLineJumpTarget:
@@ -355,15 +425,37 @@ macro commonOp(label, prologue, fn)
 _%label%:
     prologue()
     fn(narrow)
+    if ASSERT_ENABLED
+        break
+        break
+    end
 
-_%label%_wide:
+# FIXME: We cannot enable wide16 bytecode in Windows CLoop. With MSVC, as CLoop::execute gets larger code
+# size, CLoop::execute gets higher stack height requirement. This makes CLoop::execute takes 160KB stack
+# per call, causes stack overflow error easily. For now, we disable wide16 optimization for Windows CLoop.
+# https://bugs.webkit.org/show_bug.cgi?id=198283
+if not C_LOOP_WIN
+_%label%_wide16:
     prologue()
-    fn(wide)
+    fn(wide16)
+    if ASSERT_ENABLED
+        break
+        break
+    end
+end
+
+_%label%_wide32:
+    prologue()
+    fn(wide32)
+    if ASSERT_ENABLED
+        break
+        break
+    end
 end
 
 macro op(l, fn)
-    commonOp(l, macro () end, macro (unused)
-        fn()
+    commonOp(l, macro () end, macro (size)
+        size(fn, macro() end, macro() end, macro(gen) gen() end)
     end)
 end
 
@@ -402,7 +494,7 @@ macro llintOpWithJump(opcodeName, opcodeStruct, impl)
     llintOpWithMetadata(opcodeName, opcodeStruct, macro(size, get, dispatch, metadata, return)
         macro jump(fieldName)
             get(fieldName, t0)
-            jumpImpl(t0)
+            jumpImpl(dispatchIndirect, t0)
         end
 
         impl(size, get, jump, dispatch)
@@ -448,6 +540,7 @@ const JSFunctionType = constexpr JSFunctionType
 const ArrayType = constexpr ArrayType
 const DerivedArrayType = constexpr DerivedArrayType
 const ProxyObjectType = constexpr ProxyObjectType
+const HeapBigIntType = constexpr HeapBigIntType
 
 # The typed array types need to be numbered in a particular order because of the manually written
 # switch statement in get_by_val and put_by_val.
@@ -463,14 +556,17 @@ const Float64ArrayType = constexpr Float64ArrayType
 
 const FirstTypedArrayType = constexpr FirstTypedArrayType
 const NumberOfTypedArrayTypesExcludingDataView = constexpr NumberOfTypedArrayTypesExcludingDataView
+const NumberOfTypedArrayTypesExcludingBigIntArraysAndDataView = constexpr NumberOfTypedArrayTypesExcludingBigIntArraysAndDataView
 
 # Type flags constants.
 const MasqueradesAsUndefined = constexpr MasqueradesAsUndefined
 const ImplementsDefaultHasInstance = constexpr ImplementsDefaultHasInstance
+const OverridesGetPrototypeOutOfLine = constexpr OverridesGetPrototypeOutOfLine
 
 # Bytecode operand constants.
-const FirstConstantRegisterIndexNarrow = 16
-const FirstConstantRegisterIndexWide = constexpr FirstConstantRegisterIndex
+const FirstConstantRegisterIndexNarrow = constexpr FirstConstantRegisterIndex8
+const FirstConstantRegisterIndexWide16 = constexpr FirstConstantRegisterIndex16
+const FirstConstantRegisterIndexWide32 = constexpr FirstConstantRegisterIndex
 
 # Code type constants.
 const GlobalCode = constexpr GlobalCode
@@ -479,7 +575,7 @@ const FunctionCode = constexpr FunctionCode
 const ModuleCode = constexpr ModuleCode
 
 # The interpreter steals the tag word of the argument count.
-const LLIntReturnPC = ArgumentCount + TagOffset
+const LLIntReturnPC = ArgumentCountIncludingThis + TagOffset
 
 # String flags.
 const isRopeInPointer = constexpr JSString::isRopeInPointer
@@ -487,6 +583,7 @@ const HashFlags8BitBuffer = constexpr StringImpl::s_hashFlag8BitBuffer
 
 # Copied from PropertyOffset.h
 const firstOutOfLineOffset = constexpr firstOutOfLineOffset
+const knownPolyProtoOffset = constexpr knownPolyProtoOffset
 
 # ResolveType
 const GlobalProperty = constexpr GlobalProperty
@@ -508,6 +605,8 @@ const NotInitialization = constexpr InitializationMode::NotInitialization
 const MarkedBlockSize = constexpr MarkedBlock::blockSize
 const MarkedBlockMask = ~(MarkedBlockSize - 1)
 const MarkedBlockFooterOffset = constexpr MarkedBlock::offsetOfFooter
+const PreciseAllocationHeaderSize = constexpr (PreciseAllocation::headerSize())
+const PreciseAllocationVMOffset = (PreciseAllocation::m_weakSet + WeakSet::m_vm - PreciseAllocationHeaderSize)
 
 const BlackThreshold = constexpr blackThreshold
 
@@ -516,7 +615,7 @@ const VectorSizeOffset = Vector::m_size
 
 # Some common utilities.
 macro crash()
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         cloopCrash
     else
         call _llint_crash
@@ -524,6 +623,14 @@ macro crash()
 end
 
 macro assert(assertion)
+    if ASSERT_ENABLED
+        assertion(.ok)
+        crash()
+    .ok:
+    end
+end
+
+macro assert_with(assertion, crash)
     if ASSERT_ENABLED
         assertion(.ok)
         crash()
@@ -544,7 +651,7 @@ end
 #
 #     probe(
 #         macro()
-#             move cfr, a0 # pass the ExecState* as arg0.
+#             move cfr, a0 # pass the CallFrame* as arg0.
 #             move t0, a1 # pass the value of register t0 as arg1.
 #             call _cProbeCallbackFunction # to do whatever you want.
 #         end
@@ -568,7 +675,7 @@ if X86_64 or ARM64 or ARM64E or ARMv7
             push csr6, csr7
             push csr8, csr9
         elsif ARMv7
-            push csr0
+            push csr0, csr1
         end
 
         action()
@@ -581,7 +688,7 @@ if X86_64 or ARM64 or ARM64E or ARMv7
             pop csr3, csr2
             pop csr1, csr0
         elsif ARMv7
-            pop csr0
+            pop csr1, csr0
         end
         pop t5, t4
         pop t3, t2
@@ -599,9 +706,9 @@ end
 
 macro checkStackPointerAlignment(tempReg, location)
     if ASSERT_ENABLED
-        if ARM64 or ARM64E or C_LOOP
+        if ARM64 or ARM64E or C_LOOP or C_LOOP_WIN
             # ARM64 and ARM64E will check for us!
-            # C_LOOP does not need the alignment, and can use a little perf
+            # C_LOOP or C_LOOP_WIN does not need the alignment, and can use a little perf
             # improvement from avoiding useless work.
         else
             if ARMv7
@@ -619,12 +726,12 @@ macro checkStackPointerAlignment(tempReg, location)
     end
 end
 
-if C_LOOP or ARM64 or ARM64E or X86_64 or X86_64_WIN
+if C_LOOP or C_LOOP_WIN or ARM64 or ARM64E or X86_64 or X86_64_WIN
     const CalleeSaveRegisterCount = 0
 elsif ARMv7
     const CalleeSaveRegisterCount = 7
 elsif MIPS
-    const CalleeSaveRegisterCount = 2
+    const CalleeSaveRegisterCount = 3
 elsif X86 or X86_WIN
     const CalleeSaveRegisterCount = 3
 end
@@ -636,13 +743,14 @@ const CalleeRegisterSaveSize = CalleeSaveRegisterCount * MachineRegisterSize
 const VMEntryTotalFrameSize = (CalleeRegisterSaveSize + sizeof VMEntryRecord + StackAlignment - 1) & ~StackAlignmentMask
 
 macro pushCalleeSaves()
-    if C_LOOP or ARM64 or ARM64E or X86_64 or X86_64_WIN
+    if C_LOOP or C_LOOP_WIN or ARM64 or ARM64E or X86_64 or X86_64_WIN
     elsif ARMv7
         emit "push {r4-r6, r8-r11}"
     elsif MIPS
-        emit "addiu $sp, $sp, -8"
+        emit "addiu $sp, $sp, -12"
         emit "sw $s0, 0($sp)" # csr0/metaData
-        emit "sw $s4, 4($sp)"
+        emit "sw $s1, 4($sp)" # csr1/PB
+        emit "sw $s4, 8($sp)"
         # save $gp to $s4 so that we can restore it after a function call
         emit "move $s4, $gp"
     elsif X86
@@ -657,13 +765,14 @@ macro pushCalleeSaves()
 end
 
 macro popCalleeSaves()
-    if C_LOOP or ARM64 or ARM64E or X86_64 or X86_64_WIN
+    if C_LOOP or C_LOOP_WIN or ARM64 or ARM64E or X86_64 or X86_64_WIN
     elsif ARMv7
         emit "pop {r4-r6, r8-r11}"
     elsif MIPS
         emit "lw $s0, 0($sp)"
-        emit "lw $s4, 4($sp)"
-        emit "addiu $sp, $sp, 8"
+        emit "lw $s1, 4($sp)"
+        emit "lw $s4, 8($sp)"
+        emit "addiu $sp, $sp, 12"
     elsif X86
         emit "pop %ebx"
         emit "pop %edi"
@@ -676,7 +785,7 @@ macro popCalleeSaves()
 end
 
 macro preserveCallerPCAndCFR()
-    if C_LOOP or ARMv7 or MIPS
+    if C_LOOP or C_LOOP_WIN or ARMv7 or MIPS
         push lr
         push cfr
     elsif X86 or X86_WIN or X86_64 or X86_64_WIN
@@ -691,7 +800,7 @@ end
 
 macro restoreCallerPCAndCFR()
     move cfr, sp
-    if C_LOOP or ARMv7 or MIPS
+    if C_LOOP or C_LOOP_WIN or ARMv7 or MIPS
         pop cfr
         pop lr
     elsif X86 or X86_WIN or X86_64 or X86_64_WIN
@@ -703,10 +812,22 @@ end
 
 macro preserveCalleeSavesUsedByLLInt()
     subp CalleeSaveSpaceStackAligned, sp
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         storep metadataTable, -PtrSize[cfr]
-    elsif ARMv7 or MIPS
+
+    # Next ARMv7 and MIPS differ in how we store metadataTable and PB,
+    # because this codes needs to be in sync with how registers are
+    # restored in Baseline JIT (specifically in emitRestoreCalleeSavesFor).
+    # emitRestoreCalleeSavesFor restores registers in order instead of by name.
+    # However, ARMv7 and MIPS differ in the order in which registers are assigned
+    # to metadataTable and PB, therefore they can also not have the same saving
+    # order.
+    elsif ARMv7
         storep metadataTable, -4[cfr]
+        storep PB, -8[cfr]
+    elsif MIPS
+        storep PB, -4[cfr]
+        storep metadataTable, -8[cfr]
     elsif ARM64 or ARM64E
         emit "stp x27, x28, [x29, #-16]"
         emit "stp x25, x26, [x29, #-32]"
@@ -726,10 +847,16 @@ macro preserveCalleeSavesUsedByLLInt()
 end
 
 macro restoreCalleeSavesUsedByLLInt()
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         loadp -PtrSize[cfr], metadataTable
-    elsif ARMv7 or MIPS
+    # To understand why ARMv7 and MIPS differ in restore order,
+    # see comment in preserveCalleeSavesUsedByLLInt
+    elsif ARMv7
         loadp -4[cfr], metadataTable
+        loadp -8[cfr], PB
+    elsif MIPS
+        loadp -4[cfr], PB
+        loadp -8[cfr], metadataTable
     elsif ARM64 or ARM64E
         emit "ldp x25, x26, [x29, #-32]"
         emit "ldp x27, x28, [x29, #-16]"
@@ -748,47 +875,54 @@ macro restoreCalleeSavesUsedByLLInt()
     end
 end
 
+macro copyCalleeSavesToEntryFrameCalleeSavesBuffer(entryFrame)
+    if ARM64 or ARM64E or X86_64 or X86_64_WIN or ARMv7 or MIPS
+        vmEntryRecord(entryFrame, entryFrame)
+        leap VMEntryRecord::calleeSaveRegistersBuffer[entryFrame], entryFrame
+        if ARM64 or ARM64E
+            storeq csr0, [entryFrame]
+            storeq csr1, 8[entryFrame]
+            storeq csr2, 16[entryFrame]
+            storeq csr3, 24[entryFrame]
+            storeq csr4, 32[entryFrame]
+            storeq csr5, 40[entryFrame]
+            storeq csr6, 48[entryFrame]
+            storeq csr7, 56[entryFrame]
+            storeq csr8, 64[entryFrame]
+            storeq csr9, 72[entryFrame]
+            stored csfr0, 80[entryFrame]
+            stored csfr1, 88[entryFrame]
+            stored csfr2, 96[entryFrame]
+            stored csfr3, 104[entryFrame]
+            stored csfr4, 112[entryFrame]
+            stored csfr5, 120[entryFrame]
+            stored csfr6, 128[entryFrame]
+            stored csfr7, 136[entryFrame]
+        elsif X86_64
+            storeq csr0, [entryFrame]
+            storeq csr1, 8[entryFrame]
+            storeq csr2, 16[entryFrame]
+            storeq csr3, 24[entryFrame]
+            storeq csr4, 32[entryFrame]
+        elsif X86_64_WIN
+            storeq csr0, [entryFrame]
+            storeq csr1, 8[entryFrame]
+            storeq csr2, 16[entryFrame]
+            storeq csr3, 24[entryFrame]
+            storeq csr4, 32[entryFrame]
+            storeq csr5, 40[entryFrame]
+            storeq csr6, 48[entryFrame]
+        elsif ARMv7 or MIPS
+            storep csr0, [entryFrame]
+            storep csr1, 4[entryFrame]
+        end
+    end
+end
+
 macro copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(vm, temp)
     if ARM64 or ARM64E or X86_64 or X86_64_WIN or ARMv7 or MIPS
         loadp VM::topEntryFrame[vm], temp
-        vmEntryRecord(temp, temp)
-        leap VMEntryRecord::calleeSaveRegistersBuffer[temp], temp
-        if ARM64 or ARM64E
-            storeq csr0, [temp]
-            storeq csr1, 8[temp]
-            storeq csr2, 16[temp]
-            storeq csr3, 24[temp]
-            storeq csr4, 32[temp]
-            storeq csr5, 40[temp]
-            storeq csr6, 48[temp]
-            storeq csr7, 56[temp]
-            storeq csr8, 64[temp]
-            storeq csr9, 72[temp]
-            stored csfr0, 80[temp]
-            stored csfr1, 88[temp]
-            stored csfr2, 96[temp]
-            stored csfr3, 104[temp]
-            stored csfr4, 112[temp]
-            stored csfr5, 120[temp]
-            stored csfr6, 128[temp]
-            stored csfr7, 136[temp]
-        elsif X86_64
-            storeq csr0, [temp]
-            storeq csr1, 8[temp]
-            storeq csr2, 16[temp]
-            storeq csr3, 24[temp]
-            storeq csr4, 32[temp]
-        elsif X86_64_WIN
-            storeq csr0, [temp]
-            storeq csr1, 8[temp]
-            storeq csr2, 16[temp]
-            storeq csr3, 24[temp]
-            storeq csr4, 32[temp]
-            storeq csr5, 40[temp]
-            storeq csr6, 48[temp]
-        elsif ARMv7 or MIPS
-            storep csr0, [temp]
-        end
+        copyCalleeSavesToEntryFrameCalleeSavesBuffer(temp)
     end
 end
 
@@ -832,13 +966,14 @@ macro restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(vm, temp)
             loadq 48[temp], csr6
         elsif ARMv7 or MIPS
             loadp [temp], csr0
+            loadp 4[temp], csr1
         end
     end
 end
 
 macro preserveReturnAddressAfterCall(destinationRegister)
-    if C_LOOP or ARMv7 or ARM64 or ARM64E or MIPS
-        # In C_LOOP case, we're only preserving the bytecode vPC.
+    if C_LOOP or C_LOOP_WIN or ARMv7 or ARM64 or ARM64E or MIPS
+        # In C_LOOP or C_LOOP_WIN case, we're only preserving the bytecode vPC.
         move lr, destinationRegister
     elsif X86 or X86_WIN or X86_64 or X86_64_WIN
         pop destinationRegister
@@ -853,7 +988,7 @@ macro functionPrologue()
         push cfr
     elsif ARM64 or ARM64E
         push cfr, lr
-    elsif C_LOOP or ARMv7 or MIPS
+    elsif C_LOOP or C_LOOP_WIN or ARMv7 or MIPS
         push lr
         push cfr
     end
@@ -865,7 +1000,7 @@ macro functionEpilogue()
         pop cfr
     elsif ARM64 or ARM64E
         pop lr, cfr
-    elsif C_LOOP or ARMv7 or MIPS
+    elsif C_LOOP or C_LOOP_WIN or ARMv7 or MIPS
         pop cfr
         pop lr
     end
@@ -898,25 +1033,107 @@ macro traceExecution()
     end
 end
 
-macro callTargetFunction(size, opcodeStruct, dispatch, callee, callPtrTag)
-    if C_LOOP
-        cloopCallJSFunction callee
-    else
-        call callee, callPtrTag
+macro defineReturnLabel(opcodeName, size)
+    macro defineNarrow()
+        if not C_LOOP_WIN
+            _%opcodeName%_return_location:
+        end
     end
-    restoreStackPointerAfterCall()
-    dispatchAfterCall(size, opcodeStruct, dispatch)
+
+    macro defineWide16()
+        if not C_LOOP_WIN
+            _%opcodeName%_return_location_wide16:
+        end
+    end
+
+    macro defineWide32()
+        if not C_LOOP_WIN
+            _%opcodeName%_return_location_wide32:
+        end
+    end
+
+    size(defineNarrow, defineWide16, defineWide32, macro (f) f() end)
 end
 
-macro prepareForRegularCall(callee, temp1, temp2, temp3, callPtrTag)
+if ARM64E
+    global _llint_function_for_call_arity_checkUntagGateAfter
+    global _llint_function_for_call_arity_checkTagGateAfter
+    global _llint_function_for_construct_arity_checkUntagGateAfter
+    global _llint_function_for_construct_arity_checkTagGateAfter
+end
+
+macro callTargetFunction(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, callPtrTag)
+    if C_LOOP or C_LOOP_WIN
+        cloopCallJSFunction callee
+    elsif ARM64E
+        macro callNarrow()
+            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::%opcodeName%) * PtrSize, a2
+            jmp [a2], NativeToJITGatePtrTag # callPtrTag
+            _js_trampoline_%opcodeName%:
+            call t3, callPtrTag
+        end
+
+        macro callWide16()
+            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::%opcodeName%_wide16) * PtrSize, a2
+            jmp [a2], NativeToJITGatePtrTag # callPtrTag
+            _js_trampoline_%opcodeName%_wide16:
+            call t3, callPtrTag
+        end
+
+        macro callWide32()
+            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::%opcodeName%_wide32) * PtrSize, a2
+            jmp [a2], NativeToJITGatePtrTag # callPtrTag
+            _js_trampoline_%opcodeName%_wide32:
+            call t3, callPtrTag
+        end
+
+        move callee, t3
+        size(callNarrow, callWide16, callWide32, macro (gen) gen() end)
+    else
+        call callee, callPtrTag
+        if ARMv7 or MIPS
+            # It is required in ARMv7 and MIPs because global label definitions
+            # for those architectures generates a set of instructions
+            # that can clobber LLInt execution, resulting in unexpected
+            # crashes.
+            restoreStackPointerAfterCall()
+            dispatchAfterCall(size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch)
+        end
+    end
+    defineReturnLabel(opcodeName, size)
+    restoreStackPointerAfterCall()
+    dispatchAfterCall(size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch)
+
+    if not ARM64E
+        # It is required in ARMv7 and MIPs because global label definitions
+        # for those architectures generates a set of instructions
+        # that can clobber LLInt execution, resulting in unexpected
+        # crashes.
+        macro labelNarrow()
+            _js_trampoline_%opcodeName%:
+        end
+
+        macro labelWide16()
+            _js_trampoline_%opcodeName%_wide16:
+        end
+
+        macro labelWide32()
+            _js_trampoline_%opcodeName%_wide32:
+        end
+        size(labelNarrow, labelWide16, labelWide32, macro (gen) gen() end)
+        crash()
+    end
+end
+
+macro prepareForRegularCall(callee, temp1, temp2, temp3, temp4, callPtrTag)
     addp CallerFrameAndPCSize, sp
 end
 
 # sp points to the new frame
-macro prepareForTailCall(callee, temp1, temp2, temp3, callPtrTag)
+macro prepareForTailCall(callee, temp1, temp2, temp3, temp4, callPtrTag)
     restoreCalleeSavesUsedByLLInt()
 
-    loadi PayloadOffset + ArgumentCount[cfr], temp2
+    loadi PayloadOffset + ArgumentCountIncludingThis[cfr], temp2
     loadp CodeBlock[cfr], temp1
     loadi CodeBlock::m_numParameters[temp1], temp1
     bilteq temp1, temp2, .noArityFixup
@@ -931,13 +1148,13 @@ macro prepareForTailCall(callee, temp1, temp2, temp3, callPtrTag)
     move cfr, temp1
     addp temp2, temp1
 
-    loadi PayloadOffset + ArgumentCount[sp], temp2
+    loadi PayloadOffset + ArgumentCountIncludingThis[sp], temp2
     # We assume < 2^28 arguments
     muli SlotSize, temp2
     addi StackAlignment - 1 + CallFrameHeaderSize, temp2
     andi ~StackAlignmentMask, temp2
 
-    if ARMv7 or ARM64 or ARM64E or C_LOOP or MIPS
+    if ARMv7 or ARM64 or ARM64E or C_LOOP or C_LOOP_WIN or MIPS
         addp CallerFrameAndPCSize, sp
         subi CallerFrameAndPCSize, temp2
         loadp CallerFrameAndPC::returnPC[cfr], lr
@@ -948,9 +1165,8 @@ macro prepareForTailCall(callee, temp1, temp2, temp3, callPtrTag)
         storep temp3, [sp]
     end
 
-    if POINTER_PROFILING
-        addp 16, cfr, temp3
-        untagReturnAddress temp3
+    if ARM64E
+        addp 16, cfr, temp4
     end
 
     subp temp2, temp1
@@ -970,20 +1186,40 @@ macro prepareForTailCall(callee, temp1, temp2, temp3, callPtrTag)
     end
 
     move temp1, sp
-    jmp callee, callPtrTag
+    if ARM64E
+        move temp4, a2
+        move callee, a0
+        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::tailCall%callPtrTag%) * PtrSize, a1
+        jmp [a1], NativeToJITGatePtrTag # %callPtrTag%
+    else
+        jmp callee, callPtrTag
+    end
 end
 
-macro slowPathForCall(size, opcodeStruct, dispatch, slowPath, prepareCall)
+macro slowPathForCommonCall(opcodeName, size, opcodeStruct, dispatch, slowPath, prepareCall)
+    slowPathForCall(opcodeName, size, opcodeStruct, m_profile, m_dst, dispatch, slowPath, prepareCall)
+end
+
+macro slowPathForCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, slowPath, prepareCall)
     callCallSlowPath(
         slowPath,
         # Those are r0 and r1
         macro (callee, calleeFramePtr)
             btpz calleeFramePtr, .dontUpdateSP
             move calleeFramePtr, sp
-            prepareCall(callee, t2, t3, t4, SlowPathPtrTag)
+            prepareCall(callee, t2, t3, t4, t1, JSEntrySlowPathPtrTag)
         .dontUpdateSP:
-            callTargetFunction(size, opcodeStruct, dispatch, callee, SlowPathPtrTag)
+            callTargetFunction(%opcodeName%_slow, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, JSEntrySlowPathPtrTag)
         end)
+end
+
+macro getterSetterOSRExitReturnPoint(opName, size)
+    crash() # We don't reach this in straight line code. We only reach it via returning to the code below when reconstructing stack frames during OSR exit.
+
+    defineReturnLabel(opName, size)
+
+    restoreStackPointerAfterCall()
+    loadi LLIntReturnPC[cfr], PC
 end
 
 macro arrayProfile(offset, cellAndIndexingType, metadata, scratch)
@@ -992,6 +1228,106 @@ macro arrayProfile(offset, cellAndIndexingType, metadata, scratch)
     loadi JSCell::m_structureID[cell], scratch
     storei scratch, offset + ArrayProfile::m_lastSeenStructureID[metadata]
     loadb JSCell::m_indexingTypeAndMisc[cell], indexingType
+end
+
+macro getByValTypedArray(base, index, finishIntGetByVal, finishDoubleGetByVal, slowPath)
+    # First lets check if we even have a typed array. This lets us do some boilerplate up front.
+    loadb JSCell::m_type[base], t2
+    subi FirstTypedArrayType, t2
+    biaeq t2, NumberOfTypedArrayTypesExcludingBigIntArraysAndDataView, slowPath
+
+    # Sweet, now we know that we have a typed array. Do some basic things now.
+
+    if ARM64E
+        const length = t6
+        const scratch = t7
+        loadi JSArrayBufferView::m_length[base], length
+        biaeq index, length, slowPath
+    else
+        # length and scratch are intentionally undefined on this branch because they are not used on other platforms.
+        biaeq index, JSArrayBufferView::m_length[base], slowPath
+    end
+
+    loadp JSArrayBufferView::m_vector[base], t3
+    cagedPrimitive(t3, length, base, scratch)
+
+    # Now bisect through the various types:
+    #    Int8ArrayType,
+    #    Uint8ArrayType,
+    #    Uint8ClampedArrayType,
+    #    Int16ArrayType,
+    #    Uint16ArrayType,
+    #    Int32ArrayType,
+    #    Uint32ArrayType,
+    #    Float32ArrayType,
+    #    Float64ArrayType,
+    #
+    # Yet, we are not supporting BitInt64Array and BigUint64Array.
+
+    bia t2, Uint16ArrayType - FirstTypedArrayType, .opGetByValAboveUint16Array
+
+    # We have one of Int8ArrayType .. Uint16ArrayType.
+    bia t2, Uint8ClampedArrayType - FirstTypedArrayType, .opGetByValInt16ArrayOrUint16Array
+
+    # We have one of Int8ArrayType ... Uint8ClampedArrayType
+    bia t2, Int8ArrayType - FirstTypedArrayType, .opGetByValUint8ArrayOrUint8ClampedArray
+
+    # We have Int8ArrayType.
+    loadbsi [t3, index], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValUint8ArrayOrUint8ClampedArray:
+    bia t2, Uint8ArrayType - FirstTypedArrayType, .opGetByValUint8ClampedArray
+
+    # We have Uint8ArrayType.
+    loadb [t3, index], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValUint8ClampedArray:
+    # We have Uint8ClampedArrayType.
+    loadb [t3, index], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValInt16ArrayOrUint16Array:
+    # We have either Int16ArrayType or Uint16ClampedArrayType.
+    bia t2, Int16ArrayType - FirstTypedArrayType, .opGetByValUint16Array
+
+    # We have Int16ArrayType.
+    loadhsi [t3, index, 2], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValUint16Array:
+    # We have Uint16ArrayType.
+    loadh [t3, index, 2], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValAboveUint16Array:
+    # We have one of Int32ArrayType .. Float64ArrayType.
+    bia t2, Uint32ArrayType - FirstTypedArrayType, .opGetByValFloat32ArrayOrFloat64Array
+
+    # We have either Int32ArrayType or Uint32ArrayType
+    bia t2, Int32ArrayType - FirstTypedArrayType, .opGetByValUint32Array
+
+    # We have Int32ArrayType.
+    loadi [t3, index, 4], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValUint32Array:
+    # We have Uint32ArrayType.
+    # This is the hardest part because of large unsigned values.
+    loadi [t3, index, 4], t0
+    bilt t0, 0, slowPath # This case is still awkward to implement in LLInt.
+    finishIntGetByVal(t0, t1)
+
+.opGetByValFloat32ArrayOrFloat64Array:
+    # We have one of Float32ArrayType or Float64ArrayType. Sadly, we cannot handle Float32Array
+    # inline yet. That would require some offlineasm changes.
+    bieq t2, Float32ArrayType - FirstTypedArrayType, slowPath
+
+    # We have Float64ArrayType.
+    loadd [t3, index, 8], ft0
+    bdnequn ft0, ft0, slowPath
+    finishDoubleGetByVal(ft0, t0, t1, t2)
 end
 
 macro skipIfIsRememberedOrInEden(cell, slowPath)
@@ -1021,7 +1357,7 @@ macro checkSwitchToJITForEpilogue()
 end
 
 macro assertNotConstant(size, index)
-    size(FirstConstantRegisterIndexNarrow, FirstConstantRegisterIndexWide, macro (FirstConstantRegisterIndex)
+    size(FirstConstantRegisterIndexNarrow, FirstConstantRegisterIndexWide16, FirstConstantRegisterIndexWide32, macro (FirstConstantRegisterIndex)
         assert(macro (ok) bilt index, FirstConstantRegisterIndex, ok end)
     end)
 end
@@ -1032,7 +1368,10 @@ macro functionForCallCodeBlockGetter(targetRegister)
     else
         loadp Callee + PayloadOffset[cfr], targetRegister
     end
-    loadp JSFunction::m_executable[targetRegister], targetRegister
+    loadp JSFunction::m_executableOrRareData[targetRegister], targetRegister
+    btpz targetRegister, (constexpr JSFunction::rareDataTag), .isExecutable
+    loadp (FunctionRareData::m_executable - (constexpr JSFunction::rareDataTag))[targetRegister], targetRegister
+.isExecutable:
     loadp FunctionExecutable::m_codeBlockForCall[targetRegister], targetRegister
     loadp ExecutableToCodeBlockEdge::m_codeBlock[targetRegister], targetRegister
 end
@@ -1043,7 +1382,10 @@ macro functionForConstructCodeBlockGetter(targetRegister)
     else
         loadp Callee + PayloadOffset[cfr], targetRegister
     end
-    loadp JSFunction::m_executable[targetRegister], targetRegister
+    loadp JSFunction::m_executableOrRareData[targetRegister], targetRegister
+    btpz targetRegister, (constexpr JSFunction::rareDataTag), .isExecutable
+    loadp (FunctionRareData::m_executable - (constexpr JSFunction::rareDataTag))[targetRegister], targetRegister
+.isExecutable:
     loadp FunctionExecutable::m_codeBlockForConstruct[targetRegister], targetRegister
     loadp ExecutableToCodeBlockEdge::m_codeBlock[targetRegister], targetRegister
 end
@@ -1060,11 +1402,20 @@ macro notFunctionCodeBlockSetter(sourceRegister)
     # Nothing to do!
 end
 
+macro convertCalleeToVM(callee)
+    btpnz callee, (constexpr PreciseAllocation::halfAlignment), .preciseAllocation
+    andp MarkedBlockMask, callee
+    loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[callee], callee
+    jmp .done
+.preciseAllocation:
+    loadp PreciseAllocationVMOffset[callee], callee
+.done:
+end
+
 # Do the bare minimum required to execute code. Sets up the PC, leave the CodeBlock*
 # in t1. May also trigger prologue entry OSR.
 macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
     # Set up the call frame and check if we should OSR.
-    tagReturnAddress sp
     preserveCallerPCAndCFR()
 
     if TRACING
@@ -1073,7 +1424,8 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
         addp maxFrameExtentForSlowPathCall, sp
     end
     codeBlockGetter(t1)
-    if not C_LOOP
+    codeBlockSetter(t1)
+    if not (C_LOOP or C_LOOP_WIN)
         baddis 5, CodeBlock::m_llintExecuteCounter + BaselineExecutionCounter::m_counter[t1], .continue
         if JSVALUE64
             move cfr, a0
@@ -1091,39 +1443,42 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
         btpz r0, .recover
         move cfr, sp # restore the previous sp
         # pop the callerFrame since we will jump to a function that wants to save it
-        if ARM64 or ARM64E
+        if ARM64
             pop lr, cfr
-            untagReturnAddress sp
+        elsif ARM64E
+            # untagReturnAddress will be performed in Gate::entryOSREntry.
+            pop lr, cfr
         elsif ARMv7 or MIPS
             pop cfr
             pop lr
         else
             pop cfr
         end
-        jmp r0, JSEntryPtrTag
+
+        if ARM64E
+            move r0, a0
+            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::entryOSREntry) * PtrSize, a2
+            jmp [a2], NativeToJITGatePtrTag # JSEntryPtrTag
+        else
+            jmp r0, JSEntryPtrTag
+        end
     .recover:
-        codeBlockGetter(t1)
+        notFunctionCodeBlockGetter(t1)
     .continue:
     end
-
-    codeBlockSetter(t1)
 
     preserveCalleeSavesUsedByLLInt()
 
     # Set up the PC.
-    if JSVALUE64
-        loadp CodeBlock::m_instructionsRawPointer[t1], PB
-        move 0, PC
-    else
-        loadp CodeBlock::m_instructionsRawPointer[t1], PC
-    end
+    loadp CodeBlock::m_instructionsRawPointer[t1], PB
+    move 0, PC
 
     # Get new sp in t0 and check stack height.
     getFrameRegisterSizeForCodeBlock(t1, t0)
     subp cfr, t0, t0
     bpa t0, cfr, .needStackCheck
     loadp CodeBlock::m_vm[t1], t2
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         bpbeq VM::m_cloopStackLimit[t2], t0, .stackHeightOK
     else
         bpbeq VM::m_softStackLimit[t2], t0, .stackHeightOK
@@ -1147,7 +1502,7 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
 .stackHeightOKGetCodeBlock:
     # Stack check slow path returned that the stack was ok.
     # Since they were clobbered, need to get CodeBlock and new sp
-    codeBlockGetter(t1)
+    notFunctionCodeBlockGetter(t1)
     getFrameRegisterSizeForCodeBlock(t1, t0)
     subp cfr, t0, t0
 
@@ -1169,8 +1524,8 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
     loadp CodeBlock::m_metadata[t1], metadataTable
 
     if JSVALUE64
-        move TagTypeNumber, tagTypeNumber
-        addq TagBitTypeOther, tagTypeNumber, tagMask
+        move TagNumber, numberTag
+        addq TagOther, numberTag, notCellMask
     end
 end
 
@@ -1212,7 +1567,12 @@ end
 macro doReturn()
     restoreCalleeSavesUsedByLLInt()
     restoreCallerPCAndCFR()
-    ret
+    if ARM64E
+        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::returnFromLLInt) * PtrSize, a2
+        jmp [a2], NativeToJITGatePtrTag
+    else
+        ret
+    end
 end
 
 # This break instruction is needed so that the synthesized llintPCRangeStart label
@@ -1226,7 +1586,7 @@ end
 # EncodedJSValue vmEntryToJavaScript(void* code, VM* vm, ProtoCallFrame* protoFrame)
 # EncodedJSValue vmEntryToNativeFunction(void* code, VM* vm, ProtoCallFrame* protoFrame)
 
-if C_LOOP
+if C_LOOP or C_LOOP_WIN
     _llint_vm_entry_to_javascript:
 else
     global _vmEntryToJavaScript
@@ -1235,7 +1595,7 @@ end
     doVMEntry(makeJavaScriptCall)
 
 
-if C_LOOP
+if C_LOOP or C_LOOP_WIN
     _llint_vm_entry_to_native:
 else
     global _vmEntryToNative
@@ -1243,8 +1603,42 @@ else
 end
     doVMEntry(makeHostFunctionCall)
 
+if ARM64E
+    global _vmEntryToYarrJITAfter
+end
+global _vmEntryToYarrJIT
+_vmEntryToYarrJIT:
+    functionPrologue()
+if ARM64E
+    jmp t5, YarrEntryPtrTag
+    _vmEntryToYarrJITAfter:
+end
+    functionEpilogue()
+    ret
 
-if not C_LOOP
+# a0, a1, a2 are used. a3 contains function address.
+global _vmEntryCustomAccessor
+_vmEntryCustomAccessor:
+    jmp a3, CustomAccessorPtrTag
+
+# a0 and a1 are used. a2 contains function address.
+global _vmEntryHostFunction
+_vmEntryHostFunction:
+    jmp a2, HostFunctionPtrTag
+
+# unsigned vmEntryToCSSJIT(uintptr_t, uintptr_t, uintptr_t, const void* codePtr);
+if ARM64E
+emit ".globl _vmEntryToCSSJIT"
+emit "_vmEntryToCSSJIT:"
+    functionPrologue()
+    jmp t3, CSSSelectorPtrTag
+    emit ".globl _vmEntryToCSSJITAfter"
+    emit "_vmEntryToCSSJITAfter:"
+    functionEpilogue()
+    ret
+end
+
+if not (C_LOOP or C_LOOP_WIN)
     # void sanitizeStackForVMImpl(VM* vm)
     global _sanitizeStackForVMImpl
     _sanitizeStackForVMImpl:
@@ -1254,22 +1648,26 @@ if not C_LOOP
         if X86 or X86_WIN
             loadp 4[sp], a0
         end
-        const vm = a0
+        const vmOrStartSP = a0
         const address = a1
         const zeroValue = a2
     
-        loadp VM::m_lastStackTop[vm], address
+        loadp VM::m_lastStackTop[vmOrStartSP], address
+        move sp, zeroValue
+        storep zeroValue, VM::m_lastStackTop[vmOrStartSP]
+        move sp, vmOrStartSP
+
         bpbeq sp, address, .zeroFillDone
-    
+        move address, sp
+
         move 0, zeroValue
     .zeroFillLoop:
         storep zeroValue, [address]
         addp PtrSize, address
-        bpa sp, address, .zeroFillLoop
+        bpa vmOrStartSP, address, .zeroFillLoop
 
     .zeroFillDone:
-        move sp, address
-        storep address, VM::m_lastStackTop[vm]
+        move vmOrStartSP, sp
         ret
     
     # VMEntryRecord* vmEntryRecord(const EntryFrame* entryFrame)
@@ -1284,94 +1682,202 @@ if not C_LOOP
         ret
 end
 
-if C_LOOP
+if ARM64E
+    # void* jitCagePtr(void* pointer, uintptr_t tag)
+    emit ".globl _jitCagePtr"
+    emit "_jitCagePtr:"
+        tagReturnAddress sp
+        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::jitCagePtr) * PtrSize, t2
+        jmp [t2], NativeToJITGatePtrTag
+        global _jitCagePtrGateAfter
+        _jitCagePtrGateAfter:
+        ret
+
+    global _tailCallJSEntryTrampoline
+    _tailCallJSEntryTrampoline:
+        untagReturnAddress a2
+        jmp a0, JSEntryPtrTag
+
+    global _tailCallJSEntrySlowPathTrampoline
+    _tailCallJSEntrySlowPathTrampoline:
+        untagReturnAddress a2
+        jmp a0, JSEntrySlowPathPtrTag
+
+    global _exceptionHandlerTrampoline
+    _exceptionHandlerTrampoline:
+        jmp a0, ExceptionHandlerPtrTag
+
+    global _returnFromLLIntTrampoline
+    _returnFromLLIntTrampoline:
+        ret
+
+    global _jsTrampolineProgramPrologue
+    _jsTrampolineProgramPrologue:
+        tagReturnAddress sp
+        jmp _llint_program_prologue
+
+    global _jsTrampolineModuleProgramPrologue
+    _jsTrampolineModuleProgramPrologue:
+        tagReturnAddress sp
+        jmp _llint_module_program_prologue
+
+    global _jsTrampolineEvalPrologue
+    _jsTrampolineEvalPrologue:
+        tagReturnAddress sp
+        jmp _llint_eval_prologue
+
+    global _jsTrampolineFunctionForCallPrologue
+    _jsTrampolineFunctionForCallPrologue:
+        tagReturnAddress sp
+        jmp _llint_function_for_call_prologue
+
+    global _jsTrampolineFunctionForConstructPrologue
+    _jsTrampolineFunctionForConstructPrologue:
+        tagReturnAddress sp
+        jmp _llint_function_for_construct_prologue
+
+    global _jsTrampolineFunctionForCallArityCheckPrologue
+    _jsTrampolineFunctionForCallArityCheckPrologue:
+        tagReturnAddress sp
+        jmp _llint_function_for_call_arity_check
+
+    global _jsTrampolineFunctionForConstructArityCheckPrologue
+    _jsTrampolineFunctionForConstructArityCheckPrologue:
+        tagReturnAddress sp
+        jmp _llint_function_for_construct_arity_check
+end
+
+if C_LOOP or C_LOOP_WIN
     # Dummy entry point the C Loop uses to initialize.
     _llint_entry:
         crash()
 else
-    macro initPCRelative(pcBase)
+    macro initPCRelative(kind, pcBase)
         if X86_64 or X86_64_WIN or X86 or X86_WIN
-            call _relativePCBase
-        _relativePCBase:
+            call _%kind%_relativePCBase
+        _%kind%_relativePCBase:
             pop pcBase
         elsif ARM64 or ARM64E
         elsif ARMv7
-        _relativePCBase:
+        _%kind%_relativePCBase:
             move pc, pcBase
             subp 3, pcBase   # Need to back up the PC and set the Thumb2 bit
         elsif MIPS
-            la _relativePCBase, pcBase
+            la _%kind%_relativePCBase, pcBase
             setcallreg pcBase # needed to set $t9 to the right value for the .cpload created by the label.
-        _relativePCBase:
+        _%kind%_relativePCBase:
         end
-end
-
-# The PC base is in t2, as this is what _llint_entry leaves behind through
-# initPCRelative(t2)
-macro setEntryAddress(index, label)
-    setEntryAddressCommon(index, label, a0)
-end
-
-macro setEntryAddressWide(index, label)
-     setEntryAddressCommon(index, label, a1)
-end
-
-macro setEntryAddressCommon(index, label, map)
-    if X86_64 or X86_64_WIN
-        leap (label - _relativePCBase)[t2], t3
-        move index, t4
-        storep t3, [map, t4, 8]
-    elsif X86 or X86_WIN
-        leap (label - _relativePCBase)[t2], t3
-        move index, t4
-        storep t3, [map, t4, 4]
-    elsif ARM64 or ARM64E
-        pcrtoaddr label, t2
-        move index, t4
-        storep t2, [map, t4, PtrSize]
-    elsif ARMv7
-        mvlbl (label - _relativePCBase), t4
-        addp t4, t2, t4
-        move index, t3
-        storep t4, [map, t3, 4]
-    elsif MIPS
-        la label, t4
-        la _relativePCBase, t3
-        subp t3, t4
-        addp t4, t2, t4
-        move index, t3
-        storep t4, [map, t3, 4]
     end
+
+    # The PC base is in t3, as this is what _llint_entry leaves behind through
+    # initPCRelative(t3)
+    macro setEntryAddressCommon(kind, index, label, map)
+        if X86_64
+            leap (label - _%kind%_relativePCBase)[t3], t4
+            move index, t5
+            storep t4, [map, t5, 8]
+        elsif X86_64_WIN
+            leap (label - _%kind%_relativePCBase)[t3], t4
+            move index, t0
+            storep t4, [map, t0, 8]
+        elsif X86 or X86_WIN
+            leap (label - _%kind%_relativePCBase)[t3], t4
+            move index, t5
+            storep t4, [map, t5, 4]
+        elsif ARM64
+            pcrtoaddr label, t3
+            move index, t4
+            storep t3, [map, t4, PtrSize]
+        elsif ARM64E
+            pcrtoaddr label, t3
+            move index, t4
+            leap [map, t4, PtrSize], t4
+            tagCodePtr t3, BytecodePtrTag, AddressDiversified, t4
+            storep t3, [t4]
+        elsif ARMv7
+            mvlbl (label - _%kind%_relativePCBase), t4
+            addp t4, t3, t4
+            move index, t5
+            storep t4, [map, t5, 4]
+        elsif MIPS
+            la label, t4
+            la _%kind%_relativePCBase, t3
+            subp t3, t4
+            addp t4, t3, t4
+            move index, t5
+            storep t4, [map, t5, 4]
+        end
+    end
+
+
+
+    macro includeEntriesAtOffset(kind, fn)
+        macro setEntryAddress(index, label)
+            setEntryAddressCommon(kind, index, label, a0)
+        end
+
+        macro setEntryAddressWide16(index, label)
+             setEntryAddressCommon(kind, index, label, a1)
+        end
+
+        macro setEntryAddressWide32(index, label)
+             setEntryAddressCommon(kind, index, label, a2)
+        end
+
+        fn()
+    end
+
+
+macro entry(kind, initialize)
+    global _%kind%_entry
+    _%kind%_entry:
+        functionPrologue()
+        pushCalleeSaves()
+        if X86 or X86_WIN
+            loadp 20[sp], a0
+            loadp 24[sp], a1
+            loadp 28[sp], a2
+        end
+
+        initPCRelative(kind, t3)
+
+        # Include generated bytecode initialization file.
+        includeEntriesAtOffset(kind, initialize)
+
+        leap JSCConfig + constexpr JSC::offsetOfJSCConfigInitializeHasBeenCalled, t3
+        bbeq [t3], 0, .notFrozen
+        crash()
+    .notFrozen:
+
+        popCalleeSaves()
+        functionEpilogue()
+        ret
 end
 
-global _llint_entry
 # Entry point for the llint to initialize.
-_llint_entry:
-    functionPrologue()
-    pushCalleeSaves()
-    if X86 or X86_WIN
-        loadp 20[sp], a0
-        loadp 24[sp], a1
-    end
-
-    initPCRelative(t2)
-
-    # Include generated bytecode initialization file.
+entry(llint, macro()
     include InitBytecodes
+end)
 
-    popCalleeSaves()
-    functionEpilogue()
-    ret
+end // not (C_LOOP or C_LOOP_WIN)
+
+_llint_op_wide16:
+    nextInstructionWide16()
+
+_llint_op_wide32:
+    nextInstructionWide32()
+
+macro noWide(label)
+_%label%_wide16:
+    crash()
+
+_%label%_wide32:
+    crash()
 end
 
-_llint_op_wide:
-    nextInstructionWide()
-
-_llint_op_wide_wide:
-    crash()
-
-_llint_op_enter_wide:
-    crash()
+noWide(llint_op_wide16)
+noWide(llint_op_wide32)
+noWide(llint_op_enter)
 
 op(llint_program_prologue, macro ()
     prologue(notFunctionCodeBlockGetter, notFunctionCodeBlockSetter, _llint_entry_osr, _llint_trace_prologue)
@@ -1407,21 +1913,30 @@ end)
 
 op(llint_function_for_call_arity_check, macro ()
     prologue(functionForCallCodeBlockGetter, functionCodeBlockSetter, _llint_entry_osr_function_for_call_arityCheck, _llint_trace_arityCheck_for_call)
-    functionArityCheck(.functionForCallBegin, _slow_path_call_arityCheck)
+    functionArityCheck(llint_function_for_call_arity_check, .functionForCallBegin, _slow_path_call_arityCheck)
 .functionForCallBegin:
     functionInitialization(0)
     dispatch(0)
 end)
 
-
 op(llint_function_for_construct_arity_check, macro ()
     prologue(functionForConstructCodeBlockGetter, functionCodeBlockSetter, _llint_entry_osr_function_for_construct_arityCheck, _llint_trace_arityCheck_for_construct)
-    functionArityCheck(.functionForConstructBegin, _slow_path_construct_arityCheck)
+    functionArityCheck(llint_function_for_construct_arity_check, .functionForConstructBegin, _slow_path_construct_arityCheck)
 .functionForConstructBegin:
     functionInitialization(1)
     dispatch(0)
 end)
 
+# Need these stub labels to make js_trampoline_llint_function_for_call_arity_check_untag etc. LLInt helper opcodes.
+_js_trampoline_llint_function_for_call_arity_check_untag_wide16:
+_js_trampoline_llint_function_for_call_arity_check_untag_wide32:
+_js_trampoline_llint_function_for_call_arity_check_tag_wide16:
+_js_trampoline_llint_function_for_call_arity_check_tag_wide32:
+_js_trampoline_llint_function_for_construct_arity_check_untag_wide16:
+_js_trampoline_llint_function_for_construct_arity_check_untag_wide32:
+_js_trampoline_llint_function_for_construct_arity_check_tag_wide16:
+_js_trampoline_llint_function_for_construct_arity_check_tag_wide32:
+    crash()
 
 # Value-representation-specific code.
 if JSVALUE64
@@ -1440,11 +1955,15 @@ macro slowPathOp(opcodeName)
 end
 
 slowPathOp(create_cloned_arguments)
+slowPathOp(create_arguments_butterfly)
 slowPathOp(create_direct_arguments)
 slowPathOp(create_lexical_environment)
 slowPathOp(create_rest)
 slowPathOp(create_scoped_arguments)
 slowPathOp(create_this)
+slowPathOp(create_promise)
+slowPathOp(create_generator)
+slowPathOp(create_async_generator)
 slowPathOp(define_accessor_property)
 slowPathOp(define_data_property)
 slowPathOp(enumerator_generic_pname)
@@ -1456,13 +1975,20 @@ slowPathOp(get_enumerable_length)
 slowPathOp(get_property_enumerator)
 slowPathOp(greater)
 slowPathOp(greatereq)
-slowPathOp(has_generic_property)
-slowPathOp(has_indexed_property)
-slowPathOp(has_structure_property)
+slowPathOp(has_enumerable_indexed_property)
+slowPathOp(has_enumerable_property)
+
+if not JSVALUE64
+    slowPathOp(has_enumerable_structure_property)
+    slowPathOp(has_own_structure_property)
+    slowPathOp(in_structure_property)
+    slowPathOp(get_prototype_of)
+end
+
 slowPathOp(in_by_id)
 slowPathOp(in_by_val)
-slowPathOp(is_function)
-slowPathOp(is_object_or_null)
+slowPathOp(is_callable)
+slowPathOp(is_constructor)
 slowPathOp(less)
 slowPathOp(lesseq)
 slowPathOp(mod)
@@ -1478,7 +2004,11 @@ slowPathOp(strcat)
 slowPathOp(throw_static_error)
 slowPathOp(to_index_string)
 slowPathOp(typeof)
+slowPathOp(typeof_is_object)
+slowPathOp(typeof_is_function)
 slowPathOp(unreachable)
+slowPathOp(new_promise)
+slowPathOp(new_generator)
 
 macro llintSlowPathOp(opcodeName)
     llintOp(op_%opcodeName%, unused, macro (unused, unused, dispatch)
@@ -1541,14 +2071,18 @@ llintOpWithJump(op_jmp, OpJmp, macro (size, get, jump, dispatch)
 end)
 
 
-llintJumpTrueOrFalseOp(
-    jtrue, OpJtrue,
-    macro (value, target) btinz value, 1, target end)
+llintJumpTrueOrFalseOp(jtrue, OpJtrue,
+    # Misc primitive
+    macro (value, target) btinz value, 1, target end,
+    # Truthy Cell
+    macro (dispatch) end)
 
 
-llintJumpTrueOrFalseOp(
-    jfalse, OpJfalse,
-    macro (value, target) btiz value, 1, target end)
+llintJumpTrueOrFalseOp(jfalse, OpJfalse,
+    # Misc primitive
+    macro (value, target) btiz value, 1, target end,
+    # Truthy Cell
+    macro (dispatch) dispatch() end)
 
 
 compareJumpOp(
@@ -1622,7 +2156,6 @@ compareUnsignedJumpOp(
 preOp(inc, OpInc,
     macro (value, slow) baddio 1, value, slow end)
 
-
 preOp(dec, OpDec,
     macro (value, slow) bsubio 1, value, slow end)
 
@@ -1687,7 +2220,15 @@ end)
 callOp(construct, OpConstruct, prepareForRegularCall, macro (getu, metadata) end)
 
 
-macro doCallVarargs(size, opcodeStruct, dispatch, frameSlowPath, slowPath, prepareCall)
+macro branchIfException(exceptionTarget)
+    loadp CodeBlock[cfr], t3
+    loadp CodeBlock::m_vm[t3], t3
+    btpz VM::m_exception[t3], .noException
+    jmp exceptionTarget
+.noException:
+end
+
+macro doCallVarargs(opcodeName, size, opcodeStruct, dispatch, frameSlowPath, slowPath, prepareCall)
     callSlowPath(frameSlowPath)
     branchIfException(_llint_throw_from_slow_path_trampoline)
     # calleeFrame in r1
@@ -1702,19 +2243,19 @@ macro doCallVarargs(size, opcodeStruct, dispatch, frameSlowPath, slowPath, prepa
             subp r1, CallerFrameAndPCSize, sp
         end
     end
-    slowPathForCall(size, opcodeStruct, dispatch, slowPath, prepareCall)
+    slowPathForCommonCall(opcodeName, size, opcodeStruct, dispatch, slowPath, prepareCall)
 end
 
 
 llintOp(op_call_varargs, OpCallVarargs, macro (size, get, dispatch)
-    doCallVarargs(size, OpCallVarargs, dispatch, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_call_varargs, prepareForRegularCall)
+    doCallVarargs(op_call_varargs, size, OpCallVarargs, dispatch, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_call_varargs, prepareForRegularCall)
 end)
 
 llintOp(op_tail_call_varargs, OpTailCallVarargs, macro (size, get, dispatch)
     checkSwitchToJITForEpilogue()
     # We lie and perform the tail call instead of preparing it since we can't
     # prepare the frame for a call opcode
-    doCallVarargs(size, OpTailCallVarargs, dispatch, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_tail_call_varargs, prepareForTailCall)
+    doCallVarargs(op_tail_call_varargs, size, OpTailCallVarargs, dispatch, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_tail_call_varargs, prepareForTailCall)
 end)
 
 
@@ -1722,12 +2263,12 @@ llintOp(op_tail_call_forward_arguments, OpTailCallForwardArguments, macro (size,
     checkSwitchToJITForEpilogue()
     # We lie and perform the tail call instead of preparing it since we can't
     # prepare the frame for a call opcode
-    doCallVarargs(size, OpTailCallForwardArguments, dispatch, _llint_slow_path_size_frame_for_forward_arguments, _llint_slow_path_tail_call_forward_arguments, prepareForTailCall)
+    doCallVarargs(op_tail_call_forward_arguments, size, OpTailCallForwardArguments, dispatch, _llint_slow_path_size_frame_for_forward_arguments, _llint_slow_path_tail_call_forward_arguments, prepareForTailCall)
 end)
 
 
 llintOp(op_construct_varargs, OpConstructVarargs, macro (size, get, dispatch)
-    doCallVarargs(size, OpConstructVarargs, dispatch, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_construct_varargs, prepareForRegularCall)
+    doCallVarargs(op_construct_varargs, size, OpConstructVarargs, dispatch, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_construct_varargs, prepareForRegularCall)
 end)
 
 
@@ -1765,30 +2306,39 @@ end)
 # returns the JS value that the eval returned.
 
 _llint_op_call_eval:
-    slowPathForCall(
+    slowPathForCommonCall(
+        op_call_eval,
         narrow,
         OpCallEval,
         macro () dispatchOp(narrow, op_call_eval) end,
         _llint_slow_path_call_eval,
         prepareForRegularCall)
 
-_llint_op_call_eval_wide:
-    slowPathForCall(
-        wide,
+_llint_op_call_eval_wide16:
+    slowPathForCommonCall(
+        op_call_eval,
+        wide16,
         OpCallEval,
-        macro () dispatchOp(wide, op_call_eval) end,
-        _llint_slow_path_call_eval_wide,
+        macro () dispatchOp(wide16, op_call_eval) end,
+        _llint_slow_path_call_eval_wide16,
         prepareForRegularCall)
 
-_llint_generic_return_point:
-    dispatchAfterCall(narrow, OpCallEval, macro ()
-        dispatchOp(narrow, op_call_eval)
-    end)
+_llint_op_call_eval_wide32:
+    slowPathForCommonCall(
+        op_call_eval,
+        wide32,
+        OpCallEval,
+        macro () dispatchOp(wide32, op_call_eval) end,
+        _llint_slow_path_call_eval_wide32,
+        prepareForRegularCall)
 
-_llint_generic_return_point_wide:
-    dispatchAfterCall(wide, OpCallEval, macro()
-        dispatchOp(wide, op_call_eval)
+
+commonOp(llint_generic_return_point, macro () end, macro (size)
+    dispatchAfterCall(size, OpCallEval, m_profile, m_dst, macro ()
+        dispatchOp(size, op_call_eval)
     end)
+end)
+
 
 llintOp(op_identity_with_profile, OpIdentityWithProfile, macro (unused, unused, dispatch)
     dispatch()
@@ -1796,6 +2346,11 @@ end)
 
 
 llintOp(op_yield, OpYield, macro (unused, unused, unused)
+    notSupported()
+end)
+
+
+llintOp(op_create_generator_frame_environment, OpYield, macro (unused, unused, unused)
     notSupported()
 end)
 
@@ -1830,6 +2385,71 @@ op(llint_internal_function_construct_trampoline, macro ()
 end)
 
 
+op(checkpoint_osr_exit_from_inlined_call_trampoline, macro ()
+    if (JSVALUE64 and not (C_LOOP or C_LOOP_WIN)) or ARMv7 or MIPS
+        restoreStackPointerAfterCall()
+
+        # Make sure we move r0 to a1 first since r0 might be the same as a0, for instance, on arm.
+        if ARMv7 or MIPS
+            # Given _llint_slow_path_checkpoint_osr_exit_from_inlined_call has
+            # parameters as CallFrame* and EncodedJSValue,
+            # we need to store call result on a2, a3 and call frame on a0,
+            # leaving a1 as dummy value (this calling convention is considered only
+            # for little-endian architectures).
+            move r1, a3
+            move r0, a2
+            move cfr, a0
+            # We don't call saveStateForCCall() because we are going to use the bytecodeIndex from our side state.
+            cCall4(_llint_slow_path_checkpoint_osr_exit_from_inlined_call)
+        else
+            move r0, a1
+            move cfr, a0
+            # We don't call saveStateForCCall() because we are going to use the bytecodeIndex from our side state.
+            cCall2(_llint_slow_path_checkpoint_osr_exit_from_inlined_call)
+        end
+
+        restoreStateAfterCCall()
+        branchIfException(_llint_throw_from_slow_path_trampoline)
+        if ARM64E
+            move r1, a0
+            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::loopOSREntry) * PtrSize, a2
+            jmp [a2], NativeToJITGatePtrTag # JSEntryPtrTag
+        else
+            jmp r1, JSEntryPtrTag
+        end
+    else
+        notSupported()
+    end
+end)
+
+op(checkpoint_osr_exit_trampoline, macro ()
+    # FIXME: We can probably dispatch to the checkpoint handler directly but this was easier
+    # and probably doesn't matter for performance.
+    if (JSVALUE64 and not (C_LOOP or C_LOOP_WIN)) or ARMv7 or MIPS
+        restoreStackPointerAfterCall()
+
+        move cfr, a0
+        # We don't call saveStateForCCall() because we are going to use the bytecodeIndex from our side state.
+        cCall2(_llint_slow_path_checkpoint_osr_exit)
+        restoreStateAfterCCall()
+        branchIfException(_llint_throw_from_slow_path_trampoline)
+        if ARM64E
+            move r1, a0
+            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::loopOSREntry) * PtrSize, a2
+            jmp [a2], NativeToJITGatePtrTag # JSEntryPtrTag
+        else
+            jmp r1, JSEntryPtrTag
+        end
+    else
+        notSupported()
+    end
+end)
+
+op(normal_osr_exit_trampoline, macro ()
+    dispatch(0)
+end)
+
+
 # Lastly, make sure that we can link even though we don't support all opcodes.
 # These opcodes should never arise when using LLInt or either JIT. We assert
 # as much.
@@ -1846,4 +2466,51 @@ macro notSupported()
         # on Intel, which is 1 byte, and bkpt on ARMv7, which is 2 bytes.)
         break
     end
+end
+
+// FIXME: We should not need the X86_64_WIN condition here, since WEBASSEMBLY should already be false on Windows
+// https://bugs.webkit.org/show_bug.cgi?id=203716
+if WEBASSEMBLY and not X86_64_WIN
+
+entry(wasm, macro()
+    include InitWasm
+end)
+
+macro wasmScope()
+    # Wrap the script in a macro since it overwrites some of the LLInt macros,
+    # but we don't want to interfere with the LLInt opcodes
+    include WebAssembly
+end
+
+global _wasmLLIntPCRangeStart
+_wasmLLIntPCRangeStart:
+wasmScope()
+global _wasmLLIntPCRangeEnd
+_wasmLLIntPCRangeEnd:
+
+else
+
+# These need to be defined even when WebAssembly is disabled
+op(wasm_function_prologue, macro ()
+    crash()
+end)
+
+op(wasm_function_prologue_no_tls, macro ()
+    crash()
+end)
+
+_wasm_trampoline_wasm_call:
+_wasm_trampoline_wasm_call_no_tls:
+_wasm_trampoline_wasm_call_indirect:
+_wasm_trampoline_wasm_call_indirect_no_tls:
+_wasm_trampoline_wasm_call_wide16:
+_wasm_trampoline_wasm_call_no_tls_wide16:
+_wasm_trampoline_wasm_call_indirect_wide16:
+_wasm_trampoline_wasm_call_indirect_no_tls_wide16:
+_wasm_trampoline_wasm_call_wide32:
+_wasm_trampoline_wasm_call_no_tls_wide32:
+_wasm_trampoline_wasm_call_indirect_wide32:
+_wasm_trampoline_wasm_call_indirect_no_tls_wide32:
+    crash()
+
 end

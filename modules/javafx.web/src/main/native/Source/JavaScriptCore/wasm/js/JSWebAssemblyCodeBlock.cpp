@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,10 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSCInlines.h"
-#include "JSWebAssemblyLinkError.h"
-#include "JSWebAssemblyMemory.h"
+#include "JSCJSValueInlines.h"
+#include "JSCellInlines.h"
 #include "WasmModuleInformation.h"
 #include "WasmToJS.h"
-
 
 namespace JSC {
 
@@ -55,7 +53,7 @@ JSWebAssemblyCodeBlock::JSWebAssemblyCodeBlock(VM& vm, Ref<Wasm::CodeBlock>&& co
     m_wasmToJSExitStubs.reserveCapacity(m_codeBlock->functionImportCount());
     for (unsigned importIndex = 0; importIndex < m_codeBlock->functionImportCount(); ++importIndex) {
         Wasm::SignatureIndex signatureIndex = moduleInformation.importFunctionSignatureIndices.at(importIndex);
-        auto binding = Wasm::wasmToJS(&vm, m_callLinkInfos, signatureIndex, importIndex);
+        auto binding = Wasm::wasmToJS(vm, m_callLinkInfos, signatureIndex, importIndex);
         if (UNLIKELY(!binding)) {
             switch (binding.error()) {
             case Wasm::BindingFailure::OutOfMemory:
@@ -84,13 +82,16 @@ void JSWebAssemblyCodeBlock::clearJSCallICs(VM& vm)
         (*iter)->unlink(vm);
 }
 
-void JSWebAssemblyCodeBlock::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWebAssemblyCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSWebAssemblyCodeBlock* thisObject = jsCast<JSWebAssemblyCodeBlock*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
     Base::visitChildren(thisObject, visitor);
 }
+
+DEFINE_VISIT_CHILDREN(JSWebAssemblyCodeBlock);
 
 void JSWebAssemblyCodeBlock::finalizeUnconditionally(VM& vm)
 {

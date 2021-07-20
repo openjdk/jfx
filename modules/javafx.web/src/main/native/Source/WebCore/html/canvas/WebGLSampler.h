@@ -25,7 +25,13 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLSharedObject.h"
+
+namespace WTF {
+class AbstractLocker;
+}
 
 namespace WebCore {
 
@@ -34,9 +40,11 @@ public:
     static Ref<WebGLSampler> create(WebGLRenderingContextBase&);
     virtual ~WebGLSampler();
 
-protected:
+private:
     explicit WebGLSampler(WebGLRenderingContextBase&);
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) final;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) final;
 };
 
 } // namespace WebCore
+
+#endif

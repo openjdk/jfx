@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-const AtomicString& SubmitInputType::formControlType() const
+const AtomString& SubmitInputType::formControlType() const
 {
     return InputTypeNames::submit();
 }
@@ -88,16 +88,6 @@ bool SubmitInputType::canBeSuccessfulSubmitButton()
 String SubmitInputType::defaultValue() const
 {
     return submitButtonDefaultLabel();
-}
-
-bool SubmitInputType::isSubmitButton() const
-{
-    return true;
-}
-
-bool SubmitInputType::isTextButton() const
-{
-    return true;
 }
 
 } // namespace WebCore

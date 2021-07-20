@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
 #include "JSEventTarget.h"
@@ -38,14 +36,17 @@ class JSWorkletGlobalScope;
 class WorkletGlobalScope;
 
 class JSWorkletGlobalScopeBase : public JSDOMGlobalObject {
-    using Base = JSDOMGlobalObject;
 public:
+    using Base = JSDOMGlobalObject;
+
+    template<typename, JSC::SubspaceAccess>
+    static void subspaceFor(JSC::VM&) { RELEASE_ASSERT_NOT_REACHED(); }
+
     static void destroy(JSC::JSCell*);
 
     DECLARE_INFO;
 
     WorkletGlobalScope& wrapped() const { return *m_wrapped; }
-    JSC::JSProxy* proxy() const { ASSERT(m_proxy); return m_proxy.get(); }
     ScriptExecutionContext* scriptExecutionContext() const;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -59,30 +60,26 @@ public:
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
-    static void queueTaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
-
-    void clearDOMGuardedObjects();
+    static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
+    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
 
 protected:
     JSWorkletGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkletGlobalScope>&&);
     void finishCreation(JSC::VM&, JSC::JSProxy*);
 
-    static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     RefPtr<WorkletGlobalScope> m_wrapped;
-    JSC::WriteBarrier<JSC::JSProxy> m_proxy;
 };
 
 // Returns a JSWorkletGlobalScope or jsNull()
 // Always ignores the execState and passed globalObject, WorkletGlobalScope is itself a globalObject and will always use its own prototype chain.
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, WorkletGlobalScope&);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, WorkletGlobalScope* scope) { return scope ? toJS(exec, globalObject, *scope) : JSC::jsNull(); }
-JSC::JSValue toJS(JSC::ExecState*, WorkletGlobalScope&);
-inline JSC::JSValue toJS(JSC::ExecState* exec, WorkletGlobalScope* scope) { return scope ? toJS(exec, *scope) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, WorkletGlobalScope&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, WorkletGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, globalObject, *scope) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, WorkletGlobalScope&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WorkletGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, *scope) : JSC::jsNull(); }
 
 JSWorkletGlobalScope* toJSWorkletGlobalScope(JSC::VM&, JSC::JSValue);
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_PAINTING_API)

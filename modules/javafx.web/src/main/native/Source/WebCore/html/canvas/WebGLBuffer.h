@@ -25,8 +25,10 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLSharedObject.h"
-#include <wtf/Forward.h>
+#include <wtf/RefPtr.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -40,38 +42,37 @@ public:
     static Ref<WebGLBuffer> create(WebGLRenderingContextBase&);
     virtual ~WebGLBuffer();
 
-    bool associateBufferData(GC3Dsizeiptr size);
+    bool associateBufferData(GCGLsizeiptr size);
     bool associateBufferData(JSC::ArrayBuffer*);
     bool associateBufferData(JSC::ArrayBufferView*);
-    bool associateBufferSubData(GC3Dintptr offset, JSC::ArrayBuffer*);
-    bool associateBufferSubData(GC3Dintptr offset, JSC::ArrayBufferView*);
-    bool associateCopyBufferSubData(const WebGLBuffer& readBuffer, GC3Dintptr readOffset, GC3Dintptr writeOffset, GC3Dsizeiptr);
+    bool associateBufferSubData(GCGLintptr offset, JSC::ArrayBuffer*);
+    bool associateBufferSubData(GCGLintptr offset, JSC::ArrayBufferView*);
+    bool associateCopyBufferSubData(const WebGLBuffer& readBuffer, GCGLintptr readOffset, GCGLintptr writeOffset, GCGLsizeiptr);
 
     void disassociateBufferData();
 
-    GC3Dsizeiptr byteLength() const;
+    GCGLsizeiptr byteLength() const;
     const RefPtr<JSC::ArrayBuffer> elementArrayBuffer() const { return m_elementArrayBuffer; }
 
     // Gets the cached max index for the given type if one has been set.
-    Optional<unsigned> getCachedMaxIndex(GC3Denum type);
+    Optional<unsigned> getCachedMaxIndex(GCGLenum type);
     // Sets the cached max index for the given type.
-    void setCachedMaxIndex(GC3Denum type, unsigned value);
+    void setCachedMaxIndex(GCGLenum type, unsigned value);
 
-    GC3Denum getTarget() const { return m_target; }
-    void setTarget(GC3Denum, bool forWebGL2);
+    GCGLenum getTarget() const { return m_target; }
+    void setTarget(GCGLenum);
 
     bool hasEverBeenBound() const { return object() && m_target; }
 
-protected:
+private:
     WebGLBuffer(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
-private:
-    GC3Denum m_target { 0 };
+    GCGLenum m_target { 0 };
 
     RefPtr<JSC::ArrayBuffer> m_elementArrayBuffer;
-    GC3Dsizeiptr m_byteLength { 0 };
+    GCGLsizeiptr m_byteLength { 0 };
 
     // Optimization for index validation. For each type of index
     // (i.e., UNSIGNED_SHORT), cache the maximum index in the
@@ -81,7 +82,7 @@ private:
     // draw call as long as all bound array buffers are at least
     // that size.
     struct MaxIndexCacheEntry {
-        GC3Denum type;
+        GCGLenum type;
         unsigned maxIndex;
     };
     // OpenGL ES 2.0 only has two valid index types (UNSIGNED_BYTE
@@ -93,9 +94,11 @@ private:
     void clearCachedMaxIndices();
 
     // Helper function called by the three associateBufferData().
-    bool associateBufferDataImpl(const void* data, GC3Dsizeiptr byteLength);
+    bool associateBufferDataImpl(const void* data, GCGLsizeiptr byteLength);
     // Helper function called by the two associateBufferSubData().
-    bool associateBufferSubDataImpl(GC3Dintptr offset, const void* data, GC3Dsizeiptr byteLength);
+    bool associateBufferSubDataImpl(GCGLintptr offset, const void* data, GCGLsizeiptr byteLength);
 };
 
 } // namespace WebCore
+
+#endif

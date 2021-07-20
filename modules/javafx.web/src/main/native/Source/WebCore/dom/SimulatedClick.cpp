@@ -31,22 +31,24 @@
 #include "Element.h"
 #include "EventNames.h"
 #include "MouseEvent.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 class SimulatedMouseEvent final : public MouseEvent {
+    WTF_MAKE_ISO_ALLOCATED_INLINE(SimulatedMouseEvent);
 public:
-    static Ref<SimulatedMouseEvent> create(const AtomicString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
+    static Ref<SimulatedMouseEvent> create(const AtomString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
     {
         return adoptRef(*new SimulatedMouseEvent(eventType, WTFMove(view), WTFMove(underlyingEvent), target, source));
     }
 
 private:
-    SimulatedMouseEvent(const AtomicString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
+    SimulatedMouseEvent(const AtomString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
         : MouseEvent(eventType, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
             underlyingEvent ? underlyingEvent->timeStamp() : MonotonicTime::now(), WTFMove(view), /* detail */ 0,
-            { }, { }, { }, modifiersFromUnderlyingEvent(underlyingEvent), 0, 0, nullptr, 0, 0, nullptr, IsSimulated::Yes,
+            { }, { }, { }, modifiersFromUnderlyingEvent(underlyingEvent), 0, 0, nullptr, 0, 0, IsSimulated::Yes,
             source == SimulatedClickSource::UserAgent ? IsTrusted::Yes : IsTrusted::No)
     {
         setUnderlyingEvent(underlyingEvent.get());
@@ -74,19 +76,19 @@ private:
     }
 };
 
-static void simulateMouseEvent(const AtomicString& eventType, Element& element, Event* underlyingEvent, SimulatedClickSource source)
+static void simulateMouseEvent(const AtomString& eventType, Element& element, Event* underlyingEvent, SimulatedClickSource source)
 {
     element.dispatchEvent(SimulatedMouseEvent::create(eventType, element.document().windowProxy(), underlyingEvent, element, source));
 }
 
-void simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouseEventOptions mouseEventOptions, SimulatedClickVisualOptions visualOptions, SimulatedClickSource creationOptions)
+bool simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouseEventOptions mouseEventOptions, SimulatedClickVisualOptions visualOptions, SimulatedClickSource creationOptions)
 {
     if (element.isDisabledFormControl())
-        return;
+        return false;
 
     static NeverDestroyed<HashSet<Element*>> elementsDispatchingSimulatedClicks;
     if (!elementsDispatchingSimulatedClicks.get().add(&element).isNewEntry)
-        return;
+        return false;
 
     if (mouseEventOptions == SendMouseOverUpDownEvents)
         simulateMouseEvent(eventNames().mouseoverEvent, element, underlyingEvent, creationOptions);
@@ -101,6 +103,7 @@ void simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouse
     simulateMouseEvent(eventNames().clickEvent, element, underlyingEvent, creationOptions);
 
     elementsDispatchingSimulatedClicks.get().remove(&element);
+    return true;
 }
 
 } // namespace WebCore

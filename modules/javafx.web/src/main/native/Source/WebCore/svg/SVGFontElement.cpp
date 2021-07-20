@@ -21,8 +21,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGFontElement.h"
 
 #include "Document.h"
@@ -42,7 +40,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFontElement);
 
 inline SVGFontElement::SVGFontElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::fontTag));
 }
@@ -53,5 +50,3 @@ Ref<SVGFontElement> SVGFontElement::create(const QualifiedName& tagName, Documen
 }
 
 }
-
-#endif // ENABLE(SVG_FONTS)

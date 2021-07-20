@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.media;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -36,6 +37,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 
@@ -63,7 +65,8 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         return ret;
     }
 
-    private boolean registeredWithFactory = false;
+    private WeakReference<ResourceFactory> registeredWithFactory = null;
+
     private PrismMediaFrameHandler(Object provider) {
     }
 
@@ -129,11 +132,12 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
 
         PrismFrameBuffer prismBuffer = new PrismFrameBuffer(vdb);
         if (tme.texture == null) {
-            if (!registeredWithFactory) {
+            ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
+            if (registeredWithFactory == null || registeredWithFactory.get() != factory) {
                 // make sure we've registered with the resource factory so we know
                 // when to purge old textures
-                GraphicsPipeline.getDefaultResourceFactory().addFactoryListener(this);
-                registeredWithFactory = true;
+                factory.addFactoryListener(this);
+                registeredWithFactory = new WeakReference<>(factory);
             }
 
             tme.texture = GraphicsPipeline.getPipeline().
@@ -186,15 +190,15 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
      */
     private class PrismFrameBuffer implements MediaFrame {
         private final PixelFormat videoFormat;
-        private final VideoDataBuffer master;
+        private final VideoDataBuffer primary;
 
         public PrismFrameBuffer(VideoDataBuffer sourceBuffer) {
             if (null == sourceBuffer) {
                 throw new NullPointerException();
             }
 
-            master = sourceBuffer;
-            switch (master.getFormat()) {
+            primary = sourceBuffer;
+            switch (primary.getFormat()) {
                 case BGRA_PRE:
                     videoFormat = PixelFormat.INT_ARGB_PRE;
                     break;
@@ -207,23 +211,23 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
                 // ARGB isn't supported in prism, there's no corresponding PixelFormat
                 case ARGB:
                 default:
-                    throw new IllegalArgumentException("Unsupported video format "+master.getFormat());
+                    throw new IllegalArgumentException("Unsupported video format "+primary.getFormat());
             }
         }
 
         @Override
         public ByteBuffer getBufferForPlane(int plane) {
-            return master.getBufferForPlane(plane);
+            return primary.getBufferForPlane(plane);
         }
 
         @Override
         public void holdFrame() {
-            master.holdFrame();
+            primary.holdFrame();
         }
 
         @Override
         public void releaseFrame() {
-            master.releaseFrame();
+            primary.releaseFrame();
         }
 
         @Override
@@ -233,37 +237,37 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
 
         @Override
         public int getWidth() {
-            return master.getWidth();
+            return primary.getWidth();
         }
 
         @Override
         public int getHeight() {
-            return master.getHeight();
+            return primary.getHeight();
         }
 
         @Override
         public int getEncodedWidth() {
-            return master.getEncodedWidth();
+            return primary.getEncodedWidth();
         }
 
         @Override
         public int getEncodedHeight() {
-            return master.getEncodedHeight();
+            return primary.getEncodedHeight();
         }
 
         @Override
         public int planeCount() {
-            return master.getPlaneCount();
+            return primary.getPlaneCount();
         }
 
         @Override
         public int[] planeStrides() {
-            return master.getPlaneStrides();
+            return primary.getPlaneStrides();
         }
 
         @Override
         public int strideForPlane(int planeIndex) {
-            return master.getStrideForPlane(planeIndex);
+            return primary.getStrideForPlane(planeIndex);
         }
 
         @Override
@@ -277,7 +281,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
                 return null;
             }
 
-            VideoDataBuffer newVDB = master.convertToFormat(VideoFormat.BGRA_PRE);
+            VideoDataBuffer newVDB = primary.convertToFormat(VideoFormat.BGRA_PRE);
             if (null == newVDB) {
                 return null;
             }

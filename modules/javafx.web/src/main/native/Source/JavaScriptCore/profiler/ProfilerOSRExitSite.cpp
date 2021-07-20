@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,22 +26,19 @@
 #include "config.h"
 #include "ProfilerOSRExitSite.h"
 
-#include "JSGlobalObject.h"
-#include "JSScope.h"
-#include "JSString.h"
 #include "JSCInlines.h"
 #include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace Profiler {
 
-JSValue OSRExitSite::toJS(ExecState* exec) const
+JSValue OSRExitSite::toJS(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSArray* result = constructEmptyArray(exec, 0);
+    JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
     for (unsigned i = 0; i < m_codeAddresses.size(); ++i) {
-        result->putDirectIndex(exec, i, jsString(exec, toString(RawPointer(m_codeAddresses[i].dataLocation()))));
+        result->putDirectIndex(globalObject, i, jsString(vm, toString(RawPointer(m_codeAddresses[i].dataLocation()))));
         RETURN_IF_EXCEPTION(scope, { });
     }
     return result;

@@ -25,11 +25,16 @@
 #include "TagCollection.h"
 
 #include "NodeRareData.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-TagCollectionNS::TagCollectionNS(ContainerNode& rootNode, const AtomicString& namespaceURI, const AtomicString& localName)
-    : CachedHTMLCollection<TagCollectionNS, CollectionTypeTraits<ByTag>::traversalType>(rootNode, ByTag)
+WTF_MAKE_ISO_ALLOCATED_IMPL(TagCollection);
+WTF_MAKE_ISO_ALLOCATED_IMPL(TagCollectionNS);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTagCollection);
+
+TagCollectionNS::TagCollectionNS(ContainerNode& rootNode, const AtomString& namespaceURI, const AtomString& localName)
+    : CachedHTMLCollection(rootNode, ByTag)
     , m_namespaceURI(namespaceURI)
     , m_localName(localName)
 {
@@ -41,8 +46,8 @@ TagCollectionNS::~TagCollectionNS()
     ownerNode().nodeLists()->removeCachedTagCollectionNS(*this, m_namespaceURI, m_localName);
 }
 
-TagCollection::TagCollection(ContainerNode& rootNode, const AtomicString& qualifiedName)
-    : CachedHTMLCollection<TagCollection, CollectionTypeTraits<ByTag>::traversalType>(rootNode, ByTag)
+TagCollection::TagCollection(ContainerNode& rootNode, const AtomString& qualifiedName)
+    : CachedHTMLCollection(rootNode, ByTag)
     , m_qualifiedName(qualifiedName)
 {
     ASSERT(qualifiedName != starAtom());
@@ -53,8 +58,8 @@ TagCollection::~TagCollection()
     ownerNode().nodeLists()->removeCachedCollection(this, m_qualifiedName);
 }
 
-HTMLTagCollection::HTMLTagCollection(ContainerNode& rootNode, const AtomicString& qualifiedName)
-    : CachedHTMLCollection<HTMLTagCollection, CollectionTypeTraits<ByHTMLTag>::traversalType>(rootNode, ByHTMLTag)
+HTMLTagCollection::HTMLTagCollection(ContainerNode& rootNode, const AtomString& qualifiedName)
+    : CachedHTMLCollection(rootNode, ByHTMLTag)
     , m_qualifiedName(qualifiedName)
     , m_loweredQualifiedName(qualifiedName.convertToASCIILowercase())
 {

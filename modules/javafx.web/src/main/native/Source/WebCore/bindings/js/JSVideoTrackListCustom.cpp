@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "Element.h"
 #include "JSVideoTrackList.h"
@@ -35,10 +35,13 @@
 namespace WebCore {
 using namespace JSC;
 
-void JSVideoTrackList::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSVideoTrackList::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(root(wrapped().element()));
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSVideoTrackList);
 
 } // namespace WebCore
 

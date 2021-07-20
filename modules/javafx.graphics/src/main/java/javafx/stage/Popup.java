@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,12 @@ import javafx.scene.Node;
  * @since JavaFX 2.0
  */
 public class Popup extends PopupWindow {
+
+    /**
+     * Creates a {@code Popup}.
+     */
+    public Popup() {
+    }
 
     /**
      * The ObservableList of {@code Node}s to be rendered on this

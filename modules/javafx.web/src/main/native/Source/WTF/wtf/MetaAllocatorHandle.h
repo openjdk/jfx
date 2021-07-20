@@ -38,9 +38,11 @@ namespace WTF {
 class MetaAllocator;
 class PrintStream;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MetaAllocatorHandle);
 class MetaAllocatorHandle : public ThreadSafeRefCounted<MetaAllocatorHandle>, public RedBlackTree<MetaAllocatorHandle, void*>::Node {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MetaAllocatorHandle);
 private:
-    MetaAllocatorHandle(MetaAllocator*, void* start, size_t sizeInBytes, void* ownerUID);
+    MetaAllocatorHandle(MetaAllocator&, void* start, size_t sizeInBytes);
 
 public:
     using MemoryPtr = MetaAllocatorPtr<HandleMemoryPtrTag>;
@@ -84,20 +86,9 @@ public:
 
     WTF_EXPORT_PRIVATE void shrink(size_t newSizeInBytes);
 
-    bool isManaged()
+    MetaAllocator& allocator()
     {
-        return !!m_allocator;
-    }
-
-    MetaAllocator* allocator()
-    {
-        ASSERT(m_allocator);
         return m_allocator;
-    }
-
-    void* ownerUID()
-    {
-        return m_ownerUID;
     }
 
     void* key()
@@ -110,10 +101,9 @@ public:
 private:
     friend class MetaAllocator;
 
-    MetaAllocator* m_allocator;
+    MetaAllocator& m_allocator;
     MemoryPtr m_start;
     MemoryPtr m_end;
-    void* m_ownerUID;
 };
 
 }

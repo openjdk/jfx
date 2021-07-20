@@ -16,10 +16,20 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gstvideometa.h"
 
 #include <string.h>
+
+/**
+ * SECTION:gstvideometa
+ * @title: GstMeta for video
+ * @short_description: Video related GstMeta
+ *
+ */
 
 #ifndef GST_DISABLE_GST_DEBUG
 #define GST_CAT_DEFAULT ensure_debug_category()
@@ -54,6 +64,7 @@ gst_video_meta_init (GstMeta * meta, gpointer params, GstBuffer * buffer)
   emeta->width = emeta->height = emeta->n_planes = 0;
   memset (emeta->offset, 0, sizeof (emeta->offset));
   memset (emeta->stride, 0, sizeof (emeta->stride));
+  gst_video_alignment_reset (&emeta->alignment);
   emeta->map = NULL;
   emeta->unmap = NULL;
 
@@ -94,6 +105,7 @@ gst_video_meta_transform (GstBuffer * dest, GstMeta * meta,
       for (i = 0; i < dmeta->n_planes; i++) {
         dmeta->offset[i] = smeta->offset[i];
         dmeta->stride[i] = smeta->stride[i];
+        dmeta->alignment = smeta->alignment;
       }
       dmeta->map = smeta->map;
       dmeta->unmap = smeta->unmap;
@@ -227,12 +239,12 @@ default_map (GstVideoMeta * meta, guint plane, GstMapInfo * info,
   /* ERRORS */
 no_memory:
   {
-    GST_DEBUG ("plane %u, no memory at offset %" G_GSIZE_FORMAT, plane, offset);
+    GST_ERROR ("plane %u, no memory at offset %" G_GSIZE_FORMAT, plane, offset);
     return FALSE;
   }
 cannot_map:
   {
-    GST_DEBUG ("cannot map memory range %u-%u", idx, length);
+    GST_ERROR ("cannot map memory range %u-%u", idx, length);
     return FALSE;
   }
 }
@@ -288,8 +300,8 @@ gst_buffer_add_video_meta (GstBuffer * buffer,
  * @width: the width
  * @height: the height
  * @n_planes: number of planes
- * @offset: offset of each plane
- * @stride: stride of each plane
+ * @offset: (array fixed-size=4): offset of each plane
+ * @stride: (array fixed-size=4): stride of each plane
  *
  * Attaches GstVideoMeta metadata to @buffer with the given parameters.
  *
@@ -380,6 +392,139 @@ gst_video_meta_unmap (GstVideoMeta * meta, guint plane, GstMapInfo * info)
   g_return_val_if_fail (info != NULL, FALSE);
 
   return meta->unmap (meta, plane, info);
+}
+
+static gboolean
+gst_video_meta_validate_alignment (GstVideoMeta * meta,
+    gsize plane_size[GST_VIDEO_MAX_PLANES])
+{
+  GstVideoInfo info;
+  guint i;
+
+  gst_video_info_init (&info);
+  gst_video_info_set_format (&info, meta->format, meta->width, meta->height);
+
+  if (!gst_video_info_align_full (&info, &meta->alignment, plane_size)) {
+    GST_WARNING ("Failed to align meta with its alignment");
+    return FALSE;
+  }
+
+  for (i = 0; i < GST_VIDEO_INFO_N_PLANES (&info); i++) {
+    if (GST_VIDEO_INFO_PLANE_STRIDE (&info, i) != meta->stride[i]) {
+      GST_WARNING
+          ("Stride of plane %d defined in meta (%d) is different from the one computed from the alignment (%d)",
+          i, meta->stride[i], GST_VIDEO_INFO_PLANE_STRIDE (&info, i));
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_video_meta_set_alignment:
+ * @meta: a #GstVideoMeta
+ * @alignment: a #GstVideoAlignment
+ *
+ * Set the alignment of @meta to @alignment. This function checks that
+ * the paddings defined in @alignment are compatible with the strides
+ * defined in @meta and will fail to update if they are not.
+ *
+ * Returns: %TRUE if @alignment's meta has been updated, %FALSE if not
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_video_meta_set_alignment (GstVideoMeta * meta, GstVideoAlignment alignment)
+{
+  GstVideoAlignment old;
+
+  g_return_val_if_fail (meta, FALSE);
+
+  old = meta->alignment;
+  meta->alignment = alignment;
+
+  if (!gst_video_meta_validate_alignment (meta, NULL)) {
+    /* Invalid alignment, restore the previous one */
+    meta->alignment = old;
+    return FALSE;
+  }
+
+  GST_LOG ("Set alignment on meta: padding %u-%ux%u-%u", alignment.padding_top,
+      alignment.padding_left, alignment.padding_right,
+      alignment.padding_bottom);
+
+  return TRUE;
+}
+
+/**
+ * gst_video_meta_get_plane_size:
+ * @meta: a #GstVideoMeta
+ * @plane_size: (out caller-allocates) (array fixed-size=4): array used to store the plane sizes
+ *
+ * Compute the size, in bytes, of each video plane described in @meta including
+ * any padding and alignment constraint defined in @meta->alignment.
+ *
+ * Returns: %TRUE if @meta's alignment is valid and @plane_size has been
+ * updated, %FALSE otherwise
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_video_meta_get_plane_size (GstVideoMeta * meta,
+    gsize plane_size[GST_VIDEO_MAX_PLANES])
+{
+  g_return_val_if_fail (meta, FALSE);
+  g_return_val_if_fail (plane_size, FALSE);
+
+  return gst_video_meta_validate_alignment (meta, plane_size);
+}
+
+/**
+ * gst_video_meta_get_plane_height:
+ * @meta: a #GstVideoMeta
+ * @plane_height: (out caller-allocates) (array fixed-size=4): array used to store the plane height
+ *
+ * Compute the padded height of each plane from @meta (padded size
+ * divided by stride).
+ *
+ * It is not valid to call this function with a meta associated to a
+ * TILED video format.
+ *
+ * Returns: %TRUE if @meta's alignment is valid and @plane_height has been
+ * updated, %FALSE otherwise
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_video_meta_get_plane_height (GstVideoMeta * meta,
+    guint plane_height[GST_VIDEO_MAX_PLANES])
+{
+  gsize plane_size[GST_VIDEO_MAX_PLANES];
+  guint i;
+  GstVideoInfo info;
+
+  g_return_val_if_fail (meta, FALSE);
+  g_return_val_if_fail (plane_height, FALSE);
+
+  gst_video_info_init (&info);
+  gst_video_info_set_format (&info, meta->format, meta->width, meta->height);
+  g_return_val_if_fail (!GST_VIDEO_FORMAT_INFO_IS_TILED (&info), FALSE);
+
+  if (!gst_video_meta_get_plane_size (meta, plane_size))
+    return FALSE;
+
+  for (i = 0; i < meta->n_planes; i++) {
+    if (!meta->stride[i])
+      plane_height[i] = 0;
+    else
+      plane_height[i] = plane_size[i] / meta->stride[i];
+  }
+
+  for (; i < GST_VIDEO_MAX_PLANES; i++)
+    plane_height[i] = 0;
+
+  return TRUE;
 }
 
 static gboolean
@@ -885,6 +1030,7 @@ gst_video_region_of_interest_meta_add_param (GstVideoRegionOfInterestMeta *
 /**
  * gst_video_region_of_interest_meta_get_param:
  * @meta: a #GstVideoRegionOfInterestMeta
+ * @name: a name.
  *
  * Retrieve the parameter for @meta having @name as structure name,
  * or %NULL if there is none.
@@ -999,14 +1145,18 @@ gst_video_time_code_meta_get_info (void)
  * Attaches #GstVideoTimeCodeMeta metadata to @buffer with the given
  * parameters.
  *
- * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer.
+ * Returns: (transfer none) (nullable): the #GstVideoTimeCodeMeta on @buffer, or
+ * (since 1.16) %NULL if the timecode was invalid.
  *
  * Since: 1.10
  */
 GstVideoTimeCodeMeta *
-gst_buffer_add_video_time_code_meta (GstBuffer * buffer, GstVideoTimeCode * tc)
+gst_buffer_add_video_time_code_meta (GstBuffer * buffer,
+    const GstVideoTimeCode * tc)
 {
-  g_return_val_if_fail (gst_video_time_code_is_valid (tc), NULL);
+  if (!gst_video_time_code_is_valid (tc))
+    return NULL;
+
   return gst_buffer_add_video_time_code_meta_full (buffer, tc->config.fps_n,
       tc->config.fps_d, tc->config.latest_daily_jam, tc->config.flags,
       tc->hours, tc->minutes, tc->seconds, tc->frames, tc->field_count);
@@ -1028,7 +1178,8 @@ gst_buffer_add_video_time_code_meta (GstBuffer * buffer, GstVideoTimeCode * tc)
  * Attaches #GstVideoTimeCodeMeta metadata to @buffer with the given
  * parameters.
  *
- * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer.
+ * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer, or
+ * (since 1.16) %NULL if the timecode was invalid.
  *
  * Since: 1.10
  */
@@ -1048,7 +1199,10 @@ gst_buffer_add_video_time_code_meta_full (GstBuffer * buffer, guint fps_n,
   gst_video_time_code_init (&meta->tc, fps_n, fps_d, latest_daily_jam, flags,
       hours, minutes, seconds, frames, field_count);
 
-  g_return_val_if_fail (gst_video_time_code_is_valid (&meta->tc), NULL);
+  if (!gst_video_time_code_is_valid (&meta->tc)) {
+    gst_buffer_remove_meta (buffer, (GstMeta *) meta);
+    return NULL;
+  }
 
   return meta;
 }

@@ -36,7 +36,9 @@ ${includes}
 """)
 
     HeaderPostlude = (
-    """""")
+    """
+${includes}
+""")
 
     TypeConversionsHeaderPrelude = (
     """${includes}
@@ -100,6 +102,7 @@ ${commandDeclarations}
 
     BackendDispatcherHeaderDomainHandlerObjCDeclaration = (
     """class ObjCInspector${domainName}BackendDispatcher final : public Alternate${domainName}BackendDispatcher {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ObjCInspector${domainName}BackendDispatcher(id<${objcPrefix}${domainName}DomainHandler> handler) { m_delegate = handler; }
 ${commandDeclarations}
@@ -110,16 +113,21 @@ private:
     BackendDispatcherHeaderDomainHandlerImplementation = (
     """void ObjCInspector${domainName}BackendDispatcher::${commandName}(${parameters})
 {
+    if (!${respondsToSelector}) {
+        backendDispatcher()->reportProtocolError(protocol_requestId, BackendDispatcher::MethodNotFound, "'${domainName}.${commandName}' was not found"_s);
+        backendDispatcher()->sendPendingErrors();
+        return;
+    }
+
     id errorCallback = ^(NSString *error) {
-        backendDispatcher()->reportProtocolError(requestId, BackendDispatcher::ServerError, error);
+        backendDispatcher()->reportProtocolError(protocol_requestId, BackendDispatcher::ServerError, error);
         backendDispatcher()->sendPendingErrors();
     };
 
 ${successCallback}
 ${conversions}
 ${invocation}
-}
-""")
+}""")
 
     ConfigurationCommandProperty = (
     """@property (nonatomic, retain, setter=set${domainName}Handler:) id<${objcPrefix}${domainName}DomainHandler> ${variableNamePrefix}Handler;""")
@@ -133,23 +141,22 @@ ${invocation}
     if (handler == _${variableNamePrefix}Handler)
         return;
 
-    [_${variableNamePrefix}Handler release];
-    _${variableNamePrefix}Handler = [handler retain];
+    _${variableNamePrefix}Handler = handler;
 
-    auto alternateDispatcher = std::make_unique<ObjCInspector${domainName}BackendDispatcher>(handler);
-    auto alternateAgent = std::make_unique<AlternateDispatchableAgent<${domainName}BackendDispatcher, Alternate${domainName}BackendDispatcher>>("${domainName}"_s, *_controller, WTFMove(alternateDispatcher));
-    _controller->appendExtraAgent(WTFMove(alternateAgent));
+    auto alternateDispatcher = makeUnique<ObjCInspector${domainName}BackendDispatcher>(handler);
+    auto alternateAgent = makeUnique<AlternateDispatchableAgent<${domainName}BackendDispatcher, Alternate${domainName}BackendDispatcher>>("${domainName}"_s, *_controller, WTFMove(alternateDispatcher));
+    _controller->registerAlternateAgent(WTFMove(alternateAgent));
 }
 
 - (id<${objcPrefix}${domainName}DomainHandler>)${variableNamePrefix}Handler
 {
-    return _${variableNamePrefix}Handler;
+    return _${variableNamePrefix}Handler.get();
 }""")
 
     ConfigurationGetterImplementation = (
     """- (${objcPrefix}${domainName}DomainEventDispatcher *)${variableNamePrefix}EventDispatcher
 {
     if (!_${variableNamePrefix}EventDispatcher)
-        _${variableNamePrefix}EventDispatcher = [[${objcPrefix}${domainName}DomainEventDispatcher alloc] initWithController:_controller];
-    return _${variableNamePrefix}EventDispatcher;
+        _${variableNamePrefix}EventDispatcher = adoptNS([[${objcPrefix}${domainName}DomainEventDispatcher alloc] initWithController:_controller]);
+    return _${variableNamePrefix}EventDispatcher.get();
 }""")

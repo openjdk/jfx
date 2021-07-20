@@ -26,8 +26,6 @@
 #include "config.h"
 #include "SVGToOTFFontConversion.h"
 
-#if ENABLE(SVG_FONTS)
-
 #include "CSSStyleDeclaration.h"
 #include "ElementChildIterator.h"
 #include "Glyph.h"
@@ -39,6 +37,8 @@
 #include "SVGPathParser.h"
 #include "SVGPathStringSource.h"
 #include "SVGVKernElement.h"
+#include <wtf/Optional.h>
+#include <wtf/Vector.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -100,11 +100,11 @@ private:
             : m_converter(other.m_converter)
             , m_baseOfOffset(other.m_baseOfOffset)
             , m_location(other.m_location)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             , m_active(other.m_active)
 #endif
         {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             other.m_active = false;
 #endif
         }
@@ -115,7 +115,7 @@ private:
             size_t delta = m_converter.m_result.size() - m_baseOfOffset;
             ASSERT(delta < std::numeric_limits<uint16_t>::max());
             m_converter.overwrite16(m_location, delta);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             m_active = false;
 #endif
         }
@@ -129,7 +129,7 @@ private:
         SVGToOTFFontConverter& m_converter;
         const size_t m_baseOfOffset;
         const size_t m_location;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         bool m_active = { true };
 #endif
     };
@@ -227,8 +227,8 @@ private:
     void addCodepointRanges(const UnicodeRanges&, HashSet<Glyph>& glyphSet) const;
     void addCodepoints(const HashSet<String>& codepoints, HashSet<Glyph>& glyphSet) const;
     void addGlyphNames(const HashSet<String>& glyphNames, HashSet<Glyph>& glyphSet) const;
-    void addKerningPair(Vector<KerningData>&, const SVGKerningPair&) const;
-    template<typename T> size_t appendKERNSubtable(bool (T::*buildKerningPair)(SVGKerningPair&) const, uint16_t coverage);
+    void addKerningPair(Vector<KerningData>&, SVGKerningPair&&) const;
+    template<typename T> size_t appendKERNSubtable(Optional<SVGKerningPair> (T::*buildKerningPair)() const, uint16_t coverage);
     size_t finishAppendingKERNSubtable(Vector<KerningData>, uint16_t coverage);
 
     void appendLigatureSubtable(size_t subtableRecordLocation);
@@ -635,7 +635,7 @@ void SVGToOTFFontConverter::appendCFFTable()
     append32(1 + sizeOfTopIndex); // 1-index offset just past end of DICT data
 
     // DICT information
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     unsigned topDictStart = m_result.size();
 #endif
     m_result.append(operand32Bit);
@@ -715,13 +715,13 @@ void SVGToOTFFontConverter::appendCFFTable()
 
 Glyph SVGToOTFFontConverter::firstGlyph(const Vector<Glyph, 1>& v, UChar32 codepoint) const
 {
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
     UNUSED_PARAM(codepoint);
 #endif
     ASSERT(!v.isEmpty());
     if (v.isEmpty())
         return 0;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto codePoints = StringView(m_glyphs[v[0]].codepoints).codePoints();
     auto codePointsIterator = codePoints.begin();
     ASSERT(codePointsIterator != codePoints.end());
@@ -1038,7 +1038,7 @@ void SVGToOTFFontConverter::addGlyphNames(const HashSet<String>& glyphNames, Has
     }
 }
 
-void SVGToOTFFontConverter::addKerningPair(Vector<KerningData>& data, const SVGKerningPair& kerningPair) const
+void SVGToOTFFontConverter::addKerningPair(Vector<KerningData>& data, SVGKerningPair&& kerningPair) const
 {
     HashSet<Glyph> glyphSet1;
     HashSet<Glyph> glyphSet2;
@@ -1057,13 +1057,12 @@ void SVGToOTFFontConverter::addKerningPair(Vector<KerningData>& data, const SVGK
     }
 }
 
-template<typename T> inline size_t SVGToOTFFontConverter::appendKERNSubtable(bool (T::*buildKerningPair)(SVGKerningPair&) const, uint16_t coverage)
+template<typename T> inline size_t SVGToOTFFontConverter::appendKERNSubtable(Optional<SVGKerningPair> (T::*buildKerningPair)() const, uint16_t coverage)
 {
     Vector<KerningData> kerningData;
     for (auto& element : childrenOfType<T>(m_fontElement)) {
-        SVGKerningPair kerningPair;
-        if ((element.*buildKerningPair)(kerningPair))
-            addKerningPair(kerningData, kerningPair);
+        if (auto kerningPair = (element.*buildKerningPair)())
+            addKerningPair(kerningData, WTFMove(*kerningPair));
     }
     return finishAppendingKERNSubtable(WTFMove(kerningData), coverage);
 }
@@ -1106,7 +1105,7 @@ void SVGToOTFFontConverter::appendKERNTable()
     append16(0); // Version
     append16(2); // Number of subtables
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto subtablesOffset = m_result.size();
 #endif
 
@@ -1574,5 +1573,3 @@ Optional<Vector<char>> convertSVGToOTFFont(const SVGFontElement& element)
 }
 
 }
-
-#endif // ENABLE(SVG_FONTS)

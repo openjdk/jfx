@@ -67,6 +67,7 @@ class Metadata
         WTF_MAKE_NONCOPYABLE(Metadata);
 
     public:
+        #{op.opcodeID}
         Metadata(const #{op.capitalized_name}&#{" __op" if inits})#{inits} { }
 
 #{fields}
@@ -82,11 +83,6 @@ EOF
     Metadata& metadata(CodeBlock* codeBlock) const
     {
         return codeBlock->metadata<Metadata>(opcodeID, #{Metadata.field_name});
-    }
-
-    Metadata& metadata(ExecState* exec) const
-    {
-        return metadata(exec->codeBlock());
     }
 EOF
     end
@@ -112,9 +108,13 @@ EOF
         EOF
     end
 
+    def emitter_local_name
+        "__metadataID"
+    end
+
     def emitter_local
         unless @@emitter_local
-            @@emitter_local = Argument.new("__metadataID", :unsigned, -1)
+            @@emitter_local = Argument.new(emitter_local_name, :unsigned, -1)
         end
 
         return @@emitter_local

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,12 @@
 #include <wtf/UnalignedAccess.h>
 
 namespace WTF {
+
+template<typename CharacterType> inline bool isLatin1(CharacterType character)
+{
+    using UnsignedCharacterType = typename std::make_unsigned<CharacterType>::type;
+    return static_cast<UnsignedCharacterType>(character) <= static_cast<UnsignedCharacterType>(0xFF);
+}
 
 using CodeUnitMatchFunction = bool (*)(UChar);
 
@@ -166,7 +172,7 @@ ALWAYS_INLINE bool equal(const UChar* aUChar, const UChar* bUChar, unsigned leng
 
     return true;
 }
-#elif PLATFORM(IOS_FAMILY) && WTF_ARM_ARCH_AT_LEAST(7) && !ASAN_ENABLED
+#elif OS(DARWIN) && WTF_ARM_ARCH_AT_LEAST(7) && !ASAN_ENABLED
 ALWAYS_INLINE bool equal(const LChar* a, const LChar* b, unsigned length)
 {
     bool isEqual = false;
@@ -466,6 +472,14 @@ size_t findIgnoringASCIICase(const SearchCharacterType* source, const MatchChara
     return notFound;
 }
 
+inline size_t findIgnoringASCIICaseWithoutLength(const char* source, const char* matchCharacters)
+{
+    unsigned searchLength = strlen(source);
+    unsigned matchLength = strlen(matchCharacters);
+
+    return matchLength < searchLength ? findIgnoringASCIICase(source, matchCharacters, 0, searchLength, matchLength) : notFound;
+}
+
 template<typename StringClassA, typename StringClassB>
 size_t findIgnoringASCIICase(const StringClassA& source, const StringClassB& stringToFind, unsigned startOffset)
 {
@@ -540,7 +554,7 @@ ALWAYS_INLINE size_t find(const UChar* characters, unsigned length, LChar matchC
 
 inline size_t find(const LChar* characters, unsigned length, UChar matchCharacter, unsigned index = 0)
 {
-    if (matchCharacter & ~0xFF)
+    if (!isLatin1(matchCharacter))
         return notFound;
     return find(characters, length, static_cast<LChar>(matchCharacter), index);
 }
@@ -556,11 +570,12 @@ size_t findCommon(const StringClass& haystack, const StringClass& needle, unsign
         return WTF::find(haystack.characters16(), haystack.length(), needle[0], start);
     }
 
-    if (!needleLength)
-        return std::min(start, haystack.length());
-
     if (start > haystack.length())
         return notFound;
+
+    if (!needleLength)
+        return start;
+
     unsigned searchLength = haystack.length() - start;
     if (needleLength > searchLength)
         return notFound;
@@ -597,7 +612,7 @@ template<typename CharacterType, unsigned lowercaseLettersLength> inline bool eq
 
 template<typename StringClass> bool inline hasPrefixWithLettersIgnoringASCIICaseCommon(const StringClass& string, const char* lowercaseLetters, unsigned length)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     ASSERT(*lowercaseLetters);
     for (const char* letter = lowercaseLetters; *letter; ++letter)
         ASSERT(toASCIILowerUnchecked(*letter) == *letter);
@@ -658,3 +673,4 @@ template<unsigned lowercaseLettersLength> inline bool equalLettersIgnoringASCIIC
 
 using WTF::equalIgnoringASCIICase;
 using WTF::equalLettersIgnoringASCIICase;
+using WTF::isLatin1;

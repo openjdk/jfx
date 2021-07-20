@@ -31,6 +31,8 @@ namespace WebCore {
 
 class ScriptElementCachedScriptFetcher : public CachedScriptFetcher {
 public:
+    static const ASCIILiteral defaultCrossOriginModeForModule;
+
     virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, String&& integrity) const;
 
     virtual bool isClassicScript() const = 0;
@@ -39,8 +41,8 @@ public:
     const String& crossOriginMode() const { return m_crossOriginMode; }
 
 protected:
-    ScriptElementCachedScriptFetcher(const String& nonce, const String& crossOriginMode, const String& charset, const AtomicString& initiatorName, bool isInUserAgentShadowTree)
-        : CachedScriptFetcher(nonce, charset, initiatorName, isInUserAgentShadowTree)
+    ScriptElementCachedScriptFetcher(const String& nonce, ReferrerPolicy policy, const String& crossOriginMode, const String& charset, const AtomString& initiatorName, bool isInUserAgentShadowTree)
+        : CachedScriptFetcher(nonce, policy, charset, initiatorName, isInUserAgentShadowTree)
         , m_crossOriginMode(crossOriginMode)
     {
     }

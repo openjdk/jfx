@@ -32,26 +32,26 @@
 
 namespace JSC { namespace B3 {
 
-class JS_EXPORT_PRIVATE AtomicValue : public MemoryValue {
+class JS_EXPORT_PRIVATE AtomicValue final : public MemoryValue {
 public:
     static bool accepts(Kind kind)
     {
-        return isAtomic(kind.opcode());
+        return isAtom(kind.opcode());
     }
 
-    ~AtomicValue();
+    ~AtomicValue() final;
 
     Type accessType() const { return child(0)->type(); }
 
     Width accessWidth() const { return m_width; }
 
-protected:
-    void dumpMeta(CommaPrinter&, PrintStream&) const override;
-
-    Value* cloneImpl() const override;
+    B3_SPECIALIZE_VALUE_FOR_FINAL_SIZE_FIXED_CHILDREN
 
 private:
+    void dumpMeta(CommaPrinter&, PrintStream&) const final;
+
     friend class Procedure;
+    friend class Value;
 
     enum AtomicValueRMW { AtomicValueRMWTag };
     enum AtomicValueCAS { AtomicValueCASTag };

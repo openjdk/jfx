@@ -29,31 +29,76 @@
 
 #include "FormattingState.h"
 #include "InlineItem.h"
-#include "InlineRun.h"
+#include "InlineLineBox.h"
+#include "InlineLineGeometry.h"
+#include "InlineLineRun.h"
 #include <wtf/IsoMalloc.h>
-#include <wtf/OptionSet.h>
 
 namespace WebCore {
 namespace Layout {
+
+using InlineItems = Vector<InlineItem>;
+using InlineLines = Vector<InlineLineGeometry, 10>;
+using InlineLineBoxes = Vector<LineBox, 10>;
+using InlineLineRuns = Vector<LineRun>;
 
 // InlineFormattingState holds the state for a particular inline formatting context tree.
 class InlineFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingState);
 public:
     InlineFormattingState(Ref<FloatingState>&&, LayoutState&);
-    virtual ~InlineFormattingState();
+    ~InlineFormattingState();
 
-    InlineContent& inlineContent() { return m_inlineContent; }
-    InlineItem* lastInlineItem() const { return m_inlineContent.isEmpty() ? nullptr : m_inlineContent.last().get(); }
+    InlineItems& inlineItems() { return m_inlineItems; }
+    const InlineItems& inlineItems() const { return m_inlineItems; }
+    void addInlineItem(InlineItem&& inlineItem) { m_inlineItems.append(WTFMove(inlineItem)); }
 
-    // Temp
-    InlineRuns& inlineRuns() { return m_inlineRuns; }
-    void appendInlineRun(InlineRun inlineRun) { m_inlineRuns.append(inlineRun); }
+    const InlineLines& lines() const { return m_lines; }
+    InlineLines& lines() { return m_lines; }
+    void addLine(const InlineLineGeometry& line) { m_lines.append(line); }
+
+    const InlineLineBoxes& lineBoxes() const { return m_lineBoxes; }
+    void addLineBox(LineBox&& lineBox) { m_lineBoxes.append(WTFMove(lineBox)); }
+
+    const InlineLineRuns& lineRuns() const { return m_lineRuns; }
+    InlineLineRuns& lineRuns() { return m_lineRuns; }
+    void addLineRun(LineRun&& run) { m_lineRuns.append(WTFMove(run)); }
+
+    void setClearGapAfterLastLine(InlineLayoutUnit verticalGap);
+    InlineLayoutUnit clearGapAfterLastLine() const { return m_clearGapAfterLastLine; }
+
+    void clearLineAndRuns();
+    void shrinkToFit();
 
 private:
-    InlineContent m_inlineContent;
-    InlineRuns m_inlineRuns;
+    // Cacheable input to line layout.
+    InlineItems m_inlineItems;
+    InlineLines m_lines;
+    InlineLineBoxes m_lineBoxes;
+    InlineLineRuns m_lineRuns;
+    InlineLayoutUnit m_clearGapAfterLastLine { 0 };
 };
+
+inline void InlineFormattingState::setClearGapAfterLastLine(InlineLayoutUnit verticalGap)
+{
+    ASSERT(verticalGap >= 0);
+    m_clearGapAfterLastLine = verticalGap;
+}
+
+inline void InlineFormattingState::clearLineAndRuns()
+{
+    m_lines.clear();
+    m_lineBoxes.clear();
+    m_lineRuns.clear();
+    m_clearGapAfterLastLine = { };
+}
+
+inline void InlineFormattingState::shrinkToFit()
+{
+    m_lines.shrinkToFit();
+    m_lineBoxes.shrinkToFit();
+    m_lineRuns.shrinkToFit();
+}
 
 }
 }

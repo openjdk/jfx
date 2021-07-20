@@ -28,18 +28,34 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "InlineItem.h"
-#include "InlineRunProvider.h"
+#include "LayoutUnits.h"
+#include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
+
+class RenderStyle;
+
 namespace Layout {
+
+class InlineTextBox;
+class InlineTextItem;
 
 class TextUtil {
 public:
-    static LayoutUnit width(const InlineItem&, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft);
-    static Optional<ItemPosition> hyphenPositionBefore(const InlineItem&, ItemPosition from, unsigned length);
+    static InlineLayoutUnit width(const InlineTextItem&, InlineLayoutUnit contentLogicalLeft);
+    static InlineLayoutUnit width(const InlineTextItem&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
+    static InlineLayoutUnit width(const InlineTextBox&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
 
-private:
-    static LayoutUnit fixedPitchWidth(String, const RenderStyle&, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft);
+    struct SplitData {
+        unsigned start { 0 };
+        unsigned length { 0 };
+        InlineLayoutUnit logicalWidth { 0 };
+    };
+    static SplitData split(const InlineTextItem&, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft);
+    static unsigned findNextBreakablePosition(LazyLineBreakIterator&, unsigned startPosition, const RenderStyle&);
+
+    static bool shouldPreserveSpacesAndTabs(const Box&);
+    static bool shouldPreserveNewline(const Box&);
 };
 
 }

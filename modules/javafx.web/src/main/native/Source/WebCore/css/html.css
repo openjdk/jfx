@@ -25,7 +25,7 @@
 
 html {
     display: block;
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: text;
 #endif
 }
@@ -106,11 +106,22 @@ hr {
     border-width: 1px;
 }
 
+/* media elements */
+
+body:-webkit-full-page-media {
+    background-color: rgb(38, 38, 38);
+}
+
 video {
     object-fit: contain;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     -webkit-tap-highlight-color: transparent;
 #endif
+}
+
+audio {
+    width: 200px;
+    height: 25px;
 }
 
 /* heading elements */
@@ -291,6 +302,16 @@ li {
     text-align: -webkit-match-parent;
 }
 
+/* FIXME: this should also match ::before::marker and ::after::marker but we don't support
+   this yet. When we do, we can remove the code specific to ::before and ::after in
+   RenderListItem::computeMarkerStyle(), see bugs.webkit.org/b/218897. */
+::marker {
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+    white-space: pre;
+    text-transform: none;
+}
+
 ul ul, ol ul {
     list-style-type: circle;
 }
@@ -382,14 +403,12 @@ input[type="hidden"] {
 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 textarea,
-input[type="range"],
 #endif
-input,
-input:matches([type="password"], [type="search"]) {
+input {
     -webkit-appearance: textfield;
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: text;
-    background-color: -apple-system-control-background;
+    background-color: -webkit-control-background;
 #else
     background-color: white;
 #endif
@@ -407,10 +426,9 @@ input:matches([type="password"], [type="search"]) {
     cursor: auto;
 }
 
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
 @media (prefers-dark-interface) {
-    input,
-    input:matches([type="password"], [type="search"]) {
+    input {
         background-color: transparent;
     }
 }
@@ -464,71 +482,23 @@ input[type="search"]::-webkit-search-results-button {
     flex: none;
 }
 
-#if defined(ENABLE_INPUT_TYPE_DATE) && ENABLE_INPUT_TYPE_DATE
-input[type="date"] {
+#if defined(ENABLE_DATE_AND_TIME_INPUT_TYPES) && ENABLE_DATE_AND_TIME_INPUT_TYPES
+input:matches([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]) {
+    -webkit-appearance: textfield;
     align-items: center;
-    -webkit-appearance: menulist-button;
     display: -webkit-inline-flex;
     overflow: hidden;
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    width: 10em;
-#endif
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE) && ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE
-input[type="datetime"] {
-    align-items: center;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     -webkit-appearance: menulist-button;
-    display: -webkit-inline-flex;
-    overflow: hidden;
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    width: 10em;
+#else
+    -webkit-appearance: textfield;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+    /* FIXME: Font features should be defined in a @font-feature-values rule, so that the feature setting is only applied to the system font. */
+    /* "ss03" enables the raised colon separator on the system font. */
+    font-feature-settings: "ss03";
 #endif
 }
-#endif
-#if defined(ENABLE_INPUT_TYPE_DATETIMELOCAL) && ENABLE_INPUT_TYPE_DATETIMELOCAL
-input[type="datetime-local"] {
-    align-items: center;
-    -webkit-appearance: menulist-button;
-    display: -webkit-inline-flex;
-    overflow: hidden;
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    width: 10em;
-#endif
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_MONTH) && ENABLE_INPUT_TYPE_MONTH
-input[type="month"] {
-    align-items: center;
-    -webkit-appearance: menulist-button;
-    display: -webkit-inline-flex;
-    overflow: hidden;
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    width: 10em;
-#endif
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_TIME) && ENABLE_INPUT_TYPE_TIME
-input[type="time"] {
-    align-items: center;
-    -webkit-appearance: menulist-button;
-    display: -webkit-inline-flex;
-    overflow: hidden;
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    width: 10em;
-#endif
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_WEEK) && ENABLE_INPUT_TYPE_WEEK
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-input[type="week"] {
-    align-items: center;
-    -webkit-appearance: menulist-button;
-    display: -webkit-inline-flex;
-    overflow: hidden;
-    width: 10em;
-}
-#endif
 #endif
 
 input::-webkit-date-and-time-value {
@@ -538,6 +508,68 @@ input::-webkit-date-and-time-value {
     margin: 1px 24px 1px 4px;
     white-space: pre;
 #endif
+}
+
+/* FIXME: Styling inner elements of the date control should be specific to input[type="date"]. */
+
+input::-webkit-datetime-edit {
+    display: inline-block;
+    overflow: hidden;
+    padding: 1px;
+}
+
+input::-webkit-datetime-edit-fields-wrapper {
+    display: inline-block;
+    white-space: pre;
+}
+
+input::-webkit-datetime-edit-year-field,
+input::-webkit-datetime-edit-month-field,
+input::-webkit-datetime-edit-day-field,
+input::-webkit-datetime-edit-hour-field,
+input::-webkit-datetime-edit-minute-field,
+input::-webkit-datetime-edit-second-field,
+input::-webkit-datetime-edit-millisecond-field,
+input::-webkit-datetime-edit-meridiem-field {
+    display: inline-block;
+    font: inherit !important;
+    padding: 1px;
+    text-align: center;
+}
+
+input::-webkit-datetime-edit-year-field:focus,
+input::-webkit-datetime-edit-month-field:focus,
+input::-webkit-datetime-edit-day-field:focus,
+input::-webkit-datetime-edit-hour-field:focus,
+input::-webkit-datetime-edit-minute-field:focus,
+input::-webkit-datetime-edit-second-field:focus,
+input::-webkit-datetime-edit-millisecond-field:focus,
+input::-webkit-datetime-edit-meridiem-field:focus {
+#if defined(WTF_PLATFORM_COCOA) && WTF_PLATFORM_COCOA
+    background-color: -apple-system-control-accent;
+    border-radius: 3px;
+    color: white;
+#else
+    background-color: highlight;
+    color: highlighttext;
+#endif
+    outline: none;
+}
+
+input[disabled]::-webkit-datetime-edit-year-field,
+input[disabled]::-webkit-datetime-edit-month-field,
+input[disabled]::-webkit-datetime-edit-day-field,
+input[disabled]::-webkit-datetime-edit-hour-field,
+input[disabled]::-webkit-datetime-edit-minute-field,
+input[disabled]::-webkit-datetime-edit-second-field,
+input[disabled]::-webkit-datetime-edit-millisecond-field,
+input[disabled]::-webkit-datetime-edit-meridiem-field,
+input[disabled]::-webkit-datetime-edit-text {
+    color: GrayText;
+}
+
+input::-webkit-datetime-edit-text {
+    display: inline;
 }
 
 input::-webkit-inner-spin-button {
@@ -566,9 +598,9 @@ input::-webkit-strong-password-auto-fill-button {
 }
 
 input::-webkit-credentials-auto-fill-button {
-    -webkit-mask-image: -webkit-image-set(url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAMCAYAAAC9QufkAAAAAXNSR0IB2cksfwAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADyWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE1LTA0LTAzVDE2OjA2OjI1PC94bXA6TW9kaWZ5RGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBQaG90b3Nob3AgQ0MgMjAxNCAoTWFjaW50b3NoKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAxNS0wNC0wM1QxNjowMzoxNjwveG1wOkNyZWF0ZURhdGU+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpSZXNvbHV0aW9uVW5pdD4yPC90aWZmOlJlc29sdXRpb25Vbml0PgogICAgICAgICA8dGlmZjpYUmVzb2x1dGlvbj43MjwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT4xPC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4xNTwvZXhpZjpQaXhlbFhEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOlBpeGVsWURpbWVuc2lvbj4xMjwvZXhpZjpQaXhlbFlEaW1lbnNpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoz37ZdAAAA5ElEQVQoFY2RsQ5BQRBFd9EgEYXv8QlaEqVGpfUPao3oKXyEQiJI1ERESaGmwnPu2k2QJ2uS82Z2du7s7jyTJInBWnCABeygoXwM6kwN1GELFo7wgOo/4gmFEovzWzyMiTMUlyFYJQT4wlucGko8T90xZv0j/5EusVpCuLr8FPK6NraHPmT8Oks8gI2bKEEOZhAauEJf3PX5Eb4ImpEG2gni0NWJvwdFYRvuoIHeoOUa++56+wpSxb6myf4J6qG5VWCt1ckPvHsksf531HSiDJ1VV9n15eJfJ+YkvWcMF+jFZa+KJ554xIc+jempAAAAAElFTkSuQmCC") 1x, url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAYCAYAAADtaU2/AAAAAXNSR0IB2cksfwAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADyWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE1LTA0LTAzVDE2OjA2OjIxPC94bXA6TW9kaWZ5RGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBQaG90b3Nob3AgQ0MgMjAxNCAoTWFjaW50b3NoKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAxNS0wNC0wM1QxNjowMzoyNTwveG1wOkNyZWF0ZURhdGU+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpSZXNvbHV0aW9uVW5pdD4yPC90aWZmOlJlc29sdXRpb25Vbml0PgogICAgICAgICA8dGlmZjpYUmVzb2x1dGlvbj43MjwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT4xPC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4zMDwvZXhpZjpQaXhlbFhEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOlBpeGVsWURpbWVuc2lvbj4yNDwvZXhpZjpQaXhlbFlEaW1lbnNpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgpGMDB3AAAB8UlEQVRIDbVWO07DQBS0QSJUNJQcAloOQMEZ6InSUMEBkFJEQihQkQKJklQUlFBQQoH4SHAKJDokAgIz4+wLs5u15RjypOF9dvaN197dkCS/NodwC7gG3hxuXI1jUcuyLKkDa7aE4B7IHM7hCcs5Rs6Y1RHlHBpXo6JXeXX45xLOxB8QN2QsD+sKz2B2E1iRhqnEsxIvI96U/M8hv6mtyjxXehGpk+tZ3RVzdQOgcPN4KkPuvNbse2mtSsxXPYl9TkIu41L4rowQjD0Fee2UwqcTzA65/TRNB0CzSg/ygHegT34D4FGxjVXkHx0XbmQfiIzfKtto4LWEy3m58XLQs2zNzPPByAltGwXj0EfFUecbUd4O8pFxZ98CSrC4bNfvypxvxBu6cubAl3DaRSfBxNRjXtxckw5GjU+RXJweUNGOPRTqnrWRWQP1HkkTaRSK98CLioYr5vV4BqigxarlxSbsmu0XzO8qLxRmw/WCiRyLmjYEgTfhEWAPTM88VV4ozDP9HEyyBijHLdKQ4l2AR+YAGBMNhcFJVgETU8+xqIXCVXNtxm9cdJyU58VVhUKe/khwB+55XaeYqDC/zdoUtbzWFDPj7fQCLFjB+Vf4xaA2SvkK65iumLvwJNLkOFL79xJXfQhwlQTjsnu61r+2fEs/b4ZbzrEPMzEAAAAASUVORK5CYII=") 2x);
-    -webkit-mask-size: 15px 12px;
-    width: 15px;
+    -webkit-mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g><path d="M 16 3.5 C 16 2.672 16.672 2 17.5 2 C 18.3 2 19 2.7 19 3.5 C 19 4.3 18.3 5 17.5 5 C 16.7 5 16 4.3 16 3.5 Z M 11 6.5 C 11 10.1 13.9 13 17.5 13 C 21.1 13 24 10.1 24 6.5 C 24 2.9 21.1 0 17.5 0 C 13.9 0 11 2.9 11 6.5 Z"/><path d="M 20 17.3 L 20 18.6 L 20.9 19.9 C 21 20 21 20 21 20 L 17.7 23.8 C 17.7 23.8 17.7 23.8 17.7 23.8 C 17.5 23.9 17.4 23.9 17.3 23.8 L 15 21 L 15 11 L 20 11 L 20 14.8 L 21 15.9 C 21 16 21 16 20.9 16.1 L 20 17.3 Z M 17 13 L 17 21.3 L 17.5 21.8 L 18 21.3 L 18 13 L 17 13 Z"/></g></svg>');
+    -webkit-mask-size: 22px 12px;
+    width: 22px;
     height: 12px;
     margin-left: 3px;
     margin-right: 2px;
@@ -586,7 +618,11 @@ input::-webkit-credentials-auto-fill-button:active {
 }
 
 input::-webkit-contacts-auto-fill-button {
-    -webkit-mask-image: -webkit-image-set(url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAMCAYAAABm+U3GAAAAAXNSR0IArs4c6QAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADzWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE2LTAzLTE2VDE0OjM4OjM5PC94bXA6TW9kaWZ5RGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBQaG90b3Nob3AgQ0MgMjAxNSAoTWFjaW50b3NoKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAxNS0wNC0wM1QxNjowMzoxNjwveG1wOkNyZWF0ZURhdGU+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpSZXNvbHV0aW9uVW5pdD4yPC90aWZmOlJlc29sdXRpb25Vbml0PgogICAgICAgICA8dGlmZjpYUmVzb2x1dGlvbj43MjwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT42NTUzNTwvZXhpZjpDb2xvclNwYWNlPgogICAgICAgICA8ZXhpZjpQaXhlbFhEaW1lbnNpb24+MjI8L2V4aWY6UGl4ZWxYRGltZW5zaW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFlEaW1lbnNpb24+MTI8L2V4aWY6UGl4ZWxZRGltZW5zaW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KDsFf/AAAALpJREFUOMtjYMAEjECcAcTXgPgBEPcBMQ8DHvD//38MjA0UgtSi4UpqGDwdi8GTqGFwEz1dPJkaBttjMdgah5l3gHgKEDNBDWMG4plAfB2XI14hGfoEj2PLoWqWATE3EK8G4n9AnIdLwyQkg7sY8ANQ0vwLxK+B+A8QJ+MKCnUgPoZk8D4gFiVgeDQQPwficPQwFoCmhudYwheGQeHZAFVLVORpAPFLPAai4xdQXxE0eDYJhsLwNEIGAwBaGtf92KSJygAAAABJRU5ErkJggg==") 1x, url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAYCAYAAACBbx+6AAAAAXNSR0IArs4c6QAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADzWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE2LTAzLTE2VDE0OjM4OjQ5PC94bXA6TW9kaWZ5RGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBQaG90b3Nob3AgQ0MgMjAxNSAoTWFjaW50b3NoKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAxNS0wNC0wM1QxNjowMzoyNTwveG1wOkNyZWF0ZURhdGU+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpSZXNvbHV0aW9uVW5pdD4yPC90aWZmOlJlc29sdXRpb25Vbml0PgogICAgICAgICA8dGlmZjpYUmVzb2x1dGlvbj43MjwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT42NTUzNTwvZXhpZjpDb2xvclNwYWNlPgogICAgICAgICA8ZXhpZjpQaXhlbFhEaW1lbnNpb24+NDQ8L2V4aWY6UGl4ZWxYRGltZW5zaW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFlEaW1lbnNpb24+MjQ8L2V4aWY6UGl4ZWxZRGltZW5zaW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KZQbeMQAAAZxJREFUWMPNlrFKA0EQhhMUBVErCy0ECxFUECzEWt9ALNMbDkv1AQSLgEhEEG0sBAsbEYKFj6AIVtoJQTClBALRmBjXf2AP1mNvM3vZizvwwR3szX0sszObyfBjFhyBV1AFJbAGBrkJhBB/npPAiT4QgBb9R8MbmPFJ+DhGVOXKF+F+UGcI130RHmbIhoz4UhJNhmxL1roXwmWG8IsvJTEEnhnCj77s8LRFDU9aCF+CL5BnSuZBQ35njCyoMGQrci1XWD0XQQfZQFnb5JTeBUP43LKGtyPfB4adVdftcP5D7erDIPsJRm0PHWJXyfEDchHZHGgra/a4XYLiwSB8l/QugSgoedqhtEa2YNPWKA4MwvvdXH400qdxsjbCEzFlUQNj3d7WDBtSTDI4KAbAtyZhg9MdGMKU4ySSm96zSYXnDSUx5eI+LKWLsnUd6mQ7CdPkWgAb4MkgfA/Wwfh/TbplOVFqFlNOvcyfgaVeCM+B6wSScdyAxbSEN+VsF46hg7rlWnhVThqREpR7xaXwbYqyISWXwtUeCL+7Ev4FRky1YsGhhMUAAAAASUVORK5CYII=") 2x);
+#if (defined(HAVE_ALTERNATE_ICONS) && HAVE_ALTERNATE_ICONS)
+    -webkit-mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 12 24 C 18.5647 24 24 18.5529 24 12 C 24 5.4353 18.553 0 11.9883 0 C 5.4353 0 0 5.4353 0 12 C 0 18.5529 5.4471 24 12 24 Z M 12 16.0118 C 8.4706 16.0118 5.7412 17.2706 4.5529 18.6823 C 2.9647 16.9176 2.0118 14.5765 2.0118 12 C 2.0118 6.447 6.4353 2 11.9883 2 C 17.5412 2 21.9883 6.447 22 12 C 22.0119 14.5765 21.0471 16.9176 19.4589 18.6941 C 18.2706 17.2823 15.5412 16.0118 12 16.0118 Z M 12 14.0118 C 14.2588 14.0353 16.0353 12.1059 16.0353 9.5765 C 16.0353 7.2 14.2588 5.2235 12 5.2235 C 9.7412 5.2235 7.9529 7.2 7.9647 9.5765 C 7.9765 12.1059 9.7412 13.9882 12 14.0118 Z"/></svg>');
+#else
+    -webkit-mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="11" fill="none" stroke="black" stroke-width="2"/><path d="M 12 11.5 C 10.3 11.5 9 10.1 9 8.2 C 9 6.5 10.3 5 12 5 C 13.6 5 15 6.5 15 8.2 C 15 10.1 13.6 11.5 12 11.5 Z M 6.6 18 C 6.2 18 6 17.7 6 17.4 C 6 16.2 7.9 13 12 13 C 16.1 13 18 16.2 18 17.4 C 18 17.7 17.8 18 17.4 18 L 6.6 18 Z"/></svg>');
+#endif
     -webkit-mask-size: 22px 12px;
     width: 22px;
     height: 12px;
@@ -606,7 +642,7 @@ input::-webkit-contacts-auto-fill-button:active {
 }
 
 input::-webkit-credit-card-auto-fill-button {
-    -webkit-mask-image: -webkit-image-set(url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAYCAYAAACBbx+6AAAAAXNSR0IArs4c6QAAAeBJREFUWAntlrtOAkEUhmFZlhgwAQswkCgF0HCRkBAkuwEKex/Ays7aV/AR7K19ACspLLSxNVb2tlYWihc8P9mfDBtuq0OEhEnImTlzzjc/Z2dnJxBYt3UFVrwC6XR6p1arXVuW9S5/pa/jBxaYYGsvj4C7OkSOY1Sr1RvtglnZSqXi6IK7rH4oFPrUxVQ53AaqT0d/IVxTUYYFlr4ZS6/QI/DfBLdarXO8P47jXIi1PLqGww1pzWbzErGdTucME9xri7LDxdVONBp95dr1ev0KwtR59GOx2KZ70gy0pVKpZ/gpFH2dbSq33W6fBoPBb1lwEAdhEEgBiURiq1gs3nPeMIwveRrHmJ8KJuAXdiZXtsUJhFADBEJoMpnczufzD/Sbpvlh2/YRNcwEM1C1ctbeEkjr+hg2FxdCIIgMCM1ms08cRyKRt0ajcUgo7FxgNcHtM89rGUo/xxMtBEGYBDBnYLHP5Ut84E1kkNc/a8w8r2Ue/RxPtRCmvojxePylVCo1xyX5AhMwbkuUy+U7zov1zRWB+9gOuVzusVAo7Cmska5v8Ej25MFCuIYcyD2s6V5YJi/vY0YqbSNcLj84AfS2lbteuhf4Lj59Ugo+xj/ZcDjcQyEymcyu3vKuaYuvwA+kHP60wc4u3QAAAABJRU5ErkJggg==") 2x);
+    -webkit-mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="1" y="4" width="22" height="16" rx="2" fill="none" stroke="black" stroke-width="2"/><rect x="2" y="8" width="20" height="3"/><rect x="3" y="12" width="5" height="4" rx="1"/></svg>');
     -webkit-mask-size: 22px 12px;
     width: 22px;
     height: 12px;
@@ -665,23 +701,29 @@ keygen::-webkit-keygen-select {
 textarea {
     -webkit-appearance: textarea;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: text;
-    background-color: -apple-system-control-background;
+    background-color: -webkit-control-background;
 #else
     background-color: white;
 #endif
     border: 1px solid;
     -webkit-rtl-ordering: logical;
     -webkit-user-select: text;
+    padding: 2px;
 #else
     -webkit-nbsp-mode: space;
     -webkit-line-break: after-white-space;
+
+    /* On iOS we want to inherit the left and right padding for consistency with
+     other form controls (e.g. <input type="text">). We want to override the top
+     and bottom padding to ensure we have a symmetric look for text areas. */
+    padding-top: 2px;
+    padding-bottom: 2px;
 #endif
     flex-direction: column;
     resize: auto;
     cursor: auto;
-    padding: 2px;
     white-space: pre-wrap;
     word-wrap: break-word;
 }
@@ -696,6 +738,7 @@ input::placeholder {
     white-space: pre;
     word-wrap: normal;
     overflow: hidden;
+    line-height: initial;
 }
 
 input[type="password"] {
@@ -716,13 +759,16 @@ input[type="file"] {
 }
 
 input:-webkit-autofill-strong-password {
-    -webkit-text-security: none !important;
     -webkit-user-select: none !important;
+}
+
+input:-webkit-autofill-strong-password, input:-webkit-autofill-strong-password-viewable {
+    -webkit-text-security: none !important;
     cursor: default !important;
     font-family: monospace;
 }
 
-input:-webkit-autofill, input:-webkit-autofill-strong-password {
+input:-webkit-autofill, input:-webkit-autofill-strong-password, input:-webkit-autofill-strong-password-viewable {
     background-color: #FAFFBD !important;
     background-image: none !important;
     color: #000000 !important;
@@ -745,14 +791,14 @@ input:matches([type="button"], [type="submit"], [type="reset"]) {
     white-space: pre;
 }
 
-input[type="file"]::-webkit-file-upload-button {
+input[type="file"]::file-selector-button {
     -webkit-appearance: push-button;
     white-space: nowrap;
     margin: 0;
     font-size: inherit;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]), input[type="file"]::-webkit-file-upload-button, button {
+input:matches([type="button"], [type="submit"], [type="reset"]), input[type="file"]::file-selector-button, button {
     align-items: flex-start;
     text-align: center;
     cursor: default;
@@ -771,7 +817,7 @@ input:matches([type="button"], [type="submit"], [type="reset"]), input[type="fil
     box-sizing: border-box;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::-webkit-file-upload-button:active, button:active {
+input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::file-selector-button:active, button:active {
     color: ActiveButtonText;
 }
 
@@ -788,6 +834,7 @@ input[type="range"]::-webkit-slider-container, input[type="range"]::-webkit-medi
     box-sizing: border-box;
     display: flex;
     align-contents: center;
+    min-width: 0;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
@@ -821,26 +868,22 @@ input:disabled, textarea:disabled {
 input[readonly], textarea[readonly] {
     border-color: rgb(188, 188, 188);
 }
-
-textarea::placeholder {
-    text-indent: 2px;
-}
 #endif
 
 input:matches([type="button"], [type="submit"], [type="reset"]):disabled,
-input[type="file"]:disabled::-webkit-file-upload-button, button:disabled,
+input[type="file"]:disabled::file-selector-button, button:disabled,
 select:disabled, keygen:disabled, optgroup:disabled, option:disabled,
 select[disabled]>option {
     color: GrayText;
 }
 
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::-webkit-file-upload-button, button:active {
+input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::file-selector-button, button:active {
     border-style: inset;
 }
 
 input:matches([type="button"], [type="submit"], [type="reset"]):active:disabled,
-input[type="file"]:active:disabled::-webkit-file-upload-button, button:active:disabled {
+input[type="file"]:active:disabled::file-selector-button, button:active:disabled {
     border-style: outset;
 }
 #endif
@@ -884,7 +927,6 @@ input[type="checkbox"]:indeterminate:disabled {
 }
 
 input:matches([type="checkbox"], [type="radio"]):checked {
-    background: rgba(0, 0, 0, 0.8);
     border-color: rgba(255, 255, 255, 0.0);
 }
 
@@ -950,9 +992,9 @@ select {
 #else
     -webkit-appearance: menulist;
     border: 1px solid;
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: text;
-    background-color: -apple-system-control-background;
+    background-color: -webkit-control-background;
 #else
     color: black;
     background-color: white;
@@ -965,7 +1007,7 @@ select {
 }
 
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-select:matches([size], [multiple], [size][multiple]) {
+select:is([size], [multiple]), select[size][multiple] {
     -webkit-appearance: listbox;
     align-items: flex-start;
     border: 1px inset gray;
@@ -973,7 +1015,7 @@ select:matches([size], [multiple], [size][multiple]) {
     white-space: initial;
 }
 
-select:matches([size="0"], [size="1"]) {
+select:is([size=""], [size="0"], [size="1"]) {
     -webkit-appearance: menulist;
     align-items: center;
     border: 1px solid;
@@ -1057,7 +1099,6 @@ output {
     height: 16px;
 }
 
-#if defined(ENABLE_METER_ELEMENT) && ENABLE_METER_ELEMENT
 /* meter */
 
 meter {
@@ -1068,8 +1109,6 @@ meter {
     width: 5em;
     vertical-align: -0.2em;
 }
-
-#endif
 
 /* progress */
 
@@ -1161,8 +1200,12 @@ nobr {
 
 /* states */
 
-:focus {
+:-webkit-direct-focus {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    outline: auto 3px -webkit-focus-ring-color;
+#else
     outline: auto 5px -webkit-focus-ring-color;
+#endif
 }
 
 /* Read-only text fields do not show a focus ring but do still receive focus */
@@ -1170,12 +1213,14 @@ html:focus, body:focus, input[readonly]:focus, applet:focus, embed:focus, iframe
     outline: none;
 }
 
+#if !defined(WTF_PLATFORM_IOS_FAMILY) || !WTF_PLATFORM_IOS_FAMILY
 input:focus, textarea:focus, keygen:focus, select:focus {
     outline-offset: -2px;
 }
+#endif
 
 input:matches([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
-input[type="file"]:focus::-webkit-file-upload-button {
+input[type="file"]:focus::file-selector-button {
     outline-offset: 0;
 }
 
@@ -1289,7 +1334,7 @@ attachment {
 
 /* noscript is handled internally, as it depends on settings. */
 
-/* Default support for "Smart Invert" where all content color except media is inverted. */ 
+/* Default support for "Smart Invert" where all content color except media is inverted. */
 @media (inverted-colors) {
-    img:not(picture>img), picture, video { filter: invert(100%); } /* Images and videos double-inverted. */
+    img, picture, video { filter: invert(100%); } /* Images and videos double-inverted. */
 }

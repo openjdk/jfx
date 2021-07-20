@@ -28,10 +28,13 @@
 
 #include "JSDOMPromise.h"
 #include "JSFetchResponse.h"
+#include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(SERVICE_WORKER)
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(FetchEvent);
 
 Ref<FetchEvent> FetchEvent::createForTesting(ScriptExecutionContext& context)
 {
@@ -40,7 +43,7 @@ Ref<FetchEvent> FetchEvent::createForTesting(ScriptExecutionContext& context)
     return FetchEvent::create("fetch", WTFMove(init), Event::IsTrusted::Yes);
 }
 
-FetchEvent::FetchEvent(const AtomicString& type, Init&& initializer, IsTrusted isTrusted)
+FetchEvent::FetchEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
     : ExtendableEvent(type, initializer, isTrusted)
     , m_request(initializer.request.releaseNonNull())
     , m_clientId(WTFMove(initializer.clientId))
@@ -72,9 +75,7 @@ ExceptionOr<void> FetchEvent::respondWith(Ref<DOMPromise>&& promise)
     m_respondPromise = WTFMove(promise);
     addExtendLifetimePromise(*m_respondPromise);
 
-    m_respondPromise->whenSettled([this, weakThis = makeWeakPtr(*this)] () {
-        if (!weakThis)
-            return;
+    auto isRegistered = m_respondPromise->whenSettled([this, protectedThis = makeRef(*this)] {
         promiseIsSettled();
     });
 
@@ -83,6 +84,9 @@ ExceptionOr<void> FetchEvent::respondWith(Ref<DOMPromise>&& promise)
 
     m_respondWithEntered = true;
     m_waitToRespond = true;
+
+    if (isRegistered == DOMPromise::IsCallbackRegistered::No)
+        respondWithError(createResponseError(m_request->url(), "FetchEvent unable to handle respondWith promise."_s));
 
     return { };
 }
@@ -110,13 +114,13 @@ void FetchEvent::processResponse(Expected<Ref<FetchResponse>, ResourceError>&& r
 void FetchEvent::promiseIsSettled()
 {
     if (m_respondPromise->status() == DOMPromise::Status::Rejected) {
-        auto reason = m_respondPromise->result().toWTFString(m_respondPromise->globalObject()->globalExec());
+        auto reason = m_respondPromise->result().toWTFString(m_respondPromise->globalObject());
         respondWithError(createResponseError(m_request->url(), reason));
         return;
     }
 
     ASSERT(m_respondPromise->status() == DOMPromise::Status::Fulfilled);
-    auto response = JSFetchResponse::toWrapped(m_respondPromise->globalObject()->globalExec()->vm(), m_respondPromise->result());
+    auto response = JSFetchResponse::toWrapped(m_respondPromise->globalObject()->vm(), m_respondPromise->result());
     if (!response) {
         respondWithError(createResponseError(m_request->url(), "Returned response is null."_s));
         return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,19 +33,21 @@ namespace JSC {
 
 class InternalFunctionAllocationProfile {
 public:
+    static inline ptrdiff_t offsetOfStructure() { return OBJECT_OFFSETOF(InternalFunctionAllocationProfile, m_structure); }
+
     Structure* structure() { return m_structure.get(); }
     Structure* createAllocationStructureFromBase(VM&, JSGlobalObject*, JSCell* owner, JSObject* prototype, Structure* base);
 
     void clear() { m_structure.clear(); }
-    void visitAggregate(SlotVisitor& visitor) { visitor.append(m_structure); }
+    template<typename Visitor> void visitAggregate(Visitor& visitor) { visitor.append(m_structure); }
 
 private:
     WriteBarrier<Structure> m_structure;
 };
 
-inline Structure* InternalFunctionAllocationProfile::createAllocationStructureFromBase(VM& vm, JSGlobalObject* globalObject, JSCell* owner, JSObject* prototype, Structure* baseStructure)
+inline Structure* InternalFunctionAllocationProfile::createAllocationStructureFromBase(VM& vm, JSGlobalObject* baseGlobalObject, JSCell* owner, JSObject* prototype, Structure* baseStructure)
 {
-    ASSERT(!m_structure || m_structure.get()->classInfo() != baseStructure->classInfo());
+    ASSERT(!m_structure || m_structure.get()->classInfo() != baseStructure->classInfo() || m_structure->globalObject() != baseGlobalObject);
     ASSERT(baseStructure->hasMonoProto());
 
     Structure* structure;
@@ -54,7 +56,7 @@ inline Structure* InternalFunctionAllocationProfile::createAllocationStructureFr
     if (prototype == baseStructure->storedPrototype())
         structure = baseStructure;
     else
-        structure = vm.structureCache.emptyStructureForPrototypeFromBaseStructure(globalObject, prototype, baseStructure);
+        structure = vm.structureCache.emptyStructureForPrototypeFromBaseStructure(baseGlobalObject, prototype, baseStructure);
 
     // Ensure that if another thread sees the structure, it will see it properly created.
     WTF::storeStoreFence();

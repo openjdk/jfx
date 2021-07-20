@@ -44,29 +44,9 @@
 #include <wtf/MainThread.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
-
-#if USE(PTHREADS)
-#include <pthread.h>
-
-#if OS(HURD)
-// PTHREAD_KEYS_MAX is not defined in bionic nor in Hurd, so explicitly define it here.
-#define PTHREAD_KEYS_MAX 1024
-#else
-#include <limits.h>
-#endif
-
-#elif OS(WINDOWS)
-#include <windows.h>
-#include <fibersapi.h>
-#endif
+#include <wtf/Threading.h>
 
 namespace WTF {
-
-#if OS(WINDOWS) && CPU(X86)
-#define THREAD_SPECIFIC_CALL __stdcall
-#else
-#define THREAD_SPECIFIC_CALL
-#endif
 
 enum class CanBeGCThread {
     False,
@@ -75,6 +55,7 @@ enum class CanBeGCThread {
 
 template<typename T, CanBeGCThread canBeGCThread = CanBeGCThread::False> class ThreadSpecific {
     WTF_MAKE_NONCOPYABLE(ThreadSpecific);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ThreadSpecific();
     bool isSet(); // Useful as a fast check to see if this thread has set this value.
@@ -119,44 +100,16 @@ private:
     T* get();
     T* set();
     void setInTLS(Data*);
-    void static THREAD_SPECIFIC_CALL destroy(void* ptr);
+    void static destroy(void* ptr);
 
 #if USE(PTHREADS)
     pthread_key_t m_key { };
 #elif OS(WINDOWS)
-    int m_index;
+    int m_key;
 #endif
 };
 
 #if USE(PTHREADS)
-
-typedef pthread_key_t ThreadSpecificKey;
-
-static const constexpr ThreadSpecificKey InvalidThreadSpecificKey = PTHREAD_KEYS_MAX;
-
-inline void threadSpecificKeyCreate(ThreadSpecificKey* key, void (*destructor)(void *))
-{
-    int error = pthread_key_create(key, destructor);
-    if (error)
-        CRASH();
-}
-
-inline void threadSpecificKeyDelete(ThreadSpecificKey key)
-{
-    int error = pthread_key_delete(key);
-    if (error)
-        CRASH();
-}
-
-inline void threadSpecificSet(ThreadSpecificKey key, void* value)
-{
-    pthread_setspecific(key, value);
-}
-
-inline void* threadSpecificGet(ThreadSpecificKey key)
-{
-    return pthread_getspecific(key);
-}
 
 template<typename T, CanBeGCThread canBeGCThread>
 inline ThreadSpecific<T, canBeGCThread>::ThreadSpecific()
@@ -183,75 +136,28 @@ inline void ThreadSpecific<T, canBeGCThread>::setInTLS(Data* data)
 
 #elif OS(WINDOWS)
 
-// The maximum number of FLS keys that can be created. For simplification, we assume that:
-// 1) Once the instance of ThreadSpecific<> is created, it will not be destructed until the program dies.
-// 2) We do not need to hold many instances of ThreadSpecific<> data. This fixed number should be far enough.
-const int kMaxFlsKeySize = 128;
-
-WTF_EXPORT_PRIVATE long& flsKeyCount();
-WTF_EXPORT_PRIVATE DWORD* flsKeys();
-
-typedef DWORD ThreadSpecificKey;
-
-static const constexpr ThreadSpecificKey InvalidThreadSpecificKey = FLS_OUT_OF_INDEXES;
-
-inline void threadSpecificKeyCreate(ThreadSpecificKey* key, void (THREAD_SPECIFIC_CALL *destructor)(void *))
-{
-    DWORD flsKey = FlsAlloc(destructor);
-    if (flsKey == FLS_OUT_OF_INDEXES)
-        CRASH();
-
-    *key = flsKey;
-}
-
-inline void threadSpecificKeyDelete(ThreadSpecificKey key)
-{
-    FlsFree(key);
-}
-
-inline void threadSpecificSet(ThreadSpecificKey key, void* data)
-{
-    FlsSetValue(key, data);
-}
-
-inline void* threadSpecificGet(ThreadSpecificKey key)
-{
-    return FlsGetValue(key);
-}
-
 template<typename T, CanBeGCThread canBeGCThread>
 inline ThreadSpecific<T, canBeGCThread>::ThreadSpecific()
-    : m_index(-1)
+    : m_key(-1)
 {
-    DWORD flsKey = FlsAlloc(destroy);
-    if (flsKey == FLS_OUT_OF_INDEXES)
+    bool ok = Thread::SpecificStorage::allocateKey(m_key, destroy);
+    if (!ok)
         CRASH();
-
-    m_index = InterlockedIncrement(&flsKeyCount()) - 1;
-    if (m_index >= kMaxFlsKeySize)
-        CRASH();
-    flsKeys()[m_index] = flsKey;
-}
-
-template<typename T, CanBeGCThread canBeGCThread>
-inline ThreadSpecific<T, canBeGCThread>::~ThreadSpecific()
-{
-    FlsFree(flsKeys()[m_index]);
 }
 
 template<typename T, CanBeGCThread canBeGCThread>
 inline T* ThreadSpecific<T, canBeGCThread>::get()
 {
-    Data* data = static_cast<Data*>(FlsGetValue(flsKeys()[m_index]));
-    if (data)
-        return data->storagePointer();
-    return nullptr;
+    auto data = static_cast<Data*>(Thread::current().specificStorage().get(m_key));
+    if (!data)
+        return nullptr;
+    return data->storagePointer();
 }
 
 template<typename T, CanBeGCThread canBeGCThread>
 inline void ThreadSpecific<T, canBeGCThread>::setInTLS(Data* data)
 {
-    FlsSetValue(flsKeys()[m_index], data);
+    return Thread::current().specificStorage().set(m_key, data);
 }
 
 #else
@@ -259,7 +165,7 @@ inline void ThreadSpecific<T, canBeGCThread>::setInTLS(Data* data)
 #endif
 
 template<typename T, CanBeGCThread canBeGCThread>
-inline void THREAD_SPECIFIC_CALL ThreadSpecific<T, canBeGCThread>::destroy(void* ptr)
+inline void ThreadSpecific<T, canBeGCThread>::destroy(void* ptr)
 {
     Data* data = static_cast<Data*>(ptr);
 
@@ -275,7 +181,7 @@ inline void THREAD_SPECIFIC_CALL ThreadSpecific<T, canBeGCThread>::destroy(void*
 template<typename T, CanBeGCThread canBeGCThread>
 inline T* ThreadSpecific<T, canBeGCThread>::set()
 {
-    RELEASE_ASSERT(canBeGCThread == CanBeGCThread::True || !mayBeGCThread());
+    RELEASE_ASSERT(canBeGCThread == CanBeGCThread::True || !Thread::mayBeGCThread());
     ASSERT(!get());
     Data* data = new Data(this); // Data will set itself into TLS.
     ASSERT(get() == data->storagePointer());

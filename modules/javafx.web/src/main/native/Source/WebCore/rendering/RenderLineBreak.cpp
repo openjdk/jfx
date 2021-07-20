@@ -27,11 +27,14 @@
 #include "HTMLElement.h"
 #include "HTMLWBRElement.h"
 #include "InlineElementBox.h"
+#include "InlineRunAndOffset.h"
+#include "LayoutIntegrationLineIterator.h"
+#include "LayoutIntegrationRunIterator.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "RenderBlock.h"
 #include "RenderView.h"
 #include "RootInlineBox.h"
-#include "SimpleLineLayoutFunctions.h"
+#include "SVGInlineTextBox.h"
 #include "VisiblePosition.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -44,13 +47,6 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderLineBreak);
 
 static const int invalidLineHeight = -1;
-
-static const SimpleLineLayout::Layout* simpleLineLayout(const RenderLineBreak& renderer)
-{
-    if (!is<RenderBlockFlow>(*renderer.parent()))
-        return nullptr;
-    return downcast<RenderBlockFlow>(*renderer.parent()).simpleLineLayout();
-}
 
 RenderLineBreak::RenderLineBreak(HTMLElement& element, RenderStyle&& style)
     : RenderBoxModelObject(element, WTFMove(style), 0)
@@ -89,7 +85,7 @@ int RenderLineBreak::baselinePosition(FontBaseline baselineType, bool firstLine,
 
 std::unique_ptr<InlineElementBox> RenderLineBreak::createInlineBox()
 {
-    return std::make_unique<InlineElementBox>(*this);
+    return makeUnique<InlineElementBox>(*this);
 }
 
 void RenderLineBreak::setInlineBoxWrapper(InlineElementBox* inlineBox)
@@ -126,19 +122,6 @@ void RenderLineBreak::dirtyLineBoxes(bool fullLayout)
     m_inlineBoxWrapper->dirtyLineBoxes();
 }
 
-void RenderLineBreak::ensureLineBoxes()
-{
-    if (!is<RenderBlockFlow>(*parent()))
-        return;
-    downcast<RenderBlockFlow>(*parent()).ensureLineBoxes();
-}
-
-void RenderLineBreak::deleteLineBoxesBeforeSimpleLineLayout()
-{
-    delete m_inlineBoxWrapper;
-    m_inlineBoxWrapper = nullptr;
-}
-
 int RenderLineBreak::caretMinOffset() const
 {
     return 0;
@@ -156,72 +139,36 @@ bool RenderLineBreak::canBeSelectionLeaf() const
 
 VisiblePosition RenderLineBreak::positionForPoint(const LayoutPoint&, const RenderFragmentContainer*)
 {
-    ensureLineBoxes();
-    return createVisiblePosition(0, DOWNSTREAM);
-}
-
-void RenderLineBreak::setSelectionState(SelectionState state)
-{
-    if (state != SelectionNone)
-        ensureLineBoxes();
-    RenderBoxModelObject::setSelectionState(state);
-    if (!m_inlineBoxWrapper)
-        return;
-    m_inlineBoxWrapper->root().setHasSelectedChildren(state != SelectionNone);
-}
-
-LayoutRect RenderLineBreak::localCaretRect(InlineBox* inlineBox, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine)
-{
-    ASSERT_UNUSED(caretOffset, !caretOffset);
-    ASSERT_UNUSED(inlineBox, inlineBox == m_inlineBoxWrapper);
-    if (!inlineBox)
-        return LayoutRect();
-
-    const RootInlineBox& rootBox = inlineBox->root();
-    return rootBox.computeCaretRect(inlineBox->logicalLeft(), caretWidth, extraWidthToEndOfLine);
+    return createVisiblePosition(0, Affinity::Downstream);
 }
 
 IntRect RenderLineBreak::linesBoundingBox() const
 {
-    if (auto* layout = simpleLineLayout(*this))
-        return SimpleLineLayout::computeBoundingBox(*this, *layout);
+    auto run = LayoutIntegration::runFor(*this);
+    if (!run)
+        return { };
 
-    if (!m_inlineBoxWrapper)
-        return IntRect();
-
-    float logicalLeftSide = m_inlineBoxWrapper->logicalLeft();
-    float logicalRightSide = m_inlineBoxWrapper->logicalRight();
-
-    bool isHorizontal = style().isHorizontalWritingMode();
-
-    float x = isHorizontal ? logicalLeftSide : m_inlineBoxWrapper->x();
-    float y = isHorizontal ? m_inlineBoxWrapper->y() : logicalLeftSide;
-    float width = isHorizontal ? logicalRightSide - logicalLeftSide : m_inlineBoxWrapper->logicalBottom() - x;
-    float height = isHorizontal ? m_inlineBoxWrapper->logicalBottom() - y : logicalRightSide - logicalLeftSide;
-    return enclosingIntRect(FloatRect(x, y, width, height));
+    return enclosingIntRect(run->rect());
 }
 
 void RenderLineBreak::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
-    if (auto* layout = simpleLineLayout(*this)) {
-        rects.appendVector(SimpleLineLayout::collectAbsoluteRects(*this, *layout, accumulatedOffset));
+    auto box = LayoutIntegration::runFor(*this);
+    if (!box)
         return;
-    }
 
-    if (!m_inlineBoxWrapper)
-        return;
-    rects.append(enclosingIntRect(FloatRect(accumulatedOffset + m_inlineBoxWrapper->topLeft(), m_inlineBoxWrapper->size())));
+    auto rect = box->rect();
+    rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
 }
 
 void RenderLineBreak::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    if (auto* layout = simpleLineLayout(*this)) {
-        quads.appendVector(SimpleLineLayout::collectAbsoluteQuads(*this, *layout, wasFixed));
+    auto box = LayoutIntegration::runFor(*this);
+    if (!box)
         return;
-    }
-    if (!m_inlineBoxWrapper)
-        return;
-    quads.append(localToAbsoluteQuad(FloatRect(m_inlineBoxWrapper->topLeft(), m_inlineBoxWrapper->size()), UseTransforms, wasFixed));
+
+    auto rect = box->rect();
+    quads.append(localToAbsoluteQuad(FloatRect(rect.location(), rect.size()), UseTransforms, wasFixed));
 }
 
 void RenderLineBreak::updateFromStyle()
@@ -232,26 +179,31 @@ void RenderLineBreak::updateFromStyle()
 #if PLATFORM(IOS_FAMILY)
 void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, unsigned)
 {
-    ensureLineBoxes();
-    InlineElementBox* box = m_inlineBoxWrapper;
-    if (!box)
+    auto run = LayoutIntegration::runFor(*this);
+
+    if (!run)
         return;
-    const RootInlineBox& rootBox = box->root();
-    LayoutRect rect = rootBox.computeCaretRect(box->logicalLeft(), 0, nullptr);
-    if (rootBox.isFirstAfterPageBreak()) {
-        if (box->isHorizontal())
-            rect.shiftYEdgeTo(rootBox.lineTopWithLeading());
+    auto line = run.line();
+
+    auto lineSelectionRect = line->selectionRect();
+    LayoutRect rect = IntRect(run->logicalLeft(), lineSelectionRect.y(), 0, lineSelectionRect.height());
+    if (!line->isHorizontal())
+        rect = rect.transposedRect();
+
+    if (line->legacyRootInlineBox() && line->legacyRootInlineBox()->isFirstAfterPageBreak()) {
+        if (run->isHorizontal())
+            rect.shiftYEdgeTo(line->lineBoxTop());
         else
-            rect.shiftXEdgeTo(rootBox.lineTopWithLeading());
+            rect.shiftXEdgeTo(line->lineBoxTop());
     }
 
     auto* containingBlock = containingBlockForObjectInFlow();
     // Map rect, extended left to leftOffset, and right to rightOffset, through transforms to get minX and maxX.
     LogicalSelectionOffsetCaches cache(*containingBlock);
-    LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, box->logicalTop(), cache);
-    LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, box->logicalTop(), cache);
+    LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
+    LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
     LayoutRect extentsRect = rect;
-    if (box->isHorizontal()) {
+    if (run->isHorizontal()) {
         extentsRect.setX(leftOffset);
         extentsRect.setWidth(rightOffset - leftOffset);
     } else {
@@ -259,16 +211,16 @@ void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsign
         extentsRect.setHeight(rightOffset - leftOffset);
     }
     extentsRect = localToAbsoluteQuad(FloatRect(extentsRect)).enclosingBoundingBox();
-    if (!box->isHorizontal())
+    if (!run->isHorizontal())
         extentsRect = extentsRect.transposedRect();
-    bool isFirstOnLine = !box->previousOnLineExists();
-    bool isLastOnLine = !box->nextOnLineExists();
+    bool isFirstOnLine = !run.previousOnLine();
+    bool isLastOnLine = !run.nextOnLine();
     if (containingBlock->isRubyBase() || containingBlock->isRubyText())
         isLastOnLine = !containingBlock->containingBlock()->inlineBoxWrapper()->nextOnLineExists();
 
     bool isFixed = false;
     IntRect absRect = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed).enclosingBoundingBox();
-    bool boxIsHorizontal = !box->isSVGInlineTextBox() ? box->isHorizontal() : !style().isVerticalWritingMode();
+    bool boxIsHorizontal = !is<SVGInlineTextBox>(run->legacyInlineBox()) ? run->isHorizontal() : !style().isVerticalWritingMode();
     // If the containing block is an inline element, we want to check the inlineBoxWrapper orientation
     // to determine the orientation of the block. In this case we also use the inlineBoxWrapper to
     // determine if the element is the last on the line.
@@ -279,7 +231,7 @@ void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsign
         }
     }
 
-    rects.append(SelectionRect(absRect, box->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, box->isLineBreak(), isFirstOnLine, isLastOnLine, false, false, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absRect.x())));
+    rects.append(SelectionRect(absRect, run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, false, false, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absRect.x())));
 }
 #endif
 

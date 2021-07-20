@@ -30,7 +30,7 @@
 
 #include <wtf/PrintStream.h>
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
@@ -44,19 +44,19 @@ Optional<Opcode> invertedCompare(Opcode opcode, Type type)
     case NotEqual:
         return Equal;
     case LessThan:
-        if (isInt(type))
+        if (type.isInt())
             return GreaterEqual;
         return WTF::nullopt;
     case GreaterThan:
-        if (isInt(type))
+        if (type.isInt())
             return LessEqual;
         return WTF::nullopt;
     case LessEqual:
-        if (isInt(type))
+        if (type.isInt())
             return GreaterThan;
         return WTF::nullopt;
     case GreaterEqual:
-        if (isInt(type))
+        if (type.isInt())
             return LessThan;
         return WTF::nullopt;
     case Above:
@@ -119,6 +119,9 @@ void printInternal(PrintStream& out, Opcode opcode)
         return;
     case ConstFloat:
         out.print("ConstFloat");
+        return;
+    case BottomTuple:
+        out.print("BottomTuple");
         return;
     case Get:
         out.print("Get");
@@ -327,6 +330,9 @@ void printInternal(PrintStream& out, Opcode opcode)
     case Patchpoint:
         out.print("Patchpoint");
         return;
+    case Extract:
+        out.print("Extract");
+        return;
     case CheckAdd:
         out.print("CheckAdd");
         return;
@@ -372,7 +378,7 @@ void printInternal(PrintStream& out, Opcode opcode)
 
 } // namespace WTF
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

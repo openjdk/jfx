@@ -46,14 +46,14 @@ public:
     static Ref<MockCDMFactory> create() { return adoptRef(*new MockCDMFactory); }
     ~MockCDMFactory();
 
-    const Vector<AtomicString>& supportedDataTypes() const { return m_supportedDataTypes; }
+    const Vector<AtomString>& supportedDataTypes() const { return m_supportedDataTypes; }
     void setSupportedDataTypes(Vector<String>&&);
 
     const Vector<MediaKeySessionType>& supportedSessionTypes() const { return m_supportedSessionTypes; }
     void setSupportedSessionTypes(Vector<MediaKeySessionType>&& types) { m_supportedSessionTypes = WTFMove(types); }
 
-    const Vector<String>& supportedRobustness() const { return m_supportedRobustness; }
-    void setSupportedRobustness(Vector<String>&& robustness) { m_supportedRobustness = WTFMove(robustness); }
+    const Vector<AtomString>& supportedRobustness() const { return m_supportedRobustness; }
+    void setSupportedRobustness(Vector<String>&&);
 
     MediaKeysRequirement distinctiveIdentifiersRequirement() const { return m_distinctiveIdentifiersRequirement; }
     void setDistinctiveIdentifiersRequirement(MediaKeysRequirement requirement) { m_distinctiveIdentifiersRequirement = requirement; }
@@ -88,9 +88,9 @@ private:
 
     MediaKeysRequirement m_distinctiveIdentifiersRequirement { MediaKeysRequirement::Optional };
     MediaKeysRequirement m_persistentStateRequirement { MediaKeysRequirement::Optional };
-    Vector<AtomicString> m_supportedDataTypes;
+    Vector<AtomString> m_supportedDataTypes;
     Vector<MediaKeySessionType> m_supportedSessionTypes;
-    Vector<String> m_supportedRobustness;
+    Vector<AtomString> m_supportedRobustness;
     Vector<MediaKeyEncryptionScheme> m_supportedEncryptionSchemes;
     bool m_registered { true };
     bool m_canCreateInstances { true };
@@ -99,7 +99,8 @@ private:
     HashMap<String, Vector<Ref<SharedBuffer>>> m_sessions;
 };
 
-class MockCDM : public CDMPrivate, public CanMakeWeakPtr<MockCDM> {
+class MockCDM : public CDMPrivate {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     MockCDM(WeakPtr<MockCDMFactory>);
 
@@ -108,11 +109,11 @@ public:
 private:
     friend class MockCDMInstance;
 
-    bool supportsInitDataType(const AtomicString&) const final;
+    Vector<AtomString> supportedInitDataTypes() const final;
+    Vector<AtomString> supportedRobustnesses() const final;
     bool supportsConfiguration(const MediaKeySystemConfiguration&) const final;
     bool supportsConfigurationWithRestrictions(const MediaKeySystemConfiguration&, const MediaKeysRestrictions&) const final;
-    bool supportsSessionTypeWithConfiguration(MediaKeySessionType&, const MediaKeySystemConfiguration&) const final;
-    bool supportsRobustness(const String&) const final;
+    bool supportsSessionTypeWithConfiguration(const MediaKeySessionType&, const MediaKeySystemConfiguration&) const final;
     MediaKeysRequirement distinctiveIdentifiersRequirement(const MediaKeySystemConfiguration&, const MediaKeysRestrictions&) const final;
     MediaKeysRequirement persistentStateRequirement(const MediaKeySystemConfiguration&, const MediaKeysRestrictions&) const final;
     bool distinctiveIdentifiersAreUniquePerOriginAndClearable(const MediaKeySystemConfiguration&) const final;
@@ -120,7 +121,7 @@ private:
     void loadAndInitialize() final;
     bool supportsServerCertificates() const final;
     bool supportsSessions() const final;
-    bool supportsInitData(const AtomicString&, const SharedBuffer&) const final;
+    bool supportsInitData(const AtomString&, const SharedBuffer&) const final;
     RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&) const final;
     Optional<String> sanitizeSessionId(const String&) const final;
 
@@ -137,11 +138,9 @@ public:
 
 private:
     ImplementationType implementationType() const final { return ImplementationType::Mock; }
-    SuccessValue initializeWithConfiguration(const MediaKeySystemConfiguration&) final;
-    SuccessValue setDistinctiveIdentifiersAllowed(bool) final;
-    SuccessValue setPersistentStateAllowed(bool) final;
-    SuccessValue setServerCertificate(Ref<SharedBuffer>&&) final;
-    SuccessValue setStorageDirectory(const String&) final;
+    void initializeWithConfiguration(const MediaKeySystemConfiguration&, AllowDistinctiveIdentifiers, AllowPersistentState, SuccessCallback&&) final;
+    void setServerCertificate(Ref<SharedBuffer>&&, SuccessCallback&&) final;
+    void setStorageDirectory(const String&) final;
     const String& keySystem() const final;
     RefPtr<CDMInstanceSession> createSession() final;
 
@@ -155,8 +154,8 @@ public:
     MockCDMInstanceSession(WeakPtr<MockCDMInstance>&&);
 
 private:
-    void requestLicense(LicenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
-    void updateLicense(const String&, LicenseType, const SharedBuffer&, LicenseUpdateCallback&&) final;
+    void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
+    void updateLicense(const String&, LicenseType, Ref<SharedBuffer>&&, LicenseUpdateCallback&&) final;
     void loadSession(LicenseType, const String&, const String&, LoadSessionCallback&&) final;
     void closeSession(const String&, CloseSessionCallback&&) final;
     void removeSessionData(const String&, LicenseType, RemoveSessionDataCallback&&) final;

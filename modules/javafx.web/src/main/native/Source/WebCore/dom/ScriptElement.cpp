@@ -36,11 +36,13 @@
 #include "FrameLoader.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLScriptElement.h"
 #include "IgnoreDestructiveWriteCountIncrementer.h"
 #include "InlineClassicScript.h"
 #include "LoadableClassicScript.h"
 #include "LoadableModuleScript.h"
 #include "MIMETypeRegistry.h"
+#include "ModuleFetchParameters.h"
 #include "PendingScript.h"
 #include "RuntimeApplicationChecks.h"
 #include "SVGScriptElement.h"
@@ -52,6 +54,7 @@
 #include "Settings.h"
 #include "TextNodeTraversal.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/SystemTracing.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -66,6 +69,7 @@ ScriptElement::ScriptElement(Element& element, bool parserInserted, bool already
     , m_isExternalScript(false)
     , m_alreadyStarted(alreadyStarted)
     , m_haveFiredLoad(false)
+    , m_errorOccurred(false)
     , m_willBeParserExecuted(false)
     , m_readyToBeParserExecuted(false)
     , m_willExecuteWhenDocumentFinishedParsing(false)
@@ -179,8 +183,8 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition, Legac
     if (wasParserInserted && !hasAsyncAttribute())
         m_forceAsync = true;
 
-    // FIXME: HTML5 spec says we should check that all children are either comments or empty text nodes.
-    if (!hasSourceAttribute() && !m_element.firstChild())
+    auto sourceText = scriptContent();
+    if (!hasSourceAttribute() && sourceText.isEmpty())
         return false;
 
     if (!m_element.isConnected())
@@ -264,7 +268,7 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition, Legac
     } else {
         ASSERT(scriptType == ScriptType::Classic);
         TextPosition position = document.isInDocumentWrite() ? TextPosition() : scriptStartPosition;
-        executeClassicScript(ScriptSourceCode(scriptContent(), URL(document.url()), position, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(*this)));
+        executeClassicScript(ScriptSourceCode(sourceText, URL(document.url()), position, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(*this)));
     }
 
     return true;
@@ -284,11 +288,17 @@ bool ScriptElement::requestClassicScript(const String& sourceURL)
         auto script = LoadableClassicScript::create(
             m_element.attributeWithoutSynchronization(HTMLNames::nonceAttr),
             m_element.document().settings().subresourceIntegrityEnabled() ? m_element.attributeWithoutSynchronization(HTMLNames::integrityAttr).string() : emptyString(),
+            referrerPolicy(),
             m_element.attributeWithoutSynchronization(HTMLNames::crossoriginAttr),
             scriptCharset(),
             m_element.localName(),
-            m_element.isInUserAgentShadowTree());
-        if (script->load(m_element.document(), m_element.document().completeURL(sourceURL))) {
+            m_element.isInUserAgentShadowTree(),
+            hasAsyncAttribute());
+
+        auto scriptURL = m_element.document().completeURL(sourceURL);
+        m_element.document().willLoadScriptElement(scriptURL);
+
+        if (script->load(m_element.document(), scriptURL)) {
             m_loadableScript = WTFMove(script);
             m_isExternalScript = true;
         }
@@ -305,10 +315,12 @@ bool ScriptElement::requestClassicScript(const String& sourceURL)
 
 bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
 {
+    // https://html.spec.whatwg.org/multipage/urls-and-fetching.html#cors-settings-attributes
+    // Module is always CORS request. If attribute is not given, it should be same-origin credential.
     String nonce = m_element.attributeWithoutSynchronization(HTMLNames::nonceAttr);
     String crossOriginMode = m_element.attributeWithoutSynchronization(HTMLNames::crossoriginAttr);
     if (crossOriginMode.isNull())
-        crossOriginMode = "omit"_s;
+        crossOriginMode = ScriptElementCachedScriptFetcher::defaultCrossOriginModeForModule;
 
     if (hasSourceAttribute()) {
         String sourceURL = sourceAttributeValue();
@@ -335,16 +347,20 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
         auto script = LoadableModuleScript::create(
             nonce,
             m_element.document().settings().subresourceIntegrityEnabled() ? m_element.attributeWithoutSynchronization(HTMLNames::integrityAttr).string() : emptyString(),
+            referrerPolicy(),
             crossOriginMode,
             scriptCharset(),
             m_element.localName(),
             m_element.isInUserAgentShadowTree());
-        script->load(m_element.document(), moduleScriptRootURL);
         m_loadableScript = WTFMove(script);
+        if (auto* frame = m_element.document().frame()) {
+            auto& script = downcast<LoadableModuleScript>(*m_loadableScript.get());
+            frame->script().loadModuleScript(script, moduleScriptRootURL.string(), makeRef(script.parameters()));
+        }
         return true;
     }
 
-    auto script = LoadableModuleScript::create(nonce, emptyString(), crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
+    auto script = LoadableModuleScript::create(nonce, emptyString(), referrerPolicy(), crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
 
     TextPosition position = m_element.document().isInDocumentWrite() ? TextPosition() : scriptStartPosition;
     ScriptSourceCode sourceCode(scriptContent(), URL(m_element.document().url()), position, JSC::SourceProviderSourceType::Module, script.copyRef());
@@ -352,11 +368,12 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
     ASSERT(m_element.document().contentSecurityPolicy());
     const auto& contentSecurityPolicy = *m_element.document().contentSecurityPolicy();
     bool hasKnownNonce = contentSecurityPolicy.allowScriptWithNonce(nonce, m_element.isInUserAgentShadowTree());
-    if (!contentSecurityPolicy.allowInlineScript(m_element.document().url(), m_startLineNumber, sourceCode.source().toStringWithoutCopying(), hasKnownNonce))
+    if (!contentSecurityPolicy.allowInlineScript(m_element.document().url().string(), m_startLineNumber, sourceCode.source().toStringWithoutCopying(), hasKnownNonce))
         return false;
 
-    script->load(m_element.document(), sourceCode);
     m_loadableScript = WTFMove(script);
+    if (auto* frame = m_element.document().frame())
+        frame->script().loadModuleScript(downcast<LoadableModuleScript>(*m_loadableScript.get()), sourceCode);
     return true;
 }
 
@@ -372,7 +389,7 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
         ASSERT(m_element.document().contentSecurityPolicy());
         const ContentSecurityPolicy& contentSecurityPolicy = *m_element.document().contentSecurityPolicy();
         bool hasKnownNonce = contentSecurityPolicy.allowScriptWithNonce(m_element.attributeWithoutSynchronization(HTMLNames::nonceAttr), m_element.isInUserAgentShadowTree());
-        if (!contentSecurityPolicy.allowInlineScript(m_element.document().url(), m_startLineNumber, sourceCode.source().toStringWithoutCopying(), hasKnownNonce))
+        if (!contentSecurityPolicy.allowInlineScript(m_element.document().url().string(), m_startLineNumber, sourceCode.source().toStringWithoutCopying(), hasKnownNonce))
             return;
     }
 
@@ -382,9 +399,11 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
         return;
 
     IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(m_isExternalScript ? &document : nullptr);
-    CurrentScriptIncrementer currentScriptIncrementer(document, m_element);
+    CurrentScriptIncrementer currentScriptIncrementer(document, *this);
 
-    frame->script().evaluate(sourceCode);
+    WTFBeginSignpost(this, "Execute Script Element", "executing classic script from URL: %{public}s async: %d defer: %d", m_isExternalScript ? sourceCode.url().string().utf8().data() : "inline", hasAsyncAttribute(), hasDeferAttribute());
+    frame->script().evaluateIgnoringException(sourceCode);
+    WTFEndSignpost(this, "Execute Script Element");
 }
 
 void ScriptElement::executeModuleScript(LoadableModuleScript& loadableModuleScript)
@@ -399,9 +418,11 @@ void ScriptElement::executeModuleScript(LoadableModuleScript& loadableModuleScri
         return;
 
     IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(&document);
-    CurrentScriptIncrementer currentScriptIncrementer(document, m_element);
+    CurrentScriptIncrementer currentScriptIncrementer(document, *this);
 
+    WTFBeginSignpost(this, "Execute Script Element", "executing module script");
     frame->script().linkAndEvaluateModuleScript(loadableModuleScript);
+    WTFEndSignpost(this, "Execute Script Element", "executing module script");
 }
 
 void ScriptElement::dispatchLoadEventRespectingUserGestureIndicator()

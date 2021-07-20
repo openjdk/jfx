@@ -28,15 +28,11 @@
 
 #if ENABLE(B3_JIT)
 
-#include "AirArg.h"
-#include "B3BasicBlockInlines.h"
 #include "B3Dominators.h"
 #include "B3InsertionSetInlines.h"
-#include "B3MemoryValueInlines.h"
 #include "B3PhaseScope.h"
 #include "B3ProcedureInlines.h"
 #include "B3ValueInlines.h"
-#include "B3ValueKeyInlines.h"
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
@@ -154,7 +150,7 @@ private:
                 };
 
                 // We call this when we have found a constant that we'd like to use. It's possible that
-                // we have computed that the constant should be meterialized in this block, but we
+                // we have computed that the constant should be materialized in this block, but we
                 // haven't inserted it yet. This inserts the constant if necessary.
                 auto materialize = [&] (Value* child) {
                     ValueKey key = child->key();

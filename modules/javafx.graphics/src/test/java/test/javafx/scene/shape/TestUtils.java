@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.prism.paint.Color;
 import javafx.scene.Node;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 
 import static org.junit.Assert.*;
@@ -125,5 +126,21 @@ public abstract class TestUtils {
 
     public static Object getObjectValue(Node node, String pgPropertyName) throws Exception {
         return getObjectValue(node, pgPropertyName, false);
+    }
+
+    public static void attemptGC(WeakReference<?> weakRef) {
+        for (int i = 0; i < 10; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (weakRef.get() == null) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                fail("InterruptedException occurred during Thread.sleep()");
+            }
+        }
     }
 }

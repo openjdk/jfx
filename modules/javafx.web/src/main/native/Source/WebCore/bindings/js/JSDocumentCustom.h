@@ -34,10 +34,11 @@ namespace JSCastingHelpers {
 
 template<>
 struct InheritsTraits<WebCore::JSDocument> {
+    static constexpr Optional<JSTypeRange> typeRange { JSTypeRange { static_cast<JSType>(WebCore::JSDocumentWrapperType), static_cast<JSType>(WebCore::JSDocumentWrapperType) } };
     template<typename From>
-    static inline bool inherits(VM&, From* from)
+    static inline bool inherits(VM& vm, From* from)
     {
-        return from->type() == WebCore::JSDocumentWrapperType;
+        return inheritsJSTypeImpl<WebCore::JSDocument>(vm, from, *typeRange);
     }
 };
 
@@ -46,7 +47,7 @@ struct InheritsTraits<WebCore::JSDocument> {
 
 namespace WebCore {
 
-JSC::JSObject* cachedDocumentWrapper(JSC::ExecState&, JSDOMGlobalObject&, Document&);
-void reportMemoryForDocumentIfFrameless(JSC::ExecState&, Document&);
+JSC::JSObject* cachedDocumentWrapper(JSC::JSGlobalObject&, JSDOMGlobalObject&, Document&);
+void reportMemoryForDocumentIfFrameless(JSC::JSGlobalObject&, Document&);
 
 } // namespace WebCore

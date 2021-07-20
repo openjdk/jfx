@@ -62,21 +62,8 @@ typedef struct _GstBufferList GstBufferList;
 typedef gboolean   (*GstBufferListFunc)   (GstBuffer **buffer, guint idx,
                                            gpointer user_data);
 
-
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 /* refcounting */
-/**
- * gst_buffer_list_ref:
- * @list: a #GstBufferList
- *
- * Increases the refcount of the given buffer list by one.
- *
- * Note that the refcount affects the writability of @list and its data, see
- * gst_buffer_list_make_writable(). It is important to note that keeping
- * additional references to GstBufferList instances can potentially increase
- * the number of memcpy operations in a pipeline.
- *
- * Returns: (transfer full): @list
- */
 static inline GstBufferList *
 gst_buffer_list_ref (GstBufferList * list)
 {
@@ -84,35 +71,59 @@ gst_buffer_list_ref (GstBufferList * list)
       list)));
 }
 
-/**
- * gst_buffer_list_unref:
- * @list: (transfer full): a #GstBufferList
- *
- * Decreases the refcount of the buffer list. If the refcount reaches 0, the
- * buffer list will be freed.
- */
 static inline void
-gst_buffer_list_unref (GstBufferList * list)
+gst_buffer_list_unref(GstBufferList* list)
 {
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (list));
 }
 
+static inline void
+gst_clear_buffer_list (GstBufferList ** list_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) list_ptr);
+}
+
 /* copy */
-/**
- * gst_buffer_list_copy:
- * @list: a #GstBufferList
- *
- * Create a shallow copy of the given buffer list. This will make a newly
- * allocated copy of the source list with copies of buffer pointers. The
- * refcount of buffers pointed to will be increased by one.
- *
- * Returns: (transfer full): a new copy of @list.
- */
 static inline GstBufferList *
 gst_buffer_list_copy (const GstBufferList * list)
 {
   return GST_BUFFER_LIST_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (list)));
 }
+
+static inline gboolean
+gst_buffer_list_replace (GstBufferList **old_list, GstBufferList *new_list)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_list,
+      (GstMiniObject *) new_list);
+}
+
+static inline gboolean
+gst_buffer_list_take (GstBufferList **old_list, GstBufferList *new_list)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_list,
+      (GstMiniObject *) new_list);
+}
+#else  /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstBufferList * gst_buffer_list_ref     (GstBufferList * list);
+
+GST_API
+void            gst_buffer_list_unref   (GstBufferList * list);
+
+GST_API
+void            gst_clear_buffer_list   (GstBufferList ** list_ptr);
+
+GST_API
+GstBufferList * gst_buffer_list_copy    (const GstBufferList * list);
+
+GST_API
+gboolean        gst_buffer_list_replace (GstBufferList ** old_list,
+                                         GstBufferList * new_list);
+
+GST_API
+gboolean        gst_buffer_list_take    (GstBufferList ** old_list,
+                                         GstBufferList * new_list);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /**
  * gst_buffer_list_is_writable:
@@ -164,7 +175,7 @@ void                     gst_buffer_list_remove                (GstBufferList *l
 GST_API
 gboolean                 gst_buffer_list_foreach               (GstBufferList *list,
                                                                 GstBufferListFunc func,
-                                gpointer user_data);
+                gpointer user_data);
 GST_API
 GstBufferList *          gst_buffer_list_copy_deep             (const GstBufferList * list);
 
@@ -173,9 +184,7 @@ gsize                    gst_buffer_list_calculate_size        (GstBufferList * 
 
 #define gst_buffer_list_add(l,b) gst_buffer_list_insert((l),-1,(b));
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBufferList, gst_buffer_list_unref)
-#endif
 
 G_END_DECLS
 

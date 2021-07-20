@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "PODIntervalTree.h"
 #include "RootInlineBox.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -32,6 +31,9 @@ namespace WebCore {
 
 class RenderBlockFlow;
 class RenderBox;
+
+template<typename, typename> class PODInterval;
+template<typename, typename> class PODIntervalTree;
 
 class FloatingObject {
     WTF_MAKE_NONCOPYABLE(FloatingObject); WTF_MAKE_FAST_ALLOCATED;
@@ -72,17 +74,20 @@ public:
     LayoutUnit paginationStrut() const { return m_paginationStrut; }
     void setPaginationStrut(LayoutUnit strut) { m_paginationStrut = strut; }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool isInPlacedTree() const { return m_isInPlacedTree; }
     void setIsInPlacedTree(bool value) { m_isInPlacedTree = value; }
 #endif
 
-    bool shouldPaint() const { return m_shouldPaint; }
-    void setShouldPaint(bool shouldPaint) { m_shouldPaint = shouldPaint; }
+    bool shouldPaint() const;
+
+    bool paintsFloat() const { return m_paintsFloat; }
+    void setPaintsFloat(bool paintsFloat) { m_paintsFloat = paintsFloat; }
+
     bool isDescendant() const { return m_isDescendant; }
     void setIsDescendant(bool isDescendant) { m_isDescendant = isDescendant; }
 
-    // FIXME: Callers of these methods are dangerous and should be whitelisted explicitly or removed.
+    // FIXME: Callers of these methods are dangerous and should be allowed explicitly or removed.
     RootInlineBox* originatingLine() const { return m_originatingLine.get(); }
     void clearOriginatingLine() { m_originatingLine = nullptr; }
     void setOriginatingLine(RootInlineBox& line) { m_originatingLine = makeWeakPtr(line); }
@@ -95,20 +100,17 @@ public:
     LayoutSize marginOffset() const { ASSERT(isPlaced()); return m_marginOffset; }
     LayoutSize translationOffsetToAncestor() const;
 
-    String debugString() const;
-
 private:
     WeakPtr<RenderBox> m_renderer;
     WeakPtr<RootInlineBox> m_originatingLine;
     LayoutRect m_frameRect;
     LayoutUnit m_paginationStrut;
     LayoutSize m_marginOffset;
-
     unsigned m_type : 2; // Type (left or right aligned)
-    unsigned m_shouldPaint : 1;
+    unsigned m_paintsFloat : 1;
     unsigned m_isDescendant : 1;
     unsigned m_isPlaced : 1;
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     unsigned m_isInPlacedTree : 1;
 #endif
 };
@@ -181,23 +183,14 @@ private:
 
     FloatingObjectSet m_set;
     std::unique_ptr<FloatingObjectTree> m_placedFloatsTree;
-    unsigned m_leftObjectsCount;
-    unsigned m_rightObjectsCount;
-    bool m_horizontalWritingMode;
+    unsigned m_leftObjectsCount { 0 };
+    unsigned m_rightObjectsCount { 0 };
+    bool m_horizontalWritingMode { false };
     WeakPtr<const RenderBlockFlow> m_renderer;
 };
 
-} // namespace WebCore
-
-#ifndef NDEBUG
-
-namespace WTF {
-
-// This helper is used by PODIntervalTree for debugging purposes.
-template<> struct ValueToString<WebCore::FloatingObject*> {
-    static String string(const WebCore::FloatingObject* floatingObject) { return floatingObject->debugString(); }
-};
-
-} // namespace WTF
-
+#if ENABLE(TREE_DEBUGGING)
+TextStream& operator<<(TextStream&, const FloatingObject&);
 #endif
+
+} // namespace WebCore

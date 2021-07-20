@@ -34,7 +34,9 @@
 
 namespace WebCore {
 
-class FFTConvolver {
+class FFTConvolver final {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(FFTConvolver);
 public:
     // fftSize must be a power of two
     FFTConvolver(size_t fftSize);
@@ -56,7 +58,7 @@ private:
     FFTFrame m_frame;
 
     // Buffer input until we get fftSize / 2 samples then do an FFT
-    size_t m_readWriteIndex;
+    size_t m_readWriteIndex { 0 };
     AudioFloatArray m_inputBuffer;
 
     // Stores output which we read a little at a time

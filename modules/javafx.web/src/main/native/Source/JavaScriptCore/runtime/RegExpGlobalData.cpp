@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,47 +26,63 @@
 #include "config.h"
 #include "RegExpGlobalData.h"
 
+#include "JSCInlines.h"
+
 namespace JSC {
 
-void RegExpGlobalData::visitAggregate(SlotVisitor& visitor)
+template<typename Visitor>
+void RegExpGlobalData::visitAggregateImpl(Visitor& visitor)
 {
     m_cachedResult.visitAggregate(visitor);
 }
 
-JSValue RegExpGlobalData::getBackref(ExecState* exec, JSGlobalObject* owner, unsigned i)
+DEFINE_VISIT_AGGREGATE(RegExpGlobalData);
+
+JSValue RegExpGlobalData::getBackref(JSGlobalObject* globalObject, unsigned i)
 {
-    JSArray* array = m_cachedResult.lastResult(exec, owner);
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSArray* array = m_cachedResult.lastResult(globalObject, globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     if (i < array->length()) {
-        JSValue result = JSValue(array).get(exec, i);
+        JSValue result = JSValue(array).get(globalObject, i);
+        RETURN_IF_EXCEPTION(scope, { });
         ASSERT(result.isString() || result.isUndefined());
         if (!result.isUndefined())
             return result;
     }
-    return jsEmptyString(exec);
+    return jsEmptyString(vm);
 }
 
-JSValue RegExpGlobalData::getLastParen(ExecState* exec, JSGlobalObject* owner)
+JSValue RegExpGlobalData::getLastParen(JSGlobalObject* globalObject)
 {
-    JSArray* array = m_cachedResult.lastResult(exec, owner);
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSArray* array = m_cachedResult.lastResult(globalObject, globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
     unsigned length = array->length();
     if (length > 1) {
-        JSValue result = JSValue(array).get(exec, length - 1);
+        JSValue result = JSValue(array).get(globalObject, length - 1);
+        RETURN_IF_EXCEPTION(scope, { });
         ASSERT(result.isString() || result.isUndefined());
         if (!result.isUndefined())
             return result;
     }
-    return jsEmptyString(exec);
+    return jsEmptyString(vm);
 }
 
-JSValue RegExpGlobalData::getLeftContext(ExecState* exec, JSGlobalObject* owner)
+JSValue RegExpGlobalData::getLeftContext(JSGlobalObject* globalObject)
 {
-    return m_cachedResult.leftContext(exec, owner);
+    return m_cachedResult.leftContext(globalObject, globalObject);
 }
 
-JSValue RegExpGlobalData::getRightContext(ExecState* exec, JSGlobalObject* owner)
+JSValue RegExpGlobalData::getRightContext(JSGlobalObject* globalObject)
 {
-    return m_cachedResult.rightContext(exec, owner);
+    return m_cachedResult.rightContext(globalObject, globalObject);
 }
 
 } // namespace JSC

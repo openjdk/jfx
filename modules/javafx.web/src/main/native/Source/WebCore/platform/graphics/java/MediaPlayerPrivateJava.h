@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,22 +34,20 @@
 namespace WebCore {
     class MediaPlayerPrivate : public MediaPlayerPrivateInterface {
     public:
-        static void registerMediaEngine(MediaEngineRegistrar registrar);
-    private:
         //typedef MediaPlayerPrivateInterface* (*CreateMediaEnginePlayer)(MediaPlayer*);
         //typedef void (*MediaEngineSupportedTypes)(HashSet<String>& types);
         //typedef MediaPlayer::SupportsType (*MediaEngineSupportsType)(const String& type, const String& codecs);
         //typedef void (*MediaEngineRegistrar)(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType);
+        MediaPlayerPrivate(MediaPlayer *player);
+
         static void MediaEngineSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
 
         static MediaPlayer::SupportsType MediaEngineSupportsType(const MediaEngineSupportParameters&);
 
+        static void registerMediaEngine(MediaEngineRegistrar registrar);
+    private:
         // the method caches the set
         static HashSet<String, ASCIICaseInsensitiveHash>& GetSupportedTypes();
-
-
-    private:
-        MediaPlayerPrivate(MediaPlayer *player);
 
     public:
         virtual ~MediaPlayerPrivate();

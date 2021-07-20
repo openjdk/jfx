@@ -34,10 +34,13 @@
 #include <wtf/text/StringBuilder.h>
 
 #if !OS(WINDOWS)
-#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#endif
+
+#if USE(GLIB)
+#include <gio/gfiledescriptorbased.h>
+#include <gio/gio.h>
 #endif
 
 namespace WTF {
@@ -120,11 +123,11 @@ String encodeForFileName(const String& inputString)
         if (shouldEscapeUChar(character, previousCharacter, nextCharacter)) {
             if (character <= 255) {
                 result.append('%');
-                appendByteAsHex(character, result);
+                result.append(hex(static_cast<unsigned char>(character), 2));
             } else {
                 result.appendLiteral("%+");
-                appendByteAsHex(character >> 8, result);
-                appendByteAsHex(character, result);
+                result.append(hex(static_cast<unsigned char>(character >> 8), 2));
+                result.append(hex(static_cast<unsigned char>(character), 2));
             }
         } else
             result.append(character);
@@ -177,7 +180,8 @@ String decodeFromFilename(const String& inputString)
         if (!isASCIIHexDigit(inputString[i + 5]))
             return { };
 
-        result.append(toASCIIHexValue(inputString[i + 2], inputString[i + 3]) << 8 | toASCIIHexValue(inputString[i + 4], inputString[i + 5]));
+        UChar encodedCharacter = toASCIIHexValue(inputString[i + 2], inputString[i + 3]) << 8 | toASCIIHexValue(inputString[i + 4], inputString[i + 5]);
+        result.append(encodedCharacter);
         i += 5;
     }
 
@@ -276,59 +280,83 @@ bool excludeFromBackup(const String&)
 
 MappedFileData::~MappedFileData()
 {
-#if !OS(WINDOWS)
     if (!m_fileData)
         return;
-    munmap(m_fileData, m_fileSize);
-#endif
+    unmapViewOfFile(m_fileData, m_fileSize);
 }
 
-MappedFileData::MappedFileData(const String& filePath, bool& success)
+MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, bool& success)
 {
-#if OS(WINDOWS)
-    // FIXME: Implement mapping
-    success = false;
+    auto fd = openFile(filePath, FileSystem::FileOpenMode::Read);
+
+    success = mapFileHandle(fd, FileSystem::FileOpenMode::Read, mapMode);
+    closeFile(fd);
+}
+
+#if HAVE(MMAP) && !PLATFORM(JAVA)
+
+bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode mapMode)
+{
+    if (!isHandleValid(handle))
+        return false;
+
+    int fd;
+#if USE(GLIB)
+    auto* inputStream = g_io_stream_get_input_stream(G_IO_STREAM(handle));
+    fd = g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(inputStream));
 #else
-    CString fsRep = fileSystemRepresentation(filePath);
-    int fd = !fsRep.isNull() ? open(fsRep.data(), O_RDONLY) : -1;
-    if (fd < 0) {
-        success = false;
-        return;
-    }
+    // FIXME: jfx2.26 compilation failure
+    // fd = handle;
+#endif
 
     struct stat fileStat;
     if (fstat(fd, &fileStat)) {
-        close(fd);
-        success = false;
-        return;
+        return false;
     }
 
     unsigned size;
     if (!WTF::convertSafely(fileStat.st_size, size)) {
-        close(fd);
-        success = false;
-        return;
+        return false;
     }
 
     if (!size) {
-        close(fd);
-        success = true;
-        return;
+        return true;
     }
 
-    void* data = mmap(0, size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
-    close(fd);
+    int pageProtection = PROT_READ;
+    switch (openMode) {
+    case FileOpenMode::Read:
+        pageProtection = PROT_READ;
+        break;
+    case FileOpenMode::Write:
+        pageProtection = PROT_WRITE;
+        break;
+    case FileOpenMode::ReadWrite:
+        pageProtection = PROT_READ | PROT_WRITE;
+        break;
+#if OS(DARWIN)
+    case FileOpenMode::EventsOnly:
+        ASSERT_NOT_REACHED();
+#endif
+    }
+
+    void* data = mmap(0, size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), fd, 0);
 
     if (data == MAP_FAILED) {
-        success = false;
-        return;
+        return false;
     }
 
-    success = true;
     m_fileData = data;
     m_fileSize = size;
-#endif
+    return true;
 }
+
+bool unmapViewOfFile(void* buffer, size_t size)
+{
+    return !munmap(buffer, size);
+}
+
+#endif
 
 PlatformFileHandle openAndLockFile(const String& path, FileOpenMode openMode, OptionSet<FileLockMode> lockMode)
 {
@@ -362,6 +390,24 @@ bool fileIsDirectory(const String& path, ShouldFollowSymbolicLinks shouldFollowS
         return false;
     return metadata.value().type == FileMetadata::Type::Directory;
 }
+
+#if !PLATFORM(IOS_FAMILY)
+bool isSafeToUseMemoryMapForPath(const String&)
+{
+    return true;
+}
+
+void makeSafeToUseMemoryMapForPath(const String&)
+{
+}
+#endif
+
+#if !PLATFORM(COCOA)
+String createTemporaryZipArchive(const String&)
+{
+    return { };
+}
+#endif
 
 } // namespace FileSystemImpl
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,13 +55,13 @@ public class AnimationTest {
 
     private static final double EPSILON = 1e-12;
 
-    private AbstractMasterTimerMock timer;
+    private AbstractPrimaryTimerMock timer;
     private AnimationImpl animation;
     private ClipEnvelopeMock clipEnvelope;
 
     @Before
     public void setUp() {
-        timer = new AbstractMasterTimerMock();
+        timer = new AbstractPrimaryTimerMock();
         clipEnvelope = new ClipEnvelopeMock();
         animation = new AnimationImpl(timer, clipEnvelope, 1);
         animation.shim_setCycleDuration(ONE_SEC);
@@ -84,7 +84,7 @@ public class AnimationTest {
         assertEquals(DEFAULT_REPEAT_COUNT, animation0.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, animation0.isAutoReverse());
         assertEquals(Status.STOPPED, animation0.getStatus());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
         assertEquals(null, animation0.getOnFinished());
         assertEquals(0, animation0.getCuePoints().size());
 
@@ -255,6 +255,34 @@ public class AnimationTest {
     }
 
     @Test
+    public void testJumpTo_IndefiniteCycles() {
+        animation.shim_setCycleDuration(TWO_SECS);
+        animation.setCycleCount(Animation.INDEFINITE);
+
+        animation.jumpTo("end");
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+    }
+
+    @Test
+    public void testJumpTo_IndefiniteCycleDuration() {
+        animation.shim_setCycleDuration(Duration.INDEFINITE);
+
+        // TicksCalculation defines TICKS_PER_MILLI == 6
+        //
+        // Jumping to the end of Duration.INDEFINITE, which has Double.POSITIVE_INFINITY millis, sets the ticks to
+        // Math.round(Double.POSITIVE_INFINITY * TICKS_PER_MILLI), which is Long.MAX_VALUE as per Math#round specs.
+        // The multiplication by 6 gets lost here because of the infinity rules of Double.
+        //
+        // getCurrentTime() takes the ticks and returns a duration by calculating millis = ticks / TICKS_PER_MILI,
+        // which is Long.MAX_VALUE / 6.
+        //
+        // This means that the conversion Duration -> ticks -> Duration loses information, and the maximum duration is less
+        // than Long.MAX_VALUE.
+        animation.jumpTo("end");
+        assertEquals(Duration.millis(Long.MAX_VALUE / 6), animation.getCurrentTime());
+    }
+
+    @Test
     public void testJumpToCuePoint_Default() {
         animation.getCuePoints().put("ONE_SEC", ONE_SEC);
         animation.getCuePoints().put("THREE_SECS", THREE_SECS);
@@ -322,10 +350,19 @@ public class AnimationTest {
         assertFalse(listener.wasCalled);
         assertFalse(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
         animation.stop();
-        animation.setRate(1.0);
+
+        // stopped timeline, rate = -1
+        listener.wasCalled = false;
+        animation.setRate(-1.0);
+        animation.play();
+        assertEquals(ONE_SEC.toMillis(), animation.getCurrentTime().toMillis(), EPSILON);
+        assertFalse(listener.wasCalled);
+        assertTrue(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
+        animation.stop();
 
         // stopped timeline, cycleDuration = 0
         listener.wasCalled = false;
+        animation.setRate(1.0);
         animation.shim_setCycleDuration(Duration.ZERO);
         animation.play();
         assertEquals(Status.STOPPED, animation.getStatus());
@@ -549,7 +586,7 @@ public class AnimationTest {
 
     @Test
     public void testFullSpeedResolution() {
-        final int resolution = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
+        final int resolution = Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution();
 
         // send pulse
         animation.doTimePulse(4 * resolution);

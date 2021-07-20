@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,15 +30,12 @@
 #include "BigIntPrototype.h"
 #include "JSBigInt.h"
 #include "JSCInlines.h"
-#include "JSGlobalObjectFunctions.h"
-#include "Lookup.h"
 #include "ParseInt.h"
-#include "StructureInlines.h"
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL bigIntConstructorFuncAsUintN(ExecState*);
-static EncodedJSValue JSC_HOST_CALL bigIntConstructorFuncAsIntN(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(bigIntConstructorFuncAsUintN);
+static JSC_DECLARE_HOST_FUNCTION(bigIntConstructorFuncAsIntN);
 
 } // namespace JSC
 
@@ -57,102 +54,96 @@ const ClassInfo BigIntConstructor::s_info = { "Function", &Base::s_info, &bigInt
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL callBigIntConstructor(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(callBigIntConstructor);
+static JSC_DECLARE_HOST_FUNCTION(constructBigIntConstructor);
 
 BigIntConstructor::BigIntConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure, callBigIntConstructor, nullptr)
+    : InternalFunction(vm, structure, callBigIntConstructor, constructBigIntConstructor)
 {
 }
 
 void BigIntConstructor::finishCreation(VM& vm, BigIntPrototype* bigIntPrototype)
 {
-    Base::finishCreation(vm, BigIntPrototype::info()->className);
+    Base::finishCreation(vm, 1, "BigInt"_s, PropertyAdditionMode::WithoutStructureTransition);
     ASSERT(inherits(vm, info()));
 
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, bigIntPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
-    putDirect(vm, vm.propertyNames->name, jsNontrivialString(&vm, String("BigInt"_s)), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 // ------------------------------ Functions ---------------------------
 
-static bool isSafeInteger(JSValue argument)
+JSC_DEFINE_HOST_FUNCTION(callBigIntConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    if (argument.isInt32())
-        return true;
-
-    if (!argument.isDouble())
-        return false;
-
-    double number = argument.asDouble();
-    return trunc(number) == number && std::abs(number) <= maxSafeInteger();
-}
-
-static EncodedJSValue toBigInt(ExecState& state, JSValue argument)
-{
-    ASSERT(argument.isPrimitive());
-    VM& vm = state.vm();
-
-    if (argument.isBigInt())
-        return JSValue::encode(argument);
-
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (argument.isBoolean())
-        RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::createFrom(vm, argument.asBoolean())));
-
-    if (argument.isUndefinedOrNull() || argument.isNumber() || argument.isSymbol())
-        return throwVMTypeError(&state, scope, "Invalid argument type in ToBigInt operation"_s);
-
-    ASSERT(argument.isString());
-
-    RELEASE_AND_RETURN(scope, toStringView(&state, argument, [&] (StringView view) {
-        return JSValue::encode(JSBigInt::parseInt(&state, view));
-    }));
-}
-
-static EncodedJSValue JSC_HOST_CALL callBigIntConstructor(ExecState* state)
-{
-    VM& vm = state->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSValue value = state->argument(0);
-    JSValue primitive = value.toPrimitive(state);
+    JSValue value = callFrame->argument(0);
+    JSValue primitive = value.toPrimitive(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    if (primitive.isNumber()) {
-        if (!isSafeInteger(primitive))
-            return throwVMError(state, scope, createRangeError(state, "Not safe integer"_s));
-
-        scope.release();
-        if (primitive.isInt32())
-            return JSValue::encode(JSBigInt::createFrom(vm, primitive.asInt32()));
-
-        if (primitive.isUInt32())
-            return JSValue::encode(JSBigInt::createFrom(vm, primitive.asUInt32()));
-
-        return JSValue::encode(JSBigInt::createFrom(vm, static_cast<int64_t>(primitive.asDouble())));
+    if (primitive.isInt32()) {
+#if USE(BIGINT32)
+        return JSValue::encode(jsBigInt32(primitive.asInt32()));
+#else
+        RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::createFrom(globalObject, primitive.asInt32())));
+#endif
     }
 
-    EncodedJSValue result = toBigInt(*state, primitive);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    return result;
+    if (primitive.isDouble()) {
+        double number = primitive.asDouble();
+        if (!isInteger(number))
+            return throwVMError(globalObject, scope, createRangeError(globalObject, "Not an integer"_s));
+        RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::makeHeapBigIntOrBigInt32(globalObject, primitive.asDouble())));
+    }
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(primitive.toBigInt(globalObject)));
 }
 
-EncodedJSValue JSC_HOST_CALL bigIntConstructorFuncAsUintN(ExecState*)
+JSC_DEFINE_HOST_FUNCTION(constructBigIntConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    // FIXME: [ESNext][BigInt] Implement BigInt.asIntN and BigInt.asUintN
-    // https://bugs.webkit.org/show_bug.cgi?id=181144
-    CRASH();
-    return JSValue::encode(JSValue());
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    return throwVMError(globalObject, scope, createNotAConstructorError(globalObject, callFrame->jsCallee()));
 }
 
-EncodedJSValue JSC_HOST_CALL bigIntConstructorFuncAsIntN(ExecState*)
+JSC_DEFINE_HOST_FUNCTION(bigIntConstructorFuncAsUintN, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    // FIXME: [ESNext][BigInt] Implement BigInt.asIntN and BigInt.asUintN
-    // https://bugs.webkit.org/show_bug.cgi?id=181144
-    CRASH();
-    return JSValue::encode(JSValue());
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto numberOfBits = callFrame->argument(0).toIndex(globalObject, "number of bits");
+    RETURN_IF_EXCEPTION(scope, { });
+
+    JSValue bigInt = callFrame->argument(1).toBigInt(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+#if USE(BIGINT32)
+    if (bigInt.isBigInt32())
+        RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::asUintN(globalObject, numberOfBits, bigInt.bigInt32AsInt32())));
+#endif
+
+    ASSERT(bigInt.isHeapBigInt());
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::asUintN(globalObject, numberOfBits, bigInt.asHeapBigInt())));
+}
+
+JSC_DEFINE_HOST_FUNCTION(bigIntConstructorFuncAsIntN, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto numberOfBits = callFrame->argument(0).toIndex(globalObject, "number of bits");
+    RETURN_IF_EXCEPTION(scope, { });
+
+    JSValue bigInt = callFrame->argument(1).toBigInt(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+#if USE(BIGINT32)
+    if (bigInt.isBigInt32())
+        RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::asIntN(globalObject, numberOfBits, bigInt.bigInt32AsInt32())));
+#endif
+
+    ASSERT(bigInt.isHeapBigInt());
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::asIntN(globalObject, numberOfBits, bigInt.asHeapBigInt())));
 }
 
 } // namespace JSC

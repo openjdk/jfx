@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,23 +32,29 @@ namespace JSC {
 
 class JSDataView final : public JSArrayBufferView {
 public:
-    typedef JSArrayBufferView Base;
-    static const unsigned elementSize = 1;
+    using Base = JSArrayBufferView;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
-protected:
-    JSDataView(VM&, ConstructionContext&, ArrayBuffer*);
+    static constexpr unsigned elementSize = 1;
 
-public:
+    static constexpr TypedArrayContentType contentType = TypedArrayContentType::None;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.dataViewSpace<mode>();
+    }
+
     JS_EXPORT_PRIVATE static JSDataView* create(
-        ExecState*, Structure*, RefPtr<ArrayBuffer>&&, unsigned byteOffset,
+        JSGlobalObject*, Structure*, RefPtr<ArrayBuffer>&&, unsigned byteOffset,
         unsigned byteLength);
 
     // Dummy methods, which don't actually work; these are just in place to
     // placate some template specialization we do elsewhere.
-    static JSDataView* createUninitialized(ExecState*, Structure*, unsigned length);
-    static JSDataView* create(ExecState*, Structure*, unsigned length);
-    bool set(ExecState*, unsigned, JSObject*, unsigned, unsigned length);
-    bool setIndex(ExecState*, unsigned, JSValue);
+    static JSDataView* createUninitialized(JSGlobalObject*, Structure*, unsigned length);
+    static JSDataView* create(JSGlobalObject*, Structure*, unsigned length);
+    bool set(JSGlobalObject*, unsigned, JSObject*, unsigned, unsigned length);
+    bool setIndex(JSGlobalObject*, unsigned, JSValue);
 
     ArrayBuffer* possiblySharedBuffer() const { return m_buffer; }
     ArrayBuffer* unsharedBuffer() const
@@ -60,22 +66,15 @@ public:
     RefPtr<DataView> possiblySharedTypedImpl();
     RefPtr<DataView> unsharedTypedImpl();
 
-    static const TypedArrayType TypedArrayStorageType = TypeDataView;
+    static constexpr TypedArrayType TypedArrayStorageType = TypeDataView;
 
-protected:
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-
-    static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-
-public:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
     DECLARE_EXPORT_INFO;
 
 private:
+    JSDataView(VM&, ConstructionContext&, ArrayBuffer*);
+
     ArrayBuffer* m_buffer;
 };
 

@@ -29,7 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGGraph.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "TrackedReferences.h"
 
 namespace JSC { namespace DFG {
@@ -134,22 +134,38 @@ void AbstractValue::fixTypeForRepresentation(Graph& graph, NodeFlags representat
             if (m_value.isInt32())
                 m_value = jsDoubleNumber(m_value.asNumber());
         }
-        if (m_type & SpecAnyInt) {
-            m_type &= ~SpecAnyInt;
+        if (m_type & SpecIntAnyFormat) {
+            m_type &= ~SpecIntAnyFormat;
             m_type |= SpecAnyIntAsDouble;
         }
         if (m_type & ~SpecFullDouble)
             DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for double node has type outside SpecFullDouble.\n").data());
     } else if (representation == NodeResultInt52) {
         if (m_type & SpecAnyIntAsDouble) {
+            // AnyIntAsDouble can produce i32 or i52. SpecAnyIntAsDouble doesn't bound the magnitude of the value.
             m_type &= ~SpecAnyIntAsDouble;
-            m_type |= SpecInt52Only;
+            m_type |= SpecInt52Any;
         }
-        if (m_type & ~SpecAnyInt)
-            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for int52 node has type outside SpecAnyInt.\n").data());
+
+        if (m_type & SpecInt32Only) {
+            m_type &= ~SpecInt32Only;
+            m_type |= SpecInt32AsInt52;
+        }
+
+        if (m_type & ~SpecInt52Any)
+            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for int52 node has type outside SpecInt52Any.\n").data());
+
+        if (m_value) {
+            DFG_ASSERT(graph, node, m_value.isAnyInt());
+            m_type = int52AwareSpeculationFromValue(m_value);
+        }
     } else {
-        if (m_type & SpecInt52Only) {
-            m_type &= ~SpecInt52Only;
+        if (m_type & SpecInt32AsInt52) {
+            m_type &= ~SpecInt32AsInt52;
+            m_type |= SpecInt32Only;
+        }
+        if (m_type & SpecNonInt32AsInt52) {
+            m_type &= ~SpecNonInt32AsInt52;
             m_type |= SpecAnyIntAsDouble;
         }
         if (m_type & ~SpecBytecodeTop)
@@ -164,8 +180,19 @@ void AbstractValue::fixTypeForRepresentation(Graph& graph, Node* node)
     fixTypeForRepresentation(graph, node->result(), node);
 }
 
-bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value)
+bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value, VariableAccessData* variable, Node* node)
 {
+    FlushFormat flushFormat = variable->flushFormat();
+
+    {
+        if (flushFormat == FlushedDouble && value.isNumber())
+            value = jsDoubleNumber(value.asNumber());
+        SpeculatedType incomingType = resultFor(flushFormat) == NodeResultInt52 ? int52AwareSpeculationFromValue(value) : speculationFromValue(value);
+        SpeculatedType requiredType = typeFilterFor(flushFormat);
+        if (incomingType & ~requiredType)
+            return false;
+    }
+
     AbstractValue oldMe = *this;
 
     if (isClear()) {
@@ -191,8 +218,11 @@ bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value)
             m_value = JSValue();
     }
 
-    checkConsistency();
     assertIsRegistered(graph);
+
+    fixTypeForRepresentation(graph, resultFor(flushFormat), node);
+
+    checkConsistency();
 
     return oldMe != *this;
 }
@@ -236,14 +266,15 @@ FiltrationResult AbstractValue::changeStructure(Graph& graph, const RegisteredSt
     return normalizeClarity(graph);
 }
 
-FiltrationResult AbstractValue::filterArrayModes(ArrayModes arrayModes)
+FiltrationResult AbstractValue::filterArrayModes(ArrayModes arrayModes, SpeculatedType admittedTypes)
 {
     ASSERT(arrayModes);
+    ASSERT(!(admittedTypes & SpecCell));
 
     if (isClear())
         return FiltrationOK;
 
-    m_type &= SpecCell;
+    m_type &= SpecCell | admittedTypes;
     m_arrayModes &= arrayModes;
     return normalizeClarity();
 }
@@ -255,7 +286,7 @@ FiltrationResult AbstractValue::filterClassInfo(Graph& graph, const ClassInfo* c
     if (isClear())
         return FiltrationOK;
 
-    m_type &= speculationFromClassInfo(classInfo);
+    m_type &= speculationFromClassInfoInheritance(classInfo);
     m_structure.filterClassInfo(classInfo);
 
     m_structure.filter(m_type);
@@ -290,8 +321,15 @@ FiltrationResult AbstractValue::fastForwardToAndFilterSlow(AbstractValueClobberE
 FiltrationResult AbstractValue::filterByValue(const FrozenValue& value)
 {
     FiltrationResult result = filter(speculationFromValue(value.value()));
-    if (m_type)
+    if (m_type) {
         m_value = value.value();
+        // It is possible that SpeculatedType from value is broader than original m_type.
+        // The filter operation can only keep m_type as is or make it narrower.
+        // As a result, the SpeculatedType from m_value can become broader than m_type. This breaks an invariant.
+        // When setting m_value after filtering, we should filter m_value with m_type.
+        filterValueByType();
+    }
+    checkConsistency();
     return result;
 }
 
@@ -322,6 +360,11 @@ FiltrationResult AbstractValue::filter(const AbstractValue& other)
     if (!m_value) {
         // We previously didn't prove a value but now we have done so.
         m_value = other.m_value;
+        // It is possible that SpeculatedType from other.m_value is broader than original m_type.
+        // The filter operation can only keep m_type as is or make it narrower.
+        // As a result, the SpeculatedType from m_value can become broader than m_type. This breaks an invariant.
+        // When setting m_value after filtering, we should filter m_value with m_type.
+        filterValueByType();
         return FiltrationOK;
     }
 
@@ -341,17 +384,17 @@ void AbstractValue::filterValueByType()
     // the value, then we could clear both of those things. But that's unlikely to help
     // in any realistic scenario, so we don't do it. Simpler is better.
 
-    if (!!m_type) {
-        // The type is still non-empty. It may be that the new type renders
-        // the value empty because it contravenes the constant value we had.
-        if (m_value && !validateType(m_value))
-            clear();
+    if (!m_value)
         return;
-    }
 
-    // The type has been rendered empty. That means that the value must now be invalid,
-    // as well.
-    ASSERT(!m_value || !validateType(m_value));
+    if (validateTypeAcceptingBoxedInt52(m_value))
+        return;
+
+    // We assume that the constant value can produce a narrower type at
+    // some point. For example, rope JSString produces SpecString, but
+    // it produces SpecStringIdent once it is resolved to AtomStringImpl.
+    // We do not make this AbstractValue cleared, but clear the constant
+    // value if validation fails currently.
     m_value = JSValue();
 }
 
@@ -411,25 +454,19 @@ FiltrationResult AbstractValue::normalizeClarity(Graph& graph)
     return result;
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 void AbstractValue::checkConsistency() const
 {
     if (!(m_type & SpecCell)) {
-        ASSERT(m_structure.isClear());
-        ASSERT(!m_arrayModes);
+        RELEASE_ASSERT(m_structure.isClear());
+        RELEASE_ASSERT(!m_arrayModes);
     }
 
     if (isClear())
-        ASSERT(!m_value);
+        RELEASE_ASSERT(!m_value);
 
-    if (!!m_value) {
-        SpeculatedType type = m_type;
-        // This relaxes the assertion below a bit, since we don't know the representation of the
-        // node.
-        if (type & SpecInt52Only)
-            type |= SpecAnyIntAsDouble;
-        ASSERT(mergeSpeculations(type, speculationFromValue(m_value)) == type);
-    }
+    if (!!m_value)
+        RELEASE_ASSERT(validateTypeAcceptingBoxedInt52(m_value));
 
     // Note that it's possible for a prediction like (Final, []). This really means that
     // the value is bottom and that any code that uses the value is unreachable. But
@@ -441,7 +478,7 @@ void AbstractValue::assertIsRegistered(Graph& graph) const
 {
     m_structure.assertIsRegistered(graph);
 }
-#endif
+#endif // ASSERT_ENABLED
 
 ResultType AbstractValue::resultType() const
 {
@@ -461,7 +498,7 @@ ResultType AbstractValue::resultType() const
 
 void AbstractValue::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 void AbstractValue::dumpInContext(PrintStream& out, DumpContext* context) const

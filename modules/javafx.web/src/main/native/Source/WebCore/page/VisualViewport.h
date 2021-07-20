@@ -32,13 +32,14 @@
 namespace WebCore {
 
 class VisualViewport final : public RefCounted<VisualViewport>, public EventTargetWithInlineData, public DOMWindowProperty {
+    WTF_MAKE_ISO_ALLOCATED(VisualViewport);
 public:
     static Ref<VisualViewport> create(DOMWindow& window) { return adoptRef(*new VisualViewport(window)); }
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
+    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
 
     double offsetLeft() const;
     double offsetTop() const;
@@ -58,9 +59,6 @@ private:
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-
-    void enqueueResizeEvent();
-    void enqueueScrollEvent();
 
     void updateFrameLayout() const;
 

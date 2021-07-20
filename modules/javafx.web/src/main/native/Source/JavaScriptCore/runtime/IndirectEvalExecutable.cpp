@@ -29,38 +29,35 @@
 #include "CodeCache.h"
 #include "Debugger.h"
 #include "Error.h"
-#include "HeapInlines.h"
 #include "JSCJSValueInlines.h"
 #include "ParserError.h"
 
 namespace JSC {
 
-IndirectEvalExecutable* IndirectEvalExecutable::create(ExecState* exec, const SourceCode& source, bool isInStrictContext, DerivedContextType derivedContextType, bool isArrowFunctionContext, EvalContextType evalContextType)
+IndirectEvalExecutable* IndirectEvalExecutable::create(JSGlobalObject* globalObject, const SourceCode& source, DerivedContextType derivedContextType, bool isArrowFunctionContext, EvalContextType evalContextType)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
     if (!globalObject->evalEnabled()) {
-        throwException(exec, scope, createEvalError(exec, globalObject->evalDisabledErrorMessage()));
-        return 0;
+        throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
+        return nullptr;
     }
 
-    auto* executable = new (NotNull, allocateCell<IndirectEvalExecutable>(vm.heap)) IndirectEvalExecutable(exec, source, isInStrictContext, derivedContextType, isArrowFunctionContext, evalContextType);
+    auto* executable = new (NotNull, allocateCell<IndirectEvalExecutable>(vm.heap)) IndirectEvalExecutable(globalObject, source, derivedContextType, isArrowFunctionContext, evalContextType);
     executable->finishCreation(vm);
 
     ParserError error;
-    JSParserStrictMode strictMode = executable->isStrictMode() ? JSParserStrictMode::Strict : JSParserStrictMode::NotStrict;
-    DebuggerMode debuggerMode = globalObject->hasInteractiveDebugger() ? DebuggerOn : DebuggerOff;
+    OptionSet<CodeGenerationMode> codeGenerationMode = globalObject->defaultCodeGenerationMode();
 
     UnlinkedEvalCodeBlock* unlinkedEvalCode = vm.codeCache()->getUnlinkedEvalCodeBlock(
-        vm, executable, executable->source(), strictMode, debuggerMode, error, evalContextType);
+        vm, executable, executable->source(), JSParserStrictMode::NotStrict, codeGenerationMode, error, evalContextType);
 
     if (globalObject->hasDebugger())
-        globalObject->debugger()->sourceParsed(exec, executable->source().provider(), error.line(), error.message());
+        globalObject->debugger()->sourceParsed(globalObject, executable->source().provider(), error.line(), error.message());
 
     if (error.isValid()) {
-        throwVMError(exec, scope, error.toErrorObject(globalObject, executable->source()));
+        throwVMError(globalObject, scope, error.toErrorObject(globalObject, executable->source()));
         return nullptr;
     }
 
@@ -69,8 +66,10 @@ IndirectEvalExecutable* IndirectEvalExecutable::create(ExecState* exec, const So
     return executable;
 }
 
-IndirectEvalExecutable::IndirectEvalExecutable(ExecState* exec, const SourceCode& source, bool inStrictContext, DerivedContextType derivedContextType, bool isArrowFunctionContext, EvalContextType evalContextType)
-    : EvalExecutable(exec, source, inStrictContext, derivedContextType, isArrowFunctionContext, evalContextType)
+constexpr bool inStrictContext = false;
+constexpr bool insideOrdinaryFunction = false;
+IndirectEvalExecutable::IndirectEvalExecutable(JSGlobalObject* globalObject, const SourceCode& source, DerivedContextType derivedContextType, bool isArrowFunctionContext, EvalContextType evalContextType)
+    : EvalExecutable(globalObject, source, inStrictContext, derivedContextType, isArrowFunctionContext, insideOrdinaryFunction, evalContextType, NeedsClassFieldInitializer::No, PrivateBrandRequirement::None)
 {
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,24 +29,29 @@
 
 #include "AudioTrackPrivate.h"
 #include "ContentType.h"
-#include "GraphicsTypes3D.h"
-#include "InbandTextTrackPrivate.h"
+#include "Cookie.h"
+#include "GraphicsTypesGL.h"
 #include "LayoutRect.h"
 #include "LegacyCDMSession.h"
 #include "MediaPlayerEnums.h"
+#include "MediaPlayerIdentifier.h"
 #include "NativeImage.h"
 #include "PlatformLayer.h"
 #include "PlatformMediaResourceLoader.h"
 #include "PlatformMediaSession.h"
+#include "PlatformScreen.h"
 #include "SecurityOriginHash.h"
 #include "Timer.h"
+#include "VideoPlaybackQualityMetrics.h"
 #include <wtf/URL.h>
 #include "VideoTrackPrivate.h"
 #include <JavaScriptCore/Uint8Array.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/StringHash.h>
 
@@ -57,16 +62,23 @@
 OBJC_CLASS AVPlayer;
 OBJC_CLASS NSArray;
 
+#if USE(AVFOUNDATION)
+typedef struct __CVBuffer* CVPixelBufferRef;
+#endif
+
 namespace WebCore {
 
 class AudioSourceProvider;
 class CDMInstance;
 class CachedResourceLoader;
-class GraphicsContext3D;
+class GraphicsContextGL;
 class GraphicsContext;
+class InbandTextTrackPrivate;
+class LegacyCDM;
 class LegacyCDMSessionClient;
 class MediaPlaybackTarget;
 class MediaPlayer;
+class MediaPlayerFactory;
 class MediaPlayerPrivateInterface;
 class MediaPlayerRequestInstallMissingPluginsCallback;
 class MediaSourcePrivateClient;
@@ -74,9 +86,8 @@ class MediaStreamPrivate;
 class PlatformTimeRanges;
 class TextTrackRepresentation;
 
-struct Cookie;
 struct GraphicsDeviceAdapter;
-struct MediaPlayerFactory;
+struct SecurityOriginData;
 
 struct MediaEngineSupportParameters {
     ContentType type;
@@ -84,14 +95,47 @@ struct MediaEngineSupportParameters {
     bool isMediaSource { false };
     bool isMediaStream { false };
     Vector<ContentType> contentTypesRequiringHardwareSupport;
-};
 
-struct VideoPlaybackQualityMetrics {
-    uint32_t totalVideoFrames { 0 };
-    uint32_t droppedVideoFrames { 0 };
-    uint32_t corruptedVideoFrames { 0 };
-    double totalFrameDelay { 0 };
-    uint32_t displayCompositedVideoFrames { 0 };
+    template<class Encoder>
+    void encode(Encoder& encoder) const
+    {
+        encoder << type;
+        encoder << url;
+        encoder << isMediaSource;
+        encoder << isMediaStream;
+        encoder << contentTypesRequiringHardwareSupport;
+    }
+
+    template <class Decoder>
+    static Optional<MediaEngineSupportParameters> decode(Decoder& decoder)
+    {
+        Optional<ContentType> type;
+        decoder >> type;
+        if (!type)
+            return WTF::nullopt;
+
+        Optional<URL> url;
+        decoder >> url;
+        if (!url)
+            return WTF::nullopt;
+
+        Optional<bool> isMediaSource;
+        decoder >> isMediaSource;
+        if (!isMediaSource)
+            return WTF::nullopt;
+
+        Optional<bool> isMediaStream;
+        decoder >> isMediaStream;
+        if (!isMediaStream)
+            return WTF::nullopt;
+
+        Optional<Vector<ContentType>> typesRequiringHardware;
+        decoder >> typesRequiringHardware;
+        if (!typesRequiringHardware)
+            return WTF::nullopt;
+
+        return {{ WTFMove(*type), WTFMove(*url), *isMediaSource, *isMediaStream, *typesRequiringHardware }};
+    }
 };
 
 class MediaPlayerClient {
@@ -99,72 +143,67 @@ public:
     virtual ~MediaPlayerClient() = default;
 
     // the network state has changed
-    virtual void mediaPlayerNetworkStateChanged(MediaPlayer*) { }
+    virtual void mediaPlayerNetworkStateChanged() { }
 
     // the ready state has changed
-    virtual void mediaPlayerReadyStateChanged(MediaPlayer*) { }
+    virtual void mediaPlayerReadyStateChanged() { }
 
     // the volume state has changed
-    virtual void mediaPlayerVolumeChanged(MediaPlayer*) { }
+    virtual void mediaPlayerVolumeChanged() { }
 
     // the mute state has changed
-    virtual void mediaPlayerMuteChanged(MediaPlayer*) { }
+    virtual void mediaPlayerMuteChanged() { }
 
     // time has jumped, eg. not as a result of normal playback
-    virtual void mediaPlayerTimeChanged(MediaPlayer*) { }
+    virtual void mediaPlayerTimeChanged() { }
 
     // the media file duration has changed, or is now known
-    virtual void mediaPlayerDurationChanged(MediaPlayer*) { }
+    virtual void mediaPlayerDurationChanged() { }
 
     // the playback rate has changed
-    virtual void mediaPlayerRateChanged(MediaPlayer*) { }
+    virtual void mediaPlayerRateChanged() { }
 
     // the play/pause status changed
-    virtual void mediaPlayerPlaybackStateChanged(MediaPlayer*) { }
-
-    // The MediaPlayer has found potentially problematic media content.
-    // This is used internally to trigger swapping from a <video>
-    // element to an <embed> in standalone documents
-    virtual void mediaPlayerSawUnsupportedTracks(MediaPlayer*) { }
+    virtual void mediaPlayerPlaybackStateChanged() { }
 
     // The MediaPlayer could not discover an engine which supports the requested resource.
-    virtual void mediaPlayerResourceNotSupported(MediaPlayer*) { }
+    virtual void mediaPlayerResourceNotSupported() { }
 
 // Presentation-related methods
     // a new frame of video is available
-    virtual void mediaPlayerRepaint(MediaPlayer*) { }
+    virtual void mediaPlayerRepaint() { }
 
     // the movie size has changed
-    virtual void mediaPlayerSizeChanged(MediaPlayer*) { }
+    virtual void mediaPlayerSizeChanged() { }
 
-    virtual void mediaPlayerEngineUpdated(MediaPlayer*) { }
+    virtual void mediaPlayerEngineUpdated() { }
 
     // The first frame of video is available to render. A media engine need only make this callback if the
     // first frame is not available immediately when prepareForRendering is called.
-    virtual void mediaPlayerFirstVideoFrameAvailable(MediaPlayer*) { }
+    virtual void mediaPlayerFirstVideoFrameAvailable() { }
 
     // A characteristic of the media file, eg. video, audio, closed captions, etc, has changed.
-    virtual void mediaPlayerCharacteristicChanged(MediaPlayer*) { }
+    virtual void mediaPlayerCharacteristicChanged() { }
 
     // whether the rendering system can accelerate the display of this MediaPlayer.
-    virtual bool mediaPlayerRenderingCanBeAccelerated(MediaPlayer*) { return false; }
+    virtual bool mediaPlayerRenderingCanBeAccelerated() { return false; }
 
     // called when the media player's rendering mode changed, which indicates a change in the
     // availability of the platformLayer().
-    virtual void mediaPlayerRenderingModeChanged(MediaPlayer*) { }
+    virtual void mediaPlayerRenderingModeChanged() { }
 
     // whether accelerated compositing is enabled for video rendering
     virtual bool mediaPlayerAcceleratedCompositingEnabled() { return false; }
 
-    virtual void mediaPlayerActiveSourceBuffersChanged(const MediaPlayer*) { }
+    virtual void mediaPlayerActiveSourceBuffersChanged() { }
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
-    virtual GraphicsDeviceAdapter* mediaPlayerGraphicsDeviceAdapter(const MediaPlayer*) const { return nullptr; }
+    virtual GraphicsDeviceAdapter* mediaPlayerGraphicsDeviceAdapter() const { return nullptr; }
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     virtual RefPtr<ArrayBuffer> mediaPlayerCachedKeyForKeyId(const String&) const { return nullptr; }
-    virtual bool mediaPlayerKeyNeeded(MediaPlayer*, Uint8Array*) { return false; }
+    virtual void mediaPlayerKeyNeeded(Uint8Array*) { }
     virtual String mediaPlayerMediaKeysStorageDirectory() const { return emptyString(); }
 #endif
 
@@ -174,31 +213,27 @@ public:
 #endif
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    virtual void mediaPlayerCurrentPlaybackTargetIsWirelessChanged(MediaPlayer*) { };
+    virtual void mediaPlayerCurrentPlaybackTargetIsWirelessChanged(bool) { };
 #endif
+
+    virtual void mediaPlayerWillInitializeMediaEngine() { }
+    virtual void mediaPlayerDidInitializeMediaEngine() { }
 
     virtual String mediaPlayerReferrer() const { return String(); }
     virtual String mediaPlayerUserAgent() const { return String(); }
-    virtual void mediaPlayerEnterFullscreen() { }
-    virtual void mediaPlayerExitFullscreen() { }
     virtual bool mediaPlayerIsFullscreen() const { return false; }
     virtual bool mediaPlayerIsFullscreenPermitted() const { return false; }
     virtual bool mediaPlayerIsVideo() const { return false; }
     virtual LayoutRect mediaPlayerContentBoxRect() const { return LayoutRect(); }
     virtual float mediaPlayerContentsScale() const { return 1; }
-    virtual void mediaPlayerSetSize(const IntSize&) { }
-    virtual void mediaPlayerPause() { }
-    virtual void mediaPlayerPlay() { }
     virtual bool mediaPlayerPlatformVolumeConfigurationRequired() const { return false; }
-    virtual bool mediaPlayerIsPaused() const { return true; }
     virtual bool mediaPlayerIsLooping() const { return false; }
     virtual CachedResourceLoader* mediaPlayerCachedResourceLoader() { return nullptr; }
     virtual RefPtr<PlatformMediaResourceLoader> mediaPlayerCreateResourceLoader() { return nullptr; }
-    virtual bool doesHaveAttribute(const AtomicString&, AtomicString* = nullptr) const { return false; }
+    virtual bool doesHaveAttribute(const AtomString&, AtomString* = nullptr) const { return false; }
     virtual bool mediaPlayerShouldUsePersistentCache() const { return true; }
     virtual const String& mediaPlayerMediaCacheDirectory() const { return emptyString(); }
 
-#if ENABLE(VIDEO_TRACK)
     virtual void mediaPlayerDidAddAudioTrack(AudioTrackPrivate&) { }
     virtual void mediaPlayerDidAddTextTrack(InbandTextTrackPrivate&) { }
     virtual void mediaPlayerDidAddVideoTrack(VideoTrackPrivate&) { }
@@ -206,23 +241,23 @@ public:
     virtual void mediaPlayerDidRemoveTextTrack(InbandTextTrackPrivate&) { }
     virtual void mediaPlayerDidRemoveVideoTrack(VideoTrackPrivate&) { }
 
-    virtual void textTrackRepresentationBoundsChanged(const IntRect&) { }
-#endif
+    virtual void mediaPlayerReloadAndResumePlaybackIfNeeded() { }
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(AVF_CAPTIONS)
+    virtual void textTrackRepresentationBoundsChanged(const IntRect&) { }
+
+#if ENABLE(AVF_CAPTIONS)
     virtual Vector<RefPtr<PlatformTextTrack>> outOfBandTrackSources() { return { }; }
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     virtual String mediaPlayerNetworkInterfaceName() const { return String(); }
-    virtual bool mediaPlayerGetRawCookies(const URL&, Vector<Cookie>&) const { return false; }
-#endif
 
-    virtual void mediaPlayerHandlePlaybackCommand(PlatformMediaSession::RemoteControlCommandType) { }
+    using GetRawCookiesCallback = CompletionHandler<void(Vector<Cookie>&&)>;
+    virtual void mediaPlayerGetRawCookies(const URL&, GetRawCookiesCallback&& completionHandler) const { completionHandler({ }); }
+#endif
 
     virtual String mediaPlayerSourceApplicationIdentifier() const { return emptyString(); }
 
-    virtual bool mediaPlayerIsInMediaDocument() const { return false; }
     virtual void mediaPlayerEngineFailedToLoad() const { }
 
     virtual double mediaPlayerRequestedPlaybackRate() const { return 0; }
@@ -235,8 +270,16 @@ public:
 #endif
 
     virtual bool mediaPlayerShouldDisableSleep() const { return false; }
-    virtual const Vector<ContentType>& mediaContentTypesRequiringHardwareSupport() const;
+    virtual const Vector<ContentType>& mediaContentTypesRequiringHardwareSupport() const = 0;
     virtual bool mediaPlayerShouldCheckHardwareSupport() const { return false; }
+
+    virtual void mediaPlayerBufferedTimeRangesChanged() { }
+    virtual void mediaPlayerSeekableTimeRangesChanged() { }
+
+    virtual SecurityOriginData documentSecurityOrigin() const { return { }; }
+
+    virtual String audioOutputDeviceId() const { return { }; }
+    virtual String audioOutputDeviceIdOverride() const { return { }; }
 
 #if !RELEASE_LOG_DISABLED
     virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
@@ -244,16 +287,18 @@ public:
 #endif
 };
 
-class MediaPlayer : public MediaPlayerEnums, public RefCounted<MediaPlayer> {
+class WEBCORE_EXPORT MediaPlayer : public MediaPlayerEnums, public ThreadSafeRefCounted<MediaPlayer, WTF::DestructionThread::Main> {
     WTF_MAKE_NONCOPYABLE(MediaPlayer); WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<MediaPlayer> create(MediaPlayerClient&);
+    static Ref<MediaPlayer> create(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
     virtual ~MediaPlayer();
 
     void invalidate();
 
     // Media engine support.
     using MediaPlayerEnums::SupportsType;
+    static const MediaPlayerFactory* mediaEngine(MediaPlayerEnums::MediaEngineIdentifier);
     static SupportsType supportsType(const MediaEngineSupportParameters&);
     static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>&);
     static bool isAvailable();
@@ -267,10 +312,13 @@ public:
     bool supportsScanning() const;
     bool canSaveMediaData() const;
     bool requiresImmediateCompositing() const;
-    bool doesHaveAttribute(const AtomicString&, AtomicString* value = nullptr) const;
+    bool doesHaveAttribute(const AtomString&, AtomString* value = nullptr) const;
     PlatformLayer* platformLayer() const;
 
-#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+    void reloadAndResumePlaybackIfNeeded();
+
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    RetainPtr<PlatformLayer> createVideoFullscreenLayer();
     void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler = [] { });
     void setVideoFullscreenFrame(FloatRect);
     void updateVideoFullscreenInlineImage();
@@ -292,8 +340,6 @@ public:
     bool hasVideo() const;
     bool hasAudio() const;
 
-    bool inMediaDocument() const;
-
     IntSize size() const { return m_size; }
     void setSize(const IntSize& size);
 
@@ -306,13 +352,15 @@ public:
 #endif
     void cancelLoad();
 
-    bool visible() const;
     void setVisible(bool);
+    void setVisibleForCanvas(bool);
 
     void prepareToPlay();
     void play();
     void pause();
-    void setShouldBufferData(bool);
+
+    using MediaPlayerEnums::BufferingPolicy;
+    void setBufferingPolicy(BufferingPolicy);
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     // Represents synchronous exceptions that can be thrown from the Encrypted Media methods.
@@ -320,6 +368,7 @@ public:
     enum MediaKeyException { NoError, InvalidPlayerState, KeySystemNotSupported };
 
     std::unique_ptr<LegacyCDMSession> createSession(const String& keySystem, LegacyCDMSessionClient*);
+    void setCDM(LegacyCDM*);
     void setCDMSession(LegacyCDMSession*);
     void keyAdded();
 #endif
@@ -330,6 +379,11 @@ public:
     void attemptToDecryptWithInstance(CDMInstance&);
 #endif
 
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
+    void setShouldContinueAfterKeyNeeded(bool);
+    bool shouldContinueAfterKeyNeeded() const { return m_shouldContinueAfterKeyNeeded; }
+#endif
+
     bool paused() const;
     bool seeking() const;
 
@@ -337,6 +391,7 @@ public:
     MediaTime duration() const;
     MediaTime currentTime() const;
     void seek(const MediaTime&);
+    void seekWhenPossible(const MediaTime&);
     void seekWithTolerance(const MediaTime&, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance);
 
     MediaTime startTime() const;
@@ -351,8 +406,13 @@ public:
     bool preservesPitch() const;
     void setPreservesPitch(bool);
 
+    void setPitchCorrectionAlgorithm(PitchCorrectionAlgorithm);
+    PitchCorrectionAlgorithm pitchCorrectionAlgorithm() const { return m_pitchCorrectionAlgorithm; }
+
     std::unique_ptr<PlatformTimeRanges> buffered();
     std::unique_ptr<PlatformTimeRanges> seekable();
+    void bufferedTimeRangesChanged();
+    void seekableTimeRangesChanged();
     MediaTime minTimeSeekable();
     MediaTime maxTimeSeekable();
 
@@ -372,7 +432,6 @@ public:
     void setClosedCaptionsVisible(bool closedCaptionsVisible);
 
     void paint(GraphicsContext&, const FloatRect&);
-    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&);
 
     // copyVideoTextureToPlatformTexture() is used to do the GPU-GPU textures copy without a readback to system memory.
     // The first five parameters denote the corresponding GraphicsContext, destination texture, requested level, requested type and the required internalFormat for destination texture.
@@ -382,10 +441,13 @@ public:
     // In the GPU-GPU textures copy, the source texture(Video texture) should have valid target, internalFormat and size, etc.
     // The destination texture may need to be resized to to the dimensions of the source texture or re-defined to the required internalFormat.
     // The current restrictions require that format shoud be RGB or RGBA, type should be UNSIGNED_BYTE and level should be 0. It may be lifted in the future.
+#if !USE(AVFOUNDATION)
+    bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY);
+#else
+    CVPixelBufferRef pixelBufferForCurrentTime();
+#endif
 
-    bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject texture, GC3Denum target, GC3Dint level, GC3Denum internalFormat, GC3Denum format, GC3Denum type, bool premultiplyAlpha, bool flipY);
-
-    NativeImagePtr nativeImageForCurrentTime();
+    RefPtr<NativeImage> nativeImageForCurrentTime();
 
     using MediaPlayerEnums::NetworkState;
     NetworkState networkState();
@@ -414,21 +476,11 @@ public:
 
     void repaint();
 
-    MediaPlayerClient& client() const { return *m_client; }
-
     bool hasAvailableVideoFrame() const;
     void prepareForRendering();
 
-    bool canLoadPoster() const;
-    void setPoster(const String&);
-
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-    void enterFullscreen();
-    void exitFullscreen();
-#endif
-
+    using MediaPlayerEnums::WirelessPlaybackTargetType;
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    enum WirelessPlaybackTargetType { TargetTypeNone, TargetTypeAirPlay, TargetTypeTVOut };
     WirelessPlaybackTargetType wirelessPlaybackTargetType() const;
 
     String wirelessPlaybackTargetName() const;
@@ -436,7 +488,7 @@ public:
     bool wirelessVideoPlaybackDisabled() const;
     void setWirelessVideoPlaybackDisabled(bool);
 
-    void currentPlaybackTargetIsWirelessChanged();
+    void currentPlaybackTargetIsWirelessChanged(bool);
     void playbackTargetAvailabilityChanged();
 
     bool isCurrentPlaybackTargetWireless() const;
@@ -449,16 +501,11 @@ public:
     double minFastReverseRate() const;
     double maxFastForwardRate() const;
 
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-    bool canEnterFullscreen() const;
-#endif
-
     // whether accelerated rendering is supported by the media engine for the current media.
     bool supportsAcceleratedRendering() const;
     // called when the rendering system flips the into or out of accelerated rendering mode.
     void acceleratedRenderingStateChanged();
 
-    bool shouldMaintainAspectRatio() const;
     void setShouldMaintainAspectRatio(bool);
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
@@ -486,7 +533,7 @@ public:
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     RefPtr<ArrayBuffer> cachedKeyForKeyId(const String& keyId) const;
-    bool keyNeeded(Uint8Array* initData);
+    void keyNeeded(Uint8Array* initData);
     String mediaKeysStorageDirectory() const;
 #endif
 
@@ -505,7 +552,6 @@ public:
     CachedResourceLoader* cachedResourceLoader();
     RefPtr<PlatformMediaResourceLoader> createResourceLoader();
 
-#if ENABLE(VIDEO_TRACK)
     void addAudioTrack(AudioTrackPrivate&);
     void addTextTrack(InbandTextTrackPrivate&);
     void addVideoTrack(VideoTrackPrivate&);
@@ -517,26 +563,25 @@ public:
     void setTextTrackRepresentation(TextTrackRepresentation*);
     void syncTextTrackBounds();
     void tracksChanged();
-#endif
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(AVF_CAPTIONS)
+#if ENABLE(AVF_CAPTIONS)
     void notifyTrackModeChanged();
     Vector<RefPtr<PlatformTextTrack>> outOfBandTrackSources();
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     String mediaPlayerNetworkInterfaceName() const;
-    bool getRawCookies(const URL&, Vector<Cookie>&) const;
+    void getRawCookies(const URL&, MediaPlayerClient::GetRawCookiesCallback&&) const;
 #endif
 
     static void resetMediaEngines();
 
 #if USE(GSTREAMER)
-    WEBCORE_EXPORT void simulateAudioInterruption();
+    void simulateAudioInterruption();
 #endif
 
-    WEBCORE_EXPORT void beginSimulatedHDCPError();
-    WEBCORE_EXPORT void endSimulatedHDCPError();
+    void beginSimulatedHDCPError();
+    void endSimulatedHDCPError();
 
     String languageOfPrimaryAudioTrack() const;
 
@@ -546,7 +591,6 @@ public:
 
     Optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics();
 
-    void handlePlaybackCommand(PlatformMediaSession::RemoteControlCommandType);
     String sourceApplicationIdentifier() const;
     Vector<String> preferredAudioCharacteristics() const;
 
@@ -571,18 +615,54 @@ public:
     void applicationDidBecomeActive();
 
 #if USE(AVFOUNDATION)
-    WEBCORE_EXPORT AVPlayer *objCAVFoundationAVPlayer() const;
+    AVPlayer *objCAVFoundationAVPlayer() const;
 #endif
 
-    bool performTaskAtMediaTime(WTF::Function<void()>&&, MediaTime);
+    bool performTaskAtMediaTime(Function<void()>&&, const MediaTime&);
 
     bool shouldIgnoreIntrinsicSize();
 
+    bool renderingCanBeAccelerated() const { return client().mediaPlayerRenderingCanBeAccelerated(); }
+    void renderingModeChanged() const  { client().mediaPlayerRenderingModeChanged(); }
+    bool acceleratedCompositingEnabled() { return client().mediaPlayerAcceleratedCompositingEnabled(); }
+    void activeSourceBuffersChanged() { client().mediaPlayerActiveSourceBuffersChanged(); }
+    LayoutRect playerContentBoxRect() const { return client().mediaPlayerContentBoxRect(); }
+    float playerContentsScale() const { return client().mediaPlayerContentsScale(); }
+    bool shouldUsePersistentCache() const { return client().mediaPlayerShouldUsePersistentCache(); }
+    const String& mediaCacheDirectory() const { return client().mediaPlayerMediaCacheDirectory(); }
+    bool isVideoPlayer() const { return client().mediaPlayerIsVideo(); }
+    void mediaEngineUpdated() { client().mediaPlayerEngineUpdated(); }
+    void resourceNotSupported() { client().mediaPlayerResourceNotSupported(); }
+    bool isLooping() const { return client().mediaPlayerIsLooping(); }
+
+    void remoteEngineFailedToLoad();
+    SecurityOriginData documentSecurityOrigin() const;
+
+#if USE(GSTREAMER)
+    void requestInstallMissingPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback& callback) { client().requestInstallMissingPlugins(details, description, callback); }
+#endif
+
+    const MediaPlayerPrivateInterface* playerPrivate() const;
+    MediaPlayerPrivateInterface* playerPrivate();
+
+    DynamicRangeMode preferredDynamicRangeMode() const { return m_preferredDynamicRangeMode; }
+    void setPreferredDynamicRangeMode(DynamicRangeMode);
+
+    String audioOutputDeviceId() const;
+    String audioOutputDeviceIdOverride() const;
+    void audioOutputDeviceChanged();
+
+    MediaPlayerIdentifier identifier() const;
+
 private:
     MediaPlayer(MediaPlayerClient&);
+    MediaPlayer(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
 
-    const MediaPlayerFactory* nextBestMediaEngine(const MediaPlayerFactory*) const;
+    MediaPlayerClient& client() const { return *m_client; }
+
+    const MediaPlayerFactory* nextBestMediaEngine(const MediaPlayerFactory*);
     void loadWithNextMediaEngine(const MediaPlayerFactory*);
+    const MediaPlayerFactory* nextMediaEngine(const MediaPlayerFactory*);
     void reloadTimerFired();
 
     MediaPlayerClient* m_client;
@@ -592,8 +672,10 @@ private:
     URL m_url;
     ContentType m_contentType;
     String m_keySystem;
+    Optional<MediaPlayerEnums::MediaEngineIdentifier> m_activeEngineIdentifier;
+    Optional<MediaTime> m_pendingSeekRequest;
     IntSize m_size;
-    Preload m_preload { Auto };
+    Preload m_preload { Preload::Auto };
     double m_volume { 1 };
     bool m_visible { false };
     bool m_muted { false };
@@ -602,6 +684,8 @@ private:
     bool m_shouldPrepareToRender { false };
     bool m_contentMIMETypeWasInferredFromExtension { false };
     bool m_initializingMediaEngine { false };
+    DynamicRangeMode m_preferredDynamicRangeMode { DynamicRangeMode::Standard };
+    PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
 
 #if ENABLE(MEDIA_SOURCE)
     RefPtr<MediaSourcePrivateClient> m_mediaSource;
@@ -609,48 +693,52 @@ private:
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaStreamPrivate> m_mediaStream;
 #endif
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
+    bool m_shouldContinueAfterKeyNeeded { false };
+#endif
 };
 
-using CreateMediaEnginePlayer = WTF::Function<std::unique_ptr<MediaPlayerPrivateInterface> (MediaPlayer*)>;
-typedef void (*MediaEngineSupportedTypes)(HashSet<String, ASCIICaseInsensitiveHash>& types);
-typedef MediaPlayer::SupportsType (*MediaEngineSupportsType)(const MediaEngineSupportParameters& parameters);
-typedef HashSet<RefPtr<SecurityOrigin>> (*MediaEngineOriginsInMediaCache)(const String& path);
-typedef void (*MediaEngineClearMediaCache)(const String& path, WallTime modifiedSince);
-typedef void (*MediaEngineClearMediaCacheForOrigins)(const String& path, const HashSet<RefPtr<SecurityOrigin>>&);
-typedef bool (*MediaEngineSupportsKeySystem)(const String& keySystem, const String& mimeType);
+class MediaPlayerFactory {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    MediaPlayerFactory() = default;
+    virtual ~MediaPlayerFactory() = default;
 
-typedef void (*MediaEngineRegistrar)(CreateMediaEnginePlayer&&, MediaEngineSupportedTypes, MediaEngineSupportsType,
-    MediaEngineOriginsInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForOrigins, MediaEngineSupportsKeySystem);
-typedef void (*MediaEngineRegister)(MediaEngineRegistrar);
+    virtual MediaPlayerEnums::MediaEngineIdentifier identifier() const  = 0;
+    virtual std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer*) const = 0;
+    virtual void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>&) const = 0;
+    virtual MediaPlayer::SupportsType supportsTypeAndCodecs(const MediaEngineSupportParameters&) const = 0;
+
+    virtual HashSet<RefPtr<SecurityOrigin>> originsInMediaCache(const String&) const { return { }; }
+    virtual void clearMediaCache(const String&, WallTime) const { }
+    virtual void clearMediaCacheForOrigins(const String&, const HashSet<RefPtr<SecurityOrigin>>&) const { }
+    virtual bool supportsKeySystem(const String& /* keySystem */, const String& /* mimeType */) const { return false; }
+};
+
+using MediaEngineRegistrar = void(std::unique_ptr<MediaPlayerFactory>&&);
+using MediaEngineRegister = void(MediaEngineRegistrar);
 
 class MediaPlayerFactorySupport {
 public:
     WEBCORE_EXPORT static void callRegisterMediaEngine(MediaEngineRegister);
 };
 
-} // namespace WebCore
-
-namespace WTF {
-
-template<typename Type>
-struct LogArgument;
-
-template <>
-struct LogArgument<MediaTime> {
-    static String toString(const MediaTime& time)
-    {
-        return time.toJSONString();
-    }
+class RemoteMediaPlayerSupport {
+public:
+    using RegisterRemotePlayerCallback = WTF::Function<void(MediaEngineRegistrar, MediaPlayerEnums::MediaEngineIdentifier)>;
+    WEBCORE_EXPORT static void setRegisterRemotePlayerCallback(RegisterRemotePlayerCallback&&);
 };
 
-template <>
-struct LogArgument<MediaTimeRange> {
-    static String toString(const MediaTimeRange& range)
-    {
-        return range.toJSONString();
-    }
-};
-
+inline String MediaPlayer::audioOutputDeviceId() const
+{
+    return m_client ? m_client->audioOutputDeviceId() : String { };
 }
+
+inline String MediaPlayer::audioOutputDeviceIdOverride() const
+{
+    return m_client ? m_client->audioOutputDeviceIdOverride() : String { };
+}
+
+} // namespace WebCore
 
 #endif // ENABLE(VIDEO)

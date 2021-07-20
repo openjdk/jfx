@@ -183,6 +183,10 @@ void video_orc_pack_A420 (guint8 * ORC_RESTRICT d1, guint8 * ORC_RESTRICT d2,
     const guint8 * ORC_RESTRICT s1, int n);
 void video_orc_pack_AY (guint8 * ORC_RESTRICT d1, guint8 * ORC_RESTRICT d2,
     const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_unpack_VUYA (guint8 * ORC_RESTRICT d1,
+    const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_pack_VUYA (guint8 * ORC_RESTRICT d1,
+    const guint8 * ORC_RESTRICT s1, int n);
 void video_orc_unpack_RGB15_le (guint32 * ORC_RESTRICT d1,
     const guint16 * ORC_RESTRICT s1, int n);
 void video_orc_unpack_RGB15_be (guint32 * ORC_RESTRICT d1,
@@ -7944,6 +7948,218 @@ video_orc_pack_AY (guint8 * ORC_RESTRICT d1, guint8 * ORC_RESTRICT d2,
 #endif
 
 
+/* video_orc_unpack_VUYA */
+#ifdef DISABLE_ORC
+void
+video_orc_unpack_VUYA (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1,
+    int n)
+{
+  int i;
+  orc_union32 *ORC_RESTRICT ptr0;
+  const orc_union32 *ORC_RESTRICT ptr4;
+  orc_union32 var32;
+  orc_union32 var33;
+
+  ptr0 = (orc_union32 *) d1;
+  ptr4 = (orc_union32 *) s1;
+
+
+  for (i = 0; i < n; i++) {
+    /* 0: loadl */
+    var32 = ptr4[i];
+    /* 1: swapl */
+    var33.i = ORC_SWAP_L (var32.i);
+    /* 2: storel */
+    ptr0[i] = var33;
+  }
+
+}
+
+#else
+static void
+_backup_video_orc_unpack_VUYA (OrcExecutor * ORC_RESTRICT ex)
+{
+  int i;
+  int n = ex->n;
+  orc_union32 *ORC_RESTRICT ptr0;
+  const orc_union32 *ORC_RESTRICT ptr4;
+  orc_union32 var32;
+  orc_union32 var33;
+
+  ptr0 = (orc_union32 *) ex->arrays[0];
+  ptr4 = (orc_union32 *) ex->arrays[4];
+
+
+  for (i = 0; i < n; i++) {
+    /* 0: loadl */
+    var32 = ptr4[i];
+    /* 1: swapl */
+    var33.i = ORC_SWAP_L (var32.i);
+    /* 2: storel */
+    ptr0[i] = var33;
+  }
+
+}
+
+void
+video_orc_unpack_VUYA (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1,
+    int n)
+{
+  OrcExecutor _ex, *ex = &_ex;
+  static volatile int p_inited = 0;
+  static OrcCode *c = 0;
+  void (*func) (OrcExecutor *);
+
+  if (!p_inited) {
+    orc_once_mutex_lock ();
+    if (!p_inited) {
+      OrcProgram *p;
+
+#if 1
+      static const orc_uint8 bc[] = {
+        1, 9, 21, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 117, 110, 112,
+        97, 99, 107, 95, 86, 85, 89, 65, 11, 4, 4, 12, 4, 4, 184, 0,
+        4, 2, 0,
+      };
+      p = orc_program_new_from_static_bytecode (bc);
+      orc_program_set_backup_function (p, _backup_video_orc_unpack_VUYA);
+#else
+      p = orc_program_new ();
+      orc_program_set_name (p, "video_orc_unpack_VUYA");
+      orc_program_set_backup_function (p, _backup_video_orc_unpack_VUYA);
+      orc_program_add_destination (p, 4, "d1");
+      orc_program_add_source (p, 4, "s1");
+
+      orc_program_append_2 (p, "swapl", 0, ORC_VAR_D1, ORC_VAR_S1, ORC_VAR_D1,
+          ORC_VAR_D1);
+#endif
+
+      orc_program_compile (p);
+      c = orc_program_take_code (p);
+      orc_program_free (p);
+    }
+    p_inited = TRUE;
+    orc_once_mutex_unlock ();
+  }
+  ex->arrays[ORC_VAR_A2] = c;
+  ex->program = 0;
+
+  ex->n = n;
+  ex->arrays[ORC_VAR_D1] = d1;
+  ex->arrays[ORC_VAR_S1] = (void *) s1;
+
+  func = c->exec;
+  func (ex);
+}
+#endif
+
+
+/* video_orc_pack_VUYA */
+#ifdef DISABLE_ORC
+void
+video_orc_pack_VUYA (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1,
+    int n)
+{
+  int i;
+  orc_union32 *ORC_RESTRICT ptr0;
+  const orc_union32 *ORC_RESTRICT ptr4;
+  orc_union32 var32;
+  orc_union32 var33;
+
+  ptr0 = (orc_union32 *) d1;
+  ptr4 = (orc_union32 *) s1;
+
+
+  for (i = 0; i < n; i++) {
+    /* 0: loadl */
+    var32 = ptr4[i];
+    /* 1: swapl */
+    var33.i = ORC_SWAP_L (var32.i);
+    /* 2: storel */
+    ptr0[i] = var33;
+  }
+
+}
+
+#else
+static void
+_backup_video_orc_pack_VUYA (OrcExecutor * ORC_RESTRICT ex)
+{
+  int i;
+  int n = ex->n;
+  orc_union32 *ORC_RESTRICT ptr0;
+  const orc_union32 *ORC_RESTRICT ptr4;
+  orc_union32 var32;
+  orc_union32 var33;
+
+  ptr0 = (orc_union32 *) ex->arrays[0];
+  ptr4 = (orc_union32 *) ex->arrays[4];
+
+
+  for (i = 0; i < n; i++) {
+    /* 0: loadl */
+    var32 = ptr4[i];
+    /* 1: swapl */
+    var33.i = ORC_SWAP_L (var32.i);
+    /* 2: storel */
+    ptr0[i] = var33;
+  }
+
+}
+
+void
+video_orc_pack_VUYA (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1,
+    int n)
+{
+  OrcExecutor _ex, *ex = &_ex;
+  static volatile int p_inited = 0;
+  static OrcCode *c = 0;
+  void (*func) (OrcExecutor *);
+
+  if (!p_inited) {
+    orc_once_mutex_lock ();
+    if (!p_inited) {
+      OrcProgram *p;
+
+#if 1
+      static const orc_uint8 bc[] = {
+        1, 9, 19, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 112, 97, 99,
+        107, 95, 86, 85, 89, 65, 11, 4, 4, 12, 4, 4, 184, 0, 4, 2,
+        0,
+      };
+      p = orc_program_new_from_static_bytecode (bc);
+      orc_program_set_backup_function (p, _backup_video_orc_pack_VUYA);
+#else
+      p = orc_program_new ();
+      orc_program_set_name (p, "video_orc_pack_VUYA");
+      orc_program_set_backup_function (p, _backup_video_orc_pack_VUYA);
+      orc_program_add_destination (p, 4, "d1");
+      orc_program_add_source (p, 4, "s1");
+
+      orc_program_append_2 (p, "swapl", 0, ORC_VAR_D1, ORC_VAR_S1, ORC_VAR_D1,
+          ORC_VAR_D1);
+#endif
+
+      orc_program_compile (p);
+      c = orc_program_take_code (p);
+      orc_program_free (p);
+    }
+    p_inited = TRUE;
+    orc_once_mutex_unlock ();
+  }
+  ex->arrays[ORC_VAR_A2] = c;
+  ex->program = 0;
+
+  ex->n = n;
+  ex->arrays[ORC_VAR_D1] = d1;
+  ex->arrays[ORC_VAR_S1] = (void *) s1;
+
+  func = c->exec;
+  func (ex);
+}
+#endif
+
+
 /* video_orc_unpack_RGB15_le */
 #ifdef DISABLE_ORC
 void
@@ -13557,7 +13773,7 @@ video_orc_resample_bilinear_u32 (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 31, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 98, 105, 108, 105, 110, 101, 97, 114, 95,
-            117,
+        117,
         51, 50, 11, 4, 4, 12, 4, 4, 16, 4, 16, 4, 51, 0, 4, 24,
         25, 2, 0,
       };
@@ -23503,14 +23719,14 @@ static void
 _backup_video_orc_matrix8 (OrcExecutor * ORC_RESTRICT ex)
 {
   _custom_video_orc_matrix8 (ex->arrays[ORC_VAR_D1], ex->arrays[ORC_VAR_S1],
-      (ex->params[ORC_VAR_P1] & 0xffffffff) | ((orc_uint64) (ex->
-              params[ORC_VAR_T1]) << 32),
-      (ex->params[ORC_VAR_P2] & 0xffffffff) | ((orc_uint64) (ex->
-              params[ORC_VAR_T2]) << 32),
-      (ex->params[ORC_VAR_P3] & 0xffffffff) | ((orc_uint64) (ex->
-              params[ORC_VAR_T3]) << 32),
-      (ex->params[ORC_VAR_P4] & 0xffffffff) | ((orc_uint64) (ex->
-              params[ORC_VAR_T4]) << 32), ex->n);
+      (ex->params[ORC_VAR_P1] & 0xffffffff) |
+      ((orc_uint64) (ex->params[ORC_VAR_T1]) << 32),
+      (ex->params[ORC_VAR_P2] & 0xffffffff) |
+      ((orc_uint64) (ex->params[ORC_VAR_T2]) << 32),
+      (ex->params[ORC_VAR_P3] & 0xffffffff) |
+      ((orc_uint64) (ex->params[ORC_VAR_T3]) << 32),
+      (ex->params[ORC_VAR_P4] & 0xffffffff) |
+      ((orc_uint64) (ex->params[ORC_VAR_T4]) << 32), ex->n);
 }
 
 void
@@ -25844,7 +26060,7 @@ video_orc_resample_h_multaps_u8 (gint32 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 31, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 116, 97, 112, 115,
-            95,
+        95,
         117, 56, 11, 4, 4, 12, 1, 1, 12, 2, 2, 20, 2, 150, 32, 4,
         176, 0, 32, 5, 2, 0,
       };
@@ -25996,7 +26212,7 @@ video_orc_resample_h_muladdtaps_u8 (gint32 * ORC_RESTRICT d1, int d1_stride,
       static const orc_uint8 bc[] = {
         1, 7, 9, 34, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101,
         115, 97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 97, 100, 100,
-            116,
+        116,
         97, 112, 115, 95, 117, 56, 11, 4, 4, 12, 1, 1, 12, 2, 2, 20,
         2, 20, 4, 150, 32, 4, 176, 33, 32, 5, 103, 0, 0, 33, 2, 0,
 
@@ -26152,7 +26368,7 @@ video_orc_resample_scaletaps_u8 (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 31, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 115, 99, 97, 108, 101, 116, 97, 112, 115,
-            95,
+        95,
         117, 56, 11, 1, 1, 12, 4, 4, 14, 4, 255, 15, 0, 0, 14, 4,
         12, 0, 0, 0, 20, 2, 20, 4, 103, 33, 4, 16, 125, 33, 33, 17,
         166, 32, 33, 160, 0, 32, 2, 0,
@@ -26289,7 +26505,7 @@ video_orc_resample_h_multaps_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 34, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 116, 97, 112, 115,
-            95,
+        95,
         117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 12, 2, 2, 20, 2,
         150, 32, 4, 89, 0, 32, 5, 2, 0,
       };
@@ -26441,7 +26657,7 @@ video_orc_resample_h_muladdtaps_u8_lq (gint16 * ORC_RESTRICT d1, int d1_stride,
       static const orc_uint8 bc[] = {
         1, 7, 9, 37, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101,
         115, 97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 97, 100, 100,
-            116,
+        116,
         97, 112, 115, 95, 117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 12,
         2, 2, 20, 2, 150, 32, 4, 89, 32, 32, 5, 70, 0, 0, 32, 2,
         0,
@@ -26660,7 +26876,7 @@ video_orc_resample_h_multaps3_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 35, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 116, 97, 112, 115,
-            51,
+        51,
         95, 117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 12, 1, 1, 12,
         1, 1, 12, 2, 2, 12, 2, 2, 12, 2, 2, 20, 2, 20, 2, 150,
         32, 4, 89, 32, 32, 7, 150, 33, 5, 89, 33, 33, 8, 70, 32, 32,
@@ -26906,7 +27122,7 @@ video_orc_resample_h_muladdtaps3_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 38, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 97, 100, 100, 116,
-            97,
+        97,
         112, 115, 51, 95, 117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 12,
         1, 1, 12, 1, 1, 12, 2, 2, 12, 2, 2, 12, 2, 2, 20, 2,
         20, 2, 150, 32, 4, 89, 32, 32, 7, 150, 33, 5, 89, 33, 33, 8,
@@ -27194,7 +27410,7 @@ video_orc_resample_h_muladdscaletaps3_u8_lq (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 43, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 97, 100, 100, 115,
-            99,
+        99,
         97, 108, 101, 116, 97, 112, 115, 51, 95, 117, 56, 95, 108, 113, 11, 1,
         1, 12, 1, 1, 12, 1, 1, 12, 1, 1, 12, 2, 2, 12, 2, 2,
         12, 2, 2, 12, 2, 2, 14, 2, 32, 0, 0, 0, 14, 2, 6, 0,
@@ -27373,7 +27589,7 @@ video_orc_resample_scaletaps_u8_lq (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 34, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 115, 99, 97, 108, 101, 116, 97, 112, 115,
-            95,
+        95,
         117, 56, 95, 108, 113, 11, 1, 1, 12, 2, 2, 14, 2, 32, 0, 0,
         0, 14, 2, 6, 0, 0, 0, 20, 2, 70, 32, 4, 16, 94, 32, 32,
         17, 160, 0, 32, 2, 0,
@@ -27513,7 +27729,7 @@ video_orc_resample_h_multaps_u16 (gint32 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 32, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 116, 97, 112, 115,
-            95,
+        95,
         117, 49, 54, 11, 4, 4, 12, 2, 2, 12, 2, 2, 20, 4, 20, 4,
         154, 32, 4, 153, 33, 5, 120, 0, 32, 33, 2, 0,
       };
@@ -27674,7 +27890,7 @@ video_orc_resample_h_muladdtaps_u16 (gint32 * ORC_RESTRICT d1, int d1_stride,
       static const orc_uint8 bc[] = {
         1, 7, 9, 35, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101,
         115, 97, 109, 112, 108, 101, 95, 104, 95, 109, 117, 108, 97, 100, 100,
-            116,
+        116,
         97, 112, 115, 95, 117, 49, 54, 11, 4, 4, 12, 2, 2, 12, 2, 2,
         20, 4, 20, 4, 154, 32, 4, 153, 33, 5, 120, 32, 32, 33, 103, 0,
         0, 32, 2, 0,
@@ -27826,7 +28042,7 @@ video_orc_resample_scaletaps_u16 (guint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 32, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 115, 99, 97, 108, 101, 116, 97, 112, 115,
-            95,
+        95,
         117, 49, 54, 11, 2, 2, 12, 4, 4, 14, 4, 255, 15, 0, 0, 14,
         4, 12, 0, 0, 0, 20, 4, 103, 32, 4, 16, 125, 32, 32, 17, 166,
         0, 32, 2, 0,
@@ -27956,7 +28172,7 @@ video_orc_resample_v_multaps_u8 (gint32 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 31, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 116, 97, 112, 115,
-            95,
+        95,
         117, 56, 11, 4, 4, 12, 1, 1, 16, 2, 20, 2, 150, 32, 4, 176,
         0, 32, 24, 2, 0,
       };
@@ -28095,7 +28311,7 @@ video_orc_resample_v_muladdtaps_u8 (gint32 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 34, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 97, 100, 100, 116,
-            97,
+        97,
         112, 115, 95, 117, 56, 11, 4, 4, 12, 1, 1, 16, 2, 20, 2, 20,
         4, 150, 32, 4, 176, 33, 32, 24, 103, 0, 0, 33, 2, 0,
       };
@@ -28225,7 +28441,7 @@ video_orc_resample_v_multaps_u16 (gint32 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 32, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 116, 97, 112, 115,
-            95,
+        95,
         117, 49, 54, 11, 4, 4, 12, 2, 2, 16, 2, 20, 4, 154, 32, 4,
         120, 0, 32, 24, 2, 0,
       };
@@ -28370,7 +28586,7 @@ video_orc_resample_v_muladdtaps_u16 (gint32 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 35, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 97, 100, 100, 116,
-            97,
+        97,
         112, 115, 95, 117, 49, 54, 11, 4, 4, 12, 2, 2, 16, 2, 20, 4,
         20, 4, 154, 32, 4, 153, 33, 24, 120, 32, 32, 33, 103, 0, 0, 32,
         2, 0,
@@ -28503,7 +28719,7 @@ video_orc_resample_v_multaps_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 34, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 116, 97, 112, 115,
-            95,
+        95,
         117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 16, 2, 20, 2, 150,
         32, 4, 89, 0, 32, 24, 2, 0,
       };
@@ -28736,7 +28952,7 @@ video_orc_resample_v_multaps4_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 35, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 116, 97, 112, 115,
-            52,
+        52,
         95, 117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 12, 1, 1, 12,
         1, 1, 12, 1, 1, 16, 2, 16, 2, 16, 2, 16, 2, 20, 2, 20,
         2, 150, 32, 4, 89, 32, 32, 24, 150, 33, 5, 89, 33, 33, 25, 70,
@@ -28909,7 +29125,7 @@ video_orc_resample_v_muladdtaps_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 37, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 97, 100, 100, 116,
-            97,
+        97,
         112, 115, 95, 117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 16, 2,
         20, 2, 150, 32, 4, 89, 32, 32, 24, 70, 0, 0, 32, 2, 0,
       };
@@ -29156,7 +29372,7 @@ video_orc_resample_v_muladdtaps4_u8_lq (gint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 38, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 97, 100, 100, 116,
-            97,
+        97,
         112, 115, 52, 95, 117, 56, 95, 108, 113, 11, 2, 2, 12, 1, 1, 12,
         1, 1, 12, 1, 1, 12, 1, 1, 16, 2, 16, 2, 16, 2, 16, 2,
         20, 2, 20, 2, 150, 32, 4, 89, 32, 32, 24, 150, 33, 5, 89, 33,
@@ -29475,7 +29691,7 @@ video_orc_resample_v_muladdscaletaps4_u8_lq (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 43, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 114, 101, 115,
         97, 109, 112, 108, 101, 95, 118, 95, 109, 117, 108, 97, 100, 100, 115,
-            99,
+        99,
         97, 108, 101, 116, 97, 112, 115, 52, 95, 117, 56, 95, 108, 113, 11, 1,
         1, 12, 1, 1, 12, 1, 1, 12, 1, 1, 12, 1, 1, 12, 2, 2,
         14, 2, 32, 0, 0, 0, 14, 2, 6, 0, 0, 0, 16, 2, 16, 2,
@@ -31699,7 +31915,7 @@ video_orc_dither_none_4u8_mask (guint8 * ORC_RESTRICT d1, int p1, int n)
       static const orc_uint8 bc[] = {
         1, 9, 30, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 100, 105, 116,
         104, 101, 114, 95, 110, 111, 110, 101, 95, 52, 117, 56, 95, 109, 97,
-            115,
+        115,
         107, 11, 4, 4, 16, 4, 20, 4, 115, 32, 24, 21, 2, 37, 0, 32,
         0, 2, 0,
       };
@@ -32009,7 +32225,7 @@ video_orc_dither_verterr_4u8_mask (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 33, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 100, 105, 116,
         104, 101, 114, 95, 118, 101, 114, 116, 101, 114, 114, 95, 52, 117, 56,
-            95,
+        95,
         109, 97, 115, 107, 11, 4, 4, 11, 8, 8, 18, 8, 20, 8, 20, 8,
         134, 32, 24, 21, 2, 150, 33, 0, 21, 2, 70, 33, 1, 33, 21, 2,
         73, 1, 32, 33, 21, 2, 74, 33, 32, 33, 21, 2, 160, 0, 33, 2,
@@ -32192,7 +32408,7 @@ video_orc_dither_fs_muladd_u8 (guint16 * ORC_RESTRICT d1, int n)
       static const orc_uint8 bc[] = {
         1, 9, 29, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 100, 105, 116,
         104, 101, 114, 95, 102, 115, 95, 109, 117, 108, 97, 100, 100, 95, 117,
-            56,
+        56,
         11, 2, 2, 14, 4, 4, 0, 0, 0, 14, 2, 5, 0, 0, 0, 14,
         4, 8, 0, 0, 0, 14, 2, 3, 0, 0, 0, 20, 2, 20, 2, 83,
         33, 0, 16, 89, 33, 33, 17, 70, 32, 33, 0, 83, 33, 0, 18, 89,
@@ -32324,7 +32540,7 @@ video_orc_dither_ordered_u8 (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 27, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 100, 105, 116,
         104, 101, 114, 95, 111, 114, 100, 101, 114, 101, 100, 95, 117, 56, 11,
-            1,
+        1,
         1, 12, 1, 1, 35, 0, 0, 4, 2, 0,
       };
       p = orc_program_new_from_static_bytecode (bc);
@@ -32487,7 +32703,7 @@ video_orc_dither_ordered_4u8_mask (guint8 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 33, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 100, 105, 116,
         104, 101, 114, 95, 111, 114, 100, 101, 114, 101, 100, 95, 52, 117, 56,
-            95,
+        95,
         109, 97, 115, 107, 11, 4, 4, 12, 8, 8, 18, 8, 20, 8, 20, 8,
         134, 33, 24, 21, 2, 150, 32, 0, 21, 2, 70, 32, 32, 4, 21, 2,
         74, 32, 33, 32, 21, 2, 160, 0, 32, 2, 0,
@@ -32655,7 +32871,7 @@ video_orc_dither_ordered_4u16_mask (guint16 * ORC_RESTRICT d1,
       static const orc_uint8 bc[] = {
         1, 9, 34, 118, 105, 100, 101, 111, 95, 111, 114, 99, 95, 100, 105, 116,
         104, 101, 114, 95, 111, 114, 100, 101, 114, 101, 100, 95, 52, 117, 49,
-            54,
+        54,
         95, 109, 97, 115, 107, 11, 8, 8, 12, 8, 8, 18, 8, 20, 8, 20,
         8, 134, 33, 24, 21, 2, 72, 32, 0, 4, 21, 2, 74, 0, 33, 32,
         2, 0,

@@ -24,7 +24,6 @@
 
 #pragma once
 
-#include "NativeImage.h"
 #include "SecurityOriginHash.h"
 #include "Timer.h"
 #include <pal/SessionID.h>
@@ -156,9 +155,6 @@ public:
     WEBCORE_EXPORT void removeResourcesWithOrigins(PAL::SessionID, const HashSet<RefPtr<SecurityOrigin>>&);
     WEBCORE_EXPORT void getOriginsWithCache(SecurityOriginSet& origins);
     WEBCORE_EXPORT HashSet<RefPtr<SecurityOrigin>> originsWithCache(PAL::SessionID) const;
-
-    WEBCORE_EXPORT bool addImageToCache(NativeImagePtr&&, const URL&, const String& domainForCachePartition, const PAL::SessionID&, const CookieJar*);
-    WEBCORE_EXPORT void removeImageFromCache(const URL&, const String& domainForCachePartition);
 
     // pruneDead*() - Flush decoded and encoded data from resources not referenced by Web pages.
     // pruneLive*() - Flush decoded data from resources still referenced by Web pages.

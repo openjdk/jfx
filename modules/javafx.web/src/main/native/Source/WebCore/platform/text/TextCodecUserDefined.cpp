@@ -41,7 +41,7 @@ void TextCodecUserDefined::registerEncodingNames(EncodingNameRegistrar registrar
 void TextCodecUserDefined::registerCodecs(TextCodecRegistrar registrar)
 {
     registrar("x-user-defined", [] {
-        return std::make_unique<TextCodecUserDefined>();
+        return makeUnique<TextCodecUserDefined>();
     });
 }
 
@@ -75,7 +75,7 @@ static Vector<uint8_t> encodeComplexUserDefined(StringView string, UnencodableHa
     return result;
 }
 
-Vector<uint8_t> TextCodecUserDefined::encode(StringView string, UnencodableHandling handling)
+Vector<uint8_t> TextCodecUserDefined::encode(StringView string, UnencodableHandling handling) const
 {
     {
         Vector<uint8_t> result(string.length());

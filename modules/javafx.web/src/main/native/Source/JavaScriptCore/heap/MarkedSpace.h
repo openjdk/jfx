@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,9 @@
 
 #include "BlockDirectory.h"
 #include "IterationStatus.h"
-#include "LargeAllocation.h"
 #include "MarkedBlock.h"
 #include "MarkedBlockSet.h"
+#include "PreciseAllocation.h"
 #include <array>
 #include <wtf/Bag.h>
 #include <wtf/HashSet.h>
@@ -39,7 +39,9 @@ namespace JSC {
 
 class CompleteSubspace;
 class Heap;
+class HeapCell;
 class HeapIterationScope;
+class IsoSubspace;
 class LLIntOffsetsExtractor;
 class Subspace;
 class WeakSet;
@@ -63,6 +65,7 @@ public:
     // ensures that we only use the size class approach if it means being able to pack two things
     // into one block.
     static constexpr size_t largeCutoff = (blockPayload / 2) & ~(sizeStep - 1);
+    static_assert(largeCutoff <= UINT32_MAX);
 
     // We have an extra size class for size zero.
     static constexpr size_t numSizeClasses = largeCutoff / sizeStep + 1;
@@ -93,7 +96,7 @@ public:
     MarkedSpace(Heap*);
     ~MarkedSpace();
 
-    Heap* heap() const { return m_heap; }
+    Heap& heap() const;
 
     void lastChanceToFinalize(); // Must call stopAllocatingForGood first.
     void freeMemory();
@@ -102,7 +105,7 @@ public:
 
     void prepareForAllocation();
 
-    void visitWeakSets(SlotVisitor&);
+    template<typename Visitor> void visitWeakSets(Visitor&);
     void reapWeakSets();
 
     MarkedBlockSet& blocks() { return m_blocks; }
@@ -124,6 +127,7 @@ public:
     template<typename Functor> void forEachLiveCell(HeapIterationScope&, const Functor&);
     template<typename Functor> void forEachDeadCell(HeapIterationScope&, const Functor&);
     template<typename Functor> void forEachBlock(const Functor&);
+    template<typename Functor> void forEachSubspace(const Functor&);
 
     void shrink();
     void freeBlock(MarkedBlock::Handle*);
@@ -137,8 +141,8 @@ public:
     void endMarking();
     void snapshotUnswept();
     void clearNewlyAllocated();
-    void sweep();
-    void sweepLargeAllocations();
+    void sweepBlocks();
+    void sweepPreciseAllocations();
     void assertNoUnswept();
     size_t objectCount();
     size_t size();
@@ -149,15 +153,18 @@ public:
     HeapVersion markingVersion() const { return m_markingVersion; }
     HeapVersion newlyAllocatedVersion() const { return m_newlyAllocatedVersion; }
 
-    const Vector<LargeAllocation*>& largeAllocations() const { return m_largeAllocations; }
-    unsigned largeAllocationsNurseryOffset() const { return m_largeAllocationsNurseryOffset; }
-    unsigned largeAllocationsOffsetForThisCollection() const { return m_largeAllocationsOffsetForThisCollection; }
+    const Vector<PreciseAllocation*>& preciseAllocations() const { return m_preciseAllocations; }
+    unsigned preciseAllocationsNurseryOffset() const { return m_preciseAllocationsNurseryOffset; }
+    unsigned preciseAllocationsOffsetForThisCollection() const { return m_preciseAllocationsOffsetForThisCollection; }
+    HashSet<HeapCell*>* preciseAllocationSet() const { return m_preciseAllocationSet.get(); }
+
+    void enablePreciseAllocationTracking();
 
     // These are cached pointers and offsets for quickly searching the large allocations that are
     // relevant to this collection.
-    LargeAllocation** largeAllocationsForThisCollectionBegin() const { return m_largeAllocationsForThisCollectionBegin; }
-    LargeAllocation** largeAllocationsForThisCollectionEnd() const { return m_largeAllocationsForThisCollectionEnd; }
-    unsigned largeAllocationsForThisCollectionSize() const { return m_largeAllocationsForThisCollectionSize; }
+    PreciseAllocation** preciseAllocationsForThisCollectionBegin() const { return m_preciseAllocationsForThisCollectionBegin; }
+    PreciseAllocation** preciseAllocationsForThisCollectionEnd() const { return m_preciseAllocationsForThisCollectionEnd; }
+    unsigned preciseAllocationsForThisCollectionSize() const { return m_preciseAllocationsForThisCollectionSize; }
 
     BlockDirectory* firstDirectory() const { return m_directories.first(); }
 
@@ -167,14 +174,9 @@ public:
     // When this is true it means that we have flipped but the mark bits haven't converged yet.
     bool isMarking() const { return m_isMarking; }
 
-    WeakSet* activeWeakSetsBegin() { return m_activeWeakSets.begin(); }
-    WeakSet* activeWeakSetsEnd() { return m_activeWeakSets.end(); }
-    WeakSet* newActiveWeakSetsBegin() { return m_newActiveWeakSets.begin(); }
-    WeakSet* newActiveWeakSetsEnd() { return m_newActiveWeakSets.end(); }
-
     void dumpBits(PrintStream& = WTF::dataFile());
 
-    JS_EXPORT_PRIVATE static std::array<size_t, numSizeClasses> s_sizeClassForSizeStep;
+    JS_EXPORT_PRIVATE static std::array<unsigned, numSizeClasses> s_sizeClassForSizeStep;
 
 private:
     friend class CompleteSubspace;
@@ -182,6 +184,7 @@ private:
     friend class JIT;
     friend class WeakSet;
     friend class Subspace;
+    friend class IsoSubspace;
 
     // Use this version when calling from within the GC where we know that the directories
     // have already been stopped.
@@ -197,15 +200,15 @@ private:
 
     Vector<Subspace*> m_subspaces;
 
-    Vector<LargeAllocation*> m_largeAllocations;
-    unsigned m_largeAllocationsNurseryOffset { 0 };
-    unsigned m_largeAllocationsOffsetForThisCollection { 0 };
-    unsigned m_largeAllocationsNurseryOffsetForSweep { 0 };
-    unsigned m_largeAllocationsForThisCollectionSize { 0 };
-    LargeAllocation** m_largeAllocationsForThisCollectionBegin { nullptr };
-    LargeAllocation** m_largeAllocationsForThisCollectionEnd { nullptr };
+    std::unique_ptr<HashSet<HeapCell*>> m_preciseAllocationSet;
+    Vector<PreciseAllocation*> m_preciseAllocations;
+    unsigned m_preciseAllocationsNurseryOffset { 0 };
+    unsigned m_preciseAllocationsOffsetForThisCollection { 0 };
+    unsigned m_preciseAllocationsNurseryOffsetForSweep { 0 };
+    unsigned m_preciseAllocationsForThisCollectionSize { 0 };
+    PreciseAllocation** m_preciseAllocationsForThisCollectionBegin { nullptr };
+    PreciseAllocation** m_preciseAllocationsForThisCollectionEnd { nullptr };
 
-    Heap* m_heap;
     size_t m_capacity { 0 };
     HeapVersion m_markingVersion { initialVersion };
     HeapVersion m_newlyAllocatedVersion { initialVersion };
@@ -239,6 +242,16 @@ void MarkedSpace::forEachDirectory(const Functor& functor)
             return;
     }
 }
+
+template<typename Functor>
+void MarkedSpace::forEachSubspace(const Functor& functor)
+{
+    for (auto subspace : m_subspaces) {
+        if (functor(*subspace) == IterationStatus::Done)
+            return;
+    }
+}
+
 
 ALWAYS_INLINE size_t MarkedSpace::optimalSizeFor(size_t bytes)
 {

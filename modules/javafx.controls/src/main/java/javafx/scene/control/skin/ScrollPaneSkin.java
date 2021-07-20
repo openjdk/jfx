@@ -684,7 +684,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                     computeScrollNodeSize(getWidth(),getHeight());
                 }
                 if (scrollNode != null && scrollNode.isResizable()) {
-                    scrollNode.resize(snapSize(nodeWidth), snapSize(nodeHeight));
+                    scrollNode.resize(snapSizeX(nodeWidth), snapSizeY(nodeHeight));
                     if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
                         getSkinnable().requestLayout();
                     }

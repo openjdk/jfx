@@ -27,32 +27,43 @@
 #include "CSSTransition.h"
 
 #include "Animation.h"
-#include "Element.h"
+#include "DocumentTimeline.h"
+#include "InspectorInstrumentation.h"
 #include "KeyframeEffect.h"
+#include "TransitionEvent.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-Ref<CSSTransition> CSSTransition::create(Element& owningElement, CSSPropertyID property, MonotonicTime generationTime, const Animation& backingAnimation, const RenderStyle* oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor)
+WTF_MAKE_ISO_ALLOCATED_IMPL(CSSTransition);
+
+Ref<CSSTransition> CSSTransition::create(const Styleable& owningElement, CSSPropertyID property, MonotonicTime generationTime, const Animation& backingAnimation, const RenderStyle* oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor)
 {
-    auto result = adoptRef(*new CSSTransition(owningElement, property, generationTime, backingAnimation, newStyle, reversingAdjustedStartStyle, reversingShorteningFactor));
-    result->initialize(oldStyle, newStyle);
+    ASSERT(oldStyle);
+    auto result = adoptRef(*new CSSTransition(owningElement, property, generationTime, backingAnimation, *oldStyle, newStyle, reversingAdjustedStartStyle, reversingShorteningFactor));
+    result->initialize(oldStyle, newStyle, nullptr);
     result->setTimingProperties(delay, duration);
+
+    InspectorInstrumentation::didCreateWebAnimation(result.get());
+
     return result;
 }
 
-CSSTransition::CSSTransition(Element& element, CSSPropertyID property, MonotonicTime generationTime, const Animation& backingAnimation, const RenderStyle& targetStyle, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor)
-    : DeclarativeAnimation(element, backingAnimation)
+CSSTransition::CSSTransition(const Styleable& styleable, CSSPropertyID property, MonotonicTime generationTime, const Animation& backingAnimation, const RenderStyle& oldStyle, const RenderStyle& targetStyle, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor)
+    : DeclarativeAnimation(styleable, backingAnimation)
     , m_property(property)
     , m_generationTime(generationTime)
+    , m_timelineTimeAtCreation(styleable.element.document().timeline().currentTime())
     , m_targetStyle(RenderStyle::clonePtr(targetStyle))
+    , m_currentStyle(RenderStyle::clonePtr(oldStyle))
     , m_reversingAdjustedStartStyle(RenderStyle::clonePtr(reversingAdjustedStartStyle))
     , m_reversingShorteningFactor(reversingShorteningFactor)
 {
 }
 
-void CSSTransition::resolve(RenderStyle& targetStyle)
+void CSSTransition::resolve(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, Optional<Seconds> startTime)
 {
-    DeclarativeAnimation::resolve(targetStyle);
+    DeclarativeAnimation::resolve(targetStyle, parentElementStyle, startTime);
     m_currentStyle = RenderStyle::clonePtr(targetStyle);
 }
 
@@ -69,8 +80,16 @@ void CSSTransition::setTimingProperties(Seconds delay, Seconds duration)
     animationEffect->setFill(FillMode::Backwards);
     animationEffect->setDelay(delay);
     animationEffect->setIterationDuration(duration);
+    animationEffect->setTimingFunction(backingAnimation().timingFunction());
+    animationEffect->updateStaticTimingProperties();
+    effectTimingDidChange();
 
     unsuspendEffectInvalidation();
+}
+
+Ref<AnimationEventBase> CSSTransition::createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId, Optional<Seconds> timelineTime)
+{
+    return TransitionEvent::create(eventType, getPropertyNameString(m_property), elapsedTime, pseudoId, timelineTime, this);
 }
 
 } // namespace WebCore

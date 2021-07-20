@@ -34,25 +34,25 @@ struct DirectConverter;
 
 template<>
 struct DirectConverter<IDLDOMString> {
-    static String directConvert(JSC::ExecState& state, JSC::JSString* string)
+    static String directConvert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSString* string)
     {
-        return string->value(&state);
+        return string->value(&lexicalGlobalObject);
     }
 };
 
 template<>
-struct DirectConverter<IDLAtomicStringAdaptor<IDLDOMString>> {
-    static String directConvert(JSC::ExecState& state, JSC::JSString* string)
+struct DirectConverter<IDLAtomStringAdaptor<IDLDOMString>> {
+    static String directConvert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSString* string)
     {
-        return string->toAtomicString(&state);
+        return string->toAtomString(&lexicalGlobalObject);
     }
 };
 
 template<>
-struct DirectConverter<IDLRequiresExistingAtomicStringAdaptor<IDLDOMString>> {
-    static String directConvert(JSC::ExecState& state, JSC::JSString* string)
+struct DirectConverter<IDLRequiresExistingAtomStringAdaptor<IDLDOMString>> {
+    static String directConvert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSString* string)
     {
-        return string->toExistingAtomicString(&state);
+        return string->toExistingAtomString(&lexicalGlobalObject);
     }
 };
 

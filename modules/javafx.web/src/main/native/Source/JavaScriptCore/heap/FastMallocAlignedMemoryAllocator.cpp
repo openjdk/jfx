@@ -26,12 +26,14 @@
 #include "config.h"
 #include "FastMallocAlignedMemoryAllocator.h"
 
-#include <mutex>
 #include <wtf/FastMalloc.h>
 
 namespace JSC {
 
 FastMallocAlignedMemoryAllocator::FastMallocAlignedMemoryAllocator()
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    : m_heap("WebKit FastMallocAlignedMemoryAllocator")
+#endif
 {
 }
 
@@ -41,17 +43,54 @@ FastMallocAlignedMemoryAllocator::~FastMallocAlignedMemoryAllocator()
 
 void* FastMallocAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size_t size)
 {
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_heap.memalign(alignment, size, true);
+#else
     return tryFastAlignedMalloc(alignment, size);
+#endif
+
 }
 
 void FastMallocAlignedMemoryAllocator::freeAlignedMemory(void* basePtr)
 {
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_heap.free(basePtr);
+#else
     fastAlignedFree(basePtr);
+#endif
+
 }
 
 void FastMallocAlignedMemoryAllocator::dump(PrintStream& out) const
 {
     out.print("FastMalloc");
+}
+
+void* FastMallocAlignedMemoryAllocator::tryAllocateMemory(size_t size)
+{
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_heap.malloc(size);
+#else
+    return FastMalloc::tryMalloc(size);
+#endif
+}
+
+void FastMallocAlignedMemoryAllocator::freeMemory(void* pointer)
+{
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_heap.free(pointer);
+#else
+    FastMalloc::free(pointer);
+#endif
+}
+
+void* FastMallocAlignedMemoryAllocator::tryReallocateMemory(void* pointer, size_t size)
+{
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_heap.realloc(pointer, size);
+#else
+    return FastMalloc::tryRealloc(pointer, size);
+#endif
 }
 
 } // namespace JSC

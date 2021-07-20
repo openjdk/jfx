@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,9 +53,9 @@ void LazyProperty<OwnerType, ElementType>::initLater(const Func&)
 template<typename OwnerType, typename ElementType>
 void LazyProperty<OwnerType, ElementType>::setMayBeNull(VM& vm, const OwnerType* owner, ElementType* value)
 {
-    vm.heap.writeBarrier(owner, value);
     m_pointer = bitwise_cast<uintptr_t>(value);
     RELEASE_ASSERT(!(m_pointer & lazyTag));
+    vm.heap.writeBarrier(owner, value);
 }
 
 template<typename OwnerType, typename ElementType>
@@ -66,7 +66,8 @@ void LazyProperty<OwnerType, ElementType>::set(VM& vm, const OwnerType* owner, E
 }
 
 template<typename OwnerType, typename ElementType>
-void LazyProperty<OwnerType, ElementType>::visit(SlotVisitor& visitor)
+template<typename Visitor>
+void LazyProperty<OwnerType, ElementType>::visit(Visitor& visitor)
 {
     if (m_pointer && !(m_pointer & lazyTag))
         visitor.appendUnbarriered(bitwise_cast<ElementType*>(m_pointer));

@@ -20,18 +20,22 @@
 #pragma once
 
 #include "DOMWindowProperty.h"
-#include "JSDOMPromiseDeferred.h"
 #include "NavigatorBase.h"
 #include "ScriptWrappable.h"
 #include "ShareData.h"
 #include "Supplementable.h"
+#include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
+class Blob;
+class DeferredPromise;
 class DOMMimeTypeArray;
 class DOMPluginArray;
+class ShareDataReader;
 
 class Navigator final : public NavigatorBase, public ScriptWrappable, public DOMWindowProperty, public Supplementable<Navigator> {
+    WTF_MAKE_ISO_ALLOCATED(Navigator);
 public:
     static Ref<Navigator> create(ScriptExecutionContext* context, DOMWindow& window) { return adoptRef(*new Navigator(context, window)); }
     virtual ~Navigator();
@@ -42,10 +46,11 @@ public:
     bool cookieEnabled() const;
     bool javaEnabled() const;
     const String& userAgent() const final;
-    const String& platform() const final;
+    String platform() const final;
     void userAgentChanged();
     bool onLine() const final;
-    void share(ScriptExecutionContext&, ShareData, Ref<DeferredPromise>&&);
+    bool canShare(Document&, const ShareData&);
+    void share(Document&, const ShareData&, Ref<DeferredPromise>&&);
 
 #if PLATFORM(IOS_FAMILY)
     bool standalone() const;
@@ -53,13 +58,23 @@ public:
 
     void getStorageUpdates();
 
+#if ENABLE(IOS_TOUCH_EVENTS) && !PLATFORM(MACCATALYST)
+    int maxTouchPoints() const { return 5; }
+#else
+    int maxTouchPoints() const { return 0; }
+#endif
+
 private:
+    void showShareData(ExceptionOr<ShareDataWithParsedURL&>, Ref<DeferredPromise>&&);
     explicit Navigator(ScriptExecutionContext*, DOMWindow&);
 
+    void initializePluginAndMimeTypeArrays();
+
+    mutable RefPtr<ShareDataReader> m_loader;
+    mutable bool m_hasPendingShare { false };
     mutable RefPtr<DOMPluginArray> m_plugins;
     mutable RefPtr<DOMMimeTypeArray> m_mimeTypes;
     mutable String m_userAgent;
     mutable String m_platform;
 };
-
 }

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+/*
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+-->
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<!-- line # 33 --> <?language sqtmc?> <!-- do NOT compile scripts because compile PI turns it off: --> <?compile false?>
+
+<AnchorPane fx:id="idRoot" prefHeight="240.0" prefWidth="480.0"
+            xmlns:fx="http://javafx.com/fxml/1">
+
+<!-- line # 38 -->     <fx:script source="demo_02_topscript.sqtmc" />
+
+                       <children>
+
+<!-- line # 42 -->         <Button fx:id="idButton" text="Press me!"
+                                   layoutX="210.0" layoutY="137.0"
+                                   onMouseClicked="demo_02_off.fxml embedded event - MouseClicked - line # 44 (PCDATA)"
+                                   onAction="demo_02_off.fxml embedded event - ActionEvent - line # 45 - LF entity (&amp;#10;) forces linebreak in attribute value: &#10;
+(this is on a new line) these characters in attribute values need to be escaped: &lt;, &gt;, &amp;, these if used as delimiters: &quot;, &apos; (PCDATA)" />
+
+<!-- line # 48 -->         <fx:script source="demo_02_middlescript.sqtmc" />
+
+                       </children>
+
+<!-- line # 52 -->     <fx:script>demo_02_off.fxml embedded script sqtmc - line # 52</fx:script>
+
+<!-- line # 54 -->     <fx:script source="demo_02_bottomscript.sqtmc" />
+
+<!-- line # 56 --> <fx:script>something (line # 56)(PCDATA)
+        in   a=&amp;b  (line # 57)
+        the  b&gt;1   (line # 58)
+        news c&lt;2   (line # 59) </fx:script>   <fx:script><![CDATA[demo_02_off.fxml (line # 59):
+CDATA-section ("<![CDATA[") allows any characters including <, > and & !! (no need to escape (line # 60)
+these special characters; it is plain CDATA which does not get processed, just passed on     (line # 61)
+including LF etc.                                                                            (line # 62)
+        in   a=&b  (line # 63)
+        the  b>1   (line # 64)
+        news c<2   (line # 65)
+Watch out that in the code there is no string that exactly matches the end tag               (line # 66)
+for a CDATA-section (close-square-bracket+close-square-bracket+greater-character             (line # 67) ]]></fx:script>
+
+</AnchorPane>
+

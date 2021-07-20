@@ -29,6 +29,7 @@
 #include "OrderIterator.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -60,8 +61,8 @@ public:
 
     const GridCell& cell(unsigned row, unsigned column) const { return m_grid[row][column]; }
 
-    int smallestTrackStart(GridTrackSizingDirection) const;
-    void setSmallestTracksStart(int rowStart, int columnStart);
+    unsigned explicitGridStart(GridTrackSizingDirection) const;
+    void setExplicitGridStart(unsigned rowStart, unsigned columnStart);
 
     unsigned autoRepeatTracks(GridTrackSizingDirection) const;
     void setAutoRepeatTracks(unsigned autoRepeatRows, unsigned autoRepeatColumns);
@@ -85,8 +86,8 @@ private:
 
     OrderIterator m_orderIterator;
 
-    int m_smallestColumnStart { 0 };
-    int m_smallestRowStart { 0 };
+    unsigned m_explicitColumnStart { 0 };
+    unsigned m_explicitRowStart { 0 };
 
     unsigned m_autoRepeatColumns { 0 };
     unsigned m_autoRepeatRows { 0 };
@@ -96,7 +97,6 @@ private:
     GridAsMatrix m_grid;
 
     HashMap<const RenderBox*, GridArea> m_gridItemArea;
-    HashMap<const RenderBox*, size_t> m_gridItemsIndexesMap;
 
     std::unique_ptr<OrderedTrackIndexSet> m_autoRepeatEmptyColumns;
     std::unique_ptr<OrderedTrackIndexSet> m_autoRepeatEmptyRows;

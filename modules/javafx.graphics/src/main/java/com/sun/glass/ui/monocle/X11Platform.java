@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ class X11Platform extends NativePlatform {
 
     private final boolean x11Input;
 
+    @SuppressWarnings("removal")
     X11Platform() {
         LinuxSystem.getLinuxSystem().loadLibrary();
         x11Input = AccessController.doPrivileged((PrivilegedAction<Boolean>)
@@ -61,10 +62,11 @@ class X11Platform extends NativePlatform {
      */
     @Override
     protected NativeCursor createCursor() {
-        if (x11Input) {
-            return new X11Cursor();
+        if (useCursor) {
+            final NativeCursor c = x11Input ? new X11Cursor() : new X11WarpingCursor();
+            return logSelectedCursor(c);
         } else {
-            return new X11WarpingCursor();
+            return logSelectedCursor(new NullCursor());
         }
     }
 

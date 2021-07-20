@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,8 @@ import javafx.util.BuilderFactory;
 import javafx.util.Callback;
 
 import javax.script.Bindings;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -109,6 +111,7 @@ public class FXMLLoader {
         new RuntimePermission("getClassLoader");
 
     // Instance of StackWalker used to get caller class (must be private)
+    @SuppressWarnings("removal")
     private static final StackWalker walker =
         AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
@@ -618,8 +621,8 @@ public class FXMLLoader {
                                 throw constructLoadException("Error resolving " + attribute.name + "='" + attribute.value
                                         + "', either the event handler is not in the Namespace or there is an error in the script.");
                             }
-
-                            eventHandler = new ScriptEventHandler(handlerName, scriptEngine);
+                            eventHandler = new ScriptEventHandler(handlerName, scriptEngine, location.getPath()
+                                        + "-" + attribute.name  + "_attribute_in_element_ending_at_line_"  + getLineNumber());
                         }
 
                         // Add the handler
@@ -933,14 +936,12 @@ public class FXMLLoader {
                         try {
                             if (controllerFactory == null) {
                                 ReflectUtil.checkPackageAccess(type);
-                                setController(type.newInstance());
+                                setController(type.getDeclaredConstructor().newInstance());
                             } else {
                                 setController(controllerFactory.call(type));
                             }
-                        } catch (InstantiationException exception) {
-                            throw constructLoadException(exception);
-                        } catch (IllegalAccessException exception) {
-                            throw constructLoadException(exception);
+                        } catch (Exception e) {
+                            throw constructLoadException(e);
                         }
                     }
                 } else {
@@ -1016,11 +1017,9 @@ public class FXMLLoader {
                 if (value == null) {
                     try {
                         ReflectUtil.checkPackageAccess(type);
-                        value = type.newInstance();
-                    } catch (InstantiationException exception) {
-                        throw constructLoadException(exception);
-                    } catch (IllegalAccessException exception) {
-                        throw constructLoadException(exception);
+                        value = type.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw constructLoadException(e);
                     }
                 }
             }
@@ -1326,11 +1325,9 @@ public class FXMLLoader {
                     if (value == null) {
                         try {
                             ReflectUtil.checkPackageAccess(type);
-                            value = type.newInstance();
-                        } catch (InstantiationException exception) {
-                            throw constructLoadException(exception);
-                        } catch (IllegalAccessException exception) {
-                            throw constructLoadException(exception);
+                            value = type.getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw constructLoadException(e);
                         }
                     }
                     root = value;
@@ -1557,20 +1554,56 @@ public class FXMLLoader {
 
                         location = new URL(FXMLLoader.this.location, source);
                     }
+                    Bindings engineBindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+                    String filename = location.getPath();
+                    engineBindings.put(engine.FILENAME, filename);
 
                     InputStreamReader scriptReader = null;
+                    String script = null;
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
-                        engine.eval(scriptReader);
-                    } catch(ScriptException exception) {
-                        exception.printStackTrace();
+                        StringBuilder sb = new StringBuilder();
+                        final int bufSize = 4096;
+                        char[] charBuffer = new char[bufSize];
+                        int n;
+                        do {
+                            n = scriptReader.read(charBuffer,0,bufSize);
+                            if (n > 0) {
+                                sb.append(new String(charBuffer,0,n));
+                          }
+                        } while (n > -1);
+                        script = sb.toString();
+                    } catch (IOException exception) {
+                        throw constructLoadException(exception);
                     } finally {
                         if (scriptReader != null) {
                             scriptReader.close();
                         }
                     }
-                } catch (IOException exception) {
-                    throw constructLoadException(exception);
+                    try {
+                        if (engine instanceof Compilable && compileScript) {
+                            CompiledScript compiledScript = null;
+                            try {
+                                compiledScript = ((Compilable) engine).compile(script);
+                            } catch (ScriptException compileExc) {
+                                Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                                    "\", falling back to evaluating script in uncompiled mode");
+                            }
+                            if (compiledScript != null) {
+                                compiledScript.eval();
+                            } else { // fallback to uncompiled mode
+                                engine.eval(script);
+                            }
+                        } else {
+                            engine.eval(script);
+                        }
+                    } catch (ScriptException exception) {
+                        System.err.println(filename + ": caused ScriptException");
+                        exception.printStackTrace();
+                    }
+                }
+                catch (IOException exception) {
+                  throw constructLoadException(exception);
                 }
             }
         }
@@ -1581,10 +1614,31 @@ public class FXMLLoader {
 
             if (value != null && !staticLoad) {
                 // Evaluate the script
+                String filename = null;
                 try {
-                    scriptEngine.eval((String)value);
+                    Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
+                    String script = (String) value;
+                    filename = location.getPath() + "-script_starting_at_line_"
+                                       + (getLineNumber() - (int) script.codePoints().filter(c -> c == '\n').count());
+                    engineBindings.put(scriptEngine.FILENAME, filename);
+                    if (scriptEngine instanceof Compilable && compileScript) {
+                        CompiledScript compiledScript = null;
+                        try {
+                            compiledScript = ((Compilable) scriptEngine).compile(script);
+                        } catch (ScriptException compileExc) {
+                            Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                                "\", falling back to evaluating script in uncompiled mode");
+                        }
+                        if (compiledScript != null) {
+                            compiledScript.eval();
+                        } else { // fallback to uncompiled mode
+                            scriptEngine.eval(script);
+                        }
+                    } else {
+                        scriptEngine.eval(script);
+                    }
                 } catch (ScriptException exception) {
-                    System.err.println(exception.getMessage());
+                    System.err.println(filename + ": caused ScriptException\n" + exception.getMessage());
                 }
             }
         }
@@ -1675,10 +1729,25 @@ public class FXMLLoader {
     private static class ScriptEventHandler implements EventHandler<Event> {
         public final String script;
         public final ScriptEngine scriptEngine;
+        public final String filename;
+        public CompiledScript compiledScript;
+        public boolean isCompiled = false;
 
-        public ScriptEventHandler(String script, ScriptEngine scriptEngine) {
+        public ScriptEventHandler(String script, ScriptEngine scriptEngine, String filename) {
             this.script = script;
             this.scriptEngine = scriptEngine;
+            this.filename = filename;
+            if (scriptEngine instanceof Compilable  && compileScript) {
+                try {
+                    // supply the filename to the scriptEngine engine scope Bindings in case it is needed for compilation
+                    scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE).put(scriptEngine.FILENAME, filename);
+                    this.compiledScript = ((Compilable) scriptEngine).compile(script);
+                    this.isCompiled = true;
+                } catch (ScriptException compileExc) {
+                    Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                        "\", falling back to evaluating script in uncompiled mode");
+                }
+            }
         }
 
         @Override
@@ -1686,19 +1755,20 @@ public class FXMLLoader {
             // Don't pollute the page namespace with values defined in the script
             Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
             Bindings localBindings = scriptEngine.createBindings();
-            localBindings.put(EVENT_KEY, event);
             localBindings.putAll(engineBindings);
-            scriptEngine.setBindings(localBindings, ScriptContext.ENGINE_SCOPE);
-
+            localBindings.put(EVENT_KEY, event);
+            localBindings.put(scriptEngine.ARGV, new Object[]{event});
+            localBindings.put(scriptEngine.FILENAME, filename);
             // Execute the script
             try {
-                scriptEngine.eval(script);
-            } catch (ScriptException exception){
-                throw new RuntimeException(exception);
+                if (isCompiled) {
+                   compiledScript.eval(localBindings);
+                } else {
+                   scriptEngine.eval(script, localBindings);
+                }
+            } catch (ScriptException exception) {
+                throw new RuntimeException(filename + ": caused ScriptException", exception);
             }
-
-            // Restore the original bindings
-            scriptEngine.setBindings(engineBindings, ScriptContext.ENGINE_SCOPE);
         }
     }
 
@@ -1815,6 +1885,7 @@ public class FXMLLoader {
     private Element current = null;
 
     private ScriptEngine scriptEngine = null;
+    private static boolean compileScript = true;
 
     private List<String> packages = new LinkedList<String>();
     private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
@@ -1840,6 +1911,12 @@ public class FXMLLoader {
      * The tag name of import processing instruction.
      */
     public static final String IMPORT_PROCESSING_INSTRUCTION = "import";
+
+    /**
+     * The tag name of the compile processing instruction.
+     * @since 15
+     */
+    public static final String COMPILE_PROCESSING_INSTRUCTION = "compile";
 
     /**
      * Prefix of 'fx' namespace.
@@ -2046,12 +2123,14 @@ public class FXMLLoader {
     public static final String FX_NAMESPACE_VERSION = "1";
 
     static {
-        JAVAFX_VERSION = AccessController.doPrivileged(new PrivilegedAction<String>() {
+        @SuppressWarnings("removal")
+        String tmp = AccessController.doPrivileged(new PrivilegedAction<String>() {
             @Override
             public String run() {
                 return System.getProperty("javafx.version");
             }
         });
+        JAVAFX_VERSION = tmp;
 
         FXMLLoaderHelper.setFXMLLoaderAccessor(new FXMLLoaderHelper.FXMLLoaderAccessor() {
             @Override
@@ -2352,6 +2431,7 @@ public class FXMLLoader {
      */
     public ClassLoader getClassLoader() {
         if (classLoader == null) {
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             final Class caller = (sm != null) ?
                     walker.getCallerClass() :
@@ -2431,6 +2511,7 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     public <T> T load() throws IOException {
         return loadImpl((System.getSecurityManager() != null)
                             ? walker.getCallerClass()
@@ -2446,6 +2527,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public <T> T load(InputStream inputStream) throws IOException {
         return loadImpl(inputStream, (System.getSecurityManager() != null)
                                          ? walker.getCallerClass()
@@ -2674,6 +2756,10 @@ public class FXMLLoader {
             processLanguage();
         } else if (piTarget.equals(IMPORT_PROCESSING_INSTRUCTION)) {
             processImport();
+        } else if (piTarget.equals(COMPILE_PROCESSING_INSTRUCTION)) {
+            String strCompile = xmlStreamReader.getPIData().trim();
+            // if PIData() is empty string then default to true, otherwise use Boolean.parseBoolean(string) to determine the boolean value
+            compileScript = (strCompile.length() == 0 ? true : Boolean.parseBoolean(strCompile));
         }
     }
 
@@ -3050,6 +3136,7 @@ public class FXMLLoader {
 
     private static ClassLoader getDefaultClassLoader(Class caller) {
         if (defaultClassLoader == null) {
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
                 if (needsClassLoaderPermissionCheck(caller)) {
@@ -3067,6 +3154,7 @@ public class FXMLLoader {
      * @since JavaFX 2.1
      */
     public static ClassLoader getDefaultClassLoader() {
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         final Class caller = (sm != null) ?
                 walker.getCallerClass() :
@@ -3085,6 +3173,7 @@ public class FXMLLoader {
         if (defaultClassLoader == null) {
             throw new NullPointerException();
         }
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
             sm.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
@@ -3102,6 +3191,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location) throws IOException {
         return loadImpl(location, (System.getSecurityManager() != null)
                                       ? walker.getCallerClass()
@@ -3123,6 +3213,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources)
                                      throws IOException {
         return loadImpl(location, resources,
@@ -3148,6 +3239,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory)
                                      throws IOException {
@@ -3177,6 +3269,7 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory)
@@ -3210,6 +3303,7 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory,
@@ -3316,6 +3410,7 @@ public class FXMLLoader {
     }
 
     private static void checkClassLoaderPermission() {
+        @SuppressWarnings("removal")
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
@@ -3436,7 +3531,8 @@ public class FXMLLoader {
                                  membersType);
 
             final int finalAllowedMemberAccess = allowedMemberAccess;
-            AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(
                     new PrivilegedAction<Void>() {
                         @Override
                         public Void run() {

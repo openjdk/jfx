@@ -29,11 +29,9 @@
 #if ENABLE(B3_JIT)
 
 #include "B3Generate.h"
-#include "B3OpaqueByproducts.h"
 #include "B3Procedure.h"
 #include "B3TimingScope.h"
 #include "CCallHelpers.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
 
 namespace JSC { namespace B3 {
@@ -48,7 +46,7 @@ Compilation compile(Procedure& proc)
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
 
-    return Compilation(FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "B3::Compilation"), proc.releaseByproducts());
+    return Compilation(FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Compilation"), proc.releaseByproducts());
 }
 
 } } // namespace JSC::B3

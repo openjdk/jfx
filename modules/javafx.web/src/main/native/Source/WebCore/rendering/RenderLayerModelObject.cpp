@@ -26,7 +26,9 @@
 #include "RenderLayerModelObject.h"
 
 #include "RenderLayer.h"
+#include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include "StyleScrollSnapPoints.h"
@@ -69,7 +71,7 @@ void RenderLayerModelObject::willBeDestroyed()
 {
     if (isPositioned()) {
         if (style().hasViewportConstrainedPosition())
-            view().frameView().removeViewportConstrainedObject(this);
+            view().frameView().removeViewportConstrainedObject(*this);
     }
 
     if (hasLayer()) {
@@ -94,9 +96,9 @@ void RenderLayerModelObject::destroyLayer()
 void RenderLayerModelObject::createLayer()
 {
     ASSERT(!m_layer);
-    m_layer = std::make_unique<RenderLayer>(*this);
+    m_layer = makeUnique<RenderLayer>(*this);
     setHasLayer(true);
-    m_layer->insertOnlyThisLayer();
+    m_layer->insertOnlyThisLayer(RenderLayer::LayerChangeTiming::StyleChange);
 }
 
 bool RenderLayerModelObject::hasSelfPaintingLayer() const
@@ -112,49 +114,16 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
     if (s_hadLayer)
         s_layerWasSelfPainting = layer()->isSelfPaintingLayer();
 
-    // If our z-index changes value or our visibility changes,
-    // we need to dirty our stacking context's z-order list.
-    const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
-    if (oldStyle) {
-        if (parent()) {
-            // Do a repaint with the old style first, e.g., for example if we go from
-            // having an outline to not having an outline.
-            if (diff == StyleDifference::RepaintLayer) {
-                layer()->repaintIncludingDescendants();
-                if (!(oldStyle->clip() == newStyle.clip()))
-                    layer()->clearClipRectsIncludingDescendants();
-            } else if (diff == StyleDifference::Repaint || newStyle.outlineSize() < oldStyle->outlineSize())
-                repaint();
-        }
-
-        if (diff == StyleDifference::Layout || diff == StyleDifference::SimplifiedLayout) {
-            // When a layout hint happens, we do a repaint of the layer, since the layer could end up being destroyed.
-            if (hasLayer()) {
-                if (oldStyle->position() != newStyle.position()
-                    || oldStyle->zIndex() != newStyle.zIndex()
-                    || oldStyle->hasAutoZIndex() != newStyle.hasAutoZIndex()
-                    || !(oldStyle->clip() == newStyle.clip())
-                    || oldStyle->hasClip() != newStyle.hasClip()
-                    || oldStyle->opacity() != newStyle.opacity()
-                    || oldStyle->transform() != newStyle.transform()
-                    || oldStyle->filter() != newStyle.filter()
-                    )
-                layer()->repaintIncludingDescendants();
-            } else if (newStyle.hasTransform() || newStyle.opacity() < 1 || newStyle.hasFilter() || newStyle.hasBackdropFilter()) {
-                // If we don't have a layer yet, but we are going to get one because of transform or opacity,
-                //  then we need to repaint the old position of the object.
-                repaint();
-            }
-        }
-    }
-
+    auto* oldStyle = hasInitializedStyle() ? &style() : nullptr;
+    if (diff == StyleDifference::RepaintLayer && parent() && oldStyle && oldStyle->clip() != newStyle.clip())
+        layer()->clearClipRectsIncludingDescendants();
     RenderElement::styleWillChange(diff, newStyle);
 }
 
 #if ENABLE(CSS_SCROLL_SNAP)
 static bool scrollSnapContainerRequiresUpdateForStyleUpdate(const RenderStyle& oldStyle, const RenderStyle& newStyle)
 {
-    return oldStyle.scrollSnapPort() != newStyle.scrollSnapPort();
+    return oldStyle.scrollPadding() != newStyle.scrollPadding() || oldStyle.scrollSnapType() != newStyle.scrollSnapType();
 }
 #endif
 
@@ -168,22 +137,21 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             if (s_wasFloating && isFloating())
                 setChildNeedsLayout();
             createLayer();
-            if (parent() && !needsLayout() && containingBlock()) {
+            if (parent() && !needsLayout() && containingBlock())
                 layer()->setRepaintStatus(NeedsFullRepaint);
-                layer()->updateLayerPositions();
-            }
         }
     } else if (layer() && layer()->parent()) {
 #if ENABLE(CSS_COMPOSITING)
-        if (oldStyle->hasBlendMode())
-            layer()->parent()->dirtyAncestorChainHasBlendingDescendants();
+        if (oldStyle && oldStyle->hasBlendMode())
+            layer()->willRemoveChildWithBlendMode();
 #endif
-        setHasTransformRelatedProperty(false); // All transform-related propeties force layers, so we know we don't have one or the object doesn't support them.
+        setHasTransformRelatedProperty(false); // All transform-related properties force layers, so we know we don't have one or the object doesn't support them.
         setHasReflection(false);
         // Repaint the about to be destroyed self-painting layer when style change also triggers repaint.
         if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == NeedsFullRepaint && hasRepaintLayoutRects())
             repaintUsingContainer(containerForRepaint(), repaintLayoutRects().m_repaintRect);
-        layer()->removeOnlyThisLayer(); // calls destroyLayer() which clears m_layer
+
+        layer()->removeOnlyThisLayer(RenderLayer::LayerChangeTiming::StyleChange); // calls destroyLayer() which clears m_layer
         if (s_wasFloating && isFloating())
             setChildNeedsLayout();
         if (s_hadTransform)
@@ -200,17 +168,27 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
     bool oldStyleIsViewportConstrained = oldStyle && oldStyle->hasViewportConstrainedPosition();
     if (newStyleIsViewportConstrained != oldStyleIsViewportConstrained) {
         if (newStyleIsViewportConstrained && layer())
-            view().frameView().addViewportConstrainedObject(this);
+            view().frameView().addViewportConstrainedObject(*this);
         else
-            view().frameView().removeViewportConstrainedObject(this);
+            view().frameView().removeViewportConstrainedObject(*this);
+    }
+
+    const RenderStyle& newStyle = style();
+    if (oldStyle && oldStyle->scrollPadding() != newStyle.scrollPadding()) {
+        if (isDocumentElementRenderer()) {
+            FrameView& frameView = view().frameView();
+            frameView.updateScrollbarSteps();
+        } else if (RenderLayer* renderLayer = layer())
+            renderLayer->updateScrollbarSteps();
     }
 
 #if ENABLE(CSS_SCROLL_SNAP)
-    const RenderStyle& newStyle = style();
     if (oldStyle && scrollSnapContainerRequiresUpdateForStyleUpdate(*oldStyle, newStyle)) {
         if (RenderLayer* renderLayer = layer()) {
-            renderLayer->updateSnapOffsets();
-            renderLayer->updateScrollSnapState();
+            if (auto* scrollableArea = renderLayer->scrollableArea()) {
+                scrollableArea->updateSnapOffsets();
+                scrollableArea->updateScrollSnapState();
+            }
         } else if (isBody() || isDocumentElementRenderer()) {
             FrameView& frameView = view().frameView();
             frameView.updateSnapOffsets();
@@ -218,14 +196,22 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             frameView.updateScrollingCoordinatorScrollSnapProperties();
         }
     }
-    if (oldStyle && oldStyle->scrollSnapArea() != newStyle.scrollSnapArea()) {
+
+    bool scrollMarginChanged = oldStyle && oldStyle->scrollMargin() != newStyle.scrollMargin();
+    bool scrollAlignChanged = oldStyle && oldStyle->scrollSnapAlign() != newStyle.scrollSnapAlign();
+    bool scrollSnapStopChanged = oldStyle && oldStyle->scrollSnapStop() != newStyle.scrollSnapStop();
+    if (scrollMarginChanged || scrollAlignChanged || scrollSnapStopChanged) {
         auto* scrollSnapBox = enclosingScrollableContainerForSnapping();
         if (scrollSnapBox && scrollSnapBox->layer()) {
             const RenderStyle& style = scrollSnapBox->style();
             if (style.scrollSnapType().strictness != ScrollSnapStrictness::None) {
-                scrollSnapBox->layer()->updateSnapOffsets();
-                scrollSnapBox->layer()->updateScrollSnapState();
+                if (auto* scrollableArea = scrollSnapBox->layer()->scrollableArea()) {
+                    scrollableArea->updateSnapOffsets();
+                    scrollableArea->updateScrollSnapState();
+                }
                 if (scrollSnapBox->isBody() || scrollSnapBox->isDocumentElementRenderer())
+                    scrollSnapBox->view().frameView().updateSnapOffsets();
+                    scrollSnapBox->view().frameView().updateScrollSnapState();
                     scrollSnapBox->view().frameView().updateScrollingCoordinatorScrollSnapProperties();
             }
         }
@@ -281,6 +267,41 @@ void RenderLayerModelObject::computeRepaintLayoutRects(const RenderLayerModelObj
         clearRepaintLayoutRects();
     else
         setRepaintLayoutRects(RepaintLayoutRects(*this, repaintContainer, geometryMap));
+}
+
+bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& animation, const KeyframeList& keyframes)
+{
+    if (!layer() || !layer()->backing())
+        return false;
+    return layer()->backing()->startAnimation(timeOffset, animation, keyframes);
+}
+
+void RenderLayerModelObject::animationPaused(double timeOffset, const String& name)
+{
+    if (!layer() || !layer()->backing())
+        return;
+    layer()->backing()->animationPaused(timeOffset, name);
+}
+
+void RenderLayerModelObject::animationFinished(const String& name)
+{
+    if (!layer() || !layer()->backing())
+        return;
+    layer()->backing()->animationFinished(name);
+}
+
+void RenderLayerModelObject::transformRelatedPropertyDidChange()
+{
+    if (!layer() || !layer()->backing())
+        return;
+    layer()->backing()->transformRelatedPropertyDidChange();
+}
+
+void RenderLayerModelObject::suspendAnimations(MonotonicTime time)
+{
+    if (!layer() || !layer()->backing())
+        return;
+    layer()->backing()->suspendAnimations(time);
 }
 
 } // namespace WebCore

@@ -30,14 +30,11 @@
 
 #include "CCallHelpers.h"
 #include "CodeBlockWithJITType.h"
-#include "DFGCommon.h"
 #include "FTLJITCode.h"
 #include "JITOperations.h"
 #include "LinkBuffer.h"
-#include "JSCInlines.h"
 #include "ProfilerCompilation.h"
 #include "ThunkGenerators.h"
-#include "VirtualRegister.h"
 
 namespace JSC { namespace FTL {
 
@@ -71,7 +68,7 @@ void link(State& state)
     if (UNLIKELY(compilation)) {
         compilation->addDescription(
             Profiler::OriginStack(),
-            toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITCode::FTLJIT), ", instruction count = ", graph.m_codeBlock->instructionCount(), ":\n"));
+            toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));
 
         graph.ensureSSADominators();
         graph.ensureSSANaturalLoops();
@@ -80,7 +77,7 @@ void link(State& state)
 
         DumpContext dumpContext;
         StringPrintStream out;
-        Node* lastNode = 0;
+        Node* lastNode = nullptr;
         for (size_t blockIndex = 0; blockIndex < graph.numBlocks(); ++blockIndex) {
             BasicBlock* block = graph.block(blockIndex);
             if (!block)
@@ -133,25 +130,25 @@ void link(State& state)
             CCallHelpers::JumpList mainPathJumps;
 
             jit.load32(
-                frame.withOffset(sizeof(Register) * CallFrameSlot::argumentCount),
+                frame.withOffset(sizeof(Register) * CallFrameSlot::argumentCountIncludingThis),
                 GPRInfo::regT1);
             mainPathJumps.append(jit.branch32(
                                      CCallHelpers::AboveOrEqual, GPRInfo::regT1,
                                      CCallHelpers::TrustedImm32(codeBlock->numParameters())));
             jit.emitFunctionPrologue();
-            jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
+            jit.move(CCallHelpers::TrustedImmPtr(codeBlock->globalObject()), GPRInfo::argumentGPR0);
             jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
             CCallHelpers::Call callArityCheck = jit.call(OperationPtrTag);
 
             auto noException = jit.branch32(CCallHelpers::GreaterThanOrEqual, GPRInfo::returnValueGPR, CCallHelpers::TrustedImm32(0));
             jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
             jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
-            jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
+            jit.prepareCallOperation(vm);
             CCallHelpers::Call callLookupExceptionHandlerFromCallerFrame = jit.call(OperationPtrTag);
             jit.jumpToExceptionHandler(vm);
             noException.link(&jit);
 
-            if (!ASSERT_DISABLED) {
+            if (ASSERT_ENABLED) {
                 jit.load64(vm.addressOfException(), GPRInfo::regT1);
                 jit.jitAssertIsNull(GPRInfo::regT1);
             }
@@ -166,13 +163,13 @@ void link(State& state)
             jit.untagReturnAddress();
             mainPathJumps.append(jit.jump());
 
-            linkBuffer = std::make_unique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+            linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
             if (linkBuffer->didFailToAllocate()) {
                 state.allocationFailed = true;
                 return;
             }
             linkBuffer->link(callArityCheck, FunctionPtr<OperationPtrTag>(codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck));
-            linkBuffer->link(callLookupExceptionHandlerFromCallerFrame, FunctionPtr<OperationPtrTag>(lookupExceptionHandlerFromCallerFrame));
+            linkBuffer->link(callLookupExceptionHandlerFromCallerFrame, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame));
             linkBuffer->link(callArityFixup, FunctionPtr<JITThunkPtrTag>(vm.getCTIStub(arityFixupGenerator).code()));
             linkBuffer->link(mainPathJumps, state.generatedFunction);
         }
@@ -191,7 +188,7 @@ void link(State& state)
         jit.untagReturnAddress();
         CCallHelpers::Jump mainPathJump = jit.jump();
 
-        linkBuffer = std::make_unique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+        linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
         if (linkBuffer->didFailToAllocate()) {
             state.allocationFailed = true;
             return;

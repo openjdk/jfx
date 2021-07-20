@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLResolvingType.h"
 #include "WHLSLTypeArgument.h"
@@ -43,11 +43,13 @@ class NamedType;
 
 }
 
-AST::FunctionDeclaration* resolveFunctionOverloadImpl(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, Optional<std::reference_wrapper<AST::NamedType>>& castReturnType);
+AST::FunctionDeclaration* resolveFunctionOverload(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, AST::NameSpace);
+AST::FunctionDeclaration* resolveFunctionOverload(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, AST::NamedType* castReturnType, AST::NameSpace);
+AST::FunctionDeclaration* resolveFunctionOverload(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, AST::UnnamedType* castReturnType, AST::NameSpace);
 AST::NamedType* resolveTypeOverloadImpl(Vector<std::reference_wrapper<AST::NamedType>, 1>&, AST::TypeArguments&);
 
 }
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

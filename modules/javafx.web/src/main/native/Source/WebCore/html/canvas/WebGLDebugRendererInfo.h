@@ -25,11 +25,14 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLExtension.h"
 
 namespace WebCore {
 
 class WebGLDebugRendererInfo final : public WebGLExtension {
+    WTF_MAKE_ISO_ALLOCATED(WebGLDebugRendererInfo);
 public:
     enum EnumType {
         UNMASKED_VENDOR_WEBGL = 0x9245,
@@ -43,3 +46,5 @@ public:
 };
 
 } // namespace WebCore
+
+#endif

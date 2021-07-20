@@ -36,6 +36,7 @@
 #include <string.h>
 
 #include <wtf/Assertions.h>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -53,29 +54,44 @@ namespace JSC {
     )
 
 
-const int maxOpcodeLength = 40;
 #if ENABLE(C_LOOP)
 const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_CLOOP_BYTECODE_HELPER_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
 #else
 const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
 #endif
 
+constexpr int numWasmOpcodeIDs = NUMBER_OF_WASM_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
+
 #define OPCODE_ID_ENUM(opcode, length) opcode,
     enum OpcodeID : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+    enum WasmOpcodeID : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 
 #if ENABLE(C_LOOP) && !HAVE(COMPUTED_GOTO)
 
-#define OPCODE_ID_ENUM(opcode, length) opcode##_wide = numOpcodeIDs + opcode,
-    enum OpcodeIDWide : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+#define OPCODE_ID_ENUM(opcode, length) opcode##_wide16 = numOpcodeIDs + opcode,
+    enum OpcodeIDWide16 : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+    enum WasmOpcodeIDWide16 : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
+#undef OPCODE_ID_ENUM
+
+#define OPCODE_ID_ENUM(opcode, length) opcode##_wide32 = numOpcodeIDs * 2 + opcode,
+    enum OpcodeIDWide32 : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+    enum WasmOpcodeIDWide32 : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 #endif
 
 extern const unsigned opcodeLengths[];
+extern const unsigned wasmOpcodeLengths[];
 
 #define OPCODE_ID_LENGTHS(id, length) const int id##_length = length;
     FOR_EACH_OPCODE_ID(OPCODE_ID_LENGTHS);
+    FOR_EACH_WASM_ID(OPCODE_ID_LENGTHS);
 #undef OPCODE_ID_LENGTHS
+
+static constexpr unsigned maxJSOpcodeLength = /* Opcode */ 1 + /* Wide32 Opcode */ 1 + /* Operands */ (MAX_LENGTH_OF_BYTECODE_IDS - 1) * 4;
+static constexpr unsigned maxWasmOpcodeLength = /* Opcode */ 1 + /* Wide32 Opcode */ 1 + /* Operands */ (MAX_LENGTH_OF_WASM_IDS - 1) * 4;
+static constexpr unsigned maxOpcodeLength = std::max(maxJSOpcodeLength, maxWasmOpcodeLength);
+static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(maxOpcodeLength) + 1;
 
 #define FOR_EACH_OPCODE_WITH_VALUE_PROFILE(macro) \
     macro(OpCallVarargs) \
@@ -89,10 +105,13 @@ extern const unsigned opcodeLengths[];
     macro(OpTryGetById) \
     macro(OpGetByIdDirect) \
     macro(OpGetByValWithThis) \
+    macro(OpGetPrototypeOf) \
     macro(OpGetFromArguments) \
     macro(OpToNumber) \
+    macro(OpToNumeric) \
     macro(OpToObject) \
     macro(OpGetArgument) \
+    macro(OpGetInternalField) \
     macro(OpToThis) \
     macro(OpCall) \
     macro(OpTailCall) \
@@ -103,18 +122,16 @@ extern const unsigned opcodeLengths[];
     macro(OpBitor) \
     macro(OpBitnot) \
     macro(OpBitxor) \
+    macro(OpLshift) \
+    macro(OpRshift) \
 
 #define FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(macro) \
-    macro(OpHasIndexedProperty) \
+    macro(OpHasEnumerableIndexedProperty) \
     macro(OpCallVarargs) \
     macro(OpTailCallVarargs) \
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
     macro(OpGetByVal) \
-    macro(OpCall) \
-    macro(OpTailCall) \
-    macro(OpCallEval) \
-    macro(OpConstruct) \
     macro(OpInByVal) \
     macro(OpPutByVal) \
     macro(OpPutByValDirect) \
@@ -132,6 +149,9 @@ extern const unsigned opcodeLengths[];
     macro(OpTailCall) \
     macro(OpCallEval) \
     macro(OpConstruct) \
+    macro(OpIteratorOpen) \
+    macro(OpIteratorNext) \
+
 
 IGNORE_WARNINGS_BEGIN("type-limits")
 
@@ -147,20 +167,8 @@ typedef void* Opcode;
 typedef OpcodeID Opcode;
 #endif
 
-#define PADDING_STRING "                                "
-#define PADDING_STRING_LENGTH static_cast<unsigned>(strlen(PADDING_STRING))
-
 extern const char* const opcodeNames[];
-
-inline const char* padOpcodeName(OpcodeID op, unsigned width)
-{
-    unsigned pad = width - strlen(opcodeNames[op]);
-    pad = std::min(pad, PADDING_STRING_LENGTH);
-    return PADDING_STRING + PADDING_STRING_LENGTH - pad;
-}
-
-#undef PADDING_STRING_LENGTH
-#undef PADDING_STRING
+extern const char* const wasmOpcodeNames[];
 
 #if ENABLE(OPCODE_STATS)
 
@@ -185,6 +193,8 @@ inline bool isBranch(OpcodeID opcodeID)
     case op_jfalse:
     case op_jeq_null:
     case op_jneq_null:
+    case op_jundefined_or_null:
+    case op_jnundefined_or_null:
     case op_jneq_ptr:
     case op_jless:
     case op_jlesseq:

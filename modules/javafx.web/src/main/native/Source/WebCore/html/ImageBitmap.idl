@@ -24,12 +24,12 @@
  */
 
 [
-    EnabledAtRuntime=ImageBitmapOffscreenCanvas,
+    EnabledAtRuntime=ImageBitmap,
     Exposed=(Window,Worker),
     ImplementationLacksVTable
 ] interface ImageBitmap {
     readonly attribute unsigned long width;
     readonly attribute unsigned long height;
-    void close();
+    undefined close();
 };
 

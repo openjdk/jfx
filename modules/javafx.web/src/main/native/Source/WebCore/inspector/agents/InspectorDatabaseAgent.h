@@ -33,6 +33,7 @@
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/HashMap.h>
+#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -40,30 +41,30 @@ namespace WebCore {
 class Database;
 class InspectorDatabaseResource;
 
-typedef String ErrorString;
-
 class InspectorDatabaseAgent final : public InspectorAgentBase, public Inspector::DatabaseBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorDatabaseAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit InspectorDatabaseAgent(WebAgentContext&);
-    virtual ~InspectorDatabaseAgent();
+    InspectorDatabaseAgent(WebAgentContext&);
+    ~InspectorDatabaseAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
-    void clearResources();
+    // DatabaseBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<String>>> getDatabaseTableNames(const Inspector::Protocol::Database::DatabaseId&);
+    void executeSQL(const Inspector::Protocol::Database::DatabaseId&, const String& query, Ref<ExecuteSQLCallback>&&);
 
-    // Called from the front-end.
-    void enable(ErrorString&) override;
-    void disable(ErrorString&) override;
-    void getDatabaseTableNames(ErrorString&, const String& databaseId, RefPtr<JSON::ArrayOf<String>>& names) override;
-    void executeSQL(const String& databaseId, const String& query, Ref<ExecuteSQLCallback>&&) override;
+    // InspectorInstrumentation
+    void didCommitLoad();
+    void didOpenDatabase(Database&);
 
-    // Called from the injected script.
+    // CommandLineAPI
     String databaseId(Database&);
 
-    void didOpenDatabase(RefPtr<Database>&&, const String& domain, const String& name, const String& version);
 private:
     Database* databaseForId(const String& databaseId);
     InspectorDatabaseResource* findByFileName(const String& fileName);
@@ -71,9 +72,7 @@ private:
     std::unique_ptr<Inspector::DatabaseFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::DatabaseBackendDispatcher> m_backendDispatcher;
 
-    typedef HashMap<String, RefPtr<InspectorDatabaseResource>> DatabaseResourcesMap;
-    DatabaseResourcesMap m_resources;
-    bool m_enabled { false };
+    HashMap<String, RefPtr<InspectorDatabaseResource>> m_resources;
 };
 
 } // namespace WebCore

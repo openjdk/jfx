@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ObjectPropertyCondition.h"
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "TrackedReferences.h"
 
 namespace JSC {
@@ -46,18 +46,12 @@ void ObjectPropertyCondition::dump(PrintStream& out) const
     dumpInContext(out, nullptr);
 }
 
-bool ObjectPropertyCondition::structureEnsuresValidityAssumingImpurePropertyWatchpoint(
-    Structure* structure) const
-{
-    return m_condition.isStillValidAssumingImpurePropertyWatchpoint(structure);
-}
-
 bool ObjectPropertyCondition::structureEnsuresValidityAssumingImpurePropertyWatchpoint() const
 {
     if (!*this)
         return false;
 
-    return structureEnsuresValidityAssumingImpurePropertyWatchpoint(m_object->structure());
+    return m_condition.isStillValidAssumingImpurePropertyWatchpoint(m_object->structure(), nullptr);
 }
 
 bool ObjectPropertyCondition::validityRequiresImpurePropertyWatchpoint(Structure* structure) const
@@ -142,15 +136,16 @@ bool ObjectPropertyCondition::isWatchable(PropertyCondition::WatchabilityEffort 
     return isWatchable(m_object->structure(), effort);
 }
 
-bool ObjectPropertyCondition::isStillLive() const
+bool ObjectPropertyCondition::isStillLive(VM& vm) const
 {
     if (!*this)
         return false;
 
-    if (!Heap::isMarked(m_object))
-        return false;
-
-    return m_condition.isStillLive();
+    bool isStillLive = true;
+    forEachDependentCell([&](JSCell* cell) {
+        isStillLive &= vm.heap.isMarked(cell);
+    });
+    return isStillLive;
 }
 
 void ObjectPropertyCondition::validateReferences(const TrackedReferences& tracked) const

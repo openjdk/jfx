@@ -44,22 +44,17 @@
 
 namespace WebCore {
 
-const unsigned HRTFElevation::AzimuthSpacing = 15;
-const unsigned HRTFElevation::NumberOfRawAzimuths = 360 / AzimuthSpacing;
-const unsigned HRTFElevation::InterpolationFactor = 8;
-const unsigned HRTFElevation::NumberOfTotalAzimuths = NumberOfRawAzimuths * InterpolationFactor;
-
 // Total number of components of an HRTF database.
-const size_t TotalNumberOfResponses = 240;
+constexpr size_t TotalNumberOfResponses = 240;
 
 // Number of frames in an individual impulse response.
-const size_t ResponseFrameSize = 256;
+constexpr size_t ResponseFrameSize = 256;
 
 // Sample-rate of the spatialization impulse responses as stored in the resource file.
 // The impulse responses may be resampled to a different sample-rate (depending on the audio hardware) when they are loaded.
-const float ResponseSampleRate = 44100;
+constexpr float ResponseSampleRate = 44100;
 
-#if PLATFORM(COCOA) || USE(WEBAUDIO_GSTREAMER)
+#if PLATFORM(COCOA) || USE(GSTREAMER)
 #define USE_CONCATENATED_IMPULSE_RESPONSES
 #endif
 
@@ -244,8 +239,8 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createForSubject(const String& sub
     if (!isElevationGood)
         return nullptr;
 
-    auto kernelListL = std::make_unique<HRTFKernelList>(NumberOfTotalAzimuths);
-    auto kernelListR = std::make_unique<HRTFKernelList>(NumberOfTotalAzimuths);
+    auto kernelListL = makeUnique<HRTFKernelList>(NumberOfTotalAzimuths);
+    auto kernelListR = makeUnique<HRTFKernelList>(NumberOfTotalAzimuths);
 
     // Load convolution kernels from HRTF files.
     int interpolatedIndex = 0;
@@ -274,7 +269,7 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createForSubject(const String& sub
         }
     }
 
-    return std::make_unique<HRTFElevation>(WTFMove(kernelListL), WTFMove(kernelListR), elevation, sampleRate);
+    return makeUnique<HRTFElevation>(WTFMove(kernelListL), WTFMove(kernelListR), elevation, sampleRate);
 }
 
 std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFElevation* hrtfElevation1, HRTFElevation* hrtfElevation2, float x, float sampleRate)
@@ -285,8 +280,8 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFEl
 
     ASSERT(x >= 0.0 && x < 1.0);
 
-    auto kernelListL = std::make_unique<HRTFKernelList>(NumberOfTotalAzimuths);
-    auto kernelListR = std::make_unique<HRTFKernelList>(NumberOfTotalAzimuths);
+    auto kernelListL = makeUnique<HRTFKernelList>(NumberOfTotalAzimuths);
+    auto kernelListR = makeUnique<HRTFKernelList>(NumberOfTotalAzimuths);
 
     HRTFKernelList* kernelListL1 = hrtfElevation1->kernelListL();
     HRTFKernelList* kernelListR1 = hrtfElevation1->kernelListR();
@@ -302,7 +297,7 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFEl
     // Interpolate elevation angle.
     double angle = (1.0 - x) * hrtfElevation1->elevationAngle() + x * hrtfElevation2->elevationAngle();
 
-    return std::make_unique<HRTFElevation>(WTFMove(kernelListL), WTFMove(kernelListR), static_cast<int>(angle), sampleRate);
+    return makeUnique<HRTFElevation>(WTFMove(kernelListL), WTFMove(kernelListR), static_cast<int>(angle), sampleRate);
 }
 
 void HRTFElevation::getKernelsFromAzimuth(double azimuthBlend, unsigned azimuthIndex, HRTFKernel* &kernelL, HRTFKernel* &kernelR, double& frameDelayL, double& frameDelayR)

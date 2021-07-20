@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
- * Copyright (C) 2004, 2005, 2006, 2008, 2009, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include "HTMLEmbedElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ElementAncestorIterator.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
@@ -54,9 +55,7 @@ inline HTMLEmbedElement::HTMLEmbedElement(const QualifiedName& tagName, Document
 
 Ref<HTMLEmbedElement> HTMLEmbedElement::create(const QualifiedName& tagName, Document& document)
 {
-    auto result = adoptRef(*new HTMLEmbedElement(tagName, document));
-    result->finishCreating();
-    return result;
+    return adoptRef(*new HTMLEmbedElement(tagName, document));
 }
 
 Ref<HTMLEmbedElement> HTMLEmbedElement::create(Document& document)
@@ -66,36 +65,26 @@ Ref<HTMLEmbedElement> HTMLEmbedElement::create(Document& document)
 
 static inline RenderWidget* findWidgetRenderer(const Node* node)
 {
-    if (!node->renderer()) {
-        do {
-            node = node->parentNode();
-        } while (node && !is<HTMLObjectElement>(*node));
-    }
-
+    if (!node->renderer())
+        node = ancestorsOfType<HTMLObjectElement>(*node).first();
     if (node && is<RenderWidget>(node->renderer()))
         return downcast<RenderWidget>(node->renderer());
-
     return nullptr;
 }
 
 RenderWidget* HTMLEmbedElement::renderWidgetLoadingPlugin() const
 {
-    RefPtr<FrameView> view = document().view();
-    if (!view || (!view->layoutContext().isInRenderTreeLayout() && !view->isPainting())) {
-        // Needs to load the plugin immediatedly because this function is called
-        // when JavaScript code accesses the plugin.
-        // FIXME: <rdar://16893708> Check if dispatching events here is safe.
-        document().updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
-    }
-    return findWidgetRenderer(this);
+    RenderWidget* widget = HTMLPlugInImageElement::renderWidgetLoadingPlugin();
+
+    return widget ? widget : findWidgetRenderer(this);
 }
 
-void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == hiddenAttr) {
         if (equalLettersIgnoringASCIICase(value, "yes") || equalLettersIgnoringASCIICase(value, "true")) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWidth, 0, CSSPrimitiveValue::CSS_PX);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyHeight, 0, CSSPrimitiveValue::CSS_PX);
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyHeight, 0, CSSUnitType::CSS_PX);
         }
     } else
         HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
@@ -106,7 +95,7 @@ static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
     return embed.hasAttributeWithoutSynchronization(typeAttr) || embed.hasAttributeWithoutSynchronization(srcAttr);
 }
 
-void HTMLEmbedElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLEmbedElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == typeAttr) {
         m_serviceType = value.string().left(value.find(';')).convertToASCIILowercase();
@@ -154,14 +143,13 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
 
     // Note these pass m_url and m_serviceType to allow better code sharing with
     // <object> which modifies url and serviceType before calling these.
-    if (!allowedToLoadFrameURL(m_url)) {
+    if (!canLoadURL(m_url)) {
         setNeedsWidgetUpdate(false);
         return;
     }
 
-    // FIXME: It's sadness that we have this special case here.
-    //        See http://trac.webkit.org/changeset/25128 and
-    //        plugins/netscape-plugin-setwindow-size.html
+    // FIXME: It's unfortunate that we have this special case here.
+    // See http://trac.webkit.org/changeset/25128 and the plugins/netscape-plugin-setwindow-size.html test.
     if (createPlugins == CreatePlugins::No && wouldLoadAsPlugIn(m_url, m_serviceType))
         return;
 
@@ -186,8 +174,9 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
     if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
         return;
 
-    // beforeLoad could have changed the document. Make sure the URL is still safe to load.
-    if (!allowedToLoadFrameURL(m_url))
+    // Dispatching a beforeLoad event could have executed code that changed the document.
+    // Make sure the URL is still safe to load.
+    if (!canLoadURL(m_url))
         return;
 
     // FIXME: beforeLoad could have detached the renderer!  Just like in the <object> case above.
@@ -214,12 +203,6 @@ bool HTMLEmbedElement::rendererIsNeeded(const RenderStyle& style)
         }
     }
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    // Workaround for <rdar://problem/6642221>.
-    if (document().settings().usesDashboardBackwardCompatibilityMode())
-        return true;
-#endif
-
     return HTMLPlugInImageElement::rendererIsNeeded(style);
 }
 
@@ -228,7 +211,7 @@ bool HTMLEmbedElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == srcAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
-const AtomicString& HTMLEmbedElement::imageSourceURL() const
+const AtomString& HTMLEmbedElement::imageSourceURL() const
 {
     return attributeWithoutSynchronization(srcAttr);
 }

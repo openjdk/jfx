@@ -33,84 +33,78 @@ namespace WebCore {
 namespace Layout {
 
 template <typename T>
-class LayoutChildtIterator : public LayoutIterator<T> {
+class LayoutChildIterator : public LayoutIterator<T> {
 public:
-    LayoutChildtIterator(const Container& parent);
-    LayoutChildtIterator(const Container& parent, const T* current);
-    LayoutChildtIterator& operator++();
+    LayoutChildIterator(const ContainerBox& parent);
+    LayoutChildIterator(const ContainerBox& parent, const T* current);
+    LayoutChildIterator& operator++();
 };
 
 template <typename T>
-class LayoutChildtIteratorAdapter {
+class LayoutChildIteratorAdapter {
 public:
-    LayoutChildtIteratorAdapter(const Container& parent);
-    LayoutChildtIterator<T> begin() const;
-    LayoutChildtIterator<T> end() const;
+    LayoutChildIteratorAdapter(const ContainerBox& parent);
+    LayoutChildIterator<T> begin() const;
+    LayoutChildIterator<T> end() const;
     const T* first() const;
     const T* last() const;
 
 private:
-    const Container& m_parent;
+    const ContainerBox& m_parent;
 };
 
-template <typename T> LayoutChildtIteratorAdapter<T> childrenOfType(const Container&);
+template <typename T> LayoutChildIteratorAdapter<T> childrenOfType(const ContainerBox&);
 
-// LayoutChildtIterator
+// LayoutChildIterator
 
 template <typename T>
-inline LayoutChildtIterator<T>::LayoutChildtIterator(const Container& parent)
+inline LayoutChildIterator<T>::LayoutChildIterator(const ContainerBox& parent)
     : LayoutIterator<T>(&parent)
 {
 }
 
 template <typename T>
-inline LayoutChildtIterator<T>::LayoutChildtIterator(const Container& parent, const T* current)
+inline LayoutChildIterator<T>::LayoutChildIterator(const ContainerBox& parent, const T* current)
     : LayoutIterator<T>(&parent, current)
 {
 }
 
 template <typename T>
-inline LayoutChildtIterator<T>& LayoutChildtIterator<T>::operator++()
+inline LayoutChildIterator<T>& LayoutChildIterator<T>::operator++()
 {
-    return static_cast<LayoutChildtIterator<T>&>(LayoutIterator<T>::traverseNextSibling());
+    return static_cast<LayoutChildIterator<T>&>(LayoutIterator<T>::traverseNextSibling());
 }
 
-// LayoutChildtIteratorAdapter
+// LayoutChildIteratorAdapter
 
 template <typename T>
-inline LayoutChildtIteratorAdapter<T>::LayoutChildtIteratorAdapter(const Container& parent)
+inline LayoutChildIteratorAdapter<T>::LayoutChildIteratorAdapter(const ContainerBox& parent)
     : m_parent(parent)
 {
 }
 
 template <typename T>
-inline LayoutChildtIterator<T> LayoutChildtIteratorAdapter<T>::begin() const
+inline LayoutChildIterator<T> LayoutChildIteratorAdapter<T>::begin() const
 {
-    return LayoutChildtIterator<T>(m_parent, Traversal::firstChild<T>(m_parent));
+    return LayoutChildIterator<T>(m_parent, Traversal::firstChild<T>(m_parent));
 }
 
 template <typename T>
-inline LayoutChildtIterator<T> LayoutChildtIteratorAdapter<T>::end() const
+inline LayoutChildIterator<T> LayoutChildIteratorAdapter<T>::end() const
 {
-    return LayoutChildtIterator<T>(m_parent);
+    return LayoutChildIterator<T>(m_parent);
 }
 
 template <typename T>
-inline const T* LayoutChildtIteratorAdapter<T>::first() const
+inline const T* LayoutChildIteratorAdapter<T>::first() const
 {
     return Traversal::firstChild<T>(m_parent);
 }
 
 template <typename T>
-inline const T* LayoutChildtIteratorAdapter<T>::last() const
+inline LayoutChildIteratorAdapter<T> childrenOfType(const ContainerBox& parent)
 {
-    return Traversal::lastChild<T>(m_parent);
-}
-
-template <typename T>
-inline LayoutChildtIteratorAdapter<T> childrenOfType(const Container& parent)
-{
-    return LayoutChildtIteratorAdapter<T>(parent);
+    return LayoutChildIteratorAdapter<T>(parent);
 }
 
 }

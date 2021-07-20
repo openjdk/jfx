@@ -37,26 +37,39 @@
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "GenericTaskQueue.h"
+#include "ReducedResolutionSeconds.h"
 #include <wtf/ListHashSet.h>
+#include <wtf/Variant.h>
+
+namespace JSC {
+class JSGlobalObject;
+}
 
 namespace WebCore {
 
 class LoadTiming;
+class PerformanceUserTiming;
 class PerformanceEntry;
+class PerformanceMark;
+class PerformanceMeasure;
 class PerformanceNavigation;
 class PerformanceObserver;
+class PerformancePaintTiming;
 class PerformanceTiming;
 class ResourceResponse;
 class ResourceTiming;
 class ScriptExecutionContext;
-class UserTiming;
+struct PerformanceMarkOptions;
+struct PerformanceMeasureOptions;
 
 class Performance final : public RefCounted<Performance>, public ContextDestructionObserver, public EventTargetWithInlineData {
+    WTF_MAKE_ISO_ALLOCATED(Performance);
 public:
     static Ref<Performance> create(ScriptExecutionContext* context, MonotonicTime timeOrigin) { return adoptRef(*new Performance(context, timeOrigin)); }
     ~Performance();
 
     DOMHighResTimeStamp now() const;
+    ReducedResolutionSeconds nowInReducedResolutionSeconds() const;
 
     PerformanceNavigation* navigation();
     PerformanceTiming* timing();
@@ -64,17 +77,21 @@ public:
     Vector<RefPtr<PerformanceEntry>> getEntries() const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByType(const String& entryType) const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
+    void appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&) const;
 
     void clearResourceTimings();
     void setResourceTimingBufferSize(unsigned);
 
-    ExceptionOr<void> mark(const String& markName);
+    ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, Optional<PerformanceMarkOptions>&&);
     void clearMarks(const String& markName);
 
-    ExceptionOr<void> measure(const String& measureName, const String& startMark, const String& endMark);
+    using StartOrMeasureOptions = Variant<String, PerformanceMeasureOptions>;
+    ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, Optional<StartOrMeasureOptions>&&, const String& endMark);
     void clearMeasures(const String& measureName);
 
     void addResourceTiming(ResourceTiming&&);
+
+    void reportFirstContentfulPaint();
 
     void removeAllObservers();
     void registerPerformanceObserver(PerformanceObserver&);
@@ -120,7 +137,8 @@ private:
 
     MonotonicTime m_timeOrigin;
 
-    std::unique_ptr<UserTiming> m_userTiming;
+    RefPtr<PerformancePaintTiming> m_firstContentfulPaint;
+    std::unique_ptr<PerformanceUserTiming> m_userTiming;
 
     GenericTaskQueue<ScriptExecutionContext> m_performanceTimelineTaskQueue;
     ListHashSet<RefPtr<PerformanceObserver>> m_observers;

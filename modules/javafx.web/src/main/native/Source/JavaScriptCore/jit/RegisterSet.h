@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,7 @@ public:
 
     JS_EXPORT_PRIVATE static RegisterSet stackRegisters();
     JS_EXPORT_PRIVATE static RegisterSet reservedHardwareRegisters();
-    static RegisterSet runtimeRegisters();
+    static RegisterSet runtimeTagRegisters();
     static RegisterSet specialRegisters(); // The union of stack, reserved hardware, and runtime registers.
     JS_EXPORT_PRIVATE static RegisterSet calleeSaveRegisters();
     static RegisterSet vmCalleeSaveRegisters(); // Callee save registers that might be saved and used by any tier.
@@ -84,6 +84,8 @@ public:
             set(regs.tagGPR(), value);
         set(regs.payloadGPR(), value);
     }
+
+    void set(const RegisterSet& other, bool value = true) { value ? merge(other) : exclude(other); }
 
     void clear(Reg reg)
     {
@@ -218,10 +220,10 @@ private:
     }
 
     // These offsets mirror the logic in Reg.h.
-    static const unsigned gprOffset = 0;
-    static const unsigned fprOffset = gprOffset + MacroAssembler::numGPRs;
-    static const unsigned hashSpecialBitIndex = fprOffset + MacroAssembler::numFPRs;
-    static const unsigned deletedBitIndex = 0;
+    static constexpr unsigned gprOffset = 0;
+    static constexpr unsigned fprOffset = gprOffset + MacroAssembler::numGPRs;
+    static constexpr unsigned hashSpecialBitIndex = fprOffset + MacroAssembler::numFPRs;
+    static constexpr unsigned deletedBitIndex = 0;
 
     RegisterBitmap m_bits;
 };
@@ -229,7 +231,7 @@ private:
 struct RegisterSetHash {
     static unsigned hash(const RegisterSet& set) { return set.hash(); }
     static bool equal(const RegisterSet& a, const RegisterSet& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 } // namespace JSC
@@ -237,9 +239,7 @@ struct RegisterSetHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::RegisterSet> {
-    typedef JSC::RegisterSetHash Hash;
-};
+template<> struct DefaultHash<JSC::RegisterSet> : JSC::RegisterSetHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::RegisterSet> : public CustomHashTraits<JSC::RegisterSet> { };

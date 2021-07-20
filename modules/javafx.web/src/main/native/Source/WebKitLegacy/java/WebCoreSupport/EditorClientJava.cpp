@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -358,14 +358,14 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     return frame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
 }
 
-void EditorClientJava::handleKeyboardEvent(KeyboardEvent* evt)
+void EditorClientJava::handleKeyboardEvent(KeyboardEvent& evt)
 {
-    if (handleEditingKeyboardEvent(evt)) {
-        evt->setDefaultHandled();
+    if (handleEditingKeyboardEvent(&evt)) {
+        evt.setDefaultHandled();
     }
 }
 
-bool EditorClientJava::shouldDeleteRange(Range*)
+bool EditorClientJava::shouldDeleteRange(const Optional<SimpleRange>&)
 {
     notImplemented();
     return true;
@@ -402,36 +402,36 @@ int EditorClientJava::spellCheckerDocumentTag()
     return 0;
 }
 
-bool EditorClientJava::shouldBeginEditing(WebCore::Range*)
+bool EditorClientJava::shouldBeginEditing(const SimpleRange&)
 {
     notImplemented();
     return true;
 }
 
-bool EditorClientJava::shouldEndEditing(WebCore::Range*)
+bool EditorClientJava::shouldEndEditing(const SimpleRange&)
 {
     notImplemented();
     return true;
 }
 
-bool EditorClientJava::shouldInsertText(const String&, Range*, EditorInsertAction)
+bool EditorClientJava::shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction)
 {
     notImplemented();
     return true;
 }
 
-bool EditorClientJava::shouldChangeSelectedRange(Range*, Range*, EAffinity, bool)
+bool EditorClientJava::shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, Affinity, bool)
 {
     return true;
 }
 
-bool EditorClientJava::shouldApplyStyle(StyleProperties*, Range*)
+bool EditorClientJava::shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&)
 {
     return true;
 }
 
-void EditorClientJava::didApplyStyle() {
-    notImplemented();
+void EditorClientJava::didApplyStyle()
+{
 }
 
 void EditorClientJava::didBeginEditing()
@@ -459,7 +459,7 @@ void EditorClientJava::respondToChangedSelection(Frame *frame)
         // committed text which will be ignored in
         // JWebPane.processInputMethodEvent().
         frame->editor().cancelComposition();
-        setInputMethodState(false);
+        setInputMethodState(nullptr);
     }
 }
 
@@ -474,7 +474,6 @@ void EditorClientJava::didEndEditing()
 
 void EditorClientJava::didWriteSelectionToPasteboard()
 {
-    notImplemented();
 }
 
 bool EditorClientJava::canUndo() const
@@ -511,7 +510,7 @@ void EditorClientJava::redo()
     }
 }
 
-bool EditorClientJava::shouldInsertNode(Node*, Range*, EditorInsertAction)
+bool EditorClientJava::shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction)
 {
     notImplemented();
     return true;
@@ -590,13 +589,13 @@ bool EditorClientJava::spellingUIIsShowing()
 }
 
 
-bool EditorClientJava::shouldMoveRangeAfterDelete(Range*, Range*)
+bool EditorClientJava::shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&)
 {
     notImplemented();
     return true;
 }
 
-void EditorClientJava::setInputMethodState(bool enabled)
+void EditorClientJava::setInputMethodState(Element* element)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -609,11 +608,11 @@ void EditorClientJava::setInputMethodState(bool enabled)
     env->CallVoidMethod(
         m_webPage,
         midSetInputMethodState,
-        bool_to_jbool(enabled));
+        bool_to_jbool(element && element->shouldUseInputMethod()));
     WTF::CheckAndClearException(env);
 }
 
-void EditorClientJava::handleInputMethodKeydown(KeyboardEvent*)
+void EditorClientJava::handleInputMethodKeydown(KeyboardEvent&)
 {
     notImplemented();
 }
@@ -633,12 +632,12 @@ bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
     return defaultValue;
 }
 
-void EditorClientJava::discardedComposition(Frame*) {
-    notImplemented();
+void EditorClientJava::discardedComposition(Frame*)
+{
 }
 
-void EditorClientJava::canceledComposition() {
-    notImplemented();
+void EditorClientJava::canceledComposition()
+{
 }
 
 const int gc_maximumm_undoStackDepth = 1000;
@@ -662,11 +661,12 @@ void EditorClientJava::clearUndoRedoOperations()
     m_redoStack.clear();
 }
 
-void EditorClientJava::getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+void EditorClientJava::getClientPasteboardData(const Optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
 {
+    notImplemented();
 }
 
-void EditorClientJava::willWriteSelectionToPasteboard(Range*)
+void EditorClientJava::willWriteSelectionToPasteboard(const Optional<SimpleRange>&)
 {
 }
 
@@ -722,12 +722,6 @@ void EditorClientJava::getGuessesForWord(const String&, const String&, const Vis
 void EditorClientJava::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
 {
     notImplemented();
-}
-
-String EditorClientJava::replacementURLForResource(Ref<WebCore::SharedBuffer>&&, const String&)
-{
-    notImplemented();
-    return { };
 }
 
 } // namespace WebCore

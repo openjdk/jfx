@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,9 @@ import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 
 /**
- * A list that allows listeners to track changes when they occur.
+ * A list that allows listeners to track changes when they occur. Implementations can be created using methods in {@link FXCollections}
+ * such as {@link FXCollections#observableArrayList() observableArrayList}, or with a
+ * {@link javafx.beans.property.SimpleListProperty SimpleListProperty}.
  *
  * @see ListChangeListener
  * @see ListChangeListener.Change

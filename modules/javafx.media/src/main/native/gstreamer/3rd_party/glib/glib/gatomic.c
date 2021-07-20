@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Ryan Lortie
+ * Copyright (C) 2011 Ryan Lortie
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -90,20 +90,11 @@
 
 #ifdef G_ATOMIC_LOCK_FREE
 
-/* if G_ATOMIC_LOCK_FREE was defined by ./configure then we MUST
+/* if G_ATOMIC_LOCK_FREE was defined by `meson configure` then we MUST
  * implement the atomic operations in a lock-free manner.
  */
 
 #if defined (__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-
-#if defined(__ATOMIC_SEQ_CST) && !defined(__clang__)
-/* The implementation used in this code path in gatomic.h assumes
- * 4-byte int */
-G_STATIC_ASSERT (sizeof (gint) == 4);
-
-/* The implementations in gatomic.h assume 4- or 8-byte pointers */
-G_STATIC_ASSERT (sizeof (void *) == 4 || sizeof (void *) == 8);
-#endif
 
 /**
  * g_atomic_int_get:
@@ -669,7 +660,7 @@ gsize
 }
 #else
 
-/* This error occurs when ./configure decided that we should be capable
+/* This error occurs when `meson configure` decided that we should be capable
  * of lock-free atomics but we find at compile-time that we are not.
  */
 #error G_ATOMIC_LOCK_FREE defined, but incapable of lock-free atomics.

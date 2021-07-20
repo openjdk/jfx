@@ -28,35 +28,36 @@
 
 #include "Base64Utilities.h"
 #include "CacheStorageConnection.h"
-#include "EventTarget.h"
 #include "ImageBitmap.h"
 #include "ScriptExecutionContext.h"
 #include "Supplementable.h"
+#include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include <wtf/URL.h>
 #include "WorkerCacheStorageConnection.h"
-#include "WorkerEventQueue.h"
-#include "WorkerScriptController.h"
+#include "WorkerMessagePortChannelProvider.h"
+#include "WorkerThread.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <memory>
-#include <pal/SessionID.h>
 
 namespace WebCore {
 
+class CSSValuePool;
 class ContentSecurityPolicyResponseHeaders;
 class Crypto;
-class MicrotaskQueue;
 class Performance;
 class ScheduledAction;
-class WorkerInspectorController;
 class WorkerLocation;
 class WorkerNavigator;
-class WorkerThread;
+class WorkerSWClientConnection;
+struct WorkerParameters;
 
 namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class WorkerGlobalScope : public RefCounted<WorkerGlobalScope>, public Supplementable<WorkerGlobalScope>, public ScriptExecutionContext, public EventTargetWithInlineData, public Base64Utilities {
+class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WorkerOrWorkletGlobalScope {
+    WTF_MAKE_ISO_ALLOCATED(WorkerGlobalScope);
 public:
     virtual ~WorkerGlobalScope();
 
@@ -64,27 +65,24 @@ public:
     virtual bool isServiceWorkerGlobalScope() const { return false; }
 
     const URL& url() const final { return m_url; }
-    String origin() const final;
+    String origin() const;
     const String& identifier() const { return m_identifier; }
 
 #if ENABLE(INDEXED_DATABASE)
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final;
+    void suspend() final;
+    void resume() final;
 #endif
 
     WorkerCacheStorageConnection& cacheStorageConnection();
+    MessagePortChannelProvider& messagePortChannelProvider();
+#if ENABLE(SERVICE_WORKER)
+    WorkerSWClientConnection& swClientConnection();
+#endif
 
-    WorkerScriptController* script() { return m_script.get(); }
-    void clearScript() { m_script = nullptr; }
-
-    WorkerInspectorController& inspectorController() const { return *m_inspectorController; }
-
-    MicrotaskQueue& microtaskQueue() const { return *m_microtaskQueue; }
-
-    WorkerThread& thread() const { return m_thread; }
+    WorkerThread& thread() const;
 
     using ScriptExecutionContext::hasPendingActivity;
-
-    void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
 
     WorkerGlobalScope& self() { return *this; }
     WorkerLocation& location() const;
@@ -95,80 +93,63 @@ public:
 
     void setIsOnline(bool);
 
-    ExceptionOr<int> setTimeout(JSC::ExecState&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<int> setTimeout(JSC::JSGlobalObject&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearTimeout(int timeoutId);
-    ExceptionOr<int> setInterval(JSC::ExecState&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<int> setInterval(JSC::JSGlobalObject&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearInterval(int timeoutId);
 
-    bool isContextThread() const final;
     bool isSecureContext() const final;
 
     WorkerNavigator* optionalNavigator() const { return m_navigator.get(); }
     WorkerLocation* optionalLocation() const { return m_location.get(); }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
-    bool isClosing() { return m_closing; }
-
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final;
+
+    SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
 
     Crypto& crypto();
     Performance& performance() const;
 
-    void prepareForTermination();
+    void prepareForDestruction() override;
 
     void removeAllEventListeners() final;
 
     void createImageBitmap(ImageBitmap::Source&&, ImageBitmapOptions&&, ImageBitmap::Promise&&);
     void createImageBitmap(ImageBitmap::Source&&, int sx, int sy, int sw, int sh, ImageBitmapOptions&&, ImageBitmap::Promise&&);
 
-    unsigned long createUniqueIdentifier() { return m_uniqueIdentifier++; }
+    CSSValuePool& cssValuePool();
+
+    ReferrerPolicy referrerPolicy() const final;
+
+    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+
+    FetchOptions::Credentials credentials() const { return m_credentials; }
 
 protected:
-    WorkerGlobalScope(const URL&, Ref<SecurityOrigin>&&, const String& identifier, const String& userAgent, bool isOnline, WorkerThread&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, PAL::SessionID);
+    WorkerGlobalScope(WorkerThreadType, const WorkerParameters&, Ref<SecurityOrigin>&&, WorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*);
 
     void applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders&);
 
 private:
-    void refScriptExecutionContext() final { ref(); }
-    void derefScriptExecutionContext() final { deref(); }
-
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
-
     void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<Inspector::ScriptCallStack>&&) final;
 
     // The following addMessage and addConsoleMessage functions are deprecated.
     // Callers should try to create the ConsoleMessage themselves.
-    void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::ExecState*, unsigned long requestIdentifier) final;
+    void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject*, unsigned long requestIdentifier) final;
     void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier) final;
 
     bool isWorkerGlobalScope() const final { return true; }
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerGlobalScope*>(this); }
-    URL completeURL(const String&) const final;
-    PAL::SessionID sessionID() const final { return m_sessionID; }
+    URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
-    void disableEval(const String& errorMessage) final;
-    void disableWebAssembly(const String& errorMessage) final;
+
     EventTarget* errorEventTarget() final;
-    WorkerEventQueue& eventQueue() const final;
     String resourceRequestIdentifier() const final { return m_identifier; }
     SocketProvider* socketProvider() final;
 
     bool shouldBypassMainWorldContentSecurityPolicy() const final { return m_shouldBypassMainWorldContentSecurityPolicy; }
-    bool isJSExecutionForbidden() const final;
-    SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
 
 #if ENABLE(WEB_CRYPTO)
-    // The following two functions are side effects of providing extra protection to serialized
-    // CryptoKey data that went through the structured clone algorithm to local storage such as
-    // IndexedDB. They don't provide any proctection against communications between mainThread
-    // and workerThreads. In fact, they cause extra expense as workerThreads cannot talk to clients
-    // to unwrap/wrap crypto keys. Hence, workerThreads must always ask mainThread to unwrap/wrap
-    // keys, which results in a second communication and plain keys being transferred between
-    // workerThreads and the mainThread.
     bool wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) final;
     bool unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) final;
 #endif
@@ -184,16 +165,8 @@ private:
     mutable RefPtr<WorkerLocation> m_location;
     mutable RefPtr<WorkerNavigator> m_navigator;
 
-    WorkerThread& m_thread;
-    std::unique_ptr<WorkerScriptController> m_script;
-    std::unique_ptr<WorkerInspectorController> m_inspectorController;
-    std::unique_ptr<MicrotaskQueue> m_microtaskQueue;
-
-    bool m_closing { false };
     bool m_isOnline;
     bool m_shouldBypassMainWorldContentSecurityPolicy;
-
-    mutable WorkerEventQueue m_eventQueue;
 
     Ref<SecurityOrigin> m_topOrigin;
 
@@ -206,10 +179,16 @@ private:
     RefPtr<Performance> m_performance;
     mutable RefPtr<Crypto> m_crypto;
 
-    PAL::SessionID m_sessionID;
     RefPtr<WorkerCacheStorageConnection> m_cacheStorageConnection;
-
-    unsigned long m_uniqueIdentifier { 1 };
+    std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
+#if ENABLE(SERVICE_WORKER)
+    RefPtr<WorkerSWClientConnection> m_swClientConnection;
+#endif
+    std::unique_ptr<CSSValuePool> m_cssValuePool;
+    ReferrerPolicy m_referrerPolicy;
+    Settings::Values m_settingsValues;
+    WorkerType m_workerType;
+    FetchOptions::Credentials m_credentials;
 };
 
 } // namespace WebCore

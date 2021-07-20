@@ -29,6 +29,7 @@
 
 #include "DFGCommon.h"
 #include "DFGFrozenValue.h"
+#include "GPRInfo.h"
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -76,6 +77,7 @@ public:
     static LazyJSValue newString(Graph&, const String&);
 
     LazinessKind kind() const { return m_kind; }
+    SpeculatedType speculatedType() const { return kind() == KnownValue ? SpecBytecodeTop : SpecString; }
 
     FrozenValue* tryGetValue(Graph&) const
     {

@@ -177,12 +177,17 @@ typedef enum { /*< flags >*/
 
 /**
  * GstStackTraceFlags:
- * @GST_STACK_TRACE_SHOW_FULL: Try to retrieve as much information as
- *                             possible when getting the stack trace
+ * @GST_STACK_TRACE_SHOW_NONE: Try to retrieve the minimum information
+ *                             available, which may be none on some platforms
+ *                             (Since: 1.18)
+ * @GST_STACK_TRACE_SHOW_FULL: Try to retrieve as much information as possible,
+ *                             including source information when getting the
+ *                             stack trace
  *
  * Since: 1.12
  */
 typedef enum {
+    GST_STACK_TRACE_SHOW_NONE = 0,
     GST_STACK_TRACE_SHOW_FULL = 1 << 0
 } GstStackTraceFlags;
 
@@ -253,7 +258,7 @@ struct _GstDebugCategory {
  * GST_FUNCTION:
  *
  * This macro should evaluate to the name of the current function and be should
- * be defined when configuring your project, as it is compiler dependant. If it
+ * be defined when configuring your project, as it is compiler dependent. If it
  * is not defined, some default value is used. It is used to provide debugging
  * output with the function name of the message.
  *
@@ -271,7 +276,7 @@ struct _GstDebugCategory {
 #endif /* ifndef GST_FUNCTION */
 
 /**
- * GST_PTR_FORMAT:
+ * GST_PTR_FORMAT: (skip):
  *
  * printf format type used to debug GStreamer types. You can use this in
  * combination with GStreamer's debug logging system as well as the functions
@@ -287,7 +292,7 @@ struct _GstDebugCategory {
 #define GST_PTR_FORMAT     "p\aA"
 
 /**
- * GST_SEGMENT_FORMAT:
+ * GST_SEGMENT_FORMAT: (skip):
  *
  * printf format type used to debug GStreamer segments. You can use this in
  * combination with GStreamer's debug logging system as well as the functions
@@ -296,6 +301,32 @@ struct _GstDebugCategory {
  * This can only be used on pointers to GstSegment structures.
  */
 #define GST_SEGMENT_FORMAT "p\aB"
+
+/**
+ * GST_TIMEP_FORMAT: (skip):
+ *
+ * printf format type used to debug GStreamer ClockTime pointers. You can use
+ * this in combination with GStreamer's debug logging system as well as the
+ * functions gst_info_vasprintf(), gst_info_strdup_vprintf() and
+ * gst_info_strdup_printf() to pretty-print #GstClockTime pointers. This can
+ * only be used on pointers to GstClockTime values.
+ *
+ * Since: 1.18
+ */
+#define GST_TIMEP_FORMAT "p\aT"
+
+/**
+ * GST_STIMEP_FORMAT: (skip):
+ *
+ * printf format type used to debug GStreamer signed time value pointers. You
+ * can use this in combination with GStreamer's debug logging system as well as
+ * the functions gst_info_vasprintf(), gst_info_strdup_vprintf() and
+ * gst_info_strdup_printf() to pretty-print signed time (pointers to
+ * #GstClockTimeDiff or #gint64).
+ *
+ * Since: 1.18
+ */
+#define GST_STIMEP_FORMAT "p\aS"
 
 typedef struct _GstDebugMessage GstDebugMessage;
 
@@ -362,7 +393,9 @@ void _gst_debug_dump_mem (GstDebugCategory * cat, const gchar * file,
     const gchar * func, gint line, GObject * obj, const gchar * msg,
     const guint8 * data, guint length);
 
-/* we define this to avoid a compiler warning regarding a cast from a function
+/**
+ * GstDebugFuncPtr: (attributes doc.skip=true)
+ * we define this to avoid a compiler warning regarding a cast from a function
  * pointer to a void pointer
  * (see https://bugzilla.gnome.org/show_bug.cgi?id=309253)
  */
@@ -382,6 +415,15 @@ GST_API
 const gchar   * gst_debug_message_get    (GstDebugMessage  * message);
 
 GST_API
+gchar         * gst_debug_log_get_line    (GstDebugCategory * category,
+                                           GstDebugLevel      level,
+                                           const gchar      * file,
+                                           const gchar      * function,
+                                           gint               line,
+                                           GObject          * object,
+                                           GstDebugMessage  * message) G_GNUC_NO_INSTRUMENT;
+
+GST_API
 void            gst_debug_log_default    (GstDebugCategory * category,
                                           GstDebugLevel      level,
                                           const gchar      * file,
@@ -390,6 +432,7 @@ void            gst_debug_log_default    (GstDebugCategory * category,
                                           GObject          * object,
                                           GstDebugMessage  * message,
                                           gpointer           user_data) G_GNUC_NO_INSTRUMENT;
+
 GST_API
 const gchar *   gst_debug_level_get_name (GstDebugLevel level);
 
@@ -439,8 +482,7 @@ void            gst_debug_set_threshold_from_string  (const gchar * list, gboole
 GST_API
 void            gst_debug_unset_threshold_for_name   (const gchar * name);
 
-
-GST_API
+GST_DEPRECATED
 void            gst_debug_category_free              (GstDebugCategory *    category);
 
 GST_API
@@ -1498,7 +1540,9 @@ GST_TRACE (const char *format, ...)
 
 #define GST_DEBUG_CATEGORY_INIT(var,name,color,desc)    G_STMT_START{ }G_STMT_END
 #define GST_DEBUG_CATEGORY_GET(var,name)        G_STMT_START{ }G_STMT_END
+#ifndef GST_DISABLE_DEPRECATED
 #define gst_debug_category_free(category)       G_STMT_START{ }G_STMT_END
+#endif
 #define gst_debug_category_set_threshold(category,level) G_STMT_START{ }G_STMT_END
 #define gst_debug_category_reset_threshold(category)    G_STMT_START{ }G_STMT_END
 #define gst_debug_category_get_threshold(category)  (GST_LEVEL_NONE)

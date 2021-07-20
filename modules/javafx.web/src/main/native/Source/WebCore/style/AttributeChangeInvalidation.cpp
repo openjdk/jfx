@@ -28,7 +28,6 @@
 
 #include "ElementIterator.h"
 #include "StyleInvalidationFunctions.h"
-#include "StyleInvalidator.h"
 
 namespace WebCore {
 namespace Style {
@@ -39,7 +38,7 @@ static bool mayBeAffectedByAttributeChange(const RuleFeatureSet& features, bool 
     return nameSet.contains(attributeName.localName());
 }
 
-void AttributeChangeInvalidation::invalidateStyle(const QualifiedName& attributeName, const AtomicString& oldValue, const AtomicString& newValue)
+void AttributeChangeInvalidation::invalidateStyle(const QualifiedName& attributeName, const AtomString& oldValue, const AtomString& newValue)
 {
     if (newValue == oldValue)
         return;
@@ -79,7 +78,7 @@ void AttributeChangeInvalidation::invalidateStyle(const QualifiedName& attribute
             bool oldMatches = !oldValue.isNull() && SelectorChecker::attributeSelectorMatches(m_element, attributeName, oldValue, *selector);
             bool newMatches = !newValue.isNull() && SelectorChecker::attributeSelectorMatches(m_element, attributeName, newValue, *selector);
             if (oldMatches != newMatches) {
-                m_invalidationRuleSets.append(&invalidationRuleSet);
+                Invalidator::addToMatchElementRuleSets(m_matchElementRuleSets, invalidationRuleSet);
                 break;
             }
         }
@@ -88,10 +87,7 @@ void AttributeChangeInvalidation::invalidateStyle(const QualifiedName& attribute
 
 void AttributeChangeInvalidation::invalidateStyleWithRuleSets()
 {
-    for (auto* invalidationRuleSet : m_invalidationRuleSets) {
-        Invalidator invalidator(*invalidationRuleSet->ruleSet);
-        invalidator.invalidateStyleWithMatchElement(m_element, invalidationRuleSet->matchElement);
-    }
+    Invalidator::invalidateWithMatchElementRuleSets(m_element, m_matchElementRuleSets);
 }
 
 

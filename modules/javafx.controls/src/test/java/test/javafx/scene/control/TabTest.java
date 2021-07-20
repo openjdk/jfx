@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,6 @@ import static org.junit.Assert.*;
 
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -442,11 +441,6 @@ public class TabTest {
         Tooltip tt = new Tooltip();
         tab.setTooltip(tt);
         assertSame(tab.getTooltip(), tt);
-    }
-    @Ignore("The following test is incomplete with no proper sense.")
-    @Test public void checkEventDispatcherChain() {
-        EventDispatchChain chain = new EventDispatchChainImpl();
-        tab.buildEventDispatchChain(chain);
     }
 
     @Test public void setDisableAndSeeValue() {

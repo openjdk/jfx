@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,8 +52,9 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import com.sun.javafx.tk.Toolkit;
+
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -85,7 +86,26 @@ public class TextInputControlTest {
     }
 
     @Before public void setup() throws Exception {
-        textInput = (TextInputControl) type.newInstance();
+        textInput = (TextInputControl) type.getDeclaredConstructor().newInstance();
+        setUncaughtExceptionHandler();
+    }
+
+    @After public void cleanup() {
+        removeUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /******************************************************
@@ -206,15 +226,6 @@ public class TextInputControlTest {
         assertEquals("Oranges", textInput.getText());
     }
 
-    @Ignore("getCssMetaData will return null for textProperty")
-    @Test public void impl_cssSettable_ReturnsFalseForTextAlways() {
-        CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
-        assertTrue(styleable.isSettable(textInput));
-        StringProperty other = new SimpleStringProperty("Apples");
-        textInput.textProperty().bind(other);
-        assertFalse(styleable.isSettable(textInput));
-    }
-
     @Test public void cannotSpecifyTextViaCSS() {
         try {
             CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
@@ -315,15 +326,6 @@ public class TextInputControlTest {
         assertFalse(textInput.isEditable());
         other.set(true);
         assertTrue(textInput.isEditable());
-    }
-
-    @Ignore("getCssMetaData will return null for editableProperty")
-    @Test public void impl_cssSettable_ReturnsFalseForEditableAlways() {
-        CssMetaData styleable = ((StyleableProperty)textInput.editableProperty()).getCssMetaData();
-        assertTrue(styleable.isSettable(textInput));
-        StringProperty other = new SimpleStringProperty("Apples");
-        textInput.textProperty().bind(other);
-        assertFalse(styleable.isSettable(textInput));
     }
 
     @Test public void cannotSpecifyEditableViaCSS() {
@@ -451,9 +453,6 @@ public class TextInputControlTest {
         assertTrue(passed[0]);
     }
 
-    @Ignore("The notification here doesn't happen because the invalid flag is set after the first set," +
-            "however setting a change listener *must* clear that, but doesn't. I copied the code for this " +
-            "straight from the beans package, so there may be a bug there.")
     @Test public void lengthChangeNotificationWhenTextIsSetToEmptyResult() {
         textInput.setText("Goodbye");
         final boolean[] passed = new boolean[] { false };
@@ -640,11 +639,6 @@ public class TextInputControlTest {
         });
         other.set("Cleared!");
         assertTrue(passed[0]);
-    }
-
-    @Ignore
-    @Test public void selectionCanBeNull() {
-
     }
 
     /******************************************************
@@ -1890,6 +1884,64 @@ public class TextInputControlTest {
 
         textInput.undo();
         assertEquals("", textInput.getText());
+    }
+
+    @Test public void test_redo_replaceText_selectionShortening() {
+        textInput.setText("0123456789");
+        assertEquals("0123456789", textInput.getText());
+
+        textInput.replaceText(8, 10, "x");
+        assertEquals("01234567x", textInput.getText());
+
+        textInput.undo();
+        assertEquals("0123456789", textInput.getText());
+
+        textInput.redo();
+        assertEquals("01234567x", textInput.getText());
+    }
+
+    @Test public void replaceSelectionAtEndWithListener() {
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
+        textInput.setText("x xxx");
+        textInput.selectRange(2, 5);
+        textInput.selectedTextProperty().addListener((observable, oldValue, newValue) -> selectedTextLog.append("|" + newValue));
+        textInput.selectionProperty().addListener((observable, oldValue, newValue) -> selectionLog.append("|" + newValue.getStart() + "," + newValue.getEnd()));
+        textInput.replaceSelection("a");
+        assertEquals("|", selectedTextLog.toString());
+        assertEquals("|3,3", selectionLog.toString());
+        assertEquals("x a", textInput.getText());
+    }
+
+    @Test public void testSelectionProperties() {
+        textInput.setText("abcdefghij");
+
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
+        StringBuilder textLog = new StringBuilder();
+        textInput.selectedTextProperty().addListener((observable, oldValue, newValue) -> selectedTextLog.append("|" + newValue));
+        textInput.selectionProperty().addListener((observable, oldValue, newValue) -> selectionLog.append("|" + newValue.getStart() + "," + newValue.getEnd()));
+        textInput.textProperty().addListener((observable, oldValue, newValue) -> textLog.append("|" + newValue));
+
+        textInput.selectRange(3, 6);
+        assertEquals("|def", selectedTextLog.toString());
+        assertEquals("|3,6", selectionLog.toString());
+        assertEquals("", textLog.toString());
+
+        textInput.replaceSelection("xyz");
+        assertEquals("|def|", selectedTextLog.toString());
+        assertEquals("|3,6|6,6", selectionLog.toString());
+        assertEquals("|abcxyzghij", textLog.toString());
+
+        textInput.undo();
+        assertEquals("|def||def", selectedTextLog.toString());
+        assertEquals("|3,6|6,6|3,6", selectionLog.toString());
+        assertEquals("|abcxyzghij|abcdefghij", textLog.toString());
+
+        textInput.redo();
+        assertEquals("|def||def|", selectedTextLog.toString());
+        assertEquals("|3,6|6,6|3,6|6,6", selectionLog.toString());
+        assertEquals("|abcxyzghij|abcdefghij|abcxyzghij", textLog.toString());
     }
 
     // Test for JDK-8178418

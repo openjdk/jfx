@@ -28,7 +28,7 @@
 #include "InspectorAgentRegistry.h"
 #include "InspectorEnvironment.h"
 #include "InspectorFrontendRouter.h"
-#include "JSGlobalObjectScriptDebugServer.h"
+#include "JSGlobalObjectDebugger.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -38,9 +38,9 @@
 #endif
 
 namespace JSC {
+class CallFrame;
 class ConsoleClient;
 class Exception;
-class ExecState;
 class JSGlobalObject;
 }
 
@@ -67,7 +67,7 @@ class JSGlobalObjectInspectorController final
     WTF_MAKE_FAST_ALLOCATED;
 public:
     JSGlobalObjectInspectorController(JSC::JSGlobalObject&);
-    ~JSGlobalObjectInspectorController();
+    ~JSGlobalObjectInspectorController() final;
 
     void connectFrontend(FrontendChannel&, bool isAutomaticInspection, bool immediatelyPause);
     void disconnectFrontend(FrontendChannel&);
@@ -79,30 +79,33 @@ public:
     bool includesNativeCallStackWhenReportingExceptions() const { return m_includeNativeCallStackWithExceptions; }
     void setIncludesNativeCallStackWhenReportingExceptions(bool includesNativeCallStack) { m_includeNativeCallStackWithExceptions = includesNativeCallStack; }
 
-    void reportAPIException(JSC::ExecState*, JSC::Exception*);
+    void reportAPIException(JSC::JSGlobalObject*, JSC::Exception*);
 
     JSC::ConsoleClient* consoleClient() const;
 
-    bool developerExtrasEnabled() const override;
-    bool canAccessInspectedScriptState(JSC::ExecState*) const override { return true; }
-    InspectorFunctionCallHandler functionCallHandler() const override;
-    InspectorEvaluateHandler evaluateHandler() const override;
-    void frontendInitialized() override;
-    Ref<WTF::Stopwatch> executionStopwatch() override;
-    JSGlobalObjectScriptDebugServer& scriptDebugServer() override;
-    JSC::VM& vm() override;
+    bool developerExtrasEnabled() const final;
+    bool canAccessInspectedScriptState(JSC::JSGlobalObject*) const final { return true; }
+    InspectorFunctionCallHandler functionCallHandler() const final;
+    InspectorEvaluateHandler evaluateHandler() const final;
+    void frontendInitialized() final;
+    WTF::Stopwatch& executionStopwatch() const final;
+    JSGlobalObjectDebugger& debugger() final;
+    JSC::VM& vm() final;
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-    AugmentableInspectorControllerClient* augmentableInspectorControllerClient() const override { return m_augmentingClient; }
-    void setAugmentableInspectorControllerClient(AugmentableInspectorControllerClient* client) override { m_augmentingClient = client; }
+    AugmentableInspectorControllerClient* augmentableInspectorControllerClient() const final { return m_augmentingClient; }
+    void setAugmentableInspectorControllerClient(AugmentableInspectorControllerClient* client) final { m_augmentingClient = client; }
 
-    const FrontendRouter& frontendRouter() const override { return m_frontendRouter.get(); }
-    BackendDispatcher& backendDispatcher() override { return m_backendDispatcher.get(); }
-    void appendExtraAgent(std::unique_ptr<InspectorAgentBase>) override;
+    const FrontendRouter& frontendRouter() const final { return m_frontendRouter.get(); }
+    BackendDispatcher& backendDispatcher() final { return m_backendDispatcher.get(); }
+    void registerAlternateAgent(std::unique_ptr<InspectorAgentBase>) final;
 #endif
 
 private:
     void appendAPIBacktrace(ScriptCallStack&);
+
+    InspectorAgent& ensureInspectorAgent();
+    InspectorDebuggerAgent& ensureDebuggerAgent();
 
     JSAgentContext jsAgentContext();
     void createLazyAgents();
@@ -111,11 +114,13 @@ private:
     std::unique_ptr<InjectedScriptManager> m_injectedScriptManager;
     std::unique_ptr<JSGlobalObjectConsoleClient> m_consoleClient;
     Ref<WTF::Stopwatch> m_executionStopwatch;
-    JSGlobalObjectScriptDebugServer m_scriptDebugServer;
+    JSGlobalObjectDebugger m_debugger;
 
     AgentRegistry m_agents;
-    InspectorAgent* m_inspectorAgent { nullptr };
     InspectorConsoleAgent* m_consoleAgent { nullptr };
+
+    // Lazy, but also on-demand agents.
+    InspectorAgent* m_inspectorAgent { nullptr };
     InspectorDebuggerAgent* m_debuggerAgent { nullptr };
 
     Ref<FrontendRouter> m_frontendRouter;

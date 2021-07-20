@@ -26,27 +26,30 @@
 #include "config.h"
 #include "WebKitPlaybackTargetAvailabilityEvent.h"
 
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 namespace WebCore {
 
-static const AtomicString& stringForPlaybackTargetAvailability(bool available)
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitPlaybackTargetAvailabilityEvent);
+
+static const AtomString& stringForPlaybackTargetAvailability(bool available)
 {
-    static NeverDestroyed<AtomicString> availableString("available", AtomicString::ConstructFromLiteral);
-    static NeverDestroyed<AtomicString> notAvailableString("not-available", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> availableString("available", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> notAvailableString("not-available", AtomString::ConstructFromLiteral);
 
     return available ? availableString : notAvailableString;
 }
 
-WebKitPlaybackTargetAvailabilityEvent::WebKitPlaybackTargetAvailabilityEvent(const AtomicString& eventType, bool available)
+WebKitPlaybackTargetAvailabilityEvent::WebKitPlaybackTargetAvailabilityEvent(const AtomString& eventType, bool available)
     : Event(eventType, CanBubble::No, IsCancelable::No)
     , m_availability(stringForPlaybackTargetAvailability(available))
 {
 }
 
-WebKitPlaybackTargetAvailabilityEvent::WebKitPlaybackTargetAvailabilityEvent(const AtomicString& eventType, const Init& initializer, IsTrusted isTrusted)
+WebKitPlaybackTargetAvailabilityEvent::WebKitPlaybackTargetAvailabilityEvent(const AtomString& eventType, const Init& initializer, IsTrusted isTrusted)
     : Event(eventType, initializer, isTrusted)
     , m_availability(initializer.availability)
 {

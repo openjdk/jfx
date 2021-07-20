@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@ namespace JSC {
 class CallLinkStatus;
 
 class PutByIdVariant {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum Kind {
         NotSet,
@@ -44,8 +45,8 @@ public:
 
     PutByIdVariant()
         : m_kind(NotSet)
-        , m_newStructure(nullptr)
         , m_offset(invalidOffset)
+        , m_newStructure(nullptr)
     {
     }
 
@@ -131,20 +132,25 @@ public:
 
     bool attemptToMerge(const PutByIdVariant& other);
 
-    void markIfCheap(SlotVisitor&);
-    bool finalize();
+    template<typename Visitor> void markIfCheap(Visitor&);
+    bool finalize(VM&);
 
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
+
+    bool overlaps(const PutByIdVariant& other)
+    {
+        return structureSet().overlaps(other.structureSet());
+    }
 
 private:
     bool attemptToMergeTransitionWithReplace(const PutByIdVariant& replace);
 
     Kind m_kind;
+    PropertyOffset m_offset;
     StructureSet m_oldStructure;
     Structure* m_newStructure { nullptr };
     ObjectPropertyConditionSet m_conditionSet;
-    PropertyOffset m_offset;
     std::unique_ptr<CallLinkStatus> m_callLinkStatus;
 };
 

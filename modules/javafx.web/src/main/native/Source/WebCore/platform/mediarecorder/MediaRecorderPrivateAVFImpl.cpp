@@ -26,95 +26,149 @@
 #include "config.h"
 #include "MediaRecorderPrivateAVFImpl.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) && HAVE(AVASSETWRITERDELEGATE)
 
 #include "AudioStreamDescription.h"
-#include "MediaSample.h"
+#include "CAAudioStreamDescription.h"
+#include "Logging.h"
+#include "MediaRecorderPrivateWriterCocoa.h"
+#include "MediaSampleAVFObjC.h"
 #include "MediaStreamPrivate.h"
+#include "RealtimeIncomingVideoSourceCocoa.h"
 #include "SharedBuffer.h"
 #include "WebAudioBufferList.h"
 
-namespace WebCore {
+#include "CoreVideoSoftLink.h"
+#include <pal/cf/CoreMediaSoftLink.h>
 
-std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(const MediaStreamPrivate& stream)
+namespace WebCore {
+using namespace PAL;
+
+std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
 {
     // FIXME: we will need to implement support for multiple audio/video tracks
     // Currently we only choose the first track as the recorded track.
     // FIXME: We would better to throw an exception to JavaScript if writer creation fails.
 
-    String audioTrackId;
-    String videoTrackId;
-    const MediaStreamTrackPrivate* audioTrack { nullptr };
-    const MediaStreamTrackPrivate* videoTrack { nullptr };
-    for (auto& track : stream.tracks()) {
-        if (!track->enabled() || track->ended())
-            continue;
-        switch (track->type()) {
-        case RealtimeMediaSource::Type::Video: {
-            auto& settings = track->settings();
-            if (!videoTrack && settings.supportsWidth() && settings.supportsHeight()) {
-                videoTrack = track.get();
-                videoTrackId = videoTrack->id();
-            }
-            break;
-        }
-        case RealtimeMediaSource::Type::Audio:
-            if (!audioTrack) {
-                audioTrack = track.get();
-                audioTrackId = audioTrack->id();
-            }
-            break;
-        case RealtimeMediaSource::Type::None:
-            break;
-        }
-    }
-    auto writer = MediaRecorderPrivateWriter::create(audioTrack, videoTrack);
+    auto selectedTracks = MediaRecorderPrivate::selectTracks(stream);
+
+    auto writer = MediaRecorderPrivateWriter::create(!!selectedTracks.audioTrack, !!selectedTracks.videoTrack, options);
     if (!writer)
         return nullptr;
 
-    return std::make_unique<MediaRecorderPrivateAVFImpl>(writer.releaseNonNull(), WTFMove(audioTrackId), WTFMove(videoTrackId));
+    auto recorder = std::unique_ptr<MediaRecorderPrivateAVFImpl>(new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
+    if (selectedTracks.audioTrack) {
+        recorder->setAudioSource(&selectedTracks.audioTrack->source());
+        recorder->checkTrackState(*selectedTracks.audioTrack);
+    }
+    if (selectedTracks.videoTrack) {
+        recorder->setVideoSource(&selectedTracks.videoTrack->source());
+        recorder->checkTrackState(*selectedTracks.videoTrack);
+    }
+    return recorder;
 }
 
-MediaRecorderPrivateAVFImpl::MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&& writer, String&& audioTrackId, String&& videoTrackId)
+MediaRecorderPrivateAVFImpl::MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&& writer)
     : m_writer(WTFMove(writer))
-    , m_recordedAudioTrackID(WTFMove(audioTrackId))
-    , m_recordedVideoTrackID(WTFMove(videoTrackId))
 {
 }
 
-void MediaRecorderPrivateAVFImpl::sampleBufferUpdated(MediaStreamTrackPrivate& track, MediaSample& sampleBuffer)
+MediaRecorderPrivateAVFImpl::~MediaRecorderPrivateAVFImpl()
 {
-    if (track.id() != m_recordedVideoTrackID)
-        return;
-    m_writer->appendVideoSampleBuffer(sampleBuffer.platformSample().sample.cmSampleBuffer);
 }
 
-void MediaRecorderPrivateAVFImpl::audioSamplesAvailable(MediaStreamTrackPrivate& track, const WTF::MediaTime& mediaTime, const PlatformAudioData& data, const AudioStreamDescription& description, size_t sampleCount)
+void MediaRecorderPrivateAVFImpl::startRecording(StartRecordingCallback&& callback)
 {
-    if (track.id() != m_recordedAudioTrackID)
+    // FIMXE: In case of of audio recording, we should wait for the audio compression to start to give back the exact bit rate.
+    // FIXME: Add support to options.bitsPerSecond as well.
+    callback(String(m_writer->mimeType()), m_writer->audioBitRate(), m_writer->videoBitRate());
+}
+
+void MediaRecorderPrivateAVFImpl::videoSampleAvailable(MediaSample& sampleBuffer)
+{
+    if (shouldMuteVideo()) {
+        if (!m_blackFrame) {
+            m_blackFrameDescription = CMSampleBufferGetFormatDescription(sampleBuffer.platformSample().sample.cmSampleBuffer);
+            auto dimensions = CMVideoFormatDescriptionGetDimensions(m_blackFrameDescription.get());
+            m_blackFrame = createBlackPixelBuffer(dimensions.width, dimensions.height);
+
+            CMVideoFormatDescriptionRef formatDescription = nullptr;
+            auto status = CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, m_blackFrame.get(), &formatDescription);
+            if (status != noErr) {
+                RELEASE_LOG_ERROR(Media, "MediaRecorderPrivateAVFImpl::videoSampleAvailable ::unable to create a black frame description: %d", static_cast<int>(status));
+                m_blackFrame = nullptr;
+                return;
+            }
+            m_blackFrameDescription = adoptCF(formatDescription);
+        }
+
+        CMSampleBufferRef sample = nullptr;
+        CMSampleTimingInfo timingInfo { kCMTimeInvalid, toCMTime(sampleBuffer.presentationTime()), toCMTime(sampleBuffer.decodeTime()) };
+        auto status = CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, (CVImageBufferRef)m_blackFrame.get(), m_blackFrameDescription.get(), &timingInfo, &sample);
+
+        if (status != noErr) {
+            RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateAVFImpl::videoSampleAvailable - unable to create a black frame: %d", static_cast<int>(status));
+            return;
+        }
+        auto newSample = adoptCF(sample);
+        m_writer->appendVideoSampleBuffer(MediaSampleAVFObjC::create(newSample.get(), sampleBuffer.videoRotation(), sampleBuffer.videoMirrored()));
         return;
+    }
+
+    m_blackFrame = nullptr;
+    m_blackFrameDescription = nullptr;
+    m_writer->appendVideoSampleBuffer(sampleBuffer);
+}
+
+void MediaRecorderPrivateAVFImpl::audioSamplesAvailable(const WTF::MediaTime& mediaTime, const PlatformAudioData& data, const AudioStreamDescription& description, size_t sampleCount)
+{
     ASSERT(is<WebAudioBufferList>(data));
     ASSERT(description.platformDescription().type == PlatformDescription::CAAudioStreamBasicType);
+
+    if (shouldMuteAudio()) {
+        if (!m_audioBuffer || m_description != toCAAudioStreamDescription(description)) {
+            m_description = toCAAudioStreamDescription(description);
+            m_audioBuffer = makeUnique<WebAudioBufferList>(m_description, sampleCount);
+        } else
+            m_audioBuffer->setSampleCount(sampleCount);
+        m_audioBuffer->zeroFlatBuffer();
+        m_writer->appendAudioSampleBuffer(*m_audioBuffer, description, mediaTime, sampleCount);
+        return;
+    }
+
     m_writer->appendAudioSampleBuffer(data, description, mediaTime, sampleCount);
 }
 
-void MediaRecorderPrivateAVFImpl::stopRecording()
+void MediaRecorderPrivateAVFImpl::stopRecording(CompletionHandler<void()>&& completionHandler)
 {
     m_writer->stopRecording();
+    completionHandler();
 }
 
-RefPtr<SharedBuffer> MediaRecorderPrivateAVFImpl::fetchData()
+void MediaRecorderPrivateAVFImpl::pauseRecording(CompletionHandler<void()>&& completionHandler)
 {
-    return m_writer->fetchData();
+    m_writer->pause();
+    completionHandler();
 }
 
-const String& MediaRecorderPrivateAVFImpl::mimeType()
+void MediaRecorderPrivateAVFImpl::resumeRecording(CompletionHandler<void()>&& completionHandler)
 {
-    static NeverDestroyed<const String> mp4MimeType(MAKE_STATIC_STRING_IMPL("video/mp4"));
-    // FIXME: we will need to support more MIME types.
-    return mp4MimeType;
+    m_writer->resume();
+    completionHandler();
+}
+
+void MediaRecorderPrivateAVFImpl::fetchData(FetchDataCallback&& completionHandler)
+{
+    m_writer->fetchData([completionHandler = WTFMove(completionHandler), mimeType = mimeType()](auto&& buffer, auto timeCode) mutable {
+        completionHandler(WTFMove(buffer), mimeType, timeCode);
+    });
+}
+
+const String& MediaRecorderPrivateAVFImpl::mimeType() const
+{
+    return m_writer->mimeType();
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_STREAM) && HAVE(AVASSETWRITERDELEGATE)

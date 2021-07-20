@@ -28,6 +28,10 @@
 #include "IsoConfig.h"
 #include "Mutex.h"
 
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+#include <malloc/malloc.h>
+#endif
+
 namespace bmalloc {
 
 template<typename Config> class IsoHeapImpl;
@@ -44,12 +48,19 @@ template<typename Type>
 struct IsoHeap {
     typedef IsoConfig<sizeof(Type)> Config;
 
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+    IsoHeap(const char* = nullptr);
+#else
+    constexpr IsoHeap(const char* = nullptr) { }
+#endif
+
     void* allocate();
     void* tryAllocate();
     void deallocate(void* p);
 
     void scavenge();
 
+    void initialize();
     bool isInitialized();
 
     unsigned allocatorOffset() { return m_allocatorOffsetPlusOne - 1; }
@@ -61,25 +72,30 @@ struct IsoHeap {
     IsoHeapImpl<Config>& impl();
 
     Mutex m_initializationLock;
-    unsigned m_allocatorOffsetPlusOne;
-    unsigned m_deallocatorOffsetPlusOne;
-    IsoHeapImpl<Config>* m_impl;
+    unsigned m_allocatorOffsetPlusOne { 0 };
+    unsigned m_deallocatorOffsetPlusOne { 0 };
+    IsoHeapImpl<Config>* m_impl { nullptr };
+
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+    malloc_zone_t* m_zone;
+#endif
 };
 
 // Use this together with MAKE_BISO_MALLOCED_IMPL.
-#define MAKE_BISO_MALLOCED(isoType) \
+#define MAKE_BISO_MALLOCED(isoType, exportMacro) \
 public: \
-    static ::bmalloc::api::IsoHeap<isoType>& bisoHeap(); \
+    static exportMacro ::bmalloc::api::IsoHeap<isoType>& bisoHeap(); \
     \
     void* operator new(size_t, void* p) { return p; } \
     void* operator new[](size_t, void* p) { return p; } \
     \
-    void* operator new(size_t size);\
-    void operator delete(void* p);\
+    exportMacro void* operator new(size_t size);\
+    exportMacro void operator delete(void* p);\
     \
     void* operator new[](size_t size) = delete; \
     void operator delete[](void* p) = delete; \
+using webkitFastMalloced = int; \
 private: \
-typedef int __makeBisoMallocedMacroSemicolonifier
+using __makeBisoMallocedMacroSemicolonifier = int
 
 } } // namespace bmalloc::api

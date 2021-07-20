@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,22 +54,20 @@ private:
     unsigned m_hash { 0 };
 };
 
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<SymbolRegistryKey> {
-    struct Hash : StringHash {
-        static unsigned hash(const SymbolRegistryKey& key)
-        {
-            return key.hash();
-        }
-        static bool equal(const SymbolRegistryKey& a, const SymbolRegistryKey& b)
-        {
-            return StringHash::equal(a.impl(), b.impl());
-        }
-    };
+template<typename> struct DefaultHash;
+template<> struct DefaultHash<SymbolRegistryKey> : StringHash {
+    static unsigned hash(const SymbolRegistryKey& key)
+    {
+        return key.hash();
+    }
+    static bool equal(const SymbolRegistryKey& a, const SymbolRegistryKey& b)
+    {
+        return StringHash::equal(a.impl(), b.impl());
+    }
 };
 
 template<> struct HashTraits<SymbolRegistryKey> : SimpleClassHashTraits<SymbolRegistryKey> {
-    static const bool hasIsEmptyValueFunction = true;
+    static constexpr bool hasIsEmptyValueFunction = true;
     static bool isEmptyValue(const SymbolRegistryKey& key)
     {
         return key.impl() == nullptr;
@@ -76,9 +75,11 @@ template<> struct HashTraits<SymbolRegistryKey> : SimpleClassHashTraits<SymbolRe
 };
 
 class SymbolRegistry {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(SymbolRegistry);
 public:
-    SymbolRegistry() = default;
+    enum class Type : uint8_t { PublicSymbol, PrivateSymbol };
+    WTF_EXPORT_PRIVATE SymbolRegistry(Type = Type::PublicSymbol);
     WTF_EXPORT_PRIVATE ~SymbolRegistry();
 
     WTF_EXPORT_PRIVATE Ref<RegisteredSymbolImpl> symbolForKey(const String&);
@@ -87,6 +88,7 @@ public:
 
 private:
     HashSet<SymbolRegistryKey> m_table;
+    Type m_symbolType;
 };
 
 inline SymbolRegistryKey::SymbolRegistryKey(StringImpl* uid)

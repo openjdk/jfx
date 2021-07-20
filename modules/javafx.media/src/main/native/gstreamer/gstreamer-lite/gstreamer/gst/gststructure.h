@@ -133,10 +133,17 @@ GstStructure *        gst_structure_copy                 (const GstStructure  * 
 
 GST_API
 gboolean              gst_structure_set_parent_refcount  (GstStructure        * structure,
-                                                            gint                * refcount);
+                                                          gint                * refcount);
 GST_API
 void                  gst_structure_free                 (GstStructure        * structure);
 
+GST_API
+void                  gst_clear_structure                (GstStructure **structure_ptr);
+#define               gst_clear_structure(structure_ptr) g_clear_pointer ((structure_ptr), gst_structure_free)
+
+GST_API
+gboolean              gst_structure_take                 (GstStructure ** oldstr_ptr,
+                                                          GstStructure * newstr);
 GST_API
 const gchar *         gst_structure_get_name             (const GstStructure  * structure);
 
@@ -213,7 +220,7 @@ const GValue *        gst_structure_get_value            (const GstStructure  * 
                                                           const gchar         * fieldname);
 GST_API
 void                  gst_structure_remove_field         (GstStructure        * structure,
-                                                            const gchar         * fieldname);
+                                                          const gchar         * fieldname);
 GST_API
 void                  gst_structure_remove_fields        (GstStructure        * structure,
                                                           const gchar         * fieldname,
@@ -371,9 +378,7 @@ GST_API
 GstStructure *        gst_structure_intersect     (const GstStructure * struct1,
                                                    const GstStructure * struct2) G_GNUC_MALLOC;
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstStructure, gst_structure_free)
-#endif
 
 G_END_DECLS
 

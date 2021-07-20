@@ -29,24 +29,31 @@
 
 namespace JSC {
 
-template<typename Watchpoint>
-class ObjectPropertyChangeAdaptiveWatchpoint : public AdaptiveInferredPropertyValueWatchpointBase {
+template<typename WatchpointSet>
+class ObjectPropertyChangeAdaptiveWatchpoint final : public AdaptiveInferredPropertyValueWatchpointBase {
 public:
     using Base = AdaptiveInferredPropertyValueWatchpointBase;
-    ObjectPropertyChangeAdaptiveWatchpoint(const ObjectPropertyCondition& condition, Watchpoint& watchpoint)
+    ObjectPropertyChangeAdaptiveWatchpoint(JSCell* owner, const ObjectPropertyCondition& condition, WatchpointSet& watchpointSet)
         : Base(condition)
-        , m_watchpoint(watchpoint)
+        , m_owner(owner)
+        , m_watchpointSet(watchpointSet)
     {
-        RELEASE_ASSERT(watchpoint.stateOnJSThread() == IsWatched);
+        RELEASE_ASSERT(watchpointSet.stateOnJSThread() == IsWatched);
     }
 
 private:
-    void handleFire(VM& vm, const FireDetail&) override
+    bool isValid() const final
     {
-        m_watchpoint.fireAll(vm, StringFireDetail("Object Property is changed."));
+        return m_owner->isLive();
     }
 
-    Watchpoint& m_watchpoint;
+    void handleFire(VM& vm, const FireDetail&) final
+    {
+        m_watchpointSet.fireAll(vm, StringFireDetail("Object Property is changed."));
+    }
+
+    JSCell* m_owner;
+    WatchpointSet& m_watchpointSet;
 };
 
 } // namespace JSC

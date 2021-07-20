@@ -49,7 +49,7 @@ DOMWindowCaches* DOMWindowCaches::from(DOMWindow* window)
 {
     auto* supplement = static_cast<DOMWindowCaches*>(Supplement<DOMWindow>::from(window, supplementName()));
     if (!supplement) {
-        auto newSupplement = std::make_unique<DOMWindowCaches>(window);
+        auto newSupplement = makeUnique<DOMWindowCaches>(window);
         supplement = newSupplement.get();
         provideTo(window, supplementName(), WTFMove(newSupplement));
     }
@@ -72,7 +72,7 @@ DOMCacheStorage* DOMWindowCaches::caches() const
     ASSERT(frame());
     ASSERT(frame()->document());
     if (!m_caches && frame()->page())
-        m_caches = DOMCacheStorage::create(*frame()->document(), frame()->page()->cacheStorageProvider().createCacheStorageConnection(frame()->page()->sessionID()));
+        m_caches = DOMCacheStorage::create(*frame()->document(), frame()->page()->cacheStorageProvider().createCacheStorageConnection());
     return m_caches.get();
 }
 

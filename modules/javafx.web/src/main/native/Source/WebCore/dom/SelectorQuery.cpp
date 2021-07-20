@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
 #include "SelectorQuery.h"
 
 #include "CSSParser.h"
-#include "ElementDescendantIterator.h"
+#include "ElementIterator.h"
 #include "HTMLNames.h"
 #include "SelectorChecker.h"
 #include "StaticNodeList.h"
@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 static bool isSingleTagNameSelector(const CSSSelector& selector)
 {
     return selector.isLastInTagHistory() && selector.match() == CSSSelector::Tag;
@@ -46,7 +46,7 @@ static bool isSingleClassNameSelector(const CSSSelector& selector)
 {
     return selector.isLastInTagHistory() && selector.match() == CSSSelector::Class;
 }
-#endif
+#endif // ASSERT_ENABLED
 
 enum class IdMatchingType : uint8_t {
     None,
@@ -83,7 +83,7 @@ SelectorDataList::SelectorDataList(const CSSSelectorList& selectorList)
 
     m_selectors.reserveInitialCapacity(selectorCount);
     for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector))
-        m_selectors.uncheckedAppend(SelectorData(selector));
+        m_selectors.uncheckedAppend({ selector });
 
     if (selectorCount == 1) {
         const CSSSelector& selector = *m_selectors.first().selector;
@@ -124,8 +124,7 @@ inline bool SelectorDataList::selectorMatches(const SelectorData& selectorData, 
     SelectorChecker selectorChecker(element.document());
     SelectorChecker::CheckingContext selectorCheckingContext(SelectorChecker::Mode::QueryingRules);
     selectorCheckingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
-    unsigned ignoredSpecificity;
-    return selectorChecker.match(*selectorData.selector, element, selectorCheckingContext, ignoredSpecificity);
+    return selectorChecker.match(*selectorData.selector, element, selectorCheckingContext);
 }
 
 inline Element* SelectorDataList::selectorClosest(const SelectorData& selectorData, Element& element, const ContainerNode& rootNode) const
@@ -133,8 +132,7 @@ inline Element* SelectorDataList::selectorClosest(const SelectorData& selectorDa
     SelectorChecker selectorChecker(element.document());
     SelectorChecker::CheckingContext selectorCheckingContext(SelectorChecker::Mode::QueryingRules);
     selectorCheckingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
-    unsigned ignoredSpecificity;
-    if (!selectorChecker.match(*selectorData.selector, element, selectorCheckingContext, ignoredSpecificity))
+    if (!selectorChecker.match(*selectorData.selector, element, selectorCheckingContext))
         return nullptr;
     return &element;
 }
@@ -150,15 +148,12 @@ bool SelectorDataList::matches(Element& targetElement) const
 
 Element* SelectorDataList::closest(Element& targetElement) const
 {
-    Element* currentNode = &targetElement;
-    do {
+    for (auto& currentElement : lineageOfType<Element>(targetElement)) {
         for (auto& selector : m_selectors) {
-            Element* candidateElement = selectorClosest(selector, *currentNode, targetElement);
-            if (candidateElement)
+            if (auto* candidateElement = selectorClosest(selector, currentElement, targetElement))
                 return candidateElement;
         }
-        currentNode = currentNode->parentElement();
-    } while (currentNode);
+    }
     return nullptr;
 }
 
@@ -221,7 +216,7 @@ ALWAYS_INLINE void SelectorDataList::executeFastPathForIdSelector(const Containe
     ASSERT(m_selectors.size() == 1);
     ASSERT(idSelector);
 
-    const AtomicString& idToMatch = idSelector->value();
+    const AtomString& idToMatch = idSelector->value();
     if (UNLIKELY(rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
         const Vector<Element*>* elements = rootNode.treeScope().getAllElementsById(idToMatch);
         ASSERT(elements);
@@ -263,7 +258,7 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
     bool inAdjacentChain = false;
     for (; selector; selector = selector->tagHistory()) {
         if (canBeUsedForIdFastPath(*selector)) {
-            const AtomicString& idToMatch = selector->value();
+            const AtomString& idToMatch = selector->value();
             if (ContainerNode* searchRoot = rootNode.treeScope().getElementById(idToMatch)) {
                 if (LIKELY(!rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
                     if (inAdjacentChain)
@@ -283,7 +278,7 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
     return rootNode;
 }
 
-static ALWAYS_INLINE bool localNameMatches(const Element& element, const AtomicString& localName, const AtomicString& lowercaseLocalName)
+static ALWAYS_INLINE bool localNameMatches(const Element& element, const AtomString& localName, const AtomString& lowercaseLocalName)
 {
     if (element.isHTMLElement() && element.document().isHTMLDocument())
         return element.localName() == lowercaseLocalName;
@@ -292,10 +287,10 @@ static ALWAYS_INLINE bool localNameMatches(const Element& element, const AtomicS
 }
 
 template <typename SelectorQueryTrait>
-static inline void elementsForLocalName(const ContainerNode& rootNode, const AtomicString& localName, const AtomicString& lowercaseLocalName, typename SelectorQueryTrait::OutputType& output)
+static inline void elementsForLocalName(const ContainerNode& rootNode, const AtomString& localName, const AtomString& lowercaseLocalName, typename SelectorQueryTrait::OutputType& output)
 {
     if (localName == lowercaseLocalName) {
-        for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+        for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
             if (element.tagQName().localName() == localName) {
                 SelectorQueryTrait::appendOutputForElement(output, &element);
                 if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -303,7 +298,7 @@ static inline void elementsForLocalName(const ContainerNode& rootNode, const Ato
             }
         }
     } else {
-        for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+        for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
             if (localNameMatches(element, localName, lowercaseLocalName)) {
                 SelectorQueryTrait::appendOutputForElement(output, &element);
                 if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -316,7 +311,7 @@ static inline void elementsForLocalName(const ContainerNode& rootNode, const Ato
 template <typename SelectorQueryTrait>
 static inline void anyElement(const ContainerNode& rootNode, typename SelectorQueryTrait::OutputType& output)
 {
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
         SelectorQueryTrait::appendOutputForElement(output, &element);
         if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
             return;
@@ -331,9 +326,9 @@ ALWAYS_INLINE void SelectorDataList::executeSingleTagNameSelectorData(const Cont
     ASSERT(isSingleTagNameSelector(*selectorData.selector));
 
     const QualifiedName& tagQualifiedName = selectorData.selector->tagQName();
-    const AtomicString& selectorLocalName = tagQualifiedName.localName();
-    const AtomicString& selectorLowercaseLocalName = selectorData.selector->tagLowercaseLocalName();
-    const AtomicString& selectorNamespaceURI = tagQualifiedName.namespaceURI();
+    const AtomString& selectorLocalName = tagQualifiedName.localName();
+    const AtomString& selectorLowercaseLocalName = selectorData.selector->tagLowercaseLocalName();
+    const AtomString& selectorNamespaceURI = tagQualifiedName.namespaceURI();
 
     if (selectorNamespaceURI == starAtom()) {
         if (selectorLocalName != starAtom()) {
@@ -345,7 +340,7 @@ ALWAYS_INLINE void SelectorDataList::executeSingleTagNameSelectorData(const Cont
         }
     } else {
         // Fallback: NamespaceURI is set, selectorLocalName may be starAtom().
-        for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+        for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
             if (element.namespaceURI() == selectorNamespaceURI && localNameMatches(element, selectorLocalName, selectorLowercaseLocalName)) {
                 SelectorQueryTrait::appendOutputForElement(output, &element);
                 if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -361,8 +356,8 @@ ALWAYS_INLINE void SelectorDataList::executeSingleClassNameSelectorData(const Co
     ASSERT(m_selectors.size() == 1);
     ASSERT(isSingleClassNameSelector(*selectorData.selector));
 
-    const AtomicString& className = selectorData.selector->value();
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+    const AtomString& className = selectorData.selector->value();
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
         if (element.hasClass() && element.classNames().contains(className)) {
             SelectorQueryTrait::appendOutputForElement(output, &element);
             if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -376,7 +371,7 @@ ALWAYS_INLINE void SelectorDataList::executeSingleSelectorData(const ContainerNo
 {
     ASSERT(m_selectors.size() == 1);
 
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(searchRootNode))) {
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(searchRootNode))) {
         if (selectorMatches(selectorData, element, rootNode)) {
             SelectorQueryTrait::appendOutputForElement(output, &element);
             if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -388,7 +383,7 @@ ALWAYS_INLINE void SelectorDataList::executeSingleSelectorData(const ContainerNo
 template <typename SelectorQueryTrait>
 ALWAYS_INLINE void SelectorDataList::executeSingleMultiSelectorData(const ContainerNode& rootNode, typename SelectorQueryTrait::OutputType& output) const
 {
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
         for (auto& selector : m_selectors) {
             if (selectorMatches(selector, element, rootNode)) {
                 SelectorQueryTrait::appendOutputForElement(output, &element);
@@ -401,15 +396,12 @@ ALWAYS_INLINE void SelectorDataList::executeSingleMultiSelectorData(const Contai
 }
 
 #if ENABLE(CSS_SELECTOR_JIT)
-template <typename SelectorQueryTrait>
-ALWAYS_INLINE void SelectorDataList::executeCompiledSimpleSelectorChecker(const ContainerNode& searchRootNode, SelectorCompiler::QuerySelectorSimpleSelectorChecker selectorChecker, typename SelectorQueryTrait::OutputType& output, const SelectorData& selectorData) const
+template <typename SelectorQueryTrait, typename Checker>
+ALWAYS_INLINE void SelectorDataList::executeCompiledSimpleSelectorChecker(const ContainerNode& searchRootNode, Checker selectorChecker, typename SelectorQueryTrait::OutputType& output, const SelectorData& selectorData) const
 {
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(searchRootNode))) {
-#if CSS_SELECTOR_JIT_PROFILING
-        selectorData.compiledSelectorUsed();
-#else
-        UNUSED_PARAM(selectorData);
-#endif
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(searchRootNode))) {
+        selectorData.compiledSelector.wasUsed();
+
         if (selectorChecker(&element)) {
             SelectorQueryTrait::appendOutputForElement(output, &element);
             if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -418,18 +410,15 @@ ALWAYS_INLINE void SelectorDataList::executeCompiledSimpleSelectorChecker(const 
     }
 }
 
-template <typename SelectorQueryTrait>
-ALWAYS_INLINE void SelectorDataList::executeCompiledSelectorCheckerWithCheckingContext(const ContainerNode& rootNode, const ContainerNode& searchRootNode, SelectorCompiler::QuerySelectorSelectorCheckerWithCheckingContext selectorChecker, typename SelectorQueryTrait::OutputType& output, const SelectorData& selectorData) const
+template <typename SelectorQueryTrait, typename Checker>
+ALWAYS_INLINE void SelectorDataList::executeCompiledSelectorCheckerWithCheckingContext(const ContainerNode& rootNode, const ContainerNode& searchRootNode, Checker selectorChecker, typename SelectorQueryTrait::OutputType& output, const SelectorData& selectorData) const
 {
     SelectorChecker::CheckingContext checkingContext(SelectorChecker::Mode::QueryingRules);
     checkingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
 
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(searchRootNode))) {
-#if CSS_SELECTOR_JIT_PROFILING
-        selectorData.compiledSelectorUsed();
-#else
-        UNUSED_PARAM(selectorData);
-#endif
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(searchRootNode))) {
+        selectorData.compiledSelector.wasUsed();
+
         if (selectorChecker(&element, &checkingContext)) {
             SelectorQueryTrait::appendOutputForElement(output, &element);
             if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
@@ -443,20 +432,16 @@ ALWAYS_INLINE void SelectorDataList::executeCompiledSingleMultiSelectorData(cons
 {
     SelectorChecker::CheckingContext checkingContext(SelectorChecker::Mode::QueryingRules);
     checkingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
-    for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
         for (auto& selector : m_selectors) {
-#if CSS_SELECTOR_JIT_PROFILING
-            selector.compiledSelectorUsed();
-#endif
+            selector.compiledSelector.wasUsed();
+
             bool matched = false;
-            void* compiledSelectorChecker = selector.compiledSelectorCodeRef.code().executableAddress();
-            if (selector.compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker) {
-                auto selectorChecker = SelectorCompiler::querySelectorSimpleSelectorCheckerFunction(compiledSelectorChecker, selector.compilationStatus);
-                matched = selectorChecker(&element);
-            } else {
-                ASSERT(selector.compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-                auto selectorChecker = SelectorCompiler::querySelectorSelectorCheckerFunctionWithCheckingContext(compiledSelectorChecker, selector.compilationStatus);
-                matched = selectorChecker(&element, &checkingContext);
+            if (selector.compiledSelector.status == SelectorCompilationStatus::SimpleSelectorChecker)
+                matched = SelectorCompiler::querySelectorSimpleSelectorChecker(selector.compiledSelector, &element);
+            else {
+                ASSERT(selector.compiledSelector.status == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
+                matched = SelectorCompiler::querySelectorSelectorCheckerWithCheckingContext(selector.compiledSelector, &element, &checkingContext);
             }
             if (matched) {
                 SelectorQueryTrait::appendOutputForElement(output, &element);
@@ -468,20 +453,15 @@ ALWAYS_INLINE void SelectorDataList::executeCompiledSingleMultiSelectorData(cons
     }
 }
 
-static bool isCompiledSelector(SelectorCompilationStatus compilationStatus)
-{
-    return compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker || compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext;
-}
-
 bool SelectorDataList::compileSelector(const SelectorData& selectorData)
 {
-    if (selectorData.compilationStatus != SelectorCompilationStatus::NotCompiled)
-        return isCompiledSelector(selectorData.compilationStatus);
+    auto& compiledSelector = selectorData.compiledSelector;
 
-    selectorData.compilationStatus = SelectorCompiler::compileSelector(selectorData.selector, SelectorCompiler::SelectorContext::QuerySelector, selectorData.compiledSelectorCodeRef);
-    return isCompiledSelector(selectorData.compilationStatus);
+    if (compiledSelector.status == SelectorCompilationStatus::NotCompiled)
+        SelectorCompiler::compileSelector(compiledSelector, selectorData.selector, SelectorCompiler::SelectorContext::QuerySelector);
+
+    return compiledSelector.status != SelectorCompilationStatus::CannotCompile;
 }
-
 
 #endif // ENABLE(CSS_SELECTOR_JIT)
 
@@ -510,7 +490,7 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, typename S
         {
 #if ENABLE(CSS_SELECTOR_JIT)
         const SelectorData& selectorData = m_selectors.first();
-        ASSERT(selectorData.compilationStatus == SelectorCompilationStatus::NotCompiled);
+        ASSERT(selectorData.compiledSelector.status == SelectorCompilationStatus::NotCompiled);
         ASSERT(m_matchType == CompilableSingle || m_matchType == CompilableSingleWithRootFilter);
         if (compileSelector(selectorData)) {
             if (m_matchType == CompilableSingle) {
@@ -541,14 +521,15 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, typename S
         {
         CompiledSingleCase:
         const SelectorData& selectorData = m_selectors.first();
-        void* compiledSelectorChecker = selectorData.compiledSelectorCodeRef.code().executableAddress();
-        if (selectorData.compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker) {
-            SelectorCompiler::QuerySelectorSimpleSelectorChecker selectorChecker = SelectorCompiler::querySelectorSimpleSelectorCheckerFunction(compiledSelectorChecker, selectorData.compilationStatus);
-            executeCompiledSimpleSelectorChecker<SelectorQueryTrait>(*searchRootNode, selectorChecker, output, selectorData);
+        if (selectorData.compiledSelector.status == SelectorCompilationStatus::SimpleSelectorChecker) {
+            executeCompiledSimpleSelectorChecker<SelectorQueryTrait>(*searchRootNode, [&] (const Element* element) {
+                return SelectorCompiler::querySelectorSimpleSelectorChecker(selectorData.compiledSelector, element);
+            }, output, selectorData);
         } else {
-            ASSERT(selectorData.compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-            SelectorCompiler::QuerySelectorSelectorCheckerWithCheckingContext selectorChecker = SelectorCompiler::querySelectorSelectorCheckerFunctionWithCheckingContext(compiledSelectorChecker, selectorData.compilationStatus);
-            executeCompiledSelectorCheckerWithCheckingContext<SelectorQueryTrait>(rootNode, *searchRootNode, selectorChecker, output, selectorData);
+            ASSERT(selectorData.compiledSelector.status == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
+            executeCompiledSelectorCheckerWithCheckingContext<SelectorQueryTrait>(rootNode, *searchRootNode, [&] (const Element* element, const SelectorChecker::CheckingContext* context) {
+                return SelectorCompiler::querySelectorSelectorCheckerWithCheckingContext(selectorData.compiledSelector, element, context);
+            }, output, selectorData);
         }
         break;
         }
@@ -556,7 +537,7 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, typename S
     case CompiledSingleWithRootFilter:
     case CompiledSingle:
         ASSERT_NOT_REACHED();
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
         FALLTHROUGH;
 #endif
 #endif // ENABLE(CSS_SELECTOR_JIT)
@@ -620,20 +601,19 @@ ExceptionOr<SelectorQuery&> SelectorQueryCache::add(const String& selectors, Doc
         return *entry;
 
     CSSParser parser(document);
-    CSSSelectorList selectorList;
-    parser.parseSelector(selectors, selectorList);
+    auto selectorList = parser.parseSelector(selectors);
 
-    if (!selectorList.first() || selectorList.hasInvalidSelector())
+    if (!selectorList || selectorList->hasInvalidSelector())
         return Exception { SyntaxError };
 
-    if (selectorList.selectorsNeedNamespaceResolution())
+    if (selectorList->selectorsNeedNamespaceResolution())
         return Exception { SyntaxError };
 
     const int maximumSelectorQueryCacheSize = 256;
     if (m_entries.size() == maximumSelectorQueryCacheSize)
         m_entries.remove(m_entries.random());
 
-    return *m_entries.add(selectors, std::make_unique<SelectorQuery>(WTFMove(selectorList))).iterator->value;
+    return *m_entries.add(selectors, makeUnique<SelectorQuery>(WTFMove(*selectorList))).iterator->value;
 }
 
 }

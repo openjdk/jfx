@@ -34,25 +34,104 @@
 
 #include "CommandLineAPIHost.h"
 #include "InspectorDOMAgent.h"
+#include "InstrumentingAgents.h"
+#include "Logging.h"
 #include "Node.h"
+#include "Page.h"
 #include "WebInjectedScriptManager.h"
-
+#include <JavaScriptCore/ConsoleMessage.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
-PageConsoleAgent::PageConsoleAgent(WebAgentContext& context, InspectorHeapAgent* heapAgent, InspectorDOMAgent* domAgent)
-    : WebConsoleAgent(context, heapAgent)
-    , m_inspectorDOMAgent(domAgent)
+PageConsoleAgent::PageConsoleAgent(PageAgentContext& context)
+    : WebConsoleAgent(context)
+    , m_instrumentingAgents(context.instrumentingAgents)
+    , m_inspectedPage(context.inspectedPage)
 {
 }
 
-void PageConsoleAgent::clearMessages(ErrorString& errorString)
-{
-    m_inspectorDOMAgent->releaseDanglingNodes();
+PageConsoleAgent::~PageConsoleAgent() = default;
 
-    WebConsoleAgent::clearMessages(errorString);
+Protocol::ErrorStringOr<void> PageConsoleAgent::clearMessages()
+{
+    if (auto* domAgent = m_instrumentingAgents.persistentDOMAgent())
+        domAgent->releaseDanglingNodes();
+
+    return WebConsoleAgent::clearMessages();
+}
+
+Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Console::Channel>>> PageConsoleAgent::getLoggingChannels()
+{
+    auto channels = JSON::ArrayOf<Protocol::Console::Channel>::create();
+
+    auto addLogChannel = [&] (Protocol::Console::ChannelSource source) {
+        auto* logChannel = getLogChannel(Protocol::Helpers::getEnumConstantValue(source));
+        if (!logChannel)
+            return;
+
+        auto level = Protocol::Console::ChannelLevel::Off;
+        if (logChannel->state != WTFLogChannelState::Off) {
+            switch (logChannel->level) {
+            case WTFLogLevel::Always:
+            case WTFLogLevel::Error:
+            case WTFLogLevel::Warning:
+            case WTFLogLevel::Info:
+                level = Protocol::Console::ChannelLevel::Basic;
+                break;
+
+            case WTFLogLevel::Debug:
+                level = Protocol::Console::ChannelLevel::Verbose;
+                break;
+            }
+        }
+
+        auto channel = Protocol::Console::Channel::create()
+            .setSource(source)
+            .setLevel(level)
+            .release();
+        channels->addItem(WTFMove(channel));
+    };
+    addLogChannel(Protocol::Console::ChannelSource::XML);
+    addLogChannel(Protocol::Console::ChannelSource::JavaScript);
+    addLogChannel(Protocol::Console::ChannelSource::Network);
+    addLogChannel(Protocol::Console::ChannelSource::ConsoleAPI);
+    addLogChannel(Protocol::Console::ChannelSource::Storage);
+    addLogChannel(Protocol::Console::ChannelSource::Appcache);
+    addLogChannel(Protocol::Console::ChannelSource::Rendering);
+    addLogChannel(Protocol::Console::ChannelSource::CSS);
+    addLogChannel(Protocol::Console::ChannelSource::Security);
+    addLogChannel(Protocol::Console::ChannelSource::ContentBlocker);
+    addLogChannel(Protocol::Console::ChannelSource::Media);
+    addLogChannel(Protocol::Console::ChannelSource::MediaSource);
+    addLogChannel(Protocol::Console::ChannelSource::WebRTC);
+    addLogChannel(Protocol::Console::ChannelSource::ITPDebug);
+    addLogChannel(Protocol::Console::ChannelSource::PrivateClickMeasurement);
+    addLogChannel(Protocol::Console::ChannelSource::PaymentRequest);
+    addLogChannel(Protocol::Console::ChannelSource::Other);
+
+    return channels;
+}
+
+Protocol::ErrorStringOr<void> PageConsoleAgent::setLoggingChannelLevel(Protocol::Console::ChannelSource source, Protocol::Console::ChannelLevel level)
+{
+    switch (level) {
+    case Protocol::Console::ChannelLevel::Off:
+        m_inspectedPage.configureLoggingChannel(Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::Off, WTFLogLevel::Error);
+        return { };
+
+    case Protocol::Console::ChannelLevel::Basic:
+        m_inspectedPage.configureLoggingChannel(Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Info);
+        return { };
+
+    case Protocol::Console::ChannelLevel::Verbose:
+        m_inspectedPage.configureLoggingChannel(Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Debug);
+        return { };
+    }
+
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 } // namespace WebCore

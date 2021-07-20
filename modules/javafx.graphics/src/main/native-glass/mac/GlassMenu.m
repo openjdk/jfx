@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -137,7 +137,7 @@ static jfieldID  jDelegateMenuField = 0;
 
 - (void)dealloc
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
 
     if (env != NULL)
     {
@@ -324,6 +324,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
 
         if ([[glassmenu->item title] compare:@"Apple"] == NSOrderedSame)
         {
+            LOG("calling setAppleMenu");
             [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
         }
 

@@ -51,10 +51,10 @@ private:
     void doApply() final;
     EditAction editingAction() const final;
 
-    HTMLElement& fixOrphanedListChild(Node&);
+    HTMLElement* fixOrphanedListChild(Node&);
     bool selectionHasListOfType(const VisibleSelection& selection, const QualifiedName&);
     Ref<HTMLElement> mergeWithNeighboringLists(HTMLElement&);
-    void doApplyForSingleParagraph(bool forceCreateList, const HTMLQualifiedName&, Range* currentSelection);
+    void doApplyForSingleParagraph(bool forceCreateList, const HTMLQualifiedName&, SimpleRange& currentSelection);
     void unlistifyParagraph(const VisiblePosition& originalStart, HTMLElement* listNode, Node* listChildNode);
     RefPtr<HTMLElement> listifyParagraph(const VisiblePosition& originalStart, const QualifiedName& listTag);
     RefPtr<HTMLElement> m_listElement;

@@ -37,7 +37,8 @@ namespace WebCore {
 
 // An AudioChannel represents a buffer of non-interleaved floating-point audio samples.
 // The PCM samples are normally assumed to be in a nominal range -1.0 -> +1.0
-class AudioChannel {
+class AudioChannel final {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(AudioChannel);
 public:
     // Memory can be externally referenced, or can be internally allocated with an AudioFloatArray.
@@ -53,19 +54,12 @@ public:
     // Manage storage for us.
     explicit AudioChannel(size_t length)
         : m_length(length)
-        , m_rawPointer(0)
-        , m_silent(true)
     {
-        m_memBuffer = std::make_unique<AudioFloatArray>(length);
+        m_memBuffer = makeUnique<AudioFloatArray>(length);
     }
 
     // A "blank" audio channel -- must call set() before it's useful...
-    AudioChannel()
-        : m_length(0)
-        , m_rawPointer(0)
-        , m_silent(true)
-    {
-    }
+    AudioChannel() = default;
 
     // Redefine the memory for this channel.
     // storage represents external memory not managed by this object.
@@ -128,11 +122,11 @@ public:
     float maxAbsValue() const;
 
 private:
-    size_t m_length;
+    size_t m_length { 0 };
 
-    float* m_rawPointer;
+    float* m_rawPointer { nullptr };
     std::unique_ptr<AudioFloatArray> m_memBuffer;
-    bool m_silent;
+    bool m_silent { true };
 };
 
 } // WebCore

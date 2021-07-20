@@ -53,7 +53,8 @@ class RotateGestureRecognizer implements GestureRecognizer {
     private static double MAX_INITIAL_VELOCITY = 500;
     private static double ROTATION_INERTIA_MILLIS = 1500;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.rotate.threshold");
             if (s != null) {
                 ROTATATION_THRESHOLD = Double.valueOf(s);
@@ -317,6 +318,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         }
     }
 
+    @SuppressWarnings("removal")
     private void sendRotateStartedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -335,6 +337,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendRotateEvent(boolean isInertia) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -352,6 +355,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendRotateFinishedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {

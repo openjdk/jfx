@@ -35,7 +35,6 @@ String standardUserAgent(const String&, const String&)
 
 String standardUserAgentForURL(const URL&)
 {
-    // The null string means we don't need a specific UA for the given URL.
     return emptyString();
 }
 

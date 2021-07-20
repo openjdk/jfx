@@ -25,22 +25,11 @@
 
 [
     Conditional=WEB_AUDIO,
-    ImplementedAs=BiquadFilterType
-] enum BiquadFilterType {
-    "lowpass",
-    "highpass",
-    "bandpass",
-    "lowshelf",
-    "highshelf",
-    "peaking",
-    "notch",
-    "allpass"
-};
-
-[
-    Conditional=WEB_AUDIO,
     JSGenerateToJSObject,
+    Exposed=Window
 ] interface BiquadFilterNode : AudioNode {
+    [EnabledBySetting=ModernUnprefixedWebAudio] constructor (BaseAudioContext context, optional BiquadFilterOptions options);
+
     attribute BiquadFilterType type;
     
     readonly attribute AudioParam frequency; // in Hertz
@@ -48,6 +37,5 @@
     readonly attribute AudioParam Q; // Quality factor
     readonly attribute AudioParam gain; // in Decibels
 
-    // FIXME: the parameters should not be nullable.
-    void getFrequencyResponse(Float32Array? frequencyHz, Float32Array? magResponse, Float32Array? phaseResponse);
+    [MayThrowException] undefined getFrequencyResponse(Float32Array frequencyHz, Float32Array magResponse, Float32Array phaseResponse);
 };

@@ -81,7 +81,7 @@
 #include <float.h>
 
 #ifndef U_COMMON_IMPLEMENTATION
-#error U_COMMON_IMPLEMENTATION not set - must be set for all ICU source files in common/ - see http://userguide.icu-project.org/howtouseicu
+#error U_COMMON_IMPLEMENTATION not set - must be set for all ICU source files in common/ - see https://unicode-org.github.io/icu/userguide/howtouseicu
 #endif
 
 
@@ -102,19 +102,7 @@
 #   define NOMCX
 #   include <windows.h>
 #   include "unicode/uloc.h"
-#if U_PLATFORM_HAS_WINUWP_API == 0
 #   include "wintz.h"
-#else // U_PLATFORM_HAS_WINUWP_API
-typedef PVOID LPMSG; // TODO: figure out how to get rid of this typedef
-#include <Windows.Globalization.h>
-#include <windows.system.userprofile.h>
-#include <wrl/wrappers/corewrappers.h>
-#include <wrl/client.h>
-
-using namespace ABI::Windows::Foundation;
-using namespace Microsoft::WRL;
-using namespace Microsoft::WRL::Wrappers;
-#endif
 #elif U_PLATFORM == U_PF_OS400
 #   include <float.h>
 #   include <qusec.h>       /* error code structure */
@@ -130,10 +118,14 @@ using namespace Microsoft::WRL::Wrappers;
 #       ifndef _XPG4_2
 #           define _XPG4_2
 #       endif
+#   elif U_PLATFORM == U_PF_ANDROID
+#       include <sys/system_properties.h>
+#       include <dlfcn.h>
 #   endif
 #elif U_PLATFORM == U_PF_QNX
 #   include <sys/neutrino.h>
 #endif
+
 
 /*
  * Only include langinfo.h if we have a way to get the codeset. If we later
@@ -253,7 +245,6 @@ u_signBit(double d) {
 UDate fakeClock_t0 = 0; /** Time to start the clock from **/
 UDate fakeClock_dt = 0; /** Offset (fake time - real time) **/
 UBool fakeClock_set = FALSE; /** True if fake clock has spun up **/
-static UMutex fakeClockMutex = U_MUTEX_INTIALIZER;
 
 static UDate getUTCtime_real() {
     struct timeval posixTime;
@@ -262,6 +253,7 @@ static UDate getUTCtime_real() {
 }
 
 static UDate getUTCtime_fake() {
+    static UMutex fakeClockMutex;
     umtx_lock(&fakeClockMutex);
     if(!fakeClock_set) {
         UDate real = getUTCtime_real();
@@ -998,7 +990,8 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
     /* Check each entry in the directory. */
     while((dirEntry = readdir(dirp)) != NULL) {
         const char* dirName = dirEntry->d_name;
-        if (uprv_strcmp(dirName, SKIP1) != 0 && uprv_strcmp(dirName, SKIP2) != 0) {
+        if (uprv_strcmp(dirName, SKIP1) != 0 && uprv_strcmp(dirName, SKIP2) != 0
+            && uprv_strcmp(TZFILE_SKIP, dirName) != 0 && uprv_strcmp(TZFILE_SKIP2, dirName) != 0) {
             /* Create a newpath with the new entry to test each entry in the directory. */
             CharString newpath(curpath, status);
             newpath.append(dirName, -1, status);
@@ -1025,7 +1018,7 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
                 */
                 if (result != NULL)
                     break;
-            } else if (uprv_strcmp(TZFILE_SKIP, dirName) != 0 && uprv_strcmp(TZFILE_SKIP2, dirName) != 0) {
+            } else {
                 if(compareBinaryFiles(TZDEFAULT, newpath.data(), tzInfo)) {
                     int32_t amountToSkip = sizeof(TZZONEINFO) - 1;
                     if (amountToSkip > newpath.length()) {
@@ -1054,49 +1047,57 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
 }
 #endif
 
+#if U_PLATFORM == U_PF_ANDROID
+typedef int(system_property_read_callback)(const prop_info* info,
+                                           void (*callback)(void* cookie,
+                                                            const char* name,
+                                                            const char* value,
+                                                            uint32_t serial),
+                                           void* cookie);
+typedef int(system_property_get)(const char*, char*);
+
+static char gAndroidTimeZone[PROP_VALUE_MAX] = { '\0' };
+
+static void u_property_read(void* cookie, const char* name, const char* value,
+                            uint32_t serial) {
+    uprv_strcpy((char* )cookie, value);
+}
+#endif
+
 U_CAPI void U_EXPORT2
-uprv_tzname_clear_cache()
+uprv_tzname_clear_cache(void)
 {
+#if U_PLATFORM == U_PF_ANDROID
+    /* Android's timezone is stored in system property. */
+    gAndroidTimeZone[0] = '\0';
+    void* libc = dlopen("libc.so", RTLD_NOLOAD);
+    if (libc) {
+        /* Android API 26+ has new API to get system property and old API
+         * (__system_property_get) is deprecated */
+        system_property_read_callback* property_read_callback =
+            (system_property_read_callback*)dlsym(
+                libc, "__system_property_read_callback");
+        if (property_read_callback) {
+            const prop_info* info =
+                __system_property_find("persist.sys.timezone");
+            if (info) {
+                property_read_callback(info, &u_property_read, gAndroidTimeZone);
+            }
+        } else {
+            system_property_get* property_get =
+                (system_property_get*)dlsym(libc, "__system_property_get");
+            if (property_get) {
+                property_get("persist.sys.timezone", gAndroidTimeZone);
+            }
+        }
+        dlclose(libc);
+    }
+#endif
+
 #if defined(CHECK_LOCALTIME_LINK) && !defined(DEBUG_SKIP_LOCALTIME_LINK)
     gTimeZoneBufferPtr = NULL;
 #endif
 }
-
-// With the Universal Windows Platform we can just ask Windows for the name
-#if U_PLATFORM_HAS_WINUWP_API
-U_CAPI const char* U_EXPORT2
-uprv_getWindowsTimeZone()
-{
-    // Get default Windows timezone.
-    ComPtr<IInspectable> calendar;
-    HRESULT hr = RoActivateInstance(
-        HStringReference(RuntimeClass_Windows_Globalization_Calendar).Get(),
-        &calendar);
-    if (SUCCEEDED(hr))
-    {
-        ComPtr<ABI::Windows::Globalization::ITimeZoneOnCalendar> timezone;
-        hr = calendar.As(&timezone);
-        if (SUCCEEDED(hr))
-        {
-            HString timezoneString;
-            hr = timezone->GetTimeZone(timezoneString.GetAddressOf());
-            if (SUCCEEDED(hr))
-            {
-                int32_t length = static_cast<int32_t>(wcslen(timezoneString.GetRawBuffer(NULL)));
-                char* asciiId = (char*)uprv_calloc(length + 1, sizeof(char));
-                if (asciiId != nullptr)
-                {
-                    u_UCharsToChars((UChar*)timezoneString.GetRawBuffer(NULL), asciiId, length);
-                    return asciiId;
-                }
-            }
-        }
-    }
-
-    // Failed
-    return nullptr;
-}
-#endif
 
 U_CAPI const char* U_EXPORT2
 uprv_tzname(int n)
@@ -1104,11 +1105,7 @@ uprv_tzname(int n)
     (void)n; // Avoid unreferenced parameter warning.
     const char *tzid = NULL;
 #if U_PLATFORM_USES_ONLY_WIN32_API
-#if U_PLATFORM_HAS_WINUWP_API > 0
-    tzid = uprv_getWindowsTimeZone();
-#else
     tzid = uprv_detectWindowsTimeZone();
-#endif
 
     if (tzid != NULL) {
         return tzid;
@@ -1119,7 +1116,7 @@ uprv_tzname(int n)
     // the other code path returns a pointer to a heap location.
     // If we don't have a name already, then tzname wouldn't be any
     // better, so just fall back.
-    return uprv_strdup("Etc/UTC");
+    return uprv_strdup("");
 #endif // !U_TZNAME
 
 #else
@@ -1135,7 +1132,11 @@ uprv_tzname(int n)
 
 /* This code can be temporarily disabled to test tzname resolution later on. */
 #ifndef DEBUG_TZNAME
+#if U_PLATFORM == U_PF_ANDROID
+    tzid = gAndroidTimeZone;
+#else
     tzid = getenv("TZ");
+#endif
     if (tzid != NULL && isValidOlsonID(tzid)
 #if U_PLATFORM == U_PF_SOLARIS
     /* When TZ equals localtime on Solaris, check the /etc/localtime file. */
@@ -1358,12 +1359,47 @@ uprv_pathIsAbsolute(const char *path)
   return FALSE;
 }
 
-/* Temporary backup setting of ICU_DATA_DIR_PREFIX_ENV_VAR
-   until some client wrapper makefiles are updated */
-#if U_PLATFORM_IS_DARWIN_BASED && TARGET_IPHONE_SIMULATOR
+/* Backup setting of ICU_DATA_DIR_PREFIX_ENV_VAR
+   (needed for some Darwin ICU build environments) */
+#if U_PLATFORM_IS_DARWIN_BASED && TARGET_OS_SIMULATOR
 # if !defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
 #  define ICU_DATA_DIR_PREFIX_ENV_VAR "IPHONE_SIMULATOR_ROOT"
 # endif
+#endif
+
+#if defined(ICU_DATA_DIR_WINDOWS)
+// Helper function to get the ICU Data Directory under the Windows directory location.
+static BOOL U_CALLCONV getIcuDataDirectoryUnderWindowsDirectory(char* directoryBuffer, UINT bufferLength)
+{
+    wchar_t windowsPath[MAX_PATH];
+    char windowsPathUtf8[MAX_PATH];
+
+    UINT length = GetSystemWindowsDirectoryW(windowsPath, UPRV_LENGTHOF(windowsPath));
+    if ((length > 0) && (length < (UPRV_LENGTHOF(windowsPath) - 1))) {
+        // Convert UTF-16 to a UTF-8 string.
+        UErrorCode status = U_ZERO_ERROR;
+        int32_t windowsPathUtf8Len = 0;
+        u_strToUTF8(windowsPathUtf8, static_cast<int32_t>(UPRV_LENGTHOF(windowsPathUtf8)),
+            &windowsPathUtf8Len, reinterpret_cast<const UChar*>(windowsPath), -1, &status);
+
+        if (U_SUCCESS(status) && (status != U_STRING_NOT_TERMINATED_WARNING) &&
+            (windowsPathUtf8Len < (UPRV_LENGTHOF(windowsPathUtf8) - 1))) {
+            // Ensure it always has a separator, so we can append the ICU data path.
+            if (windowsPathUtf8[windowsPathUtf8Len - 1] != U_FILE_SEP_CHAR) {
+                windowsPathUtf8[windowsPathUtf8Len++] = U_FILE_SEP_CHAR;
+                windowsPathUtf8[windowsPathUtf8Len] = '\0';
+            }
+            // Check if the concatenated string will fit.
+            if ((windowsPathUtf8Len + UPRV_LENGTHOF(ICU_DATA_DIR_WINDOWS)) < bufferLength) {
+                uprv_strcpy(directoryBuffer, windowsPathUtf8);
+                uprv_strcat(directoryBuffer, ICU_DATA_DIR_WINDOWS);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
 #endif
 
 static void U_CALLCONV dataDirectoryInitFn() {
@@ -1394,9 +1430,9 @@ static void U_CALLCONV dataDirectoryInitFn() {
     */
 #   if !defined(ICU_NO_USER_DATA_OVERRIDE) && !UCONFIG_NO_FILE_IO
     /* First try to get the environment variable */
-#       if U_PLATFORM_HAS_WINUWP_API == 0  // Windows UWP does not support getenv
+#     if U_PLATFORM_HAS_WINUWP_API == 0  // Windows UWP does not support getenv
         path=getenv("ICU_DATA");
-#       endif
+#     endif
 #   endif
 
     /* ICU_DATA_DIR may be set as a compile option.
@@ -1425,35 +1461,16 @@ static void U_CALLCONV dataDirectoryInitFn() {
     }
 #endif
 
-#if defined(ICU_DATA_DIR_WINDOWS) && U_PLATFORM_HAS_WINUWP_API != 0
-    // Use data from the %windir%\globalization\icu directory
-    // This is only available if ICU is built as a system component
+#if defined(ICU_DATA_DIR_WINDOWS)
     char datadir_path_buffer[MAX_PATH];
-    UINT length = GetWindowsDirectoryA(datadir_path_buffer, UPRV_LENGTHOF(datadir_path_buffer));
-    if (length > 0 && length < (UPRV_LENGTHOF(datadir_path_buffer) - sizeof(ICU_DATA_DIR_WINDOWS) - 1))
-    {
-        if (datadir_path_buffer[length - 1] != '\\')
-        {
-            datadir_path_buffer[length++] = '\\';
-            datadir_path_buffer[length] = '\0';
-        }
-
-        if ((length + 1 + sizeof(ICU_DATA_DIR_WINDOWS)) < UPRV_LENGTHOF(datadir_path_buffer))
-        {
-            uprv_strcat(datadir_path_buffer, ICU_DATA_DIR_WINDOWS);
-            path = datadir_path_buffer;
-        }
+    if (getIcuDataDirectoryUnderWindowsDirectory(datadir_path_buffer, UPRV_LENGTHOF(datadir_path_buffer))) {
+        path = datadir_path_buffer;
     }
 #endif
 
     if(path==NULL) {
         /* It looks really bad, set it to something. */
-#if U_PLATFORM_HAS_WIN32_API
-        // Windows UWP will require icudtl.dat file in same directory as icuuc.dll
-        path = ".\\";
-#else
         path = "";
-#endif
     }
 
     u_setDataDirectory(path);
@@ -1491,20 +1508,47 @@ static void U_CALLCONV TimeZoneDataDirInitFn(UErrorCode &status) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-#if U_PLATFORM_HAS_WINUWP_API == 0
-    const char *dir = getenv("ICU_TIMEZONE_FILES_DIR");
-#else
-    // TODO: UWP does not support alternate timezone data directories at this time
+
     const char *dir = "";
+
+#if defined(ICU_TIMEZONE_FILES_DIR_PREFIX_ENV_VAR)
+    char timezonefilesdir_path_buffer[PATH_MAX];
+    const char *prefix = getenv(ICU_TIMEZONE_FILES_DIR_PREFIX_ENV_VAR);
+#endif
+
+#if U_PLATFORM_HAS_WINUWP_API == 1
+// The UWP version does not support the environment variable setting.
+
+# if defined(ICU_DATA_DIR_WINDOWS)
+    // When using the Windows system data, we can possibly pick up time zone data from the Windows directory.
+    char datadir_path_buffer[MAX_PATH];
+    if (getIcuDataDirectoryUnderWindowsDirectory(datadir_path_buffer, UPRV_LENGTHOF(datadir_path_buffer))) {
+        dir = datadir_path_buffer;
+    }
+# endif
+
+#else
+    dir = getenv("ICU_TIMEZONE_FILES_DIR");
 #endif // U_PLATFORM_HAS_WINUWP_API
+
 #if defined(U_TIMEZONE_FILES_DIR)
     if (dir == NULL) {
+        // Build time configuration setting.
         dir = TO_STRING(U_TIMEZONE_FILES_DIR);
     }
 #endif
+
     if (dir == NULL) {
         dir = "";
     }
+
+#if defined(ICU_TIMEZONE_FILES_DIR_PREFIX_ENV_VAR)
+    if (prefix != NULL) {
+        snprintf(timezonefilesdir_path_buffer, PATH_MAX, "%s%s", prefix, dir);
+        dir = timezonefilesdir_path_buffer;
+    }
+#endif
+
     setTimeZoneFilesDir(dir, status);
 }
 
@@ -1583,6 +1627,10 @@ static const char *uprv_getPOSIXIDForCategory(int category)
     {
         /* Nothing worked.  Give it a nice POSIX default value. */
         posixID = "en_US_POSIX";
+        // Note: this test will not catch 'C.UTF-8',
+        // that will be handled in uprv_getDefaultLocaleID().
+        // Leave this mapping here for the uprv_getPOSIXIDForDefaultCodepage()
+        // caller which expects to see "en_US_POSIX" in many branches.
     }
     return posixID;
 }
@@ -1641,11 +1689,7 @@ The variant cannot have dots in it.
 The 'rightmost' variant (@xxx) wins.
 The leftmost codepage (.xxx) wins.
 */
-    char *correctedPOSIXLocale = 0;
     const char* posixID = uprv_getPOSIXIDForDefaultLocale();
-    const char *p;
-    const char *q;
-    int32_t len;
 
     /* Format: (no spaces)
     ll [ _CC ] [ . MM ] [ @ VV]
@@ -1653,37 +1697,36 @@ The leftmost codepage (.xxx) wins.
       l = lang, C = ctry, M = charmap, V = variant
     */
 
-    if (gCorrectedPOSIXLocale != NULL) {
+    if (gCorrectedPOSIXLocale != nullptr) {
         return gCorrectedPOSIXLocale;
     }
 
-    if ((p = uprv_strchr(posixID, '.')) != NULL) {
-        /* assume new locale can't be larger than old one? */
-        correctedPOSIXLocale = static_cast<char *>(uprv_malloc(uprv_strlen(posixID)+1));
-        /* Exit on memory allocation error. */
-        if (correctedPOSIXLocale == NULL) {
-            return NULL;
-        }
-        uprv_strncpy(correctedPOSIXLocale, posixID, p-posixID);
-        correctedPOSIXLocale[p-posixID] = 0;
+    // Copy the ID into owned memory.
+    // Over-allocate in case we replace "C" with "en_US_POSIX" (+10), + null termination
+    char *correctedPOSIXLocale = static_cast<char *>(uprv_malloc(uprv_strlen(posixID) + 10 + 1));
+    if (correctedPOSIXLocale == nullptr) {
+        return nullptr;
+    }
+    uprv_strcpy(correctedPOSIXLocale, posixID);
 
-        /* do not copy after the @ */
-        if ((p = uprv_strchr(correctedPOSIXLocale, '@')) != NULL) {
-            correctedPOSIXLocale[p-correctedPOSIXLocale] = 0;
-        }
+    char *limit;
+    if ((limit = uprv_strchr(correctedPOSIXLocale, '.')) != nullptr) {
+        *limit = 0;
+    }
+    if ((limit = uprv_strchr(correctedPOSIXLocale, '@')) != nullptr) {
+        *limit = 0;
+    }
+
+    if ((uprv_strcmp("C", correctedPOSIXLocale) == 0) // no @ variant
+        || (uprv_strcmp("POSIX", correctedPOSIXLocale) == 0)) {
+      // Raw input was C.* or POSIX.*, Give it a nice POSIX default value.
+      // (The "C"/"POSIX" case is handled in uprv_getPOSIXIDForCategory())
+      uprv_strcpy(correctedPOSIXLocale, "en_US_POSIX");
     }
 
     /* Note that we scan the *uncorrected* ID. */
-    if ((p = uprv_strrchr(posixID, '@')) != NULL) {
-        if (correctedPOSIXLocale == NULL) {
-            correctedPOSIXLocale = static_cast<char *>(uprv_malloc(uprv_strlen(posixID)+1));
-            /* Exit on memory allocation error. */
-            if (correctedPOSIXLocale == NULL) {
-                return NULL;
-            }
-            uprv_strncpy(correctedPOSIXLocale, posixID, p-posixID);
-            correctedPOSIXLocale[p-posixID] = 0;
-        }
+    const char *p;
+    if ((p = uprv_strrchr(posixID, '@')) != nullptr) {
         p++;
 
         /* Take care of any special cases here.. */
@@ -1692,17 +1735,18 @@ The leftmost codepage (.xxx) wins.
             /* Don't worry about no__NY. In practice, it won't appear. */
         }
 
-        if (uprv_strchr(correctedPOSIXLocale,'_') == NULL) {
-            uprv_strcat(correctedPOSIXLocale, "__"); /* aa@b -> aa__b */
+        if (uprv_strchr(correctedPOSIXLocale,'_') == nullptr) {
+            uprv_strcat(correctedPOSIXLocale, "__"); /* aa@b -> aa__b (note this can make the new locale 1 char longer) */
         }
         else {
             uprv_strcat(correctedPOSIXLocale, "_"); /* aa_CC@b -> aa_CC_b */
         }
 
-        if ((q = uprv_strchr(p, '.')) != NULL) {
+        const char *q;
+        if ((q = uprv_strchr(p, '.')) != nullptr) {
             /* How big will the resulting string be? */
-            len = (int32_t)(uprv_strlen(correctedPOSIXLocale) + (q-p));
-            uprv_strncat(correctedPOSIXLocale, p, q-p);
+            int32_t len = (int32_t)(uprv_strlen(correctedPOSIXLocale) + (q-p));
+            uprv_strncat(correctedPOSIXLocale, p, q-p); // do not include charset
             correctedPOSIXLocale[len] = 0;
         }
         else {
@@ -1717,28 +1761,15 @@ The leftmost codepage (.xxx) wins.
          */
     }
 
-    /* Was a correction made? */
-    if (correctedPOSIXLocale != NULL) {
-        posixID = correctedPOSIXLocale;
-    }
-    else {
-        /* copy it, just in case the original pointer goes away.  See j2395 */
-        correctedPOSIXLocale = (char *)uprv_malloc(uprv_strlen(posixID) + 1);
-        /* Exit on memory allocation error. */
-        if (correctedPOSIXLocale == NULL) {
-            return NULL;
-        }
-        posixID = uprv_strcpy(correctedPOSIXLocale, posixID);
-    }
-
-    if (gCorrectedPOSIXLocale == NULL) {
+    if (gCorrectedPOSIXLocale == nullptr) {
         gCorrectedPOSIXLocale = correctedPOSIXLocale;
         gCorrectedPOSIXLocaleHeapAllocated = true;
         ucln_common_registerCleanup(UCLN_COMMON_PUTIL, putil_cleanup);
-        correctedPOSIXLocale = NULL;
+        correctedPOSIXLocale = nullptr;
     }
+    posixID = gCorrectedPOSIXLocale;
 
-    if (correctedPOSIXLocale != NULL) {  /* Was already set - clean up. */
+    if (correctedPOSIXLocale != nullptr) {  /* Was already set - clean up. */
         uprv_free(correctedPOSIXLocale);
     }
 
@@ -1747,70 +1778,22 @@ The leftmost codepage (.xxx) wins.
 #elif U_PLATFORM_USES_ONLY_WIN32_API
 #define POSIX_LOCALE_CAPACITY 64
     UErrorCode status = U_ZERO_ERROR;
-    char *correctedPOSIXLocale = 0;
+    char *correctedPOSIXLocale = nullptr;
 
     // If we have already figured this out just use the cached value
-    if (gCorrectedPOSIXLocale != NULL) {
+    if (gCorrectedPOSIXLocale != nullptr) {
         return gCorrectedPOSIXLocale;
     }
 
     // No cached value, need to determine the current value
-    static WCHAR windowsLocale[LOCALE_NAME_MAX_LENGTH];
-#if U_PLATFORM_HAS_WINUWP_API == 0
-    // If not a Universal Windows App, we'll need user default language.
-    // Vista and above should use Locale Names instead of LCIDs
-    int length = GetUserDefaultLocaleName(windowsLocale, UPRV_LENGTHOF(windowsLocale));
-#else
-    // In a UWP app, we want the top language that the application and user agreed upon
-    ComPtr<ABI::Windows::Foundation::Collections::IVectorView<HSTRING>> languageList;
+    static WCHAR windowsLocale[LOCALE_NAME_MAX_LENGTH] = {};
+    int length = GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SNAME, windowsLocale, LOCALE_NAME_MAX_LENGTH);
 
-    ComPtr<ABI::Windows::Globalization::IApplicationLanguagesStatics> applicationLanguagesStatics;
-    HRESULT hr = GetActivationFactory(
-        HStringReference(RuntimeClass_Windows_Globalization_ApplicationLanguages).Get(),
-        &applicationLanguagesStatics);
-    if (SUCCEEDED(hr))
-    {
-        hr = applicationLanguagesStatics->get_Languages(&languageList);
-    }
-
-    if (FAILED(hr))
-    {
-        // If there is no application context, then use the top language from the user language profile
-        ComPtr<ABI::Windows::System::UserProfile::IGlobalizationPreferencesStatics> globalizationPreferencesStatics;
-        hr = GetActivationFactory(
-            HStringReference(RuntimeClass_Windows_System_UserProfile_GlobalizationPreferences).Get(),
-            &globalizationPreferencesStatics);
-        if (SUCCEEDED(hr))
-        {
-            hr = globalizationPreferencesStatics->get_Languages(&languageList);
-        }
-    }
-
-    // We have a list of languages, ICU knows one, so use the top one for our locale
-    HString topLanguage;
-    if (SUCCEEDED(hr))
-    {
-        hr = languageList->GetAt(0, topLanguage.GetAddressOf());
-    }
-
-    if (FAILED(hr))
-    {
-        // Unexpected, use en-US by default
-        if (gCorrectedPOSIXLocale == NULL) {
-            gCorrectedPOSIXLocale = "en_US";
-        }
-
-        return gCorrectedPOSIXLocale;
-    }
-
-    // ResolveLocaleName will get a likely subtags form consistent with Windows behavior.
-    int length = ResolveLocaleName(topLanguage.GetRawBuffer(NULL), windowsLocale, UPRV_LENGTHOF(windowsLocale));
-#endif
-    // Now we should have a Windows locale name that needs converted to the POSIX style,
-    if (length > 0)
+    // Now we should have a Windows locale name that needs converted to the POSIX style.
+    if (length > 0) // If length is 0, then the GetLocaleInfoEx failed.
     {
         // First we need to go from UTF-16 to char (and also convert from _ to - while we're at it.)
-        char modifiedWindowsLocale[LOCALE_NAME_MAX_LENGTH];
+        char modifiedWindowsLocale[LOCALE_NAME_MAX_LENGTH] = {};
 
         int32_t i;
         for (i = 0; i < UPRV_LENGTHOF(modifiedWindowsLocale); i++)
@@ -1858,7 +1841,7 @@ The leftmost codepage (.xxx) wins.
     }
 
     // If unable to find a locale we can agree upon, use en-US by default
-    if (gCorrectedPOSIXLocale == NULL) {
+    if (gCorrectedPOSIXLocale == nullptr) {
         gCorrectedPOSIXLocale = "en_US";
     }
     return gCorrectedPOSIXLocale;
@@ -2148,7 +2131,7 @@ int_getDefaultCodepage()
     static char codepage[64];
     DWORD codepageNumber = 0;
 
-#if U_PLATFORM_HAS_WINUWP_API > 0
+#if U_PLATFORM_HAS_WINUWP_API == 1
     // UWP doesn't have a direct API to get the default ACP as Microsoft would rather
     // have folks use Unicode than a "system" code page, however this is the same
     // codepage as the system default locale codepage.  (FWIW, the system locale is
@@ -2368,7 +2351,7 @@ u_getVersion(UVersionInfo versionArray) {
 #include <dlfcn.h>
 #endif /* HAVE_DLFCN_H */
 
-U_INTERNAL void * U_EXPORT2
+U_CAPI void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
   void *ret = NULL;
   if(U_FAILURE(*status)) return ret;
@@ -2382,13 +2365,13 @@ uprv_dl_open(const char *libName, UErrorCode *status) {
   return ret;
 }
 
-U_INTERNAL void U_EXPORT2
+U_CAPI void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
   if(U_FAILURE(*status)) return;
   dlclose(lib);
 }
 
-U_INTERNAL UVoidFunction* U_EXPORT2
+U_CAPI UVoidFunction* U_EXPORT2
 uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
   union {
       UVoidFunction *fp;
@@ -2411,7 +2394,7 @@ uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
 /* Windows API implementation. */
 // Note: UWP does not expose/allow these APIs, so the UWP version gets the null implementation. */
 
-U_INTERNAL void * U_EXPORT2
+U_CAPI void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
   HMODULE lib = NULL;
 
@@ -2426,7 +2409,7 @@ uprv_dl_open(const char *libName, UErrorCode *status) {
   return (void*)lib;
 }
 
-U_INTERNAL void U_EXPORT2
+U_CAPI void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
   HMODULE handle = (HMODULE)lib;
   if(U_FAILURE(*status)) return;
@@ -2436,7 +2419,7 @@ uprv_dl_close(void *lib, UErrorCode *status) {
   return;
 }
 
-U_INTERNAL UVoidFunction* U_EXPORT2
+U_CAPI UVoidFunction* U_EXPORT2
 uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
   HMODULE handle = (HMODULE)lib;
   UVoidFunction* addr = NULL;
@@ -2461,7 +2444,7 @@ uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
 
 /* No dynamic loading, null (nonexistent) implementation. */
 
-U_INTERNAL void * U_EXPORT2
+U_CAPI void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
     (void)libName;
     if(U_FAILURE(*status)) return NULL;
@@ -2469,7 +2452,7 @@ uprv_dl_open(const char *libName, UErrorCode *status) {
     return NULL;
 }
 
-U_INTERNAL void U_EXPORT2
+U_CAPI void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
     (void)lib;
     if(U_FAILURE(*status)) return;
@@ -2477,7 +2460,7 @@ uprv_dl_close(void *lib, UErrorCode *status) {
     return;
 }
 
-U_INTERNAL UVoidFunction* U_EXPORT2
+U_CAPI UVoidFunction* U_EXPORT2
 uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
   (void)lib;
   (void)sym;

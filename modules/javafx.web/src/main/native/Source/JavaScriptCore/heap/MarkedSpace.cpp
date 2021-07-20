@@ -22,142 +22,121 @@
 #include "MarkedSpace.h"
 
 #include "BlockDirectoryInlines.h"
-#include "FunctionCodeBlock.h"
+#include "HeapInlines.h"
 #include "IncrementalSweeper.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
 #include "MarkedBlockInlines.h"
+#include "MarkedSpaceInlines.h"
 #include <wtf/ListDump.h>
 
 namespace JSC {
 
-std::array<size_t, MarkedSpace::numSizeClasses> MarkedSpace::s_sizeClassForSizeStep;
+std::array<unsigned, MarkedSpace::numSizeClasses> MarkedSpace::s_sizeClassForSizeStep;
 
 namespace {
 
-const Vector<size_t>& sizeClasses()
+static Vector<size_t> sizeClasses()
 {
-    static Vector<size_t>* result;
-    static std::once_flag once;
-    std::call_once(
-        once,
-        [] {
-            result = new Vector<size_t>();
+    Vector<size_t> result;
 
-            if (Options::dumpSizeClasses()) {
-                dataLog("Block size: ", MarkedBlock::blockSize, "\n");
-                dataLog("Footer size: ", sizeof(MarkedBlock::Footer), "\n");
-            }
+    if (UNLIKELY(Options::dumpSizeClasses())) {
+        dataLog("Block size: ", MarkedBlock::blockSize, "\n");
+        dataLog("Footer size: ", sizeof(MarkedBlock::Footer), "\n");
+    }
 
-            auto add = [&] (size_t sizeClass) {
-                sizeClass = WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(sizeClass);
-                if (Options::dumpSizeClasses())
-                    dataLog("Adding JSC MarkedSpace size class: ", sizeClass, "\n");
-                // Perform some validation as we go.
-                RELEASE_ASSERT(!(sizeClass % MarkedSpace::sizeStep));
-                if (result->isEmpty())
-                    RELEASE_ASSERT(sizeClass == MarkedSpace::sizeStep);
-                result->append(sizeClass);
-            };
+    auto add = [&] (size_t sizeClass) {
+        sizeClass = WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(sizeClass);
+        dataLogLnIf(Options::dumpSizeClasses(), "Adding JSC MarkedSpace size class: ", sizeClass);
+        // Perform some validation as we go.
+        RELEASE_ASSERT(!(sizeClass % MarkedSpace::sizeStep));
+        if (result.isEmpty())
+            RELEASE_ASSERT(sizeClass == MarkedSpace::sizeStep);
+        result.append(sizeClass);
+    };
 
-            // This is a definition of the size classes in our GC. It must define all of the
-            // size classes from sizeStep up to largeCutoff.
+    // This is a definition of the size classes in our GC. It must define all of the
+    // size classes from sizeStep up to largeCutoff.
 
-            // Have very precise size classes for the small stuff. This is a loop to make it easy to reduce
-            // atomSize.
-            for (size_t size = MarkedSpace::sizeStep; size < MarkedSpace::preciseCutoff; size += MarkedSpace::sizeStep)
-                add(size);
+    // Have very precise size classes for the small stuff. This is a loop to make it easy to reduce
+    // atomSize.
+    for (size_t size = MarkedSpace::sizeStep; size < MarkedSpace::preciseCutoff; size += MarkedSpace::sizeStep)
+        add(size);
 
-            // We want to make sure that the remaining size classes minimize internal fragmentation (i.e.
-            // the wasted space at the tail end of a MarkedBlock) while proceeding roughly in an exponential
-            // way starting at just above the precise size classes to four cells per block.
+    // We want to make sure that the remaining size classes minimize internal fragmentation (i.e.
+    // the wasted space at the tail end of a MarkedBlock) while proceeding roughly in an exponential
+    // way starting at just above the precise size classes to four cells per block.
 
-            if (Options::dumpSizeClasses())
-                dataLog("    Marked block payload size: ", static_cast<size_t>(MarkedSpace::blockPayload), "\n");
+    dataLogLnIf(Options::dumpSizeClasses(), "    Marked block payload size: ", static_cast<size_t>(MarkedSpace::blockPayload));
 
-            for (unsigned i = 0; ; ++i) {
-                double approximateSize = MarkedSpace::preciseCutoff * pow(Options::sizeClassProgression(), i);
+    for (unsigned i = 0; ; ++i) {
+        double approximateSize = MarkedSpace::preciseCutoff * pow(Options::sizeClassProgression(), i);
+        dataLogLnIf(Options::dumpSizeClasses(), "    Next size class as a double: ", approximateSize);
 
-                if (Options::dumpSizeClasses())
-                    dataLog("    Next size class as a double: ", approximateSize, "\n");
+        size_t approximateSizeInBytes = static_cast<size_t>(approximateSize);
+        dataLogLnIf(Options::dumpSizeClasses(), "    Next size class as bytes: ", approximateSizeInBytes);
 
-                size_t approximateSizeInBytes = static_cast<size_t>(approximateSize);
+        // Make sure that the computer did the math correctly.
+        RELEASE_ASSERT(approximateSizeInBytes >= MarkedSpace::preciseCutoff);
 
-                if (Options::dumpSizeClasses())
-                    dataLog("    Next size class as bytes: ", approximateSizeInBytes, "\n");
+        if (approximateSizeInBytes > MarkedSpace::largeCutoff)
+            break;
 
-                // Make sure that the computer did the math correctly.
-                RELEASE_ASSERT(approximateSizeInBytes >= MarkedSpace::preciseCutoff);
+        size_t sizeClass =
+            WTF::roundUpToMultipleOf<MarkedSpace::sizeStep>(approximateSizeInBytes);
+        dataLogLnIf(Options::dumpSizeClasses(), "    Size class: ", sizeClass);
 
-                if (approximateSizeInBytes > MarkedSpace::largeCutoff)
-                    break;
+        // Optimize the size class so that there isn't any slop at the end of the block's
+        // payload.
+        unsigned cellsPerBlock = MarkedSpace::blockPayload / sizeClass;
+        size_t possiblyBetterSizeClass = (MarkedSpace::blockPayload / cellsPerBlock) & ~(MarkedSpace::sizeStep - 1);
+        dataLogLnIf(Options::dumpSizeClasses(), "    Possibly better size class: ", possiblyBetterSizeClass);
 
-                size_t sizeClass =
-                    WTF::roundUpToMultipleOf<MarkedSpace::sizeStep>(approximateSizeInBytes);
+        // The size class we just came up with is better than the other one if it reduces
+        // total wastage assuming we only allocate cells of that size.
+        size_t originalWastage = MarkedSpace::blockPayload - cellsPerBlock * sizeClass;
+        size_t newWastage = (possiblyBetterSizeClass - sizeClass) * cellsPerBlock;
+        dataLogLnIf(Options::dumpSizeClasses(), "    Original wastage: ", originalWastage, ", new wastage: ", newWastage);
 
-                if (Options::dumpSizeClasses())
-                    dataLog("    Size class: ", sizeClass, "\n");
+        size_t betterSizeClass;
+        if (newWastage > originalWastage)
+            betterSizeClass = sizeClass;
+        else
+            betterSizeClass = possiblyBetterSizeClass;
 
-                // Optimize the size class so that there isn't any slop at the end of the block's
-                // payload.
-                unsigned cellsPerBlock = MarkedSpace::blockPayload / sizeClass;
-                size_t possiblyBetterSizeClass = (MarkedSpace::blockPayload / cellsPerBlock) & ~(MarkedSpace::sizeStep - 1);
+        dataLogLnIf(Options::dumpSizeClasses(), "    Choosing size class: ", betterSizeClass);
 
-                if (Options::dumpSizeClasses())
-                    dataLog("    Possibly better size class: ", possiblyBetterSizeClass, "\n");
+        if (betterSizeClass == result.last()) {
+            // Defense for when expStep is small.
+            continue;
+        }
 
-                // The size class we just came up with is better than the other one if it reduces
-                // total wastage assuming we only allocate cells of that size.
-                size_t originalWastage = MarkedSpace::blockPayload - cellsPerBlock * sizeClass;
-                size_t newWastage = (possiblyBetterSizeClass - sizeClass) * cellsPerBlock;
+        // This is usually how we get out of the loop.
+        if (betterSizeClass > MarkedSpace::largeCutoff
+            || betterSizeClass > Options::preciseAllocationCutoff())
+            break;
 
-                if (Options::dumpSizeClasses())
-                    dataLog("    Original wastage: ", originalWastage, ", new wastage: ", newWastage, "\n");
+        add(betterSizeClass);
+    }
 
-                size_t betterSizeClass;
-                if (newWastage > originalWastage)
-                    betterSizeClass = sizeClass;
-                else
-                    betterSizeClass = possiblyBetterSizeClass;
+    // Manually inject size classes for objects we know will be allocated in high volume.
+    // FIXME: All of these things should have IsoSubspaces.
+    // https://bugs.webkit.org/show_bug.cgi?id=179876
+    add(256);
 
-                if (Options::dumpSizeClasses())
-                    dataLog("    Choosing size class: ", betterSizeClass, "\n");
+    {
+        // Sort and deduplicate.
+        std::sort(result.begin(), result.end());
+        auto it = std::unique(result.begin(), result.end());
+        result.shrinkCapacity(it - result.begin());
+    }
 
-                if (betterSizeClass == result->last()) {
-                    // Defense for when expStep is small.
-                    continue;
-                }
+    dataLogLnIf(Options::dumpSizeClasses(), "JSC Heap MarkedSpace size class dump: ", listDump(result));
 
-                // This is usually how we get out of the loop.
-                if (betterSizeClass > MarkedSpace::largeCutoff
-                    || betterSizeClass > Options::largeAllocationCutoff())
-                    break;
+    // We have an optimization in MarkedSpace::optimalSizeFor() that assumes things about
+    // the size class table. This checks our results against that function's assumptions.
+    for (size_t size = MarkedSpace::sizeStep, i = 0; size <= MarkedSpace::preciseCutoff; size += MarkedSpace::sizeStep, i++)
+        RELEASE_ASSERT(result.at(i) == size);
 
-                add(betterSizeClass);
-            }
-
-            // Manually inject size classes for objects we know will be allocated in high volume.
-            // FIXME: All of these things should have IsoSubspaces.
-            // https://bugs.webkit.org/show_bug.cgi?id=179876
-            add(sizeof(UnlinkedFunctionCodeBlock));
-            add(sizeof(JSString));
-
-            {
-                // Sort and deduplicate.
-                std::sort(result->begin(), result->end());
-                auto it = std::unique(result->begin(), result->end());
-                result->shrinkCapacity(it - result->begin());
-            }
-
-            if (Options::dumpSizeClasses())
-                dataLog("JSC Heap MarkedSpace size class dump: ", listDump(*result), "\n");
-
-            // We have an optimiation in MarkedSpace::optimalSizeFor() that assumes things about
-            // the size class table. This checks our results against that function's assumptions.
-            for (size_t size = MarkedSpace::sizeStep, i = 0; size <= MarkedSpace::preciseCutoff; size += MarkedSpace::sizeStep, i++)
-                RELEASE_ASSERT(result->at(i) == size);
-        });
-    return *result;
+    return result;
 }
 
 template<typename TableType, typename SizeClassCons, typename DefaultCons>
@@ -187,17 +166,19 @@ void MarkedSpace::initializeSizeClassForStepSize()
             buildSizeClassTable(
                 s_sizeClassForSizeStep,
                 [&] (size_t sizeClass) -> size_t {
+                    RELEASE_ASSERT(sizeClass <= UINT32_MAX);
                     return sizeClass;
                 },
                 [&] (size_t sizeClass) -> size_t {
+                    RELEASE_ASSERT(sizeClass <= UINT32_MAX);
                     return sizeClass;
                 });
         });
 }
 
 MarkedSpace::MarkedSpace(Heap* heap)
-    : m_heap(heap)
 {
+    ASSERT_UNUSED(heap, heap == &this->heap());
     initializeSizeClassForStepSize();
 }
 
@@ -212,8 +193,13 @@ void MarkedSpace::freeMemory()
         [&] (MarkedBlock::Handle* block) {
             freeBlock(block);
         });
-    for (LargeAllocation* allocation : m_largeAllocations)
+    for (PreciseAllocation* allocation : m_preciseAllocations)
         allocation->destroy();
+    forEachSubspace([&](Subspace& subspace) {
+        if (subspace.isIsoSubspace())
+            static_cast<IsoSubspace&>(subspace).destroyLowerTierFreeList();
+        return IterationStatus::Continue;
+    });
 }
 
 void MarkedSpace::lastChanceToFinalize()
@@ -223,13 +209,14 @@ void MarkedSpace::lastChanceToFinalize()
             directory.lastChanceToFinalize();
             return IterationStatus::Continue;
         });
-    for (LargeAllocation* allocation : m_largeAllocations)
+    for (PreciseAllocation* allocation : m_preciseAllocations)
         allocation->lastChanceToFinalize();
+    // We do not call lastChanceToFinalize for lower-tier swept cells since we need nothing to do.
 }
 
-void MarkedSpace::sweep()
+void MarkedSpace::sweepBlocks()
 {
-    m_heap->sweeper().stopSweeping();
+    heap().sweeper().stopSweeping();
     forEachDirectory(
         [&] (BlockDirectory& directory) -> IterationStatus {
             directory.sweep();
@@ -237,41 +224,56 @@ void MarkedSpace::sweep()
         });
 }
 
-void MarkedSpace::sweepLargeAllocations()
+void MarkedSpace::sweepPreciseAllocations()
 {
-    RELEASE_ASSERT(m_largeAllocationsNurseryOffset == m_largeAllocations.size());
-    unsigned srcIndex = m_largeAllocationsNurseryOffsetForSweep;
+    RELEASE_ASSERT(m_preciseAllocationsNurseryOffset == m_preciseAllocations.size());
+    unsigned srcIndex = m_preciseAllocationsNurseryOffsetForSweep;
     unsigned dstIndex = srcIndex;
-    while (srcIndex < m_largeAllocations.size()) {
-        LargeAllocation* allocation = m_largeAllocations[srcIndex++];
+    while (srcIndex < m_preciseAllocations.size()) {
+        PreciseAllocation* allocation = m_preciseAllocations[srcIndex++];
         allocation->sweep();
         if (allocation->isEmpty()) {
-            m_capacity -= allocation->cellSize();
-            allocation->destroy();
+            if (auto* set = preciseAllocationSet())
+                set->remove(allocation->cell());
+            if (allocation->isLowerTier())
+                static_cast<IsoSubspace*>(allocation->subspace())->sweepLowerTierCell(allocation);
+            else {
+                m_capacity -= allocation->cellSize();
+                allocation->destroy();
+            }
             continue;
         }
-        m_largeAllocations[dstIndex++] = allocation;
+        allocation->setIndexInSpace(dstIndex);
+        m_preciseAllocations[dstIndex++] = allocation;
     }
-    m_largeAllocations.shrink(dstIndex);
-    m_largeAllocationsNurseryOffset = m_largeAllocations.size();
+    m_preciseAllocations.shrink(dstIndex);
+    m_preciseAllocationsNurseryOffset = m_preciseAllocations.size();
 }
 
 void MarkedSpace::prepareForAllocation()
 {
-    ASSERT(!mayBeGCThread() || m_heap->worldIsStopped());
+    ASSERT(!Thread::mayBeGCThread() || heap().worldIsStopped());
     for (Subspace* subspace : m_subspaces)
         subspace->prepareForAllocation();
 
     m_activeWeakSets.takeFrom(m_newActiveWeakSets);
 
-    if (m_heap->collectionScope() == CollectionScope::Eden)
-        m_largeAllocationsNurseryOffsetForSweep = m_largeAllocationsNurseryOffset;
+    if (heap().collectionScope() == CollectionScope::Eden)
+        m_preciseAllocationsNurseryOffsetForSweep = m_preciseAllocationsNurseryOffset;
     else
-        m_largeAllocationsNurseryOffsetForSweep = 0;
-    m_largeAllocationsNurseryOffset = m_largeAllocations.size();
+        m_preciseAllocationsNurseryOffsetForSweep = 0;
+    m_preciseAllocationsNurseryOffset = m_preciseAllocations.size();
 }
 
-void MarkedSpace::visitWeakSets(SlotVisitor& visitor)
+void MarkedSpace::enablePreciseAllocationTracking()
+{
+    m_preciseAllocationSet = makeUnique<HashSet<HeapCell*>>();
+    for (auto* allocation : m_preciseAllocations)
+        m_preciseAllocationSet->add(allocation->cell());
+}
+
+template<typename Visitor>
+void MarkedSpace::visitWeakSets(Visitor& visitor)
 {
     auto visit = [&] (WeakSet* weakSet) {
         weakSet->visit(visitor);
@@ -279,9 +281,12 @@ void MarkedSpace::visitWeakSets(SlotVisitor& visitor)
 
     m_newActiveWeakSets.forEach(visit);
 
-    if (m_heap->collectionScope() == CollectionScope::Full)
+    if (heap().collectionScope() == CollectionScope::Full)
         m_activeWeakSets.forEach(visit);
 }
+
+template void MarkedSpace::visitWeakSets(AbstractSlotVisitor&);
+template void MarkedSpace::visitWeakSets(SlotVisitor&);
 
 void MarkedSpace::reapWeakSets()
 {
@@ -291,7 +296,7 @@ void MarkedSpace::reapWeakSets()
 
     m_newActiveWeakSets.forEach(visit);
 
-    if (m_heap->collectionScope() == CollectionScope::Full)
+    if (heap().collectionScope() == CollectionScope::Full)
         m_activeWeakSets.forEach(visit);
 }
 
@@ -317,24 +322,30 @@ void MarkedSpace::stopAllocatingForGood()
 
 void MarkedSpace::prepareForConservativeScan()
 {
-    m_largeAllocationsForThisCollectionBegin = m_largeAllocations.begin() + m_largeAllocationsOffsetForThisCollection;
-    m_largeAllocationsForThisCollectionSize = m_largeAllocations.size() - m_largeAllocationsOffsetForThisCollection;
-    m_largeAllocationsForThisCollectionEnd = m_largeAllocations.end();
-    RELEASE_ASSERT(m_largeAllocationsForThisCollectionEnd == m_largeAllocationsForThisCollectionBegin + m_largeAllocationsForThisCollectionSize);
+    m_preciseAllocationsForThisCollectionBegin = m_preciseAllocations.begin() + m_preciseAllocationsOffsetForThisCollection;
+    m_preciseAllocationsForThisCollectionSize = m_preciseAllocations.size() - m_preciseAllocationsOffsetForThisCollection;
+    m_preciseAllocationsForThisCollectionEnd = m_preciseAllocations.end();
+    RELEASE_ASSERT(m_preciseAllocationsForThisCollectionEnd == m_preciseAllocationsForThisCollectionBegin + m_preciseAllocationsForThisCollectionSize);
 
     std::sort(
-        m_largeAllocationsForThisCollectionBegin, m_largeAllocationsForThisCollectionEnd,
-        [&] (LargeAllocation* a, LargeAllocation* b) {
+        m_preciseAllocationsForThisCollectionBegin, m_preciseAllocationsForThisCollectionEnd,
+        [&] (PreciseAllocation* a, PreciseAllocation* b) {
             return a < b;
         });
+    unsigned index = m_preciseAllocationsOffsetForThisCollection;
+    for (auto* start = m_preciseAllocationsForThisCollectionBegin; start != m_preciseAllocationsForThisCollectionEnd; ++start, ++index) {
+        (*start)->setIndexInSpace(index);
+        ASSERT(m_preciseAllocations[index] == *start);
+        ASSERT(m_preciseAllocations[index]->indexInSpace() == index);
+    }
 }
 
 void MarkedSpace::prepareForMarking()
 {
-    if (m_heap->collectionScope() == CollectionScope::Eden)
-        m_largeAllocationsOffsetForThisCollection = m_largeAllocationsNurseryOffset;
+    if (heap().collectionScope() == CollectionScope::Eden)
+        m_preciseAllocationsOffsetForThisCollection = m_preciseAllocationsNurseryOffset;
     else
-        m_largeAllocationsOffsetForThisCollection = 0;
+        m_preciseAllocationsOffsetForThisCollection = 0;
 }
 
 void MarkedSpace::resumeAllocating()
@@ -344,7 +355,7 @@ void MarkedSpace::resumeAllocating()
             directory.resumeAllocating();
             return IterationStatus::Continue;
         });
-    // Nothing to do for LargeAllocations.
+    // Nothing to do for PreciseAllocations.
 }
 
 bool MarkedSpace::isPagedOut(MonotonicTime deadline)
@@ -358,7 +369,7 @@ bool MarkedSpace::isPagedOut(MonotonicTime deadline)
             }
             return IterationStatus::Continue;
         });
-    // FIXME: Consider taking LargeAllocations into account here.
+    // FIXME: Consider taking PreciseAllocations into account here.
     return result;
 }
 
@@ -391,7 +402,7 @@ void MarkedSpace::shrink()
 
 void MarkedSpace::beginMarking()
 {
-    if (m_heap->collectionScope() == CollectionScope::Full) {
+    if (heap().collectionScope() == CollectionScope::Full) {
         forEachDirectory(
             [&] (BlockDirectory& directory) -> IterationStatus {
                 directory.beginMarkingForFullCollection();
@@ -407,11 +418,11 @@ void MarkedSpace::beginMarking()
 
         m_markingVersion = nextVersion(m_markingVersion);
 
-        for (LargeAllocation* allocation : m_largeAllocations)
+        for (PreciseAllocation* allocation : m_preciseAllocations)
             allocation->flip();
     }
 
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         forEachBlock(
             [&] (MarkedBlock::Handle* block) {
                 if (block->areMarksStale())
@@ -434,11 +445,11 @@ void MarkedSpace::endMarking()
 
     m_newlyAllocatedVersion = nextVersion(m_newlyAllocatedVersion);
 
-    for (unsigned i = m_largeAllocationsOffsetForThisCollection; i < m_largeAllocations.size(); ++i)
-        m_largeAllocations[i]->clearNewlyAllocated();
+    for (unsigned i = m_preciseAllocationsOffsetForThisCollection; i < m_preciseAllocations.size(); ++i)
+        m_preciseAllocations[i]->clearNewlyAllocated();
 
-    if (!ASSERT_DISABLED) {
-        for (LargeAllocation* allocation : m_largeAllocations)
+    if (ASSERT_ENABLED) {
+        for (PreciseAllocation* allocation : m_preciseAllocations)
             ASSERT_UNUSED(allocation, !allocation->isNewlyAllocated());
     }
 
@@ -472,7 +483,7 @@ size_t MarkedSpace::objectCount()
         [&] (MarkedBlock::Handle* block) {
             result += block->markCount();
         });
-    for (LargeAllocation* allocation : m_largeAllocations) {
+    for (PreciseAllocation* allocation : m_preciseAllocations) {
         if (allocation->isMarked())
             result++;
     }
@@ -486,7 +497,7 @@ size_t MarkedSpace::size()
         [&] (MarkedBlock::Handle* block) {
             result += block->markCount() * block->cellSize();
         });
-    for (LargeAllocation* allocation : m_largeAllocations) {
+    for (PreciseAllocation* allocation : m_preciseAllocations) {
         if (allocation->isMarked())
             result += allocation->cellSize();
     }
@@ -526,7 +537,7 @@ void MarkedSpace::didAllocateInBlock(MarkedBlock::Handle* block)
 
 void MarkedSpace::snapshotUnswept()
 {
-    if (m_heap->collectionScope() == CollectionScope::Eden) {
+    if (heap().collectionScope() == CollectionScope::Eden) {
         forEachDirectory(
             [&] (BlockDirectory& directory) -> IterationStatus {
                 directory.snapshotUnsweptForEdenCollection();
@@ -543,7 +554,7 @@ void MarkedSpace::snapshotUnswept()
 
 void MarkedSpace::assertNoUnswept()
 {
-    if (ASSERT_DISABLED)
+    if (!ASSERT_ENABLED)
         return;
     forEachDirectory(
         [&] (BlockDirectory& directory) -> IterationStatus {

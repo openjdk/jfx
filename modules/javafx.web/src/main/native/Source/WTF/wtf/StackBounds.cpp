@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -19,14 +19,10 @@
  */
 
 #include "config.h"
-#include <mutex>
-#include <wtf/NoTailCalls.h>
 #include <wtf/StackBounds.h>
 
 #if OS(DARWIN)
 
-#include <mach/task.h>
-#include <mach/thread_act.h>
 #include <pthread.h>
 
 #elif OS(WINDOWS)
@@ -40,6 +36,12 @@
 #include <pthread_np.h>
 #endif
 
+#if OS(LINUX)
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+
 #endif
 
 namespace WTF {
@@ -47,56 +49,12 @@ namespace WTF {
 #if PLATFORM(JAVA)
 // 16K is a safe value to guard java stack red zone
 #define JAVA_RED_ZONE 0x4000
-#if OS(WINDOWS)
-// This is safe for the default stack sizes in all supported Windows
-// configurations, but is not safe for stack sizes lower than the default.
-#if CPU(X86_64)
-static const ptrdiff_t estimatedStackSize = 1024 * 1024;
-#else
-// estimatedStackSize needs to be a little greater than 256KB to keep
-// Interpreter::StackPolicy::StackPolicy happy and less than 320KB
-// to play safe against the default stack size on 32 bit Windows.
-static const ptrdiff_t estimatedStackSize = 272 * 1024;
-#endif
-#endif
-#endif
-
-#if CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)
-ALWAYS_INLINE StackBounds::StackDirection StackBounds::stackDirection()
-{
-    return StackDirection::Downward;
-}
-#else
-static NEVER_INLINE NOT_TAIL_CALLED StackBounds::StackDirection testStackDirection2(volatile const uint8_t* pointer)
-{
-    volatile uint8_t* stackValue = bitwise_cast<uint8_t*>(currentStackPointer());
-    return (pointer < stackValue) ? StackBounds::StackDirection::Upward : StackBounds::StackDirection::Downward;
-}
-
-static NEVER_INLINE NOT_TAIL_CALLED StackBounds::StackDirection testStackDirection()
-{
-    NO_TAIL_CALLS();
-    volatile uint8_t* stackValue = bitwise_cast<uint8_t*>(currentStackPointer());
-    return testStackDirection2(stackValue);
-}
-
-NEVER_INLINE StackBounds::StackDirection StackBounds::stackDirection()
-{
-    static StackBounds::StackDirection result = StackBounds::StackDirection::Downward;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [] {
-        NO_TAIL_CALLS();
-        result = testStackDirection();
-    });
-    return result;
-}
 #endif
 
 #if OS(DARWIN)
 
 StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 {
-    ASSERT(stackDirection() == StackDirection::Downward);
     void* origin = pthread_get_stackaddr_np(thread);
     rlim_t size = pthread_get_stacksize_np(thread);
     void* bound = static_cast<char*>(origin) - size;
@@ -105,7 +63,6 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 
 StackBounds StackBounds::currentThreadStackBoundsInternal()
 {
-    ASSERT(stackDirection() == StackDirection::Downward);
     if (pthread_main_np()) {
         // FIXME: <rdar://problem/13741204>
         // pthread_get_size lies to us when we're the main thread, use get_rlimit instead
@@ -131,11 +88,7 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
     stack_t stack;
     pthread_stackseg_np(thread, &stack);
     void* origin = stack.ss_sp;
-    void* bound = nullptr;
-    if (stackDirection() == StackDirection::Upward)
-        bound = static_cast<char*>(origin) + stack.ss_size;
-    else
-        bound = static_cast<char*>(origin) - stack.ss_size;
+    void* bound = static_cast<char*>(origin) - stack.ss_size;
     return StackBounds { origin, bound };
 }
 
@@ -164,10 +117,6 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
     bound = static_cast<char*>(bound) + JAVA_RED_ZONE;
 #endif
     // pthread_attr_getstack's bound is the lowest accessible pointer of the stack.
-    // If stack grows up, origin and bound in this code should be swapped.
-    if (stackDirection() == StackDirection::Upward)
-        std::swap(origin, bound);
-
     return StackBounds { origin, bound };
 }
 
@@ -175,14 +124,31 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 
 StackBounds StackBounds::currentThreadStackBoundsInternal()
 {
-    return newThreadStackBounds(pthread_self());
+    auto ret = newThreadStackBounds(pthread_self());
+#if OS(LINUX)
+    // on glibc, pthread_attr_getstack will generally return the limit size (minus a guard page)
+    // for the main thread; this is however not necessarily always true on every libc - for example
+    // on musl, it will return the currently reserved size - since the stack bounds are expected to
+    // be constant (and they are for every thread except main, which is allowed to grow), check
+    // resource limits and use that as the boundary instead (and prevent stack overflows in JSC)
+    if (getpid() == static_cast<pid_t>(syscall(SYS_gettid))) {
+        void* origin = ret.origin();
+        rlimit limit;
+        getrlimit(RLIMIT_STACK, &limit);
+        rlim_t size = limit.rlim_cur;
+        // account for a guard page
+        size -= static_cast<rlim_t>(sysconf(_SC_PAGESIZE));
+        void* bound = static_cast<char*>(origin) - size;
+        return StackBounds { origin, bound };
+    }
+#endif
+    return ret;
 }
 
 #elif OS(WINDOWS)
 
 StackBounds StackBounds::currentThreadStackBoundsInternal()
 {
-    ASSERT(stackDirection() == StackDirection::Downward);
     MEMORY_BASIC_INFORMATION stackOrigin { };
     VirtualQuery(&stackOrigin, &stackOrigin, sizeof(stackOrigin));
     // stackOrigin.AllocationBase points to the reserved stack memory base address.
@@ -206,7 +172,7 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     // See http://msdn.microsoft.com/en-us/library/ms686774%28VS.85%29.aspx for more information.
 
     // look for uncommited memory block.
-    MEMORY_BASIC_INFORMATION uncommittedMemory = { 0 };
+    MEMORY_BASIC_INFORMATION uncommittedMemory;
     LPVOID a = stackOrigin.AllocationBase;
 
     do {
@@ -216,7 +182,7 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     } while (theAllocBase == uncommittedMemory.AllocationBase &&
         uncommittedMemory.State != MEM_RESERVE);
 
-    MEMORY_BASIC_INFORMATION guardPage{ 0 };
+    MEMORY_BASIC_INFORMATION guardPage;
     VirtualQuery(static_cast<char*>(uncommittedMemory.BaseAddress) + uncommittedMemory.RegionSize, &guardPage, sizeof(guardPage));
     ASSERT(guardPage.Protect & PAGE_GUARD);
 
@@ -232,11 +198,15 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     ASSERT(stackOrigin.AllocationBase == uncommittedMemory.AllocationBase);
     ASSERT(stackOrigin.AllocationBase == guardPage.AllocationBase);
     ASSERT(stackOrigin.AllocationBase == committedMemory.AllocationBase);
-    // TODO: refine the sanity checks below.
-    //ASSERT(stackOrigin.AllocationBase == uncommittedMemory.BaseAddress);
-    //ASSERT(endOfStack == computedEnd);
+#if !PLATFORM(JAVA)
+    ASSERT(stackOrigin.AllocationBase == uncommittedMemory.BaseAddress);
+    ASSERT(endOfStack == computedEnd);
+#endif
 #endif // NDEBUG
     void* bound = static_cast<char*>(endOfStack) + guardPage.RegionSize;
+#if PLATFORM(JAVA)
+    bound = static_cast<char*>(bound) + JAVA_RED_ZONE;
+#endif
     return StackBounds { origin, bound };
 }
 

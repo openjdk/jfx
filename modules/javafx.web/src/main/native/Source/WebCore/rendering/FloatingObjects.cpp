@@ -24,6 +24,7 @@
 #include "config.h"
 #include "FloatingObjects.h"
 
+#include "PODIntervalTree.h"
 #include "RenderBlockFlow.h"
 #include "RenderBox.h"
 #include "RenderView.h"
@@ -44,10 +45,10 @@ COMPILE_ASSERT(sizeof(FloatingObject) == sizeof(SameSizeAsFloatingObject), Float
 
 FloatingObject::FloatingObject(RenderBox& renderer)
     : m_renderer(makeWeakPtr(renderer))
-    , m_shouldPaint(true)
+    , m_paintsFloat(true)
     , m_isDescendant(false)
     , m_isPlaced(false)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isInPlacedTree(false)
 #endif
 {
@@ -64,10 +65,10 @@ FloatingObject::FloatingObject(RenderBox& renderer, Type type, const LayoutRect&
     , m_frameRect(frameRect)
     , m_marginOffset(marginOffset)
     , m_type(type)
-    , m_shouldPaint(shouldPaint)
+    , m_paintsFloat(shouldPaint)
     , m_isDescendant(isDescendant)
     , m_isPlaced(true)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isInPlacedTree(false)
 #endif
 {
@@ -75,23 +76,30 @@ FloatingObject::FloatingObject(RenderBox& renderer, Type type, const LayoutRect&
 
 std::unique_ptr<FloatingObject> FloatingObject::create(RenderBox& renderer)
 {
-    auto object = std::make_unique<FloatingObject>(renderer);
-    object->setShouldPaint(!renderer.hasSelfPaintingLayer()); // If a layer exists, the float will paint itself. Otherwise someone else will.
+    auto object = makeUnique<FloatingObject>(renderer);
     object->setIsDescendant(true);
     return object;
 }
 
 std::unique_ptr<FloatingObject> FloatingObject::copyToNewContainer(LayoutSize offset, bool shouldPaint, bool isDescendant) const
 {
-    return std::make_unique<FloatingObject>(renderer(), type(), LayoutRect(frameRect().location() - offset, frameRect().size()), marginOffset(), shouldPaint, isDescendant);
+    return makeUnique<FloatingObject>(renderer(), type(), LayoutRect(frameRect().location() - offset, frameRect().size()), marginOffset(), shouldPaint, isDescendant);
 }
 
 std::unique_ptr<FloatingObject> FloatingObject::cloneForNewParent() const
 {
-    auto cloneObject = std::make_unique<FloatingObject>(renderer(), type(), m_frameRect, m_marginOffset, m_shouldPaint, m_isDescendant);
+    auto cloneObject = makeUnique<FloatingObject>(renderer(), type(), m_frameRect, m_marginOffset, m_paintsFloat, m_isDescendant);
     cloneObject->m_paginationStrut = m_paginationStrut;
     cloneObject->m_isPlaced = m_isPlaced;
     return cloneObject;
+}
+
+bool FloatingObject::shouldPaint() const
+{
+    if (!m_renderer)
+        return false;
+
+    return !m_renderer->hasSelfPaintingLayer() && m_paintsFloat;
 }
 
 LayoutSize FloatingObject::translationOffsetToAncestor() const
@@ -99,11 +107,11 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
     return locationOffsetOfBorderBox() - renderer().locationOffset();
 }
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 
-String FloatingObject::debugString() const
+TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
-    return makeString("0x", hex(reinterpret_cast<uintptr_t>(this)), " (", frameRect().x().toInt(), 'x', frameRect().y().toInt(), ' ', frameRect().maxX().toInt(), 'x', frameRect().maxY().toInt(), ')');
+    return stream << &object << " renderer " << &object.renderer() << " " << object.frameRect() << " paintsFloat " << object.paintsFloat() << " shouldPaint " << object.shouldPaint();
 }
 
 #endif
@@ -256,9 +264,7 @@ LayoutUnit FloatingObjects::findNextFloatLogicalBottomBelowForBlock(LayoutUnit l
 }
 
 FloatingObjects::FloatingObjects(const RenderBlockFlow& renderer)
-    : m_leftObjectsCount(0)
-    , m_rightObjectsCount(0)
-    , m_horizontalWritingMode(renderer.isHorizontalWritingMode())
+    : m_horizontalWritingMode(renderer.isHorizontalWritingMode())
     , m_renderer(makeWeakPtr(renderer))
 {
 }
@@ -327,7 +333,7 @@ void FloatingObjects::addPlacedObject(FloatingObject* floatingObject)
     if (m_placedFloatsTree)
         m_placedFloatsTree->add(intervalForFloatingObject(floatingObject));
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(true);
 #endif
 }
@@ -342,7 +348,7 @@ void FloatingObjects::removePlacedObject(FloatingObject* floatingObject)
     }
 
     floatingObject->setIsPlaced(false);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(false);
 #endif
 }
@@ -372,7 +378,7 @@ void FloatingObjects::computePlacedFloatsTree()
     if (m_set.isEmpty())
         return;
 
-    m_placedFloatsTree = std::make_unique<FloatingObjectTree>();
+    m_placedFloatsTree = makeUnique<FloatingObjectTree>();
     for (auto it = m_set.begin(), end = m_set.end(); it != end; ++it) {
         FloatingObject* floatingObject = it->get();
         if (floatingObject->isPlaced())

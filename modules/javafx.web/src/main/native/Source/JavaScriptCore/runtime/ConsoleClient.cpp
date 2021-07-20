@@ -27,7 +27,8 @@
 #include "ConsoleClient.h"
 
 #include "CatchScope.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
+#include "JSGlobalObject.h"
 #include "ScriptArguments.h"
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
@@ -60,75 +61,135 @@ static void appendURLAndPosition(StringBuilder& builder, const String& url, unsi
 
 static void appendMessagePrefix(StringBuilder& builder, MessageSource source, MessageType type, MessageLevel level)
 {
-    const char* sourceString;
+    String sourceString;
     switch (source) {
+    case MessageSource::ConsoleAPI:
+        // Default, no need to be more specific.
+        break;
     case MessageSource::XML:
-        sourceString = "XML";
+        sourceString = "XML"_s;
         break;
     case MessageSource::JS:
-        sourceString = "JS";
+        sourceString = "JS"_s;
         break;
     case MessageSource::Network:
-        sourceString = "NETWORK";
-        break;
-    case MessageSource::ConsoleAPI:
-        sourceString = "CONSOLE";
+        sourceString = "NETWORK"_s;
         break;
     case MessageSource::Storage:
-        sourceString = "STORAGE";
+        sourceString = "STORAGE"_s;
         break;
     case MessageSource::AppCache:
-        sourceString = "APPCACHE";
+        sourceString = "APPCACHE"_s;
         break;
     case MessageSource::Rendering:
-        sourceString = "RENDERING";
+        sourceString = "RENDERING"_s;
         break;
     case MessageSource::CSS:
-        sourceString = "CSS";
+        sourceString = "CSS"_s;
         break;
     case MessageSource::Security:
-        sourceString = "SECURITY";
+        sourceString = "SECURITY"_s;
+        break;
+    case MessageSource::ContentBlocker:
+        sourceString = "CONTENTBLOCKER"_s;
+        break;
+    case MessageSource::Media:
+        sourceString = "MEDIA"_s;
+        break;
+    case MessageSource::MediaSource:
+        sourceString = "MEDIASOURCE"_s;
+        break;
+    case MessageSource::WebRTC:
+        sourceString = "WEBRTC"_s;
+        break;
+    case MessageSource::ITPDebug:
+        sourceString = "ITPDEBUG"_s;
+        break;
+    case MessageSource::PrivateClickMeasurement:
+        sourceString = "PRIVATECLICKMEASUREMENT"_s;
+        break;
+    case MessageSource::PaymentRequest:
+        sourceString = "PAYMENTREQUEST"_s;
         break;
     case MessageSource::Other:
-        sourceString = "OTHER";
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        sourceString = "UNKNOWN";
+        sourceString = "OTHER"_s;
         break;
     }
 
-    const char* levelString;
-    switch (level) {
-    case MessageLevel::Debug:
-        levelString = "DEBUG";
+    String typeString;
+    switch (type) {
+    case MessageType::Log:
+        // Default, no need to be more specific.
         break;
+    case MessageType::Clear:
+        typeString = "CLEAR"_s;
+        break;
+    case MessageType::Dir:
+        typeString = "DIR"_s;
+        break;
+    case MessageType::DirXML:
+        typeString = "DIRXML"_s;
+        break;
+    case MessageType::Table:
+        typeString = "TABLE"_s;
+        break;
+    case MessageType::Trace:
+        typeString = "TRACE"_s;
+        break;
+    case MessageType::StartGroup:
+        typeString = "STARTGROUP"_s;
+        break;
+    case MessageType::StartGroupCollapsed:
+        typeString = "STARTGROUPCOLLAPSED"_s;
+        break;
+    case MessageType::EndGroup:
+        typeString = "ENDGROUP"_s;
+        break;
+    case MessageType::Assert:
+        typeString = "ASSERT"_s;
+        break;
+    case MessageType::Timing:
+        typeString = "TIMING"_s;
+        break;
+    case MessageType::Profile:
+        typeString = "PROFILE"_s;
+        break;
+    case MessageType::ProfileEnd:
+        typeString = "PROFILEEND"_s;
+        break;
+    case MessageType::Image:
+        typeString = "IMAGE"_s;
+        break;
+    }
+
+    String levelString;
+    switch (level) {
     case MessageLevel::Log:
-        levelString = "LOG";
+        // Default, no need to be more specific.
+        if (type == MessageType::Log)
+            levelString = "LOG"_s;
+        break;
+    case MessageLevel::Debug:
+        levelString = "DEBUG"_s;
         break;
     case MessageLevel::Info:
-        levelString = "INFO";
+        levelString = "INFO"_s;
         break;
     case MessageLevel::Warning:
-        levelString = "WARN";
+        levelString = "WARN"_s;
         break;
     case MessageLevel::Error:
-        levelString = "ERROR";
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        levelString = "UNKNOWN";
+        levelString = "ERROR"_s;
         break;
     }
 
-    if (type == MessageType::Trace)
-        levelString = "TRACE";
-    else if (type == MessageType::Table)
-        levelString = "TABLE";
-
-    builder.append(sourceString);
-    builder.append(' ');
-    builder.append(levelString);
+    builder.append("CONSOLE");
+    if (!sourceString.isEmpty())
+        builder.append(' ', sourceString);
+    if (!typeString.isEmpty())
+        builder.append(' ', typeString);
+    if (!levelString.isEmpty())
+        builder.append(' ', levelString);
 }
 
 void ConsoleClient::printConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned lineNumber, unsigned columnNumber)
@@ -147,11 +208,11 @@ void ConsoleClient::printConsoleMessage(MessageSource source, MessageType type, 
     WTFLogAlways("%s", builder.toString().utf8().data());
 }
 
-void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, MessageType type, MessageLevel level, JSC::ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, MessageType type, MessageLevel level, JSC::JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
     bool isTraceMessage = type == MessageType::Trace;
     size_t stackSize = isTraceMessage ? ScriptCallStack::maxCallStackSizeToCapture : 1;
-    Ref<ScriptCallStack> callStack = createScriptCallStackForConsole(exec, stackSize);
+    Ref<ScriptCallStack> callStack = createScriptCallStackForConsole(globalObject, stackSize);
     const ScriptCallFrame& lastCaller = callStack->at(0);
 
     StringBuilder builder;
@@ -164,9 +225,9 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
     appendMessagePrefix(builder, source, type, level);
     for (size_t i = 0; i < arguments->argumentCount(); ++i) {
         builder.append(' ');
-        auto* state = arguments->globalState();
-        auto scope = DECLARE_CATCH_SCOPE(state->vm());
-        builder.append(arguments->argumentAt(i).toWTFString(state));
+        auto* globalObject = arguments->globalObject();
+        auto scope = DECLARE_CATCH_SCOPE(globalObject->vm());
+        builder.append(arguments->argumentAt(i).toWTFString(globalObject));
         scope.clearException();
     }
 
@@ -192,62 +253,62 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
     }
 }
 
-void ConsoleClient::internalMessageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::ExecState* exec, Ref<ScriptArguments>&& arguments, ArgumentRequirement argumentRequirement)
+void ConsoleClient::internalMessageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments, ArgumentRequirement argumentRequirement)
 {
     if (argumentRequirement == ArgumentRequired && !arguments->argumentCount())
         return;
 
-    messageWithTypeAndLevel(type, level, exec, WTFMove(arguments));
+    messageWithTypeAndLevel(type, level, globalObject, WTFMove(arguments));
 }
 
-void ConsoleClient::logWithLevel(ExecState* exec, Ref<ScriptArguments>&& arguments, MessageLevel level)
+void ConsoleClient::logWithLevel(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments, MessageLevel level)
 {
-    internalMessageWithTypeAndLevel(MessageType::Log, level, exec, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::Log, level, globalObject, WTFMove(arguments), ArgumentRequired);
 }
 
-void ConsoleClient::clear(ExecState* exec)
+void ConsoleClient::clear(JSGlobalObject* globalObject)
 {
-    internalMessageWithTypeAndLevel(MessageType::Clear, MessageLevel::Log, exec, ScriptArguments::create(*exec, { }), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::Clear, MessageLevel::Log, globalObject, ScriptArguments::create(globalObject, { }), ArgumentNotRequired);
 }
 
-void ConsoleClient::dir(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::dir(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Dir, MessageLevel::Log, exec, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::Dir, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentRequired);
 }
 
-void ConsoleClient::dirXML(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::dirXML(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::DirXML, MessageLevel::Log, exec, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::DirXML, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentRequired);
 }
 
-void ConsoleClient::table(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::table(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Table, MessageLevel::Log, exec, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::Table, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentRequired);
 }
 
-void ConsoleClient::trace(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::trace(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Trace, MessageLevel::Log, exec, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::Trace, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
 }
 
-void ConsoleClient::assertion(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::assertion(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Assert, MessageLevel::Error, exec, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::Assert, MessageLevel::Error, globalObject, WTFMove(arguments), ArgumentNotRequired);
 }
 
-void ConsoleClient::group(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::group(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::StartGroup, MessageLevel::Log, exec, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::StartGroup, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
 }
 
-void ConsoleClient::groupCollapsed(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::groupCollapsed(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::StartGroupCollapsed, MessageLevel::Log, exec, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::StartGroupCollapsed, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
 }
 
-void ConsoleClient::groupEnd(ExecState* exec, Ref<ScriptArguments>&& arguments)
+void ConsoleClient::groupEnd(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::EndGroup, MessageLevel::Log, exec, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::EndGroup, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
 }
 
 } // namespace JSC

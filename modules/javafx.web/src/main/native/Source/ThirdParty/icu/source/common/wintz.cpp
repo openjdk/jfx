@@ -13,16 +13,16 @@
 
 #include "unicode/utypes.h"
 
-// This file contains only desktop Windows behavior
-// Windows UWP calls Windows::Globalization directly, so this isn't needed there.
-#if U_PLATFORM_USES_ONLY_WIN32_API && (U_PLATFORM_HAS_WINUWP_API == 0)
+#if U_PLATFORM_USES_ONLY_WIN32_API
 
 #include "wintz.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
 
 #include "unicode/ures.h"
-#include "unicode/ustring.h"
+#include "unicode/unistr.h"
+#include "uresimp.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #   define WIN32_LEAN_AND_MEAN
@@ -34,363 +34,282 @@
 #   define NOMCX
 #include <windows.h>
 
-#define MAX_LENGTH_ID 40
+U_NAMESPACE_BEGIN
 
-/* The layout of the Tzi value in the registry */
-typedef struct
-{
-    int32_t bias;
-    int32_t standardBias;
-    int32_t daylightBias;
-    SYSTEMTIME standardDate;
-    SYSTEMTIME daylightDate;
-} TZI;
+// Note these constants and the struct are only used when dealing with the fallback path for RDP sesssions.
+
+// This is the location of the time zones in the registry on Vista+ systems.
+// See: https://docs.microsoft.com/windows/win32/api/timezoneapi/ns-timezoneapi-dynamic_time_zone_information
+#define WINDOWS_TIMEZONES_REG_KEY_PATH L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones"
+
+// Max length for a registry key is 255. +1 for null.
+// See: https://docs.microsoft.com/windows/win32/sysinfo/registry-element-size-limits
+#define WINDOWS_MAX_REG_KEY_LENGTH 256
+
+#if U_PLATFORM_HAS_WINUWP_API == 0
+
+// This is the layout of the TZI binary value in the registry.
+// See: https://docs.microsoft.com/windows/win32/api/timezoneapi/ns-timezoneapi-time_zone_information
+typedef struct _REG_TZI_FORMAT {
+    LONG Bias;
+    LONG StandardBias;
+    LONG DaylightBias;
+    SYSTEMTIME StandardDate;
+    SYSTEMTIME DaylightDate;
+} REG_TZI_FORMAT;
+
+#endif // U_PLATFORM_HAS_WINUWP_API
 
 /**
- * Various registry keys and key fragments.
- */
-static const wchar_t CURRENT_ZONE_REGKEY[] = L"SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation\\";
-static const char STANDARD_TIME_REGKEY[] = " Standard Time";
-static const char TZI_REGKEY[] = "TZI";
-static const char STD_REGKEY[] = "Std";
-
-/**
- * The time zone root keys (under HKLM) for Win7+
- */
-static const char TZ_REGKEY[] = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\\";
-
-static LONG openTZRegKey(HKEY *hkey, const char *winid)
-{
-    char subKeyName[110]; /* TODO: why 110?? */
-    char *name;
-    LONG result;
-
-    uprv_strcpy(subKeyName, TZ_REGKEY);
-    name = &subKeyName[strlen(subKeyName)];
-    uprv_strcat(subKeyName, winid);
-
-    result = RegOpenKeyExA(HKEY_LOCAL_MACHINE,
-                            subKeyName,
-                            0,
-                            KEY_QUERY_VALUE,
-                            hkey);
-    return result;
-}
-
-static LONG getTZI(const char *winid, TZI *tzi)
-{
-    DWORD cbData = sizeof(TZI);
-    LONG result;
-    HKEY hkey;
-
-    result = openTZRegKey(&hkey, winid);
-
-    if (result == ERROR_SUCCESS)
-    {
-        result = RegQueryValueExA(hkey,
-                                    TZI_REGKEY,
-                                    NULL,
-                                    NULL,
-                                    (LPBYTE)tzi,
-                                    &cbData);
-        RegCloseKey(hkey);
-    }
-
-    return result;
-}
-
-static LONG getSTDName(const char *winid, char *regStdName, int32_t length)
-{
-    DWORD cbData = length;
-    LONG result;
-    HKEY hkey;
-
-    result = openTZRegKey(&hkey, winid);
-
-    if (result == ERROR_SUCCESS)
-    {
-        result = RegQueryValueExA(hkey,
-                                    STD_REGKEY,
-                                    NULL,
-                                    NULL,
-                                    (LPBYTE)regStdName,
-                                    &cbData);
-        RegCloseKey(hkey);
-    }
-
-    return result;
-}
-
-static LONG getTZKeyName(char* tzKeyName, int32_t tzKeyNamelength)
-{
-    HKEY hkey;
-    LONG result = FALSE;
-    WCHAR timeZoneKeyNameData[128];
-    DWORD timeZoneKeyNameLength = static_cast<DWORD>(sizeof(timeZoneKeyNameData));
-
-    if(ERROR_SUCCESS == RegOpenKeyExW(
-        HKEY_LOCAL_MACHINE,
-        CURRENT_ZONE_REGKEY,
-        0,
-        KEY_QUERY_VALUE,
-        &hkey))
-    {
-        if (ERROR_SUCCESS == RegQueryValueExW(
-             hkey,
-             L"TimeZoneKeyName",
-             NULL,
-             NULL,
-             (LPBYTE)timeZoneKeyNameData,
-             &timeZoneKeyNameLength))
-        {
-            // Ensure null termination.
-            timeZoneKeyNameData[UPRV_LENGTHOF(timeZoneKeyNameData) - 1] = L'\0';
-
-            // Convert the UTF-16 string to UTF-8.
-            UErrorCode status = U_ZERO_ERROR;
-            u_strToUTF8(tzKeyName, tzKeyNamelength, NULL, reinterpret_cast<const UChar *>(timeZoneKeyNameData), -1, &status);
-            if (U_ZERO_ERROR == status)
-            {
-                result = ERROR_SUCCESS;
-            }
-        }
-        RegCloseKey(hkey);
-    }
-
-    return result;
-}
-
-/*
-  This code attempts to detect the Windows time zone directly,
-  as set in the Windows Date and Time control panel.  It attempts
-  to work on versions greater than Windows Vista and on localized
-  installs.  It works by directly interrogating the registry and
-  comparing the data there with the data returned by the
-  GetTimeZoneInformation API, along with some other strategies.  The
-  registry contains time zone data under this key:
-
-    HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Time Zones\
-
-  Under this key are several subkeys, one for each time zone.  For
-  example these subkeys are named "Pacific Standard Time" on Vista+.
-  There are some other wrinkles; see the code for
-  details.  The subkey name is NOT LOCALIZED, allowing us to support
-  localized installs.
-
-  Under the subkey are data values.  We care about:
-
-    Std   Standard time display name, localized
-    TZI   Binary block of data
-
-  The TZI data is of particular interest.  It contains the offset, two
-  more offsets for standard and daylight time, and the start and end
-  rules.  This is the same data returned by the GetTimeZoneInformation
-  API.  The API may modify the data on the way out, so we have to be
-  careful, but essentially we do a binary comparison against the TZI
-  blocks of various registry keys.  When we find a match, we know what
-  time zone Windows is set to.  Since the registry key is not
-  localized, we can then translate the key through a simple table
-  lookup into the corresponding ICU time zone.
-
-  This strategy doesn't always work because there are zones which
-  share an offset and rules, so more than one TZI block will match.
-  For example, both Tokyo and Seoul are at GMT+9 with no DST rules;
-  their TZI blocks are identical.  For these cases, we fall back to a
-  name lookup.  We attempt to match the display name as stored in the
-  registry for the current zone to the display name stored in the
-  registry for various Windows zones.  By comparing the registry data
-  directly we avoid conversion complications.
-
-  Author: Alan Liu
-  Since: ICU 2.6
-  Based on original code by Carl Brown <cbrown@xnetinc.com>
+* This is main Windows time zone detection function.
+*
+* It returns the Windows time zone converted to an ICU time zone as a heap-allocated buffer, or nullptr upon failure.
+*
+* We use the Win32 API GetDynamicTimeZoneInformation (which is available since Vista) to get the current time zone info,
+* as this API returns a non-localized time zone name which can be then mapped to an ICU time zone.
+*
+* However, in some RDP/terminal services situations, this struct isn't always fully complete, and the TimeZoneKeyName
+* field of the struct might be NULL. This can happen with some 3rd party RDP clients, and also when using older versions
+* of the RDP protocol, which don't send the newer TimeZoneKeyNamei information and only send the StandardName and DaylightName.
+*
+* Since these 3rd party clients and older RDP clients only send the pre-Vista time zone information to the server, this means that we
+* need to fallback on using the pre-Vista methods to determine the time zone. This unfortunately requires examining the registry directly
+* in order to try and determine the current time zone.
+*
+* Note that this can however still fail in some cases though if the client and server are using different languages, as the StandardName
+* that is sent by client is localized in the client's language. However, we must compare this to the names that are on the server, which
+* are localized in registry using the server's language. Despite that, this is the best we can do.
+*
+* Note: This fallback method won't work for the UWP version though, as we can't use the registry APIs in UWP.
+*
+* Once we have the current Windows time zone, then we can then map it to an ICU time zone ID (~ Olsen ID).
 */
-
-/**
- * Main Windows time zone detection function.  Returns the Windows
- * time zone, translated to an ICU time zone, or NULL upon failure.
- */
-U_CFUNC const char* U_EXPORT2
+U_CAPI const char* U_EXPORT2
 uprv_detectWindowsTimeZone()
 {
+    // We first try to obtain the time zone directly by using the TimeZoneKeyName field of the DYNAMIC_TIME_ZONE_INFORMATION struct.
+    DYNAMIC_TIME_ZONE_INFORMATION dynamicTZI;
+    uprv_memset(&dynamicTZI, 0, sizeof(dynamicTZI));
+    SYSTEMTIME systemTimeAllZero;
+    uprv_memset(&systemTimeAllZero, 0, sizeof(systemTimeAllZero));
+
+    if (GetDynamicTimeZoneInformation(&dynamicTZI) == TIME_ZONE_ID_INVALID) {
+        return nullptr;
+    }
+
+    // If the DST setting has been turned off in the Control Panel, then return "Etc/GMT<offset>".
+    //
+    // Note: This logic is based on how the Control Panel itself determines if DST is 'off' on Windows.
+    // The code is somewhat convoluted; in a sort of pseudo-code it looks like this:
+    //
+    //   IF (GetDynamicTimeZoneInformation != TIME_ZONE_ID_INVALID) && (DynamicDaylightTimeDisabled != 0) &&
+    //      (StandardDate == DaylightDate) &&
+    //      (
+    //       (TimeZoneKeyName != Empty && StandardDate == 0) ||
+    //       (TimeZoneKeyName == Empty && StandardDate != 0)
+    //      )
+    //   THEN
+    //     DST setting is "Disabled".
+    //
+    if (dynamicTZI.DynamicDaylightTimeDisabled != 0 &&
+        uprv_memcmp(&dynamicTZI.StandardDate, &dynamicTZI.DaylightDate, sizeof(dynamicTZI.StandardDate)) == 0 &&
+        ((dynamicTZI.TimeZoneKeyName[0] != L'\0' && uprv_memcmp(&dynamicTZI.StandardDate, &systemTimeAllZero, sizeof(systemTimeAllZero)) == 0) ||
+         (dynamicTZI.TimeZoneKeyName[0] == L'\0' && uprv_memcmp(&dynamicTZI.StandardDate, &systemTimeAllZero, sizeof(systemTimeAllZero)) != 0)))
+    {
+        LONG utcOffsetMins = dynamicTZI.Bias;
+        if (utcOffsetMins == 0) {
+            return uprv_strdup("Etc/UTC");
+        }
+
+        // No way to support when DST is turned off and the offset in minutes is not a multiple of 60.
+        if (utcOffsetMins % 60 == 0) {
+            char gmtOffsetTz[11] = {}; // "Etc/GMT+dd" is 11-char long with a terminal null.
+            // Note '-' before 'utcOffsetMin'. The timezone ID's sign convention
+            // is that a timezone ahead of UTC is Etc/GMT-<offset> and a timezone
+            // behind UTC is Etc/GMT+<offset>.
+            int ret = snprintf(gmtOffsetTz, UPRV_LENGTHOF(gmtOffsetTz), "Etc/GMT%+ld", -utcOffsetMins / 60);
+            if (ret > 0 && ret < UPRV_LENGTHOF(gmtOffsetTz)) {
+                return uprv_strdup(gmtOffsetTz);
+            }
+        }
+    }
+
+    // If DST is NOT disabled, but the TimeZoneKeyName field of the struct is NULL, then we may be dealing with a
+    // RDP/terminal services session where the 'Time Zone Redirection' feature is enabled. However, either the RDP
+    // client sent the server incomplete info (some 3rd party RDP clients only send the StandardName and  DaylightName,
+    // but do not send the important TimeZoneKeyName), or if the RDP server has not appropriately populated the struct correctly.
+    //
+    // In this case we unfortunately have no choice but to fallback to using the pre-Vista method of determining the
+    // time zone, which requires examining the registry directly.
+    //
+    // Note that this can however still fail though if the client and server are using different languages, as the StandardName
+    // that is sent by client is *localized* in the client's language. However, we must compare this to the names that are
+    // on the server, which are *localized* in registry using the server's language.
+    //
+    // One other note is that this fallback method doesn't work for the UWP version, as we can't use the registry APIs.
+
+    // windowsTimeZoneName will point at timezoneSubKeyName if we had to fallback to using the registry, and we found a match.
+    WCHAR timezoneSubKeyName[WINDOWS_MAX_REG_KEY_LENGTH];
+    WCHAR *windowsTimeZoneName = dynamicTZI.TimeZoneKeyName;
+
+    if (dynamicTZI.TimeZoneKeyName[0] == 0) {
+
+// We can't use the registry APIs in the UWP version.
+#if U_PLATFORM_HAS_WINUWP_API == 1
+        (void)timezoneSubKeyName; // suppress unused variable warnings.
+        return nullptr;
+#else
+        // Open the path to the time zones in the Windows registry.
+        LONG ret;
+        HKEY hKeyAllTimeZones = nullptr;
+        ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, WINDOWS_TIMEZONES_REG_KEY_PATH, 0, KEY_READ,
+                            reinterpret_cast<PHKEY>(&hKeyAllTimeZones));
+
+        if (ret != ERROR_SUCCESS) {
+            // If we can't open the key, then we can't do much, so fail.
+            return nullptr;
+        }
+
+        // Read the number of subkeys under the time zone registry path.
+        DWORD numTimeZoneSubKeys;
+        ret = RegQueryInfoKeyW(hKeyAllTimeZones, nullptr, nullptr, nullptr, &numTimeZoneSubKeys,
+                               nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+        if (ret != ERROR_SUCCESS) {
+            RegCloseKey(hKeyAllTimeZones);
+            return nullptr;
+        }
+
+        // Examine each of the subkeys to try and find a match for the localized standard name ("Std").
+        //
+        // Note: The name of the time zone subkey itself is not localized, but the "Std" name is localized. This means
+        // that we could fail to find a match if the RDP client and RDP server are using different languages, but unfortunately
+        // there isn't much we can do about it.
+        HKEY hKeyTimeZoneSubKey = nullptr;
+        ULONG registryValueType;
+        WCHAR registryStandardName[WINDOWS_MAX_REG_KEY_LENGTH];
+
+        for (DWORD i = 0; i < numTimeZoneSubKeys; i++) {
+            // Note: RegEnumKeyExW wants the size of the buffer in characters.
+            DWORD size = UPRV_LENGTHOF(timezoneSubKeyName);
+            ret = RegEnumKeyExW(hKeyAllTimeZones, i, timezoneSubKeyName, &size, nullptr, nullptr, nullptr, nullptr);
+
+            if (ret != ERROR_SUCCESS) {
+                RegCloseKey(hKeyAllTimeZones);
+                return nullptr;
+            }
+
+            ret = RegOpenKeyExW(hKeyAllTimeZones, timezoneSubKeyName, 0, KEY_READ,
+                                reinterpret_cast<PHKEY>(&hKeyTimeZoneSubKey));
+
+            if (ret != ERROR_SUCCESS) {
+                RegCloseKey(hKeyAllTimeZones);
+                return nullptr;
+            }
+
+            // Note: RegQueryValueExW wants the size of the buffer in bytes.
+            size = sizeof(registryStandardName);
+            ret = RegQueryValueExW(hKeyTimeZoneSubKey, L"Std", nullptr, &registryValueType,
+                                   reinterpret_cast<LPBYTE>(registryStandardName), &size);
+
+            if (ret != ERROR_SUCCESS || registryValueType != REG_SZ) {
+                RegCloseKey(hKeyTimeZoneSubKey);
+                RegCloseKey(hKeyAllTimeZones);
+                return nullptr;
+            }
+
+            // Note: wcscmp does an ordinal (byte) comparison.
+            if (wcscmp(reinterpret_cast<WCHAR *>(registryStandardName), dynamicTZI.StandardName) == 0) {
+                // Since we are comparing the *localized* time zone name, it's possible that some languages might use
+                // the same string for more than one time zone. Thus we need to examine the TZI data in the registry to
+                // compare the GMT offset (the bias), and the DST transition dates, to ensure it's the same time zone
+                // as the currently reported one.
+                REG_TZI_FORMAT registryTziValue;
+                uprv_memset(&registryTziValue, 0, sizeof(registryTziValue));
+
+                // Note: RegQueryValueExW wants the size of the buffer in bytes.
+                DWORD timezoneTziValueSize = sizeof(registryTziValue);
+                ret = RegQueryValueExW(hKeyTimeZoneSubKey, L"TZI", nullptr, &registryValueType,
+                                     reinterpret_cast<LPBYTE>(&registryTziValue), &timezoneTziValueSize);
+
+                if (ret == ERROR_SUCCESS) {
+                    if ((dynamicTZI.Bias == registryTziValue.Bias) &&
+                        (memcmp((const void *)&dynamicTZI.StandardDate, (const void *)&registryTziValue.StandardDate, sizeof(SYSTEMTIME)) == 0) &&
+                        (memcmp((const void *)&dynamicTZI.DaylightDate, (const void *)&registryTziValue.DaylightDate, sizeof(SYSTEMTIME)) == 0))
+                    {
+                        // We found a matching time zone.
+                        windowsTimeZoneName = timezoneSubKeyName;
+                        break;
+                    }
+                }
+            }
+            RegCloseKey(hKeyTimeZoneSubKey);
+            hKeyTimeZoneSubKey = nullptr;
+        }
+
+        if (hKeyTimeZoneSubKey != nullptr) {
+            RegCloseKey(hKeyTimeZoneSubKey);
+        }
+        if (hKeyAllTimeZones != nullptr) {
+            RegCloseKey(hKeyAllTimeZones);
+        }
+#endif // U_PLATFORM_HAS_WINUWP_API
+    }
+
+    CharString winTZ;
     UErrorCode status = U_ZERO_ERROR;
-    UResourceBundle* bundle = NULL;
-    char* icuid = NULL;
-    char apiStdName[MAX_LENGTH_ID];
-    char regStdName[MAX_LENGTH_ID];
-    char tmpid[MAX_LENGTH_ID];
-    int32_t len;
-    int id;
-    int errorCode;
-    wchar_t ISOcodeW[3]; /* 2 letter iso code in UTF-16*/
-    char  ISOcodeA[3]; /* 2 letter iso code in ansi */
+    winTZ.appendInvariantChars(UnicodeString(TRUE, windowsTimeZoneName, -1), status);
 
-    LONG result;
-    TZI tziKey;
-    TZI tziReg;
-    TIME_ZONE_INFORMATION apiTZI;
+    // Map Windows Timezone name (non-localized) to ICU timezone ID (~ Olson timezone id).
+    StackUResourceBundle winTZBundle;
+    ures_openDirectFillIn(winTZBundle.getAlias(), nullptr, "windowsZones", &status);
+    ures_getByKey(winTZBundle.getAlias(), "mapTimezones", winTZBundle.getAlias(), &status);
+    ures_getByKey(winTZBundle.getAlias(), winTZ.data(), winTZBundle.getAlias(), &status);
 
-    BOOL tryPreVistaFallback;
-    OSVERSIONINFO osVerInfo;
-
-    /* Obtain TIME_ZONE_INFORMATION from the API, and then convert it
-       to TZI.  We could also interrogate the registry directly; we do
-       this below if needed. */
-    uprv_memset(&apiTZI, 0, sizeof(apiTZI));
-    uprv_memset(&tziKey, 0, sizeof(tziKey));
-    uprv_memset(&tziReg, 0, sizeof(tziReg));
-    GetTimeZoneInformation(&apiTZI);
-    tziKey.bias = apiTZI.Bias;
-    uprv_memcpy((char *)&tziKey.standardDate, (char*)&apiTZI.StandardDate,
-           sizeof(apiTZI.StandardDate));
-    uprv_memcpy((char *)&tziKey.daylightDate, (char*)&apiTZI.DaylightDate,
-           sizeof(apiTZI.DaylightDate));
-
-    /* Convert the wchar_t* standard name to char* */
-    uprv_memset(apiStdName, 0, sizeof(apiStdName));
-    wcstombs(apiStdName, apiTZI.StandardName, MAX_LENGTH_ID);
-
-    tmpid[0] = 0;
-
-    id = GetUserGeoID(GEOCLASS_NATION);
-    errorCode = GetGeoInfoW(id, GEO_ISO2, ISOcodeW, 3, 0);
-    u_strToUTF8(ISOcodeA, 3, NULL, (const UChar *)ISOcodeW, 3, &status);
-
-    bundle = ures_openDirect(NULL, "windowsZones", &status);
-    ures_getByKey(bundle, "mapTimezones", bundle, &status);
-
-    /*
-        Windows Vista+ provides us with a "TimeZoneKeyName" that is not localized
-        and can be used to directly map a name in our bundle. Try to use that first
-        if we're on Vista or higher
-    */
-    uprv_memset(&osVerInfo, 0, sizeof(osVerInfo));
-    osVerInfo.dwOSVersionInfoSize = sizeof(osVerInfo);
-    tryPreVistaFallback = TRUE;
-    result = getTZKeyName(regStdName, sizeof(regStdName));
-    if(ERROR_SUCCESS == result)
-    {
-        UResourceBundle* winTZ = ures_getByKey(bundle, regStdName, NULL, &status);
-        if(U_SUCCESS(status))
-        {
-            const UChar* icuTZ = NULL;
-            if (errorCode != 0)
-            {
-                icuTZ = ures_getStringByKey(winTZ, ISOcodeA, &len, &status);
-            }
-            if (errorCode==0 || icuTZ==NULL)
-            {
-                /* fallback to default "001" and reset status */
-                status = U_ZERO_ERROR;
-                icuTZ = ures_getStringByKey(winTZ, "001", &len, &status);
-            }
-
-            if(U_SUCCESS(status))
-            {
-                int index=0;
-                while (! (*icuTZ == '\0' || *icuTZ ==' '))
-                {
-                    tmpid[index++]=(char)(*icuTZ++);  /* safe to assume 'char' is ASCII compatible on windows */
-                }
-                tmpid[index]='\0';
-                tryPreVistaFallback = FALSE;
-            }
-        }
-        ures_close(winTZ);
+    if (U_FAILURE(status)) {
+        return nullptr;
     }
 
-    if(tryPreVistaFallback)
-    {
-        /* Note: We get the winid not from static tables but from resource bundle. */
-        while (U_SUCCESS(status) && ures_hasNext(bundle))
-        {
-            UBool idFound = FALSE;
-            const char* winid;
-            UResourceBundle* winTZ = ures_getNextResource(bundle, NULL, &status);
-            if (U_FAILURE(status))
-            {
-                break;
-            }
-            winid = ures_getKey(winTZ);
-            result = getTZI(winid, &tziReg);
+    // Note: Since the ISO 3166 country/region codes are all invariant ASCII chars, we can
+    // directly downcast from wchar_t to do the conversion.
+    // We could call the A version of the GetGeoInfo API, but that would be slightly slower than calling the W API,
+    // as the A version of the API will end up calling MultiByteToWideChar anyways internally.
+    wchar_t regionCodeW[3] = {};
+    char regionCode[3] = {}; // 2 letter ISO 3166 country/region code made entirely of invariant chars.
+    int geoId = GetUserGeoID(GEOCLASS_NATION);
+    int regionCodeLen = GetGeoInfoW(geoId, GEO_ISO2, regionCodeW, UPRV_LENGTHOF(regionCodeW), 0);
 
-            if (result == ERROR_SUCCESS)
-            {
-                /* Windows alters the DaylightBias in some situations.
-                   Using the bias and the rules suffices, so overwrite
-                   these unreliable fields. */
-                tziKey.standardBias = tziReg.standardBias;
-                tziKey.daylightBias = tziReg.daylightBias;
+    const UChar *icuTZ16 = nullptr;
+    int32_t tzListLen = 0;
 
-                if (uprv_memcmp((char *)&tziKey, (char*)&tziReg, sizeof(tziKey)) == 0)
-                {
-                    const UChar* icuTZ = NULL;
-                    if (errorCode != 0)
-                    {
-                        icuTZ = ures_getStringByKey(winTZ, ISOcodeA, &len, &status);
-                    }
-                    if (errorCode==0 || icuTZ==NULL)
-                    {
-                        /* fallback to default "001" and reset status */
-                        status = U_ZERO_ERROR;
-                        icuTZ = ures_getStringByKey(winTZ, "001", &len, &status);
-                    }
+    if (regionCodeLen != 0) {
+        for (int i = 0; i < UPRV_LENGTHOF(regionCodeW); i++) {
+            regionCode[i] = static_cast<char>(regionCodeW[i]);
+        }
+        icuTZ16 = ures_getStringByKey(winTZBundle.getAlias(), regionCode, &tzListLen, &status);
+    }
+    if (regionCodeLen == 0 || U_FAILURE(status)) {
+        // fallback to default "001" (world)
+        status = U_ZERO_ERROR;
+        icuTZ16 = ures_getStringByKey(winTZBundle.getAlias(), "001", &tzListLen, &status);
+    }
 
-                    if (U_SUCCESS(status))
-                    {
-                        /* Get the standard name from the registry key to compare with
-                           the one from Windows API call. */
-                        uprv_memset(regStdName, 0, sizeof(regStdName));
-                        result = getSTDName(winid, regStdName, sizeof(regStdName));
-                        if (result == ERROR_SUCCESS)
-                        {
-                            if (uprv_strcmp(apiStdName, regStdName) == 0)
-                            {
-                                idFound = TRUE;
-                            }
-                        }
-
-                        /* tmpid buffer holds the ICU timezone ID corresponding to the timezone ID from Windows.
-                         * If none is found, tmpid buffer will contain a fallback ID (i.e. the time zone ID matching
-                         * the current time zone information)
-                         */
-                        if (idFound || tmpid[0] == 0)
-                        {
-                            /* if icuTZ has more than one city, take only the first (i.e. terminate icuTZ at first space) */
-                            int index=0;
-                            while (! (*icuTZ == '\0' || *icuTZ ==' '))
-                            {
-                                tmpid[index++]=(char)(*icuTZ++);  /* safe to assume 'char' is ASCII compatible on windows */
-                            }
-                            tmpid[index]='\0';
-                        }
-                    }
-                }
-            }
-            ures_close(winTZ);
-            if (idFound)
-            {
-                break;
-            }
+    // Note: We want the first entry in the string returned by ures_getStringByKey.
+    // However this string can be a space delimited list of timezones:
+    //  Ex: "America/New_York America/Detroit America/Indiana/Petersburg ..."
+    // We need to stop at the first space, so we pass tzLen (instead of tzListLen) to appendInvariantChars below.
+    int32_t tzLen = 0;
+    if (tzListLen > 0) {
+        while (!(icuTZ16[tzLen] == u'\0' || icuTZ16[tzLen] == u' ')) {
+            tzLen++;
         }
     }
 
-    /*
-     * Copy the timezone ID to icuid to be returned.
-     */
-    if (tmpid[0] != 0)
-    {
-        len = uprv_strlen(tmpid);
-        icuid = (char*)uprv_calloc(len + 1, sizeof(char));
-        if (icuid != NULL)
-        {
-            uprv_strcpy(icuid, tmpid);
-        }
-    }
-
-    ures_close(bundle);
-
-    return icuid;
+    // Note: cloneData returns nullptr if the status is a failure, so this
+    // will return nullptr if the above look-up fails.
+    CharString icuTZStr;
+    return icuTZStr.appendInvariantChars(icuTZ16, tzLen, status).cloneData(status);
 }
 
-#endif /* U_PLATFORM_USES_ONLY_WIN32_API && (U_PLATFORM_HAS_WINUWP_API == 0) */
+U_NAMESPACE_END
+#endif /* U_PLATFORM_USES_ONLY_WIN32_API  */

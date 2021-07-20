@@ -28,12 +28,9 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "DFGCommon.h"
 #include "FTLAbbreviatedTypes.h"
-#include "FTLAbstractHeapRepository.h"
 #include "FTLOutput.h"
 #include "FTLTypedPointer.h"
-#include "JSCInlines.h"
 #include "Options.h"
 
 namespace JSC { namespace FTL {
@@ -157,11 +154,11 @@ const AbstractHeap& IndexedAbstractHeap::atSlow(ptrdiff_t index)
     ASSERT(static_cast<size_t>(index) >= m_smallIndices.size());
 
     if (UNLIKELY(!m_largeIndices))
-        m_largeIndices = std::make_unique<MapType>();
+        m_largeIndices = makeUnique<MapType>();
 
     std::unique_ptr<AbstractHeap>& field = m_largeIndices->add(index, nullptr).iterator->value;
     if (!field) {
-        field = std::make_unique<AbstractHeap>();
+        field = makeUnique<AbstractHeap>();
         initialize(*field, index);
     }
 
@@ -234,7 +231,7 @@ void IndexedAbstractHeap::initialize(AbstractHeap& field, ptrdiff_t signedIndex)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-void IndexedAbstractHeap::dump(PrintStream& out) const
+void IndexedAbstractHeap::dump(PrintStream& out)
 {
     out.print("Indexed:", atAnyIndex());
 }
@@ -248,7 +245,7 @@ NumberedAbstractHeap::~NumberedAbstractHeap()
 {
 }
 
-void NumberedAbstractHeap::dump(PrintStream& out) const
+void NumberedAbstractHeap::dump(PrintStream& out)
 {
     out.print("Numbered: ", atAnyNumber());
 }
@@ -262,7 +259,7 @@ AbsoluteAbstractHeap::~AbsoluteAbstractHeap()
 {
 }
 
-void AbsoluteAbstractHeap::dump(PrintStream& out) const
+void AbsoluteAbstractHeap::dump(PrintStream& out)
 {
     out.print("Absolute:", atAnyAddress());
 }

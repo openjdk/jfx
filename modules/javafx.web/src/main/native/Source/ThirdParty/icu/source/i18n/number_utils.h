@@ -17,6 +17,7 @@
 #include "number_roundingutils.h"
 #include "decNumber.h"
 #include "charstr.h"
+#include "formatted_string_builder.h"
 
 U_NAMESPACE_BEGIN
 
@@ -35,7 +36,7 @@ enum CldrPatternStyle {
 // Namespace for naked functions
 namespace utils {
 
-inline int32_t insertDigitFromSymbols(NumberStringBuilder& output, int32_t index, int8_t digit,
+inline int32_t insertDigitFromSymbols(FormattedStringBuilder& output, int32_t index, int8_t digit,
                                       const DecimalFormatSymbols& symbols, Field field,
                                       UErrorCode& status) {
     if (symbols.getCodePointZero() != -1) {
@@ -48,8 +49,8 @@ inline bool unitIsCurrency(const MeasureUnit& unit) {
     return uprv_strcmp("currency", unit.getType()) == 0;
 }
 
-inline bool unitIsNoUnit(const MeasureUnit& unit) {
-    return uprv_strcmp("none", unit.getType()) == 0;
+inline bool unitIsBaseUnit(const MeasureUnit& unit) {
+    return unit == MeasureUnit();
 }
 
 inline bool unitIsPercent(const MeasureUnit& unit) {
@@ -80,6 +81,23 @@ inline StandardPlural::Form getStandardPlural(const PluralRules *rules,
         UnicodeString ruleString = rules->select(fdec);
         return StandardPlural::orOtherFromString(ruleString);
     }
+}
+
+/**
+ * Computes the plural form after copying the number and applying rounding rules.
+ */
+inline StandardPlural::Form getPluralSafe(
+        const RoundingImpl& rounder,
+        const PluralRules* rules,
+        const DecimalQuantity& dq,
+        UErrorCode& status) {
+    // TODO(ICU-20500): Avoid the copy?
+    DecimalQuantity copy(dq);
+    rounder.apply(copy, status);
+    if (U_FAILURE(status)) {
+        return StandardPlural::Form::OTHER;
+    }
+    return getStandardPlural(rules, copy);
 }
 
 } // namespace utils

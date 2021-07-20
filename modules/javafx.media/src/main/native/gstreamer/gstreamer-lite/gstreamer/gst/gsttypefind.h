@@ -77,11 +77,11 @@ typedef enum {
 struct _GstTypeFind {
   /* private to the caller of the typefind function */
   const guint8 *  (* peek)       (gpointer         data,
-                            gint64           offset,
-                            guint            size);
+                                  gint64           offset,
+                                  guint            size);
 
   void            (* suggest)    (gpointer         data,
-                            guint            probability,
+                                  guint            probability,
                                   GstCaps         *caps);
 
   gpointer         data;
@@ -100,19 +100,22 @@ GType     gst_type_find_get_type   (void);
 
 /* typefind function interface */
 
+/**
+ * gst_type_find_get_type: (attributes doc.skip=true)
+ */
 GST_API
 const guint8 *  gst_type_find_peek       (GstTypeFind   * find,
-                                    gint64          offset,
-                                    guint           size);
+                                          gint64          offset,
+                                          guint           size);
 GST_API
 void            gst_type_find_suggest    (GstTypeFind   * find,
-                                    guint           probability,
+                                          guint           probability,
                                           GstCaps       * caps);
 GST_API
 void            gst_type_find_suggest_simple (GstTypeFind * find,
-                                        guint         probability,
-                                        const char  * media_type,
-                                        const char  * fieldname, ...);
+                                              guint         probability,
+                                              const char  * media_type,
+                                              const char  * fieldname, ...);
 GST_API
 guint64   gst_type_find_get_length (GstTypeFind   * find);
 

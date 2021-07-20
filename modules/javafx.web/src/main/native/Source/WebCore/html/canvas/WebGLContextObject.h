@@ -25,11 +25,13 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLObject.h"
 
 namespace WebCore {
 
-class GraphicsContext3D;
+class GraphicsContextGL;
 class WebGLRenderingContextBase;
 
 // WebGLContextObject the base class for objects that are owned by a specific
@@ -45,7 +47,9 @@ public:
         return &context == m_context;
     }
 
-    void detachContext();
+    void detachContext(const WTF::AbstractLocker&);
+
+    WTF::Lock& objectGraphLockForContext() override;
 
 protected:
     WebGLContextObject(WebGLRenderingContextBase&);
@@ -55,10 +59,12 @@ protected:
         return m_context;
     }
 
-    GraphicsContext3D* getAGraphicsContext3D() const override;
+    GraphicsContextGL* getAGraphicsContextGL() const override;
 
 private:
     WebGLRenderingContextBase* m_context;
 };
 
 } // namespace WebCore
+
+#endif

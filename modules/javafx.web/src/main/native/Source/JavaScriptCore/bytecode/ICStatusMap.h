@@ -34,9 +34,10 @@ namespace JSC {
 class CallLinkInfo;
 class CallLinkStatus;
 class CodeBlock;
-class GetByIdStatus;
+class GetByStatus;
 class InByIdStatus;
 class PutByIdStatus;
+class DeleteByStatus;
 class StructureStubInfo;
 struct ByValInfo;
 
@@ -45,9 +46,10 @@ struct ICStatus {
     CallLinkInfo* callLinkInfo { nullptr };
     ByValInfo* byValInfo { nullptr };
     CallLinkStatus* callStatus { nullptr };
-    GetByIdStatus* getStatus { nullptr };
+    GetByStatus* getStatus { nullptr };
     InByIdStatus* inStatus { nullptr };
     PutByIdStatus* putStatus { nullptr };
+    DeleteByStatus* deleteStatus { nullptr };
 };
 
 typedef HashMap<CodeOrigin, ICStatus, CodeOriginApproximateHash> ICStatusMap;

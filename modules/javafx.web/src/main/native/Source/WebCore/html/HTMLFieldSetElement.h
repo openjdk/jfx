@@ -24,7 +24,7 @@
 #pragma once
 
 #include "HTMLFormControlElement.h"
-#include <wtf/HashSet.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -50,7 +50,7 @@ private:
     bool isEnumeratable() const final { return true; }
     bool supportsFocus() const final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    const AtomicString& formControlType() const final;
+    const AtomString& formControlType() const final;
     bool computeWillValidate() const final { return false; }
     void disabledAttributeChanged() final;
     void disabledStateChanged() final;
@@ -60,7 +60,7 @@ private:
     bool matchesValidPseudoClass() const final;
     bool matchesInvalidPseudoClass() const final;
 
-    HashSet<const HTMLFormControlElement*> m_invalidDescendants;
+    WeakHashSet<HTMLFormControlElement> m_invalidDescendants;
     bool m_hasDisabledAttribute { false };
 };
 

@@ -72,15 +72,15 @@ public:
     bool hasBoldFont() const override;
     bool hasItalicFont() const override;
     bool hasPlainText() const override;
-    bool hasSameFont(RenderObject*) const override;
-    bool hasSameFontColor(RenderObject*) const override;
-    bool hasSameStyle(RenderObject*) const override;
+    bool hasSameFont(const AXCoreObject&) const override;
+    bool hasSameFontColor(const AXCoreObject&) const override;
+    bool hasSameStyle(const AXCoreObject&) const override;
     bool hasUnderline() const override;
 
     bool canSetTextRangeAttributes() const override;
     bool canSetExpandedAttribute() const override;
 
-    void setAccessibleName(const AtomicString&) override;
+    void setAccessibleName(const AtomString&) override;
 
     // Provides common logic used by all elements when determining isIgnored.
     AccessibilityObjectInclusion defaultObjectInclusion() const override;
@@ -106,7 +106,7 @@ public:
     bool ariaRoleHasPresentationalChildren() const override;
 
     // Should be called on the root accessibility object to kick off a hit test.
-    AccessibilityObject* accessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
 
     Element* anchorElement() const override;
 
@@ -134,11 +134,11 @@ public:
     String text() const override;
     int textLength() const override;
     String selectedText() const override;
-    const AtomicString& accessKey() const override;
-    virtual const String& actionVerb() const;
+    String accessKey() const override;
+    String actionVerb() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
-    virtual void getDocumentLinks(AccessibilityChildrenVector&);
+    AccessibilityChildrenVector documentLinks() override;
     FrameView* documentFrameView() const override;
 
     void clearChildren() override;
@@ -146,11 +146,10 @@ public:
 
     void setFocused(bool) override;
     void setSelectedTextRange(const PlainTextRange&) override;
-    void setValue(const String&) override;
+    bool setValue(const String&) override;
     void setSelectedRows(AccessibilityChildrenVector&) override;
     AccessibilityOrientation orientation() const override;
 
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
     void textChanged() override;
     void addChildren() override;
     bool canHaveChildren() const override;
@@ -162,21 +161,19 @@ public:
     bool shouldNotifyActiveDescendant() const;
     AccessibilityObject* activeDescendant() const override;
     void handleActiveDescendantChanged() override;
-    void handleAriaExpandedChanged() override;
 
     VisiblePositionRange visiblePositionRange() const override;
     VisiblePositionRange visiblePositionRangeForLine(unsigned) const override;
     IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const override;
-    IntRect boundsForRange(const RefPtr<Range>) const override;
-    IntRect boundsForRects(LayoutRect&, LayoutRect&, RefPtr<Range>) const;
+    IntRect boundsForRange(const SimpleRange&) const override;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override;
     bool isVisiblePositionRangeInDifferentDocument(const VisiblePositionRange&) const;
     bool hasPopup() const override;
 
-    bool supportsARIADropping() const override;
-    bool supportsARIADragging() const override;
-    bool isARIAGrabbed() override;
-    Vector<String> determineARIADropEffects() override;
+    bool supportsDropping() const override;
+    bool supportsDragging() const override;
+    bool isGrabbed() override;
+    Vector<String> determineDropEffects() const override;
 
     VisiblePosition visiblePositionForPoint(const IntPoint&) const override;
     VisiblePosition visiblePositionForIndex(unsigned indexValue, bool lastIndexOK) const override;
@@ -200,9 +197,11 @@ public:
     AccessibilityRole roleValueForMSAA() const override;
 
     String passwordFieldValue() const override;
+    void titleElementText(Vector<AccessibilityText>&) const override;
 
 protected:
     explicit AccessibilityRenderObject(RenderObject*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
     ScrollableArea* getScrollableAreaIfScrollable() const override;
     void scrollTo(const IntPoint&) const override;
 
@@ -235,21 +234,22 @@ private:
     bool isTabItemSelected() const;
     LayoutRect checkboxOrRadioRect() const;
     void addRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const;
-    void addRadioButtonGroupChildren(AccessibilityObject*, AccessibilityChildrenVector&) const;
+    void addRadioButtonGroupChildren(AXCoreObject*, AccessibilityChildrenVector&) const;
     AccessibilityObject* internalLinkElement() const;
-    AccessibilityObject* accessibilityImageMapHitTest(HTMLAreaElement*, const IntPoint&) const;
+    AXCoreObject* accessibilityImageMapHitTest(HTMLAreaElement*, const IntPoint&) const;
     AccessibilityObject* accessibilityParentForImageMap(HTMLMapElement*) const;
-    AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
     bool renderObjectIsObservable(RenderObject&) const;
     RenderObject* renderParentObject() const;
     bool isDescendantOfElementType(const QualifiedName& tagName) const;
+    bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
 
     bool isSVGImage() const;
     void detachRemoteSVGRoot();
     enum CreationChoice { Create, Retrieve };
     AccessibilitySVGRoot* remoteSVGRootElement(CreationChoice createIfNecessary) const;
-    AccessibilityObject* remoteSVGElementHitTest(const IntPoint&) const;
+    AXCoreObject* remoteSVGElementHitTest(const IntPoint&) const;
     void offsetBoundingBoxForRemoteSVGElement(LayoutRect&) const;
     bool supportsPath() const override;
 
@@ -282,8 +282,16 @@ private:
 
     bool shouldGetTextFromNode(AccessibilityTextUnderElementMode) const;
 
+#if ENABLE(APPLE_PAY)
+    bool isApplePayButton() const;
+    ApplePayButtonType applePayButtonType() const;
+    String applePayButtonDescription() const;
+#endif
+
     RenderObject* targetElementForActiveDescendant(const QualifiedName&, AccessibilityObject*) const;
     bool canHavePlainText() const;
+    // Special handling of click point for links.
+    IntPoint linkClickPoint();
 };
 
 } // namespace WebCore

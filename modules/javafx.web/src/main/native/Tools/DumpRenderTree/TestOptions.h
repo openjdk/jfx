@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,29 +25,49 @@
 
 #pragma once
 
+#include "TestFeatures.h"
 #include <string>
+#include <unordered_map>
 
-struct TestOptions {
-    bool enableAttachmentElement { false };
-    bool enableWebAnimationsCSSIntegration { true };
-    bool useAcceleratedDrawing { false };
-    bool enableIntersectionObserver { false };
-    bool enableMenuItemElement { false };
-    bool enableModernMediaControls { true };
-    bool enablePointerLock { false };
-    bool enableDragDestinationActionLoad { false };
-    bool layerBackedWebView { false };
-    bool enableIsSecureContextAttribute { true };
-    bool enableInspectorAdditions { false };
-    bool dumpJSConsoleLogInStdErr { false };
-    bool allowCrossOriginSubresourcesToAskForCredentials { false };
-    bool enableColorFilter { false };
-    bool enableSelectionAcrossShadowBoundaries { true };
-    bool enableWebGPU { false };
-    bool enableCSSLogical { false };
-    bool adClickAttributionEnabled { false };
-    std::string jscOptions;
+namespace WTR {
 
-    TestOptions(const std::string& pathOrURL, const std::string& absolutePath);
+class TestOptions {
+public:
+    static const TestFeatures& defaults();
+    static const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMapping();
+
+    explicit TestOptions(TestFeatures features)
+        : m_features(std::move(features))
+    {
+    }
+
     bool webViewIsCompatibleWithOptions(const TestOptions&) const;
+
+    // Test-Runner-Specific Features
+    bool dumpJSConsoleLogInStdErr() const { return boolTestRunnerFeatureValue("dumpJSConsoleLogInStdErr", false); }
+    bool enableDragDestinationActionLoad() const { return boolTestRunnerFeatureValue("enableDragDestinationActionLoad", false); }
+    bool layerBackedWebView() const { return boolTestRunnerFeatureValue("layerBackedWebView", false); }
+    bool useEphemeralSession() const { return boolTestRunnerFeatureValue("useEphemeralSession", false); }
+    std::string additionalSupportedImageTypes() const { return stringTestRunnerFeatureValue("additionalSupportedImageTypes", { }); }
+    std::string jscOptions() const { return stringTestRunnerFeatureValue("jscOptions", { }); }
+
+    const auto& boolWebPreferenceFeatures() const { return m_features.boolWebPreferenceFeatures; }
+    const auto& doubleWebPreferenceFeatures() const { return m_features.doubleWebPreferenceFeatures; }
+    const auto& uint32WebPreferenceFeatures() const { return m_features.uint32WebPreferenceFeatures; }
+    const auto& stringWebPreferenceFeatures() const { return m_features.stringWebPreferenceFeatures; }
+
+    // FIXME: Remove these once there is a viable mechanism for reseting WebPreferences between tests,
+    // at which point, we will not need to manually reset every supported preference for each test.
+    static const std::vector<std::string>& supportedBoolWebPreferenceFeatures();
+    static const std::vector<std::string>& supportedUInt32WebPreferenceFeatures();
+
+    static std::string toWebKitLegacyPreferenceKey(const std::string&);
+
+private:
+    bool boolTestRunnerFeatureValue(std::string key, bool defaultValue) const;
+    std::string stringTestRunnerFeatureValue(std::string key, std::string defaultValue) const;
+
+    TestFeatures m_features;
 };
+
+}

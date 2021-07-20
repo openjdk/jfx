@@ -154,7 +154,7 @@ auto TextAutoSizingValue::adjustTextNodeSizes() -> StillHasNodes
             continue;
 
         auto newParentStyle = cloneRenderStyleWithState(parentStyle);
-        newParentStyle.setLineHeight(Length(lineHeight, Fixed));
+        newParentStyle.setLineHeight(lineHeightLength.isNegative() ? Length(lineHeightLength) : Length(lineHeight, LengthType::Fixed));
         newParentStyle.setSpecifiedLineHeight(Length { lineHeightLength });
         newParentStyle.setFontDescription(WTFMove(fontDescription));
         newParentStyle.fontCascade().update(&node->document().fontSelector());
@@ -225,7 +225,7 @@ void TextAutoSizing::addTextNode(Text& node, float candidateSize)
     LOG(TextAutosizing, " addAutoSizedNode %p candidateSize=%f", &node, candidateSize);
     auto addResult = m_textNodes.add<TextAutoSizingHashTranslator>(node.renderer()->style(), nullptr);
     if (addResult.isNewEntry)
-        addResult.iterator->value = std::make_unique<TextAutoSizingValue>();
+        addResult.iterator->value = makeUnique<TextAutoSizingValue>();
     addResult.iterator->value->addTextNode(node, candidateSize);
 }
 

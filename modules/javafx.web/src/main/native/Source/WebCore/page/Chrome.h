@@ -44,7 +44,6 @@ class DateTimeChooserClient;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
-class FrameLoadRequest;
 class Element;
 class Frame;
 class Geolocation;
@@ -58,6 +57,9 @@ class PopupMenuClient;
 class PopupOpeningObserver;
 class SearchPopupMenu;
 
+struct AppHighlight;
+struct ContactInfo;
+struct ContactsRequestData;
 struct DateTimeChooserParameters;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
@@ -77,18 +79,20 @@ public:
     void scroll(const IntSize&, const IntRect&, const IntRect&) override;
     IntPoint screenToRootView(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
-#if PLATFORM(IOS_FAMILY)
     IntPoint accessibilityScreenToRootView(const IntPoint&) const override;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
-#endif
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    void scheduleAnimation() override { }
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, DestinationColorSpace, PixelFormat) const override;
+
+#if ENABLE(WEBGL)
+    RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
+#endif
 
     PlatformDisplayID displayID() const override;
-    void windowScreenDidChange(PlatformDisplayID) override;
+    void windowScreenDidChange(PlatformDisplayID, Optional<unsigned>) override;
 
     FloatSize screenSize() const override;
     FloatSize availableScreenSize() const override;
@@ -112,7 +116,7 @@ public:
     void focusedElementChanged(Element*) const;
     void focusedFrameChanged(Frame*) const;
 
-    WEBCORE_EXPORT Page* createWindow(Frame&, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) const;
+    WEBCORE_EXPORT Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) const;
     WEBCORE_EXPORT void show() const;
 
     bool canRunModal() const;
@@ -144,8 +148,6 @@ public:
 
     void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags);
 
-    void setToolTip(const HitTestResult&);
-
     WEBCORE_EXPORT bool print(Frame&);
 
     WEBCORE_EXPORT void enableSuddenTermination();
@@ -159,8 +161,17 @@ public:
     std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
 #endif
 
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
+#endif
+
+#if ENABLE(APP_HIGHLIGHTS)
+    void storeAppHighlight(const AppHighlight&) const;
+#endif
+
     void runOpenPanel(Frame&, FileChooser&);
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
+    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(Optional<Vector<ContactInfo>>&&)>&&);
     void loadIconForFiles(const Vector<String>&, FileIconLoader&);
 
     void dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>&) const;
@@ -190,9 +201,10 @@ public:
 private:
     void notifyPopupOpeningObservers() const;
 
+    void getToolTip(const HitTestResult&, String&, TextDirection&);
+
     Page& m_page;
     ChromeClient& m_client;
-    PlatformDisplayID m_displayID { 0 };
     Vector<PopupOpeningObserver*> m_popupOpeningObservers;
 #if PLATFORM(IOS_FAMILY)
     bool m_isDispatchViewportDataDidChangeSuppressed { false };

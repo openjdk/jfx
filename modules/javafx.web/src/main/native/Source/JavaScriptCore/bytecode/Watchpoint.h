@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,17 @@
 #include <wtf/Atomics.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Nonmovable.h>
 #include <wtf/PrintStream.h>
 #include <wtf/ScopedLambda.h>
 #include <wtf/SentinelLinkedList.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace JSC {
+
+namespace DFG {
+struct ArrayBufferViewWatchpointAdaptor;
+}
 
 class VM;
 
@@ -52,21 +57,21 @@ public:
     virtual void dump(PrintStream&) const = 0;
 };
 
-class StringFireDetail : public FireDetail {
+class StringFireDetail final : public FireDetail {
 public:
     StringFireDetail(const char* string)
         : m_string(string)
     {
     }
 
-    void dump(PrintStream& out) const override;
+    void dump(PrintStream& out) const final;
 
 private:
     const char* m_string;
 };
 
 template<typename... Types>
-class LazyFireDetail : public FireDetail {
+class LazyFireDetail final : public FireDetail {
 public:
     LazyFireDetail(const Types&... args)
     {
@@ -75,7 +80,7 @@ public:
         });
     }
 
-    void dump(PrintStream& out) const override { m_lambda(out); }
+    void dump(PrintStream& out) const final { m_lambda(out); }
 
 private:
     ScopedLambda<void(PrintStream&)> m_lambda;
@@ -89,38 +94,98 @@ LazyFireDetail<Types...> createLazyFireDetail(const Types&... types)
 
 class WatchpointSet;
 
-class Watchpoint : public BasicRawSentinelNode<Watchpoint> {
-    WTF_MAKE_NONCOPYABLE(Watchpoint);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    Watchpoint() = default;
+// Really unfortunately, we do not have the way to dispatch appropriate destructor in base class' destructor
+// based on enum type. If we call destructor explicitly in the base class, it ends up calling the base destructor
+// twice. C++20 allows this by using std::std::destroying_delete_t. But we are not using C++20 right now.
+//
+// Because we cannot dispatch destructors of derived classes in the destructor of the base class, what it means is,
+// 1. Calling Watchpoint::~Watchpoint directly is illegal.
+// 2. `delete watchpoint` where watchpoint is non-final derived class is illegal. If watchpoint is final derived class, it works.
+// 3. If we really want to do (2), we need to call `watchpoint->destroy()` instead, and dispatch an appropriate destructor in Watchpoint::destroy.
+//
+// Luckily, none of our derived watchpoint classes have members which require destructors. So we do not dispatch
+// the destructor call to the drived class in the base class. If it becomes really required, we can introduce
+// a custom deleter for some classes which directly call "delete" to the allocated non-final Watchpoint class
+// (e.g. std::unique_ptr<Watchpoint>, RefPtr<Watchpoint>), and call Watchpoint::destroy instead of "delete"
+// operator. But since we do not require it for now, we are doing the simplest thing.
+#define JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro) \
+    macro(AdaptiveInferredPropertyValueStructure, AdaptiveInferredPropertyValueWatchpointBase::StructureWatchpoint) \
+    macro(AdaptiveInferredPropertyValueProperty, AdaptiveInferredPropertyValueWatchpointBase::PropertyWatchpoint) \
+    macro(CodeBlockJettisoning, CodeBlockJettisoningWatchpoint) \
+    macro(LLIntPrototypeLoadAdaptiveStructure, LLIntPrototypeLoadAdaptiveStructureWatchpoint) \
+    macro(FunctionRareDataAllocationProfileClearing, FunctionRareData::AllocationProfileClearingWatchpoint) \
+    macro(CachedSpecialPropertyAdaptiveStructure, CachedSpecialPropertyAdaptiveStructureWatchpoint)
 
-    virtual ~Watchpoint();
+#if ENABLE(JIT)
+#define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
+    JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro) \
+    macro(StructureTransitionStructureStubClearing, StructureTransitionStructureStubClearingWatchpoint)
+
+#if ENABLE(DFG_JIT)
+#define JSC_WATCHPOINT_TYPES(macro) \
+    JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
+    macro(AdaptiveStructure, DFG::AdaptiveStructureWatchpoint)
+#else
+#define JSC_WATCHPOINT_TYPES(macro) \
+    JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro)
+#endif
+
+#else
+#define JSC_WATCHPOINT_TYPES(macro) \
+    JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro)
+#endif
+
+#define JSC_WATCHPOINT_FIELD(type, member) \
+    type member; \
+    static_assert(std::is_trivially_destructible<type>::value, ""); \
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
+
+class Watchpoint : public PackedRawSentinelNode<Watchpoint> {
+    WTF_MAKE_NONCOPYABLE(Watchpoint);
+    WTF_MAKE_NONMOVABLE(Watchpoint);
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Watchpoint);
+public:
+#define JSC_DEFINE_WATCHPOINT_TYPES(type, _) type,
+    enum class Type : uint8_t {
+        JSC_WATCHPOINT_TYPES(JSC_DEFINE_WATCHPOINT_TYPES)
+    };
+#undef JSC_DEFINE_WATCHPOINT_TYPES
+
+    Watchpoint(Type type)
+        : m_type(type)
+    { }
 
 protected:
-    virtual void fireInternal(VM&, const FireDetail&) = 0;
+    ~Watchpoint();
 
 private:
     friend class WatchpointSet;
+    // ArrayBufferViewWatchpointAdaptor can fire watchpoints if it tries to attach a watchpoint to a view but can't allocate the ArrayBuffer.
+    friend struct DFG::ArrayBufferViewWatchpointAdaptor;
     void fire(VM&, const FireDetail&);
+
+    Type m_type;
 };
 
-enum WatchpointState {
-    ClearWatchpoint,
-    IsWatched,
-    IsInvalidated
+// Make sure that the state can be represented in 2 bits.
+enum WatchpointState : uint8_t {
+    ClearWatchpoint = 0,
+    IsWatched = 1,
+    IsInvalidated = 2
 };
 
 class InlineWatchpointSet;
 class DeferredWatchpointFire;
 class VM;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WatchpointSet);
+
 class WatchpointSet : public ThreadSafeRefCounted<WatchpointSet> {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(WatchpointSet);
     friend class LLIntOffsetsExtractor;
     friend class DeferredWatchpointFire;
 public:
-    JS_EXPORT_PRIVATE WatchpointSet(WatchpointState);
-
     // FIXME: In many cases, it would be amazing if this *did* fire the watchpoints. I suspect that
     // this might be hard to get right, but still, it might be awesome.
     JS_EXPORT_PRIVATE ~WatchpointSet(); // Note that this will not fire any of the watchpoints; if you need to know when a WatchpointSet dies then you need a separate mechanism for this.
@@ -158,6 +223,11 @@ public:
     bool isStillValid() const
     {
         return state() != IsInvalidated;
+    }
+    // Fast way of testing isStillValid(), which only works from the main thread.
+    bool isStillValidOnJSThread() const
+    {
+        return stateOnJSThread() != IsInvalidated;
     }
     // Like isStillValid(), may be called from another thread.
     bool hasBeenInvalidated() const { return !isStillValid(); }
@@ -228,6 +298,9 @@ public:
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, DeferredWatchpointFire* deferredWatchpoints); // Ditto.
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const char* reason); // Ditto.
 
+protected:
+    JS_EXPORT_PRIVATE WatchpointSet(WatchpointState);
+
 private:
     void fireAllWatchpoints(VM&, const FireDetail&);
     void take(WatchpointSet* other);
@@ -237,7 +310,7 @@ private:
     int8_t m_state;
     int8_t m_setIsNotEmpty;
 
-    SentinelLinkedList<Watchpoint, BasicRawSentinelNode<Watchpoint>> m_set;
+    SentinelLinkedList<Watchpoint, PackedRawSentinelNode<Watchpoint>> m_set;
 };
 
 // InlineWatchpointSet is a low-overhead, non-copyable watchpoint set in which
@@ -418,9 +491,9 @@ public:
     }
 
 private:
-    static const uintptr_t IsThinFlag        = 1;
-    static const uintptr_t StateMask         = 6;
-    static const uintptr_t StateShift        = 1;
+    static constexpr uintptr_t IsThinFlag        = 1;
+    static constexpr uintptr_t StateMask         = 6;
+    static constexpr uintptr_t StateShift        = 1;
 
     static bool isThin(uintptr_t data) { return data & IsThinFlag; }
     static bool isFat(uintptr_t data) { return !isThin(data); }
@@ -466,7 +539,7 @@ class DeferredWatchpointFire : public FireDetail {
     WTF_MAKE_NONCOPYABLE(DeferredWatchpointFire);
 public:
     JS_EXPORT_PRIVATE DeferredWatchpointFire(VM&);
-    JS_EXPORT_PRIVATE ~DeferredWatchpointFire();
+    JS_EXPORT_PRIVATE ~DeferredWatchpointFire() override;
 
     JS_EXPORT_PRIVATE void takeWatchpointsToFire(WatchpointSet*);
     JS_EXPORT_PRIVATE void fireAll();

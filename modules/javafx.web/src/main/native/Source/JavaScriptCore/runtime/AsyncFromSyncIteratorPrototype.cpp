@@ -26,10 +26,7 @@
 #include "config.h"
 #include "AsyncFromSyncIteratorPrototype.h"
 
-#include "BuiltinNames.h"
-#include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSObject.h"
 
 #include "AsyncFromSyncIteratorPrototype.lut.h"
 
@@ -54,7 +51,6 @@ void AsyncFromSyncIteratorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    didBecomePrototype();
 }
 
 AsyncFromSyncIteratorPrototype* AsyncFromSyncIteratorPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)

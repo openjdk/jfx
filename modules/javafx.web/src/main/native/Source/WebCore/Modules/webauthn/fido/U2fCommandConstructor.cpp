@@ -39,6 +39,7 @@
 #include "UserVerificationRequirement.h"
 #include "WebAuthenticationConstants.h"
 #include "WebAuthenticationUtils.h"
+#include <wtf/Optional.h>
 
 namespace fido {
 using namespace WebCore;
@@ -102,7 +103,8 @@ Optional<Vector<uint8_t>> convertToU2fRegisterCommand(const Vector<uint8_t>& cli
     if (!isConvertibleToU2fRegisterCommand(request))
         return WTF::nullopt;
 
-    return constructU2fRegisterCommand(produceRpIdHash(request.rp.id), clientDataHash);
+    auto appId = processGoogleLegacyAppIdSupportExtension(request.extensions);
+    return constructU2fRegisterCommand(produceRpIdHash(!appId ? request.rp.id : appId), clientDataHash);
 }
 
 Optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialCreationOptions& request, const PublicKeyCredentialDescriptor& keyHandle)
@@ -113,17 +115,33 @@ Optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>
     return constructU2fSignCommand(produceRpIdHash(request.rp.id), clientDataHash, keyHandle.idVector, true /* checkOnly */);
 }
 
-Optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialRequestOptions& request, const Vector<uint8_t>& keyHandle, bool checkOnly)
+Optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialRequestOptions& request, const Vector<uint8_t>& keyHandle, bool isAppId)
 {
     if (!isConvertibleToU2fSignCommand(request))
         return WTF::nullopt;
 
-    return constructU2fSignCommand(produceRpIdHash(request.rpId), clientDataHash, keyHandle, checkOnly);
+    if (!isAppId)
+        return constructU2fSignCommand(produceRpIdHash(request.rpId), clientDataHash, keyHandle, false);
+    ASSERT(request.extensions && !request.extensions->appid.isNull());
+    return constructU2fSignCommand(produceRpIdHash(request.extensions->appid), clientDataHash, keyHandle, false);
 }
 
 Vector<uint8_t> constructBogusU2fRegistrationCommand()
 {
     return constructU2fRegisterCommand(convertBytesToVector(kBogusAppParam, sizeof(kBogusAppParam)), convertBytesToVector(kBogusChallenge, sizeof(kBogusChallenge)));
+}
+
+String processGoogleLegacyAppIdSupportExtension(const Optional<AuthenticationExtensionsClientInputs>& extensions)
+{
+    if (!extensions) {
+        // AuthenticatorCoordinator::create should always set it.
+        ASSERT_NOT_REACHED();
+        return String();
+    }
+
+    if (!extensions->googleLegacyAppidSupport)
+        return String();
+    return "https://www.gstatic.com/securitykey/origins.json"_s;
 }
 
 } // namespace fido

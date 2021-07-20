@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 
-namespace JSC {
-
-class SlotVisitor;
-
-namespace DFG {
+namespace JSC { namespace DFG {
 
 #if ENABLE(DFG_JIT)
 
@@ -56,8 +52,8 @@ public:
     // worklist->completeAllReadyPlansForVM(vm);
     void completeAllPlansForVM(VM&);
 
-    template<typename Func>
-    void iterateCodeBlocksForGC(VM&, const Func&);
+    template<typename Func, typename Visitor>
+    void iterateCodeBlocksForGC(Visitor&, VM&, const Func&);
 
     void waitUntilAllPlansForVMAreReady(VM&);
     State completeAllReadyPlansForVM(VM&, CompilationKey = CompilationKey());
@@ -73,7 +69,7 @@ public:
     bool isActiveForVM(VM&) const;
 
     // Only called on the main thread after suspending all threads.
-    void visitWeakReferences(SlotVisitor&);
+    template<typename Visitor> void visitWeakReferences(Visitor&);
     void removeDeadPlans(VM&);
 
     void removeNonCompilingPlansForVM(VM&);
@@ -96,7 +92,9 @@ private:
 
     void dump(const AbstractLocker&, PrintStream&) const;
 
+    unsigned m_numberOfActiveThreads { 0 };
     CString m_threadName;
+    Vector<std::unique_ptr<ThreadData>> m_threads;
 
     // Used to inform the thread about what work there is left to do.
     Deque<RefPtr<Plan>> m_queue;
@@ -111,15 +109,11 @@ private:
     // Used to quickly find which plans have been compiled and are ready to
     // be completed.
     Vector<RefPtr<Plan>, 16> m_readyPlans;
-
-    Lock m_suspensionLock;
-
-    Box<Lock> m_lock;
     Ref<AutomaticThreadCondition> m_planEnqueued;
     Condition m_planCompiled;
 
-    Vector<std::unique_ptr<ThreadData>> m_threads;
-    unsigned m_numberOfActiveThreads;
+    Lock m_suspensionLock;
+    Box<Lock> m_lock;
 };
 
 JS_EXPORT_PRIVATE unsigned setNumberOfDFGCompilerThreads(unsigned);
@@ -145,8 +139,8 @@ Worklist& existingWorklistForIndex(unsigned index);
 
 void completeAllPlansForVM(VM&);
 
-template<typename Func>
-void iterateCodeBlocksForGC(VM&, const Func&);
+template<typename Func, typename Visitor>
+void iterateCodeBlocksForGC(Visitor&, VM&, const Func&);
 
 } } // namespace JSC::DFG
 

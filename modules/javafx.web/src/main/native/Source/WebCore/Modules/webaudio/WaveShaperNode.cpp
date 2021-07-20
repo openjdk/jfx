@@ -28,23 +28,65 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioContext.h"
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/TypedArrayInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 
-WaveShaperNode::WaveShaperNode(AudioContext& context)
-    : AudioBasicProcessorNode(context, context.sampleRate())
+WTF_MAKE_ISO_ALLOCATED_IMPL(WaveShaperNode);
+
+ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& context, const WaveShaperOptions& options)
 {
-    m_processor = std::make_unique<WaveShaperProcessor>(context.sampleRate(), 1);
-    setNodeType(NodeTypeWaveShaper);
+    RefPtr<Float32Array> curve;
+    if (options.curve) {
+        curve = Float32Array::tryCreate(options.curve->data(), options.curve->size());
+        if (!curve)
+            return Exception { InvalidStateError, "Invalid curve parameter" };
+    }
+
+    auto node = adoptRef(*new WaveShaperNode(context));
+
+    auto result = node->handleAudioNodeOptions(options, { 2, ChannelCountMode::Max, ChannelInterpretation::Speakers });
+    if (result.hasException())
+        return result.releaseException();
+
+    if (curve) {
+        result = node->setCurve(WTFMove(curve));
+        if (result.hasException())
+            return result.releaseException();
+    }
+
+    node->setOversample(options.oversample);
+
+    return node;
+}
+
+WaveShaperNode::WaveShaperNode(BaseAudioContext& context)
+    : AudioBasicProcessorNode(context, NodeTypeWaveShaper)
+{
+    m_processor = makeUnique<WaveShaperProcessor>(context.sampleRate(), 1);
 
     initialize();
 }
 
-void WaveShaperNode::setCurve(Float32Array& curve)
+ExceptionOr<void> WaveShaperNode::setCurve(RefPtr<Float32Array>&& curve)
 {
     ASSERT(isMainThread());
-    waveShaperProcessor()->setCurve(&curve);
+    DEBUG_LOG(LOGIDENTIFIER);
+    if (curve && curve->length() < 2)
+        return Exception { InvalidStateError, "Length of curve array cannot be less than 2" };
+
+    if (curve) {
+        // The specification states that we should maintain an internal copy of the curve so that
+        // subsequent modifications of the contents of the array have no effect.
+        auto clonedCurve = Float32Array::create(curve->data(), curve->length());
+        curve = WTFMove(clonedCurve);
+    }
+
+    waveShaperProcessor()->setCurve(curve.get());
+    return { };
 }
 
 Float32Array* WaveShaperNode::curve()
@@ -52,14 +94,14 @@ Float32Array* WaveShaperNode::curve()
     return waveShaperProcessor()->curve();
 }
 
-static inline WaveShaperProcessor::OverSampleType processorType(WaveShaperNode::OverSampleType type)
+static inline WaveShaperProcessor::OverSampleType processorType(OverSampleType type)
 {
     switch (type) {
-    case WaveShaperNode::OverSampleType::None:
+    case OverSampleType::None:
         return WaveShaperProcessor::OverSampleNone;
-    case WaveShaperNode::OverSampleType::_2x:
+    case OverSampleType::_2x:
         return WaveShaperProcessor::OverSample2x;
-    case WaveShaperNode::OverSampleType::_4x:
+    case OverSampleType::_4x:
         return WaveShaperProcessor::OverSample4x;
     }
     ASSERT_NOT_REACHED();
@@ -69,6 +111,7 @@ static inline WaveShaperProcessor::OverSampleType processorType(WaveShaperNode::
 void WaveShaperNode::setOversample(OverSampleType type)
 {
     ASSERT(isMainThread());
+    INFO_LOG(LOGIDENTIFIER, type);
 
     // Synchronize with any graph changes or changes to channel configuration.
     AudioContext::AutoLocker contextLocker(context());
@@ -87,6 +130,12 @@ auto WaveShaperNode::oversample() const -> OverSampleType
     }
     ASSERT_NOT_REACHED();
     return OverSampleType::None;
+}
+
+bool WaveShaperNode::propagatesSilence() const
+{
+    auto curve = const_cast<WaveShaperNode*>(this)->curve();
+    return !curve || !curve->length();
 }
 
 } // namespace WebCore

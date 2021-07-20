@@ -32,7 +32,7 @@
 struct wl_egl_window;
 #endif
 
-#if USE(LIBWPE)
+#if USE(WPE_RENDERER)
 struct wpe_renderer_backend_egl_offscreen_target;
 #endif
 
@@ -63,13 +63,10 @@ private:
     bool canRenderToDefaultFramebuffer() override;
     IntSize defaultFrameBufferSize() override;
     void swapInterval(int) override;
-#if USE(CAIRO)
-    cairo_device_t* cairoDevice() override;
-#endif
     bool isEGLContext() const override { return true; }
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
-    PlatformGraphicsContext3D platformContext() override;
+#if ENABLE(WEBGL)
+    PlatformGraphicsContextGL platformContext() override;
 #endif
 
     enum EGLSurfaceType { PbufferSurface, WindowSurface, PixmapSurface, Surfaceless };
@@ -82,7 +79,7 @@ private:
     GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, WlUniquePtr<struct wl_surface>&&, struct wl_egl_window*);
     void destroyWaylandWindow();
 #endif
-#if USE(LIBWPE)
+#if USE(WPE_RENDERER)
     GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, struct wpe_renderer_backend_egl_offscreen_target*);
     void destroyWPETarget();
 #endif
@@ -98,7 +95,7 @@ private:
     static std::unique_ptr<GLContextEGL> createWaylandContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
     static EGLSurface createWindowSurfaceWayland(EGLDisplay, EGLConfig, GLNativeWindowType);
 #endif
-#if USE(LIBWPE)
+#if USE(WPE_RENDERER)
     static std::unique_ptr<GLContextEGL> createWPEContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
     static EGLSurface createWindowSurfaceWPE(EGLDisplay, EGLConfig, GLNativeWindowType);
 #endif
@@ -115,11 +112,8 @@ private:
     WlUniquePtr<struct wl_surface> m_wlSurface;
     struct wl_egl_window* m_wlWindow { nullptr };
 #endif
-#if USE(LIBWPE)
+#if USE(WPE_RENDERER)
     struct wpe_renderer_backend_egl_offscreen_target* m_wpeTarget { nullptr };
-#endif
-#if USE(CAIRO)
-    cairo_device_t* m_cairoDevice { nullptr };
 #endif
 };
 

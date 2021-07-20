@@ -21,17 +21,14 @@
 
 #pragma once
 
-#include "SVGAnimatedBoolean.h"
-#include "SVGAnimatedString.h"
 #include "SVGElement.h"
-#include "SVGExternalResourcesRequired.h"
 #include "SVGURIReference.h"
 #include "ScriptElement.h"
 #include "XLinkNames.h"
 
 namespace WebCore {
 
-class SVGScriptElement final : public SVGElement, public SVGExternalResourcesRequired, public SVGURIReference, public ScriptElement {
+class SVGScriptElement final : public SVGElement, public SVGURIReference, public ScriptElement {
     WTF_MAKE_ISO_ALLOCATED(SVGScriptElement);
 public:
     static Ref<SVGScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser);
@@ -42,10 +39,10 @@ public:
 private:
     SVGScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
-    using AttributeOwnerProxy = SVGAttributeOwnerProxyImpl<SVGScriptElement, SVGElement, SVGExternalResourcesRequired, SVGURIReference>;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGScriptElement, SVGElement, SVGURIReference>;
+    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
-    const SVGAttributeOwnerProxy& attributeOwnerProxy() const final { return m_attributeOwnerProxy; }
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     void svgAttributeChanged(const QualifiedName&) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
@@ -53,11 +50,12 @@ private:
     void childrenChanged(const ChildChange&) final;
 
     bool isURLAttribute(const Attribute& attribute) const final { return attribute.name() == sourceAttributeValue(); }
-    void finishParsingChildren() final;
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
-    bool haveLoadedRequiredResources() final { return SVGExternalResourcesRequired::haveLoadedRequiredResources(); }
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
+    bool rendererIsNeeded(const RenderStyle&) final { return false; }
 
+    // ScriptElement
     String sourceAttributeValue() const final { return href(); }
     String charsetAttributeValue() const final { return String(); }
     String typeAttributeValue() const final { return getAttribute(SVGNames::typeAttr).string(); }
@@ -67,25 +65,27 @@ private:
     bool hasAsyncAttribute() const final { return false; }
     bool hasDeferAttribute() const final { return false; }
     bool hasNoModuleAttribute() const final { return false; }
+    ReferrerPolicy referrerPolicy() const final { return ReferrerPolicy::EmptyString; }
     bool hasSourceAttribute() const final { return hasAttribute(SVGNames::hrefAttr) || hasAttribute(XLinkNames::hrefAttr); }
+    void dispatchLoadEvent() final { SVGURIReference::dispatchLoadEvent(); }
+    void dispatchErrorEvent() final;
 
-    void dispatchLoadEvent() final { SVGExternalResourcesRequired::dispatchLoadEvent(); }
+    // SVGElement
+    bool haveLoadedRequiredResources() final { return SVGURIReference::haveLoadedRequiredResources(); }
+    Timer* loadEventTimer() final { return &m_loadEventTimer; }
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
-    bool rendererIsNeeded(const RenderStyle&) final { return false; }
-
-    // SVGExternalResourcesRequired
-    void setHaveFiredLoadEvent(bool haveFiredLoadEvent) final { ScriptElement::setHaveFiredLoadEvent(haveFiredLoadEvent); }
-    bool isParserInserted() const final { return ScriptElement::isParserInserted(); }
+    // SVGURIReference
     bool haveFiredLoadEvent() const final { return ScriptElement::haveFiredLoadEvent(); }
-    Timer* svgLoadEventTimer() final { return &m_svgLoadEventTimer; }
+    void setHaveFiredLoadEvent(bool haveFiredLoadEvent) final { ScriptElement::setHaveFiredLoadEvent(haveFiredLoadEvent); }
+    bool errorOccurred() const final { return ScriptElement::errorOccurred(); }
+    void setErrorOccurred(bool errorOccurred) final { ScriptElement::setErrorOccurred(errorOccurred); }
 
 #ifndef NDEBUG
     bool filterOutAnimatableAttribute(const QualifiedName& name) const final { return name == SVGNames::typeAttr; }
 #endif
 
-    AttributeOwnerProxy m_attributeOwnerProxy { *this };
-    Timer m_svgLoadEventTimer;
+    PropertyRegistry m_propertyRegistry { *this };
+    Timer m_loadEventTimer;
 };
 
 } // namespace WebCore

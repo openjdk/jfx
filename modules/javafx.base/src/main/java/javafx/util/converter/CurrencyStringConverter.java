@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,7 @@ import java.util.Locale;
 import javafx.util.StringConverter;
 
 /**
- * <p>{@link StringConverter} implementation for {@link Number} values
- * that represent currency.</p>
+ * A {@link StringConverter} implementation for {@link Number} values that represent currency. Instances of this class are immutable.
  *
  * @see PercentageStringConverter
  * @see NumberStringConverter
@@ -42,29 +41,53 @@ import javafx.util.StringConverter;
  */
 public class CurrencyStringConverter extends NumberStringConverter {
 
-    // ------------------------------------------------------------ Constructors
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the default locale and format.
+     */
     public CurrencyStringConverter() {
         this(Locale.getDefault());
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the given locale and the default format.
+     *
+     * @param locale the locale used in determining the number format used to format the string
+     */
     public CurrencyStringConverter(Locale locale) {
         this(locale, null);
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the default locale and the given decimal format pattern.
+     *
+     * @param pattern the string pattern used in determining the number format used to format the string
+     *
+     * @see java.text.DecimalFormat
+     */
     public CurrencyStringConverter(String pattern) {
         this(Locale.getDefault(), pattern);
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the given locale and decimal format pattern.
+     *
+     * @param locale the locale used in determining the number format used to format the string
+     * @param pattern the string pattern used in determining the number format used to format the string
+     *
+     * @see java.text.DecimalFormat
+     */
     public CurrencyStringConverter(Locale locale, String pattern) {
         super(locale, pattern, null);
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the given number format.
+     *
+     * @param numberFormat the number format used to format the string
+     */
     public CurrencyStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);
     }
-
-
-    // ---------------------------------------------------------------0- Methods
 
     /** {@inheritDoc} */
     @Override protected NumberFormat getNumberFormat() {

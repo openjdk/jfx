@@ -47,8 +47,8 @@ public:
     bool hasChildNodes() const { return m_firstChild; }
     bool hasOneChild() const { return m_firstChild && !m_firstChild->nextSibling(); }
 
-    bool directChildNeedsStyleRecalc() const { return getFlag(DirectChildNeedsStyleRecalcFlag); }
-    void setDirectChildNeedsStyleRecalc() { setFlag(DirectChildNeedsStyleRecalcFlag); }
+    bool directChildNeedsStyleRecalc() const { return hasStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
+    void setDirectChildNeedsStyleRecalc() { setStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
 
     WEBCORE_EXPORT unsigned countChildNodes() const;
     WEBCORE_EXPORT Node* traverseToChildAt(unsigned) const;
@@ -57,7 +57,7 @@ public:
     ExceptionOr<void> replaceChild(Node& newChild, Node& oldChild);
     WEBCORE_EXPORT ExceptionOr<void> removeChild(Node& child);
     WEBCORE_EXPORT ExceptionOr<void> appendChild(Node& newChild);
-    void replaceAllChildren(Ref<Node>&&);
+    void replaceAllChildrenWithNewText(const String&);
     void replaceAllChildren(std::nullptr_t);
 
     // These methods are only used during parsing.
@@ -73,27 +73,28 @@ public:
 
     void cloneChildNodes(ContainerNode& clone);
 
-    enum ChildChangeType { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildRemoved, NonContentsChildInserted, AllChildrenReplaced };
-    enum class ChildChangeSource { Parser, API };
     struct ChildChange {
-        ChildChangeType type;
+        enum class Type : uint8_t { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildRemoved, NonContentsChildInserted, AllChildrenReplaced };
+        enum class Source : bool { Parser, API };
+
+        ChildChange::Type type;
         Element* previousSiblingElement;
         Element* nextSiblingElement;
-        ChildChangeSource source;
+        ChildChange::Source source;
 
         bool isInsertion() const
         {
             switch (type) {
-            case ElementInserted:
-            case TextInserted:
-            case NonContentsChildInserted:
-            case AllChildrenReplaced:
+            case ChildChange::Type::ElementInserted:
+            case ChildChange::Type::TextInserted:
+            case ChildChange::Type::NonContentsChildInserted:
+            case ChildChange::Type::AllChildrenReplaced:
                 return true;
-            case ElementRemoved:
-            case TextRemoved:
-            case TextChanged:
-            case AllChildrenRemoved:
-            case NonContentsChildRemoved:
+            case ChildChange::Type::ElementRemoved:
+            case ChildChange::Type::TextRemoved:
+            case ChildChange::Type::TextChanged:
+            case ChildChange::Type::AllChildrenRemoved:
+            case ChildChange::Type::NonContentsChildRemoved:
                 return false;
             }
             ASSERT_NOT_REACHED();
@@ -101,6 +102,8 @@ public:
         }
     };
     virtual void childrenChanged(const ChildChange&);
+
+    ExceptionOr<void> appendChild(ChildChange::Source, Node& newChild);
 
     void disconnectDescendantFrames();
 
@@ -113,11 +116,11 @@ public:
     WEBCORE_EXPORT ExceptionOr<Element*> querySelector(const String& selectors);
     WEBCORE_EXPORT ExceptionOr<Ref<NodeList>> querySelectorAll(const String& selectors);
 
-    WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagName(const AtomicString&);
-    WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName);
+    WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagName(const AtomString&);
+    WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagNameNS(const AtomString& namespaceURI, const AtomString& localName);
     WEBCORE_EXPORT Ref<NodeList> getElementsByName(const String& elementName);
-    WEBCORE_EXPORT Ref<HTMLCollection> getElementsByClassName(const AtomicString& classNames);
-    Ref<RadioNodeList> radioNodeList(const AtomicString&);
+    WEBCORE_EXPORT Ref<HTMLCollection> getElementsByClassName(const AtomString& classNames);
+    Ref<RadioNodeList> radioNodeList(const AtomString&);
 
     // From the ParentNode interface - https://dom.spec.whatwg.org/#interface-parentnode
     WEBCORE_EXPORT Ref<HTMLCollection> children();
@@ -126,6 +129,8 @@ public:
     WEBCORE_EXPORT unsigned childElementCount() const;
     ExceptionOr<void> append(Vector<NodeOrString>&&);
     ExceptionOr<void> prepend(Vector<NodeOrString>&&);
+
+    ExceptionOr<void> replaceChildren(Vector<NodeOrString>&&);
 
     ExceptionOr<void> ensurePreInsertionValidity(Node& newChild, Node* refChild);
 
@@ -143,8 +148,9 @@ protected:
 private:
     void executePreparedChildrenRemoval();
     enum class DeferChildrenChanged { Yes, No };
-    NodeVector removeAllChildrenWithScriptAssertion(ChildChangeSource, DeferChildrenChanged = DeferChildrenChanged::No);
-    bool removeNodeWithScriptAssertion(Node&, ChildChangeSource);
+    NodeVector removeAllChildrenWithScriptAssertion(ChildChange::Source, DeferChildrenChanged = DeferChildrenChanged::No);
+    bool removeNodeWithScriptAssertion(Node&, ChildChange::Source);
+    ExceptionOr<void> removeSelfOrChildNodesForInsertion(Node&, NodeVector&);
 
     void removeBetween(Node* previousChild, Node* nextChild, Node& oldChild);
     ExceptionOr<void> appendChildWithoutPreInsertionValidityCheck(Node&);

@@ -53,7 +53,10 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.IntegerPropertyBase;
 import javafx.css.Styleable;
+import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
 
 /**
@@ -110,7 +113,7 @@ import javafx.css.StyleableProperty;
  * TextFlow may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  *
  * <p>
  * A textflow's parent will resize the textflow within the textflow's range
@@ -383,6 +386,7 @@ public class TextFlow extends Pane {
         if (layout == null) {
             TextLayoutFactory factory = Toolkit.getToolkit().getTextLayoutFactory();
             layout = factory.createLayout();
+            layout.setTabSize(getTabSize());
             needsContent = true;
         }
         if (needsContent) {
@@ -484,6 +488,44 @@ public class TextFlow extends Pane {
         return lineSpacing;
     }
 
+    /**
+     * The size of a tab stop in spaces.
+     * Values less than 1 are treated as 1. This value overrides the
+     * {@code tabSize} of contained {@link Text} nodes.
+     *
+     * @defaultValue 8
+     *
+     * @since 14
+     */
+    private IntegerProperty tabSize;
+
+    public final IntegerProperty tabSizeProperty() {
+        if (tabSize == null) {
+            tabSize = new StyleableIntegerProperty(TextLayout.DEFAULT_TAB_SIZE) {
+                @Override public Object getBean() { return TextFlow.this; }
+                @Override public String getName() { return "tabSize"; }
+                @Override public CssMetaData getCssMetaData() {
+                    return StyleableProperties.TAB_SIZE;
+                }
+                @Override protected void invalidated() {
+                    TextLayout layout = getTextLayout();
+                    if (layout.setTabSize(get())) {
+                        requestLayout();
+                    }
+                }
+            };
+        }
+        return tabSize;
+    }
+
+    public final int getTabSize() {
+        return tabSize == null ? TextLayout.DEFAULT_TAB_SIZE : tabSize.get();
+    }
+
+    public final void setTabSize(int spaces) {
+        tabSizeProperty().set(spaces);
+    }
+
     @Override public final double getBaselineOffset() {
         Insets insets = getInsets();
         double top = snapSpaceY(insets.getTop());
@@ -499,13 +541,13 @@ public class TextFlow extends Pane {
     /*
      * Super-lazy instantiation pattern from Bill Pugh.
      */
-     private static class StyleableProperties {
+    private static class StyleableProperties {
 
-         private static final
-             CssMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
-                 new CssMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
-                 new EnumConverter<TextAlignment>(TextAlignment.class),
-                 TextAlignment.LEFT) {
+        private static final
+            CssMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
+                new CssMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
+                new EnumConverter<TextAlignment>(TextAlignment.class),
+                TextAlignment.LEFT) {
 
             @Override public boolean isSettable(TextFlow node) {
                 return node.textAlignment == null || !node.textAlignment.isBound();
@@ -514,12 +556,12 @@ public class TextFlow extends Pane {
             @Override public StyleableProperty<TextAlignment> getStyleableProperty(TextFlow node) {
                 return (StyleableProperty<TextAlignment>)node.textAlignmentProperty();
             }
-         };
+        };
 
-         private static final
-             CssMetaData<TextFlow,Number> LINE_SPACING =
-                 new CssMetaData<TextFlow,Number>("-fx-line-spacing",
-                 SizeConverter.getInstance(), 0) {
+        private static final
+            CssMetaData<TextFlow,Number> LINE_SPACING =
+                new CssMetaData<TextFlow,Number>("-fx-line-spacing",
+                SizeConverter.getInstance(), 0) {
 
             @Override public boolean isSettable(TextFlow node) {
                 return node.lineSpacing == null || !node.lineSpacing.isBound();
@@ -528,16 +570,32 @@ public class TextFlow extends Pane {
             @Override public StyleableProperty<Number> getStyleableProperty(TextFlow node) {
                 return (StyleableProperty<Number>)node.lineSpacingProperty();
             }
-         };
+        };
 
-     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-         static {
+        private static final CssMetaData<TextFlow, Number> TAB_SIZE =
+                new CssMetaData<TextFlow,Number>("-fx-tab-size",
+                SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
+
+            @Override
+            public boolean isSettable(TextFlow node) {
+                return node.tabSize == null || !node.tabSize.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(TextFlow node) {
+                return (StyleableProperty<Number>)node.tabSizeProperty();
+            }
+        };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
             styleables.add(TEXT_ALIGNMENT);
             styleables.add(LINE_SPACING);
+            styleables.add(TAB_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
-         }
+        }
     }
 
     /**
@@ -554,10 +612,6 @@ public class TextFlow extends Pane {
     }
 
     /* The methods in this section are copied from Region due to package visibility restriction */
-    private static double snapSpace(double value, boolean snapToPixel) {
-        return snapToPixel ? Math.round(value) : value;
-    }
-
     static double boundedSize(double min, double pref, double max) {
         double a = pref >= min ? pref : min;
         double b = min >= max ? min : max;
@@ -569,11 +623,10 @@ public class TextFlow extends Pane {
     }
 
     double computeChildPrefAreaWidth(Node child, Insets margin, double height) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+        double top = margin != null? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             alt = snapSizeY(boundedSize(
@@ -588,11 +641,10 @@ public class TextFlow extends Pane {
     }
 
     double computeChildPrefAreaHeight(Node child, Insets margin, double width) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+        double top = margin != null? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSizeX(boundedSize(

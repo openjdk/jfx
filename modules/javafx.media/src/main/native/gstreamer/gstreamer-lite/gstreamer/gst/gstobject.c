@@ -153,7 +153,8 @@ gst_object_class_init (GstObjectClass * klass)
 
   properties[PROP_NAME] =
       g_param_spec_string ("name", "Name", "The name of the object", NULL,
-      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS |
+      GST_PARAM_DOC_SHOW_DEFAULT);
 
   /**
    * GstObject:parent:
@@ -166,7 +167,8 @@ gst_object_class_init (GstObjectClass * klass)
    */
   properties[PROP_PARENT] =
       g_param_spec_object ("parent", "Parent", "The parent of the object",
-      GST_TYPE_OBJECT, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      GST_TYPE_OBJECT,
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_DOC_SHOW_DEFAULT);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, properties);
 
@@ -184,8 +186,7 @@ gst_object_class_init (GstObjectClass * klass)
       g_signal_new ("deep-notify", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_FIRST | G_SIGNAL_NO_RECURSE | G_SIGNAL_DETAILED |
       G_SIGNAL_NO_HOOKS, G_STRUCT_OFFSET (GstObjectClass, deep_notify), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 2, GST_TYPE_OBJECT,
-      G_TYPE_PARAM);
+      NULL, NULL, G_TYPE_NONE, 2, GST_TYPE_OBJECT, G_TYPE_PARAM);
 
   klass->path_string_separator = "/";
 
@@ -296,6 +297,30 @@ gst_object_ref_sink (gpointer object)
 }
 
 /**
+ * gst_clear_object: (skip)
+ * @object_ptr: a pointer to a #GstObject reference
+ *
+ * Clears a reference to a #GstObject.
+ *
+ * @object_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing.
+ * Otherwise, the reference count of the object is decreased using
+ * gst_object_unref() and the pointer is set to %NULL.
+ *
+ * A macro is also included that allows this function to be used without
+ * pointer casts.
+ *
+ * Since: 1.16
+ **/
+#undef gst_clear_object
+void
+gst_clear_object (GstObject ** object_ptr)
+{
+  g_clear_pointer (object_ptr, gst_object_unref);
+}
+
+/**
  * gst_object_replace:
  * @oldobj: (inout) (transfer full) (nullable): pointer to a place of
  *     a #GstObject to replace
@@ -324,7 +349,7 @@ gst_object_replace (GstObject ** oldobj, GstObject * newobj)
       newobj ? G_OBJECT (newobj)->ref_count : 0);
 #endif
 
-  oldptr = g_atomic_pointer_get ((gpointer *) oldobj);
+  oldptr = (GstObject *) g_atomic_pointer_get ((gpointer *) oldobj);
 
   if (G_UNLIKELY (oldptr == newobj))
     return FALSE;
@@ -333,7 +358,7 @@ gst_object_replace (GstObject ** oldobj, GstObject * newobj)
     gst_object_ref (newobj);
 
   while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              oldobj, oldptr, newobj))) {
+              oldobj, (gpointer) oldptr, newobj))) {
     oldptr = g_atomic_pointer_get ((gpointer *) oldobj);
     if (G_UNLIKELY (oldptr == newobj))
       break;
@@ -570,6 +595,38 @@ had_parent:
   }
 }
 
+static gboolean
+gst_object_set_name_intern (GstObject * object, const gchar * name)
+{
+  gboolean result;
+
+  GST_OBJECT_LOCK (object);
+
+  /* parented objects cannot be renamed */
+  if (G_UNLIKELY (object->parent != NULL))
+    goto had_parent;
+
+  if (name != NULL) {
+    g_free (object->name);
+    object->name = g_strdup (name);
+    GST_OBJECT_UNLOCK (object);
+    result = TRUE;
+  } else {
+    GST_OBJECT_UNLOCK (object);
+    result = gst_object_set_name_default (object);
+  }
+
+  return result;
+
+  /* error */
+had_parent:
+  {
+    GST_WARNING ("parented objects can't be renamed");
+    GST_OBJECT_UNLOCK (object);
+    return FALSE;
+  }
+}
+
 /**
  * gst_object_set_name:
  * @object: a #GstObject
@@ -593,32 +650,9 @@ gst_object_set_name (GstObject * object, const gchar * name)
 
   g_return_val_if_fail (GST_IS_OBJECT (object), FALSE);
 
-  GST_OBJECT_LOCK (object);
-
-  /* parented objects cannot be renamed */
-  if (G_UNLIKELY (object->parent != NULL))
-    goto had_parent;
-
-  if (name != NULL) {
-    g_free (object->name);
-    object->name = g_strdup (name);
-    GST_OBJECT_UNLOCK (object);
-    result = TRUE;
-  } else {
-    GST_OBJECT_UNLOCK (object);
-    result = gst_object_set_name_default (object);
-  }
-
-  g_object_notify (G_OBJECT (object), "name");
+  if ((result = gst_object_set_name_intern (object, name)))
+    g_object_notify_by_pspec (G_OBJECT (object), properties[PROP_NAME]);
   return result;
-
-  /* error */
-had_parent:
-  {
-    GST_WARNING ("parented objects can't be renamed");
-    GST_OBJECT_UNLOCK (object);
-    return FALSE;
-  }
 }
 
 /**
@@ -901,7 +935,7 @@ gst_object_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_NAME:
-      gst_object_set_name (gstobject, g_value_get_string (value));
+      gst_object_set_name_intern (gstobject, g_value_get_string (value));
       break;
     case PROP_PARENT:
       gst_object_set_parent (gstobject, g_value_get_object (value));
@@ -1424,7 +1458,7 @@ gst_object_get_g_value_array (GstObject * object, const gchar * property_name,
  *
  * Obtain the control-rate for this @object. Audio processing #GstElement
  * objects will use this rate to sub-divide their processing loop and call
- * gst_object_sync_values() inbetween. The length of the processing segment
+ * gst_object_sync_values() in between. The length of the processing segment
  * should be up to @control-rate nanoseconds.
  *
  * If the @object is not under property control, this will return
@@ -1450,7 +1484,7 @@ gst_object_get_control_rate (GstObject * object)
  *
  * Change the control-rate for this @object. Audio processing #GstElement
  * objects will use this rate to sub-divide their processing loop and call
- * gst_object_sync_values() inbetween. The length of the processing segment
+ * gst_object_sync_values() in between. The length of the processing segment
  * should be up to @control-rate nanoseconds.
  *
  * The control-rate should not change if the element is in %GST_STATE_PAUSED or

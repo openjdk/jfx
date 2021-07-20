@@ -588,6 +588,41 @@ public class SetPropertyBaseTest {
     }
 
     @Test
+    public void testRebind_Identity() {
+        final SetProperty<Object> v1 = new SimpleSetProperty<>(FXCollections.observableSet());
+        final SetProperty<Object> v2 = new SimpleSetProperty<>(FXCollections.observableSet());
+        attachSetChangeListener();
+
+        // bind
+        property.bind(v1);
+        property.check(1);
+        setChangeListener.clear();
+
+        // rebind to same
+        property.bind(v1);
+        property.check(0);
+        setChangeListener.check0();
+
+        // rebind to other, without explicitly unbinding
+        property.bind(v2);
+        property.check(1);
+        setChangeListener.clear();
+
+        v2.add("One");
+        setChangeListener.assertAdded(Tuple.tup("One"));
+        setChangeListener.clear();
+
+        v2.add("Two");
+        setChangeListener.assertAdded(Tuple.tup("Two"));
+        setChangeListener.clear();
+
+        property.check(4);
+        assertTrue(property.isBound());
+        assertEquals(2, property.toArray().length);
+        assertEquals("SetProperty [bound, value: [Two, One]]", property.toString());
+    }
+
+    @Test
     public void testUnbind() {
         attachInvalidationListener();
         final SetProperty<Object> v = new SimpleSetProperty<Object>(VALUE_1a);

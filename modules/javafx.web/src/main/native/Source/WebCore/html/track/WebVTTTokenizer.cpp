@@ -32,7 +32,7 @@
 #include "config.h"
 #include "WebVTTTokenizer.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "MarkupTokenizerInlines.h"
 #include <wtf/text/StringBuilder.h>
@@ -202,7 +202,7 @@ StartTagClassState:
     } else if (character == '>' || character == kEndOfFileMarker) {
         addNewClass(classes, buffer);
         buffer.clear();
-        return advanceAndEmitToken(m_input, token, WebVTTToken::StartTag(result.toString(), classes.toAtomicString()));
+        return advanceAndEmitToken(m_input, token, WebVTTToken::StartTag(result.toString(), classes.toAtomString()));
     } else {
         buffer.append(character);
         WEBVTT_ADVANCE_TO(StartTagClassState);
@@ -210,7 +210,7 @@ StartTagClassState:
 
 StartTagAnnotationState:
     if (character == '>' || character == kEndOfFileMarker)
-        return advanceAndEmitToken(m_input, token, WebVTTToken::StartTag(result.toString(), classes.toAtomicString(), buffer.toAtomicString()));
+        return advanceAndEmitToken(m_input, token, WebVTTToken::StartTag(result.toString(), classes.toAtomString(), buffer.toAtomString()));
     buffer.append(character);
     WEBVTT_ADVANCE_TO(StartTagAnnotationState);
 

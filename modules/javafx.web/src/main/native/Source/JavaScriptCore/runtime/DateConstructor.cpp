@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -25,36 +25,20 @@
 #include "DateConversion.h"
 #include "DateInstance.h"
 #include "DatePrototype.h"
-#include "JSDateMath.h"
-#include "JSFunction.h"
-#include "JSGlobalObject.h"
-#include "JSString.h"
-#include "ObjectPrototype.h"
 #include "JSCInlines.h"
-#include <math.h>
-#include <time.h>
-#include <wtf/MathExtras.h>
-
-#if HAVE(SYS_TIME_H)
-#include <sys/time.h>
-#endif
-
-#if HAVE(SYS_TIMEB_H)
-#include <sys/timeb.h>
-#endif
+#include "JSDateMath.h"
 
 namespace JSC {
 
-EncodedJSValue JSC_HOST_CALL dateParse(ExecState*);
-EncodedJSValue JSC_HOST_CALL dateUTC(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(dateParse);
+static JSC_DECLARE_HOST_FUNCTION(dateUTC);
+static JSC_DECLARE_HOST_FUNCTION(dateNow);
 
 }
 
 #include "DateConstructor.lut.h"
 
 namespace JSC {
-
-using namespace WTF;
 
 const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_info, &dateConstructorTable, nullptr, CREATE_METHOD_TABLE(DateConstructor) };
 
@@ -68,8 +52,8 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(DateConstructor);
 
-static EncodedJSValue JSC_HOST_CALL callDate(ExecState*);
-static EncodedJSValue JSC_HOST_CALL constructWithDateConstructor(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(callDate);
+static JSC_DECLARE_HOST_FUNCTION(constructWithDateConstructor);
 
 DateConstructor::DateConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure, callDate, constructWithDateConstructor)
@@ -78,14 +62,13 @@ DateConstructor::DateConstructor(VM& vm, Structure* structure)
 
 void DateConstructor::finishCreation(VM& vm, DatePrototype* datePrototype)
 {
-    Base::finishCreation(vm, "Date");
+    Base::finishCreation(vm, 7, vm.propertyNames->Date.string(), PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, datePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(7), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
-static double millisecondsFromComponents(ExecState* exec, const ArgList& args, WTF::TimeType timeType)
+static double millisecondsFromComponents(JSGlobalObject* globalObject, const ArgList& args, WTF::TimeType timeType)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // Initialize doubleArguments with default values.
@@ -94,7 +77,7 @@ static double millisecondsFromComponents(ExecState* exec, const ArgList& args, W
     };
     unsigned numberOfUsedArguments = std::max(std::min<unsigned>(7U, args.size()), 1U);
     for (unsigned i = 0; i < numberOfUsedArguments; ++i) {
-        doubleArguments[i] = args.at(i).toNumber(exec);
+        doubleArguments[i] = args.at(i).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, 0);
     }
     for (unsigned i = 0; i < numberOfUsedArguments; ++i) {
@@ -111,13 +94,13 @@ static double millisecondsFromComponents(ExecState* exec, const ArgList& args, W
     t.setMinute(JSC::toInt32(doubleArguments[4]));
     t.setSecond(JSC::toInt32(doubleArguments[5]));
     t.setIsDST(-1);
-    return gregorianDateTimeToMS(vm, t, doubleArguments[6], timeType);
+    return vm.dateCache.gregorianDateTimeToMS(t, doubleArguments[6], timeType);
 }
 
 // ECMA 15.9.3
-JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, JSValue newTarget, const ArgList& args)
+JSObject* constructDate(JSGlobalObject* globalObject, JSValue newTarget, const ArgList& args)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     int numArgs = args.size();
 
@@ -130,56 +113,65 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, JSValue n
         if (auto* dateInstance = jsDynamicCast<DateInstance*>(vm, arg0))
             value = dateInstance->internalNumber();
         else {
-            JSValue primitive = arg0.toPrimitive(exec);
+            JSValue primitive = arg0.toPrimitive(globalObject);
             RETURN_IF_EXCEPTION(scope, nullptr);
             if (primitive.isString()) {
-                value = parseDate(exec, vm, asString(primitive)->value(exec));
+                String primitiveString = asString(primitive)->value(globalObject);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                value = vm.dateCache.parseDate(globalObject, vm, primitiveString);
                 RETURN_IF_EXCEPTION(scope, nullptr);
             } else
-                value = primitive.toNumber(exec);
+                value = primitive.toNumber(globalObject);
         }
     } else
-        value = millisecondsFromComponents(exec, args, WTF::LocalTime);
+        value = millisecondsFromComponents(globalObject, args, WTF::LocalTime);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    Structure* dateStructure = InternalFunction::createSubclassStructure(exec, newTarget, globalObject->dateStructure());
+    Structure* dateStructure = !newTarget || newTarget == globalObject->dateConstructor()
+        ? globalObject->dateStructure()
+        : InternalFunction::createSubclassStructure(globalObject, asObject(newTarget), getFunctionRealm(vm, asObject(newTarget))->dateStructure());
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     return DateInstance::create(vm, dateStructure, value);
 }
 
-static EncodedJSValue JSC_HOST_CALL constructWithDateConstructor(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(constructWithDateConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    ArgList args(exec);
-    return JSValue::encode(constructDate(exec, jsCast<InternalFunction*>(exec->jsCallee())->globalObject(exec->vm()), exec->newTarget(), args));
+    ArgList args(callFrame);
+    return JSValue::encode(constructDate(globalObject, callFrame->newTarget(), args));
 }
 
 // ECMA 15.9.2
-static EncodedJSValue JSC_HOST_CALL callDate(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(callDate, (JSGlobalObject* globalObject, CallFrame*))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     GregorianDateTime ts;
-    msToGregorianDateTime(vm, WallTime::now().secondsSinceEpoch().milliseconds(), WTF::LocalTime, ts);
-    return JSValue::encode(jsNontrivialString(&vm, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
+    vm.dateCache.msToGregorianDateTime(WallTime::now().secondsSinceEpoch().milliseconds(), WTF::LocalTime, ts);
+    return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
 }
 
-EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(dateParse, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    String dateStr = exec->argument(0).toWTFString(exec);
+    String dateStr = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(parseDate(exec, vm, dateStr))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(vm.dateCache.parseDate(globalObject, vm, dateStr))));
 }
 
-EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)
+JSValue dateNowImpl()
+{
+    return jsNumber(jsCurrentTime());
+}
+
+JSC_DEFINE_HOST_FUNCTION(dateNow, (JSGlobalObject*, CallFrame*))
 {
     return JSValue::encode(jsNumber(jsCurrentTime()));
 }
 
-EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(dateUTC, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    double ms = millisecondsFromComponents(exec, ArgList(exec), WTF::UTCTime);
+    double ms = millisecondsFromComponents(globalObject, ArgList(callFrame), WTF::UTCTime);
     return JSValue::encode(jsNumber(timeClip(ms)));
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -313,7 +313,7 @@ void ChromeClientJava::takeFocus(FocusDirection direction)
 
     ASSERT(m_webPage);
 
-    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirectionForward);
+    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirection::Forward);
     WTF::CheckAndClearException(env);
 }
 
@@ -329,7 +329,6 @@ void ChromeClientJava::focusedFrameChanged(Frame*)
 
 Page* ChromeClientJava::createWindow(
     Frame&,
-    const FrameLoadRequest& req,
     const WindowFeatures& features,
     const NavigationAction& na)
 {
@@ -351,11 +350,7 @@ Page* ChromeClientJava::createWindow(
     }
 
     Page* p = WebPage::pageFromJObject(newWebPage);
-    if (!req.isEmpty()) {
-        p->mainFrame().loader().load(
-            FrameLoadRequest(p->mainFrame(), ResourceRequest(na.url()), req.shouldOpenExternalURLsPolicy()));
-    }
-
+    p->mainFrame().loader().load(FrameLoadRequest(p->mainFrame(), ResourceRequest(na.url())));
     return p;
 }
 
@@ -600,7 +595,7 @@ KeyboardUIMode ChromeClientJava::keyboardUIMode()
     return KeyboardAccessTabsToLinks;
 }
 
-void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigned)
+void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigned, const String& toolTip, TextDirection)
 {
     static Node* mouseOverNode = 0;
     Element* urlElement = htr.URLElement();
@@ -617,23 +612,24 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
             mouseOverNode = 0;
         }
     }
+    setToolTip(toolTip);
 }
 
-void ChromeClientJava::setToolTip(const String& tooltip, TextDirection)
+void ChromeClientJava::setToolTip(const String& toolTip)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
-    JLString tooltipStr(NULL);
-    if (tooltip.length() > 0) {
-        tooltipStr = tooltip.toJavaString(env);
+    JLString toolTipStr(NULL);
+    if (toolTip.length() > 0) {
+        toolTipStr = toolTip.toJavaString(env);
     }
-    env->CallVoidMethod(m_webPage, setTooltipMID, (jstring)tooltipStr);
+    env->CallVoidMethod(m_webPage, setTooltipMID, (jstring)toolTipStr);
     WTF::CheckAndClearException(env);
 }
 
-void ChromeClientJava::print(Frame&)
+void ChromeClientJava::print(Frame&, const StringWithDirection&)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -675,9 +671,9 @@ void ChromeClientJava::setNeedsOneShotDrawingSynchronization()
             ->setNeedsOneShotDrawingSynchronization();
 }
 
-void ChromeClientJava::scheduleCompositingLayerFlush()
+void ChromeClientJava::triggerRenderingUpdate()
 {
-    WebPage::webPageFromJObject(m_webPage)->scheduleCompositingLayerSync();
+    WebPage::webPageFromJObject(m_webPage)->scheduleRenderingUpdate();
 }
 
 void ChromeClientJava::attachViewOverlayGraphicsLayer(GraphicsLayer*)
@@ -741,6 +737,21 @@ IntRect ChromeClientJava::rootViewToScreen(const IntRect& r) const
         r.width(),
         r.height()
     );
+}
+
+IntPoint ChromeClientJava::accessibilityScreenToRootView(const WebCore::IntPoint& point) const
+{
+    return screenToRootView(point);
+}
+
+IntRect ChromeClientJava::rootViewToAccessibilityScreen(const WebCore::IntRect& rect) const
+{
+    return rootViewToScreen(rect);
+}
+
+void ChromeClientJava::intrinsicContentsSizeChanged(const IntSize&) const
+{
+    notImplemented();
 }
 
 PlatformPageClient ChromeClientJava::platformPageClient() const
@@ -808,6 +819,10 @@ RefPtr<SearchPopupMenu> ChromeClientJava::createSearchPopupMenu(PopupMenuClient&
 RefPtr<Icon> ChromeClientJava::createIconForFiles(const Vector<String>& filenames)
 {
     return Icon::createIconForFiles(filenames);
+}
+
+void ChromeClientJava::didFinishLoadingImageForElement(WebCore::HTMLImageElement&)
+{
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,19 +35,25 @@ class JSScope;
 
 class DebuggerScope final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.debuggerScopeSpace<mode>();
+    }
 
     JS_EXPORT_PRIVATE static DebuggerScope* create(VM& vm, JSScope* scope);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
     static String className(const JSObject*, VM&);
-    static String toStringName(const JSObject*, ExecState*);
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    static void getOwnPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-    static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
+    static String toStringName(const JSObject*, JSGlobalObject*);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     DECLARE_EXPORT_INFO;
 
@@ -55,7 +61,6 @@ public:
     {
         return Structure::create(vm, globalObject, jsNull(), TypeInfo(ObjectType, StructureFlags), info());
     }
-
     class iterator {
     public:
         iterator(DebuggerScope* node)
@@ -92,7 +97,7 @@ public:
     String name() const;
     DebuggerLocation location() const;
 
-    JSValue caughtValue(ExecState*) const;
+    JSValue caughtValue(JSGlobalObject*) const;
 
 private:
     DebuggerScope(VM&, Structure*, JSScope*);
@@ -113,7 +118,7 @@ inline DebuggerScope::iterator DebuggerScope::begin()
 
 inline DebuggerScope::iterator DebuggerScope::end()
 {
-    return iterator(0);
+    return iterator(nullptr);
 }
 
 } // namespace JSC

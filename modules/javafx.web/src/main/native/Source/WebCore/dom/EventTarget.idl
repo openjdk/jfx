@@ -26,16 +26,9 @@
     JSCustomMarkFunction,
     JSCustomToNativeObject,
 ] interface EventTarget {
-    [ImplementedAs=addEventListenerForBindings] void addEventListener([AtomicString] DOMString type, EventListener? callback, optional (AddEventListenerOptions or boolean) options = false);
-    [ImplementedAs=removeEventListenerForBindings] void removeEventListener([AtomicString] DOMString type, EventListener? callback, optional (EventListenerOptions or boolean) options = false);
+    [CallWith=ScriptExecutionContext] constructor();
+
+    [ImplementedAs=addEventListenerForBindings] undefined addEventListener([AtomString] DOMString type, EventListener? callback, optional (AddEventListenerOptions or boolean) options = false);
+    [ImplementedAs=removeEventListenerForBindings] undefined removeEventListener([AtomString] DOMString type, EventListener? callback, optional (EventListenerOptions or boolean) options = false);
     [ImplementedAs=dispatchEventForBindings, MayThrowException] boolean dispatchEvent(Event event);
-};
-
-dictionary EventListenerOptions {
-    boolean capture = false;
-};
-
-dictionary AddEventListenerOptions : EventListenerOptions {
-    boolean passive;
-    boolean once = false;
 };

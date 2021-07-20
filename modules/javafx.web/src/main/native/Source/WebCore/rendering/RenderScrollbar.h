@@ -48,26 +48,27 @@ public:
 
     void paintPart(GraphicsContext&, ScrollbarPart, const IntRect&);
 
-    IntRect buttonRect(ScrollbarPart);
-    IntRect trackRect(int startLength, int endLength);
-    IntRect trackPieceRectWithMargins(ScrollbarPart, const IntRect&);
+    IntRect buttonRect(ScrollbarPart) const;
+    IntRect trackRect(int startLength, int endLength) const;
+    IntRect trackPieceRectWithMargins(ScrollbarPart, const IntRect&) const;
 
-    int minimumThumbLength();
+    int minimumThumbLength() const;
 
-    float opacity();
+    float opacity() const;
 
-    std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId);
+    bool isHiddenByStyle() const final;
+
+    std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId) const;
 
 private:
     RenderScrollbar(ScrollableArea&, ScrollbarOrientation, Element*, Frame*);
 
-    bool isCustomScrollbar() const override { return true; }
     bool isOverlayScrollbar() const override { return false; }
 
     void setParent(ScrollView*) override;
     void setEnabled(bool) override;
 
-    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy) override;
+    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy, EventRegionContext*) override;
 
     void setHoveredPart(ScrollbarPart) override;
     void setPressedPart(ScrollbarPart) override;
@@ -84,7 +85,7 @@ private:
     // FrameView which this Element pointer can in no way keep alive. See webkit bug 80610.
     RefPtr<Element> m_ownerElement;
 
-    Frame* m_owningFrame;
+    WeakPtr<Frame> m_owningFrame;
     HashMap<unsigned, RenderPtr<RenderScrollbarPart>> m_parts;
 };
 

@@ -26,6 +26,7 @@
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "ThreadableLoaderClient.h"
+#include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
@@ -50,7 +51,7 @@ class XMLHttpRequestUpload;
 struct OwnedString;
 
 class XMLHttpRequest final : public ActiveDOMObject, public RefCounted<XMLHttpRequest>, private ThreadableLoaderClient, public XMLHttpRequestEventTarget {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(XMLHttpRequest);
 public:
     static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
     WEBCORE_EXPORT ~XMLHttpRequest();
@@ -89,7 +90,8 @@ public:
     String getResponseHeader(const String& name) const;
     ExceptionOr<OwnedString> responseText();
     String responseTextIgnoringResponseType() const { return m_responseBuilder.toStringPreserveCapacity(); }
-    String responseMIMEType() const;
+    enum class FinalMIMEType { Yes, No };
+    String responseMIMEType(FinalMIMEType = FinalMIMEType::No) const;
 
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
     ExceptionOr<Document*> responseXML();
@@ -127,16 +129,24 @@ public:
 
     size_t memoryCost() const;
 
+    using EventTarget::dispatchEvent;
+    void dispatchEvent(Event&) override;
+
 private:
     explicit XMLHttpRequest(ScriptExecutionContext&);
 
+    // EventTarget.
+    void eventListenersDidChange() final;
+
+    TextEncoding finalResponseCharset() const;
+
     // ActiveDOMObject
     void contextDestroyed() override;
-    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;
     const char* activeDOMObjectName() const override;
+    bool virtualHasPendingActivity() const final;
 
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
@@ -144,18 +154,13 @@ private:
     Document* document() const;
     SecurityOrigin* securityOrigin() const;
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    bool usesDashboardBackwardCompatibilityMode() const;
-#endif
-
     // ThreadableLoaderClient
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
     void didReceiveResponse(unsigned long identifier, const ResourceResponse&) override;
     void didReceiveData(const char* data, int dataLength) override;
     void didFinishLoading(unsigned long identifier) override;
     void didFail(const ResourceError&) override;
-
-    bool responseIsXML() const;
+    void notifyIsDone(bool) final;
 
     Optional<ExceptionOr<void>> prepareToSend();
     ExceptionOr<void> send(Document&);
@@ -179,16 +184,15 @@ private:
 
     ExceptionOr<void> createRequest();
 
+    void timeoutTimerFired();
+
     void genericError();
     void networkError();
     void abortError();
 
-    void dispatchErrorEvents(const AtomicString&);
+    void dispatchErrorEvents(const AtomString&);
 
-    void resumeTimerFired();
     Ref<TextResourceDecoder> createDecoder() const;
-
-    void networkErrorTimerFired();
 
     unsigned m_async : 1;
     unsigned m_includeCredentials : 1;
@@ -199,7 +203,6 @@ private:
     unsigned m_uploadComplete : 1;
     unsigned m_wasAbortedByClient : 1;
     unsigned m_responseCacheIsValid : 1;
-    unsigned m_dispatchErrorOnResuming : 1;
     unsigned m_readyState : 3; // State
     unsigned m_responseType : 3; // ResponseType
 
@@ -213,7 +216,11 @@ private:
     RefPtr<FormData> m_requestEntityBody;
     String m_mimeTypeOverride;
 
-    RefPtr<ThreadableLoader> m_loader;
+    struct LoadingActivity {
+        Ref<XMLHttpRequest> protectedThis; // Keep object alive while loading even if there is no longer a JS wrapper.
+        Ref<ThreadableLoader> loader;
+    };
+    Optional<LoadingActivity> m_loadingActivity;
 
     String m_responseEncoding;
 
@@ -234,13 +241,13 @@ private:
 
     mutable String m_allResponseHeaders;
 
-    Timer m_resumeTimer;
-    Timer m_networkErrorTimer;
     Timer m_timeoutTimer;
 
     MonotonicTime m_sendingTime;
 
     Optional<ExceptionCode> m_exceptionCode;
+    RefPtr<UserGestureToken> m_userGestureToken;
+    bool m_hasRelevantEventListener { false };
 };
 
 inline auto XMLHttpRequest::responseType() const -> ResponseType

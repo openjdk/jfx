@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,10 @@
 #include "../PrismES2Defs.h"
 
 #include "com_sun_prism_es2_MonocleGLContext.h"
+#ifndef ANDROID
+#define __USE_GNU
+#include <dlfcn.h>
+#endif
 
 extern void *get_dlsym(void *handle, const char *symbol, int warn);
 
@@ -42,6 +46,22 @@ extern void *get_dlsym(void *handle, const char *symbol, int warn);
 
 #define asPtr(x) ((void *) (unsigned long) (x))
 #define asJLong(x) ((jlong) (unsigned long) (x))
+
+//Builtin library entrypoint
+JNIEXPORT jint JNICALL
+JNI_OnLoad_prism_es2_monocle(JavaVM *vm, void * reserved) {
+fprintf(stderr, "In JNI_OnLoad_prism_es2\n");
+#ifdef JNI_VERSION_1_8
+    //min. returned JNI_VERSION required by JDK8 for builtin libraries
+    JNIEnv *env;
+    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
+        return JNI_VERSION_1_4;
+    }
+    return JNI_VERSION_1_8;
+#else
+    return JNI_VERSION_1_4;
+#endif
+}
 
 JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MonocleGLFactory_nPopulateNativeCtxInfo
 (JNIEnv *env, jclass clazz, jlong libraryHandle) {
@@ -92,6 +112,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MonocleGLFactory_nPopulateNativeC
 
     // from the eglWrapper.c
     void *handle = asPtr(libraryHandle);
+    if (libraryHandle == 0) {
+         handle = RTLD_DEFAULT;
+    }
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)

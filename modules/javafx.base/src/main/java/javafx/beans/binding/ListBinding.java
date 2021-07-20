@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,12 @@ import javafx.collections.ObservableList;
  * @since JavaFX 2.1
  */
 public abstract class ListBinding<E> extends ListExpression<E> implements Binding<ObservableList<E>> {
+
+    /**
+     * Creates a default {@code ListBinding}.
+     */
+    public ListBinding() {
+    }
 
     private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
         @Override

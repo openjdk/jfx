@@ -29,15 +29,16 @@
 #pragma once
 
 #include "DOMFormData.h"
+#include "ExceptionOr.h"
 #include "FetchBodyConsumer.h"
 #include "FormData.h"
-#include "JSDOMPromiseDeferred.h"
 #include "ReadableStream.h"
 #include "URLSearchParams.h"
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
+class DeferredPromise;
 class FetchBodyOwner;
 class FetchBodySource;
 class ScriptExecutionContext;
@@ -48,22 +49,20 @@ public:
     void blob(FetchBodyOwner&, Ref<DeferredPromise>&&, const String&);
     void json(FetchBodyOwner&, Ref<DeferredPromise>&&);
     void text(FetchBodyOwner&, Ref<DeferredPromise>&&);
-    void formData(FetchBodyOwner&, Ref<DeferredPromise>&& promise) { promise.get().reject(NotSupportedError); }
+    void formData(FetchBodyOwner&, Ref<DeferredPromise>&&);
 
-#if ENABLE(STREAMS_API)
     void consumeAsStream(FetchBodyOwner&, FetchBodySource&);
-#endif
 
     using Init = Variant<RefPtr<Blob>, RefPtr<ArrayBufferView>, RefPtr<ArrayBuffer>, RefPtr<DOMFormData>, RefPtr<URLSearchParams>, RefPtr<ReadableStream>, String>;
-    static FetchBody extract(ScriptExecutionContext&, Init&&, String&);
+    static ExceptionOr<FetchBody> extract(Init&&, String&);
     FetchBody() = default;
 
-    WEBCORE_EXPORT static Optional<FetchBody> fromFormData(FormData&);
+    WEBCORE_EXPORT static Optional<FetchBody> fromFormData(ScriptExecutionContext&, FormData&);
 
     void loadingFailed(const Exception&);
-    void loadingSucceeded();
+    void loadingSucceeded(const String& contentType);
 
-    RefPtr<FormData> bodyAsFormData(ScriptExecutionContext&) const;
+    RefPtr<FormData> bodyAsFormData() const;
 
     using TakenData = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
     TakenData take();
@@ -100,10 +99,11 @@ private:
 
     void consume(FetchBodyOwner&, Ref<DeferredPromise>&&);
 
-    void consumeArrayBuffer(Ref<DeferredPromise>&&);
-    void consumeArrayBufferView(Ref<DeferredPromise>&&);
-    void consumeText(Ref<DeferredPromise>&&, const String&);
+    void consumeArrayBuffer(FetchBodyOwner&, Ref<DeferredPromise>&&);
+    void consumeArrayBufferView(FetchBodyOwner&, Ref<DeferredPromise>&&);
+    void consumeText(FetchBodyOwner&, Ref<DeferredPromise>&&, const String&);
     void consumeBlob(FetchBodyOwner&, Ref<DeferredPromise>&&);
+    void consumeFormData(FetchBodyOwner&, Ref<DeferredPromise>&&);
 
     bool isArrayBuffer() const { return WTF::holds_alternative<Ref<const ArrayBuffer>>(m_data); }
     bool isArrayBufferView() const { return WTF::holds_alternative<Ref<const ArrayBufferView>>(m_data); }

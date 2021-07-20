@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,7 +93,6 @@ final class IosGestureSupport {
     public static void magnifyGesturePerformed(View view, int modifiers, int x,
                                                int y, int xAbs, int yAbs,
                                                float scale) {
-        System.out.println(scale);
         gestures.handleDeltaZooming(view, modifiers, isDirect, false, x, y, xAbs,
                                     yAbs, scale, View.GESTURE_NO_DOUBLE_VALUE);
     }

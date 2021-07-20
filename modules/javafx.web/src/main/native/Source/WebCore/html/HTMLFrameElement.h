@@ -45,7 +45,8 @@ private:
     void didAttachRenderers() final;
     bool rendererIsNeeded(const RenderStyle&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    int defaultTabIndex() const final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     bool m_frameBorder { true };
     bool m_frameBorderSet { false };

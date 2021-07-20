@@ -33,28 +33,31 @@
 
 namespace JSC {
 
-typedef enum { StrictJSON, NonStrictJSON, JSONP } ParserMode;
+enum ParserMode : uint8_t { StrictJSON, NonStrictJSON, JSONP };
 
-enum JSONPPathEntryType {
+enum JSONPPathEntryType : uint8_t {
     JSONPPathEntryTypeDeclareVar, // var pathEntryName = JSON
     JSONPPathEntryTypeDot, // <prior entries>.pathEntryName = JSON
     JSONPPathEntryTypeLookup, // <prior entries>[pathIndex] = JSON
     JSONPPathEntryTypeCall // <prior entries>(JSON)
 };
 
-enum ParserState { StartParseObject, StartParseArray, StartParseExpression,
-                   StartParseStatement, StartParseStatementEndStatement,
-                   DoParseObjectStartExpression, DoParseObjectEndExpression,
-                   DoParseArrayStartExpression, DoParseArrayEndExpression };
-enum TokenType { TokLBracket, TokRBracket, TokLBrace, TokRBrace,
-                 TokString, TokIdentifier, TokNumber, TokColon,
-                 TokLParen, TokRParen, TokComma, TokTrue, TokFalse,
-                 TokNull, TokEnd, TokDot, TokAssign, TokSemi, TokError };
+enum ParserState : uint8_t {
+    StartParseObject, StartParseArray, StartParseExpression,
+    StartParseStatement, StartParseStatementEndStatement,
+    DoParseObjectStartExpression, DoParseObjectEndExpression,
+    DoParseArrayStartExpression, DoParseArrayEndExpression };
+
+enum TokenType : uint8_t {
+    TokLBracket, TokRBracket, TokLBrace, TokRBrace,
+    TokString, TokIdentifier, TokNumber, TokColon,
+    TokLParen, TokRParen, TokComma, TokTrue, TokFalse,
+    TokNull, TokEnd, TokDot, TokAssign, TokSemi, TokError };
 
 struct JSONPPathEntry {
-    JSONPPathEntryType m_type;
     Identifier m_pathEntryName;
     int m_pathIndex;
+    JSONPPathEntryType m_type;
 };
 
 struct JSONPData {
@@ -92,8 +95,9 @@ ALWAYS_INLINE void setParserTokenString(LiteralParserToken<CharType>&, const Cha
 template <typename CharType>
 class LiteralParser {
 public:
-    LiteralParser(ExecState* exec, const CharType* characters, unsigned length, ParserMode mode)
-        : m_exec(exec)
+    LiteralParser(JSGlobalObject* globalObject, const CharType* characters, unsigned length, ParserMode mode, CodeBlock* nullOrCodeBlock = nullptr)
+        : m_globalObject(globalObject)
+        , m_nullOrCodeBlock(nullOrCodeBlock)
         , m_lexer(characters, length, mode)
         , m_mode(mode)
     {
@@ -133,7 +137,7 @@ private:
 
         TokenType next();
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
         typedef const LiteralParserToken<CharType>* LiteralParserTokenPtr;
 
         LiteralParserTokenPtr currentToken()
@@ -166,7 +170,7 @@ private:
         {
             return LiteralParserTokenPtr(*this);
         }
-#endif
+#endif // ASSERT_ENABLED
 
         String getErrorMessage() { return m_lexErrorMessage; }
 
@@ -182,7 +186,7 @@ private:
         const CharType* m_ptr;
         const CharType* m_end;
         StringBuilder m_builder;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         unsigned m_currentTokenID { 0 };
 #endif
     };
@@ -190,7 +194,8 @@ private:
     class StackGuard;
     JSValue parse(ParserState);
 
-    ExecState* m_exec;
+    JSGlobalObject* m_globalObject;
+    CodeBlock* m_nullOrCodeBlock;
     typename LiteralParser<CharType>::Lexer m_lexer;
     ParserMode m_mode;
     String m_parseErrorMessage;

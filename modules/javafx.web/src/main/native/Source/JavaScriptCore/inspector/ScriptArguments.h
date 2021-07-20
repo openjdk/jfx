@@ -37,7 +37,7 @@
 #include <wtf/Vector.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSGlobalObject;
 }
 
@@ -45,19 +45,27 @@ namespace Inspector {
 
 class JS_EXPORT_PRIVATE ScriptArguments : public RefCounted<ScriptArguments> {
 public:
-    static Ref<ScriptArguments> create(JSC::ExecState&, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    static Ref<ScriptArguments> create(JSC::JSGlobalObject*, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     ~ScriptArguments();
 
     JSC::JSValue argumentAt(size_t) const;
     size_t argumentCount() const { return m_arguments.size(); }
 
-    JSC::ExecState* globalState() const;
+    JSC::JSGlobalObject* globalObject() const;
 
-    bool getFirstArgumentAsString(String& result);
+    bool getFirstArgumentAsString(String& result) const;
     bool isEqual(const ScriptArguments&) const;
 
+    static String truncateStringForConsoleMessage(const String& message)
+    {
+        constexpr size_t maxMessageLength = 10000;
+        if (message.length() <= maxMessageLength)
+            return message;
+        return makeString(message.substring(0, maxMessageLength), "..."_s);
+    }
+
 private:
-    ScriptArguments(JSC::ExecState&, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ScriptArguments(JSC::JSGlobalObject*, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
 
     JSC::Strong<JSC::JSGlobalObject> m_globalObject;
     Vector<JSC::Strong<JSC::Unknown>> m_arguments;

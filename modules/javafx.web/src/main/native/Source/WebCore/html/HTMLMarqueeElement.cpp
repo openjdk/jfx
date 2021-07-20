@@ -29,6 +29,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "RenderLayer.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderMarquee.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -68,7 +69,7 @@ bool HTMLMarqueeElement::isPresentationAttribute(const QualifiedName& name) cons
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLMarqueeElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLMarqueeElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr) {
         if (!value.isEmpty())
@@ -159,11 +160,6 @@ ExceptionOr<void> HTMLMarqueeElement::setLoop(int loop)
     return { };
 }
 
-bool HTMLMarqueeElement::canSuspendForDocumentSuspension() const
-{
-    return true;
-}
-
 void HTMLMarqueeElement::suspend(ReasonForSuspension)
 {
     if (RenderMarquee* marqueeRenderer = renderMarquee())
@@ -180,7 +176,10 @@ RenderMarquee* HTMLMarqueeElement::renderMarquee() const
 {
     if (!renderer() || !renderer()->hasLayer())
         return nullptr;
-    return renderBoxModelObject()->layer()->marquee();
+    auto* scrollableArea = renderBoxModelObject()->layer()->scrollableArea();
+    if (!scrollableArea)
+        return nullptr;
+    return scrollableArea->marquee();
 }
 
 } // namespace WebCore

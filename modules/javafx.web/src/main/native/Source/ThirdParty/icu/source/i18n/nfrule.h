@@ -38,7 +38,7 @@ public:
         kNegativeNumberRule = -1,
         kImproperFractionRule = -2,
         kProperFractionRule = -3,
-        kMasterRule = -4,
+        kDefaultRule = -4,
         kInfinityRule = -5,
         kNaNRule = -6,
         kOtherRule = -7
@@ -109,7 +109,7 @@ private:
     int32_t radix;
     int16_t exponent;
     UChar decimalPoint;
-    UnicodeString ruleText;
+    UnicodeString fRuleText;
     NFSubstitution* sub1;
     NFSubstitution* sub2;
     const RuleBasedNumberFormat* formatter;

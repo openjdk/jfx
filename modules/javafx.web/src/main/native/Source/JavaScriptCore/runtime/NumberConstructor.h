@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,7 @@
 #pragma once
 
 #include "InternalFunction.h"
+#include "MathCommon.h"
 
 namespace JSC {
 
@@ -30,7 +31,7 @@ class GetterSetter;
 class NumberConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | HasStaticPropertyTable;
 
     static NumberConstructor* create(VM& vm, Structure* structure, NumberPrototype* numberPrototype, GetterSetter*)
     {
@@ -48,20 +49,13 @@ public:
 
     static bool isIntegerImpl(JSValue value)
     {
-        if (value.isInt32())
-            return true;
-        if (!value.isDouble())
-            return false;
-
-        double number = value.asDouble();
-        return std::isfinite(number) && trunc(number) == number;
+        return value.isInt32() || (value.isDouble() && isInteger(value.asDouble()));
     }
-
-protected:
-    void finishCreation(VM&, NumberPrototype*);
 
 private:
     NumberConstructor(VM&, Structure*);
+    void finishCreation(VM&, NumberPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(NumberConstructor, InternalFunction);
 
 } // namespace JSC

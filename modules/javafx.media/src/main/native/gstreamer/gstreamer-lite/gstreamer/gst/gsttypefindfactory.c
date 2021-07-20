@@ -24,7 +24,7 @@
  * @title: GstTypeFindFactory
  * @short_description: Information about registered typefind functions
  *
- * These functions allow querying informations about registered typefind
+ * These functions allow querying information about registered typefind
  * functions. How to create and register these functions is described in
  * the section <link linkend="gstreamer-Writing-typefind-functions">
  * "Writing typefind functions"</link>.
@@ -159,7 +159,7 @@ gst_type_find_factory_get_list (void)
  *
  * Gets the #GstCaps associated with a typefind factory.
  *
- * Returns: (transfer none): the #GstCaps associated with this factory
+ * Returns: (transfer none) (nullable): the #GstCaps associated with this factory
  */
 GstCaps *
 gst_type_find_factory_get_caps (GstTypeFindFactory * factory)

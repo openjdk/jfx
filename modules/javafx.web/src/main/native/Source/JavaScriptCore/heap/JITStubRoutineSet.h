@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,14 @@
 #include "JITStubRoutine.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
+#include <wtf/Range.h>
 #include <wtf/Vector.h>
+
+using WTF::Range;
 
 namespace JSC {
 
 class GCAwareJITStubRoutine;
-class SlotVisitor;
 
 #if ENABLE(JIT)
 
@@ -52,24 +54,26 @@ public:
     void mark(void* candidateAddress)
     {
         uintptr_t address = removeCodePtrTag<uintptr_t>(candidateAddress);
-        if (!JITStubRoutine::passesFilter(address))
+        if (!m_range.contains(address))
             return;
-
         markSlow(address);
     }
 
+    void prepareForConservativeScan();
+
     void deleteUnmarkedJettisonedStubRoutines();
 
-    void traceMarkedStubRoutines(SlotVisitor&);
-
-    unsigned size() const { return m_listOfRoutines.size(); }
-    GCAwareJITStubRoutine* at(unsigned i) const { return m_listOfRoutines[i]; }
+    template<typename Visitor> void traceMarkedStubRoutines(Visitor&);
 
 private:
     void markSlow(uintptr_t address);
 
-    HashMap<uintptr_t, GCAwareJITStubRoutine*> m_addressToRoutineMap;
-    Vector<GCAwareJITStubRoutine*> m_listOfRoutines;
+    struct Routine {
+        uintptr_t startAddress;
+        GCAwareJITStubRoutine* routine;
+    };
+    Vector<Routine> m_routines;
+    Range<uintptr_t> m_range { 0, 0 };
 };
 
 #else // !ENABLE(JIT)
@@ -85,8 +89,9 @@ public:
     void add(GCAwareJITStubRoutine*) { }
     void clearMarks() { }
     void mark(void*) { }
+    void prepareForConservativeScan() { }
     void deleteUnmarkedJettisonedStubRoutines() { }
-    void traceMarkedStubRoutines(SlotVisitor&) { }
+    template<typename Visitor> void traceMarkedStubRoutines(Visitor&) { }
 };
 
 #endif // !ENABLE(JIT)

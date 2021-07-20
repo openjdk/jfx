@@ -30,21 +30,43 @@
 
 namespace WebCore {
 
+class EventListener;
+class EventTarget;
 class InstrumentingAgents;
-typedef String ErrorString;
+class RegisteredEventListener;
+class TimerBase;
 
 class WebDebuggerAgent : public Inspector::InspectorDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(WebDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WebDebuggerAgent(WebAgentContext&);
-    virtual ~WebDebuggerAgent() = default;
+    ~WebDebuggerAgent() override;
+    bool enabled() const override;
+
+    // InspectorInstrumentation
+    void didAddEventListener(EventTarget&, const AtomString& eventType, EventListener&, bool capture);
+    void willRemoveEventListener(EventTarget&, const AtomString& eventType, EventListener&, bool capture);
+    void willHandleEvent(const RegisteredEventListener&);
+    int willPostMessage();
+    void didPostMessage(int postMessageIdentifier, JSC::JSGlobalObject&);
+    void didFailPostMessage(int postMessageIdentifier);
+    void willDispatchPostMessage(int postMessageIdentifier);
+    void didDispatchPostMessage(int postMessageIdentifier);
 
 protected:
-    void enable() override;
-    void disable(bool isBeingDestroyed) override;
+    WebDebuggerAgent(WebAgentContext&);
+    void internalEnable() override;
+    void internalDisable(bool isBeingDestroyed) override;
+
+    void didClearAsyncStackTraceData() final;
 
     InstrumentingAgents& m_instrumentingAgents;
+
+private:
+    HashMap<const RegisteredEventListener*, int> m_registeredEventListeners;
+    HashSet<int> m_postMessageTasks;
+    int m_nextEventListenerIdentifier { 1 };
+    int m_nextPostMessageIdentifier { 1 };
 };
 
 } // namespace WebCore

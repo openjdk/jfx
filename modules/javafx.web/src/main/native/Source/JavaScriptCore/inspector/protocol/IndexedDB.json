@@ -1,7 +1,8 @@
 {
     "domain": "IndexedDB",
-    "featureGuard": "ENABLE(INDEXED_DATABASE)",
-    "availability": ["web"],
+    "condition": "defined(ENABLE_INDEXED_DATABASE) && ENABLE_INDEXED_DATABASE",
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page"],
     "types": [
         {
             "id": "DatabaseWithObjectStores",

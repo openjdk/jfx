@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -31,8 +31,6 @@
 #include "config.h"
 #include "ReadableStreamDefaultController.h"
 
-#if ENABLE(STREAMS_API)
-
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/HeapInlines.h>
@@ -41,35 +39,93 @@
 
 namespace WebCore {
 
-static inline JSC::JSValue callFunction(JSC::ExecState& state, JSC::JSValue jsFunction, JSC::JSValue thisValue, const JSC::ArgList& arguments)
+static bool invokeReadableStreamDefaultControllerFunction(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier, const JSC::MarkedArgumentBuffer& arguments)
 {
-    JSC::CallData callData;
-    auto callType = JSC::getCallData(state.vm(), jsFunction, callData);
-    return call(&state, jsFunction, callType, callData, thisValue, arguments);
+    JSC::VM& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder lock(vm);
+
+    auto function = lexicalGlobalObject.get(&lexicalGlobalObject, identifier);
+    ASSERT(function.isCallable(lexicalGlobalObject.vm()));
+
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto callData = JSC::getCallData(vm, function);
+    call(&lexicalGlobalObject, function, callData, JSC::jsUndefined(), arguments);
+    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    return !scope.exception();
 }
 
-JSC::JSValue ReadableStreamDefaultController::invoke(JSC::ExecState& state, JSC::JSObject& object, const char* propertyName, JSC::JSValue parameter)
+void ReadableStreamDefaultController::close()
 {
-    JSC::VM& vm = state.vm();
+    JSC::MarkedArgumentBuffer arguments;
+    arguments.append(&jsController());
+
+    auto* clientData = static_cast<JSVMClientData*>(globalObject().vm().clientData);
+    auto& privateName = clientData->builtinFunctions().readableStreamInternalsBuiltins().readableStreamDefaultControllerClosePrivateName();
+
+    invokeReadableStreamDefaultControllerFunction(globalObject(), privateName, arguments);
+}
+
+
+void ReadableStreamDefaultController::error(const Exception& exception)
+{
+    JSC::JSGlobalObject& lexicalGlobalObject = this->globalObject();
+    auto& vm = lexicalGlobalObject.vm();
     JSC::JSLockHolder lock(vm);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto value = createDOMException(&lexicalGlobalObject, exception.code(), exception.message());
 
-    auto function = object.get(&state, JSC::Identifier::fromString(&state, propertyName));
-    RETURN_IF_EXCEPTION(scope, JSC::JSValue());
-
-    if (!function.isFunction(vm)) {
-        if (!function.isUndefined())
-            throwTypeError(&state, scope, "ReadableStream trying to call a property that is not callable"_s);
-        return JSC::jsUndefined();
+    if (UNLIKELY(scope.exception())) {
+        ASSERT(isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+        return;
     }
 
     JSC::MarkedArgumentBuffer arguments;
-    arguments.append(parameter);
-    ASSERT(!arguments.hasOverflowed());
+    arguments.append(&jsController());
+    arguments.append(value);
 
-    return callFunction(state, function, &object, arguments);
+    auto* clientData = static_cast<JSVMClientData*>(lexicalGlobalObject.vm().clientData);
+    auto& privateName = clientData->builtinFunctions().readableStreamInternalsBuiltins().readableStreamDefaultControllerErrorPrivateName();
+
+    invokeReadableStreamDefaultControllerFunction(globalObject(), privateName, arguments);
+}
+
+bool ReadableStreamDefaultController::enqueue(JSC::JSValue value)
+{
+    JSC::JSGlobalObject& lexicalGlobalObject = this->globalObject();
+    auto& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder lock(vm);
+
+    JSC::MarkedArgumentBuffer arguments;
+    arguments.append(&jsController());
+    arguments.append(value);
+
+    auto* clientData = static_cast<JSVMClientData*>(lexicalGlobalObject.vm().clientData);
+    auto& privateName = clientData->builtinFunctions().readableStreamInternalsBuiltins().readableStreamDefaultControllerEnqueuePrivateName();
+
+    return invokeReadableStreamDefaultControllerFunction(globalObject(), privateName, arguments);
+}
+
+bool ReadableStreamDefaultController::enqueue(RefPtr<JSC::ArrayBuffer>&& buffer)
+{
+    if (!buffer) {
+        error(Exception { OutOfMemoryError });
+        return false;
+    }
+
+    JSC::JSGlobalObject& lexicalGlobalObject = this->globalObject();
+    auto& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder lock(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto length = buffer->byteLength();
+    auto chunk = JSC::Uint8Array::create(WTFMove(buffer), 0, length);
+    auto value = toJS(&lexicalGlobalObject, &lexicalGlobalObject, chunk.get());
+
+    if (UNLIKELY(scope.exception())) {
+        ASSERT(isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+        return false;
+    }
+
+    return enqueue(value);
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(STREAMS_API)

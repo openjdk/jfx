@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2009, 2010, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -580,6 +580,63 @@ String AXWeekFieldText()
     return WEB_UI_STRING("week and year field", "accessibility role description for a time field.");
 }
 
+String AXARIAContentGroupText(const String& ariaType)
+{
+    if (ariaType == "ARIAApplicationAlert")
+        return WEB_UI_STRING("alert", "An ARIA accessibility group that acts as an alert.");
+    if (ariaType == "ARIAApplicationAlertDialog")
+        return WEB_UI_STRING("web alert dialog", "An ARIA accessibility group that acts as an alert dialog.");
+    if (ariaType == "ARIAApplicationDialog")
+        return WEB_UI_STRING("web dialog", "An ARIA accessibility group that acts as an dialog.");
+    if (ariaType == "ARIAApplicationLog")
+        return WEB_UI_STRING("log", "An ARIA accessibility group that acts as a console log.");
+    if (ariaType == "ARIAApplicationMarquee")
+        return WEB_UI_STRING("marquee", "An ARIA accessibility group that acts as a marquee.");
+    if (ariaType == "ARIAApplicationStatus")
+        return WEB_UI_STRING("application status", "An ARIA accessibility group that acts as a status update.");
+    if (ariaType == "ARIAApplicationTimer")
+        return WEB_UI_STRING("timer", "An ARIA accessibility group that acts as an updating timer.");
+    if (ariaType == "ARIADocument")
+        return WEB_UI_STRING("document", "An ARIA accessibility group that acts as a document.");
+    if (ariaType == "ARIADocumentArticle")
+        return WEB_UI_STRING("article", "An ARIA accessibility group that acts as an article.");
+    if (ariaType == "ARIADocumentNote")
+        return WEB_UI_STRING("note", "An ARIA accessibility group that acts as a note in a document.");
+    if (ariaType == "ARIAWebApplication")
+        return WEB_UI_STRING("web application", "An ARIA accessibility group that acts as an application.");
+    if (ariaType == "ARIALandmarkBanner")
+        return WEB_UI_STRING("banner", "An ARIA accessibility group that acts as a banner.");
+    if (ariaType == "ARIALandmarkComplementary")
+        return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
+    if (ariaType == "ARIALandmarkContentInfo")
+        return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
+    if (ariaType == "ARIALandmarkMain")
+        return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
+    if (ariaType == "ARIALandmarkNavigation")
+        return WEB_UI_STRING("navigation", "An ARIA accessibility group that contains the main navigation elements of a website.");
+    if (ariaType == "ARIALandmarkRegion")
+        return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
+    if (ariaType == "ARIALandmarkSearch")
+        return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
+    if (ariaType == "ARIAUserInterfaceTooltip")
+        return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
+    if (ariaType == "ARIATabPanel")
+        return WEB_UI_STRING("tab panel", "An ARIA accessibility group that contains the content of a tab.");
+    if (ariaType == "ARIADocumentMath")
+        return WEB_UI_STRING("math", "An ARIA accessibility group that contains mathematical symbols.");
+    return String();
+}
+
+String AXHorizontalRuleDescriptionText()
+{
+    return WEB_UI_STRING("separator", "accessibility role description for a horizontal rule [<hr>]");
+}
+
+String AXMarkText()
+{
+    return WEB_UI_STRING("highlighted", "accessibility role description for a mark element");
+}
+
 String AXButtonActionVerb()
 {
     return WEB_UI_STRING("press", "Verb stating the action that will occur when a button is pressed, as used by accessibility");
@@ -627,6 +684,78 @@ String AXListItemActionVerb()
     notImplemented();
     return "select";
 }
+
+#if ENABLE(APPLE_PAY)
+String AXApplePayPlainLabel()
+{
+    return WEB_UI_STRING("Apple Pay", "Label for the plain Apple Pay button.");
+}
+
+String AXApplePayBuyLabel()
+{
+    return WEB_UI_STRING("Buy with Apple Pay", "Label for the buy with Apple Pay button.");
+}
+
+String AXApplePaySetupLabel()
+{
+    return WEB_UI_STRING("Set up with Apple Pay", "Label for the set up with Apple Pay button.");
+}
+
+String AXApplePayDonateLabel()
+{
+    return WEB_UI_STRING("Donate with Apple Pay", "Label for the donate with Apple Pay button.");
+}
+
+String AXApplePayCheckOutLabel()
+{
+    return WEB_UI_STRING("Check out with Apple Pay", "Label for the check out with Apple Pay button.");
+}
+
+String AXApplePayBookLabel()
+{
+    return WEB_UI_STRING("Book with Apple Pay", "Label for the book with Apple Pay button.");
+}
+
+String AXApplePaySubscribeLabel()
+{
+    return WEB_UI_STRING("Subscribe with Apple Pay", "Label for the subcribe with Apple Pay button.");
+}
+
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+String AXApplePayReloadLabel()
+{
+    return WEB_UI_STRING("Reload with Apple Pay", "Label for the reload with Apple Pay button.");
+}
+String AXApplePayAddMoneyLabel()
+{
+    return WEB_UI_STRING("Add money with Apple Pay", "Label for the add money with Apple Pay button.");
+}
+String AXApplePayTopUpLabel()
+{
+    return WEB_UI_STRING("Top up with Apple Pay", "Label for the top up with Apple Pay button.");
+}
+String AXApplePayOrderLabel()
+{
+    return WEB_UI_STRING("Order with Apple Pay", "Label for the order with Apple Pay button.");
+}
+String AXApplePayRentLabel()
+{
+    return WEB_UI_STRING("Rent with Apple Pay", "Label for the rent with Apple Pay button.");
+}
+String AXApplePaySupportLabel()
+{
+    return WEB_UI_STRING("Support with Apple Pay", "Label for the support with Apple Pay button.");
+}
+String AXApplePayContributeLabel()
+{
+    return WEB_UI_STRING("Contribute with Apple Pay", "Label for the contribute with Apple Pay button.");
+}
+String AXApplePayTipLabel()
+{
+    return WEB_UI_STRING("Tip with Apple Pay", "Label for the tip with Apple Pay button.");
+}
+#endif
+#endif
 
 String AXAutoFillCredentialsLabel()
 {
@@ -676,6 +805,11 @@ String insecurePluginVersionText()
 String unsupportedPluginText()
 {
     return WEB_UI_STRING_KEY("Unsupported Plug-in", "Unsupported Plug-In", "Label text to be used when an unsupported plug-in was blocked from loading");
+}
+
+String pluginTooSmallText()
+{
+    return WEB_UI_STRING_KEY("Plug-In too small", "Plug-In too small", "Label text to be used when a plug-in was blocked from loading because it was too small");
 }
 
 String multipleFileUploadText(unsigned numberOfFiles)
@@ -741,7 +875,7 @@ String localizedMediaControlElementString(const String& name)
     if (name == "RewindButton")
         return WEB_UI_STRING("back 30 seconds", "accessibility label for seek back 30 seconds button");
     if (name == "ReturnToRealtimeButton")
-        return WEB_UI_STRING("return to realtime", "accessibility label for return to real time button");
+        return WEB_UI_STRING("return to real time", "accessibility label for return to real time button");
     if (name == "CurrentTimeDisplay")
         return WEB_UI_STRING("elapsed time", "accessibility label for elapsed time display");
     if (name == "TimeRemainingDisplay")
@@ -790,7 +924,7 @@ String localizedMediaControlElementHelpText(const String& name)
     if (name == "RewindButton")
         return WEB_UI_STRING("seek movie back 30 seconds", "accessibility help text for jump back 30 seconds button");
     if (name == "ReturnToRealtimeButton")
-        return WEB_UI_STRING("return streaming movie to real time", "accessibility help text for return streaming movie to real time button");
+        return WEB_UI_STRING("resume real time streaming", "accessibility help text for return streaming movie to real time button");
     if (name == "CurrentTimeDisplay")
         return WEB_UI_STRING("current movie time in seconds", "accessibility help text for elapsed time display");
     if (name == "TimeRemainingDisplay")
@@ -944,13 +1078,6 @@ String clickToExitFullScreenText()
     return WEB_UI_STRING("Click to Exit Full Screen", "Message to display in browser window when in webkit full screen mode.");
 }
 
-#if ENABLE(VIDEO_TRACK)
-
-String textTrackSubtitlesText()
-{
-    return WEB_UI_STRING("Subtitles", "Menu section heading for subtitles");
-}
-
 String textTrackOffMenuItemText()
 {
     return WEB_UI_STRING("Off", "Menu item label for the track that represents disabling closed captions");
@@ -971,9 +1098,7 @@ String audioTrackNoLabelText()
     return WEB_UI_STRING_KEY("Unknown", "Unknown (audio track)", "Menu item label for an audio track that has no other name");
 }
 
-#endif
-
-#if ENABLE(VIDEO_TRACK) && USE(CF)
+#if USE(CF)
 
 String textTrackCountryAndLanguageMenuItemText(const String& title, const String& country, const String& language)
 {
@@ -1036,7 +1161,7 @@ String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 #elif USE(GLIB)
     return formatLocalizedString(WEB_UI_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), localizedApplicationName.utf8().data());
 #else
-    return String::fromUTF8("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
+    return WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
 #endif
 }
 
@@ -1107,5 +1232,24 @@ String unacceptableTLSCertificate()
     return WEB_UI_STRING("Unacceptable TLS certificate", "Unacceptable TLS certificate error");
 }
 #endif
+
+#if ENABLE(WEB_AUTHN)
+// On macOS, Touch ID prompt is not guaranteed to show on top of the UI client, and therefore additional
+// information is provided to help users to make decisions.
+String makeCredentialTouchIDPromptTitle(const String& bundleName, const String& domain)
+{
+    return formatLocalizedString(WEB_UI_CFSTRING("“%@” would like to use Touch ID for “%@”.", "Allow the specified bundle to use Touch ID to sign in to the specified website on this device"), bundleName.createCFString().get(), domain.createCFString().get());
+}
+
+String getAssertionTouchIDPromptTitle(const String& bundleName, const String& domain)
+{
+    return formatLocalizedString(WEB_UI_CFSTRING("“%@” would like to sign in to “%@”.", "Allow the specified bundle to sign in to the specified website"), bundleName.createCFString().get(), domain.createCFString().get());
+}
+
+String genericTouchIDPromptTitle()
+{
+    return WEB_UI_STRING("Continue with Touch ID.", "Continue with Touch ID.");
+}
+#endif // ENABLE(WEB_AUTHN)
 
 } // namespace WebCore

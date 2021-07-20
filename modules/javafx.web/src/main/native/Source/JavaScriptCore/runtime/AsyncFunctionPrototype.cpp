@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Caitlin Potter <caitp@igalia.com>.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +27,7 @@
 #include "config.h"
 #include "AsyncFunctionPrototype.h"
 
-#include "BuiltinExecutables.h"
-#include "BuiltinNames.h"
-#include "Error.h"
-#include "JSArray.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
-#include "JSString.h"
-#include "Lexer.h"
 
 namespace JSC {
 
@@ -48,9 +42,7 @@ void AsyncFunctionPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "AsyncFunction"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    didBecomePrototype();
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 } // namespace JSC

@@ -35,6 +35,7 @@ class HTMLImageElement;
 // The famous <table><tr><form><td> problem.
 
 class HTMLFormControlsCollection final : public CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType> {
+    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlsCollection);
 public:
     static Ref<HTMLFormControlsCollection> create(ContainerNode&, CollectionType);
     virtual ~HTMLFormControlsCollection();
@@ -53,17 +54,13 @@ private:
     void invalidateCacheForDocument(Document&) override;
     void updateNamedElementCache() const override;
 
-    const Vector<FormAssociatedElement*>& unsafeFormControlElements() const;
-    Vector<Ref<FormAssociatedElement>> copyFormControlElementsVector() const;
-    const Vector<HTMLImageElement*>& formImageElements() const;
-
     mutable Element* m_cachedElement;
     mutable unsigned m_cachedElementOffsetInArray;
 };
 
 inline HTMLElement* HTMLFormControlsCollection::item(unsigned offset) const
 {
-    return downcast<HTMLElement>(CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType>::item(offset));
+    return downcast<HTMLElement>(CachedHTMLCollection::item(offset));
 }
 
 } // namespace WebCore

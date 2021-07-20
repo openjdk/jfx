@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,12 @@
 #include "Document.h"
 #include "EventNames.h"
 #include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSPaymentDetailsUpdate.h"
 #include "JSPaymentResponse.h"
+#include "Page.h"
 #include "PaymentAddress.h"
+#include "PaymentCoordinator.h"
 #include "PaymentCurrencyAmount.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentHandler.h"
@@ -47,11 +50,14 @@
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/ThrowScope.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/UUID.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequest);
 
 // Implements the IsWellFormedCurrencyCode abstract operation from ECMA 402
 // https://tc39.github.io/ecma402/#sec-iswellformedcurrencycode
@@ -135,6 +141,21 @@ static bool isValidDecimalMonetaryValue(StringView value)
     return false;
 }
 
+template<typename T>
+static ExceptionOr<String> checkAndCanonicalizeData(ScriptExecutionContext& context, T& value)
+{
+    String serializedData;
+    if (value.data) {
+        auto* globalObject = context.globalObject();
+        auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+        serializedData = JSONStringify(globalObject, value.data.get(), 0);
+        if (scope.exception())
+            return Exception { ExistingExceptionError };
+        value.data.clear();
+    }
+    return { WTFMove(serializedData) };
+}
+
 // Implements the "check and canonicalize amount" validity checker
 // https://www.w3.org/TR/payment-request/#dfn-check-and-canonicalize-amount
 static ExceptionOr<void> checkAndCanonicalizeAmount(PaymentCurrencyAmount& amount)
@@ -149,18 +170,32 @@ static ExceptionOr<void> checkAndCanonicalizeAmount(PaymentCurrencyAmount& amoun
     return { };
 }
 
-// Implements the "check and canonicalize total" validity checker
-// https://www.w3.org/TR/payment-request/#dfn-check-and-canonicalize-total
-static ExceptionOr<void> checkAndCanonicalizeTotal(PaymentCurrencyAmount& total)
+enum class NegativeAmountAllowed { Yes, No };
+static ExceptionOr<void> checkAndCanonicalizePaymentItem(ScriptExecutionContext& context, PaymentItem& item, NegativeAmountAllowed negativeAmountAllowed)
 {
-    auto exception = checkAndCanonicalizeAmount(total);
+    auto exception = checkAndCanonicalizeAmount(item.amount);
     if (exception.hasException())
-        return exception;
+        return exception.releaseException();
 
-    if (total.value[0] == '-')
+    if (negativeAmountAllowed == NegativeAmountAllowed::No && item.amount.value[0] == '-')
         return Exception { TypeError, "Total currency values cannot be negative."_s };
 
+    if (item.data) {
+        auto dataResult = checkAndCanonicalizeData(context, item);
+        if (dataResult.hasException())
+            return dataResult.releaseException();
+
+        item.serializedData = dataResult.releaseReturnValue();
+    }
+
     return { };
+}
+
+// Implements the "check and canonicalize total" validity checker
+// https://www.w3.org/TR/payment-request/#dfn-check-and-canonicalize-total
+static ExceptionOr<void> checkAndCanonicalizeTotal(ScriptExecutionContext& context, PaymentItem& total)
+{
+    return checkAndCanonicalizePaymentItem(context, total, NegativeAmountAllowed::No);
 }
 
 // Implements "validate a standardized payment method identifier"
@@ -214,13 +249,7 @@ static bool isValidStandardizedPaymentMethodIdentifier(StringView identifier)
 // https://www.w3.org/TR/payment-method-id/#validation
 static bool isValidURLBasedPaymentMethodIdentifier(const URL& url)
 {
-    if (!url.protocolIs("https"))
-        return false;
-
-    if (!url.user().isEmpty() || !url.pass().isEmpty())
-        return false;
-
-    return true;
+    return url.protocolIs("https") && !url.hasCredentials();
 }
 
 // Implements "validate a payment method identifier"
@@ -240,69 +269,116 @@ Optional<PaymentRequest::MethodIdentifier> convertAndValidatePaymentMethodIdenti
     return WTF::nullopt;
 }
 
-enum class ShouldValidatePaymentMethodIdentifier {
+enum class IsUpdate {
     No,
     Yes,
 };
 
-static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetails(JSC::ExecState& execState, PaymentDetailsBase& details, bool requestShipping, ShouldValidatePaymentMethodIdentifier shouldValidatePaymentMethodIdentifier)
+static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetails(ScriptExecutionContext& context, PaymentDetailsBase& details, bool requestShipping, IsUpdate isUpdate)
 {
-    for (auto& item : details.displayItems) {
-        auto exception = checkAndCanonicalizeAmount(item.amount);
-        if (exception.hasException())
-            return exception.releaseException();
+    if (details.displayItems) {
+        for (auto& item : *details.displayItems) {
+            auto paymentItemResult = checkAndCanonicalizePaymentItem(context, item, NegativeAmountAllowed::Yes);
+            if (paymentItemResult.hasException())
+                return paymentItemResult.releaseException();
+        }
     }
 
     String selectedShippingOption;
     if (requestShipping) {
-        HashSet<String> seenShippingOptionIDs;
-        for (auto& shippingOption : details.shippingOptions) {
-            auto exception = checkAndCanonicalizeAmount(shippingOption.amount);
-            if (exception.hasException())
-                return exception.releaseException();
+        if (details.shippingOptions) {
+            HashSet<String> seenShippingOptionIDs;
+            bool didLog = false;
+            for (auto& shippingOption : *details.shippingOptions) {
+                auto exception = checkAndCanonicalizeAmount(shippingOption.amount);
+                if (exception.hasException())
+                    return exception.releaseException();
 
-            auto addResult = seenShippingOptionIDs.add(shippingOption.id);
-            if (!addResult.isNewEntry)
-                return Exception { TypeError, "Shipping option IDs must be unique." };
+                auto addResult = seenShippingOptionIDs.add(shippingOption.id);
+                if (!addResult.isNewEntry)
+                    return Exception { TypeError, "Shipping option IDs must be unique." };
 
-            if (shippingOption.selected)
-                selectedShippingOption = shippingOption.id;
-        }
+                // FIXME: <rdar://problem/73464404>
+                if (!selectedShippingOption)
+                    selectedShippingOption = shippingOption.id;
+                else if (!didLog && shippingOption.selected) {
+                    context.addConsoleMessage(JSC::MessageSource::PaymentRequest, JSC::MessageLevel::Warning, "WebKit currently uses the first shipping option even if other shipping options are marked as selected."_s);
+                    didLog = true;
+                }
+
+                if (shippingOption.data) {
+                    auto dataResult = checkAndCanonicalizeData(context, shippingOption);
+                    if (dataResult.hasException())
+                        return dataResult.releaseException();
+
+                    shippingOption.serializedData = dataResult.releaseReturnValue();
+                }
+            }
+        } else if (isUpdate == IsUpdate::No)
+            details.shippingOptions = { { } };
     }
 
     Vector<String> serializedModifierData;
-    serializedModifierData.reserveInitialCapacity(details.modifiers.size());
-    for (auto& modifier : details.modifiers) {
-        if (shouldValidatePaymentMethodIdentifier == ShouldValidatePaymentMethodIdentifier::Yes) {
-            auto paymentMethodIdentifier = convertAndValidatePaymentMethodIdentifier(modifier.supportedMethods);
-            if (!paymentMethodIdentifier)
-                return Exception { RangeError, makeString('"', modifier.supportedMethods, "\" is an invalid payment method identifier.") };
-        }
+    if (details.modifiers) {
+        serializedModifierData.reserveInitialCapacity(details.modifiers->size());
+        for (auto& modifier : *details.modifiers) {
+            if (isUpdate == IsUpdate::Yes) {
+                auto paymentMethodIdentifier = convertAndValidatePaymentMethodIdentifier(modifier.supportedMethods);
+                if (!paymentMethodIdentifier)
+                    return Exception { RangeError, makeString('"', modifier.supportedMethods, "\" is an invalid payment method identifier.") };
+            }
 
-        if (modifier.total) {
-            auto exception = checkAndCanonicalizeTotal(modifier.total->amount);
-            if (exception.hasException())
-                return exception.releaseException();
-        }
+            if (modifier.total) {
+                auto totalResult = checkAndCanonicalizeTotal(context, *modifier.total);
+                if (totalResult.hasException())
+                    return totalResult.releaseException();
+            }
 
-        for (auto& item : modifier.additionalDisplayItems) {
-            auto exception = checkAndCanonicalizeAmount(item.amount);
-            if (exception.hasException())
-                return exception.releaseException();
-        }
+            for (auto& item : modifier.additionalDisplayItems) {
+                auto paymentItemResult = checkAndCanonicalizePaymentItem(context, item, NegativeAmountAllowed::Yes);
+                if (paymentItemResult.hasException())
+                    return paymentItemResult.releaseException();
+            }
 
-        String serializedData;
-        if (modifier.data) {
-            auto scope = DECLARE_THROW_SCOPE(execState.vm());
-            serializedData = JSONStringify(&execState, modifier.data.get(), 0);
-            if (scope.exception())
-                return Exception { ExistingExceptionError };
-            modifier.data.clear();
+            String serializedData;
+            if (modifier.data) {
+                auto dataResult = checkAndCanonicalizeData(context, modifier);
+                if (dataResult.hasException())
+                    return dataResult.releaseException();
+
+                serializedData = dataResult.releaseReturnValue();
+            }
+            serializedModifierData.uncheckedAppend(WTFMove(serializedData));
         }
-        serializedModifierData.uncheckedAppend(WTFMove(serializedData));
+    } else if (isUpdate == IsUpdate::No)
+        details.modifiers = { { } };
+
+    if (details.data) {
+        auto dataResult = checkAndCanonicalizeData(context, details);
+        if (dataResult.hasException())
+            return dataResult.releaseException();
+
+        details.serializedData = dataResult.releaseReturnValue();
     }
 
     return std::make_tuple(WTFMove(selectedShippingOption), WTFMove(serializedModifierData));
+}
+
+static ExceptionOr<JSC::JSValue> parse(ScriptExecutionContext& context, const String& string)
+{
+    auto scope = DECLARE_THROW_SCOPE(context.vm());
+    JSC::JSValue data = JSONParse(context.globalObject(), string);
+    if (scope.exception())
+        return Exception { ExistingExceptionError };
+    return data;
+}
+
+static String stringify(const PaymentRequest::MethodIdentifier& identifier)
+{
+    return WTF::switchOn(identifier,
+        [] (const String& string) { return string; },
+        [] (const URL& url) { return url.string(); }
+    );
 }
 
 // Implements the PaymentRequest Constructor
@@ -321,31 +397,48 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
 
     Vector<Method> serializedMethodData;
     serializedMethodData.reserveInitialCapacity(methodData.size());
+    HashSet<String> seenMethodIDs;
     for (auto& paymentMethod : methodData) {
         auto identifier = convertAndValidatePaymentMethodIdentifier(paymentMethod.supportedMethods);
         if (!identifier)
             return Exception { RangeError, makeString('"', paymentMethod.supportedMethods, "\" is an invalid payment method identifier.") };
 
+        if (!seenMethodIDs.add(stringify(*identifier)))
+            return Exception { RangeError, "Payment method IDs must be unique."_s };
+
         String serializedData;
         if (paymentMethod.data) {
-            auto scope = DECLARE_THROW_SCOPE(document.execState()->vm());
-            serializedData = JSONStringify(document.execState(), paymentMethod.data.get(), 0);
+            auto scope = DECLARE_THROW_SCOPE(document.globalObject()->vm());
+            serializedData = JSONStringify(document.globalObject(), paymentMethod.data.get(), 0);
             if (scope.exception())
                 return Exception { ExistingExceptionError };
+
+            auto parsedDataOrException = parse(document, serializedData);
+            if (parsedDataOrException.hasException())
+                return parsedDataOrException.releaseException();
+
+            auto exception = PaymentHandler::validateData(document, parsedDataOrException.releaseReturnValue(), *identifier);
+            if (exception.hasException())
+                return exception.releaseException();
         }
         serializedMethodData.uncheckedAppend({ WTFMove(*identifier), WTFMove(serializedData) });
     }
 
-    auto totalResult = checkAndCanonicalizeTotal(details.total.amount);
+    auto totalResult = checkAndCanonicalizeTotal(document, details.total);
     if (totalResult.hasException())
         return totalResult.releaseException();
 
-    auto detailsResult = checkAndCanonicalizeDetails(*document.execState(), details, options.requestShipping, ShouldValidatePaymentMethodIdentifier::No);
+    auto detailsResult = checkAndCanonicalizeDetails(document, details, options.requestShipping, IsUpdate::No);
     if (detailsResult.hasException())
         return detailsResult.releaseException();
 
     auto shippingOptionAndModifierData = detailsResult.releaseReturnValue();
     return adoptRef(*new PaymentRequest(document, WTFMove(options), WTFMove(details), WTFMove(std::get<1>(shippingOptionAndModifierData)), WTFMove(serializedMethodData), WTFMove(std::get<0>(shippingOptionAndModifierData))));
+}
+
+bool PaymentRequest::enabledForContext(ScriptExecutionContext& context)
+{
+    return PaymentHandler::enabledForContext(context);
 }
 
 PaymentRequest::PaymentRequest(Document& document, PaymentOptions&& options, PaymentDetailsInit&& details, Vector<String>&& serializedModifierData, Vector<Method>&& serializedMethodData, String&& selectedShippingOption)
@@ -363,15 +456,6 @@ PaymentRequest::~PaymentRequest()
 {
     ASSERT(!hasPendingActivity());
     ASSERT(!m_activePaymentHandler);
-}
-
-static ExceptionOr<JSC::JSValue> parse(ScriptExecutionContext& context, const String& string)
-{
-    auto scope = DECLARE_THROW_SCOPE(context.vm());
-    JSC::JSValue data = JSONParse(context.execState(), string);
-    if (scope.exception())
-        return Exception { ExistingExceptionError };
-    return WTFMove(data);
 }
 
 // https://www.w3.org/TR/payment-request/#show()-method
@@ -394,12 +478,13 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
 
     if (PaymentHandler::hasActiveSession(document)) {
         promise.reject(Exception { AbortError });
+        m_state = State::Closed;
         return;
     }
 
     m_state = State::Interactive;
     ASSERT(!m_showPromise);
-    m_showPromise = WTFMove(promise);
+    m_showPromise = WTF::makeUnique<ShowPromise>(WTFMove(promise));
 
     RefPtr<PaymentHandler> selectedPaymentHandler;
     for (auto& paymentMethod : m_serializedMethodData) {
@@ -428,7 +513,7 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
         return;
     }
 
-    auto exception = selectedPaymentHandler->show();
+    auto exception = selectedPaymentHandler->show(document);
     if (exception.hasException()) {
         settleShowPromise(exception.releaseException());
         return;
@@ -457,7 +542,7 @@ void PaymentRequest::abortWithException(Exception&& exception)
 
 void PaymentRequest::settleShowPromise(ExceptionOr<PaymentResponse&>&& result)
 {
-    if (auto showPromise = std::exchange(m_showPromise, WTF::nullopt))
+    if (auto showPromise = std::exchange(m_showPromise, nullptr))
         showPromise->settle(WTFMove(result));
 }
 
@@ -474,6 +559,20 @@ void PaymentRequest::stop()
 {
     closeActivePaymentHandler();
     settleShowPromise(Exception { AbortError });
+}
+
+void PaymentRequest::suspend(ReasonForSuspension reason)
+{
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    if (!m_activePaymentHandler) {
+        ASSERT(!m_showPromise);
+        ASSERT(m_state != State::Interactive);
+        return;
+    }
+
+    stop();
 }
 
 // https://www.w3.org/TR/payment-request/#abort()-method
@@ -506,7 +605,7 @@ void PaymentRequest::canMakePayment(Document& document, CanMakePaymentPromise&& 
         if (!handler)
             continue;
 
-        handler->canMakePayment([promise = WTFMove(promise)](bool canMakePayment) mutable {
+        handler->canMakePayment(document, [promise = WTFMove(promise)](bool canMakePayment) mutable {
             promise.resolve(canMakePayment);
         });
         return;
@@ -525,11 +624,6 @@ Optional<PaymentShippingType> PaymentRequest::shippingType() const
     if (m_options.requestShipping)
         return m_options.shippingType;
     return WTF::nullopt;
-}
-
-bool PaymentRequest::canSuspendForDocumentSuspension() const
-{
-    return !hasPendingActivity();
 }
 
 void PaymentRequest::shippingAddressChanged(Ref<PaymentAddress>&& shippingAddress)
@@ -624,19 +718,21 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
 
     auto& context = *m_detailsPromise->scriptExecutionContext();
     auto throwScope = DECLARE_THROW_SCOPE(context.vm());
-    auto detailsUpdate = convertDictionary<PaymentDetailsUpdate>(*context.execState(), m_detailsPromise->result());
+    auto detailsUpdate = convertDictionary<PaymentDetailsUpdate>(*context.globalObject(), m_detailsPromise->result());
     if (throwScope.exception()) {
         abortWithException(Exception { ExistingExceptionError });
         return;
     }
 
-    auto totalResult = checkAndCanonicalizeTotal(detailsUpdate.total.amount);
-    if (totalResult.hasException()) {
-        abortWithException(totalResult.releaseException());
-        return;
+    if (detailsUpdate.total) {
+        auto totalResult = checkAndCanonicalizeTotal(context, *detailsUpdate.total);
+        if (totalResult.hasException()) {
+            abortWithException(totalResult.releaseException());
+            return;
+        }
     }
 
-    auto detailsResult = checkAndCanonicalizeDetails(*context.execState(), detailsUpdate, m_options.requestShipping, ShouldValidatePaymentMethodIdentifier::Yes);
+    auto detailsResult = checkAndCanonicalizeDetails(context, detailsUpdate, m_options.requestShipping, IsUpdate::Yes);
     if (detailsResult.hasException()) {
         abortWithException(detailsResult.releaseException());
         return;
@@ -644,15 +740,20 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
 
     auto shippingOptionAndModifierData = detailsResult.releaseReturnValue();
 
-    m_details.total = WTFMove(detailsUpdate.total);
-    m_details.displayItems = WTFMove(detailsUpdate.displayItems);
-    if (m_options.requestShipping) {
+    if (detailsUpdate.total)
+        m_details.total = WTFMove(*detailsUpdate.total);
+    if (detailsUpdate.displayItems)
+        m_details.displayItems = WTFMove(*detailsUpdate.displayItems);
+    if (detailsUpdate.shippingOptions && m_options.requestShipping) {
         m_details.shippingOptions = WTFMove(detailsUpdate.shippingOptions);
         m_shippingOption = WTFMove(std::get<0>(shippingOptionAndModifierData));
     }
-
-    m_details.modifiers = WTFMove(detailsUpdate.modifiers);
-    m_serializedModifierData = WTFMove(std::get<1>(shippingOptionAndModifierData));
+    if (detailsUpdate.modifiers) {
+        m_details.modifiers = WTFMove(*detailsUpdate.modifiers);
+        m_serializedModifierData = WTFMove(std::get<1>(shippingOptionAndModifierData));
+    }
+    if (!detailsUpdate.serializedData.isEmpty())
+        m_details.serializedData = WTFMove(detailsUpdate.serializedData);
 
     auto result = activePaymentHandler()->detailsUpdated(reason, WTFMove(detailsUpdate.error), WTFMove(detailsUpdate.shippingAddressErrors), WTFMove(detailsUpdate.payerErrors), detailsUpdate.paymentMethodErrors.get());
     if (result.hasException()) {

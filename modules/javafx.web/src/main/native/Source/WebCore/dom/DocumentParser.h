@@ -23,12 +23,13 @@
 
 #pragma once
 
+#include "Document.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class Document;
 class DocumentWriter;
 class SegmentedString;
 class ScriptableDocumentParser;
@@ -62,12 +63,12 @@ public:
     virtual bool processingData() const { return false; }
 
     // document() will return 0 after detach() is called.
-    Document* document() const { ASSERT(m_document); return m_document; }
+    Document* document() const { ASSERT(m_document); return m_document.get(); }
 
-    bool isParsing() const { return m_state == ParsingState; }
-    bool isStopping() const { return m_state == StoppingState; }
-    bool isStopped() const { return m_state >= StoppedState; }
-    bool isDetached() const { return m_state == DetachedState; }
+    bool isParsing() const { return m_state == ParserState::Parsing; }
+    bool isStopping() const { return m_state == ParserState::Stopping; }
+    bool isStopped() const { return m_state >= ParserState::Stopped; }
+    bool isDetached() const { return m_state == ParserState::Detached; }
 
     // FIXME: Is this necessary? Does XMLDocumentParserLibxml2 really need to set this?
     virtual void startParsing();
@@ -103,18 +104,18 @@ protected:
     explicit DocumentParser(Document&);
 
 private:
-    enum ParserState {
-        ParsingState,
-        StoppingState,
-        StoppedState,
-        DetachedState
+    enum class ParserState : uint8_t {
+        Parsing,
+        Stopping,
+        Stopped,
+        Detached
     };
     ParserState m_state;
     bool m_documentWasLoadedAsPartOfNavigation;
 
     // Every DocumentParser needs a pointer back to the document.
     // m_document will be 0 after the parser is stopped.
-    Document* m_document;
+    WeakPtr<Document> m_document;
 };
 
 } // namespace WebCore

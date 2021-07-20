@@ -32,7 +32,7 @@
 #include "config.h"
 #include "WebKitAccessibleInterfaceText.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include "AccessibilityObject.h"
 #include "Document.h"
@@ -43,6 +43,7 @@
 #include "HostWindow.h"
 #include "InlineTextBox.h"
 #include "NotImplemented.h"
+#include "Range.h"
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderText.h"
@@ -92,13 +93,15 @@ static AtkAttributeSet* getAttributeSetForAccessibilityObject(const Accessibilit
 
     Color bgColor = style->visitedDependentColor(CSSPropertyBackgroundColor);
     if (bgColor.isValid()) {
-        buffer.reset(g_strdup_printf("%i,%i,%i", bgColor.red(), bgColor.green(), bgColor.blue()));
+        auto [r, g, b, a] = bgColor.toSRGBALossy<uint8_t>();
+        buffer.reset(g_strdup_printf("%i,%i,%i", r, g, b));
         result = addToAtkAttributeSet(result, atk_text_attribute_get_name(ATK_TEXT_ATTR_BG_COLOR), buffer.get());
     }
 
     Color fgColor = style->visitedDependentColor(CSSPropertyColor);
     if (fgColor.isValid()) {
-        buffer.reset(g_strdup_printf("%i,%i,%i", fgColor.red(), fgColor.green(), fgColor.blue()));
+        auto [r, g, b, a] = fgColor.toSRGBALossy<uint8_t>();
+        buffer.reset(g_strdup_printf("%i,%i,%i", r, g, b));
         result = addToAtkAttributeSet(result, atk_text_attribute_get_name(ATK_TEXT_ATTR_FG_COLOR), buffer.get());
     }
 
@@ -334,7 +337,7 @@ static IntRect textExtents(AtkText* text, gint startOffset, gint length, AtkCoor
     return extents;
 }
 
-static int offsetAdjustmentForListItem(const AccessibilityObject* object)
+static int offsetAdjustmentForListItem(const AXCoreObject* object)
 {
     // We need to adjust the offsets for the list item marker in
     // Left-To-Right text, since we expose it together with the text.
@@ -345,7 +348,7 @@ static int offsetAdjustmentForListItem(const AccessibilityObject* object)
     return 0;
 }
 
-static int webCoreOffsetToAtkOffset(const AccessibilityObject* object, int offset)
+static int webCoreOffsetToAtkOffset(const AXCoreObject* object, int offset)
 {
     if (!object->isListItem())
         return offset;
@@ -396,28 +399,23 @@ static void getSelectionOffsetsForObject(AccessibilityObject* coreObject, Visibl
     Position lastValidPosition = lastPositionInOrAfterNode(node->lastDescendant());
 
     // Find the proper range for the selection that falls inside the object.
-    Position nodeRangeStart = selection.start();
-    if (comparePositions(nodeRangeStart, firstValidPosition) < 0)
-        nodeRangeStart = firstValidPosition;
-
-    Position nodeRangeEnd = selection.end();
-    if (comparePositions(nodeRangeEnd, lastValidPosition) > 0)
-        nodeRangeEnd = lastValidPosition;
+    auto nodeRangeStart = std::max(selection.start(), firstValidPosition);
+    auto nodeRangeEnd = std::min(selection.end(), lastValidPosition);
 
     // Calculate position of the selected range inside the object.
     Position parentFirstPosition = firstPositionInOrBeforeNode(node);
-    auto rangeInParent = Range::create(node->document(), parentFirstPosition, nodeRangeStart);
+    auto rangeInParent = *makeSimpleRange(parentFirstPosition, nodeRangeStart);
 
     // Set values for start offsets and calculate initial range length.
     // These values might be adjusted later to cover special cases.
-    startOffset = webCoreOffsetToAtkOffset(coreObject, TextIterator::rangeLength(rangeInParent.ptr(), true));
-    auto nodeRange = Range::create(node->document(), nodeRangeStart, nodeRangeEnd);
-    int rangeLength = TextIterator::rangeLength(nodeRange.ptr(), true);
+    startOffset = webCoreOffsetToAtkOffset(coreObject, characterCount(rangeInParent, TextIteratorEmitsCharactersBetweenAllVisiblePositions));
+    auto nodeRange = *makeSimpleRange(nodeRangeStart, nodeRangeEnd);
+    int rangeLength = characterCount(nodeRange, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
 
     // Special cases that are only relevant when working with *_END boundaries.
-    if (selection.affinity() == UPSTREAM) {
-        VisiblePosition visibleStart(nodeRangeStart, UPSTREAM);
-        VisiblePosition visibleEnd(nodeRangeEnd, UPSTREAM);
+    if (selection.affinity() == Affinity::Upstream) {
+        VisiblePosition visibleStart(nodeRangeStart, Affinity::Upstream);
+        VisiblePosition visibleEnd(nodeRangeEnd, Affinity::Upstream);
 
         // We need to adjust offsets when finding wrapped lines so the position at the end
         // of the line is properly taking into account when calculating the offsets.
@@ -445,9 +443,8 @@ static gchar* webkitAccessibleTextGetText(AtkText* text, gint startOffset, gint 
 
 #if ENABLE(INPUT_TYPE_COLOR)
     if (coreObject->roleValue() == AccessibilityRole::ColorWell) {
-        int r, g, b;
-        coreObject->colorValue(r, g, b);
-        return g_strdup_printf("rgb %7.5f %7.5f %7.5f 1", r / 255., g / 255., b / 255.);
+        auto color = convertColor<SRGBA<float>>(coreObject->colorValue());
+        return g_strdup_printf("rgb %7.5f %7.5f %7.5f 1", color.red, color.green, color.blue);
     }
 #endif
 
@@ -599,7 +596,7 @@ static VisibleSelection wordAtPositionForAtkBoundary(const AccessibilityObject* 
     // We mark the selection as 'upstream' so we can use that information later,
     // when finding the actual offsets in getSelectionOffsetsForObject().
     if (boundaryType == ATK_TEXT_BOUNDARY_WORD_END)
-        selectedWord.setAffinity(UPSTREAM);
+        selectedWord.setAffinity(Affinity::Upstream);
 
     return selectedWord;
 }
@@ -701,12 +698,13 @@ static bool isWhiteSpaceBetweenSentences(const VisiblePosition& position)
     if (!deprecatedIsEditingWhitespace(position.characterAfter()))
         return false;
 
-    VisiblePosition startOfWhiteSpace = startOfWord(position, RightWordIfOnBoundary);
-    VisiblePosition endOfWhiteSpace = endOfWord(startOfWhiteSpace, RightWordIfOnBoundary);
-    if (!isSentenceBoundary(startOfWhiteSpace) && !isSentenceBoundary(endOfWhiteSpace))
+    auto start = startOfWord(position, RightWordIfOnBoundary);
+    auto end = endOfWord(start, RightWordIfOnBoundary);
+    if (!isSentenceBoundary(start) && !isSentenceBoundary(end))
         return false;
 
-    return comparePositions(startOfWhiteSpace, position) <= 0 && comparePositions(endOfWhiteSpace, position) >= 0;
+    auto range = makeSimpleRange(start, end);
+    return range && contains<ComposedTree>(*range, makeBoundaryPoint(position));
 }
 
 static VisibleSelection sentenceAtPositionForAtkBoundary(const AccessibilityObject*, const VisiblePosition& position, AtkTextBoundary boundaryType)
@@ -754,7 +752,7 @@ static VisibleSelection sentenceAtPositionForAtkBoundary(const AccessibilityObje
     // We mark the selection as 'upstream' so we can use that information later,
     // when finding the actual offsets in getSelectionOffsetsForObject().
     if (boundaryType == ATK_TEXT_BOUNDARY_SENTENCE_END)
-        selectedSentence.setAffinity(UPSTREAM);
+        selectedSentence.setAffinity(Affinity::Upstream);
 
     return selectedSentence;
 }
@@ -826,7 +824,7 @@ static VisibleSelection lineAtPositionForAtkBoundary(const AccessibilityObject* 
         // In addition to checking that we are not at the end of a block, we need
         // to check that endPosition has not UPSTREAM affinity, since that would
         // cause trouble inside of text controls (we would be advancing too much).
-        if (!isEndOfBlock(endPosition) && endPosition.affinity() != UPSTREAM)
+        if (!isEndOfBlock(endPosition) && endPosition.affinity() != Affinity::Upstream)
             endPosition = endPosition.next();
         break;
 
@@ -846,7 +844,7 @@ static VisibleSelection lineAtPositionForAtkBoundary(const AccessibilityObject* 
     // We mark the selection as 'upstream' so we can use that information later,
     // when finding the actual offsets in getSelectionOffsetsForObject().
     if (boundaryType == ATK_TEXT_BOUNDARY_LINE_END)
-        selectedLine.setAffinity(UPSTREAM);
+        selectedLine.setAffinity(Affinity::Upstream);
 
     return selectedLine;
 }
@@ -990,7 +988,7 @@ static gint webkitAccessibleTextGetCaretOffset(AtkText* text)
 
     // coreObject is the unignored object whose offset the caller is requesting.
     // focusedObject is the object with the caret. It is likely ignored -- unless it's a link.
-    AccessibilityObject* coreObject = core(text);
+    AXCoreObject* coreObject = core(text);
     if (!coreObject->isAccessibilityRenderObject())
         return 0;
 
@@ -1207,7 +1205,6 @@ static gboolean webkitAccessibleTextSetCaretOffset(AtkText* text, gint offset)
     return webkitAccessibleTextSetSelection(text, 0, offset, offset);
 }
 
-#if ATK_CHECK_VERSION(2, 10, 0)
 static gchar* webkitAccessibleTextGetStringAtOffset(AtkText* text, gint offset, AtkTextGranularity granularity, gint* startOffset, gint* endOffset)
 {
     // This new API has been designed to simplify the AtkText interface and it has been
@@ -1215,9 +1212,12 @@ static gchar* webkitAccessibleTextGetStringAtOffset(AtkText* text, gint offset, 
     // ATK_TEXT_BOUNDARY_*_START boundaries, so for now we just need to translate the
     // granularity to the right old boundary and reuse the code for the old API.
     // However, this should be simplified later on (and a lot of code removed) once
-    // WebKitGTK+ depends on ATK >= 2.9.4 *and* can safely assume that a version of
+    // WebKitGTK depends on ATK >= 2.9.4 *and* can safely assume that a version of
     // AT-SPI2 new enough not to include the old APIs is being used. But until then,
     // we will have to live with both the old and new APIs implemented here.
+    // FIXME: WebKit nowadays depends on much newer ATK and we can safely assume AT-SPI2
+    // isn't ancient. But whoever wrote this code didn't use ATK_CHECK_VERSION() guards,
+    // so it's unclear what is supposed to be changed here.
     AtkTextBoundary boundaryType = ATK_TEXT_BOUNDARY_CHAR;
     switch (granularity) {
     case ATK_TEXT_GRANULARITY_CHAR:
@@ -1247,7 +1247,6 @@ static gchar* webkitAccessibleTextGetStringAtOffset(AtkText* text, gint offset, 
 
     return webkitAccessibleTextGetTextForOffset(text, offset, boundaryType, GetTextPositionAt, startOffset, endOffset);
 }
-#endif
 
 void webkitAccessibleTextInterfaceInit(AtkTextIface* iface)
 {
@@ -1269,10 +1268,7 @@ void webkitAccessibleTextInterfaceInit(AtkTextIface* iface)
     iface->remove_selection = webkitAccessibleTextRemoveSelection;
     iface->set_selection = webkitAccessibleTextSetSelection;
     iface->set_caret_offset = webkitAccessibleTextSetCaretOffset;
-
-#if ATK_CHECK_VERSION(2, 10, 0)
     iface->get_string_at_offset = webkitAccessibleTextGetStringAtOffset;
-#endif
 }
 
 #endif

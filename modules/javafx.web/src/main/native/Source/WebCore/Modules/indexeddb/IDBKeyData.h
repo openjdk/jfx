@@ -69,10 +69,10 @@ public:
 
     WEBCORE_EXPORT RefPtr<IDBKey> maybeCreateIDBKey() const;
 
-    IDBKeyData isolatedCopy() const;
+    WEBCORE_EXPORT IDBKeyData isolatedCopy() const;
 
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
-    WEBCORE_EXPORT static bool decode(KeyedDecoder&, IDBKeyData&);
+    WEBCORE_EXPORT static WARN_UNUSED_RETURN bool decode(KeyedDecoder&, IDBKeyData&);
 
     // compare() has the same semantics as strcmp().
     //   - Returns negative if this IDBKeyData is less than other.
@@ -187,6 +187,8 @@ public:
         return WTF::get<Vector<IDBKeyData>>(m_value);
     }
 
+    size_t size() const;
+
 private:
     static void isolatedCopy(const IDBKeyData& source, IDBKeyData& destination);
 
@@ -236,7 +238,7 @@ void IDBKeyData::encode(Encoder& encoder) const
     if (m_isNull)
         return;
 
-    encoder.encodeEnum(m_type);
+    encoder << m_type;
 
     switch (m_type) {
     case IndexedDB::KeyType::Invalid:
@@ -267,9 +269,9 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
         return WTF::nullopt;
 
     if (keyData.m_isNull)
-        return WTFMove(keyData);
+        return keyData;
 
-    if (!decoder.decodeEnum(keyData.m_type))
+    if (!decoder.decode(keyData.m_type))
         return WTF::nullopt;
 
     switch (keyData.m_type) {
@@ -300,7 +302,7 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
         break;
     }
 
-    return WTFMove(keyData);
+    return keyData;
 }
 
 using IDBKeyDataSet = StdSet<IDBKeyData>;

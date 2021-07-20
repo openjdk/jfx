@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
+#include "WHLSLAddressEscapeMode.h"
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,25 +38,28 @@ namespace WHLSL {
 
 namespace AST {
 
-class MakePointerExpression : public Expression {
+class MakePointerExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    MakePointerExpression(Lexer::Token&& origin, UniqueRef<Expression>&& lValue)
-        : Expression(WTFMove(origin))
-        , m_lValue(WTFMove(lValue))
+    MakePointerExpression(CodeLocation location, UniqueRef<Expression>&& leftValue, AddressEscapeMode addressEscapeMode)
+        : Expression(location, Kind::MakePointer)
+        , m_leftValue(WTFMove(leftValue))
+        , m_addressEscapeMode(addressEscapeMode)
     {
     }
 
-    virtual ~MakePointerExpression() = default;
+    ~MakePointerExpression() = default;
 
     MakePointerExpression(const MakePointerExpression&) = delete;
     MakePointerExpression(MakePointerExpression&&) = default;
 
-    bool isMakePointerExpression() const override { return true; }
+    Expression& leftValue() { return m_leftValue; }
 
-    Expression& lValue() { return m_lValue; }
+    bool mightEscape() const { return m_addressEscapeMode == AddressEscapeMode::Escapes; }
 
 private:
-    UniqueRef<Expression> m_lValue;
+    UniqueRef<Expression> m_leftValue;
+    AddressEscapeMode m_addressEscapeMode;
 };
 
 } // namespace AST
@@ -64,6 +68,8 @@ private:
 
 }
 
+DEFINE_DEFAULT_DELETE(MakePointerExpression)
+
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(MakePointerExpression, isMakePointerExpression())
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

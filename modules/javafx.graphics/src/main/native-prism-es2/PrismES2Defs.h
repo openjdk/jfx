@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -376,10 +376,16 @@ struct MeshViewInfoRec {
     MeshInfo *meshInfo;
     PhongMaterialInfo *phongMaterialInfo;
     GLfloat ambientLightColor[3];
-    GLuint pointLightIndex;
-    GLfloat pointLightWeight;
-    GLfloat pointLightPosition[3];
-    GLfloat pointLightColor[3];
+    GLuint lightIndex;
+    GLfloat lightColor[3];
+    GLfloat lightPosition[3];
+    GLfloat lightWeight;
+    GLfloat lightAttenuation[3];
+    GLfloat lightMaxRange;
+    GLfloat lightDir[3];
+    GLfloat lightInnerAngle;
+    GLfloat lightOuterAngle;
+    GLfloat lightFalloff;
     GLboolean cullEnable;
     GLenum cullMode;
     GLenum fillMode;

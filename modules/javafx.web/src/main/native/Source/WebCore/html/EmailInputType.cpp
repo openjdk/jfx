@@ -52,7 +52,7 @@ static bool isValidEmailAddress(const String& address)
     return !matchOffset && matchLength == addressLength;
 }
 
-const AtomicString& EmailInputType::formControlType() const
+const AtomString& EmailInputType::formControlType() const
 {
     return InputTypeNames::email();
 }
@@ -81,11 +81,6 @@ String EmailInputType::typeMismatchText() const
 {
     ASSERT(element());
     return element()->multiple() ? validationMessageTypeMismatchForMultipleEmailText() : validationMessageTypeMismatchForEmailText();
-}
-
-bool EmailInputType::isEmailField() const
-{
-    return true;
 }
 
 bool EmailInputType::supportsSelectionAPI() const

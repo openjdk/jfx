@@ -29,7 +29,7 @@ namespace JSC {
 
 class MacroAssembler;
 
-extern volatile uint32_t g_superSamplerCount;
+extern JS_EXPORT_PRIVATE volatile uint32_t g_superSamplerCount;
 
 void initializeSuperSampler();
 
@@ -48,11 +48,20 @@ public:
             g_superSamplerCount--;
     }
 
+    void release()
+    {
+        ASSERT(m_doSample);
+        g_superSamplerCount--;
+        m_doSample = false;
+    }
+
 private:
     bool m_doSample;
 };
 
 JS_EXPORT_PRIVATE void resetSuperSamplerState();
 JS_EXPORT_PRIVATE void printSuperSamplerState();
+JS_EXPORT_PRIVATE void enableSuperSampler();
+JS_EXPORT_PRIVATE void disableSuperSampler();
 
 } // namespace JSC

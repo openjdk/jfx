@@ -30,17 +30,13 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/text/WTFString.h>
+#include "FrameLoader.h"
 
 namespace WebCore {
 
 class Document;
 class Frame;
 class FrameLoaderClient;
-class HTMLAppletElement;
 class HTMLFrameOwnerElement;
 class HTMLMediaElement;
 class HTMLPlugInImageElement;
@@ -48,20 +44,16 @@ class IntSize;
 class Widget;
 
 // This is a slight misnomer. It handles the higher level logic of loading both subframes and plugins.
-class SubframeLoader {
+class FrameLoader::SubframeLoader {
     WTF_MAKE_NONCOPYABLE(SubframeLoader); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SubframeLoader(Frame&);
 
     void clear();
 
-    bool requestFrame(HTMLFrameOwnerElement&, const String& url, const AtomicString& frameName, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
-    bool requestObject(HTMLPlugInImageElement&, const String& url, const AtomicString& frameName,
+    bool requestFrame(HTMLFrameOwnerElement&, const String& url, const AtomString& frameName, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
+    bool requestObject(HTMLPlugInImageElement&, const String& url, const AtomString& frameName,
         const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues);
-
-    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const Vector<String>& paramNames, const Vector<String>& paramValues);
-
-    WEBCORE_EXPORT bool allowPlugins();
 
     bool containsPlugins() const { return m_containsPlugins; }
 
@@ -69,8 +61,8 @@ public:
 
 private:
     bool requestPlugin(HTMLPlugInImageElement&, const URL&, const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
-    Frame* loadOrRedirectSubframe(HTMLFrameOwnerElement&, const URL&, const AtomicString& frameName, LockHistory, LockBackForwardList);
-    Frame* loadSubframe(HTMLFrameOwnerElement&, const URL&, const String& name, const String& referrer);
+    Frame* loadOrRedirectSubframe(HTMLFrameOwnerElement&, const URL&, const AtomString& frameName, LockHistory, LockBackForwardList);
+    RefPtr<Frame> loadSubframe(HTMLFrameOwnerElement&, const URL&, const String& name, const String& referrer);
     bool loadPlugin(HTMLPlugInImageElement&, const URL&, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
 
     bool shouldUsePlugin(const URL&, const String& mimeType, bool hasFallback, bool& useFallback);
@@ -80,7 +72,7 @@ private:
 
     bool shouldConvertInvalidURLsToBlank() const;
 
-    bool m_containsPlugins;
+    bool m_containsPlugins { false };
     Frame& m_frame;
 };
 

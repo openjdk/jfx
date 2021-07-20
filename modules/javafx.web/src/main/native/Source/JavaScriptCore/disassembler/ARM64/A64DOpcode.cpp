@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if USE(ARM64_DISASSEMBLER)
+#if ENABLE(ARM64_DISASSEMBLER)
 
 #include "A64DOpcode.h"
 
@@ -65,6 +65,7 @@ struct OpcodeGroupInitializer {
 { groupIndex, groupClass::mask, groupClass::pattern, groupClass::format }
 
 static const OpcodeGroupInitializer opcodeGroupList[] = {
+    OPCODE_GROUP_ENTRY(0x08, A64DOpcodeCAS),
     OPCODE_GROUP_ENTRY(0x08, A64DOpcodeLoadStoreRegisterPair),
     OPCODE_GROUP_ENTRY(0x08, A64DOpcodeLoadStoreExclusive),
     OPCODE_GROUP_ENTRY(0x09, A64DOpcodeLoadStoreRegisterPair),
@@ -95,6 +96,9 @@ static const OpcodeGroupInitializer opcodeGroupList[] = {
     OPCODE_GROUP_ENTRY(0x17, A64DOpcodeTestAndBranchImmediate),
     OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadStoreImmediate),
     OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadStoreRegisterOffset),
+    OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadStoreAuthenticated),
+    OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadAtomic),
+    OPCODE_GROUP_ENTRY(0x18, A64DOpcodeSwapAtomic),
     OPCODE_GROUP_ENTRY(0x19, A64DOpcodeLoadStoreUnsignedImmediate),
     OPCODE_GROUP_ENTRY(0x1a, A64DOpcodeConditionalSelect),
     OPCODE_GROUP_ENTRY(0x1a, A64DOpcodeDataProcessing1Source),
@@ -456,10 +460,29 @@ const char* const A64DOpcodeDataProcessing1Source::s_opNames[8] = {
     "rbit", "rev16", "rev32", "rev", "clz", "cls", 0, 0
 };
 
+const char* const A64DOpcodeDataProcessing1Source::s_pacAutOpNames[18] = {
+    "pacia", "pacib", "pacda", "pacdb", "autia", "autib", "autda", "autdb",
+    "paciza", "pacizb", "pacdza", "pacdzb", "autiza", "autizb", "autdza", "autdzb",
+    "xpaci", "xpacd"
+};
+
 const char* A64DOpcodeDataProcessing1Source::format()
 {
     if (sBit())
         return A64DOpcode::format();
+
+    if (opCode2() == 1 && is64Bit() && opCode() <= 0x1001) {
+        if (opCode() <= 0x00111 || rt() == 0x11111) {
+            appendInstructionName(s_pacAutOpNames[opCode()]);
+            appendZROrRegisterName(rd(), is64Bit());
+            if (opCode() <= 0x00111) {
+                appendSeparator();
+                appendZROrRegisterName(rn(), is64Bit());
+            }
+            return m_formatBuffer;
+        }
+        return A64DOpcode::format();
+    }
 
     if (opCode2())
         return A64DOpcode::format();
@@ -484,8 +507,10 @@ const char* A64DOpcodeDataProcessing1Source::format()
     return m_formatBuffer;
 }
 
-const char* const A64DOpcodeDataProcessing2Source::s_opNames[8] = {
-    0, 0, "udiv", "sdiv", "lsl", "lsr", "asr", "ror" // We use the pseudo-op names for the shift/rotate instructions
+const char* const A64DOpcodeDataProcessing2Source::s_opNames[16] = {
+    // We use the pseudo-op names for the shift/rotate instructions
+    0, 0, "udiv", "sdiv", 0, 0, 0, 0,
+    "lsl", "lsr", "asr", "ror", 0, "pacga", 0, 0
 };
 
 const char* A64DOpcodeDataProcessing2Source::format()
@@ -499,10 +524,14 @@ const char* A64DOpcodeDataProcessing2Source::format()
     if (opCode() & 0x30)
         return A64DOpcode::format();
 
-    if ((opCode() & 0x34) == 0x4)
+    if ((opCode() & 0x3c) == 0x4)
         return A64DOpcode::format();
 
-    appendInstructionName(opName());
+    const char* opcodeName = opName();
+    if (!opcodeName)
+        return A64DOpcode::format();
+
+    appendInstructionName(opcodeName);
     appendZROrRegisterName(rd(), is64Bit());
     appendSeparator();
     appendZROrRegisterName(rn(), is64Bit());
@@ -601,7 +630,7 @@ const char* A64OpcodeExceptionGeneration::format()
         return A64DOpcode::format();
 
     appendInstructionName(opname);
-    appendUnsignedImmediate(immediate16());
+    appendUnsignedHexImmediate(immediate16());
     return m_formatBuffer;
 }
 
@@ -958,18 +987,30 @@ const char* A64DOpcodeMSROrMRSRegister::format()
     return m_formatBuffer;
 }
 
-const char* const A64DOpcodeHint::s_opNames[6] = {
-    "nop", "yield", "wfe", "wfi", "sev", "sevl"
+const char* const A64DOpcodeHint::s_opNames[32] = {
+    "nop", "yield", "wfe", "wfi", "sev", "sevl", 0, "xpaclri",
+    "pacia1716", 0, "pacib1716", 0, "autia1716", 0, "autib1716", 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    "paciaz", "paciasp", "pacibz", "pacibsp", "autiaz", "autiasp", "autibz", "autibsp"
 };
 
 const char* A64DOpcodeHint::format()
 {
     appendInstructionName(opName());
 
-    if (immediate7() > 5)
+    if (immediate7() >= 32 || !s_opNames[immediate7()])
         appendUnsignedImmediate(immediate7());
 
     return m_formatBuffer;
+}
+
+const char* A64DOpcodeHint::opName()
+{
+    const char* opName = (immediate7() < 32 ? s_opNames[immediate7()] : 0);
+    if (!opName)
+        return "hint";
+
+    return opName;
 }
 
 const char* const A64DOpcodeSystemSync::s_opNames[8] = {
@@ -1190,6 +1231,110 @@ const char* A64DOpcodeLoadStoreRegisterOffset::format()
 
     appendCharacter(']');
 
+    return m_formatBuffer;
+}
+
+const char* const A64DOpcodeLoadStoreAuthenticated::s_opNames[2] = {
+    "ldraa", "ldrab"
+};
+
+const char* A64DOpcodeLoadStoreAuthenticated::format()
+{
+    appendInstructionName(opName());
+    appendRegisterName(rt());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn());
+
+    if (wBit() || immediate10()) {
+        appendSeparator();
+        appendSignedImmediate(immediate10() << size());
+    }
+    appendCharacter(']');
+
+    if (wBit())
+        appendCharacter('!');
+
+    return m_formatBuffer;
+}
+
+const char* const A64DOpcodeLoadAtomic::s_opNames[64] = {
+    "ldaddb", "ldaddlb", "ldaddab", "ldaddalb",
+    "ldaddh", "ldaddlh", "ldaddah", "ldaddalh",
+    "ldadd", "ldaddl", "ldadda", "ldaddal",
+    "ldadd", "ldaddl", "ldadda", "ldaddal",
+
+    "ldclrb", "ldclrlb", "ldclrab", "ldclralb",
+    "ldclrh", "ldclrlh", "ldclrah", "ldclralh",
+    "ldclr", "ldclrl", "ldclra", "ldclral",
+    "ldclr", "ldclrl", "ldclra", "ldclral",
+
+    "ldeorb", "ldeorlb", "ldeorab", "ldeoralb",
+    "ldeorh", "ldeorlh", "ldeorah", "ldeoralh",
+    "ldeor", "ldeorl", "ldeora", "ldeoral",
+    "ldeor", "ldeorl", "ldeora", "ldeoral",
+
+    "ldsetb", "ldsetlb", "ldsetab", "ldsetalb",
+    "ldseth", "ldsetlh", "ldsetah", "ldsetalh",
+    "ldset", "ldsetl", "ldseta", "ldsetal",
+    "ldset", "ldsetl", "ldseta", "ldsetal",
+};
+
+const char* A64DOpcodeLoadAtomic::format()
+{
+    const auto* name = opName();
+    if (!name)
+        return A64DOpcode::format();
+    appendInstructionName(name);
+    appendSPOrRegisterName(rs(), is64Bit());
+    appendSeparator();
+    appendSPOrRegisterName(rt(), is64Bit());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn(), is64Bit());
+    appendCharacter(']');
+    return m_formatBuffer;
+}
+
+const char* const A64DOpcodeSwapAtomic::s_opNames[16] = {
+    "swpb", "swplb", "swpab", "swpalb",
+    "swph", "swplh", "swpah", "swpalh",
+    "swp", "swpl", "swpa", "swpal",
+    "swp", "swpl", "swpa", "swpal",
+};
+
+const char* A64DOpcodeSwapAtomic::format()
+{
+    const auto* name = opName();
+    appendInstructionName(name);
+    appendSPOrRegisterName(rs(), is64Bit());
+    appendSeparator();
+    appendSPOrRegisterName(rt(), is64Bit());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn(), is64Bit());
+    appendCharacter(']');
+    return m_formatBuffer;
+}
+
+const char* const A64DOpcodeCAS::s_opNames[16] = {
+    "casb", "caslb", "casab", "casalb",
+    "cash", "caslh", "casah", "casalh",
+    "cas", "casl", "casa", "casal",
+    "cas", "casl", "casa", "casal",
+};
+
+const char* A64DOpcodeCAS::format()
+{
+    const auto* name = opName();
+    appendInstructionName(name);
+    appendSPOrRegisterName(rs(), is64Bit());
+    appendSeparator();
+    appendSPOrRegisterName(rt(), is64Bit());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn(), is64Bit());
+    appendCharacter(']');
     return m_formatBuffer;
 }
 
@@ -1452,10 +1597,40 @@ const char* A64DOpcodeUnconditionalBranchImmediate::format()
 }
 
 const char* const A64DOpcodeUnconditionalBranchRegister::s_opNames[8] = { "br", "blr", "ret", "", "eret", "drps", "", "" };
+const char* const A64DOpcodeUnconditionalBranchRegister::s_AuthOpNames[20] = {
+    "braaz", "brabz", "blraaz", "blrabz", "retaa", "retab", 0, 0,
+    "eretaa", "eretab", 0, 0, 0, 0, 0, 0,
+    "braa", "brab", "blraa", "blrab"
+};
+
+const char* A64DOpcodeUnconditionalBranchRegister::authOpName()
+{
+    unsigned opCode = authOpCode();
+    if (opCode >= 20)
+        return 0;
+    return s_AuthOpNames[opCode];
+}
 
 const char* A64DOpcodeUnconditionalBranchRegister::format()
 {
     unsigned opcValue = opc();
+    if (op2() == 0x1f && (op3() & 0x3e) == 0x2) {
+        const char* opName = authOpName();
+        if (!opName)
+            return A64DOpcode::format();
+        if (rn() != 0x1f && (opcValue == 0x2 || opcValue == 0x4))
+            return A64DOpcode::format();
+
+        appendInstructionName(opName);
+        if ((opcValue & 0x7) <= 0x1)
+            appendRegisterName(rn());
+        if (opcValue & 0x8) {
+            appendSeparator();
+            appendRegisterName(rm());
+        }
+
+        return m_formatBuffer;
+    }
     if (opcValue == 3 || opcValue > 5)
         return A64DOpcode::format();
     if (((opcValue & 0xe) == 0x4) && rn() != 0x1f)
@@ -1468,4 +1643,4 @@ const char* A64DOpcodeUnconditionalBranchRegister::format()
 
 } } // namespace JSC::ARM64Disassembler
 
-#endif // USE(ARM64_DISASSEMBLER)
+#endif // ENABLE(ARM64_DISASSEMBLER)

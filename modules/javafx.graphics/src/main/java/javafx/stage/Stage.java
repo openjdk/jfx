@@ -1141,6 +1141,7 @@ public class Stage extends Window {
 
             StageStyle stageStyle = getStyle();
             if (stageStyle == StageStyle.TRANSPARENT) {
+                @SuppressWarnings("removal")
                 final SecurityManager securityManager =
                         System.getSecurityManager();
                 if (securityManager != null) {

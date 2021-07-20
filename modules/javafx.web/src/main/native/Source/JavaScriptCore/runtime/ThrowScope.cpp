@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #include "ThrowScope.h"
 
 #include "Exception.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "VM.h"
 
 namespace JSC {
@@ -70,28 +70,20 @@ ThrowScope::~ThrowScope()
         simulateThrow();
 }
 
-void ThrowScope::throwException(ExecState* exec, Exception* exception)
+Exception* ThrowScope::throwException(JSGlobalObject* globalObject, Exception* exception)
 {
     if (m_vm.exception() && m_vm.exception() != exception)
         m_vm.verifyExceptionCheckNeedIsSatisfied(m_recursionDepth, m_location);
 
-    m_vm.throwException(exec, exception);
+    return m_vm.throwException(globalObject, exception);
 }
 
-JSValue ThrowScope::throwException(ExecState* exec, JSValue error)
+Exception* ThrowScope::throwException(JSGlobalObject* globalObject, JSValue error)
 {
-    if (!error.isCell() || !jsDynamicCast<Exception*>(m_vm, error.asCell()))
+    if (!error.isCell() || error.isObject() || !jsDynamicCast<Exception*>(m_vm, error.asCell()))
         m_vm.verifyExceptionCheckNeedIsSatisfied(m_recursionDepth, m_location);
 
-    return m_vm.throwException(exec, error);
-}
-
-JSObject* ThrowScope::throwException(ExecState* exec, JSObject* obj)
-{
-    if (!jsDynamicCast<Exception*>(m_vm, obj))
-        m_vm.verifyExceptionCheckNeedIsSatisfied(m_recursionDepth, m_location);
-
-    return m_vm.throwException(exec, obj);
+    return m_vm.throwException(globalObject, error);
 }
 
 void ThrowScope::simulateThrow()

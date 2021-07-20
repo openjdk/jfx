@@ -24,6 +24,7 @@
 #pragma once
 
 #include "ContainerNode.h"
+#include "RuntimeApplicationChecks.h"
 #include <wtf/MainThread.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -55,9 +56,14 @@ public:
         s_count--;
     }
 
+    ScriptDisallowedScope& operator=(const ScriptDisallowedScope&)
+    {
+        return *this;
+    }
+
     static bool isEventAllowedInMainThread()
     {
-        return !isMainThread() || !s_count;
+        return !isInWebProcess() || !isMainThread() || !s_count;
     }
 
     class InMainThread {
@@ -79,8 +85,8 @@ public:
         // Release asserts in canExecuteScript should be sufficient for security defense purposes.
         static bool isEventDispatchAllowedInSubtree(Node& node)
         {
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
-            return isScriptAllowed() || EventAllowedScope::isAllowedNode(node);
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
+            return !isInWebProcess() || isScriptAllowed() || EventAllowedScope::isAllowedNode(node);
 #else
             UNUSED_PARAM(node);
             return true;
@@ -104,7 +110,7 @@ public:
         }
     };
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     class EventAllowedScope {
     public:
         explicit EventAllowedScope(ContainerNode& userAgentContentRoot)
@@ -135,13 +141,13 @@ public:
         EventAllowedScope* m_previousScope;
         static EventAllowedScope* s_currentScope;
     };
-#else
+#else // not ASSERT_ENABLED
     class EventAllowedScope {
     public:
         explicit EventAllowedScope(ContainerNode&) { }
         static bool isAllowedNode(Node&) { return true; }
     };
-#endif
+#endif // not ASSERT_ENABLED
 
     // FIXME: Remove this class once the sync layout inside SVGImage::draw is removed,
     // CachedSVGFont::ensureCustomFontData no longer synchronously creates a document during style resolution,
@@ -160,25 +166,6 @@ public:
         }
     private:
         unsigned m_originalCount { 0 };
-    };
-
-    // FIXME: Remove all uses of this class.
-    class LayoutAssertionDisableScope {
-    public:
-        LayoutAssertionDisableScope()
-        {
-            s_layoutAssertionDisableCount++;
-        }
-
-        ~LayoutAssertionDisableScope()
-        {
-            s_layoutAssertionDisableCount--;
-        }
-
-        static bool shouldDisable() { return s_layoutAssertionDisableCount; }
-
-    private:
-        static unsigned s_layoutAssertionDisableCount;
     };
 
 private:

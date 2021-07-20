@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class WheelEvent final : public MouseEvent {
+    WTF_MAKE_ISO_ALLOCATED(WheelEvent);
 public:
     enum { TickMultiplier = 120 };
 
@@ -39,7 +40,7 @@ public:
         DOM_DELTA_PAGE
     };
 
-    static Ref<WheelEvent> create(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
+    static Ref<WheelEvent> create(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable = IsCancelable::Yes);
     static Ref<WheelEvent> createForBindings();
 
     struct Init : MouseEventInit {
@@ -51,7 +52,7 @@ public:
         int wheelDeltaY { 0 }; // Deprecated.
     };
 
-    static Ref<WheelEvent> create(const AtomicString& type, const Init&);
+    static Ref<WheelEvent> create(const AtomString& type, const Init&);
 
     WEBCORE_EXPORT void initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, RefPtr<WindowProxy>&&, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
@@ -68,14 +69,14 @@ public:
     bool webkitDirectionInvertedFromDevice() const { return m_underlyingPlatformEvent && m_underlyingPlatformEvent.value().directionInvertedFromDevice(); }
 
 #if PLATFORM(MAC)
-    PlatformWheelEventPhase phase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().phase() : PlatformWheelEventPhaseNone; }
-    PlatformWheelEventPhase momentumPhase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().momentumPhase() : PlatformWheelEventPhaseNone; }
+    PlatformWheelEventPhase phase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().phase() : PlatformWheelEventPhase::None; }
+    PlatformWheelEventPhase momentumPhase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().momentumPhase() : PlatformWheelEventPhase::None; }
 #endif
 
 private:
     WheelEvent();
-    WheelEvent(const AtomicString&, const Init&);
-    WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
+    WheelEvent(const AtomString&, const Init&);
+    WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable);
 
     EventInterface eventInterface() const final;
 

@@ -27,79 +27,93 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayBox.h"
 #include "FormattingContext.h"
-#include "InlineFormattingState.h"
-#include "InlineRun.h"
+#include "InlineLineBuilder.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
-class FloatingState;
-class InlineContainer;
-class InlineRunProvider;
-class Line;
+class InlineFormattingState;
+class InvalidationState;
+class LineBox;
 
 // This class implements the layout logic for inline formatting contexts.
 // https://www.w3.org/TR/CSS22/visuren.html#inline-formatting
-class InlineFormattingContext : public FormattingContext {
+class InlineFormattingContext final : public FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingContext);
 public:
-    InlineFormattingContext(const Box& formattingContextRoot, InlineFormattingState&);
-    void layout() const override;
+    InlineFormattingContext(const ContainerBox& formattingContextRoot, InlineFormattingState&);
+    void layoutInFlowContent(InvalidationState&, const ConstraintsForInFlowContent&) override;
+    LayoutUnit usedContentHeight() const override;
+
+    class Quirks : public FormattingContext::Quirks {
+    public:
+        InlineLayoutUnit initialLineHeight() const;
+        bool hasSoftWrapOpportunityAtImage() const;
+        bool inlineLevelBoxAffectsLineBox(const LineBox::InlineLevelBox&, const LineBox&) const;
+
+    private:
+        friend class InlineFormattingContext;
+        Quirks(const InlineFormattingContext&);
+
+        const InlineFormattingContext& formattingContext() const { return downcast<InlineFormattingContext>(FormattingContext::Quirks::formattingContext()); }
+
+    };
+    InlineFormattingContext::Quirks quirks() const { return Quirks(*this); }
+
+    const InlineFormattingState& formattingState() const { return downcast<InlineFormattingState>(FormattingContext::formattingState()); }
+    InlineFormattingState& formattingState() { return downcast<InlineFormattingState>(FormattingContext::formattingState()); }
+
+    void lineLayoutForIntergration(InvalidationState&, const ConstraintsForInFlowContent&);
 
 private:
-    void computeIntrinsicWidthConstraints() const override;
-
-    class LineLayout {
-    public:
-        LineLayout(const InlineFormattingContext&);
-        void layout(const InlineRunProvider&) const;
-
-    private:
-        enum class IsLastLine { No, Yes };
-        void initializeNewLine(Line&) const;
-        void closeLine(Line&, IsLastLine) const;
-        void appendContentToLine(Line&, const InlineRunProvider::Run&, const LayoutSize&) const;
-        void postProcessInlineRuns(Line&, IsLastLine) const;
-        void createFinalRuns(Line&) const;
-        void splitInlineRunIfNeeded(const InlineRun&, InlineRuns& splitRuns) const;
-        void computeFloatPosition(const FloatingContext&, Line&, const Box&) const;
-        void placeInFlowPositionedChildren(unsigned firstRunIndex) const;
-        void alignRuns(TextAlignMode, Line&, IsLastLine) const;
-        void computeExpansionOpportunities(Line&, const InlineRunProvider::Run&, InlineRunProvider::Run::Type lastRunType) const;
-        LayoutUnit runWidth(const InlineContent&, const InlineItem&, ItemPosition from, unsigned length, LayoutUnit contentLogicalLeft) const;
-
-    private:
-        static void justifyRuns(Line&);
-
-    private:
-        const InlineFormattingContext& m_formattingContext;
-        InlineFormattingState& m_formattingState;
-        FloatingState& m_floatingState;
-        const Container& m_formattingRoot;
-    };
+    IntrinsicWidthConstraints computedIntrinsicWidthConstraints() override;
 
     class Geometry : public FormattingContext::Geometry {
     public:
-        static HeightAndMargin inlineBlockHeightAndMargin(const LayoutState&, const Box&);
-        static WidthAndMargin inlineBlockWidthAndMargin(LayoutState&, const Box&, UsedHorizontalValues);
+        LineBox lineBoxForLineContent(const LineBuilder::LineContent&);
+        InlineLayoutUnit logicalTopForNextLine(const LineBuilder::LineContent&, InlineLayoutUnit previousLineLogicalBottom, const FloatingContext&) const;
+
+        ContentHeightAndMargin inlineBlockContentHeightAndMargin(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
+        ContentWidthAndMargin inlineBlockContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&);
+
+    private:
+        friend class InlineFormattingContext;
+        Geometry(const InlineFormattingContext&);
+
+        const InlineFormattingContext& formattingContext() const { return downcast<InlineFormattingContext>(FormattingContext::Geometry::formattingContext()); }
+
     };
+    InlineFormattingContext::Geometry geometry() const { return Geometry(*this); }
 
-    void layoutFormattingContextRoot(const Box&, UsedHorizontalValues) const;
-    void computeIntrinsicWidthForFloatBox(const Box&) const;
-    void computeIntrinsicWidthForInlineBlock(const Box&) const;
-    void computeWidthAndHeightForReplacedInlineBox(const Box&, UsedHorizontalValues) const;
-    void computeMargin(const Box&, UsedHorizontalValues) const;
-    void computeHeightAndMargin(const Box&) const;
-    void computeWidthAndMargin(const Box&, UsedHorizontalValues) const;
+    void lineLayout(InlineItems&, LineBuilder::InlineItemRange, const ConstraintsForInFlowContent&);
 
-    void collectInlineContent(InlineRunProvider&) const;
+    void computeIntrinsicWidthForFormattingRoot(const Box&);
+    InlineLayoutUnit computedIntrinsicWidthForConstraint(InlineLayoutUnit availableWidth) const;
 
-    InlineFormattingState& formattingState() const { return downcast<InlineFormattingState>(FormattingContext::formattingState()); }
+    void computeHorizontalMargin(const Box&, const HorizontalConstraints&);
+    void computeHeightAndMargin(const Box&, const HorizontalConstraints&);
+    void computeWidthAndMargin(const Box&, const HorizontalConstraints&);
+
+    void collectInlineContentIfNeeded();
+    InlineRect computeGeometryForLineContent(const LineBuilder::LineContent&, const HorizontalConstraints&);
+    void invalidateFormattingState(const InvalidationState&);
 };
 
+inline InlineFormattingContext::Geometry::Geometry(const InlineFormattingContext& inlineFormattingContext)
+    : FormattingContext::Geometry(inlineFormattingContext)
+{
+}
+
+inline InlineFormattingContext::Quirks::Quirks(const InlineFormattingContext& inlineFormattingContext)
+    : FormattingContext::Quirks(inlineFormattingContext)
+{
+}
+
 }
 }
+
+SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_CONTEXT(InlineFormattingContext, isInlineFormattingContext())
+
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,17 +27,14 @@
 #include "config.h"
 #include "SymbolConstructor.h"
 
-#include "Error.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include "Symbol.h"
 #include "SymbolPrototype.h"
 #include <wtf/text/SymbolRegistry.h>
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL symbolConstructorFor(ExecState*);
-static EncodedJSValue JSC_HOST_CALL symbolConstructorKeyFor(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(symbolConstructorFor);
+static JSC_DECLARE_HOST_FUNCTION(symbolConstructorKeyFor);
 
 }
 
@@ -56,71 +53,79 @@ const ClassInfo SymbolConstructor::s_info = { "Function", &Base::s_info, &symbol
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL callSymbol(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(callSymbol);
+static JSC_DECLARE_HOST_FUNCTION(constructSymbol);
 
 SymbolConstructor::SymbolConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure, callSymbol, nullptr)
+    : InternalFunction(vm, structure, callSymbol, constructSymbol)
 {
 }
 
 #define INITIALIZE_WELL_KNOWN_SYMBOLS(name) \
-putDirectWithoutTransition(vm, Identifier::fromString(&vm, #name), Symbol::create(vm, static_cast<SymbolImpl&>(*vm.propertyNames->name##Symbol.impl())), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+putDirectWithoutTransition(vm, Identifier::fromString(vm, #name), Symbol::create(vm, static_cast<SymbolImpl&>(*vm.propertyNames->name##Symbol.impl())), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
 void SymbolConstructor::finishCreation(VM& vm, SymbolPrototype* prototype)
 {
-    Base::finishCreation(vm, prototype->classInfo(vm)->className);
+    Base::finishCreation(vm, 0, vm.propertyNames->Symbol.string(), PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_WELL_KNOWN_SYMBOLS)
 }
 
 // ------------------------------ Functions ---------------------------
 
-static EncodedJSValue JSC_HOST_CALL callSymbol(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(callSymbol, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue description = exec->argument(0);
+    JSValue description = callFrame->argument(0);
     if (description.isUndefined())
         return JSValue::encode(Symbol::create(vm));
 
-    String string = description.toWTFString(exec);
+    String string = description.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     return JSValue::encode(Symbol::createWithDescription(vm, string));
 }
 
-EncodedJSValue JSC_HOST_CALL symbolConstructorFor(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(constructSymbol, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    return throwVMError(globalObject, scope, createNotAConstructorError(globalObject, callFrame->jsCallee()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(symbolConstructorFor, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSString* stringKey = exec->argument(0).toString(exec);
+    JSString* stringKey = callFrame->argument(0).toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String string = stringKey->value(exec);
+    String string = stringKey->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    return JSValue::encode(Symbol::create(exec->vm(), exec->vm().symbolRegistry().symbolForKey(string)));
+    return JSValue::encode(Symbol::create(vm, vm.symbolRegistry().symbolForKey(string)));
 }
 
 const ASCIILiteral SymbolKeyForTypeError { "Symbol.keyFor requires that the first argument be a symbol"_s };
 
-EncodedJSValue JSC_HOST_CALL symbolConstructorKeyFor(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(symbolConstructorKeyFor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue symbolValue = exec->argument(0);
+    JSValue symbolValue = callFrame->argument(0);
     if (!symbolValue.isSymbol())
-        return JSValue::encode(throwTypeError(exec, scope, SymbolKeyForTypeError));
+        return JSValue::encode(throwTypeError(globalObject, scope, SymbolKeyForTypeError));
 
-    SymbolImpl& uid = asSymbol(symbolValue)->privateName().uid();
+    PrivateName privateName = asSymbol(symbolValue)->privateName();
+    SymbolImpl& uid = privateName.uid();
     if (!uid.symbolRegistry())
         return JSValue::encode(jsUndefined());
 
     ASSERT(uid.symbolRegistry() == &vm.symbolRegistry());
-    return JSValue::encode(jsString(exec, &uid));
+    return JSValue::encode(jsString(vm, &uid));
 }
 
 } // namespace JSC

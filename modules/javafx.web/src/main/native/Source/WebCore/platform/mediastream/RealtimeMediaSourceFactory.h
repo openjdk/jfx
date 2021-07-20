@@ -27,6 +27,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include <wtf/CompletionHandler.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -38,11 +40,14 @@ class RealtimeMediaSource;
 struct CaptureSourceOrError;
 struct MediaConstraints;
 
-class SingleSourceFactory {
+class WEBCORE_EXPORT SingleSourceFactory {
 public:
-    void setActiveSource(RealtimeMediaSource&);
-    void unsetActiveSource(RealtimeMediaSource&);
-    RealtimeMediaSource* activeSource() { return m_activeSource; }
+    virtual ~SingleSourceFactory() = default;
+
+    virtual void setActiveSource(RealtimeMediaSource&);
+    virtual void unsetActiveSource(RealtimeMediaSource&);
+
+    virtual RealtimeMediaSource* activeSource() { return m_activeSource; }
 
 private:
     RealtimeMediaSource* m_activeSource { nullptr };
@@ -57,6 +62,12 @@ public:
     virtual ~AudioCaptureFactory() = default;
     virtual CaptureSourceOrError createAudioCaptureSource(const CaptureDevice&, String&&, const MediaConstraints*) = 0;
     virtual CaptureDeviceManager& audioCaptureDeviceManager() = 0;
+    virtual const Vector<CaptureDevice>& speakerDevices() const = 0;
+    virtual void getSpeakerDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion) const { completion(copyToVector(speakerDevices())); }
+
+    class ExtensiveObserver : public CanMakeWeakPtr<ExtensiveObserver> { };
+    virtual void addExtensiveObserver(ExtensiveObserver&) { };
+    virtual void removeExtensiveObserver(ExtensiveObserver&) { };
 
 protected:
     AudioCaptureFactory() = default;
@@ -71,18 +82,20 @@ public:
     virtual ~VideoCaptureFactory() = default;
     virtual CaptureSourceOrError createVideoCaptureSource(const CaptureDevice&, String&&, const MediaConstraints*) = 0;
     virtual CaptureDeviceManager& videoCaptureDeviceManager() = 0;
-    virtual void setVideoCapturePageState(bool, bool) { }
 
 protected:
     VideoCaptureFactory() = default;
 };
 
-class DisplayCaptureFactory {
+class DisplayCaptureFactory
+#if PLATFORM(IOS_FAMILY)
+    : public SingleSourceFactory
+#endif
+{
 public:
     virtual ~DisplayCaptureFactory() = default;
     virtual CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice&, const MediaConstraints*) = 0;
     virtual CaptureDeviceManager& displayCaptureDeviceManager() = 0;
-    virtual void setDisplayCapturePageState(bool , bool) { }
 
 protected:
     DisplayCaptureFactory() = default;

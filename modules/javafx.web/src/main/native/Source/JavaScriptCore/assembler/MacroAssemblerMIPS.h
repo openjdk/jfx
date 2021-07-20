@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2010 MIPS Technologies, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,8 +38,8 @@ using Assembler = TARGET_ASSEMBLER;
 class MacroAssemblerMIPS : public AbstractMacroAssembler<Assembler> {
 public:
     typedef MIPSRegisters::FPRegisterID FPRegisterID;
-    static const unsigned numGPRs = 32;
-    static const unsigned numFPRs = 32;
+    static constexpr unsigned numGPRs = 32;
+    static constexpr unsigned numFPRs = 32;
 
     MacroAssemblerMIPS()
         : m_fixedWidth(false)
@@ -61,21 +61,21 @@ public:
         return getLSBSet(v);
     }
 
-    static const Scale ScalePtr = TimesFour;
-
     // For storing immediate number
-    static const RegisterID immTempRegister = MIPSRegisters::t0;
+    static constexpr RegisterID immTempRegister = MIPSRegisters::t0;
     // For storing data loaded from the memory
-    static const RegisterID dataTempRegister = MIPSRegisters::t1;
+    static constexpr RegisterID dataTempRegister = MIPSRegisters::t1;
     // For storing address base
-    static const RegisterID addrTempRegister = MIPSRegisters::t7;
+    static constexpr RegisterID addrTempRegister = MIPSRegisters::t7;
     // For storing compare result
-    static const RegisterID cmpTempRegister = MIPSRegisters::t8;
+    static constexpr RegisterID cmpTempRegister = MIPSRegisters::t8;
 
     // FP temp register
-    static const FPRegisterID fpTempRegister = MIPSRegisters::f16;
+    static constexpr FPRegisterID fpTempRegister = MIPSRegisters::f16;
 
-    static const int MaximumCompactPtrAlignedAddressOffset = 0x7FFFFFFF;
+    RegisterID scratchRegister() { return dataTempRegister; }
+
+    static constexpr int MaximumCompactPtrAlignedAddressOffset = 0x7FFFFFFF;
 
     enum RelationalCondition {
         Equal,
@@ -99,12 +99,12 @@ public:
     };
 
     enum DoubleCondition {
-        DoubleEqual,
-        DoubleNotEqual,
-        DoubleGreaterThan,
-        DoubleGreaterThanOrEqual,
-        DoubleLessThan,
-        DoubleLessThanOrEqual,
+        DoubleEqualAndOrdered,
+        DoubleNotEqualAndOrdered,
+        DoubleGreaterThanAndOrdered,
+        DoubleGreaterThanOrEqualAndOrdered,
+        DoubleLessThanAndOrdered,
+        DoubleLessThanOrEqualAndOrdered,
         DoubleEqualOrUnordered,
         DoubleNotEqualOrUnordered,
         DoubleGreaterThanOrUnordered,
@@ -118,9 +118,9 @@ public:
         Scale
     };
 
-    static const RegisterID stackPointerRegister = MIPSRegisters::sp;
-    static const RegisterID framePointerRegister = MIPSRegisters::fp;
-    static const RegisterID returnAddressRegister = MIPSRegisters::ra;
+    static constexpr RegisterID stackPointerRegister = MIPSRegisters::sp;
+    static constexpr RegisterID framePointerRegister = MIPSRegisters::fp;
+    static constexpr RegisterID returnAddressRegister = MIPSRegisters::ra;
 
     // Integer arithmetic operations:
     //
@@ -475,6 +475,44 @@ public:
         m_assembler.subu(dest, MIPSRegisters::zero, src);
     }
 
+
+    void or8(TrustedImm32 imm, AbsoluteAddress dest)
+    {
+        if (!imm.m_value && !m_fixedWidth)
+            return;
+
+        if (m_fixedWidth) {
+            load8(dest.m_ptr, immTempRegister);
+            or32(imm, immTempRegister);
+            store8(immTempRegister, dest.m_ptr);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(dest.m_ptr);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.lbu(immTempRegister, addrTempRegister, adr & 0xffff);
+            or32(imm, immTempRegister);
+            m_assembler.sb(immTempRegister, addrTempRegister, adr & 0xffff);
+        }
+    }
+
+    void or16(TrustedImm32 imm, AbsoluteAddress dest)
+    {
+        if (!imm.m_value && !m_fixedWidth)
+            return;
+
+        if (m_fixedWidth) {
+            // TODO: Swap dataTempRegister and immTempRegister usage
+            load16(dest.m_ptr, immTempRegister);
+            or32(imm, immTempRegister);
+            store16(immTempRegister, dest.m_ptr);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(dest.m_ptr);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.lhu(immTempRegister, addrTempRegister, adr & 0xffff);
+            or32(imm, immTempRegister);
+            m_assembler.sh(immTempRegister, addrTempRegister, adr & 0xffff);
+        }
+    }
+
     void or32(RegisterID src, RegisterID dest)
     {
         m_assembler.orInsn(dest, dest, src);
@@ -597,6 +635,12 @@ public:
             }
             m_assembler.sw(dataTempRegister, addrTempRegister, address.offset);
         }
+    }
+
+    // This is only referenced by code intented for ARM64_32.
+    void rotateRight32(TrustedImm32, RegisterID)
+    {
+        UNREACHABLE_FOR_PLATFORM();
     }
 
     void rshift32(RegisterID shiftAmount, RegisterID dest)
@@ -1172,6 +1216,22 @@ public:
         return dataLabel;
     }
 
+    void load16(const void* address, RegisterID dest)
+    {
+        if (m_fixedWidth) {
+            /*
+                li  addrTemp, address
+                lhu  dest, 0(addrTemp)
+            */
+            move(TrustedImmPtr(address), addrTempRegister);
+            m_assembler.lhu(dest, addrTempRegister, 0);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(address);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.lhu(dest, addrTempRegister, adr & 0xffff);
+        }
+    }
+
     /* Need to use zero-extened load half-word for load16.  */
     void load16(ImplicitAddress address, RegisterID dest)
     {
@@ -1271,7 +1331,7 @@ public:
         }
     }
 
-    void store8(RegisterID src, void* address)
+    void store8(RegisterID src, const void* address)
     {
         if (m_fixedWidth) {
             /*
@@ -1337,6 +1397,22 @@ public:
                 move(imm8, immTempRegister);
                 m_assembler.sb(immTempRegister, addrTempRegister, address.offset);
             }
+        }
+    }
+
+    void store16(RegisterID src, const void* address)
+    {
+        if (m_fixedWidth) {
+            /*
+                li  addrTemp, address
+                sh  src, 0(addrTemp)
+            */
+            move(TrustedImmPtr(address), addrTempRegister);
+            m_assembler.sh(src, addrTempRegister, 0);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(address);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.sh(src, addrTempRegister, adr & 0xffff);
         }
     }
 
@@ -1635,7 +1711,7 @@ public:
             move(src, dest);
     }
 
-    void zeroExtend32ToPtr(RegisterID src, RegisterID dest)
+    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
         if (src != dest || m_fixedWidth)
             move(src, dest);
@@ -1921,14 +1997,21 @@ public:
         return branchEqual(MIPSRegisters::zero, MIPSRegisters::zero);
     }
 
-    void jump(RegisterID target, PtrTag)
+    void farJump(RegisterID target, PtrTag)
     {
         move(target, MIPSRegisters::t9);
         m_assembler.jr(MIPSRegisters::t9);
         m_assembler.nop();
     }
 
-    void jump(Address address, PtrTag)
+    void farJump(TrustedImmPtr target, PtrTag)
+    {
+        move(target, MIPSRegisters::t9);
+        m_assembler.jr(MIPSRegisters::t9);
+        m_assembler.nop();
+    }
+
+    void farJump(Address address, PtrTag)
     {
         m_fixedWidth = true;
         load32(address, MIPSRegisters::t9);
@@ -1937,7 +2020,7 @@ public:
         m_fixedWidth = false;
     }
 
-    void jump(AbsoluteAddress address, PtrTag)
+    void farJump(AbsoluteAddress address, PtrTag)
     {
         m_fixedWidth = true;
         load32(address.m_ptr, MIPSRegisters::t9);
@@ -1946,9 +2029,9 @@ public:
         m_fixedWidth = false;
     }
 
-    ALWAYS_INLINE void jump(RegisterID target, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(target, NoPtrTag); }
-    ALWAYS_INLINE void jump(Address address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
-    ALWAYS_INLINE void jump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
+    ALWAYS_INLINE void farJump(RegisterID target, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(target, NoPtrTag); }
+    ALWAYS_INLINE void farJump(Address address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
+    ALWAYS_INLINE void farJump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
 
     void moveDoubleToInts(FPRegisterID src, RegisterID dest1, RegisterID dest2)
     {
@@ -2704,23 +2787,6 @@ public:
         return storePtrWithPatch(TrustedImmPtr(nullptr), address);
     }
 
-    Call tailRecursiveCall()
-    {
-        // Like a normal call, but don't update the returned address register
-        m_fixedWidth = true;
-        move(TrustedImm32(0), MIPSRegisters::t9);
-        m_assembler.jr(MIPSRegisters::t9);
-        m_assembler.nop();
-        m_fixedWidth = false;
-        return Call(m_assembler.label(), Call::Linkable);
-    }
-
-    Call makeTailRecursiveCall(Jump oldJump)
-    {
-        oldJump.link(this);
-        return tailRecursiveCall();
-    }
-
     void loadFloat(BaseIndex address, FPRegisterID dest)
     {
         if (!m_fixedWidth) {
@@ -3040,6 +3106,54 @@ public:
         m_assembler.addd(dest, dest, fpTempRegister);
     }
 
+    // andDouble and orDouble are a bit convoluted to implement
+    // because we don't have FP instructions for those
+    // operations. That means we'll have to go back and forth between
+    // the FPU and the CPU, which accounts for most of the code here.
+    void andDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.mfc1(immTempRegister, op1);
+        m_assembler.mfc1(dataTempRegister, op2);
+        m_assembler.andInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+        m_assembler.mtc1(cmpTempRegister, dest);
+
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mfhc1(immTempRegister, op1);
+        m_assembler.mfhc1(dataTempRegister, op2);
+#else
+        m_assembler.mfc1(immTempRegister, FPRegisterID(op1+1));
+        m_assembler.mfc1(dataTempRegister, FPRegisterID(op2+1));
+#endif
+        m_assembler.andInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mthc1(cmpTempRegister, dest);
+#else
+        m_assembler.mtc1(cmpTempRegister, FPRegisterID(dest+1));
+#endif
+    }
+
+    void orDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.mfc1(immTempRegister, op1);
+        m_assembler.mfc1(dataTempRegister, op2);
+        m_assembler.orInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+        m_assembler.mtc1(cmpTempRegister, dest);
+
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mfhc1(immTempRegister, op1);
+        m_assembler.mfhc1(dataTempRegister, op2);
+#else
+        m_assembler.mfc1(immTempRegister, FPRegisterID(op1+1));
+        m_assembler.mfc1(dataTempRegister, FPRegisterID(op2+1));
+#endif
+        m_assembler.orInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mthc1(cmpTempRegister, dest);
+#else
+        m_assembler.mtc1(cmpTempRegister, FPRegisterID(dest+1));
+#endif
+    }
+
     void subDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.subd(dest, dest, src);
@@ -3170,27 +3284,27 @@ public:
 
     Jump branchDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
-        if (cond == DoubleEqual) {
+        if (cond == DoubleEqualAndOrdered) {
             m_assembler.ceqd(left, right);
             return branchTrue();
         }
-        if (cond == DoubleNotEqual) {
+        if (cond == DoubleNotEqualAndOrdered) {
             m_assembler.cueqd(left, right);
             return branchFalse(); // false
         }
-        if (cond == DoubleGreaterThan) {
+        if (cond == DoubleGreaterThanAndOrdered) {
             m_assembler.cngtd(left, right);
             return branchFalse(); // false
         }
-        if (cond == DoubleGreaterThanOrEqual) {
+        if (cond == DoubleGreaterThanOrEqualAndOrdered) {
             m_assembler.cnged(left, right);
             return branchFalse(); // false
         }
-        if (cond == DoubleLessThan) {
+        if (cond == DoubleLessThanAndOrdered) {
             m_assembler.cltd(left, right);
             return branchTrue();
         }
-        if (cond == DoubleLessThanOrEqual) {
+        if (cond == DoubleLessThanOrEqualAndOrdered) {
             m_assembler.cled(left, right);
             return branchTrue();
         }
@@ -3271,7 +3385,7 @@ public:
     Jump branchDoubleNonZero(FPRegisterID reg, FPRegisterID scratch)
     {
         m_assembler.vmov(scratch, MIPSRegisters::zero, MIPSRegisters::zero);
-        return branchDouble(DoubleNotEqual, reg, scratch);
+        return branchDouble(DoubleNotEqualAndOrdered, reg, scratch);
     }
 
     Jump branchDoubleZeroOrNaN(FPRegisterID reg, FPRegisterID scratch)

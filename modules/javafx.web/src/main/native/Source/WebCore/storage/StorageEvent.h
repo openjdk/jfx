@@ -32,9 +32,10 @@ namespace WebCore {
 
 class Storage;
 
-class StorageEvent : public Event {
+class StorageEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(StorageEvent);
 public:
-    static Ref<StorageEvent> create(const AtomicString& type, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
+    static Ref<StorageEvent> create(const AtomString& type, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
     static Ref<StorageEvent> createForBindings();
 
     struct Init : EventInit {
@@ -45,7 +46,7 @@ public:
         RefPtr<Storage> storageArea;
     };
 
-    static Ref<StorageEvent> create(const AtomicString&, const Init&, IsTrusted = IsTrusted::No);
+    static Ref<StorageEvent> create(const AtomString&, const Init&, IsTrusted = IsTrusted::No);
     virtual ~StorageEvent();
 
     const String& key() const { return m_key; }
@@ -54,7 +55,7 @@ public:
     const String& url() const { return m_url; }
     Storage* storageArea() const { return m_storageArea.get(); }
 
-    void initStorageEvent(const AtomicString& type, bool canBubble, bool cancelable, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
+    void initStorageEvent(const AtomString& type, bool canBubble, bool cancelable, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
 
     // Needed once we support init<blank>EventNS
     // void initStorageEventNS(in DOMString namespaceURI, in DOMString typeArg, in boolean canBubbleArg, in boolean cancelableArg, in DOMString keyArg, in DOMString oldValueArg, in DOMString newValueArg, in DOMString urlArg, Storage storageAreaArg);
@@ -63,8 +64,8 @@ public:
 
 private:
     StorageEvent();
-    StorageEvent(const AtomicString& type, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
-    StorageEvent(const AtomicString&, const Init&, IsTrusted);
+    StorageEvent(const AtomString& type, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
+    StorageEvent(const AtomString&, const Init&, IsTrusted);
 
     String m_key;
     String m_oldValue;

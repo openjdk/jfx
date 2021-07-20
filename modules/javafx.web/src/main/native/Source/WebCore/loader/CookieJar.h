@@ -25,16 +25,15 @@
 
 #pragma once
 
+#include "FrameIdentifier.h"
+#include "PageIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
-
-namespace PAL {
-class SessionID;
-}
 
 namespace WebCore {
 
 enum class IncludeSecureCookies : bool { No, Yes };
+enum class IncludeHttpOnlyCookies : bool { No, Yes };
 enum class SecureCookiesAccessed : bool { No, Yes };
 
 class Document;
@@ -57,9 +56,14 @@ public:
     virtual void setCookies(Document&, const URL&, const String& cookieString);
 
     virtual bool cookiesEnabled(const Document&) const;
-    virtual std::pair<String, SecureCookiesAccessed> cookieRequestHeaderFieldValue(const PAL::SessionID&, const URL& firstParty, const SameSiteInfo&, const URL&, Optional<uint64_t> frameID, Optional<uint64_t> pageID, IncludeSecureCookies) const;
+    virtual std::pair<String, SecureCookiesAccessed> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies) const;
     virtual bool getRawCookies(const Document&, const URL&, Vector<Cookie>&) const;
+    virtual void setRawCookie(const Document&, const Cookie&);
     virtual void deleteCookie(const Document&, const URL&, const String& cookieName);
+
+    // Cookie Cache.
+    virtual void clearCache() { }
+    virtual void clearCacheForHost(const String&) { }
 
     virtual ~CookieJar();
 protected:

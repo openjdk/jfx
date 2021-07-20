@@ -31,10 +31,10 @@ from string import Template
 
 try:
     from .generator_templates import GeneratorTemplates as Templates
-    from .models import PrimitiveType, ObjectType, ArrayType, EnumType, AliasedType, Frameworks, Platforms
+    from .models import PrimitiveType, ObjectType, ArrayType, EnumType, AliasedType, Frameworks
 except ValueError:
     from generator_templates import GeneratorTemplates as Templates
-    from models import PrimitiveType, ObjectType, ArrayType, EnumType, AliasedType, Frameworks, Platforms
+    from models import PrimitiveType, ObjectType, ArrayType, EnumType, AliasedType, Frameworks
 
 log = logging.getLogger('global')
 
@@ -48,11 +48,15 @@ _ALWAYS_SPECIALCASED_ENUM_VALUE_LOOKUP_TABLE = dict([(s.upper(), s) for s in _AL
 _ENUM_IDENTIFIER_RENAME_MAP = {
     'canvas-bitmaprenderer': 'CanvasBitmapRenderer',  # Recording.Type.canvas-bitmaprenderer
     'canvas-webgl': 'CanvasWebGL',  # Recording.Type.canvas-webgl
+    'canvas-webgl2': 'CanvasWebGL2',  # Recording.Type.canvas-webgl2
     'webgl': 'WebGL',  # Canvas.ContextType.webgl
     'webgl2': 'WebGL2',  # Canvas.ContextType.webgl2
-    'webmetal': 'WebMetal',  # Canvas.ContextType.webmetal
+    'webgpu': 'WebGPU',  # Canvas.ContextType.gpu
     'bitmaprenderer': 'BitmapRenderer',  # Canvas.ContextType.bitmaprenderer
+    'mediasource': 'MediaSource',  # Console.ChannelSource.mediasource
     'webrtc': 'WebRTC',  # Console.ChannelSource.webrtc
+    'itp-debug': 'ITPDebug',  # Console.ChannelSource.itp-debug
+    'webkit': 'WebKit',  # CPUProfiler.ThreadInfo.type
 }
 
 # These objects are built manually by creating and setting JSON::Value instances.
@@ -69,9 +73,6 @@ _TYPES_NEEDING_RUNTIME_CASTS = set([
     "Runtime.CollectionEntry",
     "Debugger.FunctionDetails",
     "Debugger.CallFrame",
-    "Canvas.TraceLog",
-    "Canvas.ResourceInfo",
-    "Canvas.ResourceState",
     # This should be a temporary hack. TimelineEvent should be created via generated C++ API.
     "Timeline.TimelineEvent",
     # For testing purposes only.
@@ -81,44 +82,46 @@ _TYPES_NEEDING_RUNTIME_CASTS = set([
 # FIXME: This should be converted into a property in JSON.
 _TYPES_WITH_OPEN_FIELDS = {
     "Timeline.TimelineEvent": [],
-    # InspectorStyleSheet not only creates this property but wants to read it and modify it.
-    "CSS.CSSProperty": [],
-    # InspectorNetworkAgent needs to update mime-type.
-    "Network.Response": ["mimeType"],
+    "CSS.CSSProperty": ["priority", "parsedOk", "status"],
+    "DOM.HighlightConfig": [],
+    "DOM.RGBAColor": [],
+    "DOMStorage.StorageId": [],
+    "Debugger.BreakpointAction": [],
+    "Debugger.BreakpointOptions": [],
+    "Debugger.Location": [],
+    "IndexedDB.Key": [],
+    "IndexedDB.KeyRange": [],
+    "Network.Response": ["status", "statusText", "mimeType", "source"],
+    "Page.Cookie": [],
+    "Runtime.CallArgument": ["objectId"],
+    "Runtime.TypeLocation": [],
     # For testing purposes only.
     "Test.OpenParameters": ["alpha"],
 }
 
 class Generator:
-    def __init__(self, model, platform, input_filepath):
+    def __init__(self, model, input_filepath):
         self._model = model
-        self._platform = platform
         self._input_filepath = input_filepath
         self._settings = {}
 
     def model(self):
         return self._model
 
-    def platform(self):
-        return self._platform
-
     def set_generator_setting(self, key, value):
         self._settings[key] = value
-
-    def can_generate_platform(self, model_platform):
-        return model_platform is Platforms.Generic or self._platform is Platforms.All or model_platform is self._platform
 
     def version_for_domain(self, domain):
         return domain.version()
 
     def type_declarations_for_domain(self, domain):
-        return [type_declaration for type_declaration in domain.all_type_declarations() if self.can_generate_platform(type_declaration.platform)]
+        return domain.all_type_declarations()
 
     def commands_for_domain(self, domain):
-        return [command for command in domain.all_commands() if self.can_generate_platform(command.platform)]
+        return domain.all_commands()
 
     def events_for_domain(self, domain):
-        return [event for event in domain.all_events() if self.can_generate_platform(event.platform)]
+        return domain.all_events()
 
     # The goofy name is to disambiguate generator settings from framework settings.
     def get_generator_setting(self, key, default=None):
@@ -137,7 +140,7 @@ class Generator:
             if self.model().framework.name not in allowed_frameworks:
                 continue
 
-            if framework_name == "WTF":
+            if framework_name == "WTF" or framework_name == "std":
                 includes.add("#include <%s>" % header_path)
             elif self.model().framework.name != framework_name:
                 includes.add("#include <%s/%s>" % (framework_name, os.path.basename(header_path)))
@@ -263,21 +266,14 @@ class Generator:
         self._assigned_enum_values.append(enum_value)
 
     # Miscellaneous text manipulation routines.
-    def wrap_with_guard_for_domain(self, domain, text):
-        if self.model().framework is Frameworks.WebInspector:
-            return text
-        guard = domain.feature_guard
-        if guard:
-            return Generator.wrap_with_guard(guard, text)
+    def wrap_with_guard_for_condition(self, condition, text):
+        if condition:
+            return '\n'.join([
+                '#if %s' % condition,
+                text,
+                '#endif // %s' % condition,
+            ])
         return text
-
-    @staticmethod
-    def wrap_with_guard(guard, text):
-        return '\n'.join([
-            '#if %s' % guard,
-            text,
-            '#endif // %s' % guard,
-        ])
 
     @staticmethod
     def stylized_name_for_enum_value(enum_value):
@@ -292,7 +288,6 @@ class Generator:
 
     @staticmethod
     def js_name_for_parameter_type(_type):
-        _type = _type
         if isinstance(_type, AliasedType):
             _type = _type.aliased_type  # Fall through.
         if isinstance(_type, EnumType):

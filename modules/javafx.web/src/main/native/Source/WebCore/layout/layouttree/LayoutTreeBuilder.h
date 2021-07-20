@@ -27,28 +27,60 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutContainerBox.h"
+#include <wtf/IsoMalloc.h>
+#include <wtf/WeakPtr.h>
+
 namespace WebCore {
 
+class RenderBlockFlow;
+class RenderBox;
 class RenderElement;
+class RenderObject;
+class RenderTable;
 class RenderView;
 
 namespace Layout {
 
-class Box;
-class Container;
 class LayoutState;
+
+class LayoutTree {
+    WTF_MAKE_ISO_ALLOCATED(LayoutTree);
+public:
+    LayoutTree();
+    ~LayoutTree() = default;
+
+    const ContainerBox& root() const { return downcast<ContainerBox>(*m_layoutBoxes[0]); }
+    void append(std::unique_ptr<Box> box) { m_layoutBoxes.append(WTFMove(box)); }
+
+private:
+    Vector<std::unique_ptr<Box>> m_layoutBoxes;
+};
 
 class TreeBuilder {
 public:
-    static std::unique_ptr<Container> createLayoutTree(const RenderView&);
+    static std::unique_ptr<Layout::LayoutTree> buildLayoutTree(const RenderView&);
 
 private:
-    static void createSubTree(const RenderElement& rootRenderer, Container& rootContainer);
+    TreeBuilder(LayoutTree&);
+
+    void buildSubTree(const RenderElement& parentRenderer, ContainerBox& parentContainer);
+    void buildTableStructure(const RenderTable& tableRenderer, ContainerBox& tableWrapperBox);
+    Box* createLayoutBox(const ContainerBox& parentContainer, const RenderObject& childRenderer);
+
+    Box& createReplacedBox(Optional<Box::ElementAttributes>, RenderStyle&&);
+    Box& createTextBox(String text, bool canUseSimplifiedTextMeasuring, RenderStyle&&);
+    Box& createLineBreakBox(bool isOptional, RenderStyle&&);
+    ContainerBox& createContainer(Optional<Box::ElementAttributes>, RenderStyle&&);
+
+    LayoutTree& m_layoutTree;
 };
 
 #if ENABLE(TREE_DEBUGGING)
+String layoutTreeAsText(const Box&, const LayoutState*);
 void showLayoutTree(const Box&, const LayoutState*);
 void showLayoutTree(const Box&);
+void showInlineTreeAndRuns(TextStream&, const LayoutState&, const ContainerBox& inlineFormattingRoot, size_t depth);
 void printLayoutTreeForLiveDocuments();
 #endif
 

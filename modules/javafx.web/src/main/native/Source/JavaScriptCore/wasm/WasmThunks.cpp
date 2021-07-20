@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,14 +29,11 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CCallHelpers.h"
-#include "HeapCellInlines.h"
-#include "JITExceptions.h"
 #include "LinkBuffer.h"
 #include "ScratchRegisterAllocator.h"
-#include "WasmContext.h"
 #include "WasmExceptionType.h"
 #include "WasmInstance.h"
-#include "WasmOMGPlan.h"
+#include "WasmOperations.h"
 
 namespace JSC { namespace Wasm {
 
@@ -53,14 +50,12 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromWasmThunkGenerator(const
     jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
 
     CCallHelpers::Call call = jit.call(OperationPtrTag);
-    jit.jump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
+    jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
     jit.breakpoint(); // We should not reach this.
 
-    ThrowWasmException throwWasmException = Thunks::singleton().throwWasmException();
-    RELEASE_ASSERT(throwWasmException);
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID);
-    linkBuffer.link(call, FunctionPtr<OperationPtrTag>(throwWasmException));
-    return FINALIZE_CODE(linkBuffer, JITThunkPtrTag, "Throw exception from Wasm");
+    linkBuffer.link(call, FunctionPtr<OperationPtrTag>(operationWasmToJSException));
+    return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "Throw exception from Wasm");
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowFromWasmThunkGenerator(const AbstractLocker& locker)
@@ -74,10 +69,11 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowFromWasmThunkGenerator(c
     auto jumpToExceptionHandler = jit.jump();
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID);
     linkBuffer.link(jumpToExceptionHandler, CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(locker, throwExceptionFromWasmThunkGenerator).code()));
-    return FINALIZE_CODE(linkBuffer, JITThunkPtrTag, "Throw stack overflow from Wasm");
+    return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "Throw stack overflow from Wasm");
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGTierUpThunkGenerator(const AbstractLocker&)
+#if ENABLE(WEBASSEMBLY_B3JIT)
+MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGEntryTierUpThunkGenerator(const AbstractLocker&)
 {
     // We expect that the user has already put the function index into GPRInfo::argumentGPR1
     CCallHelpers jit;
@@ -90,9 +86,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGTierUpThunkGenerator(const Abstr
     unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(jit, registersToSpill, extraPaddingBytes);
 
     jit.loadWasmContextInstance(GPRInfo::argumentGPR0);
-    typedef void (*Run)(Instance*, uint32_t);
-    Run run = OMGPlan::runForIndex;
-    jit.move(MacroAssembler::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(run)), GPRInfo::argumentGPR2);
+    jit.move(MacroAssembler::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationWasmTriggerTierUpNow)), GPRInfo::argumentGPR2);
     jit.call(GPRInfo::argumentGPR2, OperationPtrTag);
 
     ScratchRegisterAllocator::restoreRegistersFromStackForCall(jit, registersToSpill, RegisterSet(), numberOfStackBytesUsedForRegisterPreservation, extraPaddingBytes);
@@ -100,8 +94,9 @@ MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGTierUpThunkGenerator(const Abstr
     jit.emitFunctionEpilogue();
     jit.ret();
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID);
-    return FINALIZE_CODE(linkBuffer, JITThunkPtrTag, "Trigger OMG tier up");
+    return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "Trigger OMG entry tier up");
 }
+#endif
 
 static Thunks* thunks;
 void Thunks::initialize()
@@ -113,19 +108,6 @@ Thunks& Thunks::singleton()
 {
     ASSERT(thunks);
     return *thunks;
-}
-
-void Thunks::setThrowWasmException(ThrowWasmException throwWasmException)
-{
-    auto locker = holdLock(m_lock);
-    // The thunks are unique for the entire process, therefore changing the throwing function changes it for all uses of WebAssembly.
-    RELEASE_ASSERT(!m_throwWasmException || m_throwWasmException == throwWasmException);
-    m_throwWasmException = throwWasmException;
-}
-
-ThrowWasmException Thunks::throwWasmException()
-{
-    return m_throwWasmException;
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> Thunks::stub(ThunkGenerator generator)

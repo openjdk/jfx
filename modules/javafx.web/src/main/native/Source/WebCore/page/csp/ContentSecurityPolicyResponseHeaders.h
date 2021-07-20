@@ -33,11 +33,9 @@ namespace WebCore {
 class ContentSecurityPolicy;
 class ResourceResponse;
 
-enum class ContentSecurityPolicyHeaderType {
+enum class ContentSecurityPolicyHeaderType : bool {
     Report,
     Enforce,
-    PrefixedReport,
-    PrefixedEnforce,
 };
 
 class ContentSecurityPolicyResponseHeaders {
@@ -48,13 +46,30 @@ public:
     ContentSecurityPolicyResponseHeaders isolatedCopy() const;
 
     template <class Encoder> void encode(Encoder&) const;
-    template <class Decoder> static bool decode(Decoder&, ContentSecurityPolicyResponseHeaders&);
+    template <class Decoder> static Optional<ContentSecurityPolicyResponseHeaders> decode(Decoder&);
+
+    enum EmptyTag { Empty };
+    struct MarkableTraits {
+        static bool isEmptyValue(const ContentSecurityPolicyResponseHeaders& identifier)
+        {
+            return identifier.m_emptyForMarkable;
+        }
+
+        static ContentSecurityPolicyResponseHeaders emptyValue()
+        {
+            return ContentSecurityPolicyResponseHeaders(Empty);
+        }
+    };
 
 private:
     friend class ContentSecurityPolicy;
+    ContentSecurityPolicyResponseHeaders(EmptyTag)
+        : m_emptyForMarkable(true)
+    { }
 
     Vector<std::pair<String, ContentSecurityPolicyHeaderType>> m_headers;
     int m_httpStatusCode { 0 };
+    bool m_emptyForMarkable { false };
 };
 
 template <class Encoder>
@@ -63,32 +78,40 @@ void ContentSecurityPolicyResponseHeaders::encode(Encoder& encoder) const
     encoder << static_cast<uint64_t>(m_headers.size());
     for (auto& pair : m_headers) {
         encoder << pair.first;
-        encoder.encodeEnum(pair.second);
+        encoder << pair.second;
     }
     encoder << m_httpStatusCode;
 }
 
 template <class Decoder>
-bool ContentSecurityPolicyResponseHeaders::decode(Decoder& decoder, ContentSecurityPolicyResponseHeaders& headers)
+Optional<ContentSecurityPolicyResponseHeaders> ContentSecurityPolicyResponseHeaders::decode(Decoder& decoder)
 {
-    uint64_t headersSize;
-    if (!decoder.decode(headersSize))
-        return false;
-    headers.m_headers.reserveCapacity(static_cast<size_t>(headersSize));
-    for (size_t i = 0; i < headersSize; ++i) {
-        String header;
-        if (!decoder.decode(header))
-            return false;
-        ContentSecurityPolicyHeaderType headerType;
-        if (!decoder.decodeEnum(headerType))
-            return false;
-        headers.m_headers.append(std::make_pair(header, headerType));
+    ContentSecurityPolicyResponseHeaders headers;
+
+    Optional<uint64_t> headersSize;
+    decoder >> headersSize;
+    if (!headersSize)
+        return WTF::nullopt;
+    for (size_t i = 0; i < *headersSize; ++i) {
+        Optional<String> header;
+        decoder >> header;
+        if (!header)
+            return WTF::nullopt;
+        Optional<ContentSecurityPolicyHeaderType> headerType;
+        decoder >> headerType;
+        if (!headerType)
+            return WTF::nullopt;
+        headers.m_headers.append(std::make_pair(WTFMove(*header), WTFMove(*headerType)));
     }
+    headers.m_headers.shrinkToFit();
 
-    if (!decoder.decode(headers.m_httpStatusCode))
-        return false;
+    Optional<int> httpStatusCode;
+    decoder >> httpStatusCode;
+    if (!httpStatusCode)
+        return WTF::nullopt;
+    headers.m_httpStatusCode = *httpStatusCode;
 
-    return true;
+    return headers;
 }
 
 } // namespace WebCore

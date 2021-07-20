@@ -28,30 +28,26 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "BlockFormattingState.h"
 #include "LayoutBox.h"
-#include "LayoutContainer.h"
+#include "LayoutBoxGeometry.h"
+#include "LayoutContainerBox.h"
+#include "LayoutInitialContainingBlock.h"
 #include "LayoutState.h"
 
 namespace WebCore {
 namespace Layout {
-
-static const Container& initialContainingBlock(const Box& layoutBox)
-{
-    auto* containingBlock = layoutBox.containingBlock();
-    while (containingBlock->containingBlock())
-        containingBlock = containingBlock->containingBlock();
-    return *containingBlock;
-}
 
 static bool isQuirkContainer(const Box& layoutBox)
 {
     return layoutBox.isBodyBox() || layoutBox.isDocumentBox() || layoutBox.isTableCell();
 }
 
-bool BlockFormattingContext::Quirks::needsStretching(const LayoutState& layoutState, const Box& layoutBox)
+bool BlockFormattingContext::Quirks::needsStretching(const Box& layoutBox) const
 {
-    // In quirks mode, body stretches to html and html to the initial containing block (height: auto only).
-    if (!layoutState.inQuirksMode())
+    ASSERT(layoutBox.isInFlow());
+    // In quirks mode, in-flow body and html stretch to the initial containing block (height: auto only).
+    if (!layoutState().inQuirksMode())
         return false;
 
     if (!layoutBox.isDocumentBox() && !layoutBox.isBodyBox())
@@ -60,49 +56,71 @@ bool BlockFormattingContext::Quirks::needsStretching(const LayoutState& layoutSt
     return layoutBox.style().logicalHeight().isAuto();
 }
 
-HeightAndMargin BlockFormattingContext::Quirks::stretchedInFlowHeight(const LayoutState& layoutState, const Box& layoutBox, HeightAndMargin heightAndMargin)
+LayoutUnit BlockFormattingContext::Quirks::stretchedInFlowHeight(const Box& layoutBox, ContentHeightAndMargin contentHeightAndMargin)
 {
-    ASSERT(layoutBox.isInFlow());
-    ASSERT(layoutBox.isDocumentBox() || layoutBox.isBodyBox());
+    ASSERT(needsStretching(layoutBox));
+    auto& formattingContext = this->formattingContext();
+    auto nonCollapsedVerticalMargin = contentHeightAndMargin.nonCollapsedMargin.before + contentHeightAndMargin.nonCollapsedMargin.after;
 
-    auto& documentBox = layoutBox.isDocumentBox() ? layoutBox : *layoutBox.parent();
-    auto& documentBoxDisplayBox = layoutState.displayBoxForLayoutBox(documentBox);
-
-    auto& initialContainingBlockDisplayBox = layoutState.displayBoxForLayoutBox(initialContainingBlock(layoutBox));
-    auto strechedHeight = initialContainingBlockDisplayBox.contentBoxHeight();
-    strechedHeight -= documentBoxDisplayBox.verticalBorder() + documentBoxDisplayBox.verticalPadding().valueOr(0);
-
-    LayoutUnit totalVerticalMargin;
     if (layoutBox.isDocumentBox()) {
-        // Document box's margins do not collapse.
-        auto verticalMargin = heightAndMargin.nonCollapsedMargin;
-        totalVerticalMargin = verticalMargin.before + verticalMargin.after;
-    } else if (layoutBox.isBodyBox()) {
-        // Here is the quirky part for body box:
-        // Stretch the body using the initial containing block's height and shrink it with document box's margin/border/padding.
-        // This looks extremely odd when html has non-auto height.
-        auto documentBoxVerticalMargin = Geometry::computedVerticalMargin(documentBox, UsedHorizontalValues { initialContainingBlockDisplayBox.contentBoxWidth() });
-        strechedHeight -= (documentBoxVerticalMargin.before.valueOr(0) + documentBoxVerticalMargin.after.valueOr(0));
-
-        auto& bodyBoxDisplayBox = layoutState.displayBoxForLayoutBox(layoutBox);
-        strechedHeight -= bodyBoxDisplayBox.verticalBorder() + bodyBoxDisplayBox.verticalPadding().valueOr(0);
-
-        auto nonCollapsedMargin = heightAndMargin.nonCollapsedMargin;
-        auto collapsedMargin = MarginCollapse::collapsedVerticalValues(layoutState, layoutBox, nonCollapsedMargin);
-        totalVerticalMargin = collapsedMargin.before.valueOr(nonCollapsedMargin.before);
-        totalVerticalMargin += collapsedMargin.isCollapsedThrough ? nonCollapsedMargin.after : collapsedMargin.after.valueOr(nonCollapsedMargin.after);
+        // Let's stretch the inflow document box(<html>) to the height of the initial containing block (view).
+        auto documentBoxContentHeight = formattingContext.geometryForBox(layoutBox.initialContainingBlock(), EscapeReason::DocumentBoxStretchesToViewportQuirk).contentBoxHeight();
+        // Document box's own vertical margin/border/padding values always shrink the content height.
+        auto& documentBoxGeometry = formattingContext.geometryForBox(layoutBox);
+        documentBoxContentHeight -= nonCollapsedVerticalMargin + documentBoxGeometry.verticalBorder() + documentBoxGeometry.verticalPadding().valueOr(0);
+        return std::max(contentHeightAndMargin.contentHeight,  documentBoxContentHeight);
     }
 
-    // Stretch but never overstretch with the margins.
-    if (heightAndMargin.height + totalVerticalMargin < strechedHeight)
-        heightAndMargin.height = strechedHeight - totalVerticalMargin;
-
-    return heightAndMargin;
+    // Here is the quirky part for body box when it stretches all the way to the ICB even when the document box does not (e.g. out-of-flow positioned).
+    ASSERT(layoutBox.isBodyBox());
+    auto& initialContainingBlock = layoutBox.initialContainingBlock();
+    auto& initialContainingBlockGeometry = formattingContext.geometryForBox(initialContainingBlock, EscapeReason::BodyStretchesToViewportQuirk);
+    // Start the content height with the ICB.
+    auto bodyBoxContentHeight = initialContainingBlockGeometry.contentBoxHeight();
+    // Body box's own border and padding shrink the content height.
+    auto& bodyBoxGeometry = formattingContext.geometryForBox(layoutBox);
+    bodyBoxContentHeight -= bodyBoxGeometry.verticalBorder() + bodyBoxGeometry.verticalPadding().valueOr(0);
+    // Body box never collapses its vertical margins with the document box but it might collapse its margin with its descendants.
+    auto nonCollapsedMargin = contentHeightAndMargin.nonCollapsedMargin;
+    auto collapsedMargin = formattingContext.marginCollapse().collapsedVerticalValues(layoutBox, nonCollapsedMargin).collapsedValues;
+    auto usedVerticalMargin = collapsedMargin.before.valueOr(nonCollapsedMargin.before);
+    usedVerticalMargin += collapsedMargin.isCollapsedThrough ? nonCollapsedMargin.after : collapsedMargin.after.valueOr(nonCollapsedMargin.after);
+    bodyBoxContentHeight -= usedVerticalMargin;
+    // Document box's padding and border also shrink the body box's content height.
+    auto& documentBox = layoutBox.parent();
+    auto& documentBoxGeometry = formattingContext.geometryForBox(documentBox, EscapeReason::BodyStretchesToViewportQuirk);
+    bodyBoxContentHeight -= documentBoxGeometry.verticalBorder() + documentBoxGeometry.verticalPadding().valueOr(0);
+    // However the non-in-flow document box's vertical margins are ignored. They don't affect the body box's content height.
+    if (documentBox.isInFlow()) {
+        auto geometry = this->geometry();
+        auto precomputeDocumentBoxVerticalMargin = geometry.computedVerticalMargin(documentBox, geometry.constraintsForInFlowContent(initialContainingBlock, EscapeReason::BodyStretchesToViewportQuirk).horizontal);
+        bodyBoxContentHeight -= precomputeDocumentBoxVerticalMargin.before.valueOr(0) + precomputeDocumentBoxVerticalMargin.after.valueOr(0);
+    }
+    return std::max(contentHeightAndMargin.contentHeight,  bodyBoxContentHeight);
 }
 
-bool BlockFormattingContext::Quirks::shouldIgnoreCollapsedQuirkMargin(const LayoutState& layoutState, const Box& layoutBox)
+bool BlockFormattingContext::Quirks::shouldIgnoreCollapsedQuirkMargin(const Box& layoutBox) const
 {
-    return layoutState.inQuirksMode() && isQuirkContainer(layoutBox);
+    return layoutState().inQuirksMode() && isQuirkContainer(layoutBox);
+}
+
+enum class VerticalMargin { Before, After };
+static inline bool hasQuirkMarginToCollapse(const Box& layoutBox, VerticalMargin verticalMargin)
+{
+    if (!layoutBox.isInFlow())
+        return false;
+    auto& style = layoutBox.style();
+    return (verticalMargin == VerticalMargin::Before && style.hasMarginBeforeQuirk()) || (verticalMargin == VerticalMargin::After && style.hasMarginAfterQuirk());
+}
+
+bool BlockFormattingContext::Quirks::shouldCollapseMarginBeforeWithParentMarginBefore(const Box& layoutBox) const
+{
+    return layoutState().inQuirksMode() && hasQuirkMarginToCollapse(layoutBox, VerticalMargin::Before) && isQuirkContainer(layoutBox.containingBlock());
+}
+
+bool BlockFormattingContext::Quirks::shouldCollapseMarginAfterWithParentMarginAfter(const Box& layoutBox) const
+{
+    return layoutState().inQuirksMode() && hasQuirkMarginToCollapse(layoutBox, VerticalMargin::After) && isQuirkContainer(layoutBox.containingBlock());
 }
 
 }

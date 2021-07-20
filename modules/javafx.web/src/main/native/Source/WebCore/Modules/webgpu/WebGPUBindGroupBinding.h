@@ -28,15 +28,16 @@
 #if ENABLE(WEBGPU)
 
 #include "WebGPUBufferBinding.h"
+#include "WebGPUSampler.h"
 #include "WebGPUTextureView.h"
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
-using WebGPUBindingResource = Variant<RefPtr<WebGPUTextureView>, WebGPUBufferBinding>;
+using WebGPUBindingResource = Variant<RefPtr<WebGPUSampler>, RefPtr<WebGPUTextureView>, WebGPUBufferBinding>;
 
 struct WebGPUBindGroupBinding {
-    unsigned long binding;
+    unsigned binding;
     WebGPUBindingResource resource;
 };
 

@@ -34,10 +34,13 @@
 #include "EventHandler.h"
 #include "FrameLoader.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLElement.h"
+#include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "MathMLNames.h"
 #include "MouseEvent.h"
 #include "RenderTableCell.h"
+#include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
@@ -74,7 +77,7 @@ unsigned MathMLElement::rowSpan() const
     return std::max(1u, std::min(limitToOnlyHTMLNonNegative(rowSpanValue, 1u), maxRowspan));
 }
 
-void MathMLElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void MathMLElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == hrefAttr) {
         bool wasLink = isLink();
@@ -87,19 +90,39 @@ void MathMLElement::parseAttribute(const QualifiedName& name, const AtomicString
     } else if (name == columnspanAttr) {
         if (is<RenderTableCell>(renderer()) && hasTagName(mtdTag))
             downcast<RenderTableCell>(renderer())->colSpanOrRowSpanChanged();
-    } else
+    } else if (name == HTMLNames::tabindexAttr) {
+        if (value.isEmpty())
+            setTabIndexExplicitly(WTF::nullopt);
+        else if (auto optionalTabIndex = parseHTMLInteger(value))
+            setTabIndexExplicitly(optionalTabIndex.value());
+    } else {
+        auto& eventName = HTMLElement::eventNameForEventHandlerAttribute(name);
+        if (!eventName.isNull()) {
+            setAttributeEventListener(eventName, name, value);
+            return;
+        }
+
         StyledElement::parseAttribute(name, value);
+    }
 }
 
 bool MathMLElement::isPresentationAttribute(const QualifiedName& name) const
 {
-    if (name == backgroundAttr || name == colorAttr || name == dirAttr || name == fontfamilyAttr || name == fontsizeAttr || name == fontstyleAttr || name == fontweightAttr || name == mathbackgroundAttr || name == mathcolorAttr || name == mathsizeAttr)
+    if (name == backgroundAttr || name == colorAttr || name == dirAttr || name == fontfamilyAttr || name == fontsizeAttr || name == fontstyleAttr || name == fontweightAttr || name == mathbackgroundAttr || name == mathcolorAttr || name == mathsizeAttr || name == displaystyleAttr)
         return true;
     return StyledElement::isPresentationAttribute(name);
 }
 
-static String convertToPercentageIfNeeded(const AtomicString& value)
+static String convertMathSizeIfNeeded(const AtomString& value)
 {
+    if (value == "small")
+        return "0.75em";
+    if (value == "normal")
+        return "1em";
+    if (value == "big")
+        return "1.5em";
+
+    // FIXME: mathsize accepts any MathML length, including named spaces (see parseMathMLLength).
     // FIXME: Might be better to use double than float.
     // FIXME: Might be better to use "shortest" numeric formatting instead of fixed width.
     bool ok = false;
@@ -109,35 +132,44 @@ static String convertToPercentageIfNeeded(const AtomicString& value)
     return makeString(FormattedNumber::fixedWidth(unitlessValue * 100, 3), '%');
 }
 
-void MathMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void MathMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == mathbackgroundAttr)
         addPropertyToPresentationAttributeStyle(style, CSSPropertyBackgroundColor, value);
-    else if (name == mathsizeAttr) {
-        // The following three values of mathsize are handled in WebCore/css/mathml.css
-        if (value != "normal" && value != "small" && value != "big")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyFontSize, convertToPercentageIfNeeded(value));
-    } else if (name == mathcolorAttr)
+    else if (name == mathsizeAttr)
+        addPropertyToPresentationAttributeStyle(style, CSSPropertyFontSize, convertMathSizeIfNeeded(value));
+    else if (name == mathcolorAttr)
         addPropertyToPresentationAttributeStyle(style, CSSPropertyColor, value);
-    // FIXME: The following are deprecated attributes that should lose if there is a conflict with a non-deprecated attribute.
-    else if (name == fontsizeAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyFontSize, value);
-    else if (name == backgroundAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyBackgroundColor, value);
-    else if (name == colorAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyColor, value);
-    else if (name == fontstyleAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyFontStyle, value);
-    else if (name == fontweightAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyFontWeight, value);
-    else if (name == fontfamilyAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyFontFamily, value);
     else if (name == dirAttr) {
-        if (hasTagName(mathTag) || hasTagName(mrowTag) || hasTagName(mstyleTag) || isMathMLToken())
+        if (document().settings().coreMathMLEnabled() || hasTagName(mathTag) || hasTagName(mrowTag) || hasTagName(mstyleTag) || isMathMLToken())
             addPropertyToPresentationAttributeStyle(style, CSSPropertyDirection, value);
-    }  else {
-        ASSERT(!isPresentationAttribute(name));
-        StyledElement::collectStyleForPresentationAttribute(name, value, style);
+    } else if (name == displaystyleAttr) {
+        if (equalLettersIgnoringASCIICase(value, "false"))
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyMathStyle, CSSValueCompact);
+        else if (equalLettersIgnoringASCIICase(value, "true"))
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyMathStyle, CSSValueNormal);
+    } else {
+        if (document().settings().coreMathMLEnabled()) {
+            StyledElement::collectStyleForPresentationAttribute(name, value, style);
+            return;
+        }
+        // FIXME: The following are deprecated attributes that should lose if there is a conflict with a non-deprecated attribute.
+        if (name == fontsizeAttr)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyFontSize, value);
+        else if (name == backgroundAttr)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyBackgroundColor, value);
+        else if (name == colorAttr)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyColor, value);
+        else if (name == fontstyleAttr)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyFontStyle, value);
+        else if (name == fontweightAttr)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyFontWeight, value);
+        else if (name == fontfamilyAttr)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyFontFamily, value);
+        else {
+            ASSERT(!isPresentationAttribute(name));
+            StyledElement::collectStyleForPresentationAttribute(name, value, style);
+        }
     }
 }
 
@@ -165,7 +197,7 @@ void MathMLElement::defaultEventHandler(Event& event)
             const auto& url = stripLeadingAndTrailingHTMLSpaces(href);
             event.setDefaultHandled();
             if (auto* frame = document().frame())
-                frame->loader().urlSelected(document().completeURL(url), "_self", &event, LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, document().shouldOpenExternalURLsPolicyToPropagate());
+                frame->loader().changeLocation(document().completeURL(url), "_self", &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
             return;
         }
     }
@@ -213,24 +245,6 @@ bool MathMLElement::supportsFocus() const
         return StyledElement::supportsFocus();
     // If not a link we should still be able to focus the element if it has tabIndex.
     return isLink() || StyledElement::supportsFocus();
-}
-
-int MathMLElement::tabIndex() const
-{
-    // Skip the supportsFocus check in StyledElement.
-    return Element::tabIndex();
-}
-
-StringView MathMLElement::stripLeadingAndTrailingWhitespace(const StringView& stringView)
-{
-    unsigned start = 0, stringLength = stringView.length();
-    while (stringLength > 0 && isHTMLSpace(stringView[start])) {
-        start++;
-        stringLength--;
-    }
-    while (stringLength > 0 && isHTMLSpace(stringView[start + stringLength - 1]))
-        stringLength--;
-    return stringView.substring(start, stringLength);
 }
 
 }

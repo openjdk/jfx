@@ -14,11 +14,15 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/localpointer.h"
 #include "unicode/ucal.h"
 #include "unicode/unum.h"
 #include "unicode/udisplaycontext.h"
 #include "unicode/ufieldpositer.h"
+
+#if U_SHOW_CPLUSPLUS_API
+#include "unicode/localpointer.h"
+#endif   // U_SHOW_CPLUSPLUS_API
+
 /**
  * \file
  * \brief C API: DateFormat
@@ -142,7 +146,7 @@
  * the date and time formatting algorithm and pattern letters defined by
  * <a href="http://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table">UTS#35
  * Unicode Locale Data Markup Language (LDML)</a> and further documented for ICU in the
- * <a href="https://sites.google.com/site/icuprojectuserguide/formatparse/datetime?pli=1#TOC-Date-Field-Symbol-Table">ICU
+ * <a href="https://unicode-org.github.io/icu/userguide/format_parse/datetime#date-field-symbol-table">ICU
  * User Guide</a>.</p>
  */
 
@@ -482,6 +486,27 @@ typedef enum UDateFormatStyle {
 #define UDAT_HOUR_TZ                    "jz"
 #endif  /* U_HIDE_DEPRECATED_API */
 
+#ifndef U_HIDE_INTERNAL_API
+/**
+ * Constant for Unicode string name of new (in 2019) Japanese calendar era,
+ * root/English abbreviated version (ASCII-range characters).
+ * @internal
+ */
+#define JP_ERA_2019_ROOT                "Reiwa"
+/**
+ * Constant for Unicode string name of new (in 2019) Japanese calendar era,
+ * Japanese abbreviated version (Han, or fullwidth Latin for testing).
+ * @internal
+ */
+#define JP_ERA_2019_JA                  "\\u4EE4\\u548C"
+/**
+ * Constant for Unicode string name of new (in 2019) Japanese calendar era,
+ * root and Japanese narrow version (ASCII-range characters).
+ * @internal
+ */
+#define JP_ERA_2019_NARROW              "R"
+#endif  // U_HIDE_INTERNAL_API
+
 /**
  * FieldPosition and UFieldPosition selectors for format fields
  * defined by DateFormat and UDateFormat.
@@ -811,10 +836,24 @@ typedef enum UDateFormatField {
 
 /**
  * Maps from a UDateFormatField to the corresponding UCalendarDateFields.
- * Note: since the mapping is many-to-one, there is no inverse mapping.
+ *
+ * Note 1: Since the mapping is many-to-one, there is no inverse mapping.
+ *
+ * Note 2: There is no UErrorCode parameter, so in case of error (UDateFormatField is
+ * unknown or has no corresponding UCalendarDateFields value), the function returns the
+ * current value of UCAL_FIELD_COUNT. However, that value may change from release to
+ * release and is consequently deprecated. For a future-proof runtime way of checking
+ * for errors:
+ * a) First save the value returned by the function when it is passed an invalid value
+ *    such as "(UDateFormatField)-1".
+ * b) Then, to test for errors when passing some other UDateFormatField value, check
+ *     whether the function returns that saved value.
+ *
  * @param field the UDateFormatField.
- * @return the UCalendarDateField.  This will be UCAL_FIELD_COUNT in case
- * of error (e.g., the input field is UDAT_FIELD_COUNT).
+ * @return the UCalendarDateField. In case of error (UDateFormatField is unknown or has
+ *   no corresponding UCalendarDateFields value) this will be the current value of
+ *   UCAL_FIELD_COUNT, but that value may change from release to release.
+ *   See Note 2 above.
  * @stable ICU 4.4
  */
 U_CAPI UCalendarDateFields U_EXPORT2
@@ -902,11 +941,13 @@ typedef enum UDateFormatBooleanAttribute {
 
     /* Do not conditionalize the following with #ifndef U_HIDE_DEPRECATED_API,
      * it is needed for layout of DateFormat object. */
+#ifndef U_FORCE_HIDE_DEPRECATED_API
     /**
      * One more than the highest normal UDateFormatBooleanAttribute value.
      * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.
      */
     UDAT_BOOLEAN_ATTRIBUTE_COUNT = 4
+#endif  // U_FORCE_HIDE_DEPRECATED_API
 } UDateFormatBooleanAttribute;
 
 /**
@@ -935,7 +976,37 @@ udat_getBooleanAttribute(const UDateFormat* fmt, UDateFormatBooleanAttribute att
 U_CAPI void U_EXPORT2
 udat_setBooleanAttribute(UDateFormat *fmt, UDateFormatBooleanAttribute attr, UBool newValue, UErrorCode* status);
 
+#ifndef U_HIDE_DRAFT_API
+/**
+ * Hour Cycle.
+ * @draft ICU 67
+ */
+typedef enum UDateFormatHourCycle {
+    /**
+     * Hour in am/pm (0~11)
+     * @draft ICU 67
+     */
+    UDAT_HOUR_CYCLE_11,
 
+    /**
+     * Hour in am/pm (1~12)
+     * @draft ICU 67
+     */
+    UDAT_HOUR_CYCLE_12,
+
+    /**
+     * Hour in day (0~23)
+     * @draft ICU 67
+     */
+    UDAT_HOUR_CYCLE_23,
+
+    /**
+     * Hour in day (1~24)
+     * @draft ICU 67
+     */
+    UDAT_HOUR_CYCLE_24
+} UDateFormatHourCycle;
+#endif  /* U_HIDE_DRAFT_API */
 
 #if U_SHOW_CPLUSPLUS_API
 
@@ -1164,7 +1235,7 @@ udat_parseCalendar(const    UDateFormat*    format,
 * With lenient parsing, the parser may use heuristics to interpret inputs that do not
 * precisely match the pattern. With strict parsing, inputs must match the pattern.
 * @param fmt The formatter to query
-* @return TRUE if fmt is set to perform lenient parsing, FALSE otherwise.
+* @return true if fmt is set to perform lenient parsing, false otherwise.
 * @see udat_setLenient
 * @stable ICU 2.0
 */
@@ -1176,7 +1247,7 @@ udat_isLenient(const UDateFormat* fmt);
 * With lenient parsing, the parser may use heuristics to interpret inputs that do not
 * precisely match the pattern. With strict parsing, inputs must match the pattern.
 * @param fmt The formatter to set
-* @param isLenient TRUE if fmt should perform lenient parsing, FALSE otherwise.
+* @param isLenient true if fmt should perform lenient parsing, false otherwise.
 * @see dat_isLenient
 * @stable ICU 2.0
 */
@@ -1336,7 +1407,7 @@ udat_set2DigitYearStart(    UDateFormat     *fmt,
 * Extract the pattern from a UDateFormat.
 * The pattern will follow the pattern syntax rules.
 * @param fmt The formatter to query.
-* @param localized TRUE if the pattern should be localized, FALSE otherwise.
+* @param localized true if the pattern should be localized, false otherwise.
 * @param result A pointer to a buffer to receive the pattern.
 * @param resultLength The maximum size of result.
 * @param status A pointer to an UErrorCode to receive any errors
@@ -1355,7 +1426,7 @@ udat_toPattern(    const   UDateFormat     *fmt,
 * Set the pattern used by an UDateFormat.
 * The pattern should follow the pattern syntax rules.
 * @param format The formatter to set.
-* @param localized TRUE if the pattern is localized, FALSE otherwise.
+* @param localized true if the pattern is localized, false otherwise.
 * @param pattern The new pattern
 * @param patternLength The length of pattern, or -1 if null-terminated.
 * @see udat_toPattern
@@ -1583,7 +1654,7 @@ udat_getContext(const UDateFormat* fmt, UDisplayContextType type, UErrorCode* st
 * @see udat_applyPatternRelative
 * @internal ICU 4.2 technology preview
 */
-U_INTERNAL int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 udat_toPatternRelativeDate(const UDateFormat *fmt,
                            UChar             *result,
                            int32_t           resultLength,
@@ -1600,7 +1671,7 @@ udat_toPatternRelativeDate(const UDateFormat *fmt,
 * @see udat_applyPatternRelative
 * @internal ICU 4.2 technology preview
 */
-U_INTERNAL int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 udat_toPatternRelativeTime(const UDateFormat *fmt,
                            UChar             *result,
                            int32_t           resultLength,
@@ -1618,7 +1689,7 @@ udat_toPatternRelativeTime(const UDateFormat *fmt,
 * @see udat_toPatternRelativeDate, udat_toPatternRelativeTime
 * @internal ICU 4.2 technology preview
 */
-U_INTERNAL void U_EXPORT2
+U_CAPI void U_EXPORT2
 udat_applyPatternRelative(UDateFormat *format,
                           const UChar *datePattern,
                           int32_t     datePatternLength,
@@ -1643,14 +1714,14 @@ typedef UDateFormat* (U_EXPORT2 *UDateFormatOpener) (UDateFormatStyle  timeStyle
  * Register a provider factory
  * @internal ICU 49
  */
-U_INTERNAL void U_EXPORT2
+U_CAPI void U_EXPORT2
 udat_registerOpener(UDateFormatOpener opener, UErrorCode *status);
 
 /**
  * Un-Register a provider factory
  * @internal ICU 49
  */
-U_INTERNAL UDateFormatOpener U_EXPORT2
+U_CAPI UDateFormatOpener U_EXPORT2
 udat_unregisterOpener(UDateFormatOpener opener, UErrorCode *status);
 #endif  /* U_HIDE_INTERNAL_API */
 

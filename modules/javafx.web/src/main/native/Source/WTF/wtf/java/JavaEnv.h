@@ -128,3 +128,6 @@ using AttachThreadAsNonDaemonToJavaEnv = AttachThreadToJavaEnv<false>;
 #define JINT_SZ sizeof(jint)
 #define JFLOAT_SZ sizeof(jfloat)
 
+namespace WTF {
+extern JGClass comSunWebkitFileSystem;
+}

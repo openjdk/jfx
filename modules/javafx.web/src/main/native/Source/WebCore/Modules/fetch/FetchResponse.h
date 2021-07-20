@@ -36,7 +36,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSValue;
 };
 
@@ -53,7 +53,7 @@ public:
 
     struct Init {
         unsigned short status { 200 };
-        String statusText { "OK"_s };
+        String statusText;
         Optional<FetchHeaders::Init> headers;
     };
 
@@ -66,11 +66,9 @@ public:
     using NotificationCallback = WTF::Function<void(ExceptionOr<FetchResponse&>&&)>;
     static void fetch(ScriptExecutionContext&, FetchRequest&, NotificationCallback&&);
 
-#if ENABLE(STREAMS_API)
     void startConsumingStream(unsigned);
     void consumeChunk(Ref<JSC::Uint8Array>&&);
     void finishConsumingStream(Ref<DeferredPromise>&&);
-#endif
 
     Type type() const { return filteredResponse().type(); }
     const String& url() const;
@@ -83,11 +81,9 @@ public:
     FetchHeaders& headers() { return m_headers; }
     ExceptionOr<Ref<FetchResponse>> clone(ScriptExecutionContext&);
 
-#if ENABLE(STREAMS_API)
     void consumeBodyAsStream() final;
     void feedStream() final;
     void cancel() final;
-#endif
 
     using ResponseData = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
     ResponseData consumeBody();
@@ -102,6 +98,7 @@ public:
     void consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&&);
 
     WEBCORE_EXPORT ResourceResponse resourceResponse() const;
+    ResourceResponse::Tainting tainting() const { return m_internalResponse.tainting(); }
 
     uint64_t bodySizeWithPadding() const { return m_bodySizeWithPadding; }
     void setBodySizeWithPadding(uint64_t size) { m_bodySizeWithPadding = size; }
@@ -111,22 +108,23 @@ public:
 
     const HTTPHeaderMap& internalResponseHeaders() const { return m_internalResponse.httpHeaderFields(); }
 
+    bool isCORSSameOrigin() const;
+    bool hasWasmMIMEType() const;
+
 private:
     FetchResponse(ScriptExecutionContext&, Optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
 
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     const ResourceResponse& filteredResponse() const;
 
-#if ENABLE(STREAMS_API)
     void closeStream();
-#endif
 
     void addAbortSteps(Ref<AbortSignal>&&);
 
     class BodyLoader final : public FetchLoaderClient {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         BodyLoader(FetchResponse&, NotificationCallback&&);
         ~BodyLoader();
@@ -136,10 +134,9 @@ private:
 
         void consumeDataByChunk(ConsumeDataByChunkCallback&&);
 
-#if ENABLE(STREAMS_API)
         RefPtr<SharedBuffer> startStreaming();
-#endif
         NotificationCallback takeNotificationCallback() { return WTFMove(m_responseCallback); }
+        ConsumeDataByChunkCallback takeConsumeDataCallback() { return WTFMove(m_consumeDataCallback); }
 
     private:
         // FetchLoaderClient API
@@ -152,11 +149,13 @@ private:
         NotificationCallback m_responseCallback;
         ConsumeDataByChunkCallback m_consumeDataCallback;
         std::unique_ptr<FetchLoader> m_loader;
+        Ref<PendingActivity<FetchResponse>> m_pendingActivity;
+        FetchOptions::Credentials m_credentials;
     };
 
     mutable Optional<ResourceResponse> m_filteredResponse;
     ResourceResponse m_internalResponse;
-    Optional<BodyLoader> m_bodyLoader;
+    std::unique_ptr<BodyLoader> m_bodyLoader;
     mutable String m_responseURL;
     // Opaque responses will padd their body size when used with Cache API.
     uint64_t m_bodySizeWithPadding { 0 };

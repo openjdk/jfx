@@ -28,10 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "ButterflyInlines.h"
 #include "DFGClobberize.h"
-#include "DFGGraph.h"
 #include "DFGNode.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -42,7 +41,6 @@ bool clobbersExitState(Graph& graph, Node* node)
     switch (node->op()) {
     case InitializeEntrypointArguments:
     case MovHint:
-    case ZombieHint:
     case PutHint:
     case KillStack:
         return true;
@@ -57,6 +55,9 @@ bool clobbersExitState(Graph& graph, Node* node)
     case ArrayifyToStructure:
     case Arrayify:
     case NewObject:
+    case NewGenerator:
+    case NewAsyncGenerator:
+    case NewInternalFieldObject:
     case NewRegexp:
     case NewSymbol:
     case NewStringObject:
@@ -66,6 +67,8 @@ bool clobbersExitState(Graph& graph, Node* node)
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
     case PhantomNewAsyncFunction:
+    case PhantomNewInternalFieldObject:
+    case MaterializeNewInternalFieldObject:
     case PhantomCreateActivation:
     case MaterializeCreateActivation:
     case PhantomNewRegexp:
@@ -77,9 +80,13 @@ bool clobbersExitState(Graph& graph, Node* node)
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case FilterCallLinkStatus:
-    case FilterGetByIdStatus:
+    case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
+    case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
+    case TryGetById:
         // These do clobber memory, but nothing that is observable. It may be nice to separate the
         // heaps into those that are observable and those that aren't, but we don't do that right now.
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=148440
@@ -87,14 +94,14 @@ bool clobbersExitState(Graph& graph, Node* node)
 
     case CreateActivation:
         // Like above, but with the activation allocation caveat.
-        return node->castOperand<SymbolTable*>()->singletonScope()->isStillValid();
+        return node->castOperand<SymbolTable*>()->singleton().isStillValid();
 
     case NewFunction:
     case NewGeneratorFunction:
     case NewAsyncGeneratorFunction:
     case NewAsyncFunction:
         // Like above, but with the JSFunction allocation caveat.
-        return node->castOperand<FunctionExecutable*>()->singletonFunction()->isStillValid();
+        return node->castOperand<FunctionExecutable*>()->singleton().isStillValid();
 
     default:
         // For all other nodes, we just care about whether they write to something other than SideState.

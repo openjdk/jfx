@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,16 +39,16 @@ public:
     static Ref<MockAudioTrackPrivate> create(const MockTrackBox& box) { return adoptRef(*new MockAudioTrackPrivate(box)); }
     virtual ~MockAudioTrackPrivate() = default;
 
-    virtual AtomicString id() const { return m_id; }
+    virtual AtomString id() const { return m_id; }
 
 protected:
     MockAudioTrackPrivate(const MockTrackBox& box)
         : m_box(box)
-        , m_id(AtomicString::number(box.trackID()))
+        , m_id(AtomString::number(box.trackID()))
     {
     }
     MockTrackBox m_box;
-    AtomicString m_id;
+    AtomString m_id;
 };
 
 class MockTextTrackPrivate : public InbandTextTrackPrivate {
@@ -56,17 +56,17 @@ public:
     static Ref<MockTextTrackPrivate> create(const MockTrackBox& box) { return adoptRef(*new MockTextTrackPrivate(box)); }
     virtual ~MockTextTrackPrivate() = default;
 
-    virtual AtomicString id() const { return m_id; }
+    virtual AtomString id() const { return m_id; }
 
 protected:
     MockTextTrackPrivate(const MockTrackBox& box)
-        : InbandTextTrackPrivate(InbandTextTrackPrivate::Generic)
+        : InbandTextTrackPrivate(InbandTextTrackPrivate::CueFormat::Generic)
         , m_box(box)
-        , m_id(AtomicString::number(box.trackID()))
+        , m_id(AtomString::number(box.trackID()))
     {
     }
     MockTrackBox m_box;
-    AtomicString m_id;
+    AtomString m_id;
 };
 
 
@@ -75,16 +75,16 @@ public:
     static Ref<MockVideoTrackPrivate> create(const MockTrackBox& box) { return adoptRef(*new MockVideoTrackPrivate(box)); }
     virtual ~MockVideoTrackPrivate() = default;
 
-    virtual AtomicString id() const { return m_id; }
+    virtual AtomString id() const { return m_id; }
 
 protected:
     MockVideoTrackPrivate(const MockTrackBox& box)
         : m_box(box)
-        , m_id(AtomicString::number(box.trackID()))
+        , m_id(AtomString::number(box.trackID()))
     {
     }
     MockTrackBox m_box;
-    AtomicString m_id;
+    AtomString m_id;
 };
 
 }

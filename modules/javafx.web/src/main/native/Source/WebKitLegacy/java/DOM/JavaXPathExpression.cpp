@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathExpressionImpl_evaluateImpl
     , jlong inResult)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(static_cast<Node*>(jlong_to_ptr(contextNode))
+    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(*static_cast<Node*>(jlong_to_ptr(contextNode))
             , type
             , static_cast<XPathResult*>(jlong_to_ptr(inResult))))));
 }

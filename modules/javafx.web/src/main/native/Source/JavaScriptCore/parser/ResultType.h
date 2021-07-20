@@ -27,6 +27,8 @@
 
 namespace JSC {
 
+    // FIXME: Consider whether this is actually necessary. Is LLInt and Baseline's profiling information enough?
+    // https://bugs.webkit.org/show_bug.cgi?id=201659
     struct ResultType {
     private:
         friend struct OperandTypes;
@@ -46,6 +48,10 @@ namespace JSC {
         static constexpr int numBitsNeeded = 7;
         static_assert((TypeBits & ((1 << numBitsNeeded) - 1)) == TypeBits, "This is necessary for correctness.");
 
+        constexpr explicit ResultType()
+            : ResultType(unknownType())
+        {
+        }
         constexpr explicit ResultType(Type type)
             : m_bits(type)
         {
@@ -74,6 +80,16 @@ namespace JSC {
         constexpr bool definitelyIsBigInt() const
         {
             return (m_bits & TypeBits) == TypeMaybeBigInt;
+        }
+
+        constexpr bool definitelyIsNull() const
+        {
+            return (m_bits & TypeBits) == TypeMaybeNull;
+        }
+
+        constexpr bool mightBeUndefinedOrNull() const
+        {
+            return m_bits & (TypeMaybeNull | TypeMaybeOther);
         }
 
         constexpr bool mightBeNumber() const
@@ -138,7 +154,12 @@ namespace JSC {
 
         static constexpr ResultType bigIntOrInt32Type()
         {
-            return ResultType(TypeMaybeBigInt | TypeInt32);
+            return ResultType(TypeMaybeBigInt | TypeInt32 | TypeMaybeNumber);
+        }
+
+        static constexpr ResultType bigIntOrNumberType()
+        {
+            return ResultType(TypeMaybeBigInt | TypeMaybeNumber);
         }
 
         static constexpr ResultType unknownType()
@@ -157,6 +178,24 @@ namespace JSC {
             return addResultType();
         }
 
+        static constexpr ResultType forNonAddArith(ResultType op1, ResultType op2)
+        {
+            if (op1.definitelyIsNumber() && op2.definitelyIsNumber())
+                return numberType();
+            if (op1.definitelyIsBigInt() && op2.definitelyIsBigInt())
+                return bigIntType();
+            return bigIntOrNumberType();
+        }
+
+        static constexpr ResultType forUnaryArith(ResultType op)
+        {
+            if (op.definitelyIsNumber())
+                return numberType();
+            if (op.definitelyIsBigInt())
+                return bigIntType();
+            return bigIntOrNumberType();
+        }
+
         // Unlike in C, a logical op produces the value of the
         // last expression evaluated (and not true or false).
         static constexpr ResultType forLogicalOp(ResultType op1, ResultType op2)
@@ -169,6 +208,15 @@ namespace JSC {
                 return stringType();
             if (op1.definitelyIsBigInt() && op2.definitelyIsBigInt())
                 return bigIntType();
+            return unknownType();
+        }
+
+        static constexpr ResultType forCoalesce(ResultType op1, ResultType op2)
+        {
+            if (op1.definitelyIsNull())
+                return op2;
+            if (!op1.mightBeUndefinedOrNull())
+                return op1;
             return unknownType();
         }
 
@@ -194,40 +242,32 @@ namespace JSC {
     {
         OperandTypes(ResultType first = ResultType::unknownType(), ResultType second = ResultType::unknownType())
         {
-            // We have to initialize one of the int to ensure that
-            // the entire struct is initialized.
-            m_u.i = 0;
-            m_u.rds.first = first.m_bits;
-            m_u.rds.second = second.m_bits;
+            m_first = first.m_bits;
+            m_second = second.m_bits;
         }
 
-        union {
-            struct {
-                ResultType::Type first;
-                ResultType::Type second;
-            } rds;
-            int i;
-        } m_u;
+        ResultType::Type m_first;
+        ResultType::Type m_second;
 
         ResultType first() const
         {
-            return ResultType(m_u.rds.first);
+            return ResultType(m_first);
         }
 
         ResultType second() const
         {
-            return ResultType(m_u.rds.second);
+            return ResultType(m_second);
         }
 
-        int toInt()
+        uint16_t bits()
         {
-            return m_u.i;
+            static_assert(sizeof(OperandTypes) == sizeof(uint16_t));
+            return bitwise_cast<uint16_t>(*this);
         }
-        static OperandTypes fromInt(int value)
+
+        static OperandTypes fromBits(uint16_t bits)
         {
-            OperandTypes types;
-            types.m_u.i = value;
-            return types;
+            return bitwise_cast<OperandTypes>(bits);
         }
 
         void dump(PrintStream& out) const

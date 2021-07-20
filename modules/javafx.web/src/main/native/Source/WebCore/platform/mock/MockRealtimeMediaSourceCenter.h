@@ -41,6 +41,7 @@ public:
     WEBCORE_EXPORT static MockRealtimeMediaSourceCenter& singleton();
 
     WEBCORE_EXPORT static void setMockRealtimeMediaSourceCenterEnabled(bool);
+    WEBCORE_EXPORT static bool mockRealtimeMediaSourceCenterEnabled();
 
     WEBCORE_EXPORT static void setDevices(Vector<MockMediaDevice>&&);
     WEBCORE_EXPORT static void addDevice(const MockMediaDevice&);
@@ -51,7 +52,8 @@ public:
     void setMockVideoCaptureEnabled(bool isEnabled) { m_isMockVideoCaptureEnabled = isEnabled; }
     void setMockDisplayCaptureEnabled(bool isEnabled) { m_isMockDisplayCaptureEnabled = isEnabled; }
 
-    static Vector<CaptureDevice>& audioDevices();
+    static Vector<CaptureDevice>& microphoneDevices();
+    static Vector<CaptureDevice>& speakerDevices();
     static Vector<CaptureDevice>& videoDevices();
     static Vector<CaptureDevice>& displayDevices();
 
@@ -72,7 +74,7 @@ private:
 
     class MockAudioCaptureDeviceManager final : public CaptureDeviceManager {
     private:
-        const Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSourceCenter::audioDevices(); }
+        const Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSourceCenter::microphoneDevices(); }
         Optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id) final { return MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(type, id); }
     };
     class MockVideoCaptureDeviceManager final : public CaptureDeviceManager {
@@ -93,6 +95,7 @@ private:
     bool m_isMockAudioCaptureEnabled { true };
     bool m_isMockVideoCaptureEnabled { true };
     bool m_isMockDisplayCaptureEnabled { true };
+    bool m_isEnabled { false };
 };
 
 }

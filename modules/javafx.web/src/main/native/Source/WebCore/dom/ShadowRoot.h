@@ -29,20 +29,28 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Element.h"
+#if ENABLE(PICTURE_IN_PICTURE_API)
+#include "HTMLVideoElement.h"
+#endif
 #include "ShadowRootMode.h"
+#include <wtf/HashMap.h>
 
 namespace WebCore {
 
 class HTMLSlotElement;
 class SlotAssignment;
 class StyleSheetList;
+class WebAnimation;
 
 class ShadowRoot final : public DocumentFragment, public TreeScope {
     WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
 public:
-    static Ref<ShadowRoot> create(Document& document, ShadowRootMode type)
+
+    enum class DelegatesFocus : uint8_t { Yes, No };
+
+    static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, DelegatesFocus delegatesFocus = DelegatesFocus::No)
     {
-        return adoptRef(*new ShadowRoot(document, type));
+        return adoptRef(*new ShadowRoot(document, type, delegatesFocus));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
@@ -60,8 +68,12 @@ public:
     bool resetStyleInheritance() const { return m_resetStyleInheritance; }
     void setResetStyleInheritance(bool);
 
-    Element* host() const { return m_host; }
-    void setHost(Element* host) { m_host = host; }
+    bool delegatesFocus() const { return m_delegatesFocus; }
+    bool containsFocusedElement() const { return m_containsFocusedElement; }
+    void setContainsFocusedElement(bool flag) { m_containsFocusedElement = flag; }
+
+    Element* host() const { return m_host.get(); }
+    void setHost(WeakPtr<Element>&& host) { m_host = WTFMove(host); }
 
     String innerHTML() const;
     ExceptionOr<void> setInnerHTML(const String&);
@@ -75,9 +87,9 @@ public:
 
     HTMLSlotElement* findAssignedSlot(const Node&);
 
-    void renameSlotElement(HTMLSlotElement&, const AtomicString& oldName, const AtomicString& newName);
-    void addSlotElementByName(const AtomicString&, HTMLSlotElement&);
-    void removeSlotElementByName(const AtomicString&, HTMLSlotElement&, ContainerNode& oldParentOfRemovedTree);
+    void renameSlotElement(HTMLSlotElement&, const AtomString& oldName, const AtomString& newName);
+    void addSlotElementByName(const AtomString&, HTMLSlotElement&);
+    void removeSlotElementByName(const AtomString&, HTMLSlotElement&, ContainerNode& oldParentOfRemovedTree);
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
@@ -85,19 +97,27 @@ public:
     void didRemoveAllChildrenOfShadowHost();
     void didChangeDefaultSlot();
     void hostChildElementDidChange(const Element&);
-    void hostChildElementDidChangeSlotAttribute(Element&, const AtomicString& oldValue, const AtomicString& newValue);
+    void hostChildElementDidChangeSlotAttribute(Element&, const AtomString& oldValue, const AtomString& newValue);
 
-    const Vector<Node*>* assignedNodesForSlot(const HTMLSlotElement&);
+    const Vector<WeakPtr<Node>>* assignedNodesForSlot(const HTMLSlotElement&);
 
     void moveShadowRootToNewParentScope(TreeScope&, Document&);
     void moveShadowRootToNewDocument(Document&);
 
-protected:
-    ShadowRoot(Document&, ShadowRootMode);
+    using PartMappings = HashMap<AtomString, Vector<AtomString, 1>>;
+    const PartMappings& partMappings() const;
+    void invalidatePartMappings();
 
-    ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    HTMLVideoElement* pictureInPictureElement() const;
+#endif
+
+    Vector<RefPtr<WebAnimation>> getAnimations();
 
 private:
+    ShadowRoot(Document&, ShadowRootMode, DelegatesFocus);
+    ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
+
     bool childTypeAllowed(NodeType) const override;
 
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
@@ -109,13 +129,16 @@ private:
 
     bool m_resetStyleInheritance { false };
     bool m_hasBegunDeletingDetachedChildren { false };
+    bool m_delegatesFocus { false };
+    bool m_containsFocusedElement { false };
     ShadowRootMode m_type { ShadowRootMode::UserAgent };
 
-    Element* m_host { nullptr };
+    WeakPtr<Element> m_host;
     RefPtr<StyleSheetList> m_styleSheetList;
 
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
+    mutable Optional<PartMappings> m_partMappings;
 };
 
 inline Element* ShadowRoot::activeElement() const

@@ -58,6 +58,7 @@
 #include "gstrfuncs.h"
 #include "gtestutils.h"
 #include "glib_trace.h"
+#include "gtrace-private.h"
 
 /**
  * SECTION:threads
@@ -320,6 +321,10 @@
  * simultaneous read-only access (by holding the 'reader' lock via
  * g_rw_lock_reader_lock()).
  *
+ * It is unspecified whether readers or writers have priority in acquiring the
+ * lock when a reader already holds the lock and a writer is queued to acquire
+ * it.
+ *
  * Here is an example for an array with access functions:
  * |[<!-- language="C" -->
  *   GRWLock lock;
@@ -508,10 +513,37 @@ static GMutex    g_once_mutex;
 static GCond     g_once_cond;
 static GSList   *g_once_init_list = NULL;
 
+static volatile guint g_thread_n_created_counter = 0;
+
 static void g_thread_cleanup (gpointer data);
 static GPrivate     g_thread_specific_private = G_PRIVATE_INIT (g_thread_cleanup);
 
-G_LOCK_DEFINE_STATIC (g_thread_new);
+/*
+ * g_private_set_alloc0:
+ * @key: a #GPrivate
+ * @size: size of the allocation, in bytes
+ *
+ * Sets the thread local variable @key to have a newly-allocated and zero-filled
+ * value of given @size, and returns a pointer to that memory. Allocations made
+ * using this API will be suppressed in valgrind: it is intended to be used for
+ * one-time allocations which are known to be leaked, such as those for
+ * per-thread initialisation data. Otherwise, this function behaves the same as
+ * g_private_set().
+ *
+ * Returns: (transfer full): new thread-local heap allocation of size @size
+ * Since: 2.60
+ */
+/*< private >*/
+gpointer
+g_private_set_alloc0 (GPrivate *key,
+                      gsize     size)
+{
+  gpointer allocated = g_malloc0 (size);
+
+  g_private_set (key, allocated);
+
+  return g_steal_pointer (&allocated);
+}
 
 /* GOnce {{{1 ------------------------------------------------------------- */
 
@@ -589,8 +621,8 @@ G_LOCK_DEFINE_STATIC (g_thread_new);
  */
 gpointer
 g_once_impl (GOnce       *once,
-         GThreadFunc  func,
-         gpointer     arg)
+       GThreadFunc  func,
+       gpointer     arg)
 {
   g_mutex_lock (&g_once_mutex);
 
@@ -599,13 +631,25 @@ g_once_impl (GOnce       *once,
 
   if (once->status != G_ONCE_STATUS_READY)
     {
+      gpointer retval;
+
       once->status = G_ONCE_STATUS_PROGRESS;
       g_mutex_unlock (&g_once_mutex);
 
-      once->retval = func (arg);
+      retval = func (arg);
 
       g_mutex_lock (&g_once_mutex);
+/* We prefer the new C11-style atomic extension of GCC if available. If not,
+ * fall back to always locking. */
+#if defined(G_ATOMIC_LOCK_FREE) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) && defined(__ATOMIC_SEQ_CST)
+      /* Only the second store needs to be atomic, as the two writes are related
+       * by a happens-before relationship here. */
+      once->retval = retval;
+      __atomic_store_n (&once->status, G_ONCE_STATUS_READY, __ATOMIC_RELEASE);
+#else
+      once->retval = retval;
       once->status = G_ONCE_STATUS_READY;
+#endif
       g_cond_broadcast (&g_once_cond);
     }
 
@@ -653,7 +697,7 @@ gboolean
   volatile gsize *value_location = location;
   gboolean need_init = FALSE;
   g_mutex_lock (&g_once_mutex);
-  if (g_atomic_pointer_get (value_location) == NULL)
+  if (g_atomic_pointer_get (value_location) == 0)
     {
       if (!g_slist_find (g_once_init_list, (void*) value_location))
         {
@@ -689,12 +733,12 @@ void
 {
   volatile gsize *value_location = location;
 
-  g_return_if_fail (g_atomic_pointer_get (value_location) == NULL);
+  g_return_if_fail (g_atomic_pointer_get (value_location) == 0);
   g_return_if_fail (result != 0);
-  g_return_if_fail (g_once_init_list != NULL);
 
   g_atomic_pointer_set (value_location, result);
   g_mutex_lock (&g_once_mutex);
+  g_return_if_fail (g_once_init_list != NULL);
   g_once_init_list = g_slist_remove (g_once_init_list, (void*) value_location);
   g_cond_broadcast (&g_once_cond);
   g_mutex_unlock (&g_once_mutex);
@@ -708,7 +752,7 @@ void
  *
  * Increase the reference count on @thread.
  *
- * Returns: a new reference to @thread
+ * Returns: (transfer full): a new reference to @thread
  *
  * Since: 2.32
  */
@@ -724,7 +768,7 @@ g_thread_ref (GThread *thread)
 
 /**
  * g_thread_unref:
- * @thread: a #GThread
+ * @thread: (transfer full): a #GThread
  *
  * Decrease the reference count on @thread, possibly freeing all
  * resources associated with it.
@@ -761,15 +805,7 @@ g_thread_proxy (gpointer data)
   GRealThread* thread = data;
 
   g_assert (data);
-
-  /* This has to happen before G_LOCK, as that might call g_thread_self */
   g_private_set (&g_thread_specific_private, data);
-
-  /* The lock makes sure that g_thread_new_internal() has a chance to
-   * setup 'func' and 'data' before we make the call.
-   */
-  G_LOCK (g_thread_new);
-  G_UNLOCK (g_thread_new);
 
   TRACE (GLIB_THREAD_SPAWNED (thread->thread.func, thread->thread.data,
                               thread->name));
@@ -786,11 +822,17 @@ g_thread_proxy (gpointer data)
   return NULL;
 }
 
+guint
+g_thread_n_created (void)
+{
+  return g_atomic_int_get (&g_thread_n_created_counter);
+}
+
 /**
  * g_thread_new:
  * @name: (nullable): an (optional) name for the new thread
- * @func: a function to execute in the new thread
- * @data: an argument to supply to the new thread
+ * @func: (closure data) (scope async): a function to execute in the new thread
+ * @data: (nullable): an argument to supply to the new thread
  *
  * This function creates a new thread. The new thread starts by invoking
  * @func with the argument data. The thread will run until @func returns
@@ -812,7 +854,15 @@ g_thread_proxy (gpointer data)
  * To free the struct returned by this function, use g_thread_unref().
  * Note that g_thread_join() implicitly unrefs the #GThread as well.
  *
- * Returns: the new #GThread
+ * New threads by default inherit their scheduler policy (POSIX) or thread
+ * priority (Windows) of the thread creating the new thread.
+ *
+ * This behaviour changed in GLib 2.64: before threads on Windows were not
+ * inheriting the thread priority but were spawned with the default priority.
+ * Starting with GLib 2.64 the behaviour is now consistent between Windows and
+ * POSIX and all threads inherit their parent thread's priority.
+ *
+ * Returns: (transfer full): the new #GThread
  *
  * Since: 2.32
  */
@@ -824,7 +874,7 @@ g_thread_new (const gchar *name,
   GError *error = NULL;
   GThread *thread;
 
-  thread = g_thread_new_internal (name, g_thread_proxy, func, data, 0, &error);
+  thread = g_thread_new_internal (name, g_thread_proxy, func, data, 0, NULL, &error);
 
   if G_UNLIKELY (thread == NULL)
     g_error ("creating thread '%s': %s", name ? name : "", error->message);
@@ -835,8 +885,8 @@ g_thread_new (const gchar *name,
 /**
  * g_thread_try_new:
  * @name: (nullable): an (optional) name for the new thread
- * @func: a function to execute in the new thread
- * @data: an argument to supply to the new thread
+ * @func: (closure data) (scope async): a function to execute in the new thread
+ * @data: (nullable): an argument to supply to the new thread
  * @error: return location for error, or %NULL
  *
  * This function is the same as g_thread_new() except that
@@ -845,7 +895,7 @@ g_thread_new (const gchar *name,
  * If a thread can not be created (due to resource limits),
  * @error is set and %NULL is returned.
  *
- * Returns: the new #GThread, or %NULL if an error occurred
+ * Returns: (transfer full): the new #GThread, or %NULL if an error occurred
  *
  * Since: 2.32
  */
@@ -855,35 +905,33 @@ g_thread_try_new (const gchar  *name,
                   gpointer      data,
                   GError      **error)
 {
-  return g_thread_new_internal (name, g_thread_proxy, func, data, 0, error);
+  return g_thread_new_internal (name, g_thread_proxy, func, data, 0, NULL, error);
 }
 
 GThread *
-g_thread_new_internal (const gchar   *name,
-                       GThreadFunc    proxy,
-                       GThreadFunc    func,
-                       gpointer       data,
-                       gsize          stack_size,
-                       GError       **error)
+g_thread_new_internal (const gchar *name,
+                       GThreadFunc proxy,
+                       GThreadFunc func,
+                       gpointer data,
+                       gsize stack_size,
+                       const GThreadSchedulerSettings *scheduler_settings,
+                       GError **error)
 {
-  GRealThread *thread;
-
   g_return_val_if_fail (func != NULL, NULL);
 
-  G_LOCK (g_thread_new);
-  thread = g_system_thread_new (proxy, stack_size, error);
-  if (thread)
-    {
-      thread->ref_count = 2;
-      thread->ours = TRUE;
-      thread->thread.joinable = TRUE;
-      thread->thread.func = func;
-      thread->thread.data = data;
-      thread->name = g_strdup (name);
-    }
-  G_UNLOCK (g_thread_new);
+  g_atomic_int_inc (&g_thread_n_created_counter);
 
-  return (GThread*) thread;
+  g_trace_mark (G_TRACE_CURRENT_TIME, 0, "GLib", "GThread created", "%s", name ? name : "(unnamed)");
+  return (GThread *) g_system_thread_new (proxy, stack_size, scheduler_settings,
+                                          name, func, data, error);
+}
+
+gboolean
+g_thread_get_scheduler_settings (GThreadSchedulerSettings *scheduler_settings)
+{
+  g_return_val_if_fail (scheduler_settings != NULL, FALSE);
+
+  return g_system_thread_get_scheduler_settings (scheduler_settings);
 }
 
 /**
@@ -919,7 +967,7 @@ g_thread_exit (gpointer retval)
 
 /**
  * g_thread_join:
- * @thread: a #GThread
+ * @thread: (transfer full): a #GThread
  *
  * Waits until @thread finishes, i.e. the function @func, as
  * given to g_thread_new(), returns or g_thread_exit() is called.
@@ -938,7 +986,7 @@ g_thread_exit (gpointer retval)
  * to be freed. Use g_thread_ref() to obtain an extra reference if you
  * want to keep the GThread alive beyond the g_thread_join() call.
  *
- * Returns: the return value of the thread
+ * Returns: (transfer full): the return value of the thread
  */
 gpointer
 g_thread_join (GThread *thread)
@@ -974,7 +1022,7 @@ g_thread_join (GThread *thread)
  * (i.e. comparisons) but you must not use GLib functions (such
  * as g_thread_join()) on these threads.
  *
- * Returns: the #GThread representing the current thread
+ * Returns: (transfer none): the #GThread representing the current thread
  */
 GThread*
 g_thread_self (void)

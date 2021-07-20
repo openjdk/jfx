@@ -26,6 +26,7 @@
 
 namespace WebCore {
 
+class KeyframeList;
 class RenderLayer;
 
 struct RepaintLayoutRects {
@@ -67,6 +68,13 @@ public:
     bool hasRepaintLayoutRects() const;
     void setRepaintLayoutRects(const RepaintLayoutRects&);
     void clearRepaintLayoutRects();
+
+    bool startAnimation(double timeOffset, const Animation&, const KeyframeList&) override;
+    void animationPaused(double timeOffset, const String& name) override;
+    void animationFinished(const String& name) override;
+    void transformRelatedPropertyDidChange() override;
+
+    void suspendAnimations(MonotonicTime = MonotonicTime()) override;
 
 protected:
     RenderLayerModelObject(Element&, RenderStyle&&, BaseTypeFlags);

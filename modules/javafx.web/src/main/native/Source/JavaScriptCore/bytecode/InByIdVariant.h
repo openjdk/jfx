@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,7 @@ class InByIdStatus;
 struct DumpContext;
 
 class InByIdVariant {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     InByIdVariant(const StructureSet& = StructureSet(), PropertyOffset = invalidOffset, const ObjectPropertyConditionSet& = ObjectPropertyConditionSet());
 
@@ -56,11 +57,16 @@ public:
 
     bool attemptToMerge(const InByIdVariant& other);
 
-    void markIfCheap(SlotVisitor&);
-    bool finalize();
+    template<typename Visitor> void markIfCheap(Visitor&);
+    bool finalize(VM&);
 
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
+
+    bool overlaps(const InByIdVariant& other)
+    {
+        return structureSet().overlaps(other.structureSet());
+    }
 
 private:
     friend class InByIdStatus;

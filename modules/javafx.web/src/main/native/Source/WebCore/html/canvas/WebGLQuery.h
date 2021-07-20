@@ -25,7 +25,13 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLSharedObject.h"
+
+namespace WTF {
+class AbstractLocker;
+}
 
 namespace WebCore {
 
@@ -34,9 +40,21 @@ public:
     static Ref<WebGLQuery> create(WebGLRenderingContextBase&);
     virtual ~WebGLQuery();
 
-protected:
+    bool isResultAvailable() const { return m_isResultAvailable; }
+
+    void makeResultAvailable() { m_isResultAvailable = true; }
+
+    void setTarget(GCGLenum target) { m_target = target; }
+    GCGLenum target() const { return m_target; }
+
+private:
     explicit WebGLQuery(WebGLRenderingContextBase&);
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
+
+    bool m_isResultAvailable { false };
+    GCGLenum m_target { 0 };
 };
 
 } // namespace WebCore
+
+#endif

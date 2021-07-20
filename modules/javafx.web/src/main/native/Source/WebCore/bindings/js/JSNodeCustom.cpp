@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2009-2010, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,10 +51,12 @@
 #include "JSEventListener.h"
 #include "JSHTMLElement.h"
 #include "JSHTMLElementWrapperFactory.h"
+#include "JSMathMLElementWrapperFactory.h"
 #include "JSProcessingInstruction.h"
 #include "JSSVGElementWrapperFactory.h"
 #include "JSShadowRoot.h"
 #include "JSText.h"
+#include "MathMLElement.h"
 #include "Node.h"
 #include "ProcessingInstruction.h"
 #include "RegisteredEventListener.h"
@@ -72,7 +74,7 @@ using namespace JSC;
 
 using namespace HTMLNames;
 
-static inline bool isReachableFromDOM(Node* node, SlotVisitor& visitor, const char** reason)
+static inline bool isReachableFromDOM(Node* node, AbstractSlotVisitor& visitor, const char** reason)
 {
     if (!node->isConnected()) {
         if (is<Element>(*node)) {
@@ -121,25 +123,28 @@ static inline bool isReachableFromDOM(Node* node, SlotVisitor& visitor, const ch
     return visitor.containsOpaqueRoot(root(node));
 }
 
-bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor, const char** reason)
+bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
     JSNode* jsNode = jsCast<JSNode*>(handle.slot()->asCell());
     return isReachableFromDOM(&jsNode->wrapped(), visitor, reason);
 }
 
-JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
+JSScope* JSNode::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObject, JSScope* node) const
 {
-    if (inherits<JSHTMLElement>(exec->vm()))
-        return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(exec, node);
+    if (inherits<JSHTMLElement>(lexicalGlobalObject->vm()))
+        return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(lexicalGlobalObject, node);
     return node;
 }
 
-void JSNode::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSNode::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(root(wrapped()));
 }
 
-static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSNode);
+
+static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
     ASSERT(!getCachedWrapper(globalObject->world(), node));
 
@@ -150,6 +155,10 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
                 wrapper = createJSHTMLWrapper(globalObject, static_reference_cast<HTMLElement>(WTFMove(node)));
             else if (is<SVGElement>(node))
                 wrapper = createJSSVGWrapper(globalObject, static_reference_cast<SVGElement>(WTFMove(node)));
+#if ENABLE(MATHML)
+            else if (is<MathMLElement>(node))
+                wrapper = createJSMathMLWrapper(globalObject, static_reference_cast<MathMLElement>(WTFMove(node)));
+#endif
             else
                 wrapper = createWrapper<Element>(globalObject, WTFMove(node));
             break;
@@ -170,7 +179,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(exec, globalObject, downcast<Document>(node.get()));
+            return toJS(lexicalGlobalObject, globalObject, downcast<Document>(node.get()));
         case Node::DOCUMENT_TYPE_NODE:
             wrapper = createWrapper<DocumentType>(globalObject, WTFMove(node));
             break;
@@ -187,14 +196,14 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
     return wrapper;
 }
 
-JSValue createWrapper(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
+JSValue createWrapper(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(exec, globalObject, WTFMove(node));
+    return createWrapperInline(lexicalGlobalObject, globalObject, WTFMove(node));
 }
 
-JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
+JSValue toJSNewlyCreated(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(exec, globalObject, WTFMove(node));
+    return createWrapperInline(lexicalGlobalObject, globalObject, WTFMove(node));
 }
 
 JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node& node)
@@ -205,12 +214,12 @@ JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node& 
 
 void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root)
 {
-    JSC::ExecState* scriptState = mainWorldExecState(root->document().frame());
-    if (!scriptState)
+    JSC::JSGlobalObject* lexicalGlobalObject = mainWorldExecState(root->document().frame());
+    if (!lexicalGlobalObject)
         return;
 
-    JSLockHolder lock(scriptState);
-    toJS(scriptState, static_cast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject()), *root);
+    JSLockHolder lock(lexicalGlobalObject);
+    toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject), *root);
 }
 
 } // namespace WebCore

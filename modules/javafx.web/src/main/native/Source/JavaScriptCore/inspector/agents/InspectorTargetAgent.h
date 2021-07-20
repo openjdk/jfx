@@ -27,6 +27,7 @@
 
 #include "InspectorAgentBase.h"
 #include "InspectorBackendDispatchers.h"
+#include "InspectorFrontendChannel.h"
 #include "InspectorFrontendDispatchers.h"
 #include <wtf/Forward.h>
 
@@ -34,39 +35,42 @@ namespace Inspector {
 
 class InspectorTarget;
 
-typedef String ErrorString;
-
-class JS_EXPORT_PRIVATE InspectorTargetAgent : public InspectorAgentBase, public TargetBackendDispatcherHandler {
+class JS_EXPORT_PRIVATE InspectorTargetAgent final : public InspectorAgentBase, public TargetBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorTargetAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorTargetAgent(FrontendRouter&, BackendDispatcher&);
-    virtual ~InspectorTargetAgent() = default;
+    ~InspectorTargetAgent() final;
 
+    // InspectorAgentBase
     void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
-    virtual FrontendChannel& frontendChannel() = 0;
-
     // TargetBackendDispatcherHandler
-    void exists(ErrorString&) final;
-    void sendMessageToTarget(ErrorString&, const String& targetId, const String& message) final;
+    Protocol::ErrorStringOr<void> setPauseOnStart(bool) final;
+    Protocol::ErrorStringOr<void> resume(const String& targetId) final;
+    Protocol::ErrorStringOr<void> sendMessageToTarget(const String& targetId, const String& message) final;
 
     // Target lifecycle.
     void targetCreated(InspectorTarget&);
     void targetDestroyed(InspectorTarget&);
+    void didCommitProvisionalTarget(const String& oldTargetID, const String& committedTargetID);
 
     // Target messages.
     void sendMessageFromTargetToFrontend(const String& targetId, const String& message);
 
 private:
+    // FrontendChannel
+    FrontendChannel::ConnectionType connectionType() const;
     void connectToTargets();
     void disconnectFromTargets();
 
+    Inspector::FrontendRouter& m_router;
     std::unique_ptr<TargetFrontendDispatcher> m_frontendDispatcher;
     Ref<TargetBackendDispatcher> m_backendDispatcher;
     HashMap<String, InspectorTarget*> m_targets;
     bool m_isConnected { false };
+    bool m_shouldPauseOnStart { false };
 };
 
 } // namespace Inspector

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,12 @@ import java.text.Format;
  */
 public abstract class StringProperty extends ReadOnlyStringProperty implements
         Property<String>, WritableStringValue {
+
+    /**
+     * Creates a default {@code StringProperty}.
+     */
+    public StringProperty() {
+    }
 
     /**
      * {@inheritDoc}

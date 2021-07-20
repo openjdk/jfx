@@ -146,17 +146,25 @@ gst_tag_from_id3_tag (const gchar * id3_tag)
 
 static const GstTagEntryMatch user_tag_matches[] = {
   /* musicbrainz identifiers being used in the real world (foobar2000) */
+  {GST_TAG_MUSICBRAINZ_RELEASETRACKID, "TXXX|musicbrainz_trackid"},
   {GST_TAG_MUSICBRAINZ_ARTISTID, "TXXX|musicbrainz_artistid"},
   {GST_TAG_MUSICBRAINZ_ALBUMID, "TXXX|musicbrainz_albumid"},
   {GST_TAG_MUSICBRAINZ_ALBUMARTISTID, "TXXX|musicbrainz_albumartistid"},
+  {GST_TAG_MUSICBRAINZ_RELEASEGROUPID, "TXXX|musicbrainz_releasegroupid"},
   {GST_TAG_MUSICBRAINZ_TRMID, "TXXX|musicbrainz_trmid"},
   {GST_TAG_CDDA_MUSICBRAINZ_DISCID, "TXXX|musicbrainz_discid"},
   /* musicbrainz identifiers according to spec no one pays
    * attention to (http://musicbrainz.org/docs/specs/metadata_tags.html) */
+  {GST_TAG_MUSICBRAINZ_RELEASETRACKID, "TXXX|MusicBrainz Release Track Id"},
   {GST_TAG_MUSICBRAINZ_ARTISTID, "TXXX|MusicBrainz Artist Id"},
   {GST_TAG_MUSICBRAINZ_ALBUMID, "TXXX|MusicBrainz Album Id"},
   {GST_TAG_MUSICBRAINZ_ALBUMARTISTID, "TXXX|MusicBrainz Album Artist Id"},
+  {GST_TAG_MUSICBRAINZ_RELEASEGROUPID, "TXXX|MusicBrainz Release Group Id"},
   {GST_TAG_MUSICBRAINZ_TRMID, "TXXX|MusicBrainz TRM Id"},
+  /* acoustid identifiers according to the official musicbrainz mapping
+   * https://picard.musicbrainz.org/docs/mappings/ */
+  {GST_TAG_ACOUSTID_ID, "TXXX|Acoustid Id"},
+  {GST_TAG_ACOUSTID_FINGERPRINT, "TXXX|Acoustid Fingerprint"},
   /* according to: http://wiki.musicbrainz.org/MusicBrainzTag (yes, no space
    * before 'ID' and not 'Id' either this time, yay for consistency) */
   {GST_TAG_CDDA_MUSICBRAINZ_DISCID, "TXXX|MusicBrainz DiscID"},
@@ -262,7 +270,7 @@ gst_tag_extract_id3v1_string (GstTagList * list, const gchar * tag,
 GstTagList *
 gst_tag_list_new_from_id3v1 (const guint8 * data)
 {
-  guint year;
+  gint64 year;
   gchar *ystr;
   GstTagList *list;
 
@@ -275,9 +283,9 @@ gst_tag_list_new_from_id3v1 (const guint8 * data)
   gst_tag_extract_id3v1_string (list, GST_TAG_ARTIST, (gchar *) & data[33], 30);
   gst_tag_extract_id3v1_string (list, GST_TAG_ALBUM, (gchar *) & data[63], 30);
   ystr = g_strndup ((gchar *) & data[93], 4);
-  year = strtoul (ystr, NULL, 10);
+  year = g_ascii_strtoll (ystr, NULL, 10);
   g_free (ystr);
-  if (year > 0) {
+  if (year > 0 && year <= 9999) {
     GstDateTime *dt = gst_date_time_new_y (year);
 
     gst_tag_list_add (list, GST_TAG_MERGE_REPLACE, GST_TAG_DATE_TIME, dt, NULL);

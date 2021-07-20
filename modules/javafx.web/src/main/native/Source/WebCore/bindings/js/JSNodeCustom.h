@@ -34,10 +34,12 @@ namespace JSCastingHelpers {
 
 template<>
 struct InheritsTraits<WebCore::JSNode> {
+    static constexpr Optional<JSTypeRange> typeRange { { static_cast<JSType>(WebCore::JSNodeType), static_cast<JSType>(WebCore::JSNodeType + WebCore::JSNodeTypeMask) } };
+    static_assert(std::numeric_limits<uint8_t>::max() == typeRange->last);
     template<typename From>
-    static inline bool inherits(VM&, From* from)
+    static inline bool inherits(VM& vm, From* from)
     {
-        return from->type() >= WebCore::JSNodeType;
+        return inheritsJSTypeImpl<WebCore::JSNode>(vm, from, *typeRange);
     }
 };
 
@@ -46,10 +48,10 @@ struct InheritsTraits<WebCore::JSNode> {
 
 namespace WebCore {
 
-WEBCORE_EXPORT JSC::JSValue createWrapper(JSC::ExecState*, JSDOMGlobalObject*, Ref<Node>&&);
+WEBCORE_EXPORT JSC::JSValue createWrapper(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<Node>&&);
 WEBCORE_EXPORT JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject*, Node&);
 
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, Node& node)
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Node& node)
 {
     if (LIKELY(globalObject->worldIsNormal())) {
         if (auto* wrapper = node.wrapper())
@@ -59,7 +61,7 @@ inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, 
             return wrapper;
     }
 
-    return createWrapper(exec, globalObject, node);
+    return createWrapper(lexicalGlobalObject, globalObject, node);
 }
 
 // In the C++ DOM, a node tree survives as long as there is a reference to its
@@ -88,7 +90,7 @@ inline void* root(Node& node)
     return root(&node);
 }
 
-ALWAYS_INLINE JSC::JSValue JSNode::nodeType(JSC::ExecState&) const
+ALWAYS_INLINE JSC::JSValue JSNode::nodeType(JSC::JSGlobalObject&) const
 {
     return JSC::jsNumber(static_cast<uint8_t>(type()) & JSNodeTypeMask);
 }

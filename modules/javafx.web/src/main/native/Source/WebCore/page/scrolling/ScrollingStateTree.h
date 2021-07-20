@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingCoordinator.h"
 #include "ScrollingStateNode.h"
@@ -68,12 +68,23 @@ public:
     void setHasNewRootStateNode(bool hasNewRoot) { m_hasNewRootStateNode = hasNewRoot; }
 
     unsigned nodeCount() const { return m_stateNodeMap.size(); }
+    unsigned scrollingNodeCount() const { return m_scrollingNodeCount; }
 
-    typedef HashMap<ScrollingNodeID, ScrollingStateNode*> StateNodeMap;
+    typedef HashMap<ScrollingNodeID, RefPtr<ScrollingStateNode>> StateNodeMap;
     const StateNodeMap& nodeMap() const { return m_stateNodeMap; }
 
     LayerRepresentation::Type preferredLayerRepresentation() const { return m_preferredLayerRepresentation; }
     void setPreferredLayerRepresentation(LayerRepresentation::Type representation) { m_preferredLayerRepresentation = representation; }
+
+    void reconcileViewportConstrainedLayerPositions(ScrollingNodeID, const LayoutRect& viewportRect, ScrollingLayerPositionAction);
+
+    void scrollingNodeAdded() { ++m_scrollingNodeCount; }
+    void scrollingNodeRemoved()
+    {
+        ASSERT(m_scrollingNodeCount);
+        --m_scrollingNodeCount;
+    }
+
 
 private:
     void setRootStateNode(Ref<ScrollingStateFrameScrollingNode>&&);
@@ -87,8 +98,10 @@ private:
 
     void removeNodeAndAllDescendants(ScrollingStateNode*);
 
-    void recursiveNodeWillBeRemoved(ScrollingStateNode* currNode);
+    void recursiveNodeWillBeRemoved(ScrollingStateNode*);
     void willRemoveNode(ScrollingStateNode*);
+
+    void reconcileLayerPositionsRecursive(ScrollingStateNode&, const LayoutRect& viewportRect, ScrollingLayerPositionAction);
 
     AsyncScrollingCoordinator* m_scrollingCoordinator;
     // Contains all the nodes we know about (those in the m_rootStateNode tree, and in m_unparentedNodes subtrees).
@@ -99,6 +112,7 @@ private:
     RefPtr<ScrollingStateFrameScrollingNode> m_rootStateNode;
     bool m_hasChangedProperties { false };
     bool m_hasNewRootStateNode { false };
+    unsigned m_scrollingNodeCount { 0 };
     LayerRepresentation::Type m_preferredLayerRepresentation { LayerRepresentation::GraphicsLayerRepresentation };
 };
 
@@ -109,4 +123,4 @@ void showScrollingStateTree(const WebCore::ScrollingStateTree*);
 void showScrollingStateTree(const WebCore::ScrollingStateNode*);
 #endif
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

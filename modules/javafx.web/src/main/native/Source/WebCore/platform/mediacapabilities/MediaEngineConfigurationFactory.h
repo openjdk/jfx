@@ -31,17 +31,33 @@
 
 namespace WebCore {
 
-struct MediaCapabilitiesInfo;
+struct MediaCapabilitiesDecodingInfo;
+struct MediaCapabilitiesEncodingInfo;
 struct MediaDecodingConfiguration;
 struct MediaEncodingConfiguration;
 
 class MediaEngineConfigurationFactory {
 public:
-    using DecodingConfigurationCallback = WTF::Function<void(MediaCapabilitiesInfo&&)>;
-    using EncodingConfigurationCallback = WTF::Function<void(MediaCapabilitiesInfo&&)>;
+    using DecodingConfigurationCallback = WTF::Function<void(MediaCapabilitiesDecodingInfo&&)>;
+    using EncodingConfigurationCallback = WTF::Function<void(MediaCapabilitiesEncodingInfo&&)>;
 
-    static void createDecodingConfiguration(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&);
-    static void createEncodingConfiguration(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&);
+    static bool hasDecodingConfigurationFactory();
+    static bool hasEncodingConfigurationFactory();
+
+    WEBCORE_EXPORT static void createDecodingConfiguration(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&);
+    WEBCORE_EXPORT static void createEncodingConfiguration(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&);
+
+    using CreateDecodingConfiguration = WTF::Function<void(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&)>;
+    using CreateEncodingConfiguration = WTF::Function<void(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&)>;
+
+    struct MediaEngineFactory {
+        CreateDecodingConfiguration createDecodingConfiguration;
+        CreateEncodingConfiguration createEncodingConfiguration;
+    };
+
+    WEBCORE_EXPORT static void clearFactories();
+    WEBCORE_EXPORT static void resetFactories();
+    WEBCORE_EXPORT static void installFactory(MediaEngineFactory&&);
 
     WEBCORE_EXPORT static void enableMock();
     WEBCORE_EXPORT static void disableMock();

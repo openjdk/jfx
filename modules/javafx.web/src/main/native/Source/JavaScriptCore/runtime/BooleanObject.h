@@ -32,6 +32,12 @@ protected:
 public:
     using Base = JSWrapperObject;
 
+    template<typename, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.booleanObjectSpace<mode>();
+    }
+
     static BooleanObject* create(VM& vm, Structure* structure)
     {
         BooleanObject* boolean = new (NotNull, allocateCell<BooleanObject>(vm.heap)) BooleanObject(vm, structure);
@@ -45,6 +51,9 @@ public:
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
+
+    static String toStringName(const JSObject*, JSGlobalObject*);
 };
+static_assert(sizeof(BooleanObject) == sizeof(JSWrapperObject));
 
 } // namespace JSC

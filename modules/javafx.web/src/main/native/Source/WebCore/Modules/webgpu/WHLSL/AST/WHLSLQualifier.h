@@ -25,9 +25,9 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLType.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -54,4 +54,4 @@ using Qualifiers = Vector<Qualifier>;
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

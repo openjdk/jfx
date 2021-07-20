@@ -26,18 +26,13 @@
 #include "config.h"
 #include "JSAsyncGeneratorFunction.h"
 
-#include "Error.h"
-#include "JSCInlines.h"
-#include "JSCJSValue.h"
-#include "JSFunction.h"
+#include "JSCellInlines.h"
 #include "JSFunctionInlines.h"
-#include "JSObject.h"
-#include "PropertySlot.h"
 #include "VM.h"
 
 namespace JSC {
 
-const ClassInfo JSAsyncGeneratorFunction    ::s_info = { "JSAsyncGeneratorFunction",  &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSAsyncGeneratorFunction) };
+const ClassInfo JSAsyncGeneratorFunction::s_info = { "JSAsyncGeneratorFunction",  &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSAsyncGeneratorFunction) };
 
 JSAsyncGeneratorFunction::JSAsyncGeneratorFunction(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
     : Base(vm, executable, scope, structure)

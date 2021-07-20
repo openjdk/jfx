@@ -43,8 +43,9 @@ class AudioBus;
 // of the loudest parts of the signal and raises the volume of the softest parts,
 // making the sound richer, fuller, and more controlled.
 
-class DynamicsCompressor {
+class DynamicsCompressor final {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(DynamicsCompressor);
 public:
     enum {
         ParamThreshold,
@@ -58,9 +59,6 @@ public:
         ParamReleaseZone3,
         ParamReleaseZone4,
         ParamPostGain,
-        ParamFilterStageGain,
-        ParamFilterStageRatio,
-        ParamFilterAnchor,
         ParamEffectBlend,
         ParamReduction,
         ParamLast
@@ -78,8 +76,13 @@ public:
     float sampleRate() const { return m_sampleRate; }
     float nyquist() const { return m_sampleRate / 2; }
 
-    double tailTime() const { return 0; }
+    double tailTime() const { return m_compressor.tailTime(); }
     double latencyTime() const { return m_compressor.latencyFrames() / static_cast<double>(sampleRate()); }
+    bool requiresTailProcessing() const
+    {
+        // Always return true even if the tail time and latency might both be zero.
+        return true;
+    }
 
 protected:
     unsigned m_numberOfChannels;
@@ -90,24 +93,8 @@ protected:
 
     float m_sampleRate;
 
-    // Emphasis filter controls.
-    float m_lastFilterStageRatio;
-    float m_lastAnchor;
-    float m_lastFilterStageGain;
-
-    typedef struct {
-        ZeroPole filters[4];
-    } ZeroPoleFilterPack4;
-
-    // Per-channel emphasis filters.
-    Vector<std::unique_ptr<ZeroPoleFilterPack4>> m_preFilterPacks;
-    Vector<std::unique_ptr<ZeroPoleFilterPack4>> m_postFilterPacks;
-
     UniqueArray<const float*> m_sourceChannels;
     UniqueArray<float*> m_destinationChannels;
-
-    void setEmphasisStageParameters(unsigned stageIndex, float gain, float normalizedFrequency /* 0 -> 1 */);
-    void setEmphasisParameters(float gain, float anchorFreq, float filterStageRatio);
 
     // The core compressor.
     DynamicsCompressorKernel m_compressor;

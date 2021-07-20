@@ -36,19 +36,21 @@
 
 namespace WebCore {
 
-class InspectorDOMAgent;
-
 class PageConsoleAgent final : public WebConsoleAgent {
     WTF_MAKE_NONCOPYABLE(PageConsoleAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PageConsoleAgent(WebAgentContext&, Inspector::InspectorHeapAgent*, InspectorDOMAgent*);
-    virtual ~PageConsoleAgent() = default;
+    PageConsoleAgent(PageAgentContext&);
+    ~PageConsoleAgent();
+
+    // ConsoleBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> clearMessages();
+    Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::Console::Channel>>> getLoggingChannels();
+    Inspector::Protocol::ErrorStringOr<void> setLoggingChannelLevel(Inspector::Protocol::Console::ChannelSource, Inspector::Protocol::Console::ChannelLevel);
 
 private:
-    void clearMessages(ErrorString&) override;
-
-    InspectorDOMAgent* m_inspectorDOMAgent;
+    InstrumentingAgents& m_instrumentingAgents;
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

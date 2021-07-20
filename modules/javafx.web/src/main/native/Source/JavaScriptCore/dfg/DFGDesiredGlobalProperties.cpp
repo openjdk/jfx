@@ -31,7 +31,6 @@
 #include "CodeBlock.h"
 #include "DFGCommonData.h"
 #include "DFGDesiredIdentifiers.h"
-#include "JSCInlines.h"
 #include "JSGlobalObject.h"
 
 namespace JSC { namespace DFG {
@@ -61,7 +60,12 @@ void DesiredGlobalProperties::reallyAdd(CodeBlock* codeBlock, DesiredIdentifiers
         auto* uid = identifiers.at(property.identifierNumber());
         auto& watchpointSet = property.globalObject()->ensureReferencedPropertyWatchpointSet(uid);
         ASSERT(watchpointSet.isStillValid());
-        watchpointSet.add(common.watchpoints.add(codeBlock));
+        CodeBlockJettisoningWatchpoint* watchpoint = nullptr;
+        {
+            ConcurrentJSLocker locker(codeBlock->m_lock);
+            watchpoint = common.watchpoints.add(codeBlock);
+        }
+        watchpointSet.add(WTFMove(watchpoint));
     }
 }
 

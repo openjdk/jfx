@@ -33,18 +33,18 @@
 #include "ScriptExecutionContext.h"
 #include "Timer.h"
 #include <wtf/MainThread.h>
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
 
-GenericEventQueue::GenericEventQueue(EventTarget& owner)
-    : m_owner(owner)
-    , m_isClosed(false)
+MainThreadGenericEventQueue::MainThreadGenericEventQueue(EventTarget& owner)
+    : ActiveDOMObject(owner.scriptExecutionContext())
+    , m_owner(owner)
+    , m_taskQueue(makeUniqueRef<GenericTaskQueue<Timer>>())
 {
 }
 
-GenericEventQueue::~GenericEventQueue() = default;
-
-void GenericEventQueue::enqueueEvent(RefPtr<Event>&& event)
+void MainThreadGenericEventQueue::enqueueEvent(RefPtr<Event>&& event)
 {
     if (m_isClosed)
         return;
@@ -54,45 +54,47 @@ void GenericEventQueue::enqueueEvent(RefPtr<Event>&& event)
 
     m_pendingEvents.append(WTFMove(event));
 
-    if (m_isSuspended)
+    if (isSuspendedOrPausedByClient())
         return;
 
-    m_taskQueue.enqueueTask(std::bind(&GenericEventQueue::dispatchOneEvent, this));
+    m_taskQueue->enqueueTask(std::bind(&MainThreadGenericEventQueue::dispatchOneEvent, this));
 }
 
-void GenericEventQueue::dispatchOneEvent()
+void MainThreadGenericEventQueue::dispatchOneEvent()
 {
     ASSERT(!m_pendingEvents.isEmpty());
 
     Ref<EventTarget> protect(m_owner);
+    SetForScope<bool> eventFiringScope(m_isFiringEvent, true);
+
     RefPtr<Event> event = m_pendingEvents.takeFirst();
-    EventTarget& target = event->target() ? *event->target() : m_owner;
-    ASSERT_WITH_MESSAGE(!target.scriptExecutionContext()->activeDOMObjectsAreStopped(),
+    Ref<EventTarget> target = event->target() ? *event->target() : m_owner;
+    ASSERT_WITH_MESSAGE(!target->scriptExecutionContext()->activeDOMObjectsAreStopped(),
         "An attempt to dispatch an event on a stopped target by EventTargetInterface=%d (nodeName=%s target=%p owner=%p)",
-        m_owner.eventTargetInterface(), m_owner.isNode() ? static_cast<Node&>(m_owner).nodeName().ascii().data() : "", &target, &m_owner);
-    target.dispatchEvent(*event);
+        m_owner.eventTargetInterface(), m_owner.isNode() ? static_cast<Node&>(m_owner).nodeName().ascii().data() : "", target.ptr(), &m_owner);
+    target->dispatchEvent(*event);
 }
 
-void GenericEventQueue::close()
+void MainThreadGenericEventQueue::close()
 {
     m_isClosed = true;
 
-    m_taskQueue.close();
+    m_taskQueue->close();
     m_pendingEvents.clear();
 }
 
-void GenericEventQueue::cancelAllEvents()
+void MainThreadGenericEventQueue::cancelAllEvents()
 {
-    m_taskQueue.cancelAllTasks();
+    m_taskQueue->cancelAllTasks();
     m_pendingEvents.clear();
 }
 
-bool GenericEventQueue::hasPendingEvents() const
+bool MainThreadGenericEventQueue::hasPendingActivity() const
 {
-    return !m_pendingEvents.isEmpty();
+    return !m_pendingEvents.isEmpty() || m_isFiringEvent;
 }
 
-bool GenericEventQueue::hasPendingEventsOfType(const AtomicString& type) const
+bool MainThreadGenericEventQueue::hasPendingEventsOfType(const AtomString& type) const
 {
     for (auto& event : m_pendingEvents) {
         if (event->type() == type)
@@ -102,22 +104,60 @@ bool GenericEventQueue::hasPendingEventsOfType(const AtomicString& type) const
     return false;
 }
 
-void GenericEventQueue::suspend()
+void MainThreadGenericEventQueue::setPaused(bool shouldPause)
 {
-    ASSERT(!m_isSuspended);
-    m_isSuspended = true;
-    m_taskQueue.cancelAllTasks();
+    if (m_isPausedByClient == shouldPause)
+        return;
+
+    m_isPausedByClient = shouldPause;
+    if (shouldPause)
+        m_taskQueue->cancelAllTasks();
+    else
+        rescheduleAllEventsIfNeeded();
 }
 
-void GenericEventQueue::resume()
+void MainThreadGenericEventQueue::suspend(ReasonForSuspension)
+{
+    if (m_isSuspended)
+        return;
+
+    m_isSuspended = true;
+    m_taskQueue->cancelAllTasks();
+}
+
+void MainThreadGenericEventQueue::resume()
 {
     if (!m_isSuspended)
         return;
 
     m_isSuspended = false;
+    rescheduleAllEventsIfNeeded();
+}
+
+void MainThreadGenericEventQueue::rescheduleAllEventsIfNeeded()
+{
+    if (isSuspendedOrPausedByClient())
+        return;
 
     for (unsigned i = 0; i < m_pendingEvents.size(); ++i)
-        m_taskQueue.enqueueTask(std::bind(&GenericEventQueue::dispatchOneEvent, this));
+        m_taskQueue->enqueueTask(std::bind(&MainThreadGenericEventQueue::dispatchOneEvent, this));
+}
+
+void MainThreadGenericEventQueue::stop()
+{
+    close();
+}
+
+const char* MainThreadGenericEventQueue::activeDOMObjectName() const
+{
+    return "MainThreadGenericEventQueue";
+}
+
+UniqueRef<MainThreadGenericEventQueue> MainThreadGenericEventQueue::create(EventTarget& eventTarget)
+{
+    auto eventQueue = makeUniqueRef<MainThreadGenericEventQueue>(eventTarget);
+    eventQueue->suspendIfNeeded();
+    return eventQueue;
 }
 
 }

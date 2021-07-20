@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,7 +111,7 @@ void GCController::garbageCollectNowIfNotDoneRecently()
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
 {
-    auto thread = Thread::create("WebCore: GCController", &collect);
+    auto thread = Thread::create("WebCore: GCController", &collect, ThreadType::GarbageCollection);
 
     if (waitUntilDone) {
         thread->waitForCompletion();
@@ -150,7 +150,7 @@ void GCController::dumpHeap()
     VM& vm = commonVM();
     JSLockHolder lock(vm);
 
-    sanitizeStackForVM(&vm);
+    sanitizeStackForVM(vm);
 
     String jsonData;
     {

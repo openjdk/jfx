@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,6 @@ namespace JSC {
 class HandleSet;
 class VM;
 class JSValue;
-class SlotVisitor;
 
 class HandleNode {
 public:
@@ -65,15 +64,15 @@ class HandleSet {
 public:
     static HandleSet* heapFor(HandleSlot);
 
-    HandleSet(VM*);
+    HandleSet(VM&);
     ~HandleSet();
 
-    VM* vm();
+    VM& vm();
 
     HandleSlot allocate();
     void deallocate(HandleSlot);
 
-    void visitStrongHandles(SlotVisitor&);
+    template<typename Visitor> void visitStrongHandles(Visitor&);
 
     JS_EXPORT_PRIVATE void writeBarrier(HandleSlot, const JSValue&);
 
@@ -88,11 +87,11 @@ private:
 
     JS_EXPORT_PRIVATE void grow();
 
-#if ENABLE(GC_VALIDATION) || !ASSERT_DISABLED
+#if ENABLE(GC_VALIDATION) || ASSERT_ENABLED
     bool isLiveNode(Node*);
 #endif
 
-    VM* m_vm;
+    VM& m_vm;
     DoublyLinkedList<HandleBlock> m_blockList;
 
     SentinelLinkedList<Node> m_strongList;
@@ -105,7 +104,7 @@ inline HandleSet* HandleSet::heapFor(HandleSlot handle)
     return toNode(handle)->handleSet();
 }
 
-inline VM* HandleSet::vm()
+inline VM& HandleSet::vm()
 {
     return m_vm;
 }
@@ -139,14 +138,14 @@ inline void HandleSet::deallocate(HandleSlot handle)
 }
 
 inline HandleNode::HandleNode()
-    : m_prev(0)
-    , m_next(0)
+    : m_prev(nullptr)
+    , m_next(nullptr)
 {
 }
 
 inline HandleNode::HandleNode(WTF::SentinelTag)
-    : m_prev(0)
-    , m_next(0)
+    : m_prev(nullptr)
+    , m_next(nullptr)
 {
 }
 

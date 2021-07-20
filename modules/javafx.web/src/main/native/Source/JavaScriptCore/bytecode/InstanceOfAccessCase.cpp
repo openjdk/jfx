@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 
 #if ENABLE(JIT)
 
+#include "JSCJSValueInlines.h"
+
 namespace JSC {
 
 std::unique_ptr<AccessCase> InstanceOfAccessCase::create(
@@ -47,7 +49,7 @@ std::unique_ptr<AccessCase> InstanceOfAccessCase::clone() const
 {
     std::unique_ptr<InstanceOfAccessCase> result(new InstanceOfAccessCase(*this));
     result->resetState();
-    return WTFMove(result);
+    return result;
 }
 
 InstanceOfAccessCase::~InstanceOfAccessCase()
@@ -57,7 +59,7 @@ InstanceOfAccessCase::~InstanceOfAccessCase()
 InstanceOfAccessCase::InstanceOfAccessCase(
     VM& vm, JSCell* owner, AccessType accessType, Structure* structure,
     const ObjectPropertyConditionSet& conditionSet, JSObject* prototype)
-    : Base(vm, owner, accessType, invalidOffset, structure, conditionSet, nullptr)
+    : Base(vm, owner, accessType, nullptr, invalidOffset, structure, conditionSet, nullptr)
     , m_prototype(vm, owner, prototype)
 {
 }

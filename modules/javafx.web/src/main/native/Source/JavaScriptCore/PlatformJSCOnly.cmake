@@ -1,4 +1,12 @@
-add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+if (ENABLE_REMOTE_INSPECTOR)
+    if (USE_GLIB)
+        include(inspector/remote/GLib.cmake)
+    elseif (APPLE)
+        include(inspector/remote/Cocoa.cmake)
+    else ()
+        include(inspector/remote/Socket.cmake)
+    endif ()
+endif ()
 
 if (USE_GLIB)
     list(APPEND JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES

@@ -34,27 +34,21 @@
 
 #include "InspectorWebAgentBase.h"
 #include "LayoutRect.h"
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
-#include <JavaScriptCore/ScriptDebugListener.h>
 #include <wtf/JSONValues.h>
+#include <wtf/RunLoop.h>
 #include <wtf/Vector.h>
-
-namespace Inspector {
-class InspectorHeapAgent;
-class InspectorScriptProfilerAgent;
-}
 
 namespace WebCore {
 
 class Event;
 class FloatQuad;
 class Frame;
-class InspectorPageAgent;
 class RenderObject;
 class RunLoopObserver;
-
-typedef String ErrorString;
 
 enum class TimelineRecordType {
     EventDispatch,
@@ -87,31 +81,27 @@ enum class TimelineRecordType {
     ObserverCallback,
 };
 
-class InspectorTimelineAgent final
-    : public InspectorAgentBase
-    , public Inspector::TimelineBackendDispatcherHandler
-    , public Inspector::ScriptDebugListener {
+class InspectorTimelineAgent final : public InspectorAgentBase , public Inspector::TimelineBackendDispatcherHandler , public JSC::Debugger::Observer {
     WTF_MAKE_NONCOPYABLE(InspectorTimelineAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorTimelineAgent(WebAgentContext&, Inspector::InspectorScriptProfilerAgent*, Inspector::InspectorHeapAgent*, InspectorPageAgent*);
-    virtual ~InspectorTimelineAgent();
+    InspectorTimelineAgent(PageAgentContext&);
+    ~InspectorTimelineAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) final;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) final;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
-    void start(ErrorString&, const int* maxCallStackDepth = nullptr) final;
-    void stop(ErrorString&) final;
-    void setAutoCaptureEnabled(ErrorString&, bool) final;
-    void setInstruments(ErrorString&, const JSON::Array&) final;
+    // TimelineBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<void> start(Optional<int>&& maxCallStackDepth);
+    Inspector::Protocol::ErrorStringOr<void> stop();
+    Inspector::Protocol::ErrorStringOr<void> setAutoCaptureEnabled(bool);
+    Inspector::Protocol::ErrorStringOr<void> setInstruments(Ref<JSON::Array>&&);
 
-    int id() const { return m_id; }
-
-    void didCommitLoad();
-
-    // Methods called from WebCore.
-    void startFromConsole(JSC::ExecState*, const String& title);
-    void stopFromConsole(JSC::ExecState*, const String& title);
+    // JSC::Debugger::Observer
+    void breakpointActionProbe(JSC::JSGlobalObject*, JSC::BreakpointActionID, unsigned batchId, unsigned sampleId, JSC::JSValue result);
 
     // InspectorInstrumentation
     void didInstallTimer(int timerId, Seconds timeout, bool singleShot, Frame*);
@@ -121,7 +111,7 @@ public:
     void willCallFunction(const String& scriptName, int scriptLine, int scriptColumn, Frame*);
     void didCallFunction(Frame*);
     void willDispatchEvent(const Event&, Frame*);
-    void didDispatchEvent();
+    void didDispatchEvent(bool defaultPrevented);
     void willEvaluateScript(const String&, int lineNumber, int columnNumber, Frame&);
     void didEvaluateScript(Frame&);
     void didInvalidateLayout(Frame&);
@@ -146,17 +136,11 @@ public:
     void mainFrameStartedLoading();
     void mainFrameNavigated();
 
+    // Console
+    void startFromConsole(JSC::JSGlobalObject*, const String& title);
+    void stopFromConsole(JSC::JSGlobalObject*, const String& title);
+
 private:
-    // ScriptDebugListener
-    void didParseSource(JSC::SourceID, const Script&) final { }
-    void failedToParseSource(const String&, const String&, int, int, const String&) final { }
-    void didPause(JSC::ExecState&, JSC::JSValue, JSC::JSValue) final { }
-    void didContinue() final { }
-
-    void breakpointActionLog(JSC::ExecState&, const String&) final { }
-    void breakpointActionSound(int) final { }
-    void breakpointActionProbe(JSC::ExecState&, const Inspector::ScriptBreakpointAction&, unsigned batchId, unsigned sampleId, JSC::JSValue result) final;
-
     void startProgrammaticCapture();
     void stopProgrammaticCapture();
 
@@ -167,15 +151,14 @@ private:
     void toggleCPUInstrument(InstrumentState);
     void toggleMemoryInstrument(InstrumentState);
     void toggleTimelineInstrument(InstrumentState);
+    void toggleAnimationInstrument(InstrumentState);
     void disableBreakpoints();
     void enableBreakpoints();
 
     friend class TimelineRecordStack;
 
     struct TimelineRecordEntry {
-        TimelineRecordEntry()
-            : type(TimelineRecordType::EventDispatch) { }
-        TimelineRecordEntry(RefPtr<JSON::Object>&& record, RefPtr<JSON::Object>&& data, RefPtr<JSON::Array>&& children, TimelineRecordType type)
+        TimelineRecordEntry(Ref<JSON::Object>&& record, Ref<JSON::Object>&& data, RefPtr<JSON::Array>&& children, TimelineRecordType type)
             : record(WTFMove(record))
             , data(WTFMove(data))
             , children(WTFMove(children))
@@ -183,47 +166,43 @@ private:
         {
         }
 
-        RefPtr<JSON::Object> record;
-        RefPtr<JSON::Object> data;
+        Ref<JSON::Object> record;
+        Ref<JSON::Object> data;
         RefPtr<JSON::Array> children;
         TimelineRecordType type;
     };
 
-    void internalStart(const int* maxCallStackDepth = nullptr);
+    void internalStart(Optional<int>&& maxCallStackDepth);
     void internalStop();
     double timestamp();
 
-    void sendEvent(RefPtr<JSON::Object>&&);
-    void appendRecord(RefPtr<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
-    void pushCurrentRecord(RefPtr<JSON::Object>&&, TimelineRecordType, bool captureCallStack, Frame*);
+    void sendEvent(Ref<JSON::Object>&&);
+    void appendRecord(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
+    void pushCurrentRecord(Ref<JSON::Object>&&, TimelineRecordType, bool captureCallStack, Frame*);
     void pushCurrentRecord(const TimelineRecordEntry& record) { m_recordStack.append(record); }
 
-    TimelineRecordEntry createRecordEntry(RefPtr<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
+    TimelineRecordEntry createRecordEntry(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
 
     void setFrameIdentifier(JSON::Object* record, Frame*);
 
     void didCompleteRecordEntry(const TimelineRecordEntry&);
     void didCompleteCurrentRecord(TimelineRecordType);
 
-    void addRecordToTimeline(RefPtr<JSON::Object>&&, TimelineRecordType);
-    void clearRecordStack();
+    void addRecordToTimeline(Ref<JSON::Object>&&, TimelineRecordType);
 
     void localToPageQuad(const RenderObject&, const LayoutRect&, FloatQuad*);
 
     std::unique_ptr<Inspector::TimelineFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::TimelineBackendDispatcher> m_backendDispatcher;
-    Inspector::InspectorScriptProfilerAgent* m_scriptProfilerAgent;
-    Inspector::InspectorHeapAgent* m_heapAgent;
-    InspectorPageAgent* m_pageAgent;
+    Page& m_inspectedPage;
 
     Vector<TimelineRecordEntry> m_recordStack;
     Vector<TimelineRecordEntry> m_pendingConsoleProfileRecords;
 
-    int m_id { 1 };
     int m_maxCallStackDepth { 5 };
 
-    bool m_enabled { false };
-    bool m_enabledFromFrontend { false };
+    bool m_tracking { false };
+    bool m_trackingFromFrontend { false };
     bool m_programmaticCaptureRestoreBreakpointActiveValue { false };
 
     bool m_autoCaptureEnabled { false };
@@ -234,8 +213,10 @@ private:
 #if PLATFORM(COCOA)
     std::unique_ptr<WebCore::RunLoopObserver> m_frameStartObserver;
     std::unique_ptr<WebCore::RunLoopObserver> m_frameStopObserver;
-#endif
     int m_runLoopNestingLevel { 0 };
+#elif USE(GLIB_EVENT_LOOP)
+    std::unique_ptr<RunLoop::Observer> m_runLoopObserver;
+#endif
     bool m_startedComposite { false };
 };
 

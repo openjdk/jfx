@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 namespace WebCore {
 
@@ -33,12 +33,12 @@ namespace WHLSL {
 
 namespace Metal {
 
-unsigned long calculateVertexBufferIndex(unsigned long);
+unsigned calculateVertexBufferIndex(unsigned);
 
-} // namespace Metal
+}
 
-} // namespace WHLSL
+}
 
-} // namespace WebCore
+}
 
-#endif // ENABLE(WEBGPU)
+#endif // ENABLE(WHLSL_COMPILER)

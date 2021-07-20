@@ -37,14 +37,28 @@
 
 namespace WebCore {
 
-void WebGLObject::setObject(Platform3DObject object)
+void WebGLObject::setObject(PlatformGLObject object)
 {
     ASSERT(!m_object);
     ASSERT(!m_deleted);
     m_object = object;
 }
 
-void WebGLObject::deleteObject(GraphicsContext3D* context3d)
+void WebGLObject::runDestructor()
+{
+    auto& lock = objectGraphLockForContext();
+    if (lock.isHeld()) {
+        // Destruction of WebGLObjects can happen in chains triggered from GC.
+        // The lock must be held only once, at the beginning of the chain.
+        auto locker = AbstractLocker(NoLockingNecessary);
+        deleteObject(locker, nullptr);
+    } else {
+        auto locker = holdLock(lock);
+        deleteObject(locker, nullptr);
+    }
+}
+
+void WebGLObject::deleteObject(const AbstractLocker& locker, GraphicsContextGL* context3d)
 {
     m_deleted = true;
     if (!m_object)
@@ -55,13 +69,14 @@ void WebGLObject::deleteObject(GraphicsContext3D* context3d)
 
     if (!m_attachmentCount) {
         if (!context3d)
-            context3d = getAGraphicsContext3D();
+            context3d = getAGraphicsContextGL();
 
         if (context3d)
-            deleteObjectImpl(context3d, m_object);
-
-        m_object = 0;
+            deleteObjectImpl(locker, context3d, m_object);
     }
+
+    if (!m_attachmentCount)
+        m_object = 0;
 }
 
 void WebGLObject::detach()
@@ -69,12 +84,12 @@ void WebGLObject::detach()
     m_attachmentCount = 0; // Make sure OpenGL resource is deleted.
 }
 
-void WebGLObject::onDetached(GraphicsContext3D* context3d)
+void WebGLObject::onDetached(const AbstractLocker& locker, GraphicsContextGL* context3d)
 {
     if (m_attachmentCount)
         --m_attachmentCount;
     if (m_deleted)
-        deleteObject(context3d);
+        deleteObject(locker, context3d);
 }
 
 }

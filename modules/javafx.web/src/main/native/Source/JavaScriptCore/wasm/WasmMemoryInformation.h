@@ -39,13 +39,13 @@
 namespace JSC { namespace Wasm {
 
 struct PinnedSizeRegisterInfo {
-    GPRReg sizeRegister;
+    GPRReg boundsCheckingSizeRegister;
     unsigned sizeOffset;
 };
 
 class PinnedRegisterInfo {
 public:
-    PinnedRegisterInfo(Vector<PinnedSizeRegisterInfo>&&, GPRReg, GPRReg);
+    PinnedRegisterInfo(GPRReg, GPRReg, GPRReg);
 
     static const PinnedRegisterInfo& get();
 
@@ -55,14 +55,12 @@ public:
         result.set(baseMemoryPointer);
         if (wasmContextInstancePointer != InvalidGPRReg)
             result.set(wasmContextInstancePointer);
-        if (mode != MemoryMode::Signaling) {
-            for (const auto& info : sizeRegisters)
-                result.set(info.sizeRegister);
-        }
+        if (mode != MemoryMode::Signaling)
+            result.set(boundsCheckingSizeRegister);
         return result;
     }
 
-    Vector<PinnedSizeRegisterInfo> sizeRegisters;
+    GPRReg boundsCheckingSizeRegister;
     GPRReg baseMemoryPointer;
     GPRReg wasmContextInstancePointer;
 };
@@ -74,10 +72,11 @@ public:
         ASSERT(!*this);
     }
 
-    MemoryInformation(PageCount initial, PageCount maximum, bool isImport);
+    MemoryInformation(PageCount initial, PageCount maximum, bool isShared, bool isImport);
 
     PageCount initial() const { return m_initial; }
     PageCount maximum() const { return m_maximum; }
+    bool isShared() const { return m_isShared; }
     bool isImport() const { return m_isImport; }
 
     explicit operator bool() const { return !!m_initial; }
@@ -85,6 +84,7 @@ public:
 private:
     PageCount m_initial { };
     PageCount m_maximum { };
+    bool m_isShared { false };
     bool m_isImport { false };
 };
 

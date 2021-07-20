@@ -31,7 +31,6 @@
 
 #include "B3BasicBlockInlines.h"
 #include "B3CCallValue.h"
-#include "B3Compilation.h"
 #include "B3FrequentedBlock.h"
 #include "B3Procedure.h"
 #include "B3SwitchValue.h"
@@ -39,6 +38,7 @@
 #include "FTLAbbreviatedTypes.h"
 #include "FTLAbstractHeapRepository.h"
 #include "FTLCommonValues.h"
+#include "FTLSelectPredictability.h"
 #include "FTLState.h"
 #include "FTLSwitchCase.h"
 #include "FTLTypedPointer.h"
@@ -46,6 +46,7 @@
 #include "FTLWeight.h"
 #include "FTLWeightedTarget.h"
 #include "HeapCell.h"
+#include "JITCompilation.h"
 #include <wtf/OrderMaker.h>
 #include <wtf/StringPrintStream.h>
 
@@ -104,14 +105,14 @@ public:
     LValue constBool(bool value);
     LValue constInt32(int32_t value);
 
-    LValue weakPointer(DFG::Graph& graph, JSCell* cell)
+    LValue alreadyRegisteredWeakPointer(DFG::Graph& graph, JSCell* cell)
     {
         ASSERT(graph.m_plan.weakReferences().contains(cell));
 
         return constIntPtr(bitwise_cast<intptr_t>(cell));
     }
 
-    LValue weakPointer(DFG::FrozenValue* value)
+    LValue alreadyRegisteredFrozenPointer(DFG::FrozenValue* value)
     {
         RELEASE_ASSERT(value->value().isCell());
 
@@ -180,7 +181,7 @@ public:
 
     LValue doubleUnary(DFG::Arith::UnaryType, LValue);
 
-    LValue doublePow(LValue base, LValue exponent);
+    LValue doubleStdPow(LValue base, LValue exponent);
     LValue doublePowi(LValue base, LValue exponent);
 
     LValue doubleSqrt(LValue);
@@ -188,6 +189,7 @@ public:
     LValue doubleLog(LValue);
 
     LValue doubleToInt(LValue);
+    LValue doubleToInt64(LValue);
     LValue doubleToUInt(LValue);
 
     LValue signExt32To64(LValue);
@@ -364,7 +366,7 @@ public:
     LValue testIsZeroPtr(LValue value, LValue mask) { return isNull(bitAnd(value, mask)); }
     LValue testNonZeroPtr(LValue value, LValue mask) { return notNull(bitAnd(value, mask)); }
 
-    LValue select(LValue value, LValue taken, LValue notTaken);
+    LValue select(LValue value, LValue taken, LValue notTaken, SelectPredictability = SelectPredictability::NotPredictable);
 
     // These are relaxed atomics by default. Use AbstractHeapRepository::decorateFencedAccess() with a
     // non-null heap to make them seq_cst fenced.
@@ -380,7 +382,7 @@ public:
     LValue call(LType type, LValue function, const VectorType& vector)
     {
         B3::CCallValue* result = m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), function);
-        result->children().appendVector(vector);
+        result->appendArgs(vector);
         return result;
     }
     LValue call(LType type, LValue function) { return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), function); }
@@ -391,14 +393,16 @@ public:
     template<typename Function, typename... Args>
     LValue callWithoutSideEffects(B3::Type type, Function function, LValue arg1, Args... args)
     {
+        static_assert(!std::is_same<Function, LValue>::value);
         return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), B3::Effects::none(),
-            constIntPtr(tagCFunctionPtr<void*>(function, B3CCallPtrTag)), arg1, args...);
+            constIntPtr(tagCFunctionPtr<void*, OperationPtrTag>(function)), arg1, args...);
     }
 
     // FIXME: Consider enhancing this to allow the client to choose the target PtrTag to use.
     // https://bugs.webkit.org/show_bug.cgi?id=184324
     template<typename FunctionType>
-    LValue operation(FunctionType function) { return constIntPtr(tagCFunctionPtr<void*>(function, B3CCallPtrTag)); }
+    LValue operation(FunctionType function) { return constIntPtr(tagCFunctionPtr<void*, OperationPtrTag>(function)); }
+    LValue operation(FunctionPtr<OperationPtrTag> function) { return constIntPtr(function.executableAddress()); }
 
     void jump(LBasicBlock);
     void branch(LValue condition, LBasicBlock taken, Weight takenWeight, LBasicBlock notTaken, Weight notTakenWeight);

@@ -37,39 +37,40 @@ class ApplicationCacheFrontendDispatcher;
 namespace WebCore {
 
 class Frame;
-class InspectorPageAgent;
 class Page;
-
-typedef String ErrorString;
 
 class InspectorApplicationCacheAgent final : public InspectorAgentBase, public Inspector::ApplicationCacheBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorApplicationCacheAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorApplicationCacheAgent(WebAgentContext&, InspectorPageAgent*);
-    virtual ~InspectorApplicationCacheAgent() = default;
+    InspectorApplicationCacheAgent(PageAgentContext&);
+    ~InspectorApplicationCacheAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
+    // ApplicationCacheBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::FrameWithManifest>>> getFramesWithManifests();
+    Inspector::Protocol::ErrorStringOr<String> getManifestForFrame(const Inspector::Protocol::Network::FrameId&);
+    Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::ApplicationCache::ApplicationCache>> getApplicationCacheForFrame(const Inspector::Protocol::Network::FrameId&);
+
+    // InspectorInstrumentation
     void updateApplicationCacheStatus(Frame*);
     void networkStateChanged();
-
-    void enable(ErrorString&) override;
-    void getFramesWithManifests(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::FrameWithManifest>>& result) override;
-    void getManifestForFrame(ErrorString&, const String& frameId, String* manifestURL) override;
-    void getApplicationCacheForFrame(ErrorString&, const String& frameId, RefPtr<Inspector::Protocol::ApplicationCache::ApplicationCache>&) override;
 
 private:
     Ref<Inspector::Protocol::ApplicationCache::ApplicationCache> buildObjectForApplicationCache(const Vector<ApplicationCacheHost::ResourceInfo>&, const ApplicationCacheHost::CacheInfo&);
     Ref<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::ApplicationCacheResource>> buildArrayForApplicationCacheResources(const Vector<ApplicationCacheHost::ResourceInfo>&);
     Ref<Inspector::Protocol::ApplicationCache::ApplicationCacheResource> buildObjectForApplicationCacheResource(const ApplicationCacheHost::ResourceInfo&);
 
-    DocumentLoader* assertFrameWithDocumentLoader(ErrorString&, const String& frameId);
+    DocumentLoader* assertFrameWithDocumentLoader(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::FrameId&);
 
     std::unique_ptr<Inspector::ApplicationCacheFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::ApplicationCacheBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent { nullptr };
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

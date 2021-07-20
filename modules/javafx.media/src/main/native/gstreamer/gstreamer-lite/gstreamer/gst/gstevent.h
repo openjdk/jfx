@@ -70,7 +70,7 @@ typedef enum {
 #define GST_EVENT_MAKE_TYPE(num,flags) \
     (((num) << GST_EVENT_NUM_SHIFT) | (flags))
 
-#define FLAG(name) GST_EVENT_TYPE_##name
+#define _FLAG(name) GST_EVENT_TYPE_##name
 
 /**
  * GstEventType:
@@ -79,7 +79,7 @@ typedef enum {
  *                 from the pipeline and unblock all streaming threads.
  * @GST_EVENT_FLUSH_STOP: Stop a flush operation. This event resets the
  *                 running-time of the pipeline.
- * @GST_EVENT_SELECT_STREAMS: A request to select one or more streams (Since 1.10)
+ * @GST_EVENT_SELECT_STREAMS: A request to select one or more streams (Since: 1.10)
  * @GST_EVENT_STREAM_START: Event to mark the start of a new stream. Sent before any
  *                 other serialized event and only sent at the start of a new stream,
  *                 not after flushing seeks.
@@ -88,7 +88,7 @@ typedef enum {
  *                 segment events contains information for clipping buffers and
  *                 converting buffer timestamps to running-time and
  *                 stream-time.
- * @GST_EVENT_STREAM_COLLECTION: A new #GstStreamCollection is available (Since 1.10)
+ * @GST_EVENT_STREAM_COLLECTION: A new #GstStreamCollection is available (Since: 1.10)
  * @GST_EVENT_TAG: A new set of metadata tags has been found in the stream.
  * @GST_EVENT_BUFFERSIZE: Notification of buffering requirements. Currently not
  *                 used yet.
@@ -97,7 +97,7 @@ typedef enum {
  *                          rendering.
  * @GST_EVENT_STREAM_GROUP_DONE: Indicates that there is no more data for
  *                 the stream group ID in the message. Sent before EOS
- *                 in some instances and should be handled mostly the same. (Since 1.10)
+ *                 in some instances and should be handled mostly the same. (Since: 1.10)
  * @GST_EVENT_EOS: End-Of-Stream. No more data is to be expected to follow
  *                 without either a STREAM_START event, or a FLUSH_STOP and a SEGMENT
  *                 event.
@@ -121,6 +121,11 @@ typedef enum {
  * @GST_EVENT_RECONFIGURE: A request for upstream renegotiating caps and reconfiguring.
  * @GST_EVENT_TOC_SELECT: A request for a new playback position based on TOC
  *                        entry's UID.
+ * @GST_EVENT_INSTANT_RATE_CHANGE: Notify downstream that a playback rate override
+ *                                 should be applied as soon as possible. (Since: 1.18)
+ * @GST_EVENT_INSTANT_RATE_SYNC_TIME: Sent by the pipeline to notify elements that handle the
+ *                                    instant-rate-change event about the running-time when
+ *                                    the rate multiplier should be applied (or was applied). (Since: 1.18)
  * @GST_EVENT_CUSTOM_UPSTREAM: Upstream custom event
  * @GST_EVENT_CUSTOM_DOWNSTREAM: Downstream custom event that travels in the
  *                        data flow.
@@ -143,45 +148,49 @@ typedef enum {
   GST_EVENT_UNKNOWN               = GST_EVENT_MAKE_TYPE (0, 0),
 
   /* bidirectional events */
-  GST_EVENT_FLUSH_START           = GST_EVENT_MAKE_TYPE (10, FLAG(BOTH)),
-  GST_EVENT_FLUSH_STOP            = GST_EVENT_MAKE_TYPE (20, FLAG(BOTH) | FLAG(SERIALIZED)),
+  GST_EVENT_FLUSH_START           = GST_EVENT_MAKE_TYPE (10, _FLAG(BOTH)),
+  GST_EVENT_FLUSH_STOP            = GST_EVENT_MAKE_TYPE (20, _FLAG(BOTH) | _FLAG(SERIALIZED)),
 
   /* downstream serialized events */
-  GST_EVENT_STREAM_START          = GST_EVENT_MAKE_TYPE (40, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
-  GST_EVENT_CAPS                  = GST_EVENT_MAKE_TYPE (50, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
-  GST_EVENT_SEGMENT               = GST_EVENT_MAKE_TYPE (70, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
-  GST_EVENT_STREAM_COLLECTION     = GST_EVENT_MAKE_TYPE (75, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
-  GST_EVENT_TAG                   = GST_EVENT_MAKE_TYPE (80, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
-  GST_EVENT_BUFFERSIZE            = GST_EVENT_MAKE_TYPE (90, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
-  GST_EVENT_SINK_MESSAGE          = GST_EVENT_MAKE_TYPE (100, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
-  GST_EVENT_STREAM_GROUP_DONE     = GST_EVENT_MAKE_TYPE (105, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
-  GST_EVENT_EOS                   = GST_EVENT_MAKE_TYPE (110, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
-  GST_EVENT_TOC                   = GST_EVENT_MAKE_TYPE (120, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
-  GST_EVENT_PROTECTION            = GST_EVENT_MAKE_TYPE (130, FLAG (DOWNSTREAM) | FLAG (SERIALIZED) | FLAG (STICKY) | FLAG (STICKY_MULTI)),
+  GST_EVENT_STREAM_START          = GST_EVENT_MAKE_TYPE (40, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
+  GST_EVENT_CAPS                  = GST_EVENT_MAKE_TYPE (50, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
+  GST_EVENT_SEGMENT               = GST_EVENT_MAKE_TYPE (70, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
+  GST_EVENT_STREAM_COLLECTION     = GST_EVENT_MAKE_TYPE (75, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY) | _FLAG(STICKY_MULTI)),
+  GST_EVENT_TAG                   = GST_EVENT_MAKE_TYPE (80, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY) | _FLAG(STICKY_MULTI)),
+  GST_EVENT_BUFFERSIZE            = GST_EVENT_MAKE_TYPE (90, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
+  GST_EVENT_SINK_MESSAGE          = GST_EVENT_MAKE_TYPE (100, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY) | _FLAG(STICKY_MULTI)),
+  GST_EVENT_STREAM_GROUP_DONE     = GST_EVENT_MAKE_TYPE (105, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
+  GST_EVENT_EOS                   = GST_EVENT_MAKE_TYPE (110, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
+  GST_EVENT_TOC                   = GST_EVENT_MAKE_TYPE (120, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY) | _FLAG(STICKY_MULTI)),
+  GST_EVENT_PROTECTION            = GST_EVENT_MAKE_TYPE (130, _FLAG (DOWNSTREAM) | _FLAG (SERIALIZED) | _FLAG (STICKY) | _FLAG (STICKY_MULTI)),
 
   /* non-sticky downstream serialized */
-  GST_EVENT_SEGMENT_DONE          = GST_EVENT_MAKE_TYPE (150, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_GAP                   = GST_EVENT_MAKE_TYPE (160, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
+  GST_EVENT_SEGMENT_DONE          = GST_EVENT_MAKE_TYPE (150, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
+  GST_EVENT_GAP                   = GST_EVENT_MAKE_TYPE (160, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
+
+  /* sticky downstream non-serialized */
+  GST_EVENT_INSTANT_RATE_CHANGE   = GST_EVENT_MAKE_TYPE (180, _FLAG(DOWNSTREAM) | _FLAG(STICKY)),
 
   /* upstream events */
-  GST_EVENT_QOS                   = GST_EVENT_MAKE_TYPE (190, FLAG(UPSTREAM)),
-  GST_EVENT_SEEK                  = GST_EVENT_MAKE_TYPE (200, FLAG(UPSTREAM)),
-  GST_EVENT_NAVIGATION            = GST_EVENT_MAKE_TYPE (210, FLAG(UPSTREAM)),
-  GST_EVENT_LATENCY               = GST_EVENT_MAKE_TYPE (220, FLAG(UPSTREAM)),
-  GST_EVENT_STEP                  = GST_EVENT_MAKE_TYPE (230, FLAG(UPSTREAM)),
-  GST_EVENT_RECONFIGURE           = GST_EVENT_MAKE_TYPE (240, FLAG(UPSTREAM)),
-  GST_EVENT_TOC_SELECT            = GST_EVENT_MAKE_TYPE (250, FLAG(UPSTREAM)),
-  GST_EVENT_SELECT_STREAMS        = GST_EVENT_MAKE_TYPE (260, FLAG(UPSTREAM)),
+  GST_EVENT_QOS                    = GST_EVENT_MAKE_TYPE (190, _FLAG(UPSTREAM)),
+  GST_EVENT_SEEK                   = GST_EVENT_MAKE_TYPE (200, _FLAG(UPSTREAM)),
+  GST_EVENT_NAVIGATION             = GST_EVENT_MAKE_TYPE (210, _FLAG(UPSTREAM)),
+  GST_EVENT_LATENCY                = GST_EVENT_MAKE_TYPE (220, _FLAG(UPSTREAM)),
+  GST_EVENT_STEP                   = GST_EVENT_MAKE_TYPE (230, _FLAG(UPSTREAM)),
+  GST_EVENT_RECONFIGURE            = GST_EVENT_MAKE_TYPE (240, _FLAG(UPSTREAM)),
+  GST_EVENT_TOC_SELECT             = GST_EVENT_MAKE_TYPE (250, _FLAG(UPSTREAM)),
+  GST_EVENT_SELECT_STREAMS         = GST_EVENT_MAKE_TYPE (260, _FLAG(UPSTREAM)),
+  GST_EVENT_INSTANT_RATE_SYNC_TIME = GST_EVENT_MAKE_TYPE (261, _FLAG(UPSTREAM)),
 
   /* custom events start here */
-  GST_EVENT_CUSTOM_UPSTREAM          = GST_EVENT_MAKE_TYPE (270, FLAG(UPSTREAM)),
-  GST_EVENT_CUSTOM_DOWNSTREAM        = GST_EVENT_MAKE_TYPE (280, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_CUSTOM_DOWNSTREAM_OOB    = GST_EVENT_MAKE_TYPE (290, FLAG(DOWNSTREAM)),
-  GST_EVENT_CUSTOM_DOWNSTREAM_STICKY = GST_EVENT_MAKE_TYPE (300, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
-  GST_EVENT_CUSTOM_BOTH              = GST_EVENT_MAKE_TYPE (310, FLAG(BOTH) | FLAG(SERIALIZED)),
-  GST_EVENT_CUSTOM_BOTH_OOB          = GST_EVENT_MAKE_TYPE (320, FLAG(BOTH))
+  GST_EVENT_CUSTOM_UPSTREAM          = GST_EVENT_MAKE_TYPE (270, _FLAG(UPSTREAM)),
+  GST_EVENT_CUSTOM_DOWNSTREAM        = GST_EVENT_MAKE_TYPE (280, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
+  GST_EVENT_CUSTOM_DOWNSTREAM_OOB    = GST_EVENT_MAKE_TYPE (290, _FLAG(DOWNSTREAM)),
+  GST_EVENT_CUSTOM_DOWNSTREAM_STICKY = GST_EVENT_MAKE_TYPE (300, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY) | _FLAG(STICKY_MULTI)),
+  GST_EVENT_CUSTOM_BOTH              = GST_EVENT_MAKE_TYPE (310, _FLAG(BOTH) | _FLAG(SERIALIZED)),
+  GST_EVENT_CUSTOM_BOTH_OOB          = GST_EVENT_MAKE_TYPE (320, _FLAG(BOTH))
 } GstEventType;
-#undef FLAG
+#undef _FLAG
 
 /**
  * GstStreamFlags:
@@ -256,6 +265,7 @@ GST_EXPORT GType _gst_event_type;
  * Get the #GstClockTime timestamp of the event. This is the time when the event
  * was created.
  */
+/* FIXME 2.0: Remove the GstEvent::timestamp field */
 #define GST_EVENT_TIMESTAMP(event)      (GST_EVENT_CAST(event)->timestamp)
 
 /**
@@ -315,64 +325,37 @@ GST_EXPORT GType _gst_event_type;
  *     same as @ev
  */
 #define         gst_event_make_writable(ev)   GST_EVENT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (ev)))
-/**
- * gst_event_replace:
- * @old_event: (inout) (transfer full) (nullable): pointer to a
- *     pointer to a #GstEvent to be replaced.
- * @new_event: (allow-none) (transfer none): pointer to a #GstEvent that will
- *     replace the event pointed to by @old_event.
- *
- * Modifies a pointer to a #GstEvent to point to a different #GstEvent. The
- * modification is done atomically (so this is useful for ensuring thread safety
- * in some cases), and the reference counts are updated appropriately (the old
- * event is unreffed, the new one is reffed).
- *
- * Either @new_event or the #GstEvent pointed to by @old_event may be %NULL.
- *
- * Returns: %TRUE if @new_event was different from @old_event
- */
+
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 static inline gboolean
-gst_event_replace (GstEvent **old_event, GstEvent *new_event)
+gst_event_replace(GstEvent** old_event, GstEvent* new_event)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_event, (GstMiniObject *) new_event);
 }
 
-/**
- * gst_event_steal:
- * @old_event: (inout) (transfer full) (nullable): pointer to a
- *     pointer to a #GstEvent to be stolen.
- *
- * Atomically replace the #GstEvent pointed to by @old_event with %NULL and
- * return the original event.
- *
- * Returns: the #GstEvent that was in @old_event
- */
 static inline GstEvent *
 gst_event_steal (GstEvent **old_event)
 {
   return GST_EVENT_CAST (gst_mini_object_steal ((GstMiniObject **) old_event));
 }
 
-/**
- * gst_event_take:
- * @old_event: (inout) (transfer full) (nullable): pointer to a
- *     pointer to a #GstEvent to be stolen.
- * @new_event: (allow-none) (transfer full): pointer to a #GstEvent that will
- *     replace the event pointed to by @old_event.
- *
- * Modifies a pointer to a #GstEvent to point to a different #GstEvent. This
- * function is similar to gst_event_replace() except that it takes ownership of
- * @new_event.
- *
- * Either @new_event or the #GstEvent pointed to by @old_event may be %NULL.
- *
- * Returns: %TRUE if @new_event was different from @old_event
- */
 static inline gboolean
 gst_event_take (GstEvent **old_event, GstEvent *new_event)
 {
   return gst_mini_object_take ((GstMiniObject **) old_event, (GstMiniObject *) new_event);
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+gboolean    gst_event_replace (GstEvent ** old_event,
+                               GstEvent * new_event);
+
+GST_API
+GstEvent *  gst_event_steal   (GstEvent ** old_event);
+
+GST_API
+gboolean    gst_event_take    (GstEvent ** old_event,
+                               GstEvent *new_event);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /**
  * GstQOSType:
@@ -410,6 +393,7 @@ struct _GstEvent {
 
   /*< public >*/ /* with COW */
   GstEventType  type;
+  /* FIXME 2.0: Remove the GstEvent::timestamp field */
   guint64       timestamp;
   guint32       seqnum;
 };
@@ -424,48 +408,45 @@ GST_API
 GstEventTypeFlags
                 gst_event_type_get_flags        (GstEventType type);
 
-
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 /* refcounting */
-/**
- * gst_event_ref:
- * @event: The event to refcount
- *
- * Increase the refcount of this event.
- *
- * Returns: (transfer full): @event (for convenience when doing assignments)
- */
 static inline GstEvent *
 gst_event_ref (GstEvent * event)
 {
   return (GstEvent *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (event));
 }
 
-/**
- * gst_event_unref:
- * @event: (transfer full): the event to refcount
- *
- * Decrease the refcount of an event, freeing it if the refcount reaches 0.
- */
 static inline void
 gst_event_unref (GstEvent * event)
 {
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (event));
 }
 
+static inline void
+gst_clear_event (GstEvent ** event_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) event_ptr);
+}
+
 /* copy event */
-/**
- * gst_event_copy:
- * @event: The event to copy
- *
- * Copy the event using the event specific copy function.
- *
- * Returns: (transfer full): the new event
- */
 static inline GstEvent *
 gst_event_copy (const GstEvent * event)
 {
   return GST_EVENT_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (event)));
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstEvent *      gst_event_ref                   (GstEvent * event);
+
+GST_API
+void            gst_event_unref                 (GstEvent * event);
+
+GST_API
+void            gst_clear_event                 (GstEvent ** event_ptr);
+
+GST_API
+GstEvent *      gst_event_copy                  (const GstEvent * event);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 GST_API
 GType           gst_event_get_type              (void);
@@ -484,6 +465,9 @@ GstStructure *  gst_event_writable_structure    (GstEvent *event);
 
 GST_API
 gboolean        gst_event_has_name              (GstEvent *event, const gchar *name);
+
+GST_API
+gboolean        gst_event_has_name_id           (GstEvent *event, GQuark name);
 
 /* identifiers for events and messages */
 
@@ -510,10 +494,10 @@ GST_API
 void            gst_event_parse_stream_start    (GstEvent *event, const gchar **stream_id);
 
 GST_API
-void            gst_event_set_stream        (GstEvent *event, GstStream *stream);
+void            gst_event_set_stream    (GstEvent *event, GstStream *stream);
 
 GST_API
-void            gst_event_parse_stream      (GstEvent *event, GstStream **stream);
+void            gst_event_parse_stream    (GstEvent *event, GstStream **stream);
 
 GST_API
 void            gst_event_set_stream_flags      (GstEvent *event, GstStreamFlags flags);
@@ -659,6 +643,12 @@ void            gst_event_parse_seek            (GstEvent *event, gdouble *rate,
                                                  GstSeekType *start_type, gint64 *start,
                                                  GstSeekType *stop_type, gint64 *stop);
 
+GST_API
+void            gst_event_set_seek_trickmode_interval (GstEvent *event, GstClockTime interval);
+
+GST_API
+void            gst_event_parse_seek_trickmode_interval (GstEvent *event, GstClockTime *interval);
+
 /* navigation event */
 
 GST_API
@@ -702,9 +692,29 @@ GstEvent*       gst_event_new_segment_done      (GstFormat format, gint64 positi
 GST_API
 void            gst_event_parse_segment_done    (GstEvent *event, GstFormat *format, gint64 *position);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+/* instant-rate-change event */
+
+GST_API
+GstEvent *      gst_event_new_instant_rate_change   (gdouble rate_multiplier, GstSegmentFlags new_flags) G_GNUC_MALLOC;
+
+GST_API
+void            gst_event_parse_instant_rate_change (GstEvent *event,
+                                                     gdouble  *rate_multiplier, GstSegmentFlags *new_flags);
+
+/* instant-rate-change-sync-time event */
+
+GST_API
+GstEvent *      gst_event_new_instant_rate_sync_time   (gdouble      rate_multiplier,
+                                                        GstClockTime running_time,
+                                                        GstClockTime upstream_running_time) G_GNUC_MALLOC;
+
+GST_API
+void            gst_event_parse_instant_rate_sync_time (GstEvent     *event,
+                                                        gdouble      *rate_multiplier,
+                                                        GstClockTime *running_time,
+                                                        GstClockTime *upstream_running_time);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstEvent, gst_event_unref)
-#endif
 
 G_END_DECLS
 

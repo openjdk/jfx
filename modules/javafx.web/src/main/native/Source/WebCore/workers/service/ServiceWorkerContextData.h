@@ -25,12 +25,12 @@
 
 #pragma once
 
+#include "CertificateInfo.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerJobDataIdentifier.h"
 #include "ServiceWorkerRegistrationData.h"
 #include "WorkerType.h"
-#include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 #include <wtf/URL.h>
 #include <wtf/URLHash.h>
@@ -40,7 +40,6 @@
 namespace WebCore {
 
 struct ServiceWorkerContextData {
-
     struct ImportedScript {
         String script;
         URL responseURL;
@@ -53,20 +52,28 @@ struct ServiceWorkerContextData {
             encoder << script << responseURL << mimeType;
         }
 
-        template<class Decoder> static bool decode(Decoder& decoder, ImportedScript& script)
+        template<class Decoder> static Optional<ImportedScript> decode(Decoder& decoder)
         {
-            ImportedScript importedScript;
-            if (!decoder.decode(importedScript.script))
-                return false;
+            Optional<String> script;
+            decoder >> script;
+            if (!script)
+                return WTF::nullopt;
 
-            if (!decoder.decode(importedScript.responseURL))
-                return false;
+            Optional<URL> responseURL;
+            decoder >> responseURL;
+            if (!responseURL)
+                return WTF::nullopt;
 
-            if (!decoder.decode(importedScript.mimeType))
-                return false;
+            Optional<String> mimeType;
+            decoder >> mimeType;
+            if (!mimeType)
+                return WTF::nullopt;
 
-            script = WTFMove(importedScript);
-            return true;
+            return {{
+                WTFMove(*script),
+                WTFMove(*responseURL),
+                WTFMove(*mimeType)
+            }};
         }
     };
 
@@ -74,11 +81,11 @@ struct ServiceWorkerContextData {
     ServiceWorkerRegistrationData registration;
     ServiceWorkerIdentifier serviceWorkerIdentifier;
     String script;
+    CertificateInfo certificateInfo;
     ContentSecurityPolicyResponseHeaders contentSecurityPolicy;
     String referrerPolicy;
     URL scriptURL;
     WorkerType workerType;
-    PAL::SessionID sessionID;
     bool loadedFromDisk;
     HashMap<URL, ImportedScript> scriptResourceMap;
 
@@ -91,8 +98,9 @@ struct ServiceWorkerContextData {
 template<class Encoder>
 void ServiceWorkerContextData::encode(Encoder& encoder) const
 {
-    encoder << jobDataIdentifier << registration << serviceWorkerIdentifier << script << contentSecurityPolicy << referrerPolicy << scriptURL << workerType << sessionID << loadedFromDisk;
+    encoder << jobDataIdentifier << registration << serviceWorkerIdentifier << script << contentSecurityPolicy << referrerPolicy << scriptURL << workerType << loadedFromDisk;
     encoder << scriptResourceMap;
+    encoder << certificateInfo;
 }
 
 template<class Decoder>
@@ -129,11 +137,7 @@ Optional<ServiceWorkerContextData> ServiceWorkerContextData::decode(Decoder& dec
         return WTF::nullopt;
 
     WorkerType workerType;
-    if (!decoder.decodeEnum(workerType))
-        return WTF::nullopt;
-
-    PAL::SessionID sessionID;
-    if (!decoder.decode(sessionID))
+    if (!decoder.decode(workerType))
         return WTF::nullopt;
 
     bool loadedFromDisk;
@@ -144,7 +148,24 @@ Optional<ServiceWorkerContextData> ServiceWorkerContextData::decode(Decoder& dec
     if (!decoder.decode(scriptResourceMap))
         return WTF::nullopt;
 
-    return {{ WTFMove(*jobDataIdentifier), WTFMove(*registration), WTFMove(*serviceWorkerIdentifier), WTFMove(script), WTFMove(contentSecurityPolicy), WTFMove(referrerPolicy), WTFMove(scriptURL), workerType, sessionID, loadedFromDisk, WTFMove(scriptResourceMap) }};
+    Optional<CertificateInfo> certificateInfo;
+    decoder >> certificateInfo;
+    if (!certificateInfo)
+        return WTF::nullopt;
+
+    return {{
+        WTFMove(*jobDataIdentifier),
+        WTFMove(*registration),
+        WTFMove(*serviceWorkerIdentifier),
+        WTFMove(script),
+        WTFMove(*certificateInfo),
+        WTFMove(contentSecurityPolicy),
+        WTFMove(referrerPolicy),
+        WTFMove(scriptURL),
+        workerType,
+        loadedFromDisk,
+        WTFMove(scriptResourceMap)
+    }};
 }
 
 } // namespace WebCore

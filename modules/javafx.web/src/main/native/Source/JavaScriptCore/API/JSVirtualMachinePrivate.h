@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "JSExportMacros.h"
-#include <JavaScriptCore/JavaScript.h>
+#import "JSExportMacros.h"
+#import <JavaScriptCore/JavaScript.h>
 
 #if JSC_OBJC_API_ENABLED
 
@@ -43,7 +43,7 @@
  API may not synchronously free memory.
 */
 
-- (void)shrinkFootprintWhenIdle JSC_API_AVAILABLE(macosx(10.14), ios(12.0));
+- (void)shrinkFootprintWhenIdle JSC_API_AVAILABLE(macos(10.14), ios(12.0));
 
 #if ENABLE(DFG_JIT)
 
@@ -58,7 +58,7 @@
 @param numberOfThreads The number of threads the DFG compiler should use going forward
 @result The previous number of threads being used by the DFG compiler
 */
-+ (NSUInteger)setNumberOfDFGCompilerThreads:(NSUInteger)numberOfThreads JSC_API_AVAILABLE(macosx(10.14), ios(12.0));
++ (NSUInteger)setNumberOfDFGCompilerThreads:(NSUInteger)numberOfThreads JSC_API_AVAILABLE(macos(10.14), ios(12.0));
 
 /*!
 @method
@@ -71,7 +71,14 @@
 @param numberOfThreads The number of threads the FTL compiler should use going forward
 @result The previous number of threads being used by the FTL compiler
 */
-+ (NSUInteger)setNumberOfFTLCompilerThreads:(NSUInteger)numberOfThreads JSC_API_AVAILABLE(macosx(10.14), ios(12.0));
++ (NSUInteger)setNumberOfFTLCompilerThreads:(NSUInteger)numberOfThreads JSC_API_AVAILABLE(macos(10.14), ios(12.0));
+
+/*!
+@method
+@abstract Allows embedders of JSC to specify that JSC should crash the process if a VM is created when unexpected.
+@param shouldCrash Sets process-wide state that indicates whether VM creation should crash or not.
+*/
++ (void)setCrashOnVMCreation:(BOOL)shouldCrash;
 
 #endif // ENABLE(DFG_JIT)
 

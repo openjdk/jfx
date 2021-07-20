@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@
 namespace JSC {
 
 class CodeBlock;
-struct CodeOrigin;
+class CodeOrigin;
 
 namespace Profiler {
 
@@ -65,7 +65,7 @@ public:
     bool isHashTableDeletedValue() const;
 
     void dump(PrintStream&) const;
-    JSValue toJS(ExecState*) const;
+    JSValue toJS(JSGlobalObject*) const;
 
 private:
     Vector<Origin, 1> m_stack;
@@ -79,7 +79,7 @@ inline bool OriginStack::isHashTableDeletedValue() const
 struct OriginStackHash {
     static unsigned hash(const OriginStack& key) { return key.hash(); }
     static bool equal(const OriginStack& a, const OriginStack& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::Profiler
@@ -87,9 +87,7 @@ struct OriginStackHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::Profiler::OriginStack> {
-    typedef JSC::Profiler::OriginStackHash Hash;
-};
+template<> struct DefaultHash<JSC::Profiler::OriginStack> : JSC::Profiler::OriginStackHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::Profiler::OriginStack> : SimpleClassHashTraits<JSC::Profiler::OriginStack> { };

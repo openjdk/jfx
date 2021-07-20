@@ -28,7 +28,9 @@
 
 
 [
-    GenerateIsReachable=ImplFrame,
+    GenerateIsReachable=ReachableFromDOMWindow,
+    ImplementationLacksVTable,
+    Exposed=Window
 ] interface Screen {
     readonly attribute unsigned long height;
     readonly attribute unsigned long width;

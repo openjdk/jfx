@@ -30,7 +30,7 @@
 #include "GamepadProviderClient.h"
 #include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
@@ -44,9 +44,9 @@ class GamepadManager : public GamepadProviderClient {
 public:
     static GamepadManager& singleton();
 
-    void platformGamepadConnected(PlatformGamepad&) final;
+    void platformGamepadConnected(PlatformGamepad&, EventMakesGamepadsVisible) final;
     void platformGamepadDisconnected(PlatformGamepad&) final;
-    void platformGamepadInputActivity(bool shouldMakeGamepadVisible) final;
+    void platformGamepadInputActivity(EventMakesGamepadsVisible) final;
 
     void registerNavigator(NavigatorGamepad*);
     void unregisterNavigator(NavigatorGamepad*);
@@ -57,7 +57,7 @@ private:
     GamepadManager();
 
     void makeGamepadVisible(PlatformGamepad&, HashSet<NavigatorGamepad*>&, HashSet<DOMWindow*>&);
-    void dispatchGamepadEvent(const WTF::AtomicString& eventName, PlatformGamepad&);
+    void dispatchGamepadEvent(const WTF::AtomString& eventName, PlatformGamepad&);
 
     void maybeStartMonitoringGamepads();
     void maybeStopMonitoringGamepads();

@@ -46,9 +46,9 @@ static void paintLayer(GraphicsContext& context, GraphicsLayer& layer, const Int
     context.translate(targetRect.x(), targetRect.y());
 
     if (supportsAlpha) {
-        context.setCompositeOperation(CompositeCopy);
-        context.fillRect(IntRect(IntPoint::zero(), sourceRect.size()), Color::transparent);
-        context.setCompositeOperation(CompositeSourceOver);
+        context.setCompositeOperation(CompositeOperator::Copy);
+        context.fillRect(IntRect(IntPoint::zero(), sourceRect.size()), Color::transparentBlack);
+        context.setCompositeOperation(CompositeOperator::SourceOver);
     }
 
     context.translate(-sourceRect.x(), -sourceRect.y());

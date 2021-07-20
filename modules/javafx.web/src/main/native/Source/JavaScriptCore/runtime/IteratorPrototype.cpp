@@ -28,8 +28,6 @@
 
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include "ObjectConstructor.h"
 
 namespace JSC {
 
@@ -39,7 +37,6 @@ void IteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    didBecomePrototype();
 
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->iteratorSymbol, iteratorPrototypeSymbolIteratorGetterCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }

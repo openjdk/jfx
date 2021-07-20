@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Oleksandr Skachkov <gskachkov@gmail.com>.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +27,7 @@
 #include "config.h"
 #include "AsyncGeneratorPrototype.h"
 
-#include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
 
 #include "AsyncGeneratorPrototype.lut.h"
 
@@ -48,8 +47,7 @@ void AsyncGeneratorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "AsyncGenerator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    didBecomePrototype();
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 } // namespace JSC

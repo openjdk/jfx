@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,21 +30,24 @@
 
 namespace WebCore {
 
-void JSStyleSheet::visitAdditionalChildren(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void JSStyleSheet::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(root(&wrapped()));
 }
 
-JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject* globalObject, Ref<StyleSheet>&& styleSheet)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSStyleSheet);
+
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<StyleSheet>&& styleSheet)
 {
     if (styleSheet->isCSSStyleSheet())
         return createWrapper<CSSStyleSheet>(globalObject, WTFMove(styleSheet));
     return createWrapper<StyleSheet>(globalObject, WTFMove(styleSheet));
 }
 
-JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, StyleSheet& stylesheet)
+JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, StyleSheet& stylesheet)
 {
-    return wrap(state, globalObject, stylesheet);
+    return wrap(lexicalGlobalObject, globalObject, stylesheet);
 }
 
 } // namespace WebCore

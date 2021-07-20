@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +27,8 @@
 #include "config.h"
 #include "GeneratorPrototype.h"
 
-#include "JSCBuiltins.h"
+#include "FunctionExecutable.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
 
 #include "GeneratorPrototype.lut.h"
 
@@ -48,8 +48,7 @@ void GeneratorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "Generator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    didBecomePrototype();
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 } // namespace JSC

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2011, 2013, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
@@ -42,23 +42,26 @@ void printErrorMessageForFrame(Frame* frame, const String& message)
     frame->document()->domWindow()->printErrorMessage(message);
 }
 
-static inline bool canAccessDocument(JSC::ExecState* state, Document* targetDocument, SecurityReportingOption reportingOption)
+static inline bool canAccessDocument(JSC::JSGlobalObject* lexicalGlobalObject, Document* targetDocument, SecurityReportingOption reportingOption)
 {
-    VM& vm = state->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
     if (!targetDocument)
         return false;
 
-    DOMWindow& active = activeDOMWindow(*state);
+    if (auto* templateHost = targetDocument->templateDocumentHost())
+        targetDocument = templateHost;
 
-    if (active.document()->securityOrigin().canAccess(targetDocument->securityOrigin()))
+    DOMWindow& active = activeDOMWindow(*lexicalGlobalObject);
+
+    if (active.document()->securityOrigin().isSameOriginDomain(targetDocument->securityOrigin()))
         return true;
 
     switch (reportingOption) {
-    case ThrowSecurityError:
-        throwSecurityError(*state, scope, targetDocument->domWindow()->crossDomainAccessErrorMessage(active, IncludeTargetOrigin::No));
+    case ThrowSecurityError: {
+        VM& vm = lexicalGlobalObject->vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+        throwSecurityError(*lexicalGlobalObject, scope, targetDocument->domWindow()->crossDomainAccessErrorMessage(active, IncludeTargetOrigin::No));
         break;
+    }
     case LogSecurityError:
         printErrorMessageForFrame(targetDocument->frame(), targetDocument->domWindow()->crossDomainAccessErrorMessage(active, IncludeTargetOrigin::Yes));
         break;
@@ -69,45 +72,50 @@ static inline bool canAccessDocument(JSC::ExecState* state, Document* targetDocu
     return false;
 }
 
-bool BindingSecurity::shouldAllowAccessToFrame(ExecState& state, Frame& frame, String& message)
+bool BindingSecurity::shouldAllowAccessToFrame(JSGlobalObject& lexicalGlobalObject, Frame& frame, String& message)
 {
-    if (BindingSecurity::shouldAllowAccessToFrame(&state, &frame, DoNotReportSecurityError))
+    if (BindingSecurity::shouldAllowAccessToFrame(&lexicalGlobalObject, &frame, DoNotReportSecurityError))
         return true;
-    message = frame.document()->domWindow()->crossDomainAccessErrorMessage(activeDOMWindow(state), IncludeTargetOrigin::No);
+    message = frame.document()->domWindow()->crossDomainAccessErrorMessage(activeDOMWindow(lexicalGlobalObject), IncludeTargetOrigin::No);
     return false;
 }
 
-bool BindingSecurity::shouldAllowAccessToDOMWindow(ExecState& state, DOMWindow* globalObject, String& message)
+bool BindingSecurity::shouldAllowAccessToDOMWindow(JSGlobalObject& lexicalGlobalObject, DOMWindow* globalObject, String& message)
 {
-    return globalObject && shouldAllowAccessToDOMWindow(state, *globalObject, message);
+    return globalObject && shouldAllowAccessToDOMWindow(lexicalGlobalObject, *globalObject, message);
 }
 
-bool BindingSecurity::shouldAllowAccessToDOMWindow(ExecState& state, DOMWindow& globalObject, String& message)
+bool BindingSecurity::shouldAllowAccessToDOMWindow(JSGlobalObject& lexicalGlobalObject, DOMWindow& globalObject, String& message)
 {
-    if (BindingSecurity::shouldAllowAccessToDOMWindow(&state, globalObject, DoNotReportSecurityError))
+    VM& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    bool shouldAllowAccess = BindingSecurity::shouldAllowAccessToDOMWindow(&lexicalGlobalObject, globalObject, DoNotReportSecurityError);
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
+    if (shouldAllowAccess)
         return true;
-    message = globalObject.crossDomainAccessErrorMessage(activeDOMWindow(state), IncludeTargetOrigin::No);
+    message = globalObject.crossDomainAccessErrorMessage(activeDOMWindow(lexicalGlobalObject), IncludeTargetOrigin::No);
     return false;
 }
 
-bool BindingSecurity::shouldAllowAccessToDOMWindow(JSC::ExecState* state, DOMWindow& target, SecurityReportingOption reportingOption)
+bool BindingSecurity::shouldAllowAccessToDOMWindow(JSC::JSGlobalObject* lexicalGlobalObject, DOMWindow& target, SecurityReportingOption reportingOption)
 {
-    return canAccessDocument(state, target.document(), reportingOption);
+    return canAccessDocument(lexicalGlobalObject, target.document(), reportingOption);
 }
 
-bool BindingSecurity::shouldAllowAccessToDOMWindow(JSC::ExecState* state, DOMWindow* target, SecurityReportingOption reportingOption)
+bool BindingSecurity::shouldAllowAccessToDOMWindow(JSC::JSGlobalObject* lexicalGlobalObject, DOMWindow* target, SecurityReportingOption reportingOption)
 {
-    return target && shouldAllowAccessToDOMWindow(state, *target, reportingOption);
+    return target && shouldAllowAccessToDOMWindow(lexicalGlobalObject, *target, reportingOption);
 }
 
-bool BindingSecurity::shouldAllowAccessToFrame(JSC::ExecState* state, Frame* target, SecurityReportingOption reportingOption)
+bool BindingSecurity::shouldAllowAccessToFrame(JSC::JSGlobalObject* lexicalGlobalObject, Frame* target, SecurityReportingOption reportingOption)
 {
-    return target && canAccessDocument(state, target->document(), reportingOption);
+    return target && canAccessDocument(lexicalGlobalObject, target->document(), reportingOption);
 }
 
-bool BindingSecurity::shouldAllowAccessToNode(JSC::ExecState& state, Node* target)
+bool BindingSecurity::shouldAllowAccessToNode(JSC::JSGlobalObject& lexicalGlobalObject, Node* target)
 {
-    return !target || canAccessDocument(&state, &target->document(), LogSecurityError);
+    return !target || canAccessDocument(&lexicalGlobalObject, &target->document(), LogSecurityError);
 }
 
 } // namespace WebCore

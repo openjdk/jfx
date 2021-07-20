@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -353,10 +353,14 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                         (event.getCode() == KeyCode.UP || event.getCode() == KeyCode.DOWN ||
                          event.getCode() == KeyCode.LEFT || event.getCode() == KeyCode.RIGHT ||
                          event.getCode() == KeyCode.HOME || event.getCode() == KeyCode.END)) {
+                    enableAtomicityCheck = true;
                     updateToolbarState(true);
+                    enableAtomicityCheck = false;
                 } else if ((event.isControlDown() || event.isMetaDown()) &&
                             event.getCode() == KeyCode.A) {
+                    enableAtomicityCheck = true;
                     updateToolbarState(true);
+                    enableAtomicityCheck = false;
                 }
             });
         });
@@ -689,7 +693,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         });
 
         fontFamilyComboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
-            executeCommand(FONT_FAMILY.getCommand(), ("".equals(newValue)) ? "''" : newValue);
+            executeCommand(FONT_FAMILY.getCommand(), "'" + newValue + "'");
         });
 
         fontSizeComboBox = new ComboBox<String>();
@@ -826,6 +830,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         button.getStyleClass().add(styleClass);
         toolbar.getItems().add(button);
 
+        @SuppressWarnings("removal")
         Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
 //        button.setGraphic(new ImageView(icon));
         ((StyleableProperty)button.graphicProperty()).applyStyle(null, new ImageView(icon));
@@ -850,6 +855,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             toggleButton.setToggleGroup(toggleGroup);
         }
 
+        @SuppressWarnings("removal")
         Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
         ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null, new ImageView(icon));
 //        toggleButton.setGraphic(new ImageView(icon));
@@ -1139,7 +1145,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             String font   = fontFamilyComboBox.getValue().toString();
 
             executeCommand(FORMAT.getCommand(), format);
-            executeCommand(FONT_FAMILY.getCommand(), font);
+            executeCommand(FONT_FAMILY.getCommand(), "'" + font + "'");
         }
     }
 

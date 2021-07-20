@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,19 @@
 #if ENABLE(VIDEO)
 
 #include "HTMLMediaElement.h"
+#include "Supplementable.h"
 #include <memory>
 
 namespace WebCore {
 
 class HTMLImageLoader;
+class ImageBuffer;
 class RenderVideo;
+class PictureInPictureObserver;
 
-class HTMLVideoElement final : public HTMLMediaElement {
+enum class RenderingMode : bool;
+
+class HTMLVideoElement final : public HTMLMediaElement, public Supplementable<HTMLVideoElement> {
     WTF_MAKE_ISO_ALLOCATED(HTMLVideoElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLVideoElement> create(Document&);
@@ -65,27 +70,35 @@ public:
     void webkitRequestFullscreen() override;
 #endif
 
+    RefPtr<ImageBuffer> createBufferForPainting(const FloatSize&, RenderingMode) const;
+
     // Used by canvas to gain raw pixel access
     void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&);
 
-    NativeImagePtr nativeImageForCurrentTime();
+    RefPtr<NativeImage> nativeImageForCurrentTime();
 
-    // Used by WebGL to do GPU-GPU textures copy if possible.
-    // See more details at MediaPlayer::copyVideoTextureToPlatformTexture() defined in Source/WebCore/platform/graphics/MediaPlayer.h.
-    bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject texture, GC3Denum target, GC3Dint level, GC3Denum internalFormat, GC3Denum format, GC3Denum type, bool premultiplyAlpha, bool flipY);
-
-    bool shouldDisplayPosterImage() const { return displayMode() == Poster || displayMode() == PosterWaitingForVideo; }
+    WEBCORE_EXPORT bool shouldDisplayPosterImage() const;
 
     URL posterImageURL() const;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    enum class VideoPresentationMode { Fullscreen, PictureInPicture, Inline };
+    enum class VideoPresentationMode { Inline, Fullscreen, PictureInPicture };
+    static VideoPresentationMode toPresentationMode(HTMLMediaElementEnums::VideoFullscreenMode);
     WEBCORE_EXPORT bool webkitSupportsPresentationMode(VideoPresentationMode) const;
-    void webkitSetPresentationMode(VideoPresentationMode);
     VideoPresentationMode webkitPresentationMode() const;
-    void setFullscreenMode(VideoFullscreenMode);
-    void fullscreenModeChanged(VideoFullscreenMode) final;
+    void webkitSetPresentationMode(VideoPresentationMode);
+
+    WEBCORE_EXPORT void setPresentationMode(VideoPresentationMode);
+    WEBCORE_EXPORT void didEnterFullscreenOrPictureInPicture(const FloatSize&);
+    WEBCORE_EXPORT void didExitFullscreenOrPictureInPicture();
+    WEBCORE_EXPORT bool isChangingPresentationMode() const;
+
+    void setVideoFullscreenFrame(const FloatRect&) final;
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    void setPictureInPictureObserver(PictureInPictureObserver*);
+#endif
 #endif
 
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
@@ -101,28 +114,37 @@ private:
     void scheduleResizeEventIfSizeChanged() final;
     bool rendererIsNeeded(const RenderStyle&) final;
     void didAttachRenderers() final;
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     bool isVideo() const final { return true; }
     bool hasVideo() const final { return player() && player()->hasVideo(); }
     bool supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const final;
     bool isURLAttribute(const Attribute&) const final;
-    const AtomicString& imageSourceURL() const final;
+    const AtomString& imageSourceURL() const final;
+
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
     bool hasAvailableVideoFrame() const;
-    void updateDisplayState() final;
-    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
-    void setDisplayMode(DisplayMode) final;
+    void mediaPlayerFirstVideoFrameAvailable() final;
 
-    PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::Video; }
+    PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::MediaType::Video; }
 
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
 
-    AtomicString m_defaultPosterURL;
+    AtomString m_defaultPosterURL;
 
     unsigned m_lastReportedVideoWidth { 0 };
     unsigned m_lastReportedVideoHeight { 0 };
+
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    bool m_enteringPictureInPicture { false };
+    bool m_exitingPictureInPicture { false };
+#endif
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    PictureInPictureObserver* m_pictureInPictureObserver { nullptr };
+#endif
 };
 
 } // namespace WebCore

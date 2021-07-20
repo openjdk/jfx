@@ -27,7 +27,7 @@
 #include "config.h"
 #include "HTMLTrackElement.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "ContentSecurityPolicy.h"
 #include "Event.h"
@@ -35,7 +35,6 @@
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "Logging.h"
-#include "RuntimeEnabledFeatures.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/CString.h>
 
@@ -60,6 +59,7 @@ static String urlForLoggingTrack(const URL& url)
 
 inline HTMLTrackElement::HTMLTrackElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
+    , ActiveDOMObject(document)
     , m_loadTimer(*this, &HTMLTrackElement::loadTimerFired)
 {
     LOG(Media, "HTMLTrackElement::HTMLTrackElement - %p", this);
@@ -76,7 +76,9 @@ HTMLTrackElement::~HTMLTrackElement()
 
 Ref<HTMLTrackElement> HTMLTrackElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(*new HTMLTrackElement(tagName, document));
+    auto trackElement = adoptRef(*new HTMLTrackElement(tagName, document));
+    trackElement->suspendIfNeeded();
+    return trackElement;
 }
 
 Node::InsertedIntoAncestorResult HTMLTrackElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -99,7 +101,7 @@ void HTMLTrackElement::removedFromAncestor(RemovalType removalType, ContainerNod
         downcast<HTMLMediaElement>(oldParentOfRemovedTree).didRemoveTextTrack(*this);
 }
 
-void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == srcAttr) {
         scheduleLoad();
@@ -112,28 +114,26 @@ void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomicStr
         track().setLabel(value);
     else if (name == srclangAttr)
         track().setLanguage(value);
-    else if (name == defaultAttr)
-        track().setIsDefault(!value.isNull());
 
     HTMLElement::parseAttribute(name, value);
 }
 
-const AtomicString& HTMLTrackElement::kind()
+const AtomString& HTMLTrackElement::kind()
 {
     return track().kindKeyword();
 }
 
-void HTMLTrackElement::setKind(const AtomicString& kind)
+void HTMLTrackElement::setKind(const AtomString& kind)
 {
     setAttributeWithoutSynchronization(kindAttr, kind);
 }
 
-const AtomicString& HTMLTrackElement::srclang() const
+const AtomString& HTMLTrackElement::srclang() const
 {
     return attributeWithoutSynchronization(srclangAttr);
 }
 
-const AtomicString& HTMLTrackElement::label() const
+const AtomString& HTMLTrackElement::label() const
 {
     return attributeWithoutSynchronization(labelAttr);
 }
@@ -235,6 +235,10 @@ bool HTMLTrackElement::canLoadURL(const URL& url)
 
 void HTMLTrackElement::didCompleteLoad(LoadStatus status)
 {
+    // Make sure the JS wrapper stays alive until the end of this method, even though we update the
+    // readyState to no longer be LOADING.
+    auto wrapperProtector = makePendingActivity(*this);
+
     // 4.8.10.12.3 Sourcing out-of-band text tracks (continued)
 
     // 4. Download: ...
@@ -274,12 +278,14 @@ void HTMLTrackElement::setReadyState(ReadyState state)
         parent->textTrackReadyStateChanged(m_track.get());
 }
 
-HTMLTrackElement::ReadyState HTMLTrackElement::readyState()
+HTMLTrackElement::ReadyState HTMLTrackElement::readyState() const
 {
-    return static_cast<ReadyState>(track().readinessState());
+    if (!m_track)
+        return HTMLTrackElement::NONE;
+    return static_cast<ReadyState>(m_track->readinessState());
 }
 
-const AtomicString& HTMLTrackElement::mediaElementCrossOriginAttribute() const
+const AtomString& HTMLTrackElement::mediaElementCrossOriginAttribute() const
 {
     if (auto parent = mediaElement())
         return parent->attributeWithoutSynchronization(HTMLNames::crossoriginAttr);
@@ -332,6 +338,22 @@ RefPtr<HTMLMediaElement> HTMLTrackElement::mediaElement() const
     if (!is<HTMLMediaElement>(parent))
         return nullptr;
     return downcast<HTMLMediaElement>(parent.get());
+}
+
+const char* HTMLTrackElement::activeDOMObjectName() const
+{
+    return "HTMLTrackElement";
+}
+
+void HTMLTrackElement::eventListenersDidChange()
+{
+    m_hasRelevantLoadEventsListener = hasEventListeners(eventNames().errorEvent)
+        || hasEventListeners(eventNames().loadEvent);
+}
+
+bool HTMLTrackElement::virtualHasPendingActivity() const
+{
+    return m_hasRelevantLoadEventsListener && readyState() == HTMLTrackElement::LOADING;
 }
 
 }

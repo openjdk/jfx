@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,48 +35,42 @@
 
 #include "LibWebRTCAudioFormat.h"
 #include "Logging.h"
-#include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
 
 RealtimeIncomingAudioSource::RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& audioTrack, String&& audioTrackId)
     : RealtimeMediaSource(RealtimeMediaSource::Type::Audio, "remote audio"_s, WTFMove(audioTrackId))
     , m_audioTrack(WTFMove(audioTrack))
-#if !RELEASE_LOG_DISABLED
-    , m_logIdentifier(reinterpret_cast<const void*>(cryptographicallyRandomNumber()))
-#endif
 {
-    notifyMutedChange(!m_audioTrack);
+    ASSERT(m_audioTrack);
+    m_audioTrack->RegisterObserver(this);
 }
 
 RealtimeIncomingAudioSource::~RealtimeIncomingAudioSource()
 {
     stop();
+    m_audioTrack->UnregisterObserver(this);
 }
 
 void RealtimeIncomingAudioSource::startProducingData()
 {
-    if (m_audioTrack)
-        m_audioTrack->AddSink(this);
+    m_audioTrack->AddSink(this);
 }
 
 void RealtimeIncomingAudioSource::stopProducingData()
 {
-    if (m_audioTrack)
-        m_audioTrack->RemoveSink(this);
+    m_audioTrack->RemoveSink(this);
 }
 
-void RealtimeIncomingAudioSource::setSourceTrack(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& track)
+void RealtimeIncomingAudioSource::OnChanged()
 {
-    ASSERT(track);
+    callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        if (!weakThis)
+            return;
 
-    if (m_audioTrack && isProducingData())
-        m_audioTrack->RemoveSink(this);
-
-    m_audioTrack = WTFMove(track);
-    notifyMutedChange(!m_audioTrack);
-    if (isProducingData())
-        m_audioTrack->AddSink(this);
+        if (m_audioTrack->state() == webrtc::MediaStreamTrackInterface::kEnded)
+            end();
+    });
 }
 
 const RealtimeMediaSourceCapabilities& RealtimeIncomingAudioSource::capabilities()
@@ -88,20 +82,6 @@ const RealtimeMediaSourceSettings& RealtimeIncomingAudioSource::settings()
 {
     return m_currentSettings;
 }
-
-#if !RELEASE_LOG_DISABLED
-WTFLogChannel& RealtimeIncomingAudioSource::logChannel() const
-{
-    return LogWebRTC;
-}
-
-const Logger& RealtimeIncomingAudioSource::logger() const
-{
-    if (!m_logger)
-        m_logger = Logger::create(this);
-    return *m_logger;
-}
-#endif
 
 }
 

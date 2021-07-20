@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,8 +37,6 @@
 #include "AirFixObviousSpills.h"
 #include "AirFixPartialRegisterStalls.h"
 #include "AirGenerationContext.h"
-#include "AirHandleCalleeSaves.h"
-#include "AirLiveness.h"
 #include "AirLogRegisterPressure.h"
 #include "AirLowerAfterRegAlloc.h"
 #include "AirLowerEntrySwitch.h"
@@ -48,16 +46,12 @@
 #include "AirOptimizeBlockOrder.h"
 #include "AirReportUsedRegisters.h"
 #include "AirSimplifyCFG.h"
-#include "AirStackAllocation.h"
-#include "AirTmpMap.h"
 #include "AirValidate.h"
 #include "B3Common.h"
 #include "B3Procedure.h"
 #include "B3TimingScope.h"
-#include "B3ValueInlines.h"
 #include "CCallHelpers.h"
 #include "DisallowMacroScratchRegisterUsage.h"
-#include "LinkBuffer.h"
 #include <wtf/IndexMap.h>
 
 namespace JSC { namespace B3 { namespace Air {
@@ -68,7 +62,7 @@ void prepareForGeneration(Code& code)
 
     // If we're doing super verbose dumping, the phase scope of any phase will already do a dump.
     if (shouldDumpIR(AirMode) && !shouldDumpIRAtEachPhase(AirMode)) {
-        dataLog("Initial air:\n");
+        dataLog(tierName, "Initial air:\n");
         dataLog(code);
     }
 
@@ -100,7 +94,7 @@ void prepareForGeneration(Code& code)
             dataLog(code);
         }
 
-        code.m_generateAndAllocateRegisters = std::make_unique<GenerateAndAllocateRegisters>(code);
+        code.m_generateAndAllocateRegisters = makeUnique<GenerateAndAllocateRegisters>(code);
         code.m_generateAndAllocateRegisters->prepareForGeneration();
 
         return;
@@ -116,7 +110,8 @@ void prepareForGeneration(Code& code)
 
     eliminateDeadCode(code);
 
-    if (code.optLevel() == 1) {
+    size_t numTmps = code.numTmps(Bank::GP) + code.numTmps(Bank::FP);
+    if (code.optLevel() == 1 || numTmps > Options::maximumTmpsForGraphColoring()) {
         // When we're compiling quickly, we do register and stack allocation in one linear scan
         // phase. It's fast because it computes liveness only once.
         allocateRegistersAndStackByLinearScan(code);
@@ -276,12 +271,7 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
             // We currently don't represent the full prologue/epilogue in Air, so we need to
             // have this override.
             auto start = jit.labelIgnoringWatchpoints();
-            if (code.frameSize()) {
-                jit.emitRestore(code.calleeSaveRegisterAtOffsetList());
-                jit.emitFunctionEpilogue();
-            } else
-                jit.emitFunctionEpilogueWithEmptyFrame();
-            jit.ret();
+            code.emitEpilogue(jit);
             addItem(block->last());
             auto end = jit.labelIgnoringWatchpoints();
             if (disassembler)

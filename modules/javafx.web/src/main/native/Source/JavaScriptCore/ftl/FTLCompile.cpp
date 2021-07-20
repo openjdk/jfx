@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,26 +31,20 @@
 #include "AirCode.h"
 #include "AirDisassembler.h"
 #include "B3Generate.h"
-#include "B3ProcedureInlines.h"
 #include "B3StackSlot.h"
 #include "B3Value.h"
+#include "B3ValueInlines.h"
 #include "CodeBlockWithJITType.h"
 #include "CCallHelpers.h"
-#include "DFGCommon.h"
 #include "DFGGraphSafepoint.h"
-#include "DFGOperations.h"
-#include "DataView.h"
-#include "Disassembler.h"
 #include "FTLJITCode.h"
-#include "FTLThunks.h"
-#include "JITSubGenerator.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
 #include "PCToCodeOriginMap.h"
-#include "ScratchRegisterAllocator.h"
 #include <wtf/RecursableLambda.h>
 
 namespace JSC { namespace FTL {
+
+const char* const tierName = "FTL ";
 
 using namespace DFG;
 
@@ -61,7 +55,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     VM& vm = graph.m_vm;
 
     if (shouldDumpDisassembly())
-        state.proc->code().setDisassembler(std::make_unique<B3::Air::Disassembler>());
+        state.proc->code().setDisassembler(makeUnique<B3::Air::Disassembler>());
 
     {
         GraphSafepoint safepoint(state.graph, safepointResult);
@@ -77,9 +71,9 @@ void compile(State& state, Safepoint::Result& safepointResult)
         return;
 
     std::unique_ptr<RegisterAtOffsetList> registerOffsets =
-        std::make_unique<RegisterAtOffsetList>(state.proc->calleeSaveRegisterAtOffsetList());
+        makeUnique<RegisterAtOffsetList>(state.proc->calleeSaveRegisterAtOffsetList());
     if (shouldDumpDisassembly())
-        dataLog("Unwind info for ", CodeBlockWithJITType(codeBlock, JITCode::FTLJIT), ": ", *registerOffsets, "\n");
+        dataLog(tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", *registerOffsets, "\n");
     codeBlock->setCalleeSaveRegisters(WTFMove(registerOffsets));
     ASSERT(!(state.proc->frameSize() % sizeof(EncodedJSValue)));
     state.jitCode->common.frameRegisterCount = state.proc->frameSize() / sizeof(EncodedJSValue);
@@ -87,7 +81,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     int localsOffset =
         state.capturedValue->offsetFromFP() / sizeof(EncodedJSValue) + graph.m_nextMachineLocal;
     if (shouldDumpDisassembly()) {
-        dataLog(
+        dataLog(tierName,
             "localsOffset = ", localsOffset, " for stack slot: ",
             pointerDump(state.capturedValue), " at ", RawPointer(state.capturedValue), "\n");
     }
@@ -133,15 +127,15 @@ void compile(State& state, Safepoint::Result& safepointResult)
     *state.exceptionHandler = jit.label();
     jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
     jit.move(MacroAssembler::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
-    jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
+    jit.prepareCallOperation(vm);
     CCallHelpers::Call call = jit.call(OperationPtrTag);
     jit.jumpToExceptionHandler(vm);
     jit.addLinkTask(
         [=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(call, FunctionPtr<OperationPtrTag>(lookupExceptionHandler));
+            linkBuffer.link(call, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler));
         });
 
-    state.finalizer->b3CodeLinkBuffer = std::make_unique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+    state.finalizer->b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
 
     if (state.finalizer->b3CodeLinkBuffer->didFailToAllocate()) {
         state.allocationFailed = true;
@@ -150,25 +144,24 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     B3::PCToOriginMap originMap = state.proc->releasePCToOriginMap();
     if (vm.shouldBuilderPCToCodeOriginMapping())
-        codeBlock->setPCToCodeOriginMap(std::make_unique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(vm, WTFMove(originMap)), *state.finalizer->b3CodeLinkBuffer));
+        codeBlock->setPCToCodeOriginMap(makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(vm, WTFMove(originMap)), *state.finalizer->b3CodeLinkBuffer));
 
-    CodeLocationLabel<JSEntryPtrTag> label = state.finalizer->b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(state.proc->entrypointLabel(0));
+    CodeLocationLabel<JSEntryPtrTag> label = state.finalizer->b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(state.proc->code().entrypointLabel(0));
     state.generatedFunction = label;
     state.jitCode->initializeB3Byproducts(state.proc->releaseByproducts());
 
-    for (auto pair : state.graph.m_entrypointIndexToCatchBytecodeOffset) {
-        unsigned catchBytecodeOffset = pair.value;
+    for (auto pair : state.graph.m_entrypointIndexToCatchBytecodeIndex) {
+        BytecodeIndex catchBytecodeIndex = pair.value;
         unsigned entrypointIndex = pair.key;
         Vector<FlushFormat> argumentFormats = state.graph.m_argumentFormats[entrypointIndex];
-        state.jitCode->common.appendCatchEntrypoint(
-            catchBytecodeOffset, state.finalizer->b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
+        state.jitCode->common.appendCatchEntrypoint(catchBytecodeIndex, state.finalizer->b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
     }
     state.jitCode->common.finalizeCatchEntrypoints();
 
     if (B3::Air::Disassembler* disassembler = state.proc->code().disassembler()) {
         PrintStream& out = WTF::dataFile();
 
-        out.print("Generated ", state.graph.m_plan.mode(), " code for ", CodeBlockWithJITType(state.graph.m_codeBlock, JITCode::FTLJIT), ", instruction count = ", state.graph.m_codeBlock->instructionCount(), ":\n");
+        out.print("Generated ", state.graph.m_plan.mode(), " code for ", CodeBlockWithJITType(state.graph.m_codeBlock, JITType::FTLJIT), ", instructions size = ", state.graph.m_codeBlock->instructionsSize(), ":\n");
 
         LinkBuffer& linkBuffer = *state.finalizer->b3CodeLinkBuffer;
         B3::Value* currentB3Value = nullptr;
@@ -176,10 +169,10 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
         HashSet<B3::Value*> printedValues;
         HashSet<Node*> printedNodes;
-        const char* dfgPrefix = "    ";
-        const char* b3Prefix  = "          ";
-        const char* airPrefix = "              ";
-        const char* asmPrefix = "                ";
+        const char* dfgPrefix = "DFG " "    ";
+        const char* b3Prefix  = "b3  " "          ";
+        const char* airPrefix = "Air " "              ";
+        const char* asmPrefix = "asm " "                ";
 
         auto printDFGNode = [&] (Node* node) {
             if (currentDFGNode == node)

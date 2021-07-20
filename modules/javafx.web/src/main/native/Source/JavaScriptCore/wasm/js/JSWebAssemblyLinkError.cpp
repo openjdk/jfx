@@ -28,32 +28,30 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 
 namespace JSC {
 
-JSWebAssemblyLinkError* JSWebAssemblyLinkError::create(ExecState* exec, VM& vm, Structure* structure, const String& message)
+JSWebAssemblyLinkError* JSWebAssemblyLinkError::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const String& message)
 {
     auto* instance = new (NotNull, allocateCell<JSWebAssemblyLinkError>(vm.heap)) JSWebAssemblyLinkError(vm, structure);
-    instance->m_sourceAppender = defaultSourceAppender;
     bool useCurrentFrame = true;
-    instance->finishCreation(exec, vm, message, useCurrentFrame);
+    instance->finishCreation(vm, globalObject, message, defaultSourceAppender, TypeNothing, useCurrentFrame);
     return instance;
 }
 
 JSWebAssemblyLinkError::JSWebAssemblyLinkError(VM& vm, Structure* structure)
-    : Base(vm, structure)
+    : Base(vm, structure, ErrorType::Error)
 {
 }
 
 const ClassInfo JSWebAssemblyLinkError::s_info = { "WebAssembly.LinkError", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyLinkError) };
 
 
-JSObject* createJSWebAssemblyLinkError(ExecState* exec, VM& vm, const String& message)
+JSObject* createJSWebAssemblyLinkError(JSGlobalObject* globalObject, VM& vm, const String& message)
 {
     ASSERT(!message.isEmpty());
-    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-    return JSWebAssemblyLinkError::create(exec, vm, globalObject->WebAssemblyLinkErrorStructure(), message);
+    return JSWebAssemblyLinkError::create(globalObject, vm, globalObject->webAssemblyLinkErrorStructure(), message);
 }
 
 } // namespace JSC

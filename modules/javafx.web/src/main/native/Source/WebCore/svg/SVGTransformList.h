@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,58 +21,51 @@
 
 #pragma once
 
-#include "SVGAnimatedListPropertyTearOff.h"
-#include "SVGListPropertyTearOff.h"
-#include "SVGTransformListValues.h"
+#include "DOMMatrix2DInit.h"
+#include "SVGTransform.h"
+#include "SVGTransformable.h"
+#include "SVGValuePropertyList.h"
 
 namespace WebCore {
 
-class SVGTransformList final : public SVGListPropertyTearOff<SVGTransformListValues> {
+class SVGTransformList final : public SVGValuePropertyList<SVGTransform> {
+    friend class SVGViewSpec;
+    using Base = SVGValuePropertyList<SVGTransform>;
+    using Base::Base;
+
 public:
-    using AnimatedListPropertyTearOff = SVGAnimatedListPropertyTearOff<SVGTransformListValues>;
-    using ListWrapperCache = AnimatedListPropertyTearOff::ListWrapperCache;
-
-    static Ref<SVGTransformList> create(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGTransformListValues& values, ListWrapperCache& wrappers)
+    static Ref<SVGTransformList> create()
     {
-        return adoptRef(*new SVGTransformList(animatedProperty, role, values, wrappers));
+        return adoptRef(*new SVGTransformList());
     }
 
-    ExceptionOr<Ref<SVGTransform>> createSVGTransformFromMatrix(SVGMatrix& matrix)
+    static Ref<SVGTransformList> create(SVGPropertyOwner* owner, SVGPropertyAccess access)
     {
-        ASSERT(m_values);
-        return m_values->createSVGTransformFromMatrix(matrix);
+        return adoptRef(*new SVGTransformList(owner, access));
     }
 
-    ExceptionOr<RefPtr<SVGTransform>> consolidate()
+    static Ref<SVGTransformList> create(const SVGTransformList& other, SVGPropertyAccess access)
     {
-        ASSERT(m_values);
-        ASSERT(m_wrappers);
-
-        auto result = canAlterList();
-        if (result.hasException())
-            return result.releaseException();
-        ASSERT(result.releaseReturnValue());
-
-        ASSERT(m_values->size() == m_wrappers->size());
-
-        // Spec: If the list was empty, then a value of null is returned.
-        if (m_values->isEmpty())
-            return nullptr;
-
-        detachListWrappers(0);
-
-        RefPtr<SVGTransform> wrapper = m_values->consolidate();
-        m_wrappers->append(makeWeakPtr(*wrapper));
-
-        ASSERT(m_values->size() == m_wrappers->size());
-        return WTFMove(wrapper);
+        return adoptRef(*new SVGTransformList(other, access));
     }
+
+    ExceptionOr<Ref<SVGTransform>> createSVGTransformFromMatrix(DOMMatrix2DInit&& matrixInit)
+    {
+        auto svgTransform =  SVGTransform::create();
+        svgTransform->setMatrix(WTFMove(matrixInit));
+        return svgTransform;
+    }
+
+    ExceptionOr<RefPtr<SVGTransform>> consolidate();
+    AffineTransform concatenate() const;
+
+    void parse(StringView);
+    String valueAsString() const override;
 
 private:
-    SVGTransformList(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGTransformListValues& values, ListWrapperCache& wrappers)
-        : SVGListPropertyTearOff<SVGTransformListValues>(animatedProperty, role, values, wrappers)
-    {
-    }
+    template<typename CharacterType> bool parseGeneric(StringParsingBuffer<CharacterType>&);
+    bool parse(StringParsingBuffer<LChar>&);
+    bool parse(StringParsingBuffer<UChar>&);
 };
 
 } // namespace WebCore

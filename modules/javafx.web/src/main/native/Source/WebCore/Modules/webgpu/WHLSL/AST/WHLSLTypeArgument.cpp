@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLTypeArgument.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLConstantExpression.h"
 #include "WHLSLTypeReference.h"
@@ -51,8 +51,8 @@ TypeArgument clone(const TypeArgument& typeArgument)
 {
     return WTF::visit(WTF::makeVisitor([](const ConstantExpression& constantExpression) -> TypeArgument {
         return constantExpression.clone();
-    }, [](const UniqueRef<TypeReference>& typeReference) -> TypeArgument {
-        return typeReference->cloneTypeReference();
+    }, [](const Ref<TypeReference>& typeReference) -> TypeArgument {
+        return typeReference.copyRef();
     }), typeArgument);
 }
 
@@ -62,4 +62,4 @@ TypeArgument clone(const TypeArgument& typeArgument)
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

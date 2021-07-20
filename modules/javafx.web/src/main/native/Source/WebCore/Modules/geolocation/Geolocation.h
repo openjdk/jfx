@@ -30,9 +30,9 @@
 
 #include "ActiveDOMObject.h"
 #include "Document.h"
-#include "Geoposition.h"
+#include "GeolocationPosition.h"
+#include "GeolocationPositionError.h"
 #include "PositionCallback.h"
-#include "PositionError.h"
 #include "PositionErrorCallback.h"
 #include "PositionOptions.h"
 #include "ScriptWrappable.h"
@@ -45,41 +45,45 @@ namespace WebCore {
 class Frame;
 class GeoNotifier;
 class GeolocationError;
+class Navigator;
 class Page;
 class ScriptExecutionContext;
 class SecurityOrigin;
 struct PositionOptions;
 
-class Geolocation : public ScriptWrappable, public RefCounted<Geolocation>, public ActiveDOMObject {
+class Geolocation final : public ScriptWrappable, public RefCounted<Geolocation>, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(Geolocation, WEBCORE_EXPORT);
     friend class GeoNotifier;
 public:
-    static Ref<Geolocation> create(ScriptExecutionContext*);
+    static Ref<Geolocation> create(Navigator&);
     WEBCORE_EXPORT ~Geolocation();
 
     WEBCORE_EXPORT void resetAllGeolocationPermission();
     Document* document() const { return downcast<Document>(scriptExecutionContext()); }
-    Frame* frame() const { return document() ? document()->frame() : nullptr; }
 
     void getCurrentPosition(Ref<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, PositionOptions&&);
     int watchPosition(Ref<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, PositionOptions&&);
     void clearWatch(int watchID);
 
-    WEBCORE_EXPORT void setIsAllowed(bool);
-    void resetIsAllowed() { m_allowGeolocation = Unknown; }
+    WEBCORE_EXPORT void setIsAllowed(bool, const String& authorizationToken);
+    const String& authorizationToken() const { return m_authorizationToken; }
+    WEBCORE_EXPORT void resetIsAllowed();
     bool isAllowed() const { return m_allowGeolocation == Yes; }
 
     void positionChanged();
     void setError(GeolocationError&);
     bool shouldBlockGeolocationRequests();
 
-private:
-    explicit Geolocation(ScriptExecutionContext*);
+    Navigator* navigator();
+    WEBCORE_EXPORT Frame* frame() const;
 
-    Geoposition* lastPosition();
+private:
+    explicit Geolocation(Navigator&);
+
+    GeolocationPosition* lastPosition();
 
     // ActiveDOMObject
     void stop() override;
-    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     const char* activeDOMObjectName() const override;
@@ -111,8 +115,8 @@ private:
 
     bool hasListeners() const { return !m_oneShots.isEmpty() || !m_watchers.isEmpty(); }
 
-    void sendError(GeoNotifierVector&, PositionError&);
-    void sendPosition(GeoNotifierVector&, Geoposition&);
+    void sendError(GeoNotifierVector&, GeolocationPositionError&);
+    void sendPosition(GeoNotifierVector&, GeolocationPosition&);
 
     static void extractNotifiersWithCachedPosition(GeoNotifierVector& notifiers, GeoNotifierVector* cached);
     static void copyToSet(const GeoNotifierVector&, GeoNotifierSet&);
@@ -125,10 +129,11 @@ private:
     void cancelRequests(GeoNotifierVector&);
     void cancelAllRequests();
 
-    void makeSuccessCallbacks(Geoposition&);
-    void handleError(PositionError&);
+    void makeSuccessCallbacks(GeolocationPosition&);
+    void handleError(GeolocationPositionError&);
 
     void requestPermission();
+    void revokeAuthorizationTokenIfNecessary();
 
     bool startUpdating(GeoNotifier*);
     void stopUpdating();
@@ -143,25 +148,21 @@ private:
     bool haveSuitableCachedPosition(const PositionOptions&);
     void makeCachedPositionCallbacks();
 
+    void resumeTimerFired();
+
+    WeakPtr<Navigator> m_navigator;
     GeoNotifierSet m_oneShots;
     Watchers m_watchers;
     GeoNotifierSet m_pendingForPermissionNotifiers;
-    RefPtr<Geoposition> m_lastPosition;
+    RefPtr<GeolocationPosition> m_lastPosition;
 
-    enum {
-        Unknown,
-        InProgress,
-        Yes,
-        No
-    } m_allowGeolocation;
-    bool m_isSuspended;
-    bool m_resetOnResume;
-    bool m_hasChangedPosition;
-    RefPtr<PositionError> m_errorWaitingForResume;
-
-    void resumeTimerFired();
+    enum { Unknown, InProgress, Yes, No } m_allowGeolocation { Unknown };
+    String m_authorizationToken;
+    bool m_isSuspended { false };
+    bool m_resetOnResume { false };
+    bool m_hasChangedPosition { false };
+    RefPtr<GeolocationPositionError> m_errorWaitingForResume;
     Timer m_resumeTimer;
-
     GeoNotifierSet m_requestsAwaitingCachedPosition;
 };
 

@@ -28,7 +28,7 @@
 
 G_BEGIN_DECLS
 
-/* gstelement.h and gstelementfactory.h include eachother */
+/* gstelement.h and gstelementfactory.h include each other */
 typedef struct _GstElement GstElement;
 typedef struct _GstElementClass GstElementClass;
 
@@ -230,14 +230,14 @@ typedef enum {
  * @GST_STATE_CHANGE_READY_TO_NULL    : state change from READY to NULL.
  *   * Elements close devices
  *   * Elements reset any internal state.
- * @GST_STATE_CHANGE_NULL_TO_NULL       : state change from NULL to NULL. (Since 1.14)
+ * @GST_STATE_CHANGE_NULL_TO_NULL       : state change from NULL to NULL. (Since: 1.14)
  * @GST_STATE_CHANGE_READY_TO_READY     : state change from READY to READY,
  * This might happen when going to PAUSED asynchronously failed, in that case
- * elements should make sure they are in a proper, coherent READY state. (Since 1.14)
+ * elements should make sure they are in a proper, coherent READY state. (Since: 1.14)
  * @GST_STATE_CHANGE_PAUSED_TO_PAUSED   : state change from PAUSED to PAUSED.
  * This might happen when elements were in PLAYING state and 'lost state',
- * they should make sure to go back to real 'PAUSED' state (prerolling for example). (Since 1.14)
- * @GST_STATE_CHANGE_PLAYING_TO_PLAYING : state change from PLAYING to PLAYING. (Since 1.14)
+ * they should make sure to go back to real 'PAUSED' state (prerolling for example). (Since: 1.14)
+ * @GST_STATE_CHANGE_PLAYING_TO_PLAYING : state change from PLAYING to PLAYING. (Since: 1.14)
  *
  * These are the different state changes an element goes through.
  * %GST_STATE_NULL &rArr; %GST_STATE_PLAYING is called an upwards state change
@@ -373,8 +373,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_ERROR_WITH_DETAILS:
  * @el:     the element that generates the error
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -406,8 +406,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_ERROR:
  * @el:     the element that generates the error
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -434,8 +434,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_WARNING_WITH_DETAILS:
  * @el:     the element that generates the warning
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -467,8 +467,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_WARNING:
  * @el:     the element that generates the warning
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -495,8 +495,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_INFO_WITH_DETAILS:
  * @el:     the element that generates the information
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -531,8 +531,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_INFO:
  * @el:     the element that generates the information
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -689,7 +689,7 @@ struct _GstElementClass
 
   /*< public >*/
   /* the element metadata */
-  gpointer       metadata;
+  gpointer     metadata;
 
   /* factory that the element was created from */
   GstElementFactory     *elementfactory;
@@ -860,6 +860,12 @@ void                    gst_element_set_start_time      (GstElement *element, Gs
 GST_API
 GstClockTime            gst_element_get_start_time      (GstElement *element);
 
+GST_API
+GstClockTime            gst_element_get_current_running_time (GstElement *element);
+
+GST_API
+GstClockTime            gst_element_get_current_clock_time (GstElement *element);
+
 /* bus */
 
 GST_API
@@ -901,7 +907,7 @@ GstPad*                 gst_element_get_request_pad     (GstElement *element, co
 
 GST_API
 GstPad*                 gst_element_request_pad         (GstElement *element, GstPadTemplate *templ,
-                             const gchar * name, const GstCaps *caps);
+               const gchar * name, const GstCaps *caps);
 GST_API
 void                    gst_element_release_request_pad (GstElement *element, GstPad *pad);
 
@@ -1016,6 +1022,13 @@ GST_API
 void                    gst_element_lost_state          (GstElement * element);
 
 
+/**
+ * GstElementCallAsyncFunc:
+ * @element: The #GstElement this function has been called against
+ * @user_data: Data passed in the function where that callback has been passed
+ *
+ * Callback prototype used in #gst_element_call_async
+ */
 typedef void          (*GstElementCallAsyncFunc)        (GstElement * element,
                                                          gpointer     user_data);
 GST_API
@@ -1050,9 +1063,7 @@ GList*                  gst_element_get_pad_template_list      (GstElement *elem
 GST_API
 const gchar *           gst_element_get_metadata               (GstElement * element, const gchar * key);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstElement, gst_object_unref)
-#endif
 
 G_END_DECLS
 

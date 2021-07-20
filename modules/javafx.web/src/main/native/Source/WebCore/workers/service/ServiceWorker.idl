@@ -36,12 +36,13 @@
 ] interface ServiceWorker : EventTarget {
     readonly attribute USVString scriptURL;
     readonly attribute ServiceWorkerState state;
-    [CallWith=ScriptExecutionContext, MayThrowException] void postMessage(any message, optional sequence<object> transfer = []);
+    [CallWith=GlobalObject, MayThrowException] undefined postMessage(any message, sequence<object> transfer);
+    [CallWith=GlobalObject, MayThrowException] undefined postMessage(any message, optional PostMessageOptions options);
 
     // event
     attribute EventHandler onstatechange;
 };
-ServiceWorker implements AbstractWorker;
+ServiceWorker includes AbstractWorker;
 
 enum ServiceWorkerState {
     "installing",

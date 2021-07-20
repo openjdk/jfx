@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "InspectorWebAgentBase.h"
 #include <JavaScriptCore/InspectorConsoleAgent.h>
 
 namespace WebCore {
@@ -32,20 +33,16 @@ namespace WebCore {
 class DOMWindow;
 class ResourceError;
 class ResourceResponse;
-typedef String ErrorString;
 
 class WebConsoleAgent : public Inspector::InspectorConsoleAgent {
     WTF_MAKE_NONCOPYABLE(WebConsoleAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WebConsoleAgent(Inspector::AgentContext&, Inspector::InspectorHeapAgent*);
-    virtual ~WebConsoleAgent() = default;
+    WebConsoleAgent(WebAgentContext&);
+    ~WebConsoleAgent() override;
 
+    // InspectorInstrumentation
     void frameWindowDiscarded(DOMWindow*);
-
-    void getLoggingChannels(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::Console::Channel>>&) final;
-    void setLoggingChannelLevel(ErrorString&, const String& channel, const String& level) final;
-
     void didReceiveResponse(unsigned long requestIdentifier, const ResourceResponse&);
     void didFailLoading(unsigned long requestIdentifier, const ResourceError&);
 };

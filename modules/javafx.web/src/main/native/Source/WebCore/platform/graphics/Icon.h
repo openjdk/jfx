@@ -27,14 +27,12 @@
 #include <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "NativeImage.h"
+#include "PlatformImage.h"
 #include <CoreGraphics/CoreGraphics.h>
 #elif PLATFORM(MAC)
 OBJC_CLASS NSImage;
 #elif PLATFORM(WIN)
 typedef struct HICON__* HICON;
-#elif PLATFORM(GTK)
-typedef struct _GdkPixbuf GdkPixbuf;
 #elif PLATFORM(JAVA)
 #include "jni.h"
 #include "RQRef.h"
@@ -44,6 +42,7 @@ namespace WebCore {
 
 class GraphicsContext;
 class FloatRect;
+class NativeImage;
 
 class Icon : public RefCounted<Icon> {
 public:
@@ -59,7 +58,7 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     // FIXME: Make this work for non-iOS ports and remove the PLATFORM(IOS_FAMILY)-guard.
-    WEBCORE_EXPORT static RefPtr<Icon> createIconForImage(const NativeImagePtr&);
+    WEBCORE_EXPORT static RefPtr<Icon> createIconForImage(PlatformImagePtr&&);
 #endif
 
 #if PLATFORM(MAC)
@@ -69,17 +68,14 @@ public:
 
 private:
 #if PLATFORM(IOS_FAMILY)
-    Icon(const RetainPtr<CGImageRef>&);
-    RetainPtr<CGImageRef> m_cgImage;
+    Icon(RefPtr<NativeImage>&&);
+    RefPtr<NativeImage> m_cgImage;
 #elif PLATFORM(MAC)
     Icon(NSImage*);
     RetainPtr<NSImage> m_nsImage;
 #elif PLATFORM(WIN)
     Icon(HICON);
     HICON m_hIcon;
-#elif PLATFORM(GTK)
-    Icon();
-    GdkPixbuf* m_icon;
 #elif PLATFORM(JAVA)
     Icon(const JLObject &jicon);
     RefPtr<RQRef> m_jicon;

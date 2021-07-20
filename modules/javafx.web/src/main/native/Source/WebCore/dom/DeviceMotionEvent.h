@@ -25,13 +25,17 @@
 
 #pragma once
 
+#include "DeviceOrientationOrMotionPermissionState.h"
 #include "Event.h"
+#include "IDLTypes.h"
 
 namespace WebCore {
 
 class DeviceMotionData;
+template<typename IDLType> class DOMPromiseDeferred;
 
 class DeviceMotionEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(DeviceMotionEvent);
 public:
     virtual ~DeviceMotionEvent();
 
@@ -49,7 +53,7 @@ public:
         Optional<double> gamma;
     };
 
-    static Ref<DeviceMotionEvent> create(const AtomicString& eventType, DeviceMotionData* deviceMotionData)
+    static Ref<DeviceMotionEvent> create(const AtomString& eventType, DeviceMotionData* deviceMotionData)
     {
         return adoptRef(*new DeviceMotionEvent(eventType, deviceMotionData));
     }
@@ -64,11 +68,17 @@ public:
     Optional<RotationRate> rotationRate() const;
     Optional<double> interval() const;
 
-    void initDeviceMotionEvent(const AtomicString& type, bool bubbles, bool cancelable, Optional<Acceleration>&&, Optional<Acceleration>&&, Optional<RotationRate>&&, Optional<double>);
+    void initDeviceMotionEvent(const AtomString& type, bool bubbles, bool cancelable, Optional<Acceleration>&&, Optional<Acceleration>&&, Optional<RotationRate>&&, Optional<double>);
+
+#if ENABLE(DEVICE_ORIENTATION)
+    using PermissionState = DeviceOrientationOrMotionPermissionState;
+    using PermissionPromise = DOMPromiseDeferred<IDLEnumeration<PermissionState>>;
+    static void requestPermission(Document&, PermissionPromise&&);
+#endif
 
 private:
     DeviceMotionEvent();
-    DeviceMotionEvent(const AtomicString& eventType, DeviceMotionData*);
+    DeviceMotionEvent(const AtomString& eventType, DeviceMotionData*);
 
     EventInterface eventInterface() const override;
 

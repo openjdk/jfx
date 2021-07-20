@@ -154,9 +154,7 @@ typedef enum
  *
  * Deprecated: 2.30: Use %G_UNICODE_SPACING_MARK.
  */
-#ifndef G_DISABLE_DEPRECATED
-#define G_UNICODE_COMBINING_MARK G_UNICODE_SPACING_MARK
-#endif
+#define G_UNICODE_COMBINING_MARK G_UNICODE_SPACING_MARK GLIB_DEPRECATED_MACRO_IN_2_30_FOR(G_UNICODE_SPACING_MARK)
 
 /**
  * GUnicodeBreakType:
@@ -422,6 +420,14 @@ typedef enum
  * @G_UNICODE_SCRIPT_MEDEFAIDRIN:          Medefaidrin. Since: 2.58
  * @G_UNICODE_SCRIPT_OLD_SOGDIAN:          Old Sogdian. Since: 2.58
  * @G_UNICODE_SCRIPT_SOGDIAN:              Sogdian. Since: 2.58
+ * @G_UNICODE_SCRIPT_ELYMAIC:              Elym. Since: 2.62
+ * @G_UNICODE_SCRIPT_NANDINAGARI:          Nand. Since: 2.62
+ * @G_UNICODE_SCRIPT_NYIAKENG_PUACHUE_HMONG: Rohg. Since: 2.62
+ * @G_UNICODE_SCRIPT_WANCHO:               Wcho. Since: 2.62
+ * @G_UNICODE_SCRIPT_CHORASMIAN:           Chorasmian. Since: 2.66
+ * @G_UNICODE_SCRIPT_DIVES_AKURU:          Dives Akuru. Since: 2.66
+ * @G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT:  Khitan small script. Since: 2.66
+ * @G_UNICODE_SCRIPT_YEZIDI:               Yezidi. Since: 2.66
  *
  * The #GUnicodeScript enumeration identifies different writing
  * systems. The values correspond to the names as defined in the
@@ -563,7 +569,7 @@ typedef enum
   G_UNICODE_SCRIPT_KHUDAWADI,              /* Sind */
   G_UNICODE_SCRIPT_LINEAR_A,               /* Lina */
   G_UNICODE_SCRIPT_MAHAJANI,               /* Mahj */
-  G_UNICODE_SCRIPT_MANICHAEAN,             /* Manu */
+  G_UNICODE_SCRIPT_MANICHAEAN,             /* Mani */
   G_UNICODE_SCRIPT_MENDE_KIKAKUI,          /* Mend */
   G_UNICODE_SCRIPT_MODI,                   /* Modi */
   G_UNICODE_SCRIPT_MRO,                    /* Mroo */
@@ -607,7 +613,19 @@ typedef enum
   G_UNICODE_SCRIPT_MAKASAR,                /* Maka */
   G_UNICODE_SCRIPT_MEDEFAIDRIN,            /* Medf */
   G_UNICODE_SCRIPT_OLD_SOGDIAN,            /* Sogo */
-  G_UNICODE_SCRIPT_SOGDIAN                 /* Sogd */
+  G_UNICODE_SCRIPT_SOGDIAN,                /* Sogd */
+
+  /* Unicode 12.0 additions */
+  G_UNICODE_SCRIPT_ELYMAIC,                /* Elym */
+  G_UNICODE_SCRIPT_NANDINAGARI,            /* Nand */
+  G_UNICODE_SCRIPT_NYIAKENG_PUACHUE_HMONG, /* Rohg */
+  G_UNICODE_SCRIPT_WANCHO,                 /* Wcho */
+
+  /* Unicode 13.0 additions */
+  G_UNICODE_SCRIPT_CHORASMIAN,             /* Chrs */
+  G_UNICODE_SCRIPT_DIVES_AKURU,            /* Diak */
+  G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT,    /* Kits */
+  G_UNICODE_SCRIPT_YEZIDI                  /* Yezi */
 } GUnicodeScript;
 
 GLIB_AVAILABLE_IN_ALL
@@ -847,6 +865,10 @@ GLIB_AVAILABLE_IN_ALL
 gboolean g_utf8_validate (const gchar  *str,
                           gssize        max_len,
                           const gchar **end);
+GLIB_AVAILABLE_IN_2_60
+gboolean g_utf8_validate_len (const gchar  *str,
+                              gsize         max_len,
+                              const gchar **end);
 
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_strup   (const gchar *str,

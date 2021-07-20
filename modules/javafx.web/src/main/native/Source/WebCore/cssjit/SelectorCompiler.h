@@ -29,8 +29,7 @@
 
 #include "CompiledSelector.h"
 #include "SelectorChecker.h"
-
-#define CSS_SELECTOR_JIT_PROFILING 0
+#include <JavaScriptCore/VM.h>
 
 namespace WebCore {
 
@@ -47,36 +46,55 @@ enum class SelectorContext {
     QuerySelector
 };
 
-typedef unsigned (*RuleCollectorSimpleSelectorChecker)(const Element*, unsigned*);
-typedef unsigned (*QuerySelectorSimpleSelectorChecker)(const Element*);
+void compileSelector(CompiledSelector&, const CSSSelector*, SelectorContext);
 
-typedef unsigned (*RuleCollectorSelectorCheckerWithCheckingContext)(const Element*, SelectorChecker::CheckingContext*, unsigned*);
-typedef unsigned (*QuerySelectorSelectorCheckerWithCheckingContext)(const Element*, const SelectorChecker::CheckingContext*);
+#if CPU(ARM64E)
+extern "C" unsigned vmEntryToCSSJIT(uintptr_t, uintptr_t, uintptr_t, const void* codePtr);
+extern "C" void vmEntryToCSSJITAfter(void);
+#endif
 
-SelectorCompilationStatus compileSelector(const CSSSelector*, SelectorContext, JSC::MacroAssemblerCodeRef<CSSSelectorPtrTag>& outputCodeRef);
-
-inline RuleCollectorSimpleSelectorChecker ruleCollectorSimpleSelectorCheckerFunction(void* executableAddress, SelectorCompilationStatus compilationStatus)
+inline unsigned ruleCollectorSimpleSelectorChecker(CompiledSelector& compiledSelector, const Element* element, unsigned* value)
 {
-    ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker);
-    return WTF::untagCFunctionPtr<RuleCollectorSimpleSelectorChecker, CSSSelectorPtrTag>(executableAddress);
+    ASSERT(compiledSelector.status == SelectorCompilationStatus::SimpleSelectorChecker);
+#if CPU(ARM64E)
+    if (JSC::Options::useJITCage())
+        return vmEntryToCSSJIT(bitwise_cast<uintptr_t>(element), bitwise_cast<uintptr_t>(value), 0, compiledSelector.codeRef.code().executableAddress());
+#endif
+    using RuleCollectorSimpleSelectorChecker = unsigned(*)(const Element*, unsigned*);
+    return WTF::untagCFunctionPtr<RuleCollectorSimpleSelectorChecker, JSC::CSSSelectorPtrTag>(compiledSelector.codeRef.code().executableAddress())(element, value);
 }
 
-inline QuerySelectorSimpleSelectorChecker querySelectorSimpleSelectorCheckerFunction(void* executableAddress, SelectorCompilationStatus compilationStatus)
+inline unsigned querySelectorSimpleSelectorChecker(CompiledSelector& compiledSelector, const Element* element)
 {
-    ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker);
-    return WTF::untagCFunctionPtr<QuerySelectorSimpleSelectorChecker, CSSSelectorPtrTag>(executableAddress);
+    ASSERT(compiledSelector.status == SelectorCompilationStatus::SimpleSelectorChecker);
+#if CPU(ARM64E)
+    if (JSC::Options::useJITCage())
+        return vmEntryToCSSJIT(bitwise_cast<uintptr_t>(element), 0, 0, compiledSelector.codeRef.code().executableAddress());
+#endif
+    using QuerySelectorSimpleSelectorChecker = unsigned(*)(const Element*);
+    return WTF::untagCFunctionPtr<QuerySelectorSimpleSelectorChecker, JSC::CSSSelectorPtrTag>(compiledSelector.codeRef.code().executableAddress())(element);
 }
 
-inline RuleCollectorSelectorCheckerWithCheckingContext ruleCollectorSelectorCheckerFunctionWithCheckingContext(void* executableAddress, SelectorCompilationStatus compilationStatus)
+inline unsigned ruleCollectorSelectorCheckerWithCheckingContext(CompiledSelector& compiledSelector, const Element* element, SelectorChecker::CheckingContext* context, unsigned* value)
 {
-    ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-    return WTF::untagCFunctionPtr<RuleCollectorSelectorCheckerWithCheckingContext, CSSSelectorPtrTag>(executableAddress);
+    ASSERT(compiledSelector.status == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
+#if CPU(ARM64E)
+    if (JSC::Options::useJITCage())
+        return vmEntryToCSSJIT(bitwise_cast<uintptr_t>(element), bitwise_cast<uintptr_t>(context), bitwise_cast<uintptr_t>(value), compiledSelector.codeRef.code().executableAddress());
+#endif
+    using RuleCollectorSelectorCheckerWithCheckingContext = unsigned(*)(const Element*, SelectorChecker::CheckingContext*, unsigned*);
+    return WTF::untagCFunctionPtr<RuleCollectorSelectorCheckerWithCheckingContext, JSC::CSSSelectorPtrTag>(compiledSelector.codeRef.code().executableAddress())(element, context, value);
 }
 
-inline QuerySelectorSelectorCheckerWithCheckingContext querySelectorSelectorCheckerFunctionWithCheckingContext(void* executableAddress, SelectorCompilationStatus compilationStatus)
+inline unsigned querySelectorSelectorCheckerWithCheckingContext(CompiledSelector& compiledSelector, const Element* element, const SelectorChecker::CheckingContext* context)
 {
-    ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-    return WTF::untagCFunctionPtr<QuerySelectorSelectorCheckerWithCheckingContext, CSSSelectorPtrTag>(executableAddress);
+    ASSERT(compiledSelector.status == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
+#if CPU(ARM64E)
+    if (JSC::Options::useJITCage())
+        return vmEntryToCSSJIT(bitwise_cast<uintptr_t>(element), bitwise_cast<uintptr_t>(context), 0, compiledSelector.codeRef.code().executableAddress());
+#endif
+    using QuerySelectorSelectorCheckerWithCheckingContext = unsigned(*)(const Element*, const SelectorChecker::CheckingContext*);
+    return WTF::untagCFunctionPtr<QuerySelectorSelectorCheckerWithCheckingContext, JSC::CSSSelectorPtrTag>(compiledSelector.codeRef.code().executableAddress())(element, context);
 }
 
 } // namespace SelectorCompiler

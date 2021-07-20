@@ -11,16 +11,6 @@ set(ICU_PRIVATE_DEFINES
     "U_CHARSET_IS_UTF8=1"
 )
 
-if (WIN32)
-    list(APPEND ICU_PUBLIC_DEFINES
-        "UCHAR_TYPE=wchar_t"
-    )
-else ()
-    list(APPEND ICU_PUBLIC_DEFINES
-        "UCHAR_TYPE=uint16_t"
-    )
-endif ()
-
 set(ICU_PUBLIC_INCLUDES
     "source/common"
     "source/i18n"
@@ -77,10 +67,11 @@ set(ICU_COMMON_SOURCES
     source/common/brkiter.cpp
     source/common/bytesinkutil.cpp
     source/common/bytestream.cpp
-    source/common/bytestriebuilder.cpp
     source/common/bytestrie.cpp
+    source/common/bytestriebuilder.cpp
     source/common/bytestrieiterator.cpp
     source/common/caniter.cpp
+    source/common/characterproperties.cpp
     source/common/chariter.cpp
     source/common/charstr.cpp
     source/common/cmemory.cpp
@@ -96,17 +87,22 @@ set(ICU_COMMON_SOURCES
     source/common/filterednormalizer2.cpp
     source/common/icudataver.cpp
     source/common/icuplug.cpp
-    source/common/listformatter.cpp
     source/common/loadednormalizer2impl.cpp
+    source/common/localebuilder.cpp
+    source/common/localematcher.cpp
+    source/common/localeprioritylist.cpp
     source/common/locavailable.cpp
     source/common/locbased.cpp
     source/common/locdispnames.cpp
+    source/common/locdistance.cpp
     source/common/locdspnm.cpp
     source/common/locid.cpp
     source/common/loclikely.cpp
+    source/common/loclikelysubtags.cpp
     source/common/locmap.cpp
     source/common/locresdata.cpp
     source/common/locutil.cpp
+    source/common/lsr.cpp
     source/common/messagepattern.cpp
     source/common/normalizer2.cpp
     source/common/normalizer2impl.cpp
@@ -118,8 +114,8 @@ set(ICU_COMMON_SOURCES
     source/common/propsvec.cpp
     source/common/punycode.cpp
     source/common/putil.cpp
-    source/common/rbbi_cache.cpp
     source/common/rbbi.cpp
+    source/common/rbbi_cache.cpp
     source/common/rbbidata.cpp
     source/common/rbbinode.cpp
     source/common/rbbirb.cpp
@@ -127,9 +123,10 @@ set(ICU_COMMON_SOURCES
     source/common/rbbisetb.cpp
     source/common/rbbistbl.cpp
     source/common/rbbitblb.cpp
-    source/common/resbund_cnv.cpp
     source/common/resbund.cpp
+    source/common/resbund_cnv.cpp
     source/common/resource.cpp
+    source/common/restrace.cpp
     source/common/ruleiter.cpp
     source/common/schriter.cpp
     source/common/serv.cpp
@@ -146,8 +143,8 @@ set(ICU_COMMON_SOURCES
     source/common/stringtriebuilder.cpp
     source/common/uarrsort.cpp
     source/common/ubidi.cpp
-    source/common/ubidiln.cpp
     source/common/ubidi_props.cpp
+    source/common/ubidiln.cpp
     source/common/ubiditransform.cpp
     source/common/ubidiwrt.cpp
     source/common/ubrk.cpp
@@ -156,36 +153,37 @@ set(ICU_COMMON_SOURCES
     source/common/ucasemap_titlecase_brkiter.cpp
     source/common/ucat.cpp
     source/common/uchar.cpp
-    source/common/ucharstriebuilder.cpp
     source/common/ucharstrie.cpp
+    source/common/ucharstriebuilder.cpp
     source/common/ucharstrieiterator.cpp
     source/common/uchriter.cpp
     source/common/ucln_cmn.cpp
     source/common/ucmndata.cpp
+    source/common/ucnv.cpp
     source/common/ucnv2022.cpp
     source/common/ucnv_bld.cpp
-    source/common/ucnvbocu.cpp
     source/common/ucnv_cb.cpp
     source/common/ucnv_cnv.cpp
-    source/common/ucnv.cpp
     source/common/ucnv_ct.cpp
-    source/common/ucnvdisp.cpp
     source/common/ucnv_err.cpp
     source/common/ucnv_ext.cpp
-    source/common/ucnvhz.cpp
     source/common/ucnv_io.cpp
-    source/common/ucnvisci.cpp
-    source/common/ucnvlat1.cpp
     source/common/ucnv_lmb.cpp
-    source/common/ucnvmbcs.cpp
-    source/common/ucnvscsu.cpp
-    source/common/ucnvsel.cpp
     source/common/ucnv_set.cpp
     source/common/ucnv_u16.cpp
     source/common/ucnv_u32.cpp
     source/common/ucnv_u7.cpp
     source/common/ucnv_u8.cpp
+    source/common/ucnvbocu.cpp
+    source/common/ucnvdisp.cpp
+    source/common/ucnvhz.cpp
+    source/common/ucnvisci.cpp
+    source/common/ucnvlat1.cpp
+    source/common/ucnvmbcs.cpp
+    source/common/ucnvscsu.cpp
+    source/common/ucnvsel.cpp
     source/common/ucol_swp.cpp
+    source/common/ucptrie.cpp
     source/common/ucurr.cpp
     source/common/udata.cpp
     source/common/udatamem.cpp
@@ -198,60 +196,61 @@ set(ICU_COMMON_SOURCES
     source/common/uinvchar.cpp
     source/common/uiter.cpp
     source/common/ulist.cpp
-    source/common/ulistformatter.cpp
     source/common/uloc.cpp
     source/common/uloc_keytype.cpp
     source/common/uloc_tag.cpp
     source/common/umapfile.cpp
     source/common/umath.cpp
+    source/common/umutablecptrie.cpp
     source/common/umutex.cpp
     source/common/unames.cpp
     source/common/unifiedcache.cpp
     source/common/unifilt.cpp
     source/common/unifunct.cpp
-    source/common/uniset_closure.cpp
     source/common/uniset.cpp
+    source/common/uniset_closure.cpp
     source/common/uniset_props.cpp
     source/common/unisetspan.cpp
+    source/common/unistr.cpp
     source/common/unistr_case.cpp
     source/common/unistr_case_locale.cpp
     source/common/unistr_cnv.cpp
-    source/common/unistr.cpp
     source/common/unistr_props.cpp
     source/common/unistr_titlecase_brkiter.cpp
-    source/common/unormcmp.cpp
     source/common/unorm.cpp
+    source/common/unormcmp.cpp
     source/common/uobject.cpp
     source/common/uprops.cpp
-    source/common/uresbund.cpp
     source/common/ures_cnv.cpp
+    source/common/uresbund.cpp
     source/common/uresdata.cpp
     source/common/usc_impl.cpp
     source/common/uscript.cpp
     source/common/uscript_props.cpp
     source/common/uset.cpp
-    source/common/usetiter.cpp
     source/common/uset_props.cpp
+    source/common/usetiter.cpp
     source/common/ushape.cpp
     source/common/usprep.cpp
     source/common/ustack.cpp
+    source/common/ustr_cnv.cpp
+    source/common/ustr_titlecase_brkiter.cpp
+    source/common/ustr_wcs.cpp
     source/common/ustrcase.cpp
     source/common/ustrcase_locale.cpp
-    source/common/ustr_cnv.cpp
     source/common/ustrenum.cpp
     source/common/ustrfmt.cpp
     source/common/ustring.cpp
-    source/common/ustr_titlecase_brkiter.cpp
     source/common/ustrtrns.cpp
-    source/common/ustr_wcs.cpp
     source/common/utext.cpp
     source/common/utf_impl.cpp
     source/common/util.cpp
     source/common/util_props.cpp
     source/common/utrace.cpp
-    source/common/utrie2_builder.cpp
-    source/common/utrie2.cpp
     source/common/utrie.cpp
+    source/common/utrie2.cpp
+    source/common/utrie2_builder.cpp
+    source/common/utrie_swap.cpp
     source/common/uts46.cpp
     source/common/utypes.cpp
     source/common/uvector.cpp
@@ -334,20 +333,25 @@ set(ICU_I18N_SOURCES
     source/i18n/double-conversion-bignum-dtoa.cpp
     source/i18n/double-conversion-bignum.cpp
     source/i18n/double-conversion-cached-powers.cpp
-    source/i18n/double-conversion-diy-fp.cpp
+    source/i18n/double-conversion-double-to-string.cpp
     source/i18n/double-conversion-fast-dtoa.cpp
+    source/i18n/double-conversion-string-to-double.cpp
     source/i18n/double-conversion-strtod.cpp
-    source/i18n/double-conversion.cpp
     source/i18n/dtfmtsym.cpp
     source/i18n/dtitvfmt.cpp
     source/i18n/dtitvinf.cpp
     source/i18n/dtptngen.cpp
     source/i18n/dtrule.cpp
+    source/i18n/erarules.cpp
     source/i18n/esctrn.cpp
     source/i18n/ethpccal.cpp
     source/i18n/fmtable.cpp
     source/i18n/fmtable_cnv.cpp
     source/i18n/format.cpp
+    source/i18n/formatted_string_builder.cpp
+    source/i18n/formattedval_iterimpl.cpp
+    source/i18n/formattedval_sbimpl.cpp
+    source/i18n/formattedvalue.cpp
     source/i18n/fphdlimp.cpp
     source/i18n/fpositer.cpp
     source/i18n/funcrepl.cpp
@@ -359,8 +363,10 @@ set(ICU_I18N_SOURCES
     source/i18n/inputext.cpp
     source/i18n/islamcal.cpp
     source/i18n/japancal.cpp
+    source/i18n/listformatter.cpp
     source/i18n/measfmt.cpp
     source/i18n/measunit.cpp
+    source/i18n/measunit_extra.cpp
     source/i18n/measure.cpp
     source/i18n/msgfmt.cpp
     source/i18n/name2uni.cpp
@@ -368,7 +374,6 @@ set(ICU_I18N_SOURCES
     source/i18n/nfrule.cpp
     source/i18n/nfsubs.cpp
     source/i18n/nortrans.cpp
-    source/i18n/nounit.cpp
     source/i18n/nultrans.cpp
     source/i18n/number_affixutils.cpp
     source/i18n/number_asformat.cpp
@@ -386,13 +391,15 @@ set(ICU_I18N_SOURCES
     source/i18n/number_modifiers.cpp
     source/i18n/number_multiplier.cpp
     source/i18n/number_notation.cpp
+    source/i18n/number_output.cpp
     source/i18n/number_padding.cpp
     source/i18n/number_patternmodifier.cpp
     source/i18n/number_patternstring.cpp
     source/i18n/number_rounding.cpp
     source/i18n/number_scientific.cpp
     source/i18n/number_skeletons.cpp
-    source/i18n/number_stringbuilder.cpp
+    source/i18n/number_symbolswrapper.cpp
+    source/i18n/number_usageprefs.cpp
     source/i18n/number_utils.cpp
     source/i18n/numfmt.cpp
     source/i18n/numparse_affixes.cpp
@@ -402,12 +409,15 @@ set(ICU_I18N_SOURCES
     source/i18n/numparse_impl.cpp
     source/i18n/numparse_parsednumber.cpp
     source/i18n/numparse_scientific.cpp
-    source/i18n/numparse_stringsegment.cpp
     source/i18n/numparse_symbols.cpp
     source/i18n/numparse_validators.cpp
+    source/i18n/numrange_capi.cpp
+    source/i18n/numrange_fluent.cpp
+    source/i18n/numrange_impl.cpp
     source/i18n/numsys.cpp
     source/i18n/olsontz.cpp
     source/i18n/persncal.cpp
+    source/i18n/pluralranges.cpp
     source/i18n/plurfmt.cpp
     source/i18n/plurrule.cpp
     source/i18n/quant.cpp
@@ -440,6 +450,7 @@ set(ICU_I18N_SOURCES
     source/i18n/smpdtfst.cpp
     source/i18n/sortkey.cpp
     source/i18n/standardplural.cpp
+    source/i18n/string_segment.cpp
     source/i18n/strmatch.cpp
     source/i18n/strrepl.cpp
     source/i18n/stsearch.cpp
@@ -472,10 +483,15 @@ set(ICU_I18N_SOURCES
     source/i18n/udatpg.cpp
     source/i18n/ufieldpositer.cpp
     source/i18n/uitercollationiterator.cpp
+    source/i18n/ulistformatter.cpp
     source/i18n/ulocdata.cpp
     source/i18n/umsg.cpp
     source/i18n/unesctrn.cpp
     source/i18n/uni2name.cpp
+    source/i18n/units_data.cpp
+    source/i18n/units_complexconverter.cpp
+    source/i18n/units_converter.cpp
+    source/i18n/units_router.cpp
     source/i18n/unum.cpp
     source/i18n/unumsys.cpp
     source/i18n/upluralrules.cpp
@@ -519,22 +535,33 @@ target_link_libraries(icui18n PUBLIC icuuc)
 
 ###### tools BEGIN ####
 set(ICU_TOOLSUTILS_SOURCES
+    source/tools/toolutil/collationinfo.cpp
+    source/tools/toolutil/dbgutil.cpp
+    source/tools/toolutil/denseranges.cpp
     source/tools/toolutil/filestrm.cpp
+    source/tools/toolutil/filetools.cpp
+    source/tools/toolutil/flagparser.cpp
     source/tools/toolutil/package.cpp
     source/tools/toolutil/pkgitems.cpp
+    source/tools/toolutil/ppucd.cpp
     source/tools/toolutil/swapimpl.cpp
     source/tools/toolutil/toolutil.cpp
     source/tools/toolutil/unewdata.cpp
+    source/tools/toolutil/ucln_tu.cpp
     source/tools/toolutil/ucm.cpp
     source/tools/toolutil/ucmstate.cpp
+    source/tools/toolutil/udbgutil.cpp
+    source/tools/toolutil/uoptions.cpp
     source/tools/toolutil/uparse.cpp
     source/tools/toolutil/ucbuf.cpp
     source/tools/toolutil/writesrc.cpp
     source/tools/toolutil/pkg_genc.cpp
     source/tools/toolutil/pkg_gencmn.cpp
+    source/tools/toolutil/pkg_icu.cpp
+    source/tools/toolutil/xmlparser.cpp
 
     java/data/data_as_asm.cpp
-	  source/stubdata/stubdata.cpp
+    source/stubdata/stubdata.cpp
 )
 
 add_executable(data_as_asm ${ICU_TOOLSUTILS_SOURCES})
@@ -552,12 +579,10 @@ target_link_libraries(data_as_asm icuuc icui18n)
 ###### tools END ####
 
 ###### data BEGIN ####
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/icu/data")
-file(GLOB ICU_DATA_ZIP_FILE "java/data/icudt*l.zip")
+file(GLOB ICU_DATA_ZIP_FILE "${CMAKE_BINARY_DIR}/icu/data/icu4c-*.zip")
 
-get_filename_component(ICU_DATA_FILE_NAME ${ICU_DATA_ZIP_FILE} NAME)
 # Get just file name without extension
-string(REGEX REPLACE ".zip" "" ICU_DATA_FILE_NAME ${ICU_DATA_FILE_NAME})
+set(ICU_DATA_FILE_NAME "icudt68l")
 
 # Use jar instead of unzip, it will be helpful to get rid of cygwin dependency
 find_package(Java)

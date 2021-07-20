@@ -35,8 +35,3 @@
 #ifdef __OBJC__
 #import <Foundation/Foundation.h>
 #endif
-
-#if OS(WINDOWS)
-#undef WEBCORE_EXPORT
-#define WEBCORE_EXPORT WTF_IMPORT_DECLARATION
-#endif

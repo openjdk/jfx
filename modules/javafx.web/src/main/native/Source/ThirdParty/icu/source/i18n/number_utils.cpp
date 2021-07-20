@@ -70,7 +70,7 @@ const char16_t* utils::getPatternForStyle(const Locale& locale, const char* nsNa
             break;
         default:
             patternKey = "decimalFormat"; // silence compiler error
-            U_ASSERT(false);
+            UPRV_UNREACHABLE;
     }
     LocalUResourceBundlePointer res(ures_open(nullptr, locale.getName(), &status));
     if (U_FAILURE(status)) { return u""; }
@@ -237,7 +237,9 @@ void DecNum::multiplyBy(const DecNum& rhs, UErrorCode& status) {
 
 void DecNum::divideBy(const DecNum& rhs, UErrorCode& status) {
     uprv_decNumberDivide(fData, fData, rhs.fData, &fContext);
-    if (fContext.status != 0) {
+    if ((fContext.status & DEC_Inexact) != 0) {
+        // Ignore.
+    } else if (fContext.status != 0) {
         status = U_INTERNAL_PROGRAM_ERROR;
     }
 }
@@ -248,6 +250,20 @@ bool DecNum::isNegative() const {
 
 bool DecNum::isZero() const {
     return decNumberIsZero(fData.getAlias());
+}
+
+void DecNum::toString(ByteSink& output, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    // "string must be at least dn->digits+14 characters long"
+    int32_t minCapacity = fData.getAlias()->digits + 14;
+    MaybeStackArray<char, 30> buffer(minCapacity, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    uprv_decNumberToString(fData, buffer.getAlias());
+    output.Append(buffer.getAlias(), static_cast<int32_t>(uprv_strlen(buffer.getAlias())));
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

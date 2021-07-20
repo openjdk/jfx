@@ -28,8 +28,6 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "JSCInlines.h"
-
 namespace JSC { namespace DFG {
 
 void AbstractHeap::Payload::dump(PrintStream& out) const
@@ -38,6 +36,14 @@ void AbstractHeap::Payload::dump(PrintStream& out) const
         out.print("TOP");
     else
         out.print(value());
+}
+
+void AbstractHeap::Payload::dumpAsOperand(PrintStream& out) const
+{
+    if (isTop())
+        out.print("TOP");
+    else
+        out.print(Operand::fromBits(value()));
 }
 
 void AbstractHeap::dump(PrintStream& out) const
@@ -49,6 +55,13 @@ void AbstractHeap::dump(PrintStream& out) const
         out.print("(", DOMJIT::HeapRange::fromRaw(payload().value32()), ")");
         return;
     }
+    if (kind() == Stack) {
+        out.print("(");
+        payload().dumpAsOperand(out);
+        out.print(")");
+        return;
+    }
+
     out.print("(", payload(), ")");
 }
 

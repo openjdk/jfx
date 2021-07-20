@@ -18,6 +18,7 @@
 #include "unicode/localpointer.h"
 #include "numparse_validators.h"
 #include "number_multiplier.h"
+#include "string_segment.h"
 
 U_NAMESPACE_BEGIN
 
@@ -95,9 +96,10 @@ class U_I18N_API NumberParserImpl : public MutableMatcherCollection, public UMem
 
     explicit NumberParserImpl(parse_flags_t parseFlags);
 
-    void parseGreedyRecursive(StringSegment& segment, ParsedNumber& result, UErrorCode& status) const;
+    void parseGreedy(StringSegment& segment, ParsedNumber& result, UErrorCode& status) const;
 
-    void parseLongestRecursive(StringSegment& segment, ParsedNumber& result, UErrorCode& status) const;
+    void parseLongestRecursive(
+        StringSegment& segment, ParsedNumber& result, int32_t recursionLevels, UErrorCode& status) const;
 };
 
 

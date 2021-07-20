@@ -43,7 +43,7 @@
  * container using gst_element_post_message().
  */
 
-
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include <string.h>             /* memcpy */
 #include "gsterror.h"
@@ -107,10 +107,12 @@ static GstMessageQuarks message_quarks[] = {
   {GST_MESSAGE_HAVE_CONTEXT, "have-context", 0},
   {GST_MESSAGE_DEVICE_ADDED, "device-added", 0},
   {GST_MESSAGE_DEVICE_REMOVED, "device-removed", 0},
+  {GST_MESSAGE_DEVICE_CHANGED, "device-changed", 0},
   {GST_MESSAGE_PROPERTY_NOTIFY, "property-notify", 0},
   {GST_MESSAGE_STREAM_COLLECTION, "stream-collection", 0},
   {GST_MESSAGE_STREAMS_SELECTED, "streams-selected", 0},
   {GST_MESSAGE_REDIRECT, "redirect", 0},
+  {GST_MESSAGE_INSTANT_RATE_REQUEST, "instant-rate-request", 0},
   {0, NULL, 0}
 };
 
@@ -217,6 +219,9 @@ _gst_message_free (GstMessage * message)
     gst_structure_set_parent_refcount (structure, NULL);
     gst_structure_free (structure);
   }
+#ifdef USE_POISONING
+  memset (message, 0xff, sizeof (GstMessageImpl));
+#endif
 
   g_slice_free1 (sizeof (GstMessageImpl), message);
 }
@@ -367,6 +372,7 @@ void
 gst_message_set_seqnum (GstMessage * message, guint32 seqnum)
 {
   g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (seqnum != GST_SEQNUM_INVALID);
 
   GST_MESSAGE_SEQNUM (message) = seqnum;
 }
@@ -398,7 +404,7 @@ gst_message_new_eos (GstObject * src)
  * @src: (transfer none) (allow-none): The object originating the message.
  * @error: (transfer none): The GError for this message.
  * @debug: A debugging string.
- * @details: (transfer full): (allow-none): A GstStructure with details
+ * @details: (transfer full) (allow-none): A GstStructure with details
  *
  * Create a new error message. The message will copy @error and
  * @debug. This message is posted by element when a fatal event
@@ -492,7 +498,7 @@ gst_message_parse_error_details (GstMessage * message,
  * @src: (transfer none) (allow-none): The object originating the message.
  * @error: (transfer none): The GError for this message.
  * @debug: A debugging string.
- * @details: (transfer full): (allow-none): A GstStructure with details
+ * @details: (transfer full) (allow-none): A GstStructure with details
  *
  * Create a new warning message. The message will make copies of @error and
  * @debug.
@@ -582,7 +588,7 @@ gst_message_parse_warning_details (GstMessage * message,
  * @src: (transfer none) (allow-none): The object originating the message.
  * @error: (transfer none): The GError for this message.
  * @debug: A debugging string.
- * @details: (transfer full): (allow-none): A GstStructure with details
+ * @details: (transfer full) (allow-none): A GstStructure with details
  *
  * Create a new info message. The message will make copies of @error and
  * @debug.
@@ -2430,6 +2436,7 @@ gst_message_set_group_id (GstMessage * message, guint group_id)
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STREAM_START);
   g_return_if_fail (gst_message_is_writable (message));
+  g_return_if_fail (group_id != GST_GROUP_ID_INVALID);
 
   structure = GST_MESSAGE_STRUCTURE (message);
   gst_structure_id_set (structure, GST_QUARK (GROUP_ID), G_TYPE_UINT, group_id,
@@ -2685,6 +2692,69 @@ gst_message_parse_device_removed (GstMessage * message, GstDevice ** device)
   if (device)
     gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
         GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+}
+
+/**
+ * gst_message_new_device_changed:
+ * @src: The #GstObject that created the message
+ * @device: (transfer none): The newly created device representing @replaced_device
+ *         with its new configuration.
+ *
+ * Creates a new device-changed message. The device-changed message is produced
+ * by #GstDeviceProvider or a #GstDeviceMonitor. They announce that a device
+ * properties has changed and @device represent the new modified version of @changed_device.
+ *
+ * Returns: a newly allocated #GstMessage
+ *
+ * Since: 1.16
+ */
+GstMessage *
+gst_message_new_device_changed (GstObject * src, GstDevice * device,
+    GstDevice * changed_device)
+{
+  GstMessage *message;
+  GstStructure *structure;
+
+  g_return_val_if_fail (device != NULL, NULL);
+  g_return_val_if_fail (GST_IS_DEVICE (device), NULL);
+
+  structure = gst_structure_new_id (GST_QUARK (MESSAGE_DEVICE_CHANGED),
+      GST_QUARK (DEVICE), GST_TYPE_DEVICE, device,
+      GST_QUARK (DEVICE_CHANGED), GST_TYPE_DEVICE, changed_device, NULL);
+  message = gst_message_new_custom (GST_MESSAGE_DEVICE_CHANGED, src, structure);
+
+  return message;
+}
+
+/**
+ * gst_message_parse_device_changed:
+ * @message: a #GstMessage of type %GST_MESSAGE_DEVICE_CHANGED
+ * @device: (out) (allow-none) (transfer full): A location where to store a
+ *  pointer to the updated version of the #GstDevice, or %NULL
+ * @changed_device: (out) (allow-none) (transfer full): A location where to store a
+ *  pointer to the old version of the #GstDevice, or %NULL
+ *
+ * Parses a device-changed message. The device-changed message is produced by
+ * #GstDeviceProvider or a #GstDeviceMonitor. It announces the
+ * disappearance of monitored devices. * It announce that a device properties has
+ * changed and @device represents the new modified version of @changed_device.
+ *
+ * Since: 1.16
+ */
+void
+gst_message_parse_device_changed (GstMessage * message, GstDevice ** device,
+    GstDevice ** changed_device)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_DEVICE_CHANGED);
+
+  if (device)
+    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
+        GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+
+  if (changed_device)
+    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
+        GST_QUARK (DEVICE_CHANGED), GST_TYPE_DEVICE, changed_device, NULL);
 }
 #endif // GSTREAMER_LITE
 
@@ -2984,8 +3054,8 @@ gst_message_parse_streams_selected (GstMessage * message,
  * such as bitrate statistics for the given location.
  *
  * By default, message recipients should treat entries in the order they are
- * stored. The recipient should therefore try entry #0 first, and if this
- * entry is not acceptable or working, try entry #1 etc. Senders must make
+ * stored. The recipient should therefore try entry \#0 first, and if this
+ * entry is not acceptable or working, try entry \#1 etc. Senders must make
  * sure that they add entries in this order. However, recipients are free to
  * ignore the order and pick an entry that is "best" for them. One example
  * would be a recipient that scans the entries for the one with the highest
@@ -3199,4 +3269,169 @@ gst_message_get_num_redirect_entries (GstMessage * message)
       && (size == gst_value_list_get_size (entry_taglists_gvalue)), 0);
 
   return size;
+}
+
+/**
+ * gst_message_new_instant_rate_request:
+ * @src: The #GstObject that posted the message
+ * @rate_multiplier: the rate multiplier factor that should be applied
+ *
+ * Creates a new instant-rate-request message. Elements handling the
+ * instant-rate-change event must post this message. The message is
+ * handled at the pipeline, and allows the pipeline to select the
+ * running time when the rate change should happen and to send an
+ * @GST_EVENT_INSTANT_RATE_SYNC_TIME event to notify the elements
+ * in the pipeline.
+ *
+ * Returns: a newly allocated #GstMessage
+ *
+ * Since: 1.18
+ */
+GstMessage *
+gst_message_new_instant_rate_request (GstObject * src, gdouble rate_multiplier)
+{
+  GstStructure *structure;
+  GstMessage *message;
+
+  g_return_val_if_fail (rate_multiplier != 0.0, NULL);
+
+  structure = gst_structure_new_id (GST_QUARK (MESSAGE_INSTANT_RATE_REQUEST),
+      GST_QUARK (RATE), G_TYPE_DOUBLE, rate_multiplier, NULL);
+  message =
+      gst_message_new_custom (GST_MESSAGE_INSTANT_RATE_REQUEST, src, structure);
+
+  return message;
+}
+
+/**
+ * gst_message_parse_instant_rate_request:
+ * @message: a #GstMessage of type %GST_MESSAGE_INSTANT_RATE_REQUEST
+ * @rate_multiplier: (out) (allow-none): return location for the rate, or %NULL
+ *
+ * Parses the rate_multiplier from the instant-rate-request message.
+ *
+ * Since: 1.18
+ */
+void
+gst_message_parse_instant_rate_request (GstMessage * message,
+    gdouble * rate_multiplier)
+{
+  GstStructure *structure;
+
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) ==
+      GST_MESSAGE_INSTANT_RATE_REQUEST);
+
+  structure = GST_MESSAGE_STRUCTURE (message);
+  gst_structure_id_get (structure, GST_QUARK (RATE), G_TYPE_DOUBLE,
+      rate_multiplier, NULL);
+}
+
+/**
+ * gst_message_ref: (skip)
+ * @msg: the message to ref
+ *
+ * Convenience macro to increase the reference count of the message.
+ *
+ * Returns: @msg (for convenience when doing assignments)
+ */
+GstMessage *
+gst_message_ref (GstMessage * msg)
+{
+  return (GstMessage *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (msg));
+}
+
+/**
+ * gst_message_unref: (skip)
+ * @msg: the message to unref
+ *
+ * Convenience macro to decrease the reference count of the message, possibly
+ * freeing it.
+ */
+void
+gst_message_unref (GstMessage * msg)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (msg));
+}
+
+/**
+ * gst_clear_message: (skip)
+ * @msg_ptr: a pointer to a #GstMessage reference
+ *
+ * Clears a reference to a #GstMessage.
+ *
+ * @msg_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the message is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+void
+gst_clear_message (GstMessage ** msg_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) msg_ptr);
+}
+
+/**
+ * gst_message_copy: (skip)
+ * @msg: the message to copy
+ *
+ * Creates a copy of the message. Returns a copy of the message.
+ *
+ * Returns: (transfer full): a new copy of @msg.
+ *
+ * MT safe
+ */
+GstMessage *
+gst_message_copy (const GstMessage * msg)
+{
+  return
+      GST_MESSAGE_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST
+          (msg)));
+}
+
+/**
+ * gst_message_replace: (skip)
+ * @old_message: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstMessage to be replaced.
+ * @new_message: (allow-none) (transfer none): pointer to a #GstMessage that will
+ *     replace the message pointed to by @old_message.
+ *
+ * Modifies a pointer to a #GstMessage to point to a different #GstMessage. The
+ * modification is done atomically (so this is useful for ensuring thread safety
+ * in some cases), and the reference counts are updated appropriately (the old
+ * message is unreffed, the new one is reffed).
+ *
+ * Either @new_message or the #GstMessage pointed to by @old_message may be %NULL.
+ *
+ * Returns: %TRUE if @new_message was different from @old_message
+ */
+gboolean
+gst_message_replace (GstMessage ** old_message, GstMessage * new_message)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_message,
+      (GstMiniObject *) new_message);
+}
+
+/**
+ * gst_message_take:
+ * @old_message: (inout) (transfer full): pointer to a pointer to a #GstMessage
+ *     to be replaced.
+ * @new_message: (transfer full) (allow-none): pointer to a #GstMessage that
+ *     will replace the message pointed to by @old_message.
+ *
+ * Modifies a pointer to a #GstMessage to point to a different #GstMessage. This
+ * function is similar to gst_message_replace() except that it takes ownership
+ * of @new_message.
+ *
+ * Returns: %TRUE if @new_message was different from @old_message
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_message_take (GstMessage ** old_message, GstMessage * new_message)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_message,
+      (GstMiniObject *) new_message);
 }

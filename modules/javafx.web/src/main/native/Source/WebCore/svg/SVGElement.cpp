@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2008 Rob Buis <buis@kde.org>
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -27,43 +27,41 @@
 #include "SVGElement.h"
 
 #include "CSSPropertyParser.h"
-#include "DeprecatedCSSOMValue.h"
 #include "Document.h"
-#include "ElementIterator.h"
+#include "ElementChildIterator.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "RenderObject.h"
-#include "RenderSVGResource.h"
+#include "RenderAncestorIterator.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMasker.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementRareData.h"
+#include "SVGForeignObjectElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGImageElement.h"
 #include "SVGNames.h"
+#include "SVGPropertyAnimatorFactory.h"
 #include "SVGRenderStyle.h"
 #include "SVGRenderSupport.h"
 #include "SVGSVGElement.h"
 #include "SVGTitleElement.h"
 #include "SVGUseElement.h"
 #include "ShadowRoot.h"
+#include "StyleAdjuster.h"
 #include "XMLNames.h"
-#include <wtf/Assertions.h>
 #include <wtf/HashMap.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/WTFString.h>
-
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGElement);
 
-static NEVER_INLINE HashMap<AtomicStringImpl*, CSSPropertyID> createAttributeNameToCSSPropertyIDMap()
+static NEVER_INLINE HashMap<AtomStringImpl*, CSSPropertyID> createAttributeNameToCSSPropertyIDMap()
 {
     using namespace HTMLNames;
     using namespace SVGNames;
@@ -143,10 +141,10 @@ static NEVER_INLINE HashMap<AtomicStringImpl*, CSSPropertyID> createAttributeNam
         &yAttr.get(),
     };
 
-    HashMap<AtomicStringImpl*, CSSPropertyID> map;
+    HashMap<AtomStringImpl*, CSSPropertyID> map;
 
     for (auto& name : attributeNames) {
-        const AtomicString& localName = name->localName();
+        const AtomString& localName = name->localName();
         map.add(localName.impl(), cssPropertyID(localName));
     }
 
@@ -157,126 +155,14 @@ static NEVER_INLINE HashMap<AtomicStringImpl*, CSSPropertyID> createAttributeNam
     return map;
 }
 
-static NEVER_INLINE HashMap<QualifiedName::QualifiedNameImpl*, AnimatedPropertyType> createAttributeNameToAnimatedPropertyTypeMap()
-{
-    using namespace HTMLNames;
-    using namespace SVGNames;
-
-    struct TableEntry {
-        const QualifiedName& attributeName;
-        AnimatedPropertyType type;
-    };
-
-    static const TableEntry table[] = {
-        { alignment_baselineAttr, AnimatedString },
-        { baseline_shiftAttr, AnimatedString },
-        { buffered_renderingAttr, AnimatedString },
-        { clipAttr, AnimatedRect },
-        { clip_pathAttr, AnimatedString },
-        { clip_ruleAttr, AnimatedString },
-        { SVGNames::colorAttr, AnimatedColor },
-        { color_interpolationAttr, AnimatedString },
-        { color_interpolation_filtersAttr, AnimatedString },
-        { color_profileAttr, AnimatedString },
-        { color_renderingAttr, AnimatedString },
-        { cursorAttr, AnimatedString },
-        { displayAttr, AnimatedString },
-        { dominant_baselineAttr, AnimatedString },
-        { fillAttr, AnimatedColor },
-        { fill_opacityAttr, AnimatedNumber },
-        { fill_ruleAttr, AnimatedString },
-        { filterAttr, AnimatedString },
-        { flood_colorAttr, AnimatedColor },
-        { flood_opacityAttr, AnimatedNumber },
-        { font_familyAttr, AnimatedString },
-        { font_sizeAttr, AnimatedLength },
-        { font_stretchAttr, AnimatedString },
-        { font_styleAttr, AnimatedString },
-        { font_variantAttr, AnimatedString },
-        { font_weightAttr, AnimatedString },
-        { image_renderingAttr, AnimatedString },
-        { kerningAttr, AnimatedLength },
-        { letter_spacingAttr, AnimatedLength },
-        { lighting_colorAttr, AnimatedColor },
-        { marker_endAttr, AnimatedString },
-        { marker_midAttr, AnimatedString },
-        { marker_startAttr, AnimatedString },
-        { maskAttr, AnimatedString },
-        { mask_typeAttr, AnimatedString },
-        { opacityAttr, AnimatedNumber },
-        { overflowAttr, AnimatedString },
-        { paint_orderAttr, AnimatedString },
-        { pointer_eventsAttr, AnimatedString },
-        { shape_renderingAttr, AnimatedString },
-        { stop_colorAttr, AnimatedColor },
-        { stop_opacityAttr, AnimatedNumber },
-        { strokeAttr, AnimatedColor },
-        { stroke_dasharrayAttr, AnimatedLengthList },
-        { stroke_dashoffsetAttr, AnimatedLength },
-        { stroke_linecapAttr, AnimatedString },
-        { stroke_linejoinAttr, AnimatedString },
-        { stroke_miterlimitAttr, AnimatedNumber },
-        { stroke_opacityAttr, AnimatedNumber },
-        { stroke_widthAttr, AnimatedLength },
-        { text_anchorAttr, AnimatedString },
-        { text_decorationAttr, AnimatedString },
-        { text_renderingAttr, AnimatedString },
-        { vector_effectAttr, AnimatedString },
-        { visibilityAttr, AnimatedString },
-        { word_spacingAttr, AnimatedLength },
-    };
-
-    HashMap<QualifiedName::QualifiedNameImpl*, AnimatedPropertyType> map;
-    for (auto& entry : table)
-        map.add(entry.attributeName.impl(), entry.type);
-    return map;
-}
-
-static const HashMap<QualifiedName::QualifiedNameImpl*, AnimatedPropertyType>& attributeNameToAnimatedPropertyTypeMap()
-{
-    static const auto map = makeNeverDestroyed(createAttributeNameToAnimatedPropertyTypeMap());
-    return map;
-}
-
-static NEVER_INLINE HashMap<QualifiedName::QualifiedNameImpl*, AnimatedPropertyType> createCSSPropertyWithSVGDOMNameToAnimatedPropertyTypeMap()
-{
-    using namespace HTMLNames;
-    using namespace SVGNames;
-
-    struct TableEntry {
-        const QualifiedName& attributeName;
-        AnimatedPropertyType type;
-    };
-
-    static const TableEntry table[] = {
-        { cxAttr, AnimatedLength },
-        { cyAttr, AnimatedLength },
-        { rAttr, AnimatedLength },
-        { rxAttr, AnimatedLength },
-        { ryAttr, AnimatedLength },
-        { SVGNames::heightAttr, AnimatedLength },
-        { SVGNames::widthAttr, AnimatedLength },
-        { xAttr, AnimatedLength },
-        { yAttr, AnimatedLength },
-    };
-
-    HashMap<QualifiedName::QualifiedNameImpl*, AnimatedPropertyType> map;
-    for (auto& entry : table)
-        map.add(entry.attributeName.impl(), entry.type);
-    return map;
-}
-
-static inline const HashMap<QualifiedName::QualifiedNameImpl*, AnimatedPropertyType>& cssPropertyWithSVGDOMNameToAnimatedPropertyTypeMap()
-{
-    static const auto map = makeNeverDestroyed(createCSSPropertyWithSVGDOMNameToAnimatedPropertyTypeMap());
-    return map;
-}
-
 SVGElement::SVGElement(const QualifiedName& tagName, Document& document)
     : StyledElement(tagName, document, CreateSVGElement)
-    , SVGLangSpace(this)
+    , m_propertyAnimatorFactory(makeUnique<SVGPropertyAnimatorFactory>())
 {
-    registerAttributes();
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<HTMLNames::classAttr, &SVGElement::m_className>();
+    });
 }
 
 SVGElement::~SVGElement()
@@ -293,27 +179,20 @@ SVGElement::~SVGElement()
     document().accessSVGExtensions().removeAllElementReferencesForTarget(*this);
 }
 
-int SVGElement::tabIndex() const
-{
-    if (supportsFocus())
-        return Element::tabIndex();
-    return -1;
-}
-
 void SVGElement::willRecalcStyle(Style::Change change)
 {
     if (!m_svgRareData || styleResolutionShouldRecompositeLayer())
         return;
     // If the style changes because of a regular property change (not induced by SMIL animations themselves)
     // reset the "computed style without SMIL style properties", so the base value change gets reflected.
-    if (change > Style::NoChange || needsStyleRecalc())
+    if (change > Style::Change::None || needsStyleRecalc())
         m_svgRareData->setNeedsOverrideComputedStyleUpdate();
 }
 
 SVGElementRareData& SVGElement::ensureSVGRareData()
 {
     if (!m_svgRareData)
-        m_svgRareData = std::make_unique<SVGElementRareData>();
+        m_svgRareData = makeUnique<SVGElementRareData>();
     return *m_svgRareData;
 }
 
@@ -325,7 +204,7 @@ bool SVGElement::isOutermostSVGSVGElement() const
     // If we're living in a shadow tree, we're a <svg> element that got created as replacement
     // for a <symbol> element or a cloned <svg> element in the referenced tree. In that case
     // we're always an inner <svg> element.
-    if (isInShadowTree() && parentOrShadowHostElement() && parentOrShadowHostElement()->isSVGElement())
+    if (isInShadowTree() && is<SVGElement>(parentOrShadowHostElement()))
         return false;
 
     // Element may not be in the document, pretend we're outermost for viewport(), getCTM(), etc.
@@ -333,14 +212,14 @@ bool SVGElement::isOutermostSVGSVGElement() const
         return true;
 
     // We act like an outermost SVG element, if we're a direct child of a <foreignObject> element.
-    if (parentNode()->hasTagName(SVGNames::foreignObjectTag))
+    if (is<SVGForeignObjectElement>(*parentNode()))
         return true;
 
     // This is true whenever this is the outermost SVG, even if there are HTML elements outside it
-    return !parentNode()->isSVGElement();
+    return !is<SVGElement>(*parentNode());
 }
 
-void SVGElement::reportAttributeParsingError(SVGParsingError error, const QualifiedName& name, const AtomicString& value)
+void SVGElement::reportAttributeParsingError(SVGParsingError error, const QualifiedName& name, const AtomString& value)
 {
     if (error == NoError)
         return;
@@ -451,24 +330,16 @@ void SVGElement::setCorrespondingElement(SVGElement* correspondingElement)
         correspondingElement->ensureSVGRareData().instances().add(this);
 }
 
-void SVGElement::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<HTMLNames::classAttr, &SVGElement::m_className>();
-}
-
-void SVGElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == HTMLNames::classAttr) {
-        m_className.setValue(value);
+        m_className->setBaseValInternal(value);
         return;
     }
 
     if (name == HTMLNames::tabindexAttr) {
         if (value.isEmpty())
-            clearTabIndexExplicitlyIfNeeded();
+            setTabIndexExplicitly(WTF::nullopt);
         else if (auto optionalTabIndex = parseHTMLInteger(value))
             setTabIndexExplicitly(optionalTabIndex.value());
         return;
@@ -479,35 +350,6 @@ void SVGElement::parseAttribute(const QualifiedName& name, const AtomicString& v
         setAttributeEventListener(eventName, name, value);
         return;
     }
-
-    SVGLangSpace::parseAttribute(name, value);
-}
-
-Vector<AnimatedPropertyType> SVGElement::animatedPropertyTypesForAttribute(const QualifiedName& attributeName)
-{
-    auto types = animatedTypes(attributeName);
-    if (!types.isEmpty())
-        return types;
-
-    {
-        auto& map = attributeNameToAnimatedPropertyTypeMap();
-        auto it = map.find(attributeName.impl());
-        if (it != map.end()) {
-            types.append(it->value);
-            return types;
-        }
-    }
-
-    {
-        auto& map = cssPropertyWithSVGDOMNameToAnimatedPropertyTypeMap();
-        auto it = map.find(attributeName.impl());
-        if (it != map.end()) {
-            types.append(it->value);
-            return types;
-        }
-    }
-
-    return types;
 }
 
 bool SVGElement::haveLoadedRequiredResources()
@@ -519,7 +361,7 @@ bool SVGElement::haveLoadedRequiredResources()
     return true;
 }
 
-bool SVGElement::addEventListener(const AtomicString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
+bool SVGElement::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
     // Add event listener to regular DOM element
     if (!Node::addEventListener(eventType, listener.copyRef(), options))
@@ -539,7 +381,7 @@ bool SVGElement::addEventListener(const AtomicString& eventType, Ref<EventListen
     return true;
 }
 
-bool SVGElement::removeEventListener(const AtomicString& eventType, EventListener& listener, const ListenerOptions& options)
+bool SVGElement::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
 {
     if (containingShadowRoot())
         return Node::removeEventListener(eventType, listener, options);
@@ -592,47 +434,23 @@ static bool hasLoadListener(Element* element)
     return false;
 }
 
-void SVGElement::sendSVGLoadEventIfPossible(bool sendParentLoadEvents)
+void SVGElement::sendLoadEventIfPossible()
 {
     if (!isConnected() || !document().frame())
         return;
 
-    RefPtr<SVGElement> currentTarget = this;
-    while (currentTarget && currentTarget->haveLoadedRequiredResources()) {
-        RefPtr<Element> parent;
-        if (sendParentLoadEvents)
-            parent = currentTarget->parentOrShadowHostElement(); // save the next parent to dispatch too incase dispatching the event changes the tree
-        if (hasLoadListener(currentTarget.get()))
-            currentTarget->dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        currentTarget = (parent && parent->isSVGElement()) ? static_pointer_cast<SVGElement>(parent) : RefPtr<SVGElement>();
-        SVGElement* element = currentTarget.get();
-        if (!element || !element->isOutermostSVGSVGElement())
-            continue;
+    if (!haveLoadedRequiredResources() || !hasLoadListener(this))
+        return;
 
-        // Consider <svg onload="foo()"><image xlink:href="foo.png" externalResourcesRequired="true"/></svg>.
-        // If foo.png is not yet loaded, the first SVGLoad event will go to the <svg> element, sent through
-        // Document::implicitClose(). Then the SVGLoad event will fire for <image>, once its loaded.
-        ASSERT(sendParentLoadEvents);
-
-        // If the load event was not sent yet by Document::implicitClose(), but the <image> from the example
-        // above, just appeared, don't send the SVGLoad event to the outermost <svg>, but wait for the document
-        // to be "ready to render", first.
-        if (!document().loadEventFinished())
-            break;
-    }
+    dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-void SVGElement::sendSVGLoadEventIfPossibleAsynchronously()
+void SVGElement::loadEventTimerFired()
 {
-    svgLoadEventTimer()->startOneShot(0_s);
+    sendLoadEventIfPossible();
 }
 
-void SVGElement::svgLoadEventTimerFired()
-{
-    sendSVGLoadEventIfPossible();
-}
-
-Timer* SVGElement::svgLoadEventTimer()
+Timer* SVGElement::loadEventTimer()
 {
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -642,13 +460,8 @@ void SVGElement::finishParsingChildren()
 {
     StyledElement::finishParsingChildren();
 
-    // The outermost SVGSVGElement SVGLoad event is fired through Document::dispatchWindowLoadEvent.
     if (isOutermostSVGSVGElement())
         return;
-
-    // finishParsingChildren() is called when the close tag is reached for an element (e.g. </svg>)
-    // we send SVGLoad events here if we can, otherwise they'll be sent when any required loads finish
-    sendSVGLoadEventIfPossible();
 
     // Notify all the elements which have references to this element to rebuild their shadow and render
     // trees, e.g. a <use> element references a target element before this target element is defined.
@@ -662,9 +475,7 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
     auto& svgChild = downcast<SVGElement>(child);
 
     static const QualifiedName* const invalidTextContent[] {
-#if ENABLE(SVG_FONTS)
         &SVGNames::altGlyphTag.get(),
-#endif
         &SVGNames::textPathTag.get(),
         &SVGNames::trefTag.get(),
         &SVGNames::tspanTag.get(),
@@ -678,7 +489,7 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
     return svgChild.isValid();
 }
 
-void SVGElement::attributeChanged(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason)
+void SVGElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason)
 {
     StyledElement::attributeChanged(name, oldValue, newValue);
 
@@ -693,33 +504,90 @@ void SVGElement::attributeChanged(const QualifiedName& name, const AtomicString&
         svgAttributeChanged(name);
 }
 
-void SVGElement::synchronizeAllAnimatedSVGAttribute(SVGElement* svgElement)
+void SVGElement::synchronizeAttribute(const QualifiedName& name)
 {
-    ASSERT(svgElement->elementData());
-    ASSERT(svgElement->elementData()->animatedSVGAttributesAreDirty());
-
-    svgElement->synchronizeAttributes();
-    svgElement->elementData()->setAnimatedSVGAttributesAreDirty(false);
+    // If the value of the property has changed, serialize the new value to the attribute.
+    if (auto value = propertyRegistry().synchronize(name))
+        setSynchronizedLazyAttribute(name, *value);
 }
 
-void SVGElement::synchronizeAnimatedSVGAttribute(const QualifiedName& name) const
+void SVGElement::synchronizeAllAttributes()
 {
-    if (!elementData() || !elementData()->animatedSVGAttributesAreDirty())
-        return;
+    // SVGPropertyRegistry::synchronizeAllAttributes() returns the new values of
+    // the properties which have changed but not committed yet.
+    auto map = propertyRegistry().synchronizeAllAttributes();
+    for (const auto& entry : map)
+        setSynchronizedLazyAttribute(entry.key, entry.value);
+}
 
-    SVGElement* nonConstThis = const_cast<SVGElement*>(this);
-    if (name == anyQName())
-        synchronizeAllAnimatedSVGAttribute(nonConstThis);
+void SVGElement::commitPropertyChange(SVGProperty* property)
+{
+    // We want to dirty the top-level property when a descendant changes. For example
+    // a change in an SVGLength item in SVGLengthList should set the dirty flag on
+    // SVGLengthList and not the SVGLength.
+    property->setDirty();
+
+    invalidateSVGAttributes();
+    svgAttributeChanged(propertyRegistry().propertyAttributeName(*property));
+}
+
+void SVGElement::commitPropertyChange(SVGAnimatedProperty& animatedProperty)
+{
+    QualifiedName attributeName = propertyRegistry().animatedPropertyAttributeName(animatedProperty);
+    ASSERT(attributeName != nullQName());
+
+    // A change in a style property, e.g SVGRectElement::x should be serialized to
+    // the attribute immediately. Otherwise it is okay to be lazy in this regard.
+    if (!propertyRegistry().isAnimatedStylePropertyAttribute(attributeName))
+        propertyRegistry().setAnimatedPropertDirty(attributeName, animatedProperty);
     else
-        nonConstThis->synchronizeAttribute(name);
+        setSynchronizedLazyAttribute(attributeName, animatedProperty.baseValAsString());
+
+    invalidateSVGAttributes();
+    svgAttributeChanged(attributeName);
 }
 
-Optional<ElementStyle> SVGElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+bool SVGElement::isAnimatedPropertyAttribute(const QualifiedName& attributeName) const
+{
+    return propertyRegistry().isAnimatedPropertyAttribute(attributeName);
+}
+
+bool SVGElement::isAnimatedAttribute(const QualifiedName& attributeName) const
+{
+    return SVGPropertyAnimatorFactory::isKnownAttribute(attributeName) || isAnimatedPropertyAttribute(attributeName);
+}
+
+bool SVGElement::isAnimatedStyleAttribute(const QualifiedName& attributeName) const
+{
+    return SVGPropertyAnimatorFactory::isKnownAttribute(attributeName) || propertyRegistry().isAnimatedStylePropertyAttribute(attributeName);
+}
+
+RefPtr<SVGAttributeAnimator> SVGElement::createAnimator(const QualifiedName& attributeName, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
+{
+    // Property animator, e.g. "fill" or "fill-opacity".
+    if (auto animator = propertyAnimatorFactory().createAnimator(attributeName, animationMode, calcMode, isAccumulated, isAdditive))
+        return animator;
+
+    // Animated property animator.
+    auto animator = propertyRegistry().createAnimator(attributeName, animationMode, calcMode, isAccumulated, isAdditive);
+    if (!animator)
+        return animator;
+    for (auto* instance : instances())
+        instance->propertyRegistry().appendAnimatedInstance(attributeName, *animator);
+    return animator;
+}
+
+void SVGElement::animatorWillBeDeleted(const QualifiedName& attributeName)
+{
+    propertyAnimatorFactory().animatorWillBeDeleted(attributeName);
+}
+
+Optional<Style::ElementStyle> SVGElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
 {
     // If the element is in a <use> tree we get the style from the definition tree.
     if (auto styleElement = makeRefPtr(this->correspondingElement())) {
-        Optional<ElementStyle> style = styleElement->resolveStyle(&parentStyle);
-        StyleResolver::adjustSVGElementStyle(*this, *style->renderStyle);
+        auto style = styleElement->resolveStyle(&parentStyle);
+        Style::Adjuster::adjustSVGElementStyle(*style.renderStyle, *this);
         return style;
     }
 
@@ -758,7 +626,7 @@ const RenderStyle* SVGElement::computedStyle(PseudoId pseudoElementSpecifier)
     return m_svgRareData->overrideComputedStyle(*this, parentStyle);
 }
 
-QualifiedName SVGElement::animatableAttributeForName(const AtomicString& localName)
+QualifiedName SVGElement::animatableAttributeForName(const AtomString& localName)
 {
     static const auto animatableAttributes = makeNeverDestroyed([] {
         static const QualifiedName* const names[] = {
@@ -856,7 +724,7 @@ QualifiedName SVGElement::animatableAttributeForName(const AtomicString& localNa
             &SVGNames::zAttr.get(),
             &SVGNames::hrefAttr.get(),
         };
-        HashMap<AtomicString, QualifiedName> map;
+        HashMap<AtomString, QualifiedName> map;
         for (auto& name : names) {
             auto addResult = map.add(name->localName(), *name);
             ASSERT_UNUSED(addResult, addResult.isNewEntry);
@@ -900,7 +768,7 @@ bool SVGElement::rendererIsNeeded(const RenderStyle& style)
     // Spec: SVG allows inclusion of elements from foreign namespaces anywhere
     // with the SVG content. In general, the SVG user agent will include the unknown
     // elements in the DOM but will otherwise ignore unknown elements.
-    if (!parentOrShadowHostElement() || parentOrShadowHostElement()->isSVGElement())
+    if (!parentOrShadowHostElement() || is<SVGElement>(*parentOrShadowHostElement()))
         return StyledElement::rendererIsNeeded(style);
 
     return false;
@@ -915,17 +783,6 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
     return properties.get().get(attrName.localName().impl());
 }
 
-bool SVGElement::isAnimatableCSSProperty(const QualifiedName& attributeName)
-{
-    return attributeNameToAnimatedPropertyTypeMap().contains(attributeName.impl())
-        || cssPropertyWithSVGDOMNameToAnimatedPropertyTypeMap().contains(attributeName.impl());
-}
-
-bool SVGElement::isPresentationAttributeWithSVGDOM(const QualifiedName& attributeName)
-{
-    return !animatedTypes(attributeName).isEmpty();
-}
-
 bool SVGElement::isPresentationAttribute(const QualifiedName& name) const
 {
     if (cssPropertyIdForSVGAttributeName(name) > 0)
@@ -933,7 +790,7 @@ bool SVGElement::isPresentationAttribute(const QualifiedName& name) const
     return StyledElement::isPresentationAttribute(name);
 }
 
-void SVGElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void SVGElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     CSSPropertyID propertyID = cssPropertyIdForSVGAttributeName(name);
     if (propertyID > 0)
@@ -964,16 +821,26 @@ void SVGElement::svgAttributeChanged(const QualifiedName& attrName)
         invalidateInstances();
         return;
     }
-
-    SVGLangSpace::svgAttributeChanged(attrName);
 }
 
 Node::InsertedIntoAncestorResult SVGElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     StyledElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     updateRelativeLengthsInformation();
-    buildPendingResourcesIfNeeded();
+
+    if (needsPendingResourceHandling() && insertionType.connectedToDocument && !isInShadowTree()) {
+        SVGDocumentExtensions& extensions = document().accessSVGExtensions();
+        String resourceId = getIdAttribute();
+        if (extensions.isIdOfPendingResource(resourceId))
+            return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
+    }
+
     return InsertedIntoAncestorResult::Done;
+}
+
+void SVGElement::didFinishInsertingNode()
+{
+    buildPendingResourcesIfNeeded();
 }
 
 void SVGElement::buildPendingResourcesIfNeeded()
@@ -994,6 +861,10 @@ void SVGElement::buildPendingResourcesIfNeeded()
         ASSERT(clientElement->hasPendingResources());
         if (clientElement->hasPendingResources()) {
             clientElement->buildPendingResource();
+            if (auto renderer = clientElement->renderer()) {
+                for (auto& ancestor : ancestorsOfType<RenderSVGResourceContainer>(*renderer))
+                    ancestor.markAllClientsForRepaint();
+            }
             extensions.clearHasPendingResourcesIfPossible(*clientElement);
         }
     }
@@ -1003,28 +874,9 @@ void SVGElement::childrenChanged(const ChildChange& change)
 {
     StyledElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser)
+    if (change.source == ChildChange::Source::Parser)
         return;
     invalidateInstances();
-}
-
-RefPtr<DeprecatedCSSOMValue> SVGElement::getPresentationAttribute(const String& name)
-{
-    if (!hasAttributesWithoutUpdate())
-        return 0;
-
-    QualifiedName attributeName(nullAtom(), name, nullAtom());
-    const Attribute* attribute = findAttributeByName(attributeName);
-    if (!attribute)
-        return 0;
-
-    auto style = MutableStyleProperties::create(SVGAttributeMode);
-    CSSPropertyID propertyID = cssPropertyIdForSVGAttributeName(attribute->name());
-    style->setProperty(propertyID, attribute->value());
-    auto cssValue = style->getPropertyCSSValue(propertyID);
-    if (!cssValue)
-        return nullptr;
-    return cssValue->createDeprecatedCSSOMWrapper(style->ensureCSSStyleDeclaration());
 }
 
 bool SVGElement::instanceUpdatesBlocked() const
@@ -1069,44 +921,16 @@ void SVGElement::updateRelativeLengthsInformation(bool hasRelativeLengths, SVGEl
         m_elementsWithRelativeLengths.remove(element);
     }
 
-    if (!element->isSVGGraphicsElement())
-        return;
-
-    // Find first styled parent node, and notify it that we've changed our relative length state.
-    auto node = makeRefPtr(parentNode());
-    while (node) {
-        if (!node->isSVGElement())
-            break;
-
-        // Register us in the parent element map.
-        downcast<SVGElement>(*node).updateRelativeLengthsInformation(hasRelativeLengths, this);
-        break;
+    if (is<SVGGraphicsElement>(*element)) {
+        auto parent = makeRefPtr(parentNode());
+        if (is<SVGElement>(parent))
+            downcast<SVGElement>(*parent).updateRelativeLengthsInformation(hasRelativeLengths, this);
     }
 }
 
-bool SVGElement::hasFocusEventListeners() const
+bool SVGElement::accessKeyAction(bool sendMouseEvents)
 {
-    Element* eventTarget = const_cast<SVGElement*>(this);
-    return eventTarget->hasEventListeners(eventNames().focusinEvent)
-        || eventTarget->hasEventListeners(eventNames().focusoutEvent)
-        || eventTarget->hasEventListeners(eventNames().focusEvent)
-        || eventTarget->hasEventListeners(eventNames().blurEvent);
-}
-
-bool SVGElement::isMouseFocusable() const
-{
-    if (!isFocusable())
-        return false;
-    Element* eventTarget = const_cast<SVGElement*>(this);
-    return hasFocusEventListeners()
-        || eventTarget->hasEventListeners(eventNames().keydownEvent)
-        || eventTarget->hasEventListeners(eventNames().keyupEvent)
-        || eventTarget->hasEventListeners(eventNames().keypressEvent);
-}
-
-void SVGElement::accessKeyAction(bool sendMouseEvents)
-{
-    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 void SVGElement::invalidateInstances()
@@ -1120,7 +944,7 @@ void SVGElement::invalidateInstances()
         if (auto useElement = instance->correspondingUseElement())
             useElement->invalidateShadowTree();
         instance->setCorrespondingElement(nullptr);
-    } while (!instances.isEmpty());
+    }
 }
 
 }

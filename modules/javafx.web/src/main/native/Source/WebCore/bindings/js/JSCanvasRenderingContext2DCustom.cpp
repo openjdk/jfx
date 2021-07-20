@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,23 +22,26 @@
 #include "JSNodeCustom.h"
 #include "JSCanvasRenderingContext2D.h"
 
+#include "JSNodeCustom.h"
+
 namespace WebCore {
 
-using namespace JSC;
-
-bool JSCanvasRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::SlotVisitor& visitor, const char** reason)
+bool JSCanvasRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, const char** reason)
 {
     if (UNLIKELY(reason))
         *reason = "Canvas is opaque root";
 
-    JSCanvasRenderingContext2D* jsCanvasRenderingContext = jsCast<JSCanvasRenderingContext2D*>(handle.slot()->asCell());
+    JSCanvasRenderingContext2D* jsCanvasRenderingContext = JSC::jsCast<JSCanvasRenderingContext2D*>(handle.slot()->asCell());
     void* root = WebCore::root(jsCanvasRenderingContext->wrapped().canvas());
     return visitor.containsOpaqueRoot(root);
 }
 
-void JSCanvasRenderingContext2D::visitAdditionalChildren(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void JSCanvasRenderingContext2D::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(root(wrapped().canvas()));
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSCanvasRenderingContext2D);
 
 } // namespace WebCore

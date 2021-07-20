@@ -19,12 +19,15 @@
 #include "unicode/udat.h"
 #include "unicode/ustring.h"
 #include "unicode/utf16.h"
+#include "bytesinkutil.h"
+#include "charstr.h"
 #include "tzgnames.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "putilimp.h"
 #include "uassert.h"
 #include "ucln_in.h"
+#include "ulocimp.h"
 #include "umutex.h"
 #include "uresimp.h"
 #include "ureslocs.h"
@@ -147,7 +150,7 @@ static icu::UInitOnce gZoneIdTrieInitOnce = U_INITONCE_INITIALIZER;
 static TextTrieMap *gShortZoneIdTrie = NULL;
 static icu::UInitOnce gShortZoneIdTrieInitOnce = U_INITONCE_INITIALIZER;
 
-static UMutex gLock = U_MUTEX_INITIALIZER;
+static UMutex gLock;
 
 U_CDECL_BEGIN
 /**
@@ -267,7 +270,7 @@ GMTOffsetField::isValid(FieldType type, int32_t width) {
     case SECOND:
         return (width == 2);
     default:
-        U_ASSERT(FALSE);
+        UPRV_UNREACHABLE;
     }
     return (width > 0);
 }
@@ -324,10 +327,13 @@ TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
     const char* region = fLocale.getCountry();
     int32_t regionLen = static_cast<int32_t>(uprv_strlen(region));
     if (regionLen == 0) {
-        char loc[ULOC_FULLNAME_CAPACITY];
-        uloc_addLikelySubtags(fLocale.getName(), loc, sizeof(loc), &status);
+        CharString loc;
+        {
+            CharStringByteSink sink(&loc);
+            ulocimp_addLikelySubtags(fLocale.getName(), sink, &status);
+        }
 
-        regionLen = uloc_getCountry(loc, fTargetRegion, sizeof(fTargetRegion), &status);
+        regionLen = uloc_getCountry(loc.data(), fTargetRegion, sizeof(fTargetRegion), &status);
         if (U_SUCCESS(status)) {
             fTargetRegion[regionLen] = 0;
         } else {
@@ -499,7 +505,7 @@ TimeZoneFormat::operator==(const Format& other) const {
     return isEqual;
 }
 
-Format*
+TimeZoneFormat*
 TimeZoneFormat::clone() const {
     return new TimeZoneFormat(*this);
 }
@@ -589,8 +595,7 @@ TimeZoneFormat::setGMTOffsetPattern(UTimeZoneFormatGMTOffsetPatternType type, co
         required = FIELDS_HMS;
         break;
     default:
-        U_ASSERT(FALSE);
-        break;
+        UPRV_UNREACHABLE;
     }
 
     UVector* patternItems = parseOffsetPattern(pattern, required, status);
@@ -1028,7 +1033,7 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
                 break;
 
             default:
-                U_ASSERT(FALSE);
+                UPRV_UNREACHABLE;
             }
 
             int32_t len = 0;
@@ -1873,7 +1878,7 @@ TimeZoneFormat::parseOffsetFieldsWithPattern(const UnicodeString& text, int32_t 
                     while (len > 0) {
                         UChar32 ch;
                         int32_t chLen;
-                        U16_GET(patStr, 0, 0, len, ch)
+                        U16_GET(patStr, 0, 0, len, ch);
                         if (PatternProps::isWhiteSpace(ch)) {
                             chLen = U16_LENGTH(ch);
                             len -= chLen;
@@ -2648,12 +2653,12 @@ TimeZoneFormat::checkAbuttingHoursAndMinutes() {
         UVector *items = fGMTOffsetPatternItems[type];
         for (int32_t i = 0; i < items->size(); i++) {
             const GMTOffsetField* item = (GMTOffsetField*)items->elementAt(i);
-            GMTOffsetField::FieldType type = item->getType();
-            if (type != GMTOffsetField::TEXT) {
+            GMTOffsetField::FieldType fieldType = item->getType();
+            if (fieldType != GMTOffsetField::TEXT) {
                 if (afterH) {
                     fAbuttingOffsetHoursAndMinutes = TRUE;
                     break;
-                } else if (type == GMTOffsetField::HOUR) {
+                } else if (fieldType == GMTOffsetField::HOUR) {
                     afterH = TRUE;
                 }
             } else if (afterH) {

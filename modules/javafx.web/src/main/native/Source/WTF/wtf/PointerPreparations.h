@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,18 +25,29 @@
 
 #pragma once
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/PointerPreparations.h>)
-#include <WebKitAdditions/PointerPreparations.h>
+#if CPU(ARM64E)
+#include <ptrauth.h>
 #endif
 
-#ifndef WTF_PREPARE_VTBL_POINTER_FOR_INSPECTION
-#define WTF_PREPARE_VTBL_POINTER_FOR_INSPECTION(vtblPtr) (reinterpret_cast<void*>(vtblPtr))
-#endif
+namespace WTF {
 
-#ifndef WTF_SET_POINTER_PREPARATION_OPTIONS
-#define WTF_SET_POINTER_PREPARATION_OPTIONS() do { } while (false)
-#endif
+#if COMPILER_HAS_CLANG_BUILTIN(__builtin_get_vtable_pointer)
 
-#ifndef WTF_METHOD_TABLE_ENTRY
-#define WTF_METHOD_TABLE_ENTRY(method) method
-#endif
+template<typename T>
+ALWAYS_INLINE const void* getVTablePointer(T* o) { return __builtin_get_vtable_pointer(o); }
+
+#else // not COMPILER_HAS_CLANG_BUILTIN(__builtin_get_vtable_pointer)
+
+#if CPU(ARM64E)
+template<typename T>
+ALWAYS_INLINE const void* getVTablePointer(T* o) { return __builtin_ptrauth_auth(*(reinterpret_cast<void**>(o)), ptrauth_key_cxx_vtable_pointer, 0); }
+#else // not CPU(ARM64E)
+template<typename T>
+ALWAYS_INLINE const void* getVTablePointer(T* o) { return (*(reinterpret_cast<void**>(o))); }
+#endif // not CPU(ARM64E)
+
+#endif // not COMPILER_HAS_CLANG_BUILTIN(__builtin_get_vtable_pointer)
+
+} // namespace WTF
+
+using WTF::getVTablePointer;

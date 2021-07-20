@@ -152,9 +152,6 @@
 GST_DEBUG_CATEGORY_STATIC (gst_base_sink_debug);
 #define GST_CAT_DEFAULT gst_base_sink_debug
 
-#define GST_BASE_SINK_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_BASE_SINK, GstBaseSinkPrivate))
-
 #define GST_FLOW_STEP GST_FLOW_CUSTOM_ERROR
 
 typedef struct
@@ -181,6 +178,7 @@ struct _GstBaseSinkPrivate
   gboolean async_enabled;
   GstClockTimeDiff ts_offset;
   GstClockTime render_delay;
+  GstClockTime processing_deadline;
 
   /* start, stop of current buffer, stream time, used to report position */
   GstClockTime current_sstart;
@@ -212,8 +210,8 @@ struct _GstBaseSinkPrivate
   /* latency stuff */
   GstClockTime latency;
 
-  /* if we already commited the state */
-  gboolean commited;
+  /* if we already committed the state */
+  gboolean committed;
   /* state change to playing ongoing */
   gboolean to_playing;
 
@@ -246,6 +244,25 @@ struct _GstBaseSinkPrivate
   /* we have a pending and a current step operation */
   GstStepInfo current_step;
   GstStepInfo pending_step;
+
+  /* instant rate change state */
+  /* seqnum of the last instant-rate-sync-time event
+   * received. %GST_SEQNUM_INVALID if there isn't one */
+  guint32 instant_rate_sync_seqnum;
+  /* Active instant-rate multipler. 0.0 if nothing pending */
+  gdouble instant_rate_multiplier;
+  /* seqnum of the last instant-rate event.
+   * %GST_SEQNUM_INVALID if there isn't one */
+  guint32 last_instant_rate_seqnum;
+  guint32 segment_seqnum;
+  GstSegment upstream_segment;
+  /* Running time at the start of the last segment event
+   * or instant-rate switch in *our* segment, not upstream */
+  GstClockTime last_anchor_running_time;
+  /* Difference between upstream running time and our own running time
+   * at the last segment event or instant-rate switch:
+   * upstream + offset = ours */
+  GstClockTimeDiff instant_rate_offset;
 
   /* Cached GstClockID */
   GstClockID cached_clock_id;
@@ -290,6 +307,7 @@ struct _GstBaseSinkPrivate
 #define DEFAULT_THROTTLE_TIME       0
 #define DEFAULT_MAX_BITRATE         0
 #define DEFAULT_DROP_OUT_OF_SEGMENT TRUE
+#define DEFAULT_PROCESSING_DEADLINE (20 * GST_MSECOND)
 
 enum
 {
@@ -305,10 +323,13 @@ enum
   PROP_RENDER_DELAY,
   PROP_THROTTLE_TIME,
   PROP_MAX_BITRATE,
+  PROP_PROCESSING_DEADLINE,
+  PROP_STATS,
   PROP_LAST
 };
 
 static GstElementClass *parent_class = NULL;
+static gint private_offset = 0;
 
 static void gst_base_sink_class_init (GstBaseSinkClass * klass);
 static void gst_base_sink_init (GstBaseSink * trans, gpointer g_class);
@@ -335,9 +356,19 @@ gst_base_sink_get_type (void)
 
     _type = g_type_register_static (GST_TYPE_ELEMENT,
         "GstBaseSink", &base_sink_info, G_TYPE_FLAG_ABSTRACT);
+
+    private_offset =
+        g_type_add_instance_private (_type, sizeof (GstBaseSinkPrivate));
+
     g_once_init_leave (&base_sink_type, _type);
   }
   return base_sink_type;
+}
+
+static inline GstBaseSinkPrivate *
+gst_base_sink_get_instance_private (GstBaseSink * self)
+{
+  return (G_STRUCT_MEMBER_P (self, private_offset));
 }
 
 static void gst_base_sink_set_property (GObject * object, guint prop_id,
@@ -407,10 +438,11 @@ gst_base_sink_class_init (GstBaseSinkClass * klass)
   gobject_class = G_OBJECT_CLASS (klass);
   gstelement_class = GST_ELEMENT_CLASS (klass);
 
+  if (private_offset != 0)
+    g_type_class_adjust_private_offset (klass, &private_offset);
+
   GST_DEBUG_CATEGORY_INIT (gst_base_sink_debug, "basesink", 0,
       "basesink element");
-
-  g_type_class_add_private (klass, sizeof (GstBaseSinkPrivate));
 
   parent_class = g_type_class_peek_parent (klass);
 
@@ -527,6 +559,38 @@ gst_base_sink_class_init (GstBaseSinkClass * klass)
           "The maximum bits per second to render (0 = disabled)", 0,
           G_MAXUINT64, DEFAULT_MAX_BITRATE,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  /**
+   * GstBaseSink:processing-deadline:
+   *
+   * Maximum amount of time (in nanoseconds) that the pipeline can take
+   * for processing the buffer. This is added to the latency of live
+   * pipelines.
+   *
+   * Since: 1.16
+   */
+  g_object_class_install_property (gobject_class, PROP_PROCESSING_DEADLINE,
+      g_param_spec_uint64 ("processing-deadline", "Processing deadline",
+          "Maximum processing time for a buffer in nanoseconds", 0,
+          G_MAXUINT64, DEFAULT_PROCESSING_DEADLINE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+
+  /**
+   * GstBaseSink:stats:
+   *
+   * Various #GstBaseSink statistics. This property returns a #GstStructure
+   * with name `application/x-gst-base-sink-stats` with the following fields:
+   *
+   * - "average-rate"  G_TYPE_DOUBLE   average frame rate
+   * - "dropped" G_TYPE_UINT64   Number of dropped frames
+   * - "rendered" G_TYPE_UINT64   Number of rendered frames
+   *
+   * Since: 1.18
+   */
+  g_object_class_install_property (gobject_class, PROP_STATS,
+      g_param_spec_boxed ("stats", "Statistics",
+          "Sink Statistics", GST_TYPE_STRUCTURE,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   gstelement_class->change_state =
       GST_DEBUG_FUNCPTR (gst_base_sink_change_state);
@@ -622,7 +686,7 @@ gst_base_sink_init (GstBaseSink * basesink, gpointer g_class)
   GstPadTemplate *pad_template;
   GstBaseSinkPrivate *priv;
 
-  basesink->priv = priv = GST_BASE_SINK_GET_PRIVATE (basesink);
+  basesink->priv = priv = gst_base_sink_get_instance_private (basesink);
 
   pad_template =
       gst_element_class_get_pad_template (GST_ELEMENT_CLASS (g_class), "sink");
@@ -653,6 +717,7 @@ gst_base_sink_init (GstBaseSink * basesink, gpointer g_class)
   priv->async_enabled = DEFAULT_ASYNC;
   priv->ts_offset = DEFAULT_TS_OFFSET;
   priv->render_delay = DEFAULT_RENDER_DELAY;
+  priv->processing_deadline = DEFAULT_PROCESSING_DEADLINE;
   priv->blocksize = DEFAULT_BLOCKSIZE;
   priv->cached_clock_id = NULL;
   g_atomic_int_set (&priv->enable_last_sample, DEFAULT_ENABLE_LAST_SAMPLE);
@@ -734,14 +799,10 @@ void
 gst_base_sink_set_drop_out_of_segment (GstBaseSink * sink,
     gboolean drop_out_of_segment)
 {
-  GstBaseSinkPrivate *priv;
-
   g_return_if_fail (GST_IS_BASE_SINK (sink));
 
-  priv = GST_BASE_SINK_GET_PRIVATE (sink);
-
   GST_OBJECT_LOCK (sink);
-  priv->drop_out_of_segment = drop_out_of_segment;
+  sink->priv->drop_out_of_segment = drop_out_of_segment;
   GST_OBJECT_UNLOCK (sink);
 
 }
@@ -761,15 +822,12 @@ gst_base_sink_set_drop_out_of_segment (GstBaseSink * sink,
 gboolean
 gst_base_sink_get_drop_out_of_segment (GstBaseSink * sink)
 {
-  GstBaseSinkPrivate *priv;
   gboolean res;
 
   g_return_val_if_fail (GST_IS_BASE_SINK (sink), FALSE);
 
-  priv = GST_BASE_SINK_GET_PRIVATE (sink);
-
   GST_OBJECT_LOCK (sink);
-  res = priv->drop_out_of_segment;
+  res = sink->priv->drop_out_of_segment;
   GST_OBJECT_UNLOCK (sink);
 
   return res;
@@ -1148,7 +1206,7 @@ gst_base_sink_query_latency (GstBaseSink * sink, gboolean * live,
     GstClockTime * max_latency)
 {
   gboolean l, us_live, res, have_latency;
-  GstClockTime min, max, render_delay;
+  GstClockTime min, max, render_delay, processing_deadline;
   GstQuery *query;
   GstClockTime us_min, us_max;
 
@@ -1157,12 +1215,15 @@ gst_base_sink_query_latency (GstBaseSink * sink, gboolean * live,
   l = sink->sync;
   have_latency = sink->priv->have_latency;
   render_delay = sink->priv->render_delay;
+  processing_deadline = sink->priv->processing_deadline;
   GST_OBJECT_UNLOCK (sink);
 
   /* assume no latency */
   min = 0;
   max = -1;
   us_live = FALSE;
+  us_min = 0;
+  us_max = 0;
 
   if (have_latency) {
     GST_DEBUG_OBJECT (sink, "we are ready for LATENCY query");
@@ -1180,6 +1241,24 @@ gst_base_sink_query_latency (GstBaseSink * sink, gboolean * live,
          * values to create the complete latency. */
         min = us_min;
         max = us_max;
+
+        if (l) {
+          if (max == -1 || min + processing_deadline <= max)
+            min += processing_deadline;
+          else {
+            GST_ELEMENT_WARNING (sink, CORE, CLOCK,
+                (_("Pipeline construction is invalid, please add queues.")),
+                ("Not enough buffering available for "
+                    " the processing deadline of %" GST_TIME_FORMAT
+                    ", add enough queues to buffer  %" GST_TIME_FORMAT
+                    " additional data. Shortening processing latency to %"
+                    GST_TIME_FORMAT ".",
+                    GST_TIME_ARGS (processing_deadline),
+                    GST_TIME_ARGS (min + processing_deadline - max),
+                    GST_TIME_ARGS (max - min)));
+            min = max;
+          }
+        }
       }
       if (l) {
         /* we need to add the render delay if we are live */
@@ -1206,8 +1285,14 @@ gst_base_sink_query_latency (GstBaseSink * sink, gboolean * live,
 
   if (res) {
     GST_DEBUG_OBJECT (sink, "latency query: live: %d, have_latency %d,"
-        " upstream: %d, min %" GST_TIME_FORMAT ", max %" GST_TIME_FORMAT, l,
-        have_latency, us_live, GST_TIME_ARGS (min), GST_TIME_ARGS (max));
+        " upstream_live %d, min(%" GST_TIME_FORMAT ")=upstream(%"
+        GST_TIME_FORMAT ")+processing_deadline(%" GST_TIME_FORMAT
+        ")+render_delay(%" GST_TIME_FORMAT "), max(%" GST_TIME_FORMAT
+        ")=upstream(%" GST_TIME_FORMAT ")+render_delay(%" GST_TIME_FORMAT ")",
+        l, have_latency, us_live, GST_TIME_ARGS (min), GST_TIME_ARGS (us_min),
+        GST_TIME_ARGS (processing_deadline), GST_TIME_ARGS (render_delay),
+        GST_TIME_ARGS (max), GST_TIME_ARGS (us_max),
+        GST_TIME_ARGS (render_delay));
 
     if (live)
       *live = l;
@@ -1411,6 +1496,67 @@ gst_base_sink_get_max_bitrate (GstBaseSink * sink)
   return res;
 }
 
+/**
+ * gst_base_sink_set_processing_deadline:
+ * @sink: a #GstBaseSink
+ * @processing_deadline: the new processing deadline in nanoseconds.
+ *
+ * Maximum amount of time (in nanoseconds) that the pipeline can take
+ * for processing the buffer. This is added to the latency of live
+ * pipelines.
+ *
+ * This function is usually called by subclasses.
+ *
+ * Since: 1.16
+ */
+void
+gst_base_sink_set_processing_deadline (GstBaseSink * sink,
+    GstClockTime processing_deadline)
+{
+  GstClockTime old_processing_deadline;
+
+  g_return_if_fail (GST_IS_BASE_SINK (sink));
+
+  GST_OBJECT_LOCK (sink);
+  old_processing_deadline = sink->priv->processing_deadline;
+  sink->priv->processing_deadline = processing_deadline;
+  GST_LOG_OBJECT (sink, "set render processing_deadline to %" GST_TIME_FORMAT,
+      GST_TIME_ARGS (processing_deadline));
+  GST_OBJECT_UNLOCK (sink);
+
+  if (processing_deadline != old_processing_deadline) {
+    GST_DEBUG_OBJECT (sink, "posting latency changed");
+    gst_element_post_message (GST_ELEMENT_CAST (sink),
+        gst_message_new_latency (GST_OBJECT_CAST (sink)));
+  }
+}
+
+/**
+ * gst_base_sink_get_processing_deadline:
+ * @sink: a #GstBaseSink
+ *
+ * Get the processing deadline of @sink. see
+ * gst_base_sink_set_processing_deadline() for more information about
+ * the processing deadline.
+ *
+ * Returns: the processing deadline
+ *
+ * Since: 1.16
+ */
+GstClockTime
+gst_base_sink_get_processing_deadline (GstBaseSink * sink)
+{
+  GstClockTimeDiff res;
+
+  g_return_val_if_fail (GST_IS_BASE_SINK (sink), 0);
+
+  GST_OBJECT_LOCK (sink);
+  res = sink->priv->processing_deadline;
+  GST_OBJECT_UNLOCK (sink);
+
+  return res;
+}
+
 static void
 gst_base_sink_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
@@ -1447,6 +1593,9 @@ gst_base_sink_set_property (GObject * object, guint prop_id,
       break;
     case PROP_MAX_BITRATE:
       gst_base_sink_set_max_bitrate (sink, g_value_get_uint64 (value));
+      break;
+    case PROP_PROCESSING_DEADLINE:
+      gst_base_sink_set_processing_deadline (sink, g_value_get_uint64 (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1494,6 +1643,12 @@ gst_base_sink_get_property (GObject * object, guint prop_id, GValue * value,
     case PROP_MAX_BITRATE:
       g_value_set_uint64 (value, gst_base_sink_get_max_bitrate (sink));
       break;
+    case PROP_PROCESSING_DEADLINE:
+      g_value_set_uint64 (value, gst_base_sink_get_processing_deadline (sink));
+      break;
+    case PROP_STATS:
+      g_value_take_boxed (value, gst_base_sink_get_stats (sink));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -1535,11 +1690,11 @@ gst_base_sink_commit_state (GstBaseSink * basesink)
   switch (pending) {
     case GST_STATE_PLAYING:
     {
-      GST_DEBUG_OBJECT (basesink, "commiting state to PLAYING");
+      GST_DEBUG_OBJECT (basesink, "committing state to PLAYING");
 
       basesink->need_preroll = FALSE;
       post_async_done = TRUE;
-      basesink->priv->commited = TRUE;
+      basesink->priv->committed = TRUE;
       post_playing = TRUE;
       /* post PAUSED too when we were READY */
       if (current == GST_STATE_READY) {
@@ -1548,10 +1703,10 @@ gst_base_sink_commit_state (GstBaseSink * basesink)
       break;
     }
     case GST_STATE_PAUSED:
-      GST_DEBUG_OBJECT (basesink, "commiting state to PAUSED");
+      GST_DEBUG_OBJECT (basesink, "committing state to PAUSED");
       post_paused = TRUE;
       post_async_done = TRUE;
-      basesink->priv->commited = TRUE;
+      basesink->priv->committed = TRUE;
       post_pending = GST_STATE_VOID_PENDING;
       break;
     case GST_STATE_READY:
@@ -2042,6 +2197,13 @@ do_times:
   rstart = gst_segment_to_running_time (segment, format, cstart);
   rstop = gst_segment_to_running_time (segment, format, cstop);
 
+  /* In reverse playback, play from stop to start */
+  if (segment->rate < 0.0 && GST_CLOCK_TIME_IS_VALID (rstop)) {
+    GstClockTime tmp = rstart;
+    rstart = rstop;
+    rstop = tmp;
+  }
+
   if (GST_CLOCK_TIME_IS_VALID (stop))
     rnext = rstop;
   else
@@ -2180,11 +2342,8 @@ gst_base_sink_wait_clock (GstBaseSink * sink, GstClockTime time,
   time += base_time;
 
   /* Re-use existing clockid if available */
-  /* FIXME: Casting to GstClockEntry only works because the types
-   * are the same */
   if (G_LIKELY (sink->priv->cached_clock_id != NULL
-          && GST_CLOCK_ENTRY_CLOCK ((GstClockEntry *) sink->
-              priv->cached_clock_id) == clock)) {
+          && gst_clock_id_uses_clock (sink->priv->cached_clock_id, clock))) {
     if (!gst_clock_single_shot_id_reinit (clock, sink->priv->cached_clock_id,
             time)) {
       gst_clock_id_unref (sink->priv->cached_clock_id);
@@ -2380,7 +2539,7 @@ preroll_canceled:
   }
 stopping:
   {
-    GST_DEBUG_OBJECT (sink, "stopping while commiting state");
+    GST_DEBUG_OBJECT (sink, "stopping while committing state");
     return GST_FLOW_FLUSHING;
   }
 preroll_failed:
@@ -2451,7 +2610,7 @@ gst_base_sink_wait (GstBaseSink * sink, GstClockTime time,
       goto flushing;
 
     /* retry if we got unscheduled, which means we did not reach the timeout
-     * yet. if some other error occures, we continue. */
+     * yet. if some other error occurs, we continue. */
   } while (status == GST_CLOCK_UNSCHEDULED);
 
   GST_DEBUG_OBJECT (sink, "end of stream");
@@ -2501,9 +2660,14 @@ gst_base_sink_do_sync (GstBaseSink * basesink,
   GstFlowReturn ret;
   GstStepInfo *current, *pending;
   gboolean stepped;
+  guint32 current_instant_rate_seqnum;
 
   priv = basesink->priv;
 
+  /* remember the currently handled instant-rate sequence number. If this
+   * changes after pre-rolling, we need to goto do_step again for updating
+   * the timing information of the current buffer */
+  current_instant_rate_seqnum = priv->instant_rate_sync_seqnum;
 do_step:
   sstart = sstop = rstart = rstop = rnext = GST_CLOCK_TIME_NONE;
   do_sync = TRUE;
@@ -2572,6 +2736,13 @@ again:
     goto do_step;
   }
 
+  if (G_UNLIKELY (priv->instant_rate_sync_seqnum !=
+          current_instant_rate_seqnum)) {
+    current_instant_rate_seqnum = priv->instant_rate_sync_seqnum;
+    // TODO rename the goto label - it does more these days.
+    goto do_step;
+  }
+
   /* After rendering we store the position of the last buffer so that we can use
    * it to report the position. We need to take the lock here. */
   GST_OBJECT_LOCK (basesink);
@@ -2620,6 +2791,13 @@ again:
   /* check for unlocked by a state change, we are not flushing so
    * we can try to preroll on the current buffer. */
   if (G_UNLIKELY (status == GST_CLOCK_UNSCHEDULED)) {
+    if (G_UNLIKELY (priv->instant_rate_sync_seqnum !=
+            current_instant_rate_seqnum)) {
+      current_instant_rate_seqnum = priv->instant_rate_sync_seqnum;
+      // TODO rename
+      goto do_step;
+    }
+
     GST_DEBUG_OBJECT (basesink, "unscheduled, waiting some more");
     priv->call_preroll = TRUE;
     goto again;
@@ -2677,6 +2855,60 @@ gst_base_sink_send_qos (GstBaseSink * basesink, GstQOSType type,
   GST_CAT_DEBUG_OBJECT (GST_CAT_QOS, basesink,
       "qos: type %d, proportion: %lf, diff %" G_GINT64_FORMAT ", timestamp %"
       GST_TIME_FORMAT, type, proportion, diff, GST_TIME_ARGS (time));
+
+  /* Compensate for any instant-rate-change related running time offset
+   * between upstream and the internal running time of the sink */
+  if (basesink->priv->instant_rate_sync_seqnum != GST_SEQNUM_INVALID) {
+    GstClockTime actual_duration;
+    GstClockTime upstream_duration;
+    GstClockTimeDiff difference;
+    gboolean negative_duration;
+
+    GST_DEBUG_OBJECT (basesink,
+        "Current internal running time %" GST_TIME_FORMAT
+        ", last internal running time %" GST_TIME_FORMAT, GST_TIME_ARGS (time),
+        GST_TIME_ARGS (basesink->priv->last_anchor_running_time));
+
+    /* Calculate how much running time was spent since the last switch/segment
+     * in the "corrected upstream segment", our segment */
+    /* Due to rounding errors and other inaccuracies, it can happen
+     * that our calculated internal running time is before the upstream
+     * running time. We need to compensate for that */
+    if (time < basesink->priv->last_anchor_running_time) {
+      actual_duration = basesink->priv->last_anchor_running_time - time;
+      negative_duration = TRUE;
+    } else {
+      actual_duration = time - basesink->priv->last_anchor_running_time;
+      negative_duration = FALSE;
+    }
+
+    /* Transpose that duration (i.e. what upstream beliefs) */
+    upstream_duration =
+        (actual_duration * basesink->segment.rate) /
+        basesink->priv->upstream_segment.rate;
+
+    /* Add the difference to the previously accumulated correction */
+    if (negative_duration)
+      difference = upstream_duration - actual_duration;
+    else
+      difference = actual_duration - upstream_duration;
+
+    GST_DEBUG_OBJECT (basesink,
+        "Current instant rate correction offset. Actual duration %"
+        GST_TIME_FORMAT ", upstream duration %" GST_TIME_FORMAT
+        ", negative %d, difference %" GST_STIME_FORMAT ", current offset %"
+        GST_STIME_FORMAT, GST_TIME_ARGS (actual_duration),
+        GST_TIME_ARGS (upstream_duration), negative_duration,
+        GST_STIME_ARGS (difference),
+        GST_STIME_ARGS (basesink->priv->instant_rate_offset + difference));
+
+    difference = basesink->priv->instant_rate_offset + difference;
+
+    if (difference > 0 && time < difference)
+      time = 0;
+    else
+      time -= difference;
+  }
 
   event = gst_event_new_qos (type, proportion, diff, time);
 
@@ -3026,8 +3258,17 @@ gst_base_sink_flush_stop (GstBaseSink * basesink, GstPad * pad,
     /* we need new segment info after the flush. */
     basesink->have_newsegment = FALSE;
     if (reset_time) {
+      gst_segment_init (&basesink->priv->upstream_segment,
+          GST_FORMAT_UNDEFINED);
       gst_segment_init (&basesink->segment, GST_FORMAT_UNDEFINED);
       GST_ELEMENT_START_TIME (basesink) = 0;
+
+      basesink->priv->last_instant_rate_seqnum = GST_SEQNUM_INVALID;
+      basesink->priv->instant_rate_sync_seqnum = GST_SEQNUM_INVALID;
+      basesink->priv->instant_rate_multiplier = 0;
+      basesink->priv->segment_seqnum = GST_SEQNUM_INVALID;
+      basesink->priv->instant_rate_offset = 0;
+      basesink->priv->last_anchor_running_time = 0;
     }
   }
   GST_OBJECT_UNLOCK (basesink);
@@ -3174,21 +3415,140 @@ gst_base_sink_default_event (GstBaseSink * basesink, GstEvent * event)
         gst_caps_unref (current_caps);
       break;
     }
-    case GST_EVENT_SEGMENT:
+    case GST_EVENT_SEGMENT:{
+      guint32 seqnum = gst_event_get_seqnum (event);
+      GstSegment new_segment;
+
       /* configure the segment */
       /* The segment is protected with both the STREAM_LOCK and the OBJECT_LOCK.
        * We protect with the OBJECT_LOCK so that we can use the values to
        * safely answer a POSITION query. */
       GST_OBJECT_LOCK (basesink);
-      /* the newsegment event is needed to bring the buffer timestamps to the
+      /* the new segment event is needed to bring the buffer timestamps to the
        * stream time and to drop samples outside of the playback segment. */
-      gst_event_copy_segment (event, &basesink->segment);
+
+      gst_event_copy_segment (event, &new_segment);
+
+      GST_DEBUG_OBJECT (basesink,
+          "received upstream segment %u %" GST_SEGMENT_FORMAT, seqnum,
+          &new_segment);
+
+      /* Make sure that the position stays between start and stop */
+      new_segment.position =
+          CLAMP (new_segment.position, new_segment.start, new_segment.stop);
+
+      if (basesink->priv->instant_rate_sync_seqnum != GST_SEQNUM_INVALID) {
+        GstClockTime upstream_duration;
+        GstClockTime actual_duration;
+        GstClockTime new_segment_running_time;
+        GstClockTimeDiff difference;
+        gboolean negative_duration;
+
+        /* Calculate how much running time upstream believes has passed since
+         * the last switch/segment */
+        new_segment_running_time =
+            gst_segment_to_running_time (&new_segment, GST_FORMAT_TIME,
+            new_segment.position);
+
+        GST_DEBUG_OBJECT (basesink,
+            "Current upstream running time %" GST_TIME_FORMAT
+            ", last upstream running time %" GST_TIME_FORMAT,
+            GST_TIME_ARGS (new_segment_running_time),
+            GST_TIME_ARGS (basesink->priv->last_anchor_running_time -
+                basesink->priv->instant_rate_offset));
+
+        /* Due to rounding errors and other inaccuracies, it can happen
+         * that our calculated internal running time is before the upstream
+         * running time. We need to compensate for that */
+        if (new_segment_running_time <
+            basesink->priv->last_anchor_running_time -
+            basesink->priv->instant_rate_offset) {
+          upstream_duration =
+              basesink->priv->last_anchor_running_time -
+              basesink->priv->instant_rate_offset - new_segment_running_time;
+          negative_duration = TRUE;
+        } else {
+          upstream_duration =
+              new_segment_running_time -
+              basesink->priv->last_anchor_running_time +
+              basesink->priv->instant_rate_offset;
+          negative_duration = FALSE;
+        }
+
+        /* Calculate the actual running-time duration of the previous segment */
+        actual_duration =
+            (upstream_duration * basesink->priv->instant_rate_multiplier);
+
+        if (negative_duration)
+          difference = upstream_duration - actual_duration;
+        else
+          difference = actual_duration - upstream_duration;
+
+        GST_DEBUG_OBJECT (basesink,
+            "Current internal running time %" GST_TIME_FORMAT
+            ", last internal running time %" GST_TIME_FORMAT,
+            GST_TIME_ARGS (new_segment_running_time +
+                basesink->priv->instant_rate_offset + difference),
+            GST_TIME_ARGS (basesink->priv->last_anchor_running_time));
+
+        /* Add the difference to the previously accumulated correction. */
+        basesink->priv->instant_rate_offset += difference;
+
+        GST_DEBUG_OBJECT (basesink,
+            "Updating instant rate correction offset. Actual duration %"
+            GST_TIME_FORMAT ", upstream duration %" GST_TIME_FORMAT
+            ", negative %d, difference %" GST_STIME_FORMAT ", new offset %"
+            GST_STIME_FORMAT, GST_TIME_ARGS (actual_duration),
+            GST_TIME_ARGS (upstream_duration),
+            negative_duration,
+            GST_STIME_ARGS (difference),
+            GST_STIME_ARGS (basesink->priv->instant_rate_offset));
+
+        if (basesink->priv->instant_rate_offset < 0 &&
+            new_segment_running_time < -basesink->priv->instant_rate_offset) {
+          GST_WARNING_OBJECT (basesink,
+              "Upstream current running time %" GST_TIME_FORMAT
+              " is smaller than calculated offset %" GST_STIME_FORMAT,
+              GST_TIME_ARGS (new_segment_running_time),
+              GST_STIME_ARGS (basesink->priv->instant_rate_offset));
+
+          basesink->priv->last_anchor_running_time = 0;
+          basesink->priv->instant_rate_offset = 0;
+        } else {
+          basesink->priv->last_anchor_running_time =
+              new_segment_running_time + basesink->priv->instant_rate_offset;
+        }
+
+        /* Update the segments from the event and with the newly calculated
+         * correction offset */
+        basesink->priv->upstream_segment = new_segment;
+        basesink->segment = new_segment;
+
+        basesink->segment.rate *= basesink->priv->instant_rate_multiplier;
+
+        gst_segment_offset_running_time (&basesink->segment, GST_FORMAT_TIME,
+            basesink->priv->instant_rate_offset);
+
+        GST_DEBUG_OBJECT (basesink,
+            "Adjusted segment is now %" GST_SEGMENT_FORMAT, &basesink->segment);
+      } else {
+        /* otherwise both segments are simply the same, no correction needed */
+        basesink->priv->upstream_segment = new_segment;
+        basesink->segment = new_segment;
+        basesink->priv->last_anchor_running_time =
+            gst_segment_to_running_time (&new_segment, new_segment.format,
+            new_segment.position);
+        basesink->priv->instant_rate_offset = 0;        /* Should already be 0, but to be sure */
+      }
+
       GST_DEBUG_OBJECT (basesink, "configured segment %" GST_SEGMENT_FORMAT,
           &basesink->segment);
+      basesink->priv->segment_seqnum = seqnum;
       basesink->have_newsegment = TRUE;
       gst_base_sink_reset_qos (basesink);
       GST_OBJECT_UNLOCK (basesink);
       break;
+    }
     case GST_EVENT_GAP:
     {
       if (G_UNLIKELY (gst_base_sink_wait_event (basesink,
@@ -3227,6 +3587,41 @@ gst_base_sink_default_event (GstBaseSink * basesink, GstEvent * event)
       gst_event_parse_sink_message (event, &msg);
       if (msg)
         gst_element_post_message (GST_ELEMENT_CAST (basesink), msg);
+      break;
+    }
+    case GST_EVENT_INSTANT_RATE_CHANGE:
+    {
+      GstMessage *msg;
+      gdouble rate_multiplier;
+      guint32 seqnum = gst_event_get_seqnum (event);
+
+      GST_OBJECT_LOCK (basesink);
+      if (G_UNLIKELY (basesink->priv->last_instant_rate_seqnum == seqnum)) {
+        /* Ignore repeated event */
+        GST_LOG_OBJECT (basesink,
+            "Ignoring repeated instant-rate-change event");
+        GST_OBJECT_UNLOCK (basesink);
+        break;
+      }
+      if (basesink->priv->instant_rate_sync_seqnum == seqnum) {
+        /* Ignore if we already received the instant-rate-sync-time event from the pipeline */
+        GST_LOG_OBJECT (basesink,
+            "Ignoring instant-rate-change event for which we already received instant-rate-sync-time");
+        GST_OBJECT_UNLOCK (basesink);
+        break;
+      }
+
+      basesink->priv->last_instant_rate_seqnum = seqnum;
+      GST_OBJECT_UNLOCK (basesink);
+
+      gst_event_parse_instant_rate_change (event, &rate_multiplier, NULL);
+
+      msg =
+          gst_message_new_instant_rate_request (GST_OBJECT_CAST (basesink),
+          rate_multiplier);
+      gst_message_set_seqnum (msg, seqnum);
+      gst_element_post_message (GST_ELEMENT_CAST (basesink), msg);
+
       break;
     }
     default:
@@ -3421,7 +3816,7 @@ gst_base_sink_chain_unlocked (GstBaseSink * basesink, GstPad * pad,
       ", end: %" GST_TIME_FORMAT, GST_TIME_ARGS (start), GST_TIME_ARGS (end));
 
   /* a dropped buffer does not participate in anything. Buffer can only be
-   * dropped if their PTS falls completly outside the segment, while we sync
+   * dropped if their PTS falls completely outside the segment, while we sync
    * preferably on DTS */
   if (GST_CLOCK_TIME_IS_VALID (start) && (segment->format == GST_FORMAT_TIME)) {
     GstClockTime pts = GST_BUFFER_PTS (sync_buf);
@@ -4038,6 +4433,114 @@ gst_base_sink_perform_step (GstBaseSink * sink, GstPad * pad, GstEvent * event)
   return TRUE;
 }
 
+static gboolean
+gst_base_sink_perform_instant_rate_change (GstBaseSink * sink, GstPad * pad,
+    GstEvent * event)
+{
+  GstBaseSinkPrivate *priv;
+  guint32 seqnum;
+  gdouble rate;
+  GstClockTime running_time, upstream_running_time;
+
+  GstClockTime switch_time;
+  gint res;
+
+  priv = sink->priv;
+
+  GST_DEBUG_OBJECT (sink, "performing instant-rate-change with event %p",
+      event);
+
+  seqnum = gst_event_get_seqnum (event);
+  gst_event_parse_instant_rate_sync_time (event, &rate, &running_time,
+      &upstream_running_time);
+
+  GST_DEBUG_OBJECT (sink, "instant-rate-change %u %lf at %" GST_TIME_FORMAT
+      ", upstream %" GST_TIME_FORMAT,
+      seqnum, rate, GST_TIME_ARGS (running_time),
+      GST_TIME_ARGS (upstream_running_time));
+
+  /* Take the preroll lock so we can change the segment. We do not call unlock
+   * like for stepping as that would cause the PLAYING state to be lost and
+   * would get us into prerolling again first
+   *
+   * FIXME: The below potentially blocks until the chain function returns, but
+   * the lock is not taken during all waiting operations inside the chain
+   * function (clock, preroll) so this should be fine in most cases. Only
+   * problem is if the render() or prepare() functions are waiting themselves!
+   *
+   * FIXME: If the subclass is calling gst_base_sink_wait() it will be woken
+   * up but there is no way for it to update the timestamps, or to report back
+   * to the base class that it should recalculate the values. The current
+   * change would not be instantaneous in that case but would wait until the
+   * next buffer.
+   */
+  GST_BASE_SINK_PREROLL_LOCK (sink);
+
+  /* We can safely change the segment and everything here as we hold the
+   * PREROLL_LOCK and it is taken for the whole chain function */
+  sink->priv->instant_rate_sync_seqnum = seqnum;
+  sink->priv->instant_rate_multiplier = rate;
+  sink->priv->instant_rate_offset = running_time - upstream_running_time;
+  sink->priv->last_anchor_running_time = running_time;
+
+  GST_DEBUG_OBJECT (sink, "Current internal running time %" GST_TIME_FORMAT
+      ", last internal running time %" GST_TIME_FORMAT,
+      GST_TIME_ARGS (running_time),
+      GST_TIME_ARGS (sink->priv->last_anchor_running_time));
+
+  /* Calculate the current position in the segment and do a seek with the
+   * new rate. This updates rate, base and offset accordingly */
+  res =
+      gst_segment_position_from_running_time_full (&sink->segment,
+      GST_FORMAT_TIME, running_time, &switch_time);
+
+  GST_DEBUG_OBJECT (sink, "Before adjustment seg is %" GST_SEGMENT_FORMAT
+      " new running_time %" GST_TIME_FORMAT
+      " position %" GST_STIME_FORMAT " res %d", &sink->segment,
+      GST_TIME_ARGS (running_time),
+      GST_STIME_ARGS ((GstClockTimeDiff) switch_time), res);
+
+  if (res < 0) {
+    GST_WARNING_OBJECT (sink,
+        "Negative position calculated. Can't instant-rate change to there");
+    GST_BASE_SINK_PREROLL_UNLOCK (sink);
+    return TRUE;
+  }
+
+  sink->segment.position = switch_time;
+
+  /* Calculate new output rate based on upstream value */
+  rate *= sink->priv->upstream_segment.rate;
+
+  gst_segment_do_seek (&sink->segment, rate, GST_FORMAT_TIME,
+      sink->segment.flags & (~GST_SEEK_FLAG_FLUSH) &
+      GST_SEEK_FLAG_INSTANT_RATE_CHANGE, GST_SEEK_TYPE_NONE, -1,
+      GST_SEEK_TYPE_NONE, -1, NULL);
+
+  GST_DEBUG_OBJECT (sink, "Adjusted segment is now %" GST_SEGMENT_FORMAT,
+      &sink->segment);
+
+  priv->current_sstart = GST_CLOCK_TIME_NONE;
+  priv->current_sstop = GST_CLOCK_TIME_NONE;
+  priv->eos_rtime = GST_CLOCK_TIME_NONE;
+  gst_base_sink_reset_qos (sink);
+
+  if (sink->clock_id) {
+    gst_clock_id_unschedule (sink->clock_id);
+  }
+
+  if (sink->have_preroll) {
+    GST_DEBUG_OBJECT (sink, "signal waiter");
+    /* TODO: Rename this, and GST_FLOW_STEP */
+    priv->step_unlock = TRUE;
+    GST_BASE_SINK_PREROLL_SIGNAL (sink);
+  }
+
+  GST_BASE_SINK_PREROLL_UNLOCK (sink);
+
+  return TRUE;
+}
+
 /* with STREAM_LOCK
  */
 static void
@@ -4219,7 +4722,7 @@ gst_base_sink_pad_activate (GstPad * pad, GstObject * parent)
 
   if (!gst_pad_peer_query (pad, query)) {
     gst_query_unref (query);
-    GST_DEBUG_OBJECT (basesink, "peer query faild, no pull mode");
+    GST_DEBUG_OBJECT (basesink, "peer query failed, no pull mode");
     goto fallback;
   }
 
@@ -4491,6 +4994,18 @@ gst_base_sink_send_event (GstElement * element, GstEvent * event)
        * when a particular piece of data will be rendered. */
       break;
     }
+    case GST_EVENT_INSTANT_RATE_SYNC_TIME:
+    {
+      gst_base_sink_perform_instant_rate_change (basesink, pad, event);
+
+      /* Forward the event. If upstream handles it already, it is supposed to
+       * send a SEGMENT event with the same seqnum and the final rate before
+       * the next buffer
+       */
+      forward = TRUE;
+
+      break;
+    }
     case GST_EVENT_SEEK:
       /* in pull mode we will execute the seek */
       if (mode == GST_PAD_MODE_PULL)
@@ -4507,6 +5022,84 @@ gst_base_sink_send_event (GstElement * element, GstEvent * event)
   if (forward) {
     GST_DEBUG_OBJECT (basesink, "sending event %p %" GST_PTR_FORMAT, event,
         event);
+
+    /* Compensate for any instant-rate-change related running time offset
+     * between upstream and the internal running time of the sink */
+    if (basesink->priv->instant_rate_sync_seqnum != GST_SEQNUM_INVALID) {
+      GstClockTime now = GST_CLOCK_TIME_NONE;
+      GstClockTime actual_duration;
+      GstClockTime upstream_duration;
+      GstClockTimeDiff difference;
+      gboolean is_playing, negative_duration;
+
+      GST_OBJECT_LOCK (basesink);
+      is_playing = GST_STATE (basesink) == GST_STATE_PLAYING
+          && (GST_STATE_PENDING (basesink) == GST_STATE_VOID_PENDING ||
+          GST_STATE_PENDING (basesink) == GST_STATE_PLAYING);
+
+      if (is_playing) {
+        GstClockTime base_time, clock_time;
+        GstClock *clock;
+
+        base_time = GST_ELEMENT_CAST (basesink)->base_time;
+        clock = GST_ELEMENT_CLOCK (basesink);
+        GST_OBJECT_UNLOCK (basesink);
+
+        if (clock) {
+          clock_time = gst_clock_get_time (clock);
+          now = clock_time - base_time;
+        }
+      } else {
+        now = GST_ELEMENT_START_TIME (basesink);
+        GST_OBJECT_UNLOCK (basesink);
+      }
+
+      GST_DEBUG_OBJECT (basesink,
+          "Current internal running time %" GST_TIME_FORMAT
+          ", last internal running time %" GST_TIME_FORMAT, GST_TIME_ARGS (now),
+          GST_TIME_ARGS (basesink->priv->last_anchor_running_time));
+
+      if (now != GST_CLOCK_TIME_NONE) {
+        /* Calculate how much running time was spent since the last switch/segment
+         * in the "corrected upstream segment", our segment */
+        /* Due to rounding errors and other inaccuracies, it can happen
+         * that our calculated internal running time is before the upstream
+         * running time. We need to compensate for that */
+        if (now < basesink->priv->last_anchor_running_time) {
+          actual_duration = basesink->priv->last_anchor_running_time - now;
+          negative_duration = TRUE;
+        } else {
+          actual_duration = now - basesink->priv->last_anchor_running_time;
+          negative_duration = FALSE;
+        }
+
+        /* Transpose that duration (i.e. what upstream beliefs) */
+        upstream_duration =
+            (actual_duration * basesink->segment.rate) /
+            basesink->priv->upstream_segment.rate;
+
+        /* Add the difference to the previously accumulated correction */
+        if (negative_duration)
+          difference = upstream_duration - actual_duration;
+        else
+          difference = actual_duration - upstream_duration;
+
+        GST_DEBUG_OBJECT (basesink,
+            "Current instant rate correction offset. Actual duration %"
+            GST_TIME_FORMAT ", upstream duration %" GST_TIME_FORMAT
+            ", negative %d, difference %" GST_STIME_FORMAT ", current offset %"
+            GST_STIME_FORMAT, GST_TIME_ARGS (actual_duration),
+            GST_TIME_ARGS (upstream_duration), negative_duration,
+            GST_STIME_ARGS (difference),
+            GST_STIME_ARGS (basesink->priv->instant_rate_offset + difference));
+
+        difference = basesink->priv->instant_rate_offset + difference;
+
+        event = gst_event_make_writable (event);
+        gst_event_set_running_time_offset (event, -difference);
+      }
+    }
+
     result = gst_pad_push_event (pad, event);
   } else {
     /* not forwarded, unref the event */
@@ -5065,6 +5658,8 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
       GST_DEBUG_OBJECT (basesink, "READY to PAUSED");
       basesink->have_newsegment = FALSE;
       gst_segment_init (&basesink->segment, GST_FORMAT_UNDEFINED);
+      gst_segment_init (&basesink->priv->upstream_segment,
+          GST_FORMAT_UNDEFINED);
       basesink->offset = 0;
       basesink->have_preroll = FALSE;
       priv->step_unlock = FALSE;
@@ -5078,10 +5673,16 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
       priv->received_eos = FALSE;
       gst_base_sink_reset_qos (basesink);
       priv->rc_next = -1;
-      priv->commited = FALSE;
+      priv->committed = FALSE;
       priv->call_preroll = TRUE;
       priv->current_step.valid = FALSE;
       priv->pending_step.valid = FALSE;
+      priv->instant_rate_sync_seqnum = GST_SEQNUM_INVALID;
+      priv->instant_rate_multiplier = 0;
+      priv->last_instant_rate_seqnum = GST_SEQNUM_INVALID;
+      priv->segment_seqnum = GST_SEQNUM_INVALID;
+      priv->instant_rate_offset = 0;
+      priv->last_anchor_running_time = 0;
       if (priv->async_enabled) {
         GST_DEBUG_OBJECT (basesink, "doing async state change");
         /* when async enabled, post async-start message and return ASYNC from
@@ -5119,7 +5720,7 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
         basesink->need_preroll = TRUE;
         basesink->playing_async = TRUE;
         priv->call_preroll = TRUE;
-        priv->commited = FALSE;
+        priv->committed = FALSE;
         if (priv->async_enabled) {
           GST_DEBUG_OBJECT (basesink, "doing async state change");
           ret = GST_STATE_CHANGE_ASYNC;
@@ -5184,7 +5785,7 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
               "PLAYING to PAUSED, we are not prerolled");
           basesink->playing_async = TRUE;
           basesink->need_preroll = TRUE;
-          priv->commited = FALSE;
+          priv->committed = FALSE;
           priv->call_preroll = TRUE;
           if (priv->async_enabled) {
             GST_DEBUG_OBJECT (basesink, "doing async state change");
@@ -5221,7 +5822,7 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
       gst_base_sink_set_last_buffer_list (basesink, NULL);
       priv->call_preroll = FALSE;
 
-      if (!priv->commited) {
+      if (!priv->committed) {
         if (priv->async_enabled) {
           GST_DEBUG_OBJECT (basesink, "PAUSED to READY, posting async-done");
 
@@ -5233,7 +5834,7 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
               gst_message_new_async_done (GST_OBJECT_CAST (basesink),
                   GST_CLOCK_TIME_NONE));
         }
-        priv->commited = TRUE;
+        priv->committed = TRUE;
       } else {
         GST_DEBUG_OBJECT (basesink, "PAUSED to READY, don't need_preroll");
       }
@@ -5271,4 +5872,32 @@ activate_failed:
         "element failed to change states -- activation problem?");
     return GST_STATE_CHANGE_FAILURE;
   }
+}
+
+/**
+ * gst_base_sink_get_stats:
+ * @sink: #GstBaseSink
+ *
+ * Return various #GstBaseSink statistics. This function returns a #GstStructure
+ * with name `application/x-gst-base-sink-stats` with the following fields:
+ *
+ * - "average-rate" G_TYPE_DOUBLE   average frame rate
+ * - "dropped" G_TYPE_UINT64   Number of dropped frames
+ * - "rendered" G_TYPE_UINT64   Number of rendered frames
+ *
+ * Returns: (transfer full): pointer to #GstStructure
+ *
+ * Since: 1.18
+ */
+GstStructure *
+gst_base_sink_get_stats (GstBaseSink * sink)
+{
+  GstBaseSinkPrivate *priv = NULL;
+
+  g_return_val_if_fail (sink != NULL, NULL);
+  priv = sink->priv;
+  return gst_structure_new ("application/x-gst-base-sink-stats",
+      "average-rate", G_TYPE_DOUBLE, priv->avg_rate,
+      "dropped", G_TYPE_UINT64, priv->dropped,
+      "rendered", G_TYPE_UINT64, priv->rendered, NULL);
 }

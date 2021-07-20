@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "DataRef.h"
 #include "LengthBox.h"
 #include "StyleImage.h"
+#include <wtf/DataRef.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -34,8 +34,14 @@ class LayoutSize;
 class LayoutRect;
 class RenderStyle;
 
-enum ENinePieceImageRule { StretchImageRule, RoundImageRule, SpaceImageRule, RepeatImageRule };
+enum class NinePieceImageRule : uint8_t {
+    Stretch,
+    Round,
+    Space,
+    Repeat,
+};
 
+// Used for array indexing, so not an enum class.
 enum ImagePiece {
     MinPiece = 0,
     TopLeftPiece = MinPiece,
@@ -76,32 +82,37 @@ inline bool isVerticalPiece(ImagePiece piece)
     return piece == LeftPiece || piece == RightPiece || piece == MiddlePiece;
 }
 
-inline Optional<PhysicalBoxSide> imagePieceHorizontalSide(ImagePiece piece)
+inline Optional<BoxSide> imagePieceHorizontalSide(ImagePiece piece)
 {
     if (piece == TopLeftPiece || piece == TopPiece || piece == TopRightPiece)
-        return PhysicalBoxSide::Top;
+        return BoxSide::Top;
 
     if (piece == BottomLeftPiece || piece == BottomPiece || piece == BottomRightPiece)
-        return PhysicalBoxSide::Bottom;
+        return BoxSide::Bottom;
 
     return WTF::nullopt;
 }
 
-inline Optional<PhysicalBoxSide> imagePieceVerticalSide(ImagePiece piece)
+inline Optional<BoxSide> imagePieceVerticalSide(ImagePiece piece)
 {
     if (piece == TopLeftPiece || piece == LeftPiece || piece == BottomLeftPiece)
-        return PhysicalBoxSide::Left;
+        return BoxSide::Left;
 
     if (piece == TopRightPiece || piece == RightPiece || piece == BottomRightPiece)
-        return PhysicalBoxSide::Right;
+        return BoxSide::Right;
 
     return WTF::nullopt;
 }
 
 class NinePieceImage {
 public:
-    NinePieceImage();
-    NinePieceImage(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule);
+    enum class Type {
+        Normal,
+        Mask
+    };
+
+    NinePieceImage(Type = Type::Normal);
+    NinePieceImage(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule);
 
     bool operator==(const NinePieceImage& other) const { return m_data == other.m_data; }
     bool operator!=(const NinePieceImage& other) const { return m_data != other.m_data; }
@@ -122,11 +133,11 @@ public:
     const LengthBox& outset() const { return m_data->outset; }
     void setOutset(LengthBox outset) { m_data.access().outset = WTFMove(outset); }
 
-    ENinePieceImageRule horizontalRule() const { return static_cast<ENinePieceImageRule>(m_data->horizontalRule); }
-    void setHorizontalRule(ENinePieceImageRule rule) { m_data.access().horizontalRule = rule; }
+    NinePieceImageRule horizontalRule() const { return m_data->horizontalRule; }
+    void setHorizontalRule(NinePieceImageRule rule) { m_data.access().horizontalRule = rule; }
 
-    ENinePieceImageRule verticalRule() const { return static_cast<ENinePieceImageRule>(m_data->verticalRule); }
-    void setVerticalRule(ENinePieceImageRule rule) { m_data.access().verticalRule = rule; }
+    NinePieceImageRule verticalRule() const { return m_data->verticalRule; }
+    void setVerticalRule(NinePieceImageRule rule) { m_data.access().verticalRule = rule; }
 
     void copyImageSlicesFrom(const NinePieceImage& other)
     {
@@ -150,18 +161,11 @@ public:
         m_data.access().verticalRule = other.m_data->verticalRule;
     }
 
-    void setMaskDefaults()
-    {
-        m_data.access().imageSlices = LengthBox(0);
-        m_data.access().fill = true;
-        m_data.access().borderSlices = LengthBox();
-    }
-
     static LayoutUnit computeOutset(const Length& outsetSide, LayoutUnit borderSide)
     {
         if (outsetSide.isRelative())
-            return outsetSide.value() * borderSide;
-        return outsetSide.value();
+            return LayoutUnit(outsetSide.value() * borderSide);
+        return LayoutUnit(outsetSide.value());
     }
 
     static LayoutUnit computeSlice(Length, LayoutUnit width, LayoutUnit slice, LayoutUnit extent);
@@ -176,35 +180,36 @@ public:
     static void scaleSlicesIfNeeded(const LayoutSize&, LayoutBoxExtent& slices, float deviceScaleFactor);
 
     static FloatSize computeSideTileScale(ImagePiece, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects);
-    static FloatSize computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, ENinePieceImageRule hRule, ENinePieceImageRule vRule);
-    static Vector<FloatSize> computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, ENinePieceImageRule hRule, ENinePieceImageRule vRule);
+    static FloatSize computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule);
+    static Vector<FloatSize> computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule);
 
     void paint(GraphicsContext&, RenderElement*, const RenderStyle&, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator) const;
 
 private:
     struct Data : RefCounted<Data> {
         static Ref<Data> create();
-        static Ref<Data> create(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule);
+        static Ref<Data> create(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule);
         Ref<Data> copy() const;
 
         bool operator==(const Data&) const;
         bool operator!=(const Data& other) const { return !(*this == other); }
 
-        bool fill : 1;
-        unsigned horizontalRule : 2; // ENinePieceImageRule
-        unsigned verticalRule : 2; // ENinePieceImageRule
+        bool fill { false };
+        NinePieceImageRule horizontalRule { NinePieceImageRule::Stretch };
+        NinePieceImageRule verticalRule { NinePieceImageRule::Stretch };
         RefPtr<StyleImage> image;
-        LengthBox imageSlices { { 100, Percent }, { 100, Percent }, { 100, Percent }, { 100, Percent } };
-        LengthBox borderSlices { { 1, Relative }, { 1, Relative }, { 1, Relative }, { 1, Relative } };
+        LengthBox imageSlices { { 100, LengthType::Percent }, { 100, LengthType::Percent }, { 100, LengthType::Percent }, { 100, LengthType::Percent } };
+        LengthBox borderSlices { { 1, LengthType::Relative }, { 1, LengthType::Relative }, { 1, LengthType::Relative }, { 1, LengthType::Relative } };
         LengthBox outset { 0 };
 
     private:
         Data();
-        Data(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule);
+        Data(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule);
         Data(const Data&);
     };
 
     static DataRef<Data>& defaultData();
+    static DataRef<Data>& defaultMaskData();
 
     DataRef<Data> m_data;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,27 +25,33 @@
 
 #pragma once
 
-#include "SVGAnimatedListPropertyTearOff.h"
-#include "SVGListPropertyTearOff.h"
-#include "SVGNumberListValues.h"
+#include "SVGNumber.h"
+#include "SVGValuePropertyList.h"
 
 namespace WebCore {
 
-class SVGNumberList : public SVGListPropertyTearOff<SVGNumberListValues> {
+class SVGNumberList final : public SVGValuePropertyList<SVGNumber> {
+    using Base = SVGValuePropertyList<SVGNumber>;
+    using Base::Base;
+
 public:
-    using AnimatedListPropertyTearOff = SVGAnimatedListPropertyTearOff<SVGNumberListValues>;
-    using ListWrapperCache = AnimatedListPropertyTearOff::ListWrapperCache;
-
-    static Ref<SVGNumberList> create(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGNumberListValues& values, ListWrapperCache& wrappers)
+    static Ref<SVGNumberList> create()
     {
-        return adoptRef(*new SVGNumberList(animatedProperty, role, values, wrappers));
+        return adoptRef(*new SVGNumberList());
     }
 
-private:
-    SVGNumberList(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGNumberListValues& values, ListWrapperCache& wrappers)
-        : SVGListPropertyTearOff<SVGNumberListValues>(animatedProperty, role, values, wrappers)
+    static Ref<SVGNumberList> create(SVGPropertyOwner* owner, SVGPropertyAccess access)
     {
+        return adoptRef(*new SVGNumberList(owner, access));
     }
+
+    static Ref<SVGNumberList> create(const SVGNumberList& other, SVGPropertyAccess access)
+    {
+        return adoptRef(*new SVGNumberList(other, access));
+    }
+
+    bool parse(StringView);
+    String valueAsString() const override;
 };
 
 } // namespace WebCore

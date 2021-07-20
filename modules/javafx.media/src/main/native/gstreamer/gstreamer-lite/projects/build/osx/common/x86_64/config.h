@@ -25,6 +25,9 @@
 /* The GIO install prefix. */
 #undef GIO_PREFIX
 
+/* public symbol export define */
+#undef GST_API_EXPORT
+
 /* GStreamer API Version */
 #define GST_API_VERSION "1.0"
 
@@ -79,6 +82,10 @@
 /* libexecdir path component, used to find plugin-scanner on relocatable
    builds on windows */
 #undef GST_PLUGIN_SCANNER_SUBDIR
+
+/* plugin directory path component, used to find plugins on relocatable builds
+   on windows */
+#undef GST_PLUGIN_SUBDIR
 
 /* location of the installed gst-ptp-helper */
 #undef GST_PTP_HELPER_INSTALLED
@@ -292,8 +299,7 @@
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
-/* Have PTHREAD_PRIO_INHERIT. */
-#define HAVE_PTHREAD_PRIO_INHERIT 1
+#define HAVE_PTHREAD_COND_TIMEDWAIT_RELATIVE_NP 1
 
 /* Have function pthread_setname_np(const char*) */
 #undef HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID
@@ -468,16 +474,16 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 1.14.4"
+#define PACKAGE_STRING "GStreamer 1.18.4"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL ""
+#undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.14.4"
+#define PACKAGE_VERSION "1.18.4"
 
 /* directory where plugins are located */
 #undef PLUGINDIR
@@ -517,7 +523,7 @@
 #undef USE_POISONING
 
 /* Version number of package */
-#define VERSION "1.14.4"
+#define VERSION "1.18.4"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

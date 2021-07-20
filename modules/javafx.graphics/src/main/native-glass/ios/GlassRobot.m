@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -307,7 +307,7 @@ static inline void DumpImage(CGImageRef image)
 
 - (void)mousePress
 {
-     touch = [[UITouch alloc] initInView:[GlassWindow getMasterWindowHost] :touchLocation];
+     touch = [[UITouch alloc] initInView:[GlassWindow getMainWindowHost] :touchLocation];
     UIEvent *eventDown = [[UIEvent alloc] initWithTouch:touch];
 
     [touch.view touchesBegan:[eventDown allTouches] withEvent:eventDown];
@@ -363,7 +363,7 @@ static inline void DumpImage(CGImageRef image)
     // On iOS 4 and later, use UIGraphicsBeginImageContextWithOptions to take the scale into consideration
     // Set the scale parameter to your OpenGL ES view's contentScaleFactor
     // so that you get a high-resolution snapshot when its value is greater than 1.0
-    CGFloat scale = [GlassWindow getMasterWindowHost].contentScaleFactor;
+    CGFloat scale = [GlassWindow getMainWindowHost].contentScaleFactor;
     NSInteger widthInPoints = width / scale;
     NSInteger heightInPoints = height / scale;
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(widthInPoints, heightInPoints), NO, scale);
@@ -412,7 +412,7 @@ static inline void DumpImage(CGImageRef image)
 }
 
 - (void)keyPress:(NSString *)chr {
-    UIView *subview = [[[GlassWindow getMasterWindowHost] subviews] objectAtIndex:0];
+    UIView *subview = [[[GlassWindow getMainWindowHost] subviews] objectAtIndex:0];
     if (subview != NULL) {
         subview = [[subview subviews] objectAtIndex:0];
         if (subview != NULL) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,25 +43,20 @@ public class ES2Pipeline extends GraphicsPipeline {
             pixelFormatAttributes = new GLPixelFormat.Attributes();
     static final boolean msaa;
     static final boolean npotSupported;
+    private static final boolean supports3D;
     private static boolean es2Enabled;
     private static boolean isEglfb = false;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String libName = "prism_es2";
 
             String eglType = PlatformUtil.getEmbeddedType();
-            if ("eglfb".equals(eglType)) {
-                isEglfb = true;
-                libName = "prism_es2_eglfb";
-            }
-            else if ("monocle".equals(eglType)) {
+            if ("monocle".equals(eglType)) {
                 isEglfb = true;
                 libName = "prism_es2_monocle";
             }
-            else if ("eglx11".equals(eglType))
-                libName = "prism_es2_eglx11";
-
             if (PrismSettings.verbose) {
                 System.out.println("Loading ES2 native library ... " + libName);
             }
@@ -89,10 +84,14 @@ public class ES2Pipeline extends GraphicsPipeline {
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
             msaa = glFactory.isGLExtensionSupported("GL_ARB_multisample");
             npotSupported = glFactory.isNPOTSupported();
+            // 3D requires platform that has non-power of two (NPOT) support, but
+            // also works on iOS with OpenGL ES 2.0 or greater
+            supports3D = npotSupported || PlatformUtil.isIOS();
         } else {
             theInstance = null;
             msaa = false;
             npotSupported = false;
+            supports3D = false;
         }
 
     }
@@ -201,8 +200,7 @@ public class ES2Pipeline extends GraphicsPipeline {
 
     @Override
     public boolean is3DSupported() {
-        // 3D requires platform that has non-power of two (NPOT) support.
-        return npotSupported;
+        return supports3D;
     }
 
     @Override

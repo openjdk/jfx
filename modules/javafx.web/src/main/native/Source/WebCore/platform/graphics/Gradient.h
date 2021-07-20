@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008 Torch Mobile, Inc.
  *
@@ -31,44 +31,44 @@
 #include "Color.h"
 #include "FloatPoint.h"
 #include "GraphicsTypes.h"
-#include <wtf/RefCounted.h>
 #include <wtf/Variant.h>
 #include <wtf/Vector.h>
 
 #if USE(CG)
+#include <wtf/RetainPtr.h>
+#endif
+
+#if USE(DIRECT2D)
+#include "COMPtr.h"
+#endif
+
+#if USE(CG)
 typedef struct CGContext* CGContextRef;
 typedef struct CGGradient* CGGradientRef;
-typedef CGGradientRef PlatformGradient;
-#elif USE(DIRECT2D)
+#endif
+
+#if USE(DIRECT2D)
 interface ID2D1Brush;
 interface ID2D1RenderTarget;
-typedef ID2D1Brush* PlatformGradient;
-#elif USE(CAIRO)
+#endif
+
+#if USE(CAIRO)
 typedef struct _cairo_pattern cairo_pattern_t;
-typedef cairo_pattern_t* PlatformGradient;
-#else
-typedef void* PlatformGradient;
 #endif
 
 namespace WebCore {
 
-class Color;
 class FloatRect;
 class GraphicsContext;
 
 class Gradient : public RefCounted<Gradient> {
 public:
-    // FIXME: ExtendedColor - A color stop needs a notion of color space.
     struct ColorStop {
         float offset { 0 };
         Color color;
 
-        ColorStop() = default;
-        ColorStop(float offset, const Color& color)
-            : offset(offset)
-            , color(color)
-        {
-        }
+        template<typename Encoder> void encode(Encoder&) const;
+        template<typename Decoder> static Optional<ColorStop> decode(Decoder&);
     };
 
     using ColorStopVector = Vector<ColorStop, 2>;
@@ -76,6 +76,9 @@ public:
     struct LinearData {
         FloatPoint point0;
         FloatPoint point1;
+
+        template<typename Encoder> void encode(Encoder&) const;
+        template<typename Decoder> static Optional<LinearData> decode(Decoder&);
     };
 
     struct RadialData {
@@ -84,83 +87,220 @@ public:
         float startRadius;
         float endRadius;
         float aspectRatio; // For elliptical gradient, width / height.
+
+        template<typename Encoder> void encode(Encoder&) const;
+        template<typename Decoder> static Optional<RadialData> decode(Decoder&);
     };
 
     struct ConicData {
         FloatPoint point0;
         float angleRadians;
+
+        template<typename Encoder> void encode(Encoder&) const;
+        template<typename Decoder> static Optional<ConicData> decode(Decoder&);
     };
 
     using Data = Variant<LinearData, RadialData, ConicData>;
 
-    enum class Type { Linear, Radial, Conic };
+    WEBCORE_EXPORT static Ref<Gradient> create(Data&&);
 
-    static Ref<Gradient> create(LinearData&&);
-    static Ref<Gradient> create(RadialData&&);
-    static Ref<Gradient> create(ConicData&&);
-
-    WEBCORE_EXPORT ~Gradient();
-
-    Type type() const;
-
-    bool hasAlpha() const;
     bool isZeroSize() const;
 
     const Data& data() const { return m_data; }
 
-    WEBCORE_EXPORT void addColorStop(const ColorStop&);
-    WEBCORE_EXPORT void addColorStop(float, const Color&);
-    void setSortedColorStops(ColorStopVector&&);
+    WEBCORE_EXPORT void addColorStop(ColorStop&&);
+    WEBCORE_EXPORT void setSortedColorStops(ColorStopVector&&);
 
     const ColorStopVector& stops() const { return m_stops; }
 
-    void setSpreadMethod(GradientSpreadMethod);
+    WEBCORE_EXPORT void setSpreadMethod(GradientSpreadMethod);
     GradientSpreadMethod spreadMethod() const { return m_spreadMethod; }
-
-    // CG needs to transform the gradient at draw time.
-    void setGradientSpaceTransform(const AffineTransform& gradientSpaceTransformation);
-    const AffineTransform& gradientSpaceTransform() const { return m_gradientSpaceTransformation; }
 
     void fill(GraphicsContext&, const FloatRect&);
     void adjustParametersForTiledDrawing(FloatSize&, FloatRect&, const FloatSize& spacing);
 
     unsigned hash() const;
-    void invalidateHash() { m_cachedHash = 0; }
+
+#if USE(CAIRO)
+    RefPtr<cairo_pattern_t> createPattern(float globalAlpha, const AffineTransform&);
+#endif
 
 #if USE(CG)
     void paint(GraphicsContext&);
     void paint(CGContextRef);
-#elif USE(DIRECT2D)
-    PlatformGradient createPlatformGradientIfNecessary(ID2D1RenderTarget*);
-#elif USE(CAIRO)
-    PlatformGradient createPlatformGradient(float globalAlpha);
 #endif
 
-private:
-    Gradient(LinearData&&);
-    Gradient(RadialData&&);
-    Gradient(ConicData&&);
-
-    PlatformGradient platformGradient();
-    void platformInit() { m_gradient = nullptr; }
-    void platformDestroy();
-
-    void sortStopsIfNecessary();
-
 #if USE(DIRECT2D)
-    void generateGradient(ID2D1RenderTarget*);
+    ID2D1Brush* createBrush(ID2D1RenderTarget*);
+#endif
+
+    template<typename Encoder> void encode(Encoder&) const;
+    template<typename Decoder> static Optional<Ref<Gradient>> decode(Decoder&);
+
+private:
+    explicit Gradient(Data&&);
+
+    void sortStops() const;
+    void stopsChanged();
+
+#if USE(CG)
+    void createCGGradient();
 #endif
 
     Data m_data;
-
     mutable ColorStopVector m_stops;
     mutable bool m_stopsSorted { false };
-    GradientSpreadMethod m_spreadMethod { SpreadMethodPad };
-    AffineTransform m_gradientSpaceTransformation;
-
+    GradientSpreadMethod m_spreadMethod { GradientSpreadMethod::Pad };
     mutable unsigned m_cachedHash { 0 };
 
-    PlatformGradient m_gradient;
+#if USE(CG)
+    RetainPtr<CGGradientRef> m_gradient;
+#endif
+
+#if USE(DIRECT2D)
+    COMPtr<ID2D1Brush> m_brush;
+#endif
 };
 
+template<typename Encoder> void Gradient::ColorStop::encode(Encoder& encoder) const
+{
+    encoder << offset;
+    encoder << color;
 }
+
+template<typename Decoder> Optional<Gradient::ColorStop> Gradient::ColorStop::decode(Decoder& decoder)
+{
+    Optional<float> offset;
+    decoder >> offset;
+    if (!offset)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    return {{ *offset, *color }};
+}
+
+template<typename Encoder> void Gradient::LinearData::encode(Encoder& encoder) const
+{
+    encoder << point0;
+    encoder << point1;
+}
+
+template<typename Decoder> Optional<Gradient::LinearData> Gradient::LinearData::decode(Decoder& decoder)
+{
+    Optional<FloatPoint> point0;
+    decoder >> point0;
+    if (!point0)
+        return WTF::nullopt;
+
+    Optional<FloatPoint> point1;
+    decoder >> point1;
+    if (!point1)
+        return WTF::nullopt;
+
+    return {{ *point0, *point1 }};
+}
+
+template<typename Encoder> void Gradient::RadialData::encode(Encoder& encoder) const
+{
+    encoder << point0;
+    encoder << point1;
+    encoder << startRadius;
+    encoder << endRadius;
+    encoder << aspectRatio;
+}
+
+template<typename Decoder> Optional<Gradient::RadialData> Gradient::RadialData::decode(Decoder& decoder)
+{
+    Optional<FloatPoint> point0;
+    decoder >> point0;
+    if (!point0)
+        return WTF::nullopt;
+
+    Optional<FloatPoint> point1;
+    decoder >> point1;
+    if (!point1)
+        return WTF::nullopt;
+
+    Optional<float> startRadius;
+    decoder >> startRadius;
+    if (!startRadius)
+        return WTF::nullopt;
+
+    Optional<float> endRadius;
+    decoder >> endRadius;
+    if (!endRadius)
+        return WTF::nullopt;
+
+    Optional<float> aspectRatio;
+    decoder >> aspectRatio;
+    if (!aspectRatio)
+        return WTF::nullopt;
+
+    return {{ *point0, *point1, *startRadius, *endRadius, *aspectRatio }};
+}
+
+template<typename Encoder> void Gradient::ConicData::encode(Encoder& encoder) const
+{
+    encoder << point0;
+    encoder << angleRadians;
+}
+
+template<typename Decoder> Optional<Gradient::ConicData> Gradient::ConicData::decode(Decoder& decoder)
+{
+    Optional<FloatPoint> point0;
+    decoder >> point0;
+    if (!point0)
+        return WTF::nullopt;
+
+    Optional<float> angleRadians;
+    decoder >> angleRadians;
+    if (!angleRadians)
+        return WTF::nullopt;
+
+    return {{ *point0, *angleRadians }};
+}
+
+template<typename Encoder> void Gradient::encode(Encoder& encoder) const
+{
+    encoder << m_data;
+    encoder << m_stops;
+    encoder << m_stopsSorted;
+    encoder << m_spreadMethod;
+}
+
+template<typename Decoder> Optional<Ref<Gradient>> Gradient::decode(Decoder& decoder)
+{
+    Optional<Data> data;
+    decoder >> data;
+    if (!data)
+        return WTF::nullopt;
+    auto gradient = Gradient::create(WTFMove(*data));
+
+    Optional<ColorStopVector> stops;
+    decoder >> stops;
+    if (!stops)
+        return WTF::nullopt;
+    Optional<bool> stopsSorted;
+    decoder >> stopsSorted;
+    if (!stopsSorted.hasValue())
+        return WTF::nullopt;
+    if (*stopsSorted)
+        gradient->setSortedColorStops(WTFMove(*stops));
+    else {
+        for (auto& stop : *stops)
+            gradient->addColorStop(WTFMove(stop));
+    }
+
+    GradientSpreadMethod spreadMethod;
+    if (!decoder.decode(spreadMethod))
+        return WTF::nullopt;
+    gradient->setSpreadMethod(spreadMethod);
+
+    return gradient;
+}
+
+} // namespace WebCore

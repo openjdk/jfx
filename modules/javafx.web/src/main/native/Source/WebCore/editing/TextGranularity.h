@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
+
 namespace WebCore {
 
 // FIXME: This really should be broken up into more than one concept.
 // Frame doesn't need the 3 boundaries in this enum.
-enum TextGranularity {
+enum class TextGranularity : uint8_t {
     CharacterGranularity,
     WordGranularity,
     SentenceGranularity,
@@ -43,3 +45,23 @@ enum TextGranularity {
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::TextGranularity> {
+    using values = EnumValues<
+        WebCore::TextGranularity,
+        WebCore::TextGranularity::CharacterGranularity,
+        WebCore::TextGranularity::WordGranularity,
+        WebCore::TextGranularity::SentenceGranularity,
+        WebCore::TextGranularity::LineGranularity,
+        WebCore::TextGranularity::ParagraphGranularity,
+        WebCore::TextGranularity::DocumentGranularity,
+        WebCore::TextGranularity::SentenceBoundary,
+        WebCore::TextGranularity::LineBoundary,
+        WebCore::TextGranularity::ParagraphBoundary,
+        WebCore::TextGranularity::DocumentBoundary
+    >;
+};
+
+}

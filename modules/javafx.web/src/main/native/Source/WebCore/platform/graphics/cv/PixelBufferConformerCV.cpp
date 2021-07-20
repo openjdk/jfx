@@ -26,8 +26,6 @@
 #include "config.h"
 #include "PixelBufferConformerCV.h"
 
-#if HAVE(CORE_VIDEO)
-
 #include "GraphicsContextCG.h"
 #include "ImageBufferUtilitiesCG.h"
 #include "Logging.h"
@@ -39,15 +37,10 @@ namespace WebCore {
 
 PixelBufferConformerCV::PixelBufferConformerCV(CFDictionaryRef attributes)
 {
-#if USE(VIDEOTOOLBOX)
     VTPixelBufferConformerRef conformer = nullptr;
     VTPixelBufferConformerCreateWithAttributes(kCFAllocatorDefault, attributes, &conformer);
     ASSERT(conformer);
     m_pixelConformer = adoptCF(conformer);
-#else
-    UNUSED_PARAM(attributes);
-    ASSERT(!attributes);
-#endif
 }
 
 struct CVPixelBufferInfo {
@@ -76,8 +69,10 @@ static const void* CVPixelBufferGetBytePointerCallback(void* refcon)
 
     ++info->lockCount;
     void* address = CVPixelBufferGetBaseAddress(info->pixelBuffer.get());
-    verifyImageBufferIsBigEnough(address, CVPixelBufferGetDataSize(info->pixelBuffer.get()));
-    RELEASE_LOG_INFO(Media, "CVPixelBufferGetBytePointerCallback() returning bytePointer: %p, size: %zu", address, CVPixelBufferGetDataSize(info->pixelBuffer.get()));
+    size_t byteLength = CVPixelBufferGetBytesPerRow(info->pixelBuffer.get()) * CVPixelBufferGetHeight(info->pixelBuffer.get());
+
+    verifyImageBufferIsBigEnough(address, byteLength);
+    RELEASE_LOG_INFO(Media, "CVPixelBufferGetBytePointerCallback() returning bytePointer: %p, size: %zu", address, byteLength);
     return address;
 }
 
@@ -136,7 +131,6 @@ static void CVPixelBufferReleaseInfoCallback(void* refcon)
 
 RetainPtr<CVPixelBufferRef> PixelBufferConformerCV::convert(CVPixelBufferRef rawBuffer)
 {
-#if USE(VIDEOTOOLBOX)
     RetainPtr<CVPixelBufferRef> buffer { rawBuffer };
 
     if (!VTPixelBufferConformerIsConformantPixelBuffer(m_pixelConformer.get(), buffer.get())) {
@@ -146,9 +140,6 @@ RetainPtr<CVPixelBufferRef> PixelBufferConformerCV::convert(CVPixelBufferRef raw
             return nullptr;
         return adoptCF(outputBuffer);
     }
-#else
-    UNUSED_PARAM(rawBuffer);
-#endif
     return nullptr;
 }
 
@@ -158,7 +149,6 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     size_t width = CVPixelBufferGetWidth(buffer.get());
     size_t height = CVPixelBufferGetHeight(buffer.get());
 
-#if USE(VIDEOTOOLBOX)
     if (!VTPixelBufferConformerIsConformantPixelBuffer(m_pixelConformer.get(), buffer.get())) {
         CVPixelBufferRef outputBuffer = nullptr;
         OSStatus status = VTPixelBufferConformerCopyConformedPixelBuffer(m_pixelConformer.get(), buffer.get(), false, &outputBuffer);
@@ -166,11 +156,10 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
             return nullptr;
         buffer = adoptCF(outputBuffer);
     }
-#endif
 
     CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Little | kCGImageAlphaFirst;
     size_t bytesPerRow = CVPixelBufferGetBytesPerRow(buffer.get());
-    size_t byteLength = CVPixelBufferGetDataSize(buffer.get());
+    size_t byteLength = bytesPerRow * height;
 
     ASSERT(byteLength);
     if (!byteLength)
@@ -187,5 +176,3 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
 }
 
 }
-
-#endif // HAVE(CORE_VIDEO)

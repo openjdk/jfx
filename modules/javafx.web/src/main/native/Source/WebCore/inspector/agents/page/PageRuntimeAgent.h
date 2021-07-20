@@ -36,46 +36,46 @@
 #include <JavaScriptCore/InspectorRuntimeAgent.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 }
 
 namespace WebCore {
 
-class InspectorPageAgent;
+class DOMWrapperWorld;
 class Frame;
 class Page;
 class SecurityOrigin;
-typedef String ErrorString;
 
 class PageRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
     WTF_MAKE_NONCOPYABLE(PageRuntimeAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PageRuntimeAgent(PageAgentContext&, InspectorPageAgent*);
-    virtual ~PageRuntimeAgent() = default;
+    PageRuntimeAgent(PageAgentContext&);
+    ~PageRuntimeAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
-    void enable(ErrorString&) override;
-    void disable(ErrorString&) override;
+    // RuntimeBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, Optional<bool> /* wasThrown */, Optional<int> /* savedResultIndex */>> evaluate(const String& expression, const String& objectGroup, Optional<bool>&& includeCommandLineAPI, Optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, Optional<Inspector::Protocol::Runtime::ExecutionContextId>&&, Optional<bool>&& returnByValue, Optional<bool>&& generatePreview, Optional<bool>&& saveResult, Optional<bool>&& emulateUserGesture);
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, Optional<bool> /* wasThrown */>> callFunctionOn(const Inspector::Protocol::Runtime::RemoteObjectId&, const String& expression, RefPtr<JSON::Array>&& arguments, Optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, Optional<bool>&& returnByValue, Optional<bool>&& generatePreview, Optional<bool>&& emulateUserGesture);
 
     // InspectorInstrumentation
-    void didCreateMainWorldContext(Frame&);
+    void frameNavigated(Frame&);
+    void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
 
 private:
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
-    void muteConsole() override;
-    void unmuteConsole() override;
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, Optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
+    void muteConsole();
+    void unmuteConsole();
     void reportExecutionContextCreation();
-    void notifyContextCreated(const String& frameId, JSC::ExecState*, SecurityOrigin*, bool isPageContext);
+    void notifyContextCreated(const Inspector::Protocol::Network::FrameId&, JSC::JSGlobalObject*, const DOMWrapperWorld&, SecurityOrigin* = nullptr);
 
     std::unique_ptr<Inspector::RuntimeFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent;
+
+    InstrumentingAgents& m_instrumentingAgents;
 
     Page& m_inspectedPage;
-
-    bool m_mainWorldContextCreated { false };
 };
 
 } // namespace WebCore

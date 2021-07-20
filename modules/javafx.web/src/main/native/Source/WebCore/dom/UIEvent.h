@@ -33,8 +33,9 @@ namespace WebCore {
 typedef WindowProxy AbstractView;
 
 class UIEvent : public Event {
+    WTF_MAKE_ISO_ALLOCATED(UIEvent);
 public:
-    static Ref<UIEvent> create(const AtomicString& type, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, RefPtr<WindowProxy>&& view, int detail)
+    static Ref<UIEvent> create(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, RefPtr<WindowProxy>&& view, int detail)
     {
         return adoptRef(*new UIEvent(type, canBubble, isCancelable, isComposed, WTFMove(view), detail));
     }
@@ -42,13 +43,13 @@ public:
     {
         return adoptRef(*new UIEvent);
     }
-    static Ref<UIEvent> create(const AtomicString& type, const UIEventInit& initializer)
+    static Ref<UIEvent> create(const AtomString& type, const UIEventInit& initializer, IsTrusted = IsTrusted::No)
     {
         return adoptRef(*new UIEvent(type, initializer));
     }
     virtual ~UIEvent();
 
-    WEBCORE_EXPORT void initUIEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, int detail);
+    WEBCORE_EXPORT void initUIEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, int detail);
 
     WindowProxy* view() const { return m_view.get(); }
     int detail() const { return m_detail; }
@@ -66,9 +67,9 @@ public:
 protected:
     UIEvent();
 
-    UIEvent(const AtomicString& type, CanBubble, IsCancelable, IsComposed, RefPtr<WindowProxy>&&, int detail);
-    UIEvent(const AtomicString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail, IsTrusted = IsTrusted::Yes);
-    UIEvent(const AtomicString&, const UIEventInit&);
+    UIEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, RefPtr<WindowProxy>&&, int detail);
+    UIEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail, IsTrusted = IsTrusted::Yes);
+    UIEvent(const AtomString&, const UIEventInit&, IsTrusted = IsTrusted::No);
 
 private:
     bool isUIEvent() const final;

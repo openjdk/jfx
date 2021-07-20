@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ public class RT_27529Test {
 
     @Test
     public void testListAndArrayWithEscapes() throws IOException {
+        System.err.println("Below warnings about - deprecated escape sequence - are expected from this test.");
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_27529_2.fxml"),
             ResourceBundle.getBundle("test/javafx/fxml/rt_27529"));
         fxmlLoader.load();

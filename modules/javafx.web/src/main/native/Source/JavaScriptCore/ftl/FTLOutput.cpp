@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,18 +28,14 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "B3ArgumentRegValue.h"
 #include "B3AtomicValue.h"
 #include "B3BasicBlockInlines.h"
-#include "B3CCallValue.h"
 #include "B3Const32Value.h"
-#include "B3ConstPtrValue.h"
 #include "B3FenceValue.h"
 #include "B3MathExtras.h"
 #include "B3MemoryValue.h"
 #include "B3SlotBaseValue.h"
 #include "B3StackmapGenerationParams.h"
-#include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
 #include "B3ValueInlines.h"
 #include "SuperSampler.h"
@@ -290,20 +286,17 @@ LValue Output::doubleTrunc(LValue value)
         result->effects = Effects::none();
         return result;
     }
-    double (*truncDouble)(double) = trunc;
-    return callWithoutSideEffects(Double, truncDouble, value);
+    return callWithoutSideEffects(Double, Math::truncDouble, value);
 }
 
 LValue Output::doubleUnary(DFG::Arith::UnaryType type, LValue value)
 {
-    double (*unaryFunction)(double) = DFG::arithUnaryFunction(type);
-    return callWithoutSideEffects(B3::Double, unaryFunction, value);
+    return callWithoutSideEffects(B3::Double, DFG::arithUnaryFunction(type), value);
 }
 
-LValue Output::doublePow(LValue xOperand, LValue yOperand)
+LValue Output::doubleStdPow(LValue xOperand, LValue yOperand)
 {
-    double (*powDouble)(double, double) = pow;
-    return callWithoutSideEffects(B3::Double, powDouble, xOperand, yOperand);
+    return callWithoutSideEffects(B3::Double, Math::stdPowDouble, xOperand, yOperand);
 }
 
 LValue Output::doublePowi(LValue x, LValue y)
@@ -328,6 +321,18 @@ LValue Output::doubleToInt(LValue value)
     result->setGenerator(
         [] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             jit.truncateDoubleToInt32(params[1].fpr(), params[0].gpr());
+        });
+    result->effects = Effects::none();
+    return result;
+}
+
+LValue Output::doubleToInt64(LValue value)
+{
+    PatchpointValue* result = patchpoint(Int64);
+    result->append(value, ValueRep::SomeRegister);
+    result->setGenerator(
+        [] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.truncateDoubleToInt64(params[1].fpr(), params[0].gpr());
         });
     result->effects = Effects::none();
     return result;
@@ -486,80 +491,80 @@ LValue Output::baseIndex(LValue base, LValue index, Scale scale, ptrdiff_t offse
 LValue Output::equal(LValue left, LValue right)
 {
     TriState result = left->equalConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::Equal, origin(), left, right);
 }
 
 LValue Output::notEqual(LValue left, LValue right)
 {
     TriState result = left->notEqualConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::NotEqual, origin(), left, right);
 }
 
 LValue Output::above(LValue left, LValue right)
 {
     TriState result = left->aboveConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::Above, origin(), left, right);
 }
 
 LValue Output::aboveOrEqual(LValue left, LValue right)
 {
     TriState result = left->aboveEqualConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::AboveEqual, origin(), left, right);
 }
 
 LValue Output::below(LValue left, LValue right)
 {
     TriState result = left->belowConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::Below, origin(), left, right);
 }
 
 LValue Output::belowOrEqual(LValue left, LValue right)
 {
     TriState result = left->belowEqualConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::BelowEqual, origin(), left, right);
 }
 
 LValue Output::greaterThan(LValue left, LValue right)
 {
     TriState result = left->greaterThanConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::GreaterThan, origin(), left, right);
 }
 
 LValue Output::greaterThanOrEqual(LValue left, LValue right)
 {
     TriState result = left->greaterEqualConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::GreaterEqual, origin(), left, right);
 }
 
 LValue Output::lessThan(LValue left, LValue right)
 {
     TriState result = left->lessThanConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::LessThan, origin(), left, right);
 }
 
 LValue Output::lessThanOrEqual(LValue left, LValue right)
 {
     TriState result = left->lessEqualConstant(right);
-    if (result != MixedTriState)
-        return constBool(result == TrueTriState);
+    if (result != TriState::Indeterminate)
+        return constBool(result == TriState::True);
     return m_block->appendNew<B3::Value>(m_proc, B3::LessEqual, origin(), left, right);
 }
 
@@ -643,15 +648,37 @@ LValue Output::notZero64(LValue value)
     return m_block->appendNew<B3::Value>(m_proc, B3::NotEqual, origin(), value, int64Zero);
 }
 
-LValue Output::select(LValue value, LValue taken, LValue notTaken)
+LValue Output::select(LValue value, LValue left, LValue right, SelectPredictability predictability)
 {
     if (value->hasInt32()) {
         if (value->asInt32())
-            return taken;
+            return left;
         else
-            return notTaken;
+            return right;
     }
-    return m_block->appendNew<B3::Value>(m_proc, B3::Select, origin(), value, taken, notTaken);
+
+    if (predictability == SelectPredictability::NotPredictable)
+        return m_block->appendNew<B3::Value>(m_proc, B3::Select, origin(), value, left, right);
+
+    LBasicBlock continuation = newBlock();
+    LBasicBlock leftTakenBlock = newBlock();
+    LBasicBlock rightTakenBlock = newBlock();
+
+    m_block->appendNewControlValue(
+        m_proc, B3::Branch, origin(), value,
+        FrequentedBlock(leftTakenBlock, predictability != SelectPredictability::RightLikely ? FrequencyClass::Normal : FrequencyClass::Rare),
+        FrequentedBlock(rightTakenBlock, predictability != SelectPredictability::LeftLikely ? FrequencyClass::Normal : FrequencyClass::Rare));
+
+    LValue phi = continuation->appendNew<B3::Value>(m_proc, B3::Phi, left->type(), origin());
+
+    leftTakenBlock->appendNew<B3::UpsilonValue>(m_proc, origin(), left, phi);
+    leftTakenBlock->appendNewControlValue(m_proc, B3::Jump, origin(), B3::FrequentedBlock(continuation));
+
+    rightTakenBlock->appendNew<B3::UpsilonValue>(m_proc, origin(), right, phi);
+    rightTakenBlock->appendNewControlValue(m_proc, B3::Jump, origin(), B3::FrequentedBlock(continuation));
+
+    m_block = continuation;
+    return phi;
 }
 
 LValue Output::atomicXchgAdd(LValue operand, TypedPointer pointer, Width width)

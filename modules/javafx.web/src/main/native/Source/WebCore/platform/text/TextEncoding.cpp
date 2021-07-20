@@ -31,11 +31,13 @@
 #include "DecodeEscapeSequences.h"
 #include "TextCodec.h"
 #include "TextEncodingRegistry.h"
-#include <unicode/unorm.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/CString.h>
 #include <wtf/text/StringView.h>
+
+#if USE(JAVA_UNICODE)
+#include "TextNormalizerJava.h"
+#endif
 
 namespace WebCore {
 
@@ -46,21 +48,15 @@ static const TextEncoding& UTF7Encoding()
 }
 
 TextEncoding::TextEncoding(const char* name)
-    : m_name(atomicCanonicalTextEncodingName(name))
+    : m_name(atomCanonicalTextEncodingName(name))
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
 {
-    // Aliases are valid, but not "replacement" itself.
-    if (equalLettersIgnoringASCIICase(name, "replacement"))
-        m_name = nullptr;
 }
 
 TextEncoding::TextEncoding(const String& name)
-    : m_name(atomicCanonicalTextEncodingName(name))
+    : m_name(atomCanonicalTextEncodingName(name))
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
 {
-    // Aliases are valid, but not "replacement" itself.
-    if (equalLettersIgnoringASCIICase(name, "replacement"))
-        m_name = nullptr;
 }
 
 String TextEncoding::decode(const char* data, size_t length, bool stopOnError, bool& sawError) const
@@ -71,7 +67,7 @@ String TextEncoding::decode(const char* data, size_t length, bool stopOnError, b
     return newTextCodec(*this)->decode(data, length, true, stopOnError, sawError);
 }
 
-Vector<uint8_t> TextEncoding::encode(StringView string, UnencodableHandling handling) const
+Vector<uint8_t> TextEncoding::encode(StringView string, UnencodableHandling handling, NFCNormalize normalize) const
 {
     if (!m_name || string.isEmpty())
         return { };
@@ -79,8 +75,14 @@ Vector<uint8_t> TextEncoding::encode(StringView string, UnencodableHandling hand
     // FIXME: What's the right place to do normalization?
     // It's a little strange to do it inside the encode function.
     // Perhaps normalization should be an explicit step done before calling encode.
-    auto normalizedString = normalizedNFC(string);
-    return newTextCodec(*this)->encode(normalizedString.view, handling);
+#if !USE(JAVA_UNICODE)
+    if (normalize == NFCNormalize::Yes)
+        return newTextCodec(*this)->encode(normalizedNFC(string).view, handling);
+    return newTextCodec(*this)->encode(string, handling);
+#else
+    String normalized = TextNormalizer::normalize(text.upconvertedCharacters(), text.length(), TextNormalizer::NFC);
+    return newTextCodec(*this)->encode(StringView { normalized.characters16(), normalized.length() }, handling);
+#endif
 }
 
 const char* TextEncoding::domName() const
@@ -95,7 +97,7 @@ const char* TextEncoding::domName() const
     // FIXME: This is not thread-safe. At the moment, this function is
     // only accessed in a single thread, but eventually has to be made
     // thread-safe along with usesVisualOrdering().
-    static const char* const a = atomicCanonicalTextEncodingName("windows-949");
+    static const char* const a = atomCanonicalTextEncodingName("windows-949");
     if (m_name == a)
         return "EUC-KR";
     return m_name;
@@ -106,7 +108,7 @@ bool TextEncoding::usesVisualOrdering() const
     if (noExtendedTextEncodingNameUsed())
         return false;
 
-    static const char* const a = atomicCanonicalTextEncodingName("ISO-8859-8");
+    static const char* const a = atomCanonicalTextEncodingName("ISO-8859-8");
     return m_name == a;
 }
 
@@ -189,10 +191,10 @@ const TextEncoding& WindowsLatin1Encoding()
     return globalWindowsLatin1Encoding;
 }
 
-String decodeURLEscapeSequences(const String& string, const TextEncoding& encoding)
+String decodeURLEscapeSequences(StringView string, const TextEncoding& encoding)
 {
     if (string.isEmpty())
-        return string;
+        return string.toString();
     return decodeEscapeSequences<URLEscapeSequence>(string, encoding);
 }
 

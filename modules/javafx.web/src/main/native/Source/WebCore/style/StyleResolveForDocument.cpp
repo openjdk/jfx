@@ -30,7 +30,6 @@
 #include "StyleResolveForDocument.h"
 
 #include "CSSFontSelector.h"
-#include "ConstantPropertyMap.h"
 #include "Document.h"
 #include "FontCascade.h"
 #include "Frame.h"
@@ -43,6 +42,7 @@
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleAdjuster.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 
@@ -63,7 +63,7 @@ RenderStyle resolveForDocument(const Document& document)
     documentStyle.setZoom(!document.printing() ? renderView.frame().pageZoomFactor() : 1);
     documentStyle.setPageScaleTransform(renderView.frame().frameScaleFactor());
     FontCascadeDescription documentFontDescription = documentStyle.fontDescription();
-    documentFontDescription.setLocale(document.contentLanguage());
+    documentFontDescription.setSpecifiedLocale(document.contentLanguage());
     documentStyle.setFontDescription(WTFMove(documentFontDescription));
 
     // This overrides any -webkit-user-modify inherited from the parent iframe.
@@ -72,6 +72,8 @@ RenderStyle resolveForDocument(const Document& document)
     if (document.inDesignMode())
         documentStyle.setTextSizeAdjust(TextSizeAdjustment(NoTextSizeAdjustment));
 #endif
+
+    Adjuster::adjustEventListenerRegionTypesForRootStyle(documentStyle, document);
 
     Element* docElement = document.documentElement();
     RenderObject* docElementRenderer = docElement ? docElement->renderer() : nullptr;
@@ -94,7 +96,7 @@ RenderStyle resolveForDocument(const Document& document)
     const Pagination& pagination = renderView.frameView().pagination();
     if (pagination.mode != Pagination::Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
-        documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, Fixed)));
+        documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, LengthType::Fixed)));
         if (renderView.multiColumnFlow())
             renderView.updateColumnProgressionFromStyle(documentStyle);
         if (renderView.page().paginationLineGridEnabled()) {
@@ -106,7 +108,7 @@ RenderStyle resolveForDocument(const Document& document)
     const Settings& settings = renderView.frame().settings();
 
     FontCascadeDescription fontDescription;
-    fontDescription.setLocale(document.contentLanguage());
+    fontDescription.setSpecifiedLocale(document.contentLanguage());
     fontDescription.setRenderingMode(settings.fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
     fontDescription.setShouldAllowUserInstalledFonts(settings.shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No);
@@ -117,18 +119,13 @@ RenderStyle resolveForDocument(const Document& document)
     bool useSVGZoomRules = document.isSVGDocument();
     fontDescription.setComputedSize(computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules, &documentStyle, document));
 
-    FontOrientation fontOrientation;
-    NonCJKGlyphOrientation glyphOrientation;
-    std::tie(fontOrientation, glyphOrientation) = documentStyle.fontAndGlyphOrientation();
+    auto [fontOrientation, glyphOrientation] = documentStyle.fontAndGlyphOrientation();
     fontDescription.setOrientation(fontOrientation);
     fontDescription.setNonCJKGlyphOrientation(glyphOrientation);
 
     documentStyle.setFontDescription(WTFMove(fontDescription));
 
     documentStyle.fontCascade().update(&const_cast<Document&>(document).fontSelector());
-
-    for (auto& it : document.constantProperties().values())
-        documentStyle.setInheritedCustomPropertyValue(it.key, makeRef(it.value.get()));
 
     return documentStyle;
 }

@@ -25,21 +25,20 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #if !USE(DIRECT2D)
 
 #include "CaptionUserPreferencesMediaAF.h"
 
 #include "AudioTrackList.h"
+#include "ColorSerialization.h"
 #include "FloatConversion.h"
 #include "HTMLMediaElement.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
-#include "MediaControlElements.h"
 #include "TextTrackList.h"
 #include "UserStyleSheetTypes.h"
-#include "VTTCue.h"
 #include <algorithm>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
@@ -272,13 +271,13 @@ String CaptionUserPreferencesMediaAF::captionsWindowCSS() const
 
     Color windowColor(color.get());
     if (!windowColor.isValid())
-        windowColor = Color::transparent;
+        windowColor = Color::transparentBlack;
 
     bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
     CGFloat opacity = MACaptionAppearanceGetWindowOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
         important = behavior == kMACaptionAppearanceBehaviorUseValue;
-    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, Color(windowColor.red(), windowColor.green(), windowColor.blue(), static_cast<int>(opacity * 255)), important);
+    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
 
     if (!opacity)
         return windowStyle;
@@ -290,7 +289,7 @@ String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
 {
     // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-past-nodes
     // and webkit-media-text-track-future-nodes.
-    static NeverDestroyed<Color> defaultBackgroundColor(0, 0, 0, 0.8 * 255);
+    constexpr auto defaultBackgroundColor = Color::black.colorWithAlphaByte(204);
 
     MACaptionAppearanceBehavior behavior;
 
@@ -303,7 +302,7 @@ String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
     CGFloat opacity = MACaptionAppearanceGetBackgroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
         important = behavior == kMACaptionAppearanceBehaviorUseValue;
-    return colorPropertyCSS(CSSPropertyBackgroundColor, Color(backgroundColor.red(), backgroundColor.green(), backgroundColor.blue(), static_cast<int>(opacity * 255)), important);
+    return colorPropertyCSS(CSSPropertyBackgroundColor, backgroundColor.colorWithAlpha(opacity), important);
 }
 
 Color CaptionUserPreferencesMediaAF::captionsTextColor(bool& important) const
@@ -319,7 +318,7 @@ Color CaptionUserPreferencesMediaAF::captionsTextColor(bool& important) const
     CGFloat opacity = MACaptionAppearanceGetForegroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
         important = behavior == kMACaptionAppearanceBehaviorUseValue;
-    return Color(textColor.red(), textColor.green(), textColor.blue(), static_cast<int>(opacity * 255));
+    return textColor.colorWithAlpha(opacity);
 }
 
 String CaptionUserPreferencesMediaAF::captionsTextColorCSS() const
@@ -351,14 +350,15 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
         return emptyString();
 
     StringBuilder builder;
-    appendCSS(builder, CSSPropertyBorderRadius, makeString(FormattedNumber::fixedWidth(radius, 2), "px"), behavior == kMACaptionAppearanceBehaviorUseValue);
+    appendCSS(builder, CSSPropertyBorderRadius, makeString(radius, "px"), behavior == kMACaptionAppearanceBehaviorUseValue);
     return builder.toString();
 }
 
 String CaptionUserPreferencesMediaAF::colorPropertyCSS(CSSPropertyID id, const Color& color, bool important) const
 {
     StringBuilder builder;
-    appendCSS(builder, id, color.serialized(), important);
+    // FIXME: Seems like this should be using serializationForCSS instead?
+    appendCSS(builder, id, serializationForHTML(color), important);
     return builder.toString();
 }
 
@@ -587,7 +587,7 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
     String windowCornerRadius = windowRoundedCornerRadiusCSS();
     if (!windowColor.isEmpty() || !windowCornerRadius.isEmpty()) {
         captionsOverrideStyleSheet.appendLiteral(" ::");
-        captionsOverrideStyleSheet.append(VTTCue::cueBackdropShadowPseudoId());
+        captionsOverrideStyleSheet.append(TextTrackCue::cueBackdropShadowPseudoId());
         captionsOverrideStyleSheet.append('{');
 
         if (!windowColor.isEmpty())
@@ -682,9 +682,9 @@ String CaptionUserPreferencesMediaAF::displayNameForTrack(AudioTrack* track) con
 
 static String trackDisplayName(TextTrack* track)
 {
-    if (track == TextTrack::captionMenuOffItem())
+    if (track == &TextTrack::captionMenuOffItem())
         return textTrackOffMenuItemText();
-    if (track == TextTrack::captionMenuAutomaticItem())
+    if (track == &TextTrack::captionMenuAutomaticItem())
         return textTrackAutomaticMenuItemText();
 
     StringBuilder displayNameBuilder;
@@ -720,128 +720,40 @@ String CaptionUserPreferencesMediaAF::displayNameForTrack(TextTrack* track) cons
     return trackDisplayName(track);
 }
 
-int CaptionUserPreferencesMediaAF::textTrackSelectionScore(TextTrack* track, HTMLMediaElement* mediaElement) const
-{
-    CaptionDisplayMode displayMode = captionDisplayMode();
-    if (displayMode == Manual)
-        return 0;
-
-    bool legacyOverride = mediaElement->webkitClosedCaptionsVisible();
-    if (displayMode == AlwaysOn && (!userPrefersSubtitles() && !userPrefersCaptions() && !legacyOverride))
-        return 0;
-    if (track->kind() != TextTrack::Kind::Captions && track->kind() != TextTrack::Kind::Subtitles && track->kind() != TextTrack::Kind::Forced)
-        return 0;
-    if (!track->isMainProgramContent())
-        return 0;
-
-    bool trackHasOnlyForcedSubtitles = track->containsOnlyForcedSubtitles();
-    if (!legacyOverride && ((trackHasOnlyForcedSubtitles && displayMode != ForcedOnly) || (!trackHasOnlyForcedSubtitles && displayMode == ForcedOnly)))
-        return 0;
-
-    Vector<String> userPreferredCaptionLanguages = preferredLanguages();
-
-    if ((displayMode == Automatic && !legacyOverride) || trackHasOnlyForcedSubtitles) {
-
-        if (!mediaElement || !mediaElement->player())
-            return 0;
-
-        String textTrackLanguage = track->validBCP47Language();
-        if (textTrackLanguage.isEmpty())
-            return 0;
-
-        Vector<String> languageList;
-        languageList.reserveCapacity(1);
-
-        String audioTrackLanguage;
-        if (testingMode())
-            audioTrackLanguage = primaryAudioTrackLanguageOverride();
-        else
-            audioTrackLanguage = mediaElement->player()->languageOfPrimaryAudioTrack();
-
-        if (audioTrackLanguage.isEmpty())
-            return 0;
-
-        bool exactMatch;
-        if (trackHasOnlyForcedSubtitles) {
-            languageList.append(audioTrackLanguage);
-            size_t offset = indexOfBestMatchingLanguageInList(textTrackLanguage, languageList, exactMatch);
-
-            // Only consider a forced-only track if it IS in the same language as the primary audio track.
-            if (offset)
-                return 0;
-        } else {
-            languageList.append(defaultLanguage());
-
-            // Only enable a text track if the current audio track is NOT in the user's preferred language ...
-            size_t offset = indexOfBestMatchingLanguageInList(audioTrackLanguage, languageList, exactMatch);
-            if (!offset)
-                return 0;
-
-            // and the text track matches the user's preferred language.
-            offset = indexOfBestMatchingLanguageInList(textTrackLanguage, languageList, exactMatch);
-            if (offset)
-                return 0;
-        }
-
-        userPreferredCaptionLanguages = languageList;
-    }
-
-    int trackScore = 0;
-
-    if (userPrefersCaptions()) {
-        // When the user prefers accessibility tracks, rank is SDH, then CC, then subtitles.
-        if (track->kind() == TextTrack::Kind::Subtitles)
-            trackScore = 1;
-        else if (track->isClosedCaptions())
-            trackScore = 2;
-        else
-            trackScore = 3;
-    } else {
-        // When the user prefers translation tracks, rank is subtitles, then SDH, then CC tracks.
-        if (track->kind() == TextTrack::Kind::Subtitles)
-            trackScore = 3;
-        else if (!track->isClosedCaptions())
-            trackScore = 2;
-        else
-            trackScore = 1;
-    }
-
-    return trackScore + textTrackLanguageSelectionScore(track, userPreferredCaptionLanguages);
-}
-
 static bool textTrackCompare(const RefPtr<TextTrack>& a, const RefPtr<TextTrack>& b)
 {
     String preferredLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(defaultLanguage()));
     String aLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(a->validBCP47Language()));
-    String bLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(b->language()));
+    String bLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(b->validBCP47Language()));
 
     // Tracks in the user's preferred language are always at the top of the menu.
     bool aIsPreferredLanguage = !codePointCompare(aLanguageDisplayName, preferredLanguageDisplayName);
     bool bIsPreferredLanguage = !codePointCompare(bLanguageDisplayName, preferredLanguageDisplayName);
-    if ((aIsPreferredLanguage || bIsPreferredLanguage) && (aIsPreferredLanguage != bIsPreferredLanguage))
+    if (aIsPreferredLanguage != bIsPreferredLanguage)
         return aIsPreferredLanguage;
 
     // Tracks not in the user's preferred language sort first by language ...
-    if (codePointCompare(aLanguageDisplayName, bLanguageDisplayName))
-        return codePointCompare(aLanguageDisplayName, bLanguageDisplayName) < 0;
+    if (auto languageDisplayNameComparison = codePointCompare(aLanguageDisplayName, bLanguageDisplayName))
+        return languageDisplayNameComparison < 0;
 
     // ... but when tracks have the same language, main program content sorts next highest ...
     bool aIsMainContent = a->isMainProgramContent();
     bool bIsMainContent = b->isMainProgramContent();
-    if ((aIsMainContent || bIsMainContent) && (aIsMainContent != bIsMainContent))
+    if (aIsMainContent != bIsMainContent)
         return aIsMainContent;
 
-    // ... and main program trakcs sort higher than CC tracks ...
+    // ... and main program tracks sort higher than CC tracks ...
     bool aIsCC = a->isClosedCaptions();
     bool bIsCC = b->isClosedCaptions();
-    if ((aIsCC || bIsCC) && (aIsCC != bIsCC)) {
-        if (aIsCC)
-            return aIsMainContent;
-        return bIsMainContent;
-    }
+    if (aIsCC != bIsCC)
+        return aIsCC;
 
     // ... and tracks of the same type and language sort by the menu item text.
-    return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+    if (auto trackDisplayComparison = codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())))
+        return trackDisplayComparison < 0;
+
+    // ... and if the menu item text is the same, compare the unique IDs
+    return a->uniqueId() < b->uniqueId();
 }
 
 Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(AudioTrackList* trackList)
@@ -857,13 +769,17 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
     }
 
     std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](auto& a, auto& b) {
-        return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+        auto trackDisplayComparison = codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get()));
+        if (trackDisplayComparison)
+            return trackDisplayComparison < 0;
+
+        return a->uniqueId() < b->uniqueId();
     });
 
     return tracksForMenu;
 }
 
-Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList)
+Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
 {
     ASSERT(trackList);
 
@@ -872,6 +788,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
     CaptionDisplayMode displayMode = captionDisplayMode();
     bool prefersAccessibilityTracks = userPrefersCaptions();
     bool filterTrackList = shouldFilterTrackMenu();
+    bool requestingCaptionsOrDescriptionsOrSubtitles = kinds.contains(TextTrack::Kind::Subtitles) || kinds.contains(TextTrack::Kind::Captions) || kinds.contains(TextTrack::Kind::Descriptions);
 
     for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
         TextTrack* track = trackList->item(i);
@@ -883,82 +800,85 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
             continue;
         }
 
-        auto kind = track->kind();
-        if (kind != TextTrack::Kind::Captions && kind != TextTrack::Kind::Descriptions && kind != TextTrack::Kind::Subtitles)
+        if (!kinds.contains(track->kind()))
             continue;
 
-        if (track->containsOnlyForcedSubtitles()) {
-            LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it contains only forced subtitles", track->kindKeyword().string().utf8().data(), language.utf8().data());
-            continue;
-        }
+        if (requestingCaptionsOrDescriptionsOrSubtitles) {
+            if (track->containsOnlyForcedSubtitles()) {
+                LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it contains only forced subtitles", track->kindKeyword().string().utf8().data(), language.utf8().data());
+                continue;
+            }
 
-        if (track->isEasyToRead()) {
-            LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s' because it is 'easy to read'", track->kindKeyword().string().utf8().data(), language.utf8().data());
-            if (!language.isEmpty())
-                languagesIncluded.add(language);
-            tracksForMenu.append(track);
-            continue;
-        }
+            if (track->isEasyToRead()) {
+                LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s' because it is 'easy to read'", track->kindKeyword().string().utf8().data(), language.utf8().data());
+                if (!language.isEmpty())
+                    languagesIncluded.add(language);
+                tracksForMenu.append(track);
+                continue;
+            }
 
-        if (track->mode() == TextTrack::Mode::Showing) {
-            LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s' because it is already visible", track->kindKeyword().string().utf8().data(), language.utf8().data());
-            if (!language.isEmpty())
-                languagesIncluded.add(language);
-            tracksForMenu.append(track);
-            continue;
-        }
+            if (track->mode() == TextTrack::Mode::Showing) {
+                LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s' because it is already visible", track->kindKeyword().string().utf8().data(), language.utf8().data());
+                if (!language.isEmpty())
+                    languagesIncluded.add(language);
+                tracksForMenu.append(track);
+                continue;
+            }
 
-        if (!language.isEmpty() && track->isMainProgramContent()) {
-            bool isAccessibilityTrack = track->kind() == TextTrack::Kind::Captions;
-            if (prefersAccessibilityTracks) {
-                // In the first pass, include only caption tracks if the user prefers accessibility tracks.
-                if (!isAccessibilityTrack && filterTrackList) {
-                    LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it is NOT an accessibility track", track->kindKeyword().string().utf8().data(), language.utf8().data());
-                    continue;
-                }
-            } else {
-                // In the first pass, only include the first non-CC or SDH track with each language if the user prefers translation tracks.
-                if (isAccessibilityTrack && filterTrackList) {
-                    LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it is an accessibility track", track->kindKeyword().string().utf8().data(), language.utf8().data());
-                    continue;
-                }
-                if (languagesIncluded.contains(language) && filterTrackList) {
-                    LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it is not the first with this language", track->kindKeyword().string().utf8().data(), language.utf8().data());
-                    continue;
+            if (!language.isEmpty() && track->isMainProgramContent()) {
+                bool isAccessibilityTrack = track->kind() == TextTrack::Kind::Captions;
+                if (prefersAccessibilityTracks) {
+                    // In the first pass, include only caption tracks if the user prefers accessibility tracks.
+                    if (!isAccessibilityTrack && filterTrackList) {
+                        LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it is NOT an accessibility track", track->kindKeyword().string().utf8().data(), language.utf8().data());
+                        continue;
+                    }
+                } else {
+                    // In the first pass, only include the first non-CC or SDH track with each language if the user prefers translation tracks.
+                    if (isAccessibilityTrack && filterTrackList) {
+                        LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it is an accessibility track", track->kindKeyword().string().utf8().data(), language.utf8().data());
+                        continue;
+                    }
+                    if (languagesIncluded.contains(language) && filterTrackList) {
+                        LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - skipping '%s' track with language '%s' because it is not the first with this language", track->kindKeyword().string().utf8().data(), language.utf8().data());
+                        continue;
+                    }
                 }
             }
+
+            if (!language.isEmpty())
+                languagesIncluded.add(language);
         }
 
-        if (!language.isEmpty())
-            languagesIncluded.add(language);
         tracksForMenu.append(track);
 
         LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s', is%s main program content", track->kindKeyword().string().utf8().data(), language.utf8().data(), track->isMainProgramContent() ? "" : " NOT");
     }
 
-    // Now that we have filtered for the user's accessibility/translation preference, add  all tracks with a unique language without regard to track type.
-    for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
-        TextTrack* track = trackList->item(i);
-        String language = displayNameForLanguageLocale(track->language());
+    if (requestingCaptionsOrDescriptionsOrSubtitles) {
+        // Now that we have filtered for the user's accessibility/translation preference, add  all tracks with a unique language without regard to track type.
+        for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
+            TextTrack* track = trackList->item(i);
+            String language = displayNameForLanguageLocale(track->language());
 
-        if (tracksForMenu.contains(track))
-            continue;
+            if (tracksForMenu.contains(track))
+                continue;
 
-        auto kind = track->kind();
-        if (kind != TextTrack::Kind::Captions && kind != TextTrack::Kind::Descriptions && kind != TextTrack::Kind::Subtitles)
-            continue;
+            if (!kinds.contains(track->kind()))
+                continue;
 
-        // All candidates with no languge were added the first time through.
-        if (language.isEmpty())
-            continue;
+            // All candidates with no languge were added the first time through.
+            if (language.isEmpty())
+                continue;
 
-        if (track->containsOnlyForcedSubtitles())
-            continue;
+            if (track->containsOnlyForcedSubtitles())
+                continue;
 
-        if (!languagesIncluded.contains(language) && track->isMainProgramContent()) {
-            languagesIncluded.add(language);
-            tracksForMenu.append(track);
-            LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s' because it is the only track with this language", track->kindKeyword().string().utf8().data(), language.utf8().data());
+            if (!languagesIncluded.contains(language) && track->isMainProgramContent()) {
+                languagesIncluded.add(language);
+                tracksForMenu.append(track);
+                LOG(Media, "CaptionUserPreferencesMediaAF::sortedTrackListForMenu - adding '%s' track with language '%s' because it is the only track with this language", track->kindKeyword().string().utf8().data(), language.utf8().data());
+            }
         }
     }
 
@@ -967,8 +887,10 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
 
     std::sort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
 
-    tracksForMenu.insert(0, TextTrack::captionMenuOffItem());
-    tracksForMenu.insert(1, TextTrack::captionMenuAutomaticItem());
+    if (requestingCaptionsOrDescriptionsOrSubtitles) {
+        tracksForMenu.insert(0, &TextTrack::captionMenuOffItem());
+        tracksForMenu.insert(1, &TextTrack::captionMenuAutomaticItem());
+    }
 
     return tracksForMenu;
 }
@@ -977,4 +899,4 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
 
 #endif
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

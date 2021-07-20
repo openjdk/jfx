@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Google Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
@@ -34,7 +34,6 @@
 #include "config.h"
 #include <wtf/MonotonicTime.h>
 
-#include <time.h>
 #include <wtf/WallTime.h>
 
 #if OS(DARWIN)
@@ -51,8 +50,10 @@
 #include <windows.h>
 #include <math.h>
 #include <stdint.h>
+#include <time.h>
 #else
 #include <sys/time.h>
+#include <time.h>
 #endif
 
 #if OS(FUCHSIA)
@@ -68,8 +69,8 @@ namespace WTF {
 #if OS(WINDOWS)
 
 // Number of 100 nanosecond between January 1, 1601 and January 1, 1970.
-static const ULONGLONG epochBias = 116444736000000000ULL;
-static const double hundredsOfNanosecondsPerMillisecond = 10000;
+static constexpr ULONGLONG epochBias = 116444736000000000ULL;
+static constexpr double hundredsOfNanosecondsPerMillisecond = 10000;
 
 static double lowResUTCTime()
 {
@@ -230,9 +231,7 @@ static inline double currentTime()
 // Non-Windows GTK builds could use gettimeofday() directly but for the sake of consistency lets use GTK function.
 static inline double currentTime()
 {
-    GTimeVal now;
-    g_get_current_time(&now);
-    return static_cast<double>(now.tv_sec) + static_cast<double>(now.tv_usec / 1000000.0);
+    return static_cast<double>(g_get_real_time() / 1000000.0);
 }
 
 #else
@@ -251,11 +250,9 @@ WallTime WallTime::now()
     return fromRawSeconds(currentTime());
 }
 
-MonotonicTime MonotonicTime::now()
+#if OS(DARWIN)
+MonotonicTime MonotonicTime::fromMachAbsoluteTime(uint64_t machAbsoluteTime)
 {
-#if USE(GLIB)
-    return fromRawSeconds(static_cast<double>(g_get_monotonic_time() / 1000000.0));
-#elif OS(DARWIN)
     // Based on listing #2 from Apple QA 1398, but modified to be thread-safe.
     static mach_timebase_info_data_t timebaseInfo;
     static std::once_flag initializeTimerOnceFlag;
@@ -264,8 +261,16 @@ MonotonicTime MonotonicTime::now()
         ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
         ASSERT(timebaseInfo.denom);
     });
+    return fromRawSeconds((machAbsoluteTime * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom));
+}
+#endif
 
-    return fromRawSeconds((mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom));
+MonotonicTime MonotonicTime::now()
+{
+#if USE(GLIB)
+    return fromRawSeconds(static_cast<double>(g_get_monotonic_time() / 1000000.0));
+#elif OS(DARWIN)
+    return fromMachAbsoluteTime(mach_absolute_time());
 #elif OS(FUCHSIA)
     return fromRawSeconds(zx_clock_get_monotonic() / static_cast<double>(ZX_SEC(1)));
 #elif OS(LINUX) || OS(FREEBSD) || OS(OPENBSD) || OS(NETBSD)

@@ -29,28 +29,30 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "DOMException.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaRecorderErrorEvent);
 
-Ref<MediaRecorderErrorEvent> MediaRecorderErrorEvent::create(const AtomicString& type, Exception&& exception)
+Ref<MediaRecorderErrorEvent> MediaRecorderErrorEvent::create(const AtomString& type, Exception&& exception)
 {
     return adoptRef(*new MediaRecorderErrorEvent(type, WTFMove(exception)));
 }
 
-Ref<MediaRecorderErrorEvent> MediaRecorderErrorEvent::create(const AtomicString& type, Init&& init, IsTrusted isTrusted)
+Ref<MediaRecorderErrorEvent> MediaRecorderErrorEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
     auto domError = init.error.releaseNonNull();
     return adoptRef(*new MediaRecorderErrorEvent(type, WTFMove(init), WTFMove(domError), isTrusted));
 }
 
-MediaRecorderErrorEvent::MediaRecorderErrorEvent(const AtomicString& type, Init&& init, Ref<DOMException>&& exception, IsTrusted isTrusted)
+MediaRecorderErrorEvent::MediaRecorderErrorEvent(const AtomString& type, Init&& init, Ref<DOMException>&& exception, IsTrusted isTrusted)
     : Event(type, WTFMove(init), isTrusted)
     , m_domError(WTFMove(exception))
 {
 }
 
-MediaRecorderErrorEvent::MediaRecorderErrorEvent(const AtomicString& type, Exception&& exception)
+MediaRecorderErrorEvent::MediaRecorderErrorEvent(const AtomString& type, Exception&& exception)
     : Event(type, Event::CanBubble::No, Event::IsCancelable::No)
     , m_domError(DOMException::create(exception))
 {

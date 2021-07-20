@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,13 +52,28 @@ public class PlatformUtil {
     private static String javafxPlatform;
 
     static {
-        javafxPlatform = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
+        @SuppressWarnings("removal")
+        String str1 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
+        javafxPlatform = str1;
+
         loadProperties();
-        embedded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
-        embeddedType = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
-        useEGL = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
+
+        @SuppressWarnings("removal")
+        boolean bool1 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
+        embedded = bool1;
+
+        @SuppressWarnings("removal")
+        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
+        embeddedType = str2;
+
+        @SuppressWarnings("removal")
+        boolean bool2 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
+        useEGL = bool2;
+
         if (useEGL) {
-            doEGLCompositing = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
+            @SuppressWarnings("removal")
+            boolean bool3 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
+            doEGLCompositing = bool3;
         } else
             doEGLCompositing = false;
     }
@@ -71,6 +86,7 @@ public class PlatformUtil {
     private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
     private static final boolean SOLARIS = os.startsWith("SunOS");
     private static final boolean IOS = os.startsWith("iOS");
+    private static final boolean STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
 
     /**
      * Utility method used to determine whether the version number as
@@ -133,8 +149,8 @@ public class PlatformUtil {
     }
 
     public static boolean useGLES2() {
-        String useGles2 = "false";
-        useGles2 =
+        @SuppressWarnings("removal")
+        String useGles2 =
                 AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("use.gles2"));
         if ("true".equals(useGles2))
             return true;
@@ -175,6 +191,13 @@ public class PlatformUtil {
      */
     public static boolean isIOS(){
         return IOS;
+    }
+
+    /**
+     * Returns true if the current runtime is a statically linked image
+     */
+    public static boolean isStaticBuild(){
+        return STATIC_BUILD;
     }
 
     private static void loadPropertiesFromFile(final File file) {
@@ -230,13 +253,13 @@ public class PlatformUtil {
             // Strip everything after the last "/" or "\" to get rid of the jar filename
             int lastIndexOfSlash = Math.max(
                     s.lastIndexOf('/'), s.lastIndexOf('\\'));
-            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath())
-                    .getParentFile();
+            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath());
         } catch (MalformedURLException e) {
             return null;
         }
     }
 
+    @SuppressWarnings("removal")
     private static void loadProperties() {
         final String vmname = System.getProperty("java.vm.name");
         final String arch = System.getProperty("os.arch");

@@ -25,11 +25,15 @@
 namespace JSC {
 
 class MathObject final : public JSNonFinalObject {
-private:
-    MathObject(VM&, Structure*);
-
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(MathObject, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static MathObject* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
@@ -45,12 +49,14 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
+private:
+    MathObject(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*);
 };
 
-EncodedJSValue JSC_HOST_CALL mathProtoFuncAbs(ExecState*);
-EncodedJSValue JSC_HOST_CALL mathProtoFuncFloor(ExecState*);
-EncodedJSValue JSC_HOST_CALL mathProtoFuncTrunc(ExecState*);
+JSC_DECLARE_HOST_FUNCTION(mathProtoFuncAbs);
+JSC_DECLARE_HOST_FUNCTION(mathProtoFuncFloor);
+JSC_DECLARE_HOST_FUNCTION(mathProtoFuncMin);
+JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTrunc);
 
 } // namespace JSC

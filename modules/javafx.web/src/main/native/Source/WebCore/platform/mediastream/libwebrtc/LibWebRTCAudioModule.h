@@ -32,15 +32,15 @@
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
 #include <webrtc/modules/audio_device/include/audio_device.h>
-#include <webrtc/rtc_base/messagehandler.h>
-#include <webrtc/rtc_base/thread.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/WorkQueue.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 
 // LibWebRTCAudioModule is pulling streamed data to ensure audio data is passed to the audio track.
-class LibWebRTCAudioModule final : public webrtc::AudioDeviceModule, private rtc::MessageHandler {
+class LibWebRTCAudioModule : public webrtc::AudioDeviceModule {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     LibWebRTCAudioModule();
@@ -51,10 +51,6 @@ private:
         ASSERT_NOT_REACHED();
         return value;
     }
-
-    void AddRef() const final { }
-    rtc::RefCountReleaseStatus Release() const final { return rtc::RefCountReleaseStatus::kOtherRefsRemained; }
-    void OnMessage(rtc::Message*);
 
     // webrtc::AudioDeviceModule API
     int32_t StartPlayout() final;
@@ -123,14 +119,13 @@ private:
 #endif
 
 private:
-    void StartPlayoutOnAudioThread();
+    void pollAudioData();
+    void pollFromSource();
 
-    void PollFromSource();
-
-    std::unique_ptr<rtc::Thread> m_audioTaskRunner;
-
-    bool m_isPlaying = false;
-    webrtc::AudioTransport* m_audioTransport = nullptr;
+    Ref<WorkQueue> m_queue;
+    bool m_isPlaying { false };
+    webrtc::AudioTransport* m_audioTransport { nullptr };
+    MonotonicTime m_pollingTime;
 };
 
 } // namespace WebCore

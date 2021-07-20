@@ -27,15 +27,19 @@
 
 #if ENABLE(GAMEPAD)
 
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
-GamepadEvent::GamepadEvent(const AtomicString& eventType, Gamepad& gamepad)
+WTF_MAKE_ISO_ALLOCATED_IMPL(GamepadEvent);
+
+GamepadEvent::GamepadEvent(const AtomString& eventType, Gamepad& gamepad)
     : Event(eventType, CanBubble::No, IsCancelable::No)
     , m_gamepad(&gamepad)
 {
 }
 
-GamepadEvent::GamepadEvent(const AtomicString& eventType, const Init& initializer, IsTrusted isTrusted)
+GamepadEvent::GamepadEvent(const AtomString& eventType, const Init& initializer, IsTrusted isTrusted)
     : Event(eventType, initializer, isTrusted)
     , m_gamepad(initializer.gamepad)
 {

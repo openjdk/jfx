@@ -43,9 +43,36 @@ owns a large non-GC memory region. Calling this function will encourage the
 garbage collector to collect soon, hoping to reclaim that large non-GC memory
 region.
 */
-JS_EXPORT void JSReportExtraMemoryCost(JSContextRef ctx, size_t size) JSC_API_AVAILABLE(macosx(10.6), ios(7.0));
+JS_EXPORT void JSReportExtraMemoryCost(JSContextRef ctx, size_t size) JSC_API_AVAILABLE(macos(10.6), ios(7.0));
 
 JS_EXPORT void JSDisableGCTimer(void);
+
+#if !defined(__APPLE__) && !defined(WIN32) && !defined(_WIN32)
+/*!
+@function JSConfigureSignalForGC
+@abstract Configure signals for GC in non-Apple and non-Windows platforms.
+@param signal The signal number to use.
+@result true if the signal is successfully configured, otherwise false.
+@discussion Call this function before any of JSC initialization starts. Otherwise, it fails.
+*/
+JS_EXPORT bool JSConfigureSignalForGC(int signal);
+#endif
+
+/*!
+@function
+@abstract Produces an object with various statistics about current memory usage.
+@param ctx The execution context to use.
+@result An object containing GC heap status data.
+@discussion Specifically, the result object has the following integer-valued fields:
+ heapSize: current size of heap
+ heapCapacity: current capacity of heap
+ extraMemorySize: amount of non-GC memory referenced by GC objects (included in heap size / capacity)
+ objectCount: current count of GC objects
+ protectedObjectCount: current count of protected GC objects
+ globalObjectCount: current count of global GC objects
+ protectedGlobalObjectCount: current count of protected global GC objects
+*/
+JS_EXPORT JSObjectRef JSGetMemoryUsageStatistics(JSContextRef ctx);
 
 #ifdef __cplusplus
 }

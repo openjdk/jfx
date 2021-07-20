@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,9 +78,9 @@ enum class Operations {
     GetKeyLength
 };
 
-static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(ExecState&, WebCore::SubtleCrypto::AlgorithmIdentifier, Operations);
+static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(JSGlobalObject&, WebCore::SubtleCrypto::AlgorithmIdentifier, Operations);
 
-static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(ExecState& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier)
+static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(JSGlobalObject& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier)
 {
     auto digestParams = normalizeCryptoAlgorithmParameters(state, algorithmIdentifier, Operations::Digest);
     if (digestParams.hasException())
@@ -88,14 +88,14 @@ static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(ExecState& state,
     return digestParams.returnValue()->identifier;
 }
 
-static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(ExecState& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier, Operations operation)
+static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(JSGlobalObject& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier, Operations operation)
 {
     VM& vm = state.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (WTF::holds_alternative<String>(algorithmIdentifier)) {
         auto newParams = Strong<JSObject>(vm, constructEmptyObject(&state));
-        newParams->putDirect(vm, Identifier::fromString(&vm, "name"), jsString(&state, WTF::get<String>(algorithmIdentifier)));
+        newParams->putDirect(vm, Identifier::fromString(vm, "name"), jsString(vm, WTF::get<String>(algorithmIdentifier)));
 
         return normalizeCryptoAlgorithmParameters(state, newParams, operation);
     }
@@ -115,31 +115,31 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::Decrypt:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::RSA_OAEP: {
             auto params = convertDictionary<CryptoAlgorithmRsaOaepParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmRsaOaepParams>(params);
+            result = makeUnique<CryptoAlgorithmRsaOaepParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CBC:
         case CryptoAlgorithmIdentifier::AES_CFB: {
             auto params = convertDictionary<CryptoAlgorithmAesCbcCfbParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmAesCbcCfbParams>(params);
+            result = makeUnique<CryptoAlgorithmAesCbcCfbParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CTR: {
             auto params = convertDictionary<CryptoAlgorithmAesCtrParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmAesCtrParams>(params);
+            result = makeUnique<CryptoAlgorithmAesCtrParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::AES_GCM: {
             auto params = convertDictionary<CryptoAlgorithmAesGcmParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmAesGcmParams>(params);
+            result = makeUnique<CryptoAlgorithmAesGcmParams>(params);
             break;
         }
         default:
@@ -151,7 +151,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
         case CryptoAlgorithmIdentifier::HMAC:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::ECDSA: {
             auto params = convertDictionary<CryptoAlgorithmEcdsaParams>(state, value.get());
@@ -160,13 +160,13 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmEcdsaParams>(params);
+            result = makeUnique<CryptoAlgorithmEcdsaParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::RSA_PSS: {
             auto params = convertDictionary<CryptoAlgorithmRsaPssParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmRsaPssParams>(params);
+            result = makeUnique<CryptoAlgorithmRsaPssParams>(params);
             break;
         }
         default:
@@ -180,7 +180,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::SHA_256:
         case CryptoAlgorithmIdentifier::SHA_384:
         case CryptoAlgorithmIdentifier::SHA_512:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         default:
             return Exception { NotSupportedError };
@@ -191,7 +191,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5: {
             auto params = convertDictionary<CryptoAlgorithmRsaKeyGenParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmRsaKeyGenParams>(params);
+            result = makeUnique<CryptoAlgorithmRsaKeyGenParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
@@ -203,7 +203,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmRsaHashedKeyGenParams>(params);
+            result = makeUnique<CryptoAlgorithmRsaHashedKeyGenParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CTR:
@@ -213,7 +213,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::AES_KW: {
             auto params = convertDictionary<CryptoAlgorithmAesKeyParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmAesKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmAesKeyParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::HMAC: {
@@ -223,14 +223,14 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmHmacKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmHmacKeyParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::ECDSA:
         case CryptoAlgorithmIdentifier::ECDH: {
             auto params = convertDictionary<CryptoAlgorithmEcKeyParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmEcKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmEcKeyParams>(params);
             break;
         }
         default:
@@ -241,15 +241,15 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::ECDH: {
             // Remove this hack once https://bugs.webkit.org/show_bug.cgi?id=169333 is fixed.
-            JSValue nameValue = value.get()->get(&state, Identifier::fromString(&state, "name"));
-            JSValue publicValue = value.get()->get(&state, Identifier::fromString(&state, "public"));
+            JSValue nameValue = value.get()->get(&state, Identifier::fromString(vm, "name"));
+            JSValue publicValue = value.get()->get(&state, Identifier::fromString(vm, "public"));
             JSObject* newValue = constructEmptyObject(&state);
-            newValue->putDirect(vm, Identifier::fromString(&vm, "name"), nameValue);
-            newValue->putDirect(vm, Identifier::fromString(&vm, "publicKey"), publicValue);
+            newValue->putDirect(vm, Identifier::fromString(vm, "name"), nameValue);
+            newValue->putDirect(vm, Identifier::fromString(vm, "publicKey"), publicValue);
 
             auto params = convertDictionary<CryptoAlgorithmEcdhKeyDeriveParams>(state, newValue);
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmEcdhKeyDeriveParams>(params);
+            result = makeUnique<CryptoAlgorithmEcdhKeyDeriveParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::HKDF: {
@@ -259,7 +259,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmHkdfParams>(params);
+            result = makeUnique<CryptoAlgorithmHkdfParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::PBKDF2: {
@@ -269,7 +269,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmPbkdf2Params>(params);
+            result = makeUnique<CryptoAlgorithmPbkdf2Params>(params);
             break;
         }
         default:
@@ -279,7 +279,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::ImportKey:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
         case CryptoAlgorithmIdentifier::RSA_PSS:
@@ -290,7 +290,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmRsaHashedImportParams>(params);
+            result = makeUnique<CryptoAlgorithmRsaHashedImportParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::AES_CTR:
@@ -298,7 +298,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::AES_GCM:
         case CryptoAlgorithmIdentifier::AES_CFB:
         case CryptoAlgorithmIdentifier::AES_KW:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::HMAC: {
             auto params = convertDictionary<CryptoAlgorithmHmacKeyParams>(state, value.get());
@@ -307,19 +307,19 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmHmacKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmHmacKeyParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::ECDSA:
         case CryptoAlgorithmIdentifier::ECDH: {
             auto params = convertDictionary<CryptoAlgorithmEcKeyParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmEcKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmEcKeyParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::HKDF:
         case CryptoAlgorithmIdentifier::PBKDF2:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         default:
             return Exception { NotSupportedError };
@@ -329,7 +329,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::UnwrapKey:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::AES_KW:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         default:
             return Exception { NotSupportedError };
@@ -344,7 +344,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::AES_KW: {
             auto params = convertDictionary<CryptoAlgorithmAesKeyParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
-            result = std::make_unique<CryptoAlgorithmAesKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmAesKeyParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::HMAC: {
@@ -354,12 +354,12 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             if (hashIdentifier.hasException())
                 return hashIdentifier.releaseException();
             params.hashIdentifier = hashIdentifier.releaseReturnValue();
-            result = std::make_unique<CryptoAlgorithmHmacKeyParams>(params);
+            result = makeUnique<CryptoAlgorithmHmacKeyParams>(params);
             break;
         }
         case CryptoAlgorithmIdentifier::HKDF:
         case CryptoAlgorithmIdentifier::PBKDF2:
-            result = std::make_unique<CryptoAlgorithmParameters>(params);
+            result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         default:
             return Exception { NotSupportedError };
@@ -368,7 +368,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     }
 
     result->identifier = *identifier;
-    return WTFMove(result);
+    return result;
 }
 
 static CryptoKeyUsageBitmap toCryptoKeyUsageBitmap(CryptoKeyUsage usage)
@@ -509,10 +509,8 @@ static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
 
 RefPtr<DeferredPromise> getPromise(DeferredPromise* index, WeakPtr<SubtleCrypto> subtleCryptoWeakPointer)
 {
-    if (subtleCryptoWeakPointer) {
-        if (auto promise = subtleCryptoWeakPointer->m_pendingPromises.take(index))
-            return WTFMove(promise.value());
-    }
+    if (subtleCryptoWeakPointer)
+        return subtleCryptoWeakPointer->m_pendingPromises.take(index);
     return nullptr;
 }
 
@@ -520,16 +518,16 @@ static std::unique_ptr<CryptoAlgorithmParameters> crossThreadCopyImportParams(co
 {
     switch (importParams.parametersClass()) {
     case CryptoAlgorithmParameters::Class::None: {
-        auto result = std::make_unique<CryptoAlgorithmParameters>();
+        auto result = makeUnique<CryptoAlgorithmParameters>();
         result->identifier = importParams.identifier;
         return result;
     }
     case CryptoAlgorithmParameters::Class::EcKeyParams:
-        return std::make_unique<CryptoAlgorithmEcKeyParams>(crossThreadCopy(downcast<CryptoAlgorithmEcKeyParams>(importParams)));
+        return makeUnique<CryptoAlgorithmEcKeyParams>(crossThreadCopy(downcast<CryptoAlgorithmEcKeyParams>(importParams)));
     case CryptoAlgorithmParameters::Class::HmacKeyParams:
-        return std::make_unique<CryptoAlgorithmHmacKeyParams>(crossThreadCopy(downcast<CryptoAlgorithmHmacKeyParams>(importParams)));
+        return makeUnique<CryptoAlgorithmHmacKeyParams>(crossThreadCopy(downcast<CryptoAlgorithmHmacKeyParams>(importParams)));
     case CryptoAlgorithmParameters::Class::RsaHashedImportParams:
-        return std::make_unique<CryptoAlgorithmRsaHashedImportParams>(crossThreadCopy(downcast<CryptoAlgorithmRsaHashedImportParams>(importParams)));
+        return makeUnique<CryptoAlgorithmRsaHashedImportParams>(crossThreadCopy(downcast<CryptoAlgorithmRsaHashedImportParams>(importParams)));
     default:
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -538,7 +536,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> crossThreadCopyImportParams(co
 
 // MARK: - Exposed functions.
 
-void SubtleCrypto::encrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::encrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Encrypt);
     if (paramsOrException.hasException()) {
@@ -576,7 +574,7 @@ void SubtleCrypto::encrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorith
     algorithm->encrypt(*params, key, WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::decrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::decrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Decrypt);
     if (paramsOrException.hasException()) {
@@ -614,7 +612,7 @@ void SubtleCrypto::decrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorith
     algorithm->decrypt(*params, key, WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::sign(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::sign(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Sign);
     if (paramsOrException.hasException()) {
@@ -652,7 +650,7 @@ void SubtleCrypto::sign(JSC::ExecState& state, AlgorithmIdentifier&& algorithmId
     algorithm->sign(*params, key, WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::verify(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& signatureBufferSource, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::verify(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& signatureBufferSource, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Verify);
     if (paramsOrException.hasException()) {
@@ -691,7 +689,7 @@ void SubtleCrypto::verify(JSC::ExecState& state, AlgorithmIdentifier&& algorithm
     algorithm->verify(*params, key, WTFMove(signature), WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::digest(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::digest(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Digest);
     if (paramsOrException.hasException()) {
@@ -719,7 +717,7 @@ void SubtleCrypto::digest(JSC::ExecState& state, AlgorithmIdentifier&& algorithm
     algorithm->digest(WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::generateKey(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::generateKey(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::GenerateKey);
     if (paramsOrException.hasException()) {
@@ -766,7 +764,7 @@ void SubtleCrypto::generateKey(JSC::ExecState& state, AlgorithmIdentifier&& algo
     algorithm->generateKey(*params, extractable, keyUsagesBitmap, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext());
 }
 
-void SubtleCrypto::deriveKey(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, AlgorithmIdentifier&& derivedKeyType, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::deriveKey(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, AlgorithmIdentifier&& derivedKeyType, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::DeriveBits);
     if (paramsOrException.hasException()) {
@@ -843,7 +841,7 @@ void SubtleCrypto::deriveKey(JSC::ExecState& state, AlgorithmIdentifier&& algori
     algorithm->deriveBits(*params, baseKey, length, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::deriveBits(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, unsigned length, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::deriveBits(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, unsigned length, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::DeriveBits);
     if (paramsOrException.hasException()) {
@@ -879,7 +877,7 @@ void SubtleCrypto::deriveBits(JSC::ExecState& state, AlgorithmIdentifier&& algor
     algorithm->deriveBits(*params, baseKey, length, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::importKey(JSC::ExecState& state, KeyFormat format, KeyDataVariant&& keyDataVariant, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::importKey(JSC::JSGlobalObject& state, KeyFormat format, KeyDataVariant&& keyDataVariant, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::ImportKey);
     if (paramsOrException.hasException()) {
@@ -967,7 +965,7 @@ void SubtleCrypto::exportKey(KeyFormat format, CryptoKey& key, Ref<DeferredPromi
     algorithm->exportKey(format, key, WTFMove(callback), WTFMove(exceptionCallback));
 }
 
-void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& key, CryptoKey& wrappingKey, AlgorithmIdentifier&& wrapAlgorithmIdentifier, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoKey& key, CryptoKey& wrappingKey, AlgorithmIdentifier&& wrapAlgorithmIdentifier, Ref<DeferredPromise>&& promise)
 {
     bool isEncryption = false;
 
@@ -1013,7 +1011,7 @@ void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& k
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
     auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer, wrapAlgorithm, wrappingKey = makeRef(wrappingKey), wrapParams = WTFMove(wrapParams), isEncryption, context, workQueue = m_workQueue.copyRef()](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
+    auto callback = [index, subtleCryptoWeakPointer, wrapAlgorithm, wrappingKey = makeRef(wrappingKey), wrapParams = WTFMove(wrapParams), isEncryption, context, workQueue = m_workQueue](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
         if (subtleCryptoWeakPointer) {
             if (auto promise = subtleCryptoWeakPointer->m_pendingPromises.get(index)) {
                 Vector<uint8_t> bytes;
@@ -1025,8 +1023,8 @@ void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& k
                     break;
                 case SubtleCrypto::KeyFormat::Jwk: {
                     // FIXME: Converting to JS just to JSON-Stringify seems inefficient. We should find a way to go directly from the struct to JSON.
-                    auto jwk = toJS<IDLDictionary<JsonWebKey>>(*(promise->globalObject()->globalExec()), *(promise->globalObject()), WTFMove(WTF::get<JsonWebKey>(key)));
-                    String jwkString = JSONStringify(promise->globalObject()->globalExec(), jwk, 0);
+                    auto jwk = toJS<IDLDictionary<JsonWebKey>>(*(promise->globalObject()), *(promise->globalObject()), WTFMove(WTF::get<JsonWebKey>(key)));
+                    String jwkString = JSONStringify(promise->globalObject(), jwk, 0);
                     CString jwkUtf8String = jwkString.utf8(StrictConversion);
                     bytes.append(jwkUtf8String.data(), jwkUtf8String.length());
                 }
@@ -1062,7 +1060,7 @@ void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& k
     exportAlgorithm->exportKey(format, key, WTFMove(callback), WTFMove(exceptionCallback));
 }
 
-void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSource&& wrappedKeyBufferSource, CryptoKey& unwrappingKey, AlgorithmIdentifier&& unwrapAlgorithmIdentifier, AlgorithmIdentifier&& unwrappedKeyAlgorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::unwrapKey(JSC::JSGlobalObject& state, KeyFormat format, BufferSource&& wrappedKeyBufferSource, CryptoKey& unwrappingKey, AlgorithmIdentifier&& unwrapAlgorithmIdentifier, AlgorithmIdentifier&& unwrappedKeyAlgorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto wrappedKey = copyToVector(WTFMove(wrappedKeyBufferSource));
 
@@ -1127,7 +1125,7 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
                     keyData = bytes;
                     break;
                 case SubtleCrypto::KeyFormat::Jwk: {
-                    auto& state = *(promise->globalObject()->globalExec());
+                    auto& state = *(promise->globalObject());
                     auto& vm = state.vm();
                     auto scope = DECLARE_THROW_SCOPE(vm);
 

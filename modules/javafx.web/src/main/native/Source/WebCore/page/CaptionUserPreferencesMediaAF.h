@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "CSSPropertyNames.h"
 #include "CaptionUserPreferences.h"
@@ -65,9 +65,8 @@ public:
 #endif
 
     String captionsStyleSheetOverride() const override;
-    int textTrackSelectionScore(TextTrack*, HTMLMediaElement*) const override;
     Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList*) override;
-    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*) override;
+    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>) override;
     String displayNameForTrack(AudioTrack*) const override;
     String displayNameForTrack(TextTrack*) const override;
 
@@ -92,4 +91,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

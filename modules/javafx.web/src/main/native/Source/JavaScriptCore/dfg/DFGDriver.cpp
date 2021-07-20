@@ -26,26 +26,17 @@
 #include "config.h"
 #include "DFGDriver.h"
 
-#include "JSObject.h"
-#include "JSString.h"
-
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
 #include "DFGPlan.h"
 #include "DFGThunks.h"
 #include "DFGWorklist.h"
-#include "FunctionWhitelist.h"
+#include "FunctionAllowlist.h"
 #include "JITCode.h"
-#include "JSCInlines.h"
 #include "Options.h"
 #include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
-#include <wtf/Atomics.h>
 #include <wtf/NeverDestroyed.h>
-
-#if ENABLE(FTL_JIT)
-#include "FTLThunks.h"
-#endif
 
 namespace JSC { namespace DFG {
 
@@ -57,40 +48,39 @@ unsigned getNumCompilations()
 }
 
 #if ENABLE(DFG_JIT)
-static FunctionWhitelist& ensureGlobalDFGWhitelist()
+static FunctionAllowlist& ensureGlobalDFGAllowlist()
 {
-    static LazyNeverDestroyed<FunctionWhitelist> dfgWhitelist;
-    static std::once_flag initializeWhitelistFlag;
-    std::call_once(initializeWhitelistFlag, [] {
-        const char* functionWhitelistFile = Options::dfgWhitelist();
-        dfgWhitelist.construct(functionWhitelistFile);
+    static LazyNeverDestroyed<FunctionAllowlist> dfgAllowlist;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::dfgAllowlist();
+        dfgAllowlist.construct(functionAllowlistFile);
     });
-    return dfgWhitelist;
+    return dfgAllowlist;
 }
 
 static CompilationResult compileImpl(
     VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationMode mode,
-    unsigned osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
+    BytecodeIndex osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
-    if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionCount())
-        || !ensureGlobalDFGWhitelist().contains(codeBlock))
+    if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionsSize())
+        || !ensureGlobalDFGAllowlist().contains(codeBlock))
         return CompilationFailed;
 
     numCompilations++;
 
     ASSERT(codeBlock);
     ASSERT(codeBlock->alternative());
-    ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
-    ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITCode::DFGJIT);
+    ASSERT(JITCode::isBaselineCode(codeBlock->alternative()->jitType()));
+    ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITType::DFGJIT);
 
     if (logCompilationChanges(mode))
-        dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", number of instructions = ", codeBlock->instructionCount(), "\n");
+        dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize(), "\n");
 
     // Make sure that any stubs that the DFG is going to use are initialized. We want to
     // make sure that all JIT code generation does finalization on the main thread.
     vm.getCTIStub(arityFixupGenerator);
-    vm.getCTIStub(osrExitThunkGenerator);
     vm.getCTIStub(osrExitGenerationThunkGenerator);
     vm.getCTIStub(throwExceptionFromCallSlowPathGenerator);
     vm.getCTIStub(linkCallThunkGenerator);
@@ -116,7 +106,7 @@ static CompilationResult compileImpl(
 }
 #else // ENABLE(DFG_JIT)
 static CompilationResult compileImpl(
-    VM&, CodeBlock*, CodeBlock*, CompilationMode, unsigned, const Operands<Optional<JSValue>>&,
+    VM&, CodeBlock*, CodeBlock*, CompilationMode, BytecodeIndex, const Operands<Optional<JSValue>>&,
     Ref<DeferredCompilationCallback>&&)
 {
     return CompilationFailed;
@@ -125,7 +115,7 @@ static CompilationResult compileImpl(
 
 CompilationResult compile(
     VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationMode mode,
-    unsigned osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
+    BytecodeIndex osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
     CompilationResult result = compileImpl(

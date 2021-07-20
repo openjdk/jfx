@@ -68,7 +68,10 @@ enum CSSParserTokenType {
     BadStringToken,
     EOFToken,
     CommentToken,
+    LastCSSParserTokenType = CommentToken,
 };
+
+constexpr std::underlying_type_t<CSSParserTokenType> numberOfCSSParserTokenTypes = LastCSSParserTokenType + 1;
 
 enum NumericSign {
     NoSign,
@@ -127,7 +130,7 @@ public:
     double numericValue() const;
     HashTokenType getHashTokenType() const { ASSERT(m_type == HashToken); return m_hashTokenType; }
     BlockType getBlockType() const { return static_cast<BlockType>(m_blockType); }
-    CSSPrimitiveValue::UnitType unitType() const { return static_cast<CSSPrimitiveValue::UnitType>(m_unit); }
+    CSSUnitType unitType() const { return static_cast<CSSUnitType>(m_unit); }
     UChar32 unicodeRangeStart() const { ASSERT(m_type == UnicodeRangeToken); return m_unicodeRange.start; }
     UChar32 unicodeRangeEnd() const { ASSERT(m_type == UnicodeRangeToken); return m_unicodeRange.end; }
     CSSValueID id() const;
@@ -137,7 +140,7 @@ public:
 
     CSSPropertyID parseAsCSSPropertyID() const;
 
-    void serialize(StringBuilder&) const;
+    void serialize(StringBuilder&, const CSSParserToken* nextToken = nullptr) const;
 
     CSSParserToken copyWithUpdatedString(const StringView&) const;
 
@@ -152,7 +155,7 @@ private:
     unsigned m_blockType : 2; // BlockType
     unsigned m_numericValueType : 1; // NumericValueType
     unsigned m_numericSign : 2; // NumericSign
-    unsigned m_unit : 7; // CSSPrimitiveValue::UnitType
+    unsigned m_unit : 7; // CSSUnitType
 
     bool valueDataCharRawEqual(const CSSParserToken& other) const;
 

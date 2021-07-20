@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,98 +26,134 @@
 #include "config.h"
 #include "TestOptions.h"
 
-#include <fstream>
+#include "TestOptionsGeneratedKeys.h"
 
-static bool parseBooleanTestHeaderValue(const std::string& value)
+namespace WTR {
+
+const std::vector<std::string>& TestOptions::supportedBoolWebPreferenceFeatures()
 {
-    if (value == "true")
-        return true;
-    if (value == "false")
-        return false;
+    // FIXME: Remove this once there is a viable mechanism for reseting WebPreferences between tests,
+    // at which point, we will not need to manually reset every supported preference for each test.
 
-    LOG_ERROR("Found unexpected value '%s' for boolean option. Expected 'true' or 'false'.", value.c_str());
-    return false;
+    static std::vector<std::string> supported = [] {
+        std::vector<std::string> keys;
+        for (const auto& [key, value] : defaults().boolWebPreferenceFeatures)
+            keys.push_back(key);
+        return keys;
+    }();
+    return supported;
 }
 
-TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolutePath)
+const std::vector<std::string>& TestOptions::supportedUInt32WebPreferenceFeatures()
 {
-    const auto& path = absolutePath.empty() ? pathOrURL : absolutePath;
-    if (path.empty())
-        return;
+    // FIXME: Remove this once there is a viable mechanism for reseting WebPreferences between tests,
+    // at which point, we will not need to manually reset every supported preference for each test.
 
-    std::string options;
-    std::ifstream testFile(path.data());
-    if (!testFile.good())
-        return;
-    getline(testFile, options);
-    std::string beginString("webkit-test-runner [ ");
-    std::string endString(" ]");
-    size_t beginLocation = options.find(beginString);
-    if (beginLocation == std::string::npos)
-        return;
-    size_t endLocation = options.find(endString, beginLocation);
-    if (endLocation == std::string::npos) {
-        LOG_ERROR("Could not find end of test header in %s", path.c_str());
-        return;
+    static std::vector<std::string> supported = [] {
+        std::vector<std::string> keys;
+        for (const auto& [key, value] : defaults().uint32WebPreferenceFeatures)
+            keys.push_back(key);
+        return keys;
+    }();
+    return supported;
+}
+
+const TestFeatures& TestOptions::defaults()
+{
+    static TestFeatures features;
+    if (features.boolWebPreferenceFeatures.empty()) {
+        features.boolWebPreferenceFeatures = {
+            // These are WebPreference values that must always be set as they may
+            // differ from the default set in the WebPreferences*.yaml configuration.
+            { "AcceleratedDrawingEnabled", false },
+            { "AllowCrossOriginSubresourcesToAskForCredentials", false },
+            { "AllowFileAccessFromFileURLs", true },
+            { "AllowTopNavigationToDataURLs", true },
+            { "AllowUniversalAccessFromFileURLs", true },
+            { "AspectRatioOfImgFromWidthAndHeightEnabled", false },
+            { "AspectRatioEnabled", true },
+            { "AsyncClipboardAPIEnabled", false },
+            { "AttachmentElementEnabled", false },
+            { "CSSLogicalEnabled", false },
+            { "CSSOMViewSmoothScrollingEnabled", false },
+            { "ColorFilterEnabled", false },
+            { "ContactPickerAPIEnabled", false },
+            { "CoreMathMLEnabled", false },
+            { "DOMPasteAllowed", true },
+            { "DeveloperExtrasEnabled", true },
+            { "HiddenPageDOMTimerThrottlingEnabled", false },
+            { "InspectorAdditionsEnabled", false },
+            { "IntersectionObserverEnabled", false },
+            { "JavaScriptCanAccessClipboard", true },
+            { "JavaScriptCanOpenWindowsAutomatically", true },
+            { "JavaScriptEnabled", true },
+            { "KeygenElementEnabled", false },
+            { "LayoutFormattingContextIntegrationEnabled", true },
+            { "LineHeightUnitsEnabled", false },
+            { "LoadsImagesAutomatically", true },
+            { "MainContentUserGestureOverrideEnabled", false },
+            { "MenuItemElementEnabled", false },
+            { "ModernMediaControlsEnabled", true },
+            { "NeedsStorageAccessFromFileURLsQuirk", false },
+            { "OverscrollBehaviorEnabled", true },
+            { "PluginsEnabled", true },
+            { "PrivateClickMeasurementEnabled", false },
+            { "RequestIdleCallbackEnabled", false },
+            { "ResizeObserverEnabled", false },
+            { "SelectionAcrossShadowBoundariesEnabled", true },
+            { "ShrinksStandaloneImagesToFit", true },
+            { "SpatialNavigationEnabled", false },
+            { "TabsToLinks", false },
+            { "TelephoneNumberParsingEnabled", false },
+            { "UsesBackForwardCache", false },
+            { "WebGPUEnabled", false },
+            { "XSSAuditorEnabled", false },
+        };
+        features.uint32WebPreferenceFeatures = {
+            { "MinimumFontSize", 0 },
+        };
     }
-    std::string pairString = options.substr(beginLocation + beginString.size(), endLocation - (beginLocation + beginString.size()));
-    size_t pairStart = 0;
-    while (pairStart < pairString.size()) {
-        size_t pairEnd = pairString.find(" ", pairStart);
-        if (pairEnd == std::string::npos)
-            pairEnd = pairString.size();
-        size_t equalsLocation = pairString.find("=", pairStart);
-        if (equalsLocation == std::string::npos) {
-            LOG_ERROR("Malformed option in test header (could not find '=' character) in %s", path.c_str());
-            break;
-        }
-        auto key = pairString.substr(pairStart, equalsLocation - pairStart);
-        auto value = pairString.substr(equalsLocation + 1, pairEnd - (equalsLocation + 1));
-        if (key == "enableAttachmentElement")
-            enableAttachmentElement = parseBooleanTestHeaderValue(value);
-        if (key == "useAcceleratedDrawing")
-            useAcceleratedDrawing = parseBooleanTestHeaderValue(value);
-        else if (key == "enableIntersectionObserver")
-            enableIntersectionObserver = parseBooleanTestHeaderValue(value);
-        else if (key == "enableMenuItemElement")
-            enableMenuItemElement = parseBooleanTestHeaderValue(value);
-        else if (key == "enableModernMediaControls")
-            enableModernMediaControls = parseBooleanTestHeaderValue(value);
-        else if (key == "enablePointerLock")
-            enablePointerLock = parseBooleanTestHeaderValue(value);
-        else if (key == "enableDragDestinationActionLoad")
-            enableDragDestinationActionLoad = parseBooleanTestHeaderValue(value);
-        else if (key == "layerBackedWebView")
-            layerBackedWebView = parseBooleanTestHeaderValue(value);
-        else if (key == "enableIsSecureContextAttribute")
-            enableIsSecureContextAttribute = parseBooleanTestHeaderValue(value);
-        else if (key == "enableInspectorAdditions")
-            enableInspectorAdditions = parseBooleanTestHeaderValue(value);
-        else if (key == "dumpJSConsoleLogInStdErr")
-            dumpJSConsoleLogInStdErr = parseBooleanTestHeaderValue(value);
-        else if (key == "allowCrossOriginSubresourcesToAskForCredentials")
-            allowCrossOriginSubresourcesToAskForCredentials = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:WebAnimationsCSSIntegrationEnabled")
-            enableWebAnimationsCSSIntegration = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:selectionAcrossShadowBoundariesEnabled")
-            enableSelectionAcrossShadowBoundaries = parseBooleanTestHeaderValue(value);
-        else if (key == "enableColorFilter")
-            enableColorFilter = parseBooleanTestHeaderValue(value);
-        else if (key == "jscOptions")
-            jscOptions = value;
-        else if (key == "experimental:WebGPUEnabled")
-            enableWebGPU = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:CSSLogicalEnabled")
-            enableCSSLogical = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:AdClickAttributionEnabled")
-            adClickAttributionEnabled = parseBooleanTestHeaderValue(value);
-        pairStart = pairEnd + 1;
-    }
+    return features;
+}
+
+const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMapping()
+{
+    static const std::unordered_map<std::string, TestHeaderKeyType> map {
+        GENERATED_WEB_PREFERENCE_KEY_TYPE_MAPPINGS
+
+        { "dumpJSConsoleLogInStdErr", TestHeaderKeyType::BoolTestRunner },
+        { "enableDragDestinationActionLoad", TestHeaderKeyType::BoolTestRunner },
+        { "layerBackedWebView", TestHeaderKeyType::BoolTestRunner },
+        { "useEphemeralSession", TestHeaderKeyType::BoolTestRunner },
+
+        { "additionalSupportedImageTypes", TestHeaderKeyType::StringTestRunner },
+        { "jscOptions", TestHeaderKeyType::StringTestRunner },
+    };
+
+    return map;
 }
 
 bool TestOptions::webViewIsCompatibleWithOptions(const TestOptions& other) const
 {
-    return other.layerBackedWebView == layerBackedWebView
-        && other.jscOptions == jscOptions
-        && other.enableWebAnimationsCSSIntegration == enableWebAnimationsCSSIntegration;
+    return m_features == other.m_features;
+}
+
+template<typename T> T featureValue(std::string key, T defaultValue, const std::unordered_map<std::string, T>& map)
+{
+    auto it = map.find(key);
+    if (it != map.end())
+        return it->second;
+    return defaultValue;
+}
+
+bool TestOptions::boolTestRunnerFeatureValue(std::string key, bool defaultValue) const
+{
+    return featureValue(key, defaultValue, m_features.boolTestRunnerFeatures);
+}
+
+std::string TestOptions::stringTestRunnerFeatureValue(std::string key, std::string defaultValue) const
+{
+    return featureValue(key, defaultValue, m_features.stringTestRunnerFeatures);
+}
+
 }

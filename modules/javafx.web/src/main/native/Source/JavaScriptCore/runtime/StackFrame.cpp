@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 #include "CodeBlock.h"
 #include "DebuggerPrimitives.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -38,10 +38,10 @@ StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee)
 {
 }
 
-StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee, CodeBlock* codeBlock, unsigned bytecodeOffset)
+StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
     : m_callee(vm, owner, callee)
     , m_codeBlock(vm, owner, codeBlock)
-    , m_bytecodeOffset(bytecodeOffset)
+    , m_bytecodeIndex(bytecodeIndex)
 {
 }
 
@@ -111,10 +111,10 @@ void StackFrame::computeLineAndColumn(unsigned& line, unsigned& column) const
     int divot = 0;
     int unusedStartOffset = 0;
     int unusedEndOffset = 0;
-    m_codeBlock->expressionRangeForBytecodeOffset(m_bytecodeOffset, divot, unusedStartOffset, unusedEndOffset, line, column);
+    m_codeBlock->expressionRangeForBytecodeIndex(m_bytecodeIndex, divot, unusedStartOffset, unusedEndOffset, line, column);
 
     ScriptExecutable* executable = m_codeBlock->ownerExecutable();
-    if (Optional<int> overrideLineNumber = executable->overrideLineNumber(*m_codeBlock->vm()))
+    if (Optional<int> overrideLineNumber = executable->overrideLineNumber(m_codeBlock->vm()))
         line = overrideLineNumber.value();
 }
 
@@ -124,9 +124,8 @@ String StackFrame::toString(VM& vm) const
     String functionName = this->functionName(vm);
     String sourceURL = this->sourceURL();
     traceBuild.append(functionName);
+    traceBuild.append('@');
     if (!sourceURL.isEmpty()) {
-        if (!functionName.isEmpty())
-            traceBuild.append('@');
         traceBuild.append(sourceURL);
         if (hasLineAndColumnInfo()) {
             unsigned line;
@@ -140,14 +139,6 @@ String StackFrame::toString(VM& vm) const
         }
     }
     return traceBuild.toString().impl();
-}
-
-void StackFrame::visitChildren(SlotVisitor& visitor)
-{
-    if (m_callee)
-        visitor.append(m_callee);
-    if (m_codeBlock)
-        visitor.append(m_codeBlock);
 }
 
 } // namespace JSC

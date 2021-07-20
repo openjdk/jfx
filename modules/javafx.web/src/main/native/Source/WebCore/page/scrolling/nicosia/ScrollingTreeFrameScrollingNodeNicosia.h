@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2018 Igalia S.L.
+ * Copyright (C) 2012, 2014-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,24 +32,63 @@
 
 #include "ScrollingTreeFrameScrollingNode.h"
 
+#include <wtf/RefPtr.h>
+
+namespace Nicosia {
+class CompositionLayer;
+}
+
 namespace WebCore {
+class ScrollAnimation;
+class ScrollAnimationKinetic;
 
 class ScrollingTreeFrameScrollingNodeNicosia final : public ScrollingTreeFrameScrollingNode {
 public:
     static Ref<ScrollingTreeFrameScrollingNode> create(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
     virtual ~ScrollingTreeFrameScrollingNodeNicosia();
 
+    RefPtr<Nicosia::CompositionLayer> rootContentsLayer() const { return m_rootContentsLayer; }
+
 private:
     ScrollingTreeFrameScrollingNodeNicosia(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
-    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override;
+    void commitStateBeforeChildren(const ScrollingStateNode&) override;
+    void commitStateAfterChildren(const ScrollingStateNode&) override;
 
-    FloatPoint scrollPosition() const override;
-    void setScrollPosition(const FloatPoint&) override;
-    void setScrollPositionWithoutContentEdgeConstraints(const FloatPoint&) override;
-    void setScrollLayerPosition(const FloatPoint&, const FloatRect&) override;
+#if ENABLE(KINETIC_SCROLLING)
+    void ensureScrollAnimationKinetic();
+#endif
+#if ENABLE(SMOOTH_SCROLLING)
+    void ensureScrollAnimationSmooth();
+#endif
 
-    void updateLayersAfterViewportChange(const FloatRect&, double) override;
+    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
+
+    void stopScrollAnimations() override;
+
+    void stopScrollAnimations() override;
+
+    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
+
+    void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) override;
+
+    void repositionScrollingLayers() override;
+    void repositionRelatedLayers() override;
+
+    RefPtr<Nicosia::CompositionLayer> m_rootContentsLayer;
+    RefPtr<Nicosia::CompositionLayer> m_counterScrollingLayer;
+    RefPtr<Nicosia::CompositionLayer> m_insetClipLayer;
+    RefPtr<Nicosia::CompositionLayer> m_contentShadowLayer;
+    RefPtr<Nicosia::CompositionLayer> m_headerLayer;
+    RefPtr<Nicosia::CompositionLayer> m_footerLayer;
+
+    bool m_scrollAnimatorEnabled { false };
+#if ENABLE(KINETIC_SCROLLING)
+    std::unique_ptr<ScrollAnimationKinetic> m_kineticAnimation;
+#endif
+#if ENABLE(SMOOTH_SCROLLING)
+    std::unique_ptr<ScrollAnimation> m_smoothAnimation;
+#endif
 };
 
 } // namespace WebCore

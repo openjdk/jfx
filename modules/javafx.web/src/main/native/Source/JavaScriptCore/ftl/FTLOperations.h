@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,17 +34,16 @@ namespace JSC { namespace FTL {
 
 class LazySlowPath;
 
-extern "C" {
+JSC_DECLARE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObject*, ExitTimeObjectMaterialization*, EncodedJSValue*));
 
-JSCell* JIT_OPERATION operationMaterializeObjectInOSR(
-    ExecState*, ExitTimeObjectMaterialization*, EncodedJSValue*) WTF_INTERNAL;
+JSC_DECLARE_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalObject*, ExitTimeObjectMaterialization*, EncodedJSValue*, EncodedJSValue*));
 
-void JIT_OPERATION operationPopulateObjectInOSR(
-    ExecState*, ExitTimeObjectMaterialization*, EncodedJSValue*, EncodedJSValue*) WTF_INTERNAL;
+JSC_DECLARE_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame*, unsigned));
 
-void* JIT_OPERATION compileFTLLazySlowPath(ExecState*, unsigned) WTF_INTERNAL;
+JSC_DECLARE_JIT_OPERATION(operationSwitchStringAndGetBranchOffset, int32_t, (JSGlobalObject*, size_t tableIndex, JSString*));
+JSC_DECLARE_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalObject*, JSCell*));
 
-} // extern "C"
+JSC_DECLARE_JIT_OPERATION(operationReportBoundsCheckEliminationErrorAndCrash, void, (intptr_t codeBlockAsIntPtr, int32_t, int32_t, int32_t, int32_t, int32_t));
 
 } } // namespace JSC::DFG
 

@@ -16,13 +16,17 @@
 #include "uassert.h"
 #include "unicode/platform.h"
 #include "unicode/uniset.h"
+#include "standardplural.h"
+#include "formatted_string_builder.h"
 
-U_NAMESPACE_BEGIN namespace number {
+U_NAMESPACE_BEGIN
+namespace number {
 namespace impl {
 
-// Typedef several enums for brevity and for easier comparison to Java.
+// For convenience and historical reasons, import the Field typedef to the namespace.
+typedef FormattedStringBuilder::Field Field;
 
-typedef UNumberFormatFields Field;
+// Typedef several enums for brevity and for easier comparison to Java.
 
 typedef UNumberFormatRoundingMode RoundingMode;
 
@@ -44,7 +48,7 @@ static constexpr char16_t kFallbackPaddingString[] = u" ";
 class Modifier;
 class MutablePatternModifier;
 class DecimalQuantity;
-class NumberStringBuilder;
+class ModifierStore;
 struct MicroProps;
 
 
@@ -87,6 +91,14 @@ enum CompactType {
     TYPE_DECIMAL, TYPE_CURRENCY
 };
 
+enum Signum {
+    SIGNUM_NEG = 0,
+    SIGNUM_NEG_ZERO = 1,
+    SIGNUM_POS_ZERO = 2,
+    SIGNUM_POS = 3,
+    SIGNUM_COUNT = 4,
+};
+
 
 class U_I18N_API AffixPatternProvider {
   public:
@@ -127,12 +139,13 @@ class U_I18N_API AffixPatternProvider {
     virtual bool hasBody() const = 0;
 };
 
+
 /**
  * A Modifier is an object that can be passed through the formatting pipeline until it is finally applied to the string
  * builder. A Modifier usually contains a prefix and a suffix that are applied, but it could contain something else,
  * like a {@link com.ibm.icu.text.SimpleFormatter} pattern.
  *
- * A Modifier is usually immutable, except in cases such as {@link MurkyModifier}, which are mutable for performance
+ * A Modifier is usually immutable, except in cases such as {@link MutablePatternModifier}, which are mutable for performance
  * reasons.
  *
  * Exported as U_I18N_API because it is a base class for other exported types
@@ -153,7 +166,7 @@ class U_I18N_API Modifier {
      *            formatted.
      * @return The number of characters (UTF-16 code units) that were added to the string builder.
      */
-    virtual int32_t apply(NumberStringBuilder& output, int leftIndex, int rightIndex,
+    virtual int32_t apply(FormattedStringBuilder& output, int leftIndex, int rightIndex,
                           UErrorCode& status) const = 0;
 
     /**
@@ -162,12 +175,12 @@ class U_I18N_API Modifier {
      *
      * @return The number of characters (UTF-16 code units) in the prefix.
      */
-    virtual int32_t getPrefixLength(UErrorCode& status) const = 0;
+    virtual int32_t getPrefixLength() const = 0;
 
     /**
      * Returns the number of code points in the modifier, prefix plus suffix.
      */
-    virtual int32_t getCodePointCount(UErrorCode& status) const = 0;
+    virtual int32_t getCodePointCount() const = 0;
 
     /**
      * Whether this modifier is strong. If a modifier is strong, it should always be applied immediately and not allowed
@@ -177,38 +190,87 @@ class U_I18N_API Modifier {
      * @return Whether the modifier is strong.
      */
     virtual bool isStrong() const = 0;
+
+    /**
+     * Whether the modifier contains at least one occurrence of the given field.
+     */
+    virtual bool containsField(Field field) const = 0;
+
+    /**
+     * A fill-in for getParameters(). obj will always be set; if non-null, the other
+     * two fields are also safe to read.
+     */
+    struct U_I18N_API Parameters {
+        const ModifierStore* obj = nullptr;
+        Signum signum;
+        StandardPlural::Form plural;
+
+        Parameters();
+        Parameters(const ModifierStore* _obj, Signum _signum, StandardPlural::Form _plural);
+    };
+
+    /**
+     * Gets a set of "parameters" for this Modifier.
+     *
+     * TODO: Make this return a `const Parameters*` more like Java?
+     */
+    virtual void getParameters(Parameters& output) const = 0;
+
+    /**
+     * Returns whether this Modifier is *semantically equivalent* to the other Modifier;
+     * in many cases, this is the same as equal, but parameters should be ignored.
+     */
+    virtual bool semanticallyEquivalent(const Modifier& other) const = 0;
 };
+
+
+/**
+ * This is *not* a modifier; rather, it is an object that can return modifiers
+ * based on given parameters.
+ *
+ * Exported as U_I18N_API because it is a base class for other exported types.
+ */
+class U_I18N_API ModifierStore {
+  public:
+    virtual ~ModifierStore();
+
+    /**
+     * Returns a Modifier with the given parameters (best-effort).
+     */
+    virtual const Modifier* getModifier(Signum signum, StandardPlural::Form plural) const = 0;
+};
+
 
 /**
  * This interface is used when all number formatting settings, including the locale, are known, except for the quantity
  * itself. The {@link #processQuantity} method performs the final step in the number processing pipeline: it uses the
  * quantity to generate a finalized {@link MicroProps}, which can be used to render the number to output.
  *
- * <p>
  * In other words, this interface is used for the parts of number processing that are <em>quantity-dependent</em>.
  *
- * <p>
  * In order to allow for multiple different objects to all mutate the same MicroProps, a "chain" of MicroPropsGenerators
  * are linked together, and each one is responsible for manipulating a certain quantity-dependent part of the
  * MicroProps. At the tail of the linked list is a base instance of {@link MicroProps} with properties that are not
  * quantity-dependent. Each element in the linked list calls {@link #processQuantity} on its "parent", then does its
  * work, and then returns the result.
  *
+ * This chain of MicroPropsGenerators is typically constructed by NumberFormatterImpl::macrosToMicroGenerator() when
+ * constructing a NumberFormatter.
+ *
  * Exported as U_I18N_API because it is a base class for other exported types
  *
  */
 class U_I18N_API MicroPropsGenerator {
   public:
-    virtual ~MicroPropsGenerator();
+    virtual ~MicroPropsGenerator() = default;
 
     /**
-     * Considers the given {@link DecimalQuantity}, optionally mutates it, and returns a {@link MicroProps}.
+     * Considers the given {@link DecimalQuantity}, optionally mutates it, and
+     * populates a {@link MicroProps} instance.
      *
-     * @param quantity
-     *            The quantity for consideration and optional mutation.
-     * @param micros
-     *            The MicroProps instance to populate.
-     * @return A MicroProps instance resolved for the quantity.
+     * @param quantity The quantity for consideration and optional mutation.
+     * @param micros The MicroProps instance to populate. It will be modified as
+     *   needed for the given quantity.
      */
     virtual void processQuantity(DecimalQuantity& quantity, MicroProps& micros,
                                  UErrorCode& status) const = 0;
@@ -293,6 +355,7 @@ class U_I18N_API NullableValue {
     bool fNull;
     T fValue;
 };
+
 
 } // namespace impl
 } // namespace number

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,6 +120,8 @@ public abstract class TextInputControl extends Control {
         public int length();
     }
 
+    private boolean blockSelectedTextUpdate;
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -154,21 +156,8 @@ public abstract class TextInputControl extends Control {
         });
 
         // Bind the selected text to be based on the selection and text properties
-        selectedText.bind(new StringBinding() {
-            { bind(selection, text); }
-            @Override protected String computeValue() {
-                String txt = text.get();
-                IndexRange sel = selection.get();
-                if (txt == null || sel == null) return "";
-
-                int start = sel.getStart();
-                int end = sel.getEnd();
-                int length = txt.length();
-                if (end > start + length) end = length;
-                if (start > length-1) start = end = 0;
-                return txt.substring(start, end);
-            }
-        });
+        selection.addListener((ob, o, n) -> updateSelectedText());
+        text.addListener((ob, o, n) -> updateSelectedText());
 
         focusedProperty().addListener((ob, o, n) -> {
             if (n) {
@@ -182,6 +171,20 @@ public abstract class TextInputControl extends Control {
 
         // Specify the default style class
         getStyleClass().add("text-input");
+    }
+
+    private void updateSelectedText() {
+        if (!blockSelectedTextUpdate) {
+            String txt = text.get();
+            IndexRange sel = selection.get();
+            if (txt == null || sel == null) {
+                selectedText.set("");
+            } else {
+                int start = sel.getStart();
+                int end = sel.getEnd();
+                selectedText.set(txt.substring(start, end));
+            }
+        }
     }
 
     /***************************************************************************
@@ -1139,18 +1142,24 @@ public abstract class TextInputControl extends Control {
             final String newText = undoChange.newText;
             final String oldText = undoChange.oldText;
 
-            if (newText != null) {
-                getContent().delete(start, start + newText.length(), oldText.isEmpty());
-            }
+            blockSelectedTextUpdate = true;
+            try {
+                if (newText != null) {
+                    getContent().delete(start, start + newText.length(), oldText.isEmpty());
+                }
 
-            if (oldText != null) {
-                getContent().insert(start, oldText, true);
-                doSelectRange(start, start + oldText.length());
-            } else {
-                doSelectRange(start, start + newText.length());
-            }
+                if (oldText != null) {
+                    getContent().insert(start, oldText, true);
+                    doSelectRange(start, start + oldText.length());
+                } else {
+                    doSelectRange(start, start + newText.length());
+                }
 
-            undoChange = undoChange.prev;
+                undoChange = undoChange.prev;
+            } finally {
+                blockSelectedTextUpdate = false;
+                updateSelectedText();
+            }
         }
         updateUndoRedoState();
     }
@@ -1168,15 +1177,21 @@ public abstract class TextInputControl extends Control {
             final String newText = undoChange.newText;
             final String oldText = undoChange.oldText;
 
-            if (oldText != null) {
-                getContent().delete(start, start + oldText.length(), newText.isEmpty());
-            }
+            blockSelectedTextUpdate = true;
+            try {
+                if (oldText != null) {
+                    getContent().delete(start, start + oldText.length(), newText.isEmpty());
+                }
 
-            if (newText != null) {
-                getContent().insert(start, newText, true);
-                doSelectRange(start + newText.length(), start + newText.length());
-            } else {
-                doSelectRange(start, start);
+                if (newText != null) {
+                    getContent().insert(start, newText, true);
+                    doSelectRange(start + newText.length(), start + newText.length());
+                } else {
+                    doSelectRange(start, start);
+                }
+            } finally {
+                blockSelectedTextUpdate = false;
+                updateSelectedText();
             }
         }
         updateUndoRedoState();
@@ -1237,20 +1252,26 @@ public abstract class TextInputControl extends Control {
     private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
         // RT-16566: Need to take into account stripping of chars into the
         // final anchor & caret position
-        int length = getLength();
-        int adjustmentAmount = 0;
-        if (end != start) {
-            getContent().delete(start, end, value.isEmpty());
-            length -= (end - start);
+        blockSelectedTextUpdate = true;
+        try {
+            int length = getLength();
+            int adjustmentAmount = 0;
+            if (end != start) {
+                getContent().delete(start, end, value.isEmpty());
+                length -= (end - start);
+            }
+            if (value != null) {
+                getContent().insert(start, value, true);
+                adjustmentAmount = value.length() - (getLength() - length);
+                anchor -= adjustmentAmount;
+                caretPosition -= adjustmentAmount;
+            }
+            doSelectRange(anchor, caretPosition);
+            return adjustmentAmount;
+        } finally {
+            blockSelectedTextUpdate = false;
+            updateSelectedText();
         }
-        if (value != null) {
-            getContent().insert(start, value, true);
-            adjustmentAmount = value.length() - (getLength() - length);
-            anchor -= adjustmentAmount;
-            caretPosition -= adjustmentAmount;
-        }
-        doSelectRange(anchor, caretPosition);
-        return adjustmentAmount;
     }
 
     private <T> void updateText(TextFormatter<T> formatter) {

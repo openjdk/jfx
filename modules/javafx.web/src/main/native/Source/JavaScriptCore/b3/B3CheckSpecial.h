@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #if ENABLE(B3_JIT)
 
-#include "AirArg.h"
 #include "AirKind.h"
 #include "B3StackmapSpecial.h"
 #include <wtf/HashMap.h>
@@ -49,7 +48,7 @@ struct Inst;
 // - CheckSub(0, x), which turns into BranchNeg32 x.
 // - CheckMul(a, b), which turns into Mul32 b, a but we pass Any for a's ValueRep.
 
-class CheckSpecial : public StackmapSpecial {
+class CheckSpecial final : public StackmapSpecial {
 public:
     // Support for hash consing these things.
     class Key {
@@ -114,9 +113,9 @@ public:
 
     CheckSpecial(Air::Kind, unsigned numArgs, RoleMode stackmapRole = SameAsRep);
     CheckSpecial(const Key&);
-    ~CheckSpecial();
+    ~CheckSpecial() final;
 
-protected:
+private:
     // Constructs and returns the Inst representing the branch that this will use.
     Air::Inst hiddenBranch(const Air::Inst&) const;
 
@@ -129,12 +128,11 @@ protected:
     // NOTE: the generate method will generate the hidden branch and then register a LatePath that
     // generates the stackmap. Super crazy dude!
 
-    CCallHelpers::Jump generate(Air::Inst&, CCallHelpers&, Air::GenerationContext&) final;
+    MacroAssembler::Jump generate(Air::Inst&, CCallHelpers&, Air::GenerationContext&) final;
 
     void dumpImpl(PrintStream&) const final;
     void deepDumpImpl(PrintStream&) const final;
 
-private:
     Air::Kind m_checkKind;
     RoleMode m_stackmapRole;
     unsigned m_numCheckArgs;
@@ -143,7 +141,7 @@ private:
 struct CheckSpecialKeyHash {
     static unsigned hash(const CheckSpecial::Key& key) { return key.hash(); }
     static bool equal(const CheckSpecial::Key& a, const CheckSpecial::Key& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::B3
@@ -151,14 +149,12 @@ struct CheckSpecialKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::CheckSpecial::Key> {
-    typedef JSC::B3::CheckSpecialKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::B3::CheckSpecial::Key> : JSC::B3::CheckSpecialKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::CheckSpecial::Key> : SimpleClassHashTraits<JSC::B3::CheckSpecial::Key> {
     // I don't want to think about this very hard, it's not worth it. I'm a be conservative.
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

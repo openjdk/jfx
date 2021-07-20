@@ -43,8 +43,8 @@ typedef struct _GstAlsaSinkClass GstAlsaSinkClass;
 #define GST_ALSA_SINK_LOCK(obj)     (g_mutex_lock (GST_ALSA_SINK_GET_LOCK (obj)))
 #define GST_ALSA_SINK_UNLOCK(obj)   (g_mutex_unlock (GST_ALSA_SINK_GET_LOCK (obj)))
 
-#define GST_DELAY_SINK_GET_LOCK(obj)    (&GST_ALSA_SINK_CAST (obj)->delay_lock)
-#define GST_DELAY_SINK_LOCK(obj)            (g_mutex_lock (GST_DELAY_SINK_GET_LOCK (obj)))
+#define GST_DELAY_SINK_GET_LOCK(obj)  (&GST_ALSA_SINK_CAST (obj)->delay_lock)
+#define GST_DELAY_SINK_LOCK(obj)          (g_mutex_lock (GST_DELAY_SINK_GET_LOCK (obj)))
 #define GST_DELAY_SINK_UNLOCK(obj)  (g_mutex_unlock (GST_DELAY_SINK_GET_LOCK (obj)))
 
 /**
@@ -73,6 +73,11 @@ struct _GstAlsaSink {
   snd_pcm_uframes_t period_size;
 
   GstCaps *cached_caps;
+
+  gboolean is_paused;
+  gboolean after_paused;
+  gboolean hw_support_pause;
+  snd_pcm_sframes_t pos_in_buffer;
 
   GMutex alsa_lock;
   GMutex delay_lock;

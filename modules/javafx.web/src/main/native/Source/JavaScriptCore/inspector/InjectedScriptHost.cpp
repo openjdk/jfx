@@ -26,24 +26,25 @@
 #include "config.h"
 #include "InjectedScriptHost.h"
 
-#include "JSCInlines.h"
 #include "JSInjectedScriptHost.h"
-
-using namespace JSC;
+#include "JSObjectInlines.h"
+#include "StructureInlines.h"
 
 namespace Inspector {
+
+using namespace JSC;
 
 InjectedScriptHost::~InjectedScriptHost()
 {
 }
 
-JSValue InjectedScriptHost::wrapper(ExecState* exec, JSGlobalObject* globalObject)
+JSValue InjectedScriptHost::wrapper(JSGlobalObject* globalObject)
 {
     JSValue value = m_wrappers.getWrapper(globalObject);
     if (value)
         return value;
 
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     JSObject* prototype = JSInjectedScriptHost::createPrototype(vm, globalObject);
     Structure* structure = JSInjectedScriptHost::createStructure(vm, globalObject, prototype);
     JSInjectedScriptHost* injectedScriptHost = JSInjectedScriptHost::create(vm, structure, makeRef(*this));

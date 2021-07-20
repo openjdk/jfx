@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,13 @@
 
 namespace JSC {
 
-typedef size_t SourceID;
-static const SourceID noSourceID = 0;
+using SourceID = size_t;
+constexpr SourceID noSourceID = 0;
 
-typedef size_t BreakpointID;
-static const BreakpointID noBreakpointID = 0;
+using BreakpointID = size_t;
+constexpr BreakpointID noBreakpointID = 0;
+
+using BreakpointActionID = int;
+constexpr BreakpointActionID noBreakpointActionID = 0;
 
 } // namespace JSC

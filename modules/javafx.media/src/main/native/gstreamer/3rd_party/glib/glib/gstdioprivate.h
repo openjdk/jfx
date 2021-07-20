@@ -23,6 +23,11 @@ G_BEGIN_DECLS
 
 #if defined (G_OS_WIN32)
 
+typedef struct _gtimespec {
+  guint64 tv_sec;
+  guint32 tv_nsec;
+} gtimespec;
+
 struct _GWin32PrivateStat
 {
   guint32 volume_serial;
@@ -38,9 +43,9 @@ struct _GWin32PrivateStat
   guint16 st_gid;
   guint32 st_nlink;
   guint64 st_size;
-  guint64 st_ctime;
-  guint64 st_atime;
-  guint64 st_mtime;
+  gtimespec st_ctim;
+  gtimespec st_atim;
+  gtimespec st_mtim;
 };
 
 typedef struct _GWin32PrivateStat GWin32PrivateStat;
@@ -51,9 +56,11 @@ int g_win32_stat_utf8     (const gchar       *filename,
 int g_win32_lstat_utf8    (const gchar       *filename,
                            GWin32PrivateStat *buf);
 
-int g_win32_readlink_utf8 (const gchar *filename,
-                           gchar       *buf,
-                           gsize        buf_size);
+int g_win32_readlink_utf8 (const gchar       *filename,
+                           gchar             *buf,
+                           gsize              buf_size,
+                           gchar            **alloc_buf,
+                           gboolean           terminate);
 
 int g_win32_fstat         (int                fd,
                            GWin32PrivateStat *buf);

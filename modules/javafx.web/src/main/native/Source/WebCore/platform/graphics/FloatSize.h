@@ -123,7 +123,10 @@ public:
            m_height < other.m_height ? m_height : other.m_height);
     }
 
-    WEBCORE_EXPORT float diagonalLength() const;
+    float diagonalLength() const
+    {
+        return std::hypot(m_width, m_height);
+    }
 
     float diagonalLengthSquared() const
     {
@@ -156,7 +159,7 @@ public:
 #endif
 
     String toJSONString() const;
-    Ref<JSON::Object> toJSONObject() const;
+    WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
 
 private:
     float m_width { 0 };

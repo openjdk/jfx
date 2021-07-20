@@ -9,8 +9,9 @@ SUNWprivate_1.0 {
                WTFReportAssertionFailure;
                _ZN3WTF5equalEPKNS_10StringImplEPKh;
                _ZN3WTF6StringC1EPKc;
-               _ZN3WTF6StringC1EPKtj;
+               _ZN3WTF6StringC1EPKDsj;
                _ZN3WTF7RunLoop4mainEv;
+               _ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE;
                _ZN3WTF8fastFreeEPv;
                _ZN3WTF8LockBase8lockSlowEv;
                _ZN3WTF8LockBase10unlockSlowEv;
@@ -117,6 +118,8 @@ SUNWprivate_1.0 {
                JSValueToObject;
                JSValueToStringCopy;
                JSValueUnprotect;
+               _ZN3JSC6Config23enableRestrictedOptionsEv;
+               _ZN3JSC6Config25disableFreezingForTestingEv;
                _ZN3JSC16slowValidateCellEPNS_6JSCellE;
                _ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue;
                _ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue;
@@ -998,7 +1001,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_getOuterHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getOuterTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getSpellcheckImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_getTabIndexImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getTitleImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getTranslateImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getWebkitdropzoneImpl;
@@ -1017,7 +1019,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setSpellcheckImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTranslateImpl;
@@ -1951,6 +1952,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkStop;
                Java_com_sun_webkit_WebPage_twkStopAll;
                Java_com_sun_webkit_WebPage_twkUpdateContent;
+               Java_com_sun_webkit_WebPage_twkUpdateRendering;
                Java_com_sun_webkit_WebPage_twkWorkerThreadCount;
                Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection;
                Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer;
@@ -1981,12 +1983,12 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_network_SocketStreamHandle_twkDidFail;
                Java_com_sun_webkit_network_SocketStreamHandle_twkDidOpen;
                Java_com_sun_webkit_network_SocketStreamHandle_twkDidReceiveData;
-               Java_com_sun_webkit_network_URLLoader_twkDidFail;
-               Java_com_sun_webkit_network_URLLoader_twkDidFinishLoading;
-               Java_com_sun_webkit_network_URLLoader_twkDidReceiveData;
-               Java_com_sun_webkit_network_URLLoader_twkDidReceiveResponse;
-               Java_com_sun_webkit_network_URLLoader_twkDidSendData;
-               Java_com_sun_webkit_network_URLLoader_twkWillSendRequest;
+               Java_com_sun_webkit_network_URLLoaderBase_twkDidFail;
+               Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading;
+               Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData;
+               Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveResponse;
+               Java_com_sun_webkit_network_URLLoaderBase_twkDidSendData;
+               Java_com_sun_webkit_network_URLLoaderBase_twkWillSendRequest;
                kJSClassDefinitionEmpty;
         local:
                 *;

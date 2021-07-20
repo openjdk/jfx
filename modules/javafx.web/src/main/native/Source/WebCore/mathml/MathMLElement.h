@@ -52,7 +52,7 @@ public:
     // MathML lengths (https://www.w3.org/TR/MathML3/chapter2.html#fund.units)
     // TeX's Math Unit is used internally for named spaces (1 mu = 1/18 em).
     // Unitless values are interpreted as a multiple of a reference value.
-    enum class LengthType { Cm, Em, Ex, In, MathUnit, Mm, ParsingFailed, Pc, Percentage, Pt, Px, UnitLess, Infinity };
+    enum class LengthType { Cm, Em, Ex, In, MathUnit, Mm, ParsingFailed, Pc, Percentage, Pt, Px, UnitLess };
     struct Length {
         LengthType type { LengthType::ParsingFailed };
         float value { 0 };
@@ -85,7 +85,6 @@ public:
         Stretched = 18
     };
 
-    virtual Optional<bool> specifiedDisplayStyle() { return WTF::nullopt; }
     virtual Optional<MathVariant> specifiedMathVariant() { return WTF::nullopt; }
 
     virtual void updateSelectedChild() { }
@@ -93,13 +92,11 @@ public:
 protected:
     MathMLElement(const QualifiedName& tagName, Document&);
 
-    static StringView stripLeadingAndTrailingWhitespace(const StringView&);
-
-    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    void parseAttribute(const QualifiedName&, const AtomString&) override;
     bool childShouldCreateRenderer(const Node&) const override;
 
     bool isPresentationAttribute(const QualifiedName&) const override;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
 
     bool willRespondToMouseClickEvents() override;
     void defaultEventHandler(Event&) override;
@@ -110,7 +107,6 @@ private:
     bool isMouseFocusable() const final;
     bool isURLAttribute(const Attribute&) const final;
     bool supportsFocus() const final;
-    int tabIndex() const final;
 };
 
 inline bool Node::hasTagName(const MathMLQualifiedName& name) const

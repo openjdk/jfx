@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ import org.junit.Before;
 /**
  * Test :dir functional pseudo-class
  */
-@Ignore
+@Ignore("JDK-8234152")
 public class Node_effectiveOrientation_Css_Test {
 
     private Group root;
@@ -63,7 +63,17 @@ public class Node_effectiveOrientation_Css_Test {
 
     @After
     public void tearDown() {
+        resetStyleManager();
         stage.hide();
+    }
+
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
     }
 
     public Node_effectiveOrientation_Css_Test() {}

@@ -28,7 +28,6 @@
  */
 
 #include "config.h"
-
 #include "BasicShapes.h"
 
 #include "BasicShapeFunctions.h"
@@ -40,46 +39,48 @@
 #include "RenderBox.h"
 #include "SVGPathByteStream.h"
 #include "SVGPathUtilities.h"
-
+#include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TinyLRUCache.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 void BasicShapeCenterCoordinate::updateComputedLength()
 {
     if (m_direction == TopLeft) {
-        m_computedLength = m_length.isUndefined() ? Length(0, Fixed) : m_length;
+        m_computedLength = m_length.isUndefined() ? Length(0, LengthType::Fixed) : m_length;
         return;
     }
 
     if (m_length.isUndefined()) {
-        m_computedLength = Length(100, Percent);
+        m_computedLength = Length(100, LengthType::Percent);
         return;
     }
 
     m_computedLength = convertTo100PercentMinusLength(m_length);
 }
 
-struct SVGPathTranslatedByteStream {
-    SVGPathTranslatedByteStream(const FloatPoint& offset, const SVGPathByteStream& rawStream)
-        : m_offset(offset)
-        , m_rawStream(rawStream)
-    { }
-
-    bool operator==(const SVGPathTranslatedByteStream& other) const { return other.m_offset == m_offset && other.m_rawStream == m_rawStream; }
-    bool operator!=(const SVGPathTranslatedByteStream& other) const { return !(*this == other); }
-    bool isEmpty() const { return m_rawStream.isEmpty(); }
+struct SVGPathTransformedByteStream {
+    bool operator==(const SVGPathTransformedByteStream& other) const
+    {
+        return other.offset == offset && other.zoom == zoom && other.rawStream == rawStream;
+    }
+    bool operator!=(const SVGPathTransformedByteStream& other) const { return !(*this == other); }
+    bool isEmpty() const { return rawStream.isEmpty(); }
 
     Path path() const
     {
-        Path path = buildPathFromByteStream(m_rawStream);
-        path.translate(toFloatSize(m_offset));
+        Path path = buildPathFromByteStream(rawStream);
+        if (zoom != 1)
+            path.transform(AffineTransform().scale(zoom));
+        path.translate(toFloatSize(offset));
         return path;
     }
 
-    FloatPoint m_offset;
-    SVGPathByteStream m_rawStream;
+    SVGPathByteStream rawStream;
+    float zoom;
+    FloatPoint offset;
 };
 
 struct EllipsePathPolicy : public TinyLRUCachePolicy<FloatRect, Path> {
@@ -106,18 +107,17 @@ public:
     }
 };
 
-struct PolygonPathPolicy : public TinyLRUCachePolicy<Vector<FloatPoint>, Path> {
+struct PolygonPathPolicy : TinyLRUCachePolicy<Vector<FloatPoint>, Path> {
 public:
     static bool isKeyNull(const Vector<FloatPoint>& points) { return !points.size(); }
 
     static Path createValueForKey(const Vector<FloatPoint>& points) { return Path::polygonPathFromPoints(points); }
 };
 
-struct TranslatedByteStreamPathPolicy : public TinyLRUCachePolicy<SVGPathTranslatedByteStream, Path> {
-public:
-    static bool isKeyNull(const SVGPathTranslatedByteStream& stream) { return stream.isEmpty(); }
+struct TransformedByteStreamPathPolicy : TinyLRUCachePolicy<SVGPathTransformedByteStream, Path> {
+    static bool isKeyNull(const SVGPathTransformedByteStream& stream) { return stream.isEmpty(); }
 
-    static Path createValueForKey(const SVGPathTranslatedByteStream& stream) { return stream.path(); }
+    static Path createValueForKey(const SVGPathTransformedByteStream& stream) { return stream.path(); }
 };
 
 static const Path& cachedEllipsePath(const FloatRect& rect)
@@ -138,10 +138,10 @@ static const Path& cachedPolygonPath(const Vector<FloatPoint>& points)
     return cache.get().get(points);
 }
 
-static const Path& cachedTranslatedByteStreamPath(const SVGPathByteStream& stream, const FloatPoint& offset)
+static const Path& cachedTransformedByteStreamPath(const SVGPathByteStream& stream, float zoom, const FloatPoint& offset)
 {
-    static NeverDestroyed<TinyLRUCache<SVGPathTranslatedByteStream, Path, 4, TranslatedByteStreamPathPolicy>> cache;
-    return cache.get().get(SVGPathTranslatedByteStream(offset, stream));
+    static NeverDestroyed<TinyLRUCache<SVGPathTransformedByteStream, Path, 4, TransformedByteStreamPathPolicy>> cache;
+    return cache.get().get(SVGPathTransformedByteStream { stream, zoom, offset });
 }
 
 bool BasicShapeCircle::operator==(const BasicShape& other) const
@@ -158,7 +158,7 @@ bool BasicShapeCircle::operator==(const BasicShape& other) const
 float BasicShapeCircle::floatValueForRadiusInBox(float boxWidth, float boxHeight) const
 {
     if (m_radius.type() == BasicShapeRadius::Value)
-        return floatValueForLength(m_radius.value(), sqrtf((boxWidth * boxWidth + boxHeight * boxHeight) / 2));
+        return floatValueForLength(m_radius.value(), std::hypot(boxWidth, boxHeight) / sqrtOfTwoFloat);
 
     float centerX = floatValueForCenterCoordinate(m_centerX, boxWidth);
     float centerY = floatValueForCenterCoordinate(m_centerY, boxHeight);
@@ -198,7 +198,14 @@ Ref<BasicShape> BasicShapeCircle::blend(const BasicShape& other, double progress
     result->setCenterX(m_centerX.blend(otherCircle.centerX(), progress));
     result->setCenterY(m_centerY.blend(otherCircle.centerY(), progress));
     result->setRadius(m_radius.blend(otherCircle.radius(), progress));
-    return WTFMove(result);
+    return result;
+}
+
+void BasicShapeCircle::dump(TextStream& ts) const
+{
+    ts.dumpProperty("center-x", centerX());
+    ts.dumpProperty("center-y", centerY());
+    ts.dumpProperty("radius", radius());
 }
 
 bool BasicShapeEllipse::operator==(const BasicShape& other) const
@@ -257,14 +264,22 @@ Ref<BasicShape> BasicShapeEllipse::blend(const BasicShape& other, double progres
         result->setCenterY(otherEllipse.centerY());
         result->setRadiusX(otherEllipse.radiusX());
         result->setRadiusY(otherEllipse.radiusY());
-        return WTFMove(result);
+        return result;
     }
 
     result->setCenterX(m_centerX.blend(otherEllipse.centerX(), progress));
     result->setCenterY(m_centerY.blend(otherEllipse.centerY(), progress));
     result->setRadiusX(m_radiusX.blend(otherEllipse.radiusX(), progress));
     result->setRadiusY(m_radiusY.blend(otherEllipse.radiusY(), progress));
-    return WTFMove(result);
+    return result;
+}
+
+void BasicShapeEllipse::dump(TextStream& ts) const
+{
+    ts.dumpProperty("center-x", centerX());
+    ts.dumpProperty("center-y", centerY());
+    ts.dumpProperty("radius-x", radiusX());
+    ts.dumpProperty("radius-y", radiusY());
 }
 
 bool BasicShapePolygon::operator==(const BasicShape& other) const
@@ -311,7 +326,7 @@ Ref<BasicShape> BasicShapePolygon::blend(const BasicShape& other, double progres
     size_t length = m_values.size();
     auto result = BasicShapePolygon::create();
     if (!length)
-        return WTFMove(result);
+        return result;
 
     result->setWindRule(otherPolygon.windRule());
 
@@ -321,7 +336,13 @@ Ref<BasicShape> BasicShapePolygon::blend(const BasicShape& other, double progres
             WebCore::blend(otherPolygon.values().at(i + 1), m_values.at(i + 1), progress));
     }
 
-    return WTFMove(result);
+    return result;
+}
+
+void BasicShapePolygon::dump(TextStream& ts) const
+{
+    ts.dumpProperty("wind-rule", windRule());
+    ts.dumpProperty("path", values());
 }
 
 BasicShapePath::BasicShapePath(std::unique_ptr<SVGPathByteStream>&& byteStream)
@@ -331,7 +352,7 @@ BasicShapePath::BasicShapePath(std::unique_ptr<SVGPathByteStream>&& byteStream)
 
 const Path& BasicShapePath::path(const FloatRect& boundingBox)
 {
-    return cachedTranslatedByteStreamPath(*m_byteStream, boundingBox.location());
+    return cachedTransformedByteStreamPath(*m_byteStream, m_zoom, boundingBox.location());
 }
 
 bool BasicShapePath::operator==(const BasicShape& other) const
@@ -340,7 +361,7 @@ bool BasicShapePath::operator==(const BasicShape& other) const
         return false;
 
     auto& otherPath = downcast<BasicShapePath>(other);
-    return m_windRule == otherPath.m_windRule && *m_byteStream == *otherPath.m_byteStream;
+    return m_zoom == otherPath.m_zoom && m_windRule == otherPath.m_windRule && *m_byteStream == *otherPath.m_byteStream;
 }
 
 bool BasicShapePath::canBlend(const BasicShape& other) const
@@ -358,12 +379,18 @@ Ref<BasicShape> BasicShapePath::blend(const BasicShape& from, double progress) c
 
     auto& fromPath = downcast<BasicShapePath>(from);
 
-    auto resultingPathBytes = std::make_unique<SVGPathByteStream>();
+    auto resultingPathBytes = makeUnique<SVGPathByteStream>();
     buildAnimatedSVGPathByteStream(*fromPath.m_byteStream, *m_byteStream, *resultingPathBytes, progress);
-
     auto result = BasicShapePath::create(WTFMove(resultingPathBytes));
     result->setWindRule(windRule());
-    return WTFMove(result);
+    result->setZoom(m_zoom);
+    return result;
+}
+
+void BasicShapePath::dump(TextStream& ts) const
+{
+    ts.dumpProperty("wind-rule", windRule());
+    // FIXME: print the byte stream?
 }
 
 bool BasicShapeInset::operator==(const BasicShape& other) const
@@ -382,12 +409,6 @@ bool BasicShapeInset::operator==(const BasicShape& other) const
         && m_bottomLeftRadius == otherInset.m_bottomLeftRadius;
 }
 
-static FloatSize floatSizeForLengthSize(const LengthSize& lengthSize, const FloatRect& boundingBox)
-{
-    return { floatValueForLength(lengthSize.width, boundingBox.width()),
-        floatValueForLength(lengthSize.height, boundingBox.height()) };
-}
-
 const Path& BasicShapeInset::path(const FloatRect& boundingBox)
 {
     float left = floatValueForLength(m_left, boundingBox.width());
@@ -395,10 +416,10 @@ const Path& BasicShapeInset::path(const FloatRect& boundingBox)
     auto rect = FloatRect(left + boundingBox.x(), top + boundingBox.y(),
         std::max<float>(boundingBox.width() - left - floatValueForLength(m_right, boundingBox.width()), 0),
         std::max<float>(boundingBox.height() - top - floatValueForLength(m_bottom, boundingBox.height()), 0));
-    auto radii = FloatRoundedRect::Radii(floatSizeForLengthSize(m_topLeftRadius, boundingBox),
-        floatSizeForLengthSize(m_topRightRadius, boundingBox),
-        floatSizeForLengthSize(m_bottomLeftRadius, boundingBox),
-        floatSizeForLengthSize(m_bottomRightRadius, boundingBox));
+    auto radii = FloatRoundedRect::Radii(floatSizeForLengthSize(m_topLeftRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_topRightRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_bottomLeftRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_bottomRightRadius, boundingBox.size()));
     radii.scale(calcBorderRadiiConstraintScaleFor(rect, radii));
 
     return cachedRoundedRectPath(FloatRoundedRect(rect, radii));
@@ -425,6 +446,50 @@ Ref<BasicShape> BasicShapeInset::blend(const BasicShape& from, double progress) 
     result->setBottomRightRadius(WebCore::blend(fromInset.bottomRightRadius(), bottomRightRadius(), progress));
     result->setBottomLeftRadius(WebCore::blend(fromInset.bottomLeftRadius(), bottomLeftRadius(), progress));
 
-    return WTFMove(result);
+    return result;
 }
+
+void BasicShapeInset::dump(TextStream& ts) const
+{
+    ts.dumpProperty("top", top());
+    ts.dumpProperty("right", right());
+    ts.dumpProperty("bottom", bottom());
+    ts.dumpProperty("left", left());
+
+    ts.dumpProperty("top-left-radius", topLeftRadius());
+    ts.dumpProperty("top-right-radius", topRightRadius());
+    ts.dumpProperty("bottom-right-radius", bottomRightRadius());
+    ts.dumpProperty("bottom-left-radius", bottomLeftRadius());
 }
+
+static TextStream& operator<<(TextStream& ts, BasicShapeRadius::Type radiusType)
+{
+    switch (radiusType) {
+    case BasicShapeRadius::Value: ts << "value"; break;
+    case BasicShapeRadius::ClosestSide: ts << "closest-side"; break;
+    case BasicShapeRadius::FarthestSide: ts << "farthest-side"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const BasicShapeRadius& radius)
+{
+    ts.dumpProperty("value", radius.value());
+    ts.dumpProperty("type", radius.type());
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const BasicShapeCenterCoordinate& coordinate)
+{
+    ts.dumpProperty("direction", coordinate.direction() == BasicShapeCenterCoordinate::TopLeft ? "top left" : "bottom right");
+    ts.dumpProperty("length", coordinate.length());
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const BasicShape& shape)
+{
+    shape.dump(ts);
+    return ts;
+}
+
+} // namespace WebCore

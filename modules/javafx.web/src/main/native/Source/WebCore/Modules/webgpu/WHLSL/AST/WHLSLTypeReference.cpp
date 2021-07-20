@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLTypeReference.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLNativeTypeDeclaration.h"
 #include <wtf/UniqueRef.h>
@@ -37,12 +37,12 @@ namespace WHLSL {
 
 namespace AST {
 
-UniqueRef<TypeReference> TypeReference::wrap(Lexer::Token&& origin, NamedType& resolvedType)
+Ref<TypeReference> TypeReference::wrap(CodeLocation location, NamedType& resolvedType)
 {
     TypeArguments typeArguments;
     if (is<NativeTypeDeclaration>(resolvedType))
         typeArguments = AST::clone(downcast<NativeTypeDeclaration>(resolvedType).typeArguments());
-    auto result = makeUniqueRef<TypeReference>(WTFMove(origin), String(resolvedType.name()), WTFMove(typeArguments));
+    auto result = TypeReference::create(location, String(resolvedType.name()), WTFMove(typeArguments));
     result->setResolvedType(resolvedType);
     return result;
 }
@@ -53,4 +53,4 @@ UniqueRef<TypeReference> TypeReference::wrap(Lexer::Token&& origin, NamedType& r
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

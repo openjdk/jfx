@@ -31,7 +31,7 @@
 #include "ScrollingStateTree.h"
 #include <wtf/text/TextStream.h>
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 namespace WebCore {
 
@@ -58,10 +58,13 @@ Ref<ScrollingStateNode> ScrollingStateFixedNode::clone(ScrollingStateTree& adopt
     return adoptRef(*new ScrollingStateFixedNode(*this, adoptiveTree));
 }
 
-void ScrollingStateFixedNode::setAllPropertiesChanged()
+OptionSet<ScrollingStateNode::Property> ScrollingStateFixedNode::applicableProperties() const
 {
-    setPropertyChangedBit(ViewportConstraints);
-    ScrollingStateNode::setAllPropertiesChanged();
+    constexpr OptionSet<Property> nodeProperties = { Property::ViewportConstraints };
+
+    auto properties = ScrollingStateNode::applicableProperties();
+    properties.add(nodeProperties);
+    return properties;
 }
 
 void ScrollingStateFixedNode::updateConstraints(const FixedPositionViewportConstraints& constraints)
@@ -72,13 +75,11 @@ void ScrollingStateFixedNode::updateConstraints(const FixedPositionViewportConst
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingStateFixedNode " << scrollingNodeID() << " updateConstraints with viewport rect " << constraints.viewportRectAtLastLayout() << " layer pos at last layout " << constraints.layerPositionAtLastLayout() << " offset from top " << (constraints.layerPositionAtLastLayout().y() - constraints.viewportRectAtLastLayout().y()));
 
     m_constraints = constraints;
-    setPropertyChanged(ViewportConstraints);
+    setPropertyChanged(Property::ViewportConstraints);
 }
 
 void ScrollingStateFixedNode::reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction action)
 {
-    ScrollingStateNode::reconcileLayerPositionForViewportRect(viewportRect, action);
-
     FloatPoint position = m_constraints.layerPositionForViewportRect(viewportRect);
     if (layer().representsGraphicsLayer()) {
         auto* graphicsLayer = static_cast<GraphicsLayer*>(layer());
@@ -131,4 +132,4 @@ void ScrollingStateFixedNode::dumpProperties(TextStream& ts, ScrollingStateTreeA
 
 } // namespace WebCore
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

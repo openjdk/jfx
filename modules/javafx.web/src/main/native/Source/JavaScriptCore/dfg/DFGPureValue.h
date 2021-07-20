@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "DFGGraph.h"
 #include "DFGNode.h"
 
 namespace JSC { namespace DFG {
@@ -144,7 +145,7 @@ private:
 struct PureValueHash {
     static unsigned hash(const PureValue& key) { return key.hash(); }
     static bool equal(const PureValue& a, const PureValue& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::DFG
@@ -152,13 +153,11 @@ struct PureValueHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PureValue> {
-    typedef JSC::DFG::PureValueHash Hash;
-};
+template<> struct DefaultHash<JSC::DFG::PureValue> : JSC::DFG::PureValueHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PureValue> : SimpleClassHashTraits<JSC::DFG::PureValue> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

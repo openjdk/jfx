@@ -33,10 +33,10 @@ class NullSetterFunction final : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static NullSetterFunction* create(VM& vm, Structure* structure)
+    static NullSetterFunction* create(VM& vm, Structure* structure, ECMAMode ecmaMode)
     {
-        NullSetterFunction* function = new (NotNull, allocateCell< NullSetterFunction>(vm.heap))  NullSetterFunction(vm, structure);
-        function->finishCreation(vm, String());
+        NullSetterFunction* function = new (NotNull, allocateCell<NullSetterFunction>(vm.heap))  NullSetterFunction(vm, structure, ecmaMode);
+        function->finishCreation(vm, 0, String());
         return function;
     }
 
@@ -44,11 +44,12 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(NullSetterFunctionType, StructureFlags), info());
     }
 
 private:
-    NullSetterFunction(VM&, Structure*);
+    NullSetterFunction(VM&, Structure*, ECMAMode);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(NullSetterFunction, InternalFunction);
 
 } // namespace JSC

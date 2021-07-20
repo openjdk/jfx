@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2020, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +37,12 @@
 namespace WebCore {
 
 class AudioContext;
+struct MediaElementAudioSourceOptions;
 
 class MediaElementAudioSourceNode final : public AudioNode, public AudioSourceProviderClient {
+    WTF_MAKE_ISO_ALLOCATED(MediaElementAudioSourceNode);
 public:
-    static Ref<MediaElementAudioSourceNode> create(AudioContext&, HTMLMediaElement&);
+    static ExceptionOr<Ref<MediaElementAudioSourceNode>> create(BaseAudioContext&, MediaElementAudioSourceOptions&&);
 
     virtual ~MediaElementAudioSourceNode();
 
@@ -47,19 +50,19 @@ public:
 
     // AudioNode
     void process(size_t framesToProcess) override;
-    void reset() override;
 
     // AudioSourceProviderClient
     void setFormat(size_t numberOfChannels, float sampleRate) override;
 
-    void lock();
-    void unlock();
+    Lock& processLock() { return m_processLock; }
 
 private:
-    MediaElementAudioSourceNode(AudioContext&, HTMLMediaElement&);
+    MediaElementAudioSourceNode(BaseAudioContext&, Ref<HTMLMediaElement>&&);
+    void provideInput(AudioBus*, size_t framesToProcess);
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }
+    bool requiresTailProcessing() const final { return false; }
 
     // As an audio source, we will never propagate silence.
     bool propagatesSilence() const override { return false; }
@@ -67,10 +70,10 @@ private:
     bool wouldTaintOrigin();
 
     Ref<HTMLMediaElement> m_mediaElement;
-    Lock m_processMutex;
+    Lock m_processLock;
 
-    unsigned m_sourceNumberOfChannels;
-    double m_sourceSampleRate;
+    unsigned m_sourceNumberOfChannels { 0 };
+    double m_sourceSampleRate { 0 };
     bool m_muted { false };
 
     std::unique_ptr<MultiChannelResampler> m_multiChannelResampler;

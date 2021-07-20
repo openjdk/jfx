@@ -20,8 +20,6 @@
 
 #pragma once
 
-#if ENABLE(METER_ELEMENT)
-
 #include "LabelableElement.h"
 
 namespace WebCore {
@@ -73,7 +71,7 @@ private:
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool childShouldCreateRenderer(const Node&) const final;
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     void didElementStateChange();
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
@@ -82,5 +80,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(METER_ELEMENT)

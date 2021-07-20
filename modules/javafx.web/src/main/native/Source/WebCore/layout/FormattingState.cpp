@@ -28,6 +28,8 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "FloatingState.h"
+#include "LayoutBoxGeometry.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -44,6 +46,15 @@ FormattingState::FormattingState(Ref<FloatingState>&& floatingState, Type type, 
 
 FormattingState::~FormattingState()
 {
+}
+
+BoxGeometry& FormattingState::boxGeometry(const Box& layoutBox)
+{
+    // Should never need to mutate a display box outside of the formatting context.
+    ASSERT(&layoutState().establishedFormattingState(layoutBox.formattingContextRoot()) == this);
+    // Anonymous text wrappers do not need to compute box geometry. They initiate inline runs.
+    ASSERT(!layoutBox.isInlineTextBox());
+    return layoutState().ensureGeometryForBox(layoutBox);
 }
 
 }

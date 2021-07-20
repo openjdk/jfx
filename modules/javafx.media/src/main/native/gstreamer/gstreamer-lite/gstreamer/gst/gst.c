@@ -36,7 +36,7 @@
  * GStreamer covers a wide range of use cases including: playback, recording,
  * editing, serving streams, voice over ip and video calls.
  *
- * The <application>GStreamer</application> library should be initialized with
+ * The `GStreamer` library should be initialized with
  * gst_init() before it can be used. You should pass pointers to the main argc
  * and argv variables so that GStreamer can process its own command line
  * options, as shown in the following example.
@@ -121,6 +121,13 @@
 #include <locale.h>             /* for LC_ALL */
 
 #include "gst.h"
+
+#ifdef GSTREAMER_LITE
+#ifdef STATIC_BUILD
+gboolean fxplugins_init (GstPlugin * plugin);
+gboolean fxavplugins_init (GstPlugin * plugin);
+#endif // STATIC_BUILD
+#endif // GSTREAMER_LITE
 
 #define GST_CAT_DEFAULT GST_CAT_GST_INIT
 
@@ -655,7 +662,7 @@ gst_register_core_elements (GstPlugin * plugin)
 
 /*
  * this bit handles:
- * - initalization of threads if we use them
+ * - initialization of threads if we use them
  * - log handler
  * - initial output
  * - initializes gst_format
@@ -818,6 +825,16 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
       "gstplugins-lite", "gstplugins-lite",
       lite_plugins_init, VERSION, GST_LICENSE, PACKAGE,
       GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+#ifdef STATIC_BUILD
+  gst_plugin_register_static (GST_VERSION_MAJOR, GST_VERSION_MINOR,
+      "fxplugins", "fxplugin",
+      fxplugins_init, VERSION, GST_LICENSE, PACKAGE,
+      GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+  gst_plugin_register_static (GST_VERSION_MAJOR, GST_VERSION_MINOR,
+     "fxavplugins", "fxavplugin",
+      fxavplugins_init, VERSION, GST_LICENSE, PACKAGE,
+      GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+#endif // STATIC_BUILD
 #endif // GSTREAMER_LITE
 
   /*
@@ -839,6 +856,10 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
   GST_INFO ("GLib headers version: %d.%d.%d", GLIB_MAJOR_VERSION,
       GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
   GST_INFO ("initialized GStreamer successfully");
+
+  /* Adjust initial plugin rank based on the GST_PLUGIN_FEATURE_RANK
+   * environment variable */
+  _priv_gst_plugin_feature_rank_initialize ();
 
 #ifndef GST_DISABLE_GST_DEBUG
   _priv_gst_tracing_init ();
@@ -906,7 +927,7 @@ gst_debug_help (void)
         e = gst_element_factory_create (factory, NULL);
         if (e)
           gst_object_unref (e);
-  }
+      }
 
     next:
       features = g_list_next (features);
@@ -1020,7 +1041,7 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
     case ARG_PLUGIN_PATH:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
-      split_and_iterate (arg, G_SEARCHPATH_SEPARATOR_S, add_path_func, NULL);
+        split_and_iterate (arg, G_SEARCHPATH_SEPARATOR_S, add_path_func, NULL);
 #endif /* GST_DISABLE_REGISTRY */
       break;
     case ARG_PLUGIN_LOAD:
@@ -1032,7 +1053,7 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
     case ARG_REGISTRY_UPDATE_DISABLE:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
-      _priv_gst_disable_registry_update = TRUE;
+        _priv_gst_disable_registry_update = TRUE;
 #endif
       break;
     case ARG_REGISTRY_FORK_DISABLE:
@@ -1262,6 +1283,11 @@ gst_deinit (void)
 
   gst_deinitialized = TRUE;
   GST_INFO ("deinitialized GStreamer");
+
+  /* Doing this as the very last step to allow the above GST_INFO() to work
+   * correctly. It's of course making the above statement a lie: for a short
+   * while we're not deinitialized yet */
+  _priv_gst_debug_cleanup ();
 }
 
 /**

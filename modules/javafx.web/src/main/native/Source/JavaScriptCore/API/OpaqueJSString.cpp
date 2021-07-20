@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,8 @@
 #include "config.h"
 #include "OpaqueJSString.h"
 
-#include "CallFrame.h"
 #include "Identifier.h"
 #include "IdentifierInlines.h"
-#include "JSGlobalObject.h"
 #include <wtf/text/StringView.h>
 
 using namespace JSC;
@@ -78,9 +76,9 @@ Identifier OpaqueJSString::identifier(VM* vm) const
         return Identifier(Identifier::EmptyIdentifier);
 
     if (m_string.is8Bit())
-        return Identifier::fromString(vm, m_string.characters8(), m_string.length());
+        return Identifier::fromString(*vm, m_string.characters8(), m_string.length());
 
-    return Identifier::fromString(vm, m_string.characters16(), m_string.length());
+    return Identifier::fromString(*vm, m_string.characters16(), m_string.length());
 }
 
 const UChar* OpaqueJSString::characters()

@@ -31,8 +31,11 @@
 #include "AudioContext.h"
 #include "AudioParamTimeline.h"
 #include "AudioSummingJunction.h"
+#include "AutomationRate.h"
+#include "WebKitAudioContext.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <sys/types.h>
+#include <wtf/LoggerHelper.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,14 +43,22 @@ namespace WebCore {
 
 class AudioNodeOutput;
 
-class AudioParam final : public AudioSummingJunction, public RefCounted<AudioParam> {
-public:
-    static const double DefaultSmoothingConstant;
-    static const double SnapThreshold;
+enum class AutomationRateMode : bool { Fixed, Variable };
 
-    static Ref<AudioParam> create(AudioContext& context, const String& name, double defaultValue, double minValue, double maxValue, unsigned units = 0)
+class AudioParam final
+    : public AudioSummingJunction
+    , public RefCounted<AudioParam>
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
+public:
+    static constexpr double SmoothingConstant = 0.05;
+    static constexpr double SnapThreshold = 0.001;
+
+    static Ref<AudioParam> create(BaseAudioContext& context, const String& name, float defaultValue, float minValue, float maxValue, AutomationRate automationRate, AutomationRateMode automationRateMode = AutomationRateMode::Variable)
     {
-        return adoptRef(*new AudioParam(context, name, defaultValue, minValue, maxValue, units));
+        return adoptRef(*new AudioParam(context, name, defaultValue, minValue, maxValue, automationRate, automationRateMode));
     }
 
     // AudioSummingJunction
@@ -58,16 +69,21 @@ public:
     float value();
     void setValue(float);
 
+    float valueForBindings() const;
+    ExceptionOr<void> setValueForBindings(float);
+
+    AutomationRate automationRate() const { return m_automationRate; }
+    ExceptionOr<void> setAutomationRate(AutomationRate);
+
     // Final value for k-rate parameters, otherwise use calculateSampleAccurateValues() for a-rate.
     // Must be called in the audio thread.
     float finalValue();
 
-    String name() const { return m_name; }
+    const String& name() const { return m_name; }
 
-    float minValue() const { return static_cast<float>(m_minValue); }
-    float maxValue() const { return static_cast<float>(m_maxValue); }
-    float defaultValue() const { return static_cast<float>(m_defaultValue); }
-    unsigned units() const { return m_units; }
+    float minValue() const { return m_minValue; }
+    float maxValue() const { return m_maxValue; }
+    float defaultValue() const { return m_defaultValue; }
 
     // Value smoothing:
 
@@ -80,17 +96,17 @@ public:
     bool smooth();
 
     void resetSmoothedValue() { m_smoothedValue = m_value; }
-    void setSmoothingConstant(double k) { m_smoothingConstant = k; }
 
     // Parameter automation.
-    void setValueAtTime(float value, float time) { m_timeline.setValueAtTime(value, time); }
-    void linearRampToValueAtTime(float value, float time) { m_timeline.linearRampToValueAtTime(value, time); }
-    void exponentialRampToValueAtTime(float value, float time) { m_timeline.exponentialRampToValueAtTime(value, time); }
-    void setTargetAtTime(float target, float time, float timeConstant) { m_timeline.setTargetAtTime(target, time, timeConstant); }
-    void setValueCurveAtTime(const RefPtr<Float32Array>& curve, float time, float duration) { m_timeline.setValueCurveAtTime(curve.get(), time, duration); }
-    void cancelScheduledValues(float startTime) { m_timeline.cancelScheduledValues(startTime); }
+    ExceptionOr<AudioParam&> setValueAtTime(float value, double startTime);
+    ExceptionOr<AudioParam&> linearRampToValueAtTime(float value, double endTime);
+    ExceptionOr<AudioParam&> exponentialRampToValueAtTime(float value, double endTime);
+    ExceptionOr<AudioParam&> setTargetAtTime(float target, double startTime, float timeConstant);
+    ExceptionOr<AudioParam&> setValueCurveAtTime(Vector<float>&& curve, double startTime, double duration);
+    ExceptionOr<AudioParam&> cancelScheduledValues(double cancelTime);
+    ExceptionOr<AudioParam&> cancelAndHoldAtTime(double cancelTime);
 
-    bool hasSampleAccurateValues() { return m_timeline.hasValues() || numberOfRenderingConnections(); }
+    bool hasSampleAccurateValues() const;
 
     // Calculates numberOfValues parameter values starting at the context's current time.
     // Must be called in the context's render thread.
@@ -101,36 +117,37 @@ public:
     void disconnect(AudioNodeOutput*);
 
 protected:
-    AudioParam(AudioContext& context, const String& name, double defaultValue, double minValue, double maxValue, unsigned units = 0)
-        : AudioSummingJunction(context)
-        , m_name(name)
-        , m_value(defaultValue)
-        , m_defaultValue(defaultValue)
-        , m_minValue(minValue)
-        , m_maxValue(maxValue)
-        , m_units(units)
-        , m_smoothedValue(defaultValue)
-        , m_smoothingConstant(DefaultSmoothingConstant)
-    {
-    }
+    AudioParam(BaseAudioContext&, const String&, float defaultValue, float minValue, float maxValue, AutomationRate, AutomationRateMode);
 
 private:
     // sampleAccurate corresponds to a-rate (audio rate) vs. k-rate in the Web Audio specification.
     void calculateFinalValues(float* values, unsigned numberOfValues, bool sampleAccurate);
     void calculateTimelineValues(float* values, unsigned numberOfValues);
 
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const final { return "AudioParam"; }
+    WTFLogChannel& logChannel() const final;
+#endif
+
     String m_name;
-    double m_value;
-    double m_defaultValue;
-    double m_minValue;
-    double m_maxValue;
-    unsigned m_units;
+    float m_value;
+    float m_defaultValue;
+    float m_minValue;
+    float m_maxValue;
+    AutomationRate m_automationRate;
+    AutomationRateMode m_automationRateMode;
 
     // Smoothing (de-zippering)
-    double m_smoothedValue;
-    double m_smoothingConstant;
+    float m_smoothedValue;
 
     AudioParamTimeline m_timeline;
+
+#if !RELEASE_LOG_DISABLED
+    mutable Ref<const Logger> m_logger;
+    const void* m_logIdentifier;
+#endif
 };
 
 } // namespace WebCore

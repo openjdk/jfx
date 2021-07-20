@@ -22,8 +22,6 @@
 #include "config.h"
 #include "NumberObject.h"
 
-#include "JSGlobalObject.h"
-#include "NumberPrototype.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -44,10 +42,15 @@ void NumberObject::finishCreation(VM& vm)
     ASSERT(type() == NumberObjectType);
 }
 
-NumberObject* constructNumber(ExecState* exec, JSGlobalObject* globalObject, JSValue number)
+String NumberObject::toStringName(const JSObject*, JSGlobalObject*)
 {
-    NumberObject* object = NumberObject::create(exec->vm(), globalObject->numberObjectStructure());
-    object->setInternalValue(exec->vm(), number);
+    return "Number"_s;
+}
+
+NumberObject* constructNumber(JSGlobalObject* globalObject, JSValue number)
+{
+    NumberObject* object = NumberObject::create(globalObject->vm(), globalObject->numberObjectStructure());
+    object->setInternalValue(globalObject->vm(), number);
     return object;
 }
 

@@ -25,14 +25,14 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLBooleanLiteral.h"
 #include "WHLSLEnumerationMemberLiteral.h"
 #include "WHLSLFloatLiteral.h"
 #include "WHLSLIntegerLiteral.h"
-#include "WHLSLNullLiteral.h"
 #include "WHLSLUnsignedIntegerLiteral.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Variant.h>
 
 namespace WebCore {
@@ -41,10 +41,11 @@ namespace WHLSL {
 
 namespace AST {
 
-// FIXME: macOS Sierra doesn't seem to support putting Variants inside Variants,
+// FIXME: https://bugs.webkit.org/show_bug.cgi?id=198158 macOS Sierra doesn't seem to support putting Variants inside Variants,
 // so this is a wrapper class to make sure that doesn't happen. As soon as we don't
 // have to support Sierra, this can be migrated to a Variant proper.
-class ConstantExpression {
+class ConstantExpression final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ConstantExpression(IntegerLiteral&& integerLiteral)
         : m_variant(WTFMove(integerLiteral))
@@ -58,11 +59,6 @@ public:
 
     ConstantExpression(FloatLiteral&& floatLiteral)
         : m_variant(WTFMove(floatLiteral))
-    {
-    }
-
-    ConstantExpression(NullLiteral&& nullLiteral)
-        : m_variant(WTFMove(nullLiteral))
     {
     }
 
@@ -88,14 +84,14 @@ public:
         return WTF::get<IntegerLiteral>(m_variant);
     }
 
-    template<typename T> void visit(T&& t)
+    template <typename Visitor> auto visit(const Visitor& visitor) -> decltype(WTF::visit(visitor, std::declval<Variant<IntegerLiteral, UnsignedIntegerLiteral, FloatLiteral, BooleanLiteral, EnumerationMemberLiteral>&>()))
     {
-        WTF::visit(WTFMove(t), m_variant);
+        return WTF::visit(visitor, m_variant);
     }
 
-    template<typename T> void visit(T&& t) const
+    template <typename Visitor> auto visit(const Visitor& visitor) const -> decltype(WTF::visit(visitor, std::declval<Variant<IntegerLiteral, UnsignedIntegerLiteral, FloatLiteral, BooleanLiteral, EnumerationMemberLiteral>&>()))
     {
-        WTF::visit(WTFMove(t), m_variant);
+        return WTF::visit(visitor, m_variant);
     }
 
     ConstantExpression clone() const
@@ -106,8 +102,6 @@ public:
             return unsignedIntegerLiteral.clone();
         }, [&](const FloatLiteral& floatLiteral) -> ConstantExpression {
             return floatLiteral.clone();
-        }, [&](const NullLiteral& nullLiteral) -> ConstantExpression {
-            return nullLiteral.clone();
         }, [&](const BooleanLiteral& booleanLiteral) -> ConstantExpression {
             return booleanLiteral.clone();
         }, [&](const EnumerationMemberLiteral& enumerationMemberLiteral) -> ConstantExpression {
@@ -125,8 +119,6 @@ public:
             value = unsignedIntegerLiteral.value();
         }, [&](const FloatLiteral& floatLiteral) {
             value = floatLiteral.value();
-        }, [&](const NullLiteral&) {
-            result = WTF::holds_alternative<NullLiteral>(other.m_variant);
         }, [&](const BooleanLiteral& booleanLiteral) {
             if (WTF::holds_alternative<BooleanLiteral>(other.m_variant)) {
                 const auto& otherBooleanLiteral = WTF::get<BooleanLiteral>(other.m_variant);
@@ -150,8 +142,6 @@ public:
             result = value == unsignedIntegerLiteral.value();
         }, [&](const FloatLiteral& floatLiteral) {
             result = value == floatLiteral.value();
-        }, [&](const NullLiteral&) {
-            result = false;
         }, [&](const BooleanLiteral&) {
             result = false;
         }, [&](const EnumerationMemberLiteral&) {
@@ -167,7 +157,6 @@ private:
         IntegerLiteral,
         UnsignedIntegerLiteral,
         FloatLiteral,
-        NullLiteral,
         BooleanLiteral,
         EnumerationMemberLiteral
         > m_variant;
@@ -179,4 +168,4 @@ private:
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

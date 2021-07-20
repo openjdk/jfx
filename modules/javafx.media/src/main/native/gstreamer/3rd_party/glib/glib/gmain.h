@@ -30,7 +30,7 @@ G_BEGIN_DECLS
 
 typedef enum /*< flags >*/
 {
-  G_IO_IN   GLIB_SYSDEF_POLLIN,
+  G_IO_IN GLIB_SYSDEF_POLLIN,
   G_IO_OUT  GLIB_SYSDEF_POLLOUT,
   G_IO_PRI  GLIB_SYSDEF_POLLPRI,
   G_IO_ERR  GLIB_SYSDEF_POLLERR,
@@ -188,7 +188,7 @@ typedef gboolean (*GSourceFunc)       (gpointer user_data);
  *
  * Since: 2.58
  */
-#define G_SOURCE_FUNC(f) ((GSourceFunc) (void (*)(void)) (f))
+#define G_SOURCE_FUNC(f) ((GSourceFunc) (void (*)(void)) (f)) GLIB_AVAILABLE_MACRO_IN_2_58
 
 /**
  * GChildWatchFunc:
@@ -204,6 +204,20 @@ typedef gboolean (*GSourceFunc)       (gpointer user_data);
 typedef void     (*GChildWatchFunc)   (GPid     pid,
                                        gint     status,
                                        gpointer user_data);
+
+
+/**
+ * GSourceDisposeFunc:
+ * @source: #GSource that is currently being disposed
+ *
+ * Dispose function for @source. See g_source_set_dispose_function() for
+ * details.
+ *
+ * Since: 2.64
+ */
+GLIB_AVAILABLE_TYPE_IN_2_64
+typedef void (*GSourceDisposeFunc)       (GSource *source);
+
 struct _GSource
 {
   /*< private >*/
@@ -392,9 +406,9 @@ gint     g_main_context_query    (GMainContext *context,
                                   gint          n_fds);
 GLIB_AVAILABLE_IN_ALL
 gboolean     g_main_context_check    (GMainContext *context,
-                                  gint          max_priority,
-                                  GPollFD      *fds,
-                                  gint          n_fds);
+                                      gint          max_priority,
+                                      GPollFD      *fds,
+                                      gint          n_fds);
 GLIB_AVAILABLE_IN_ALL
 void     g_main_context_dispatch (GMainContext *context);
 
@@ -430,6 +444,91 @@ GMainContext *g_main_context_get_thread_default  (void);
 GLIB_AVAILABLE_IN_ALL
 GMainContext *g_main_context_ref_thread_default  (void);
 
+/**
+ * GMainContextPusher:
+ *
+ * Opaque type. See g_main_context_pusher_new() for details.
+ *
+ * Since: 2.64
+ */
+typedef void GMainContextPusher GLIB_AVAILABLE_TYPE_IN_2_64;
+
+/**
+ * g_main_context_pusher_new:
+ * @main_context: (transfer none): a main context to push
+ *
+ * Push @main_context as the new thread-default main context for the current
+ * thread, using g_main_context_push_thread_default(), and return a new
+ * #GMainContextPusher. Pop with g_main_context_pusher_free(). Using
+ * g_main_context_pop_thread_default() on @main_context while a
+ * #GMainContextPusher exists for it can lead to undefined behaviour.
+ *
+ * Using two #GMainContextPushers in the same scope is not allowed, as it leads
+ * to an undefined pop order.
+ *
+ * This is intended to be used with g_autoptr().  Note that g_autoptr()
+ * is only available when using GCC or clang, so the following example
+ * will only work with those compilers:
+ * |[
+ * typedef struct
+ * {
+ *   ...
+ *   GMainContext *context;
+ *   ...
+ * } MyObject;
+ *
+ * static void
+ * my_object_do_stuff (MyObject *self)
+ * {
+ *   g_autoptr(GMainContextPusher) pusher = g_main_context_pusher_new (self->context);
+ *
+ *   // Code with main context as the thread default here
+ *
+ *   if (cond)
+ *     // No need to pop
+ *     return;
+ *
+ *   // Optionally early pop
+ *   g_clear_pointer (&pusher, g_main_context_pusher_free);
+ *
+ *   // Code with main context no longer the thread default here
+ * }
+ * ]|
+ *
+ * Returns: (transfer full): a #GMainContextPusher
+ * Since: 2.64
+ */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_64
+static inline GMainContextPusher *
+g_main_context_pusher_new (GMainContext *main_context)
+{
+  g_main_context_push_thread_default (main_context);
+  return (GMainContextPusher *) main_context;
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+
+/**
+ * g_main_context_pusher_free:
+ * @pusher: (transfer full): a #GMainContextPusher
+ *
+ * Pop @pusher’s main context as the thread default main context.
+ * See g_main_context_pusher_new() for details.
+ *
+ * This will pop the #GMainContext as the current thread-default main context,
+ * but will not call g_main_context_unref() on it.
+ *
+ * Since: 2.64
+ */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_64
+static inline void
+g_main_context_pusher_free (GMainContextPusher *pusher)
+{
+  g_main_context_pop_thread_default ((GMainContext *) pusher);
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+
 /* GMainLoop: */
 
 GLIB_AVAILABLE_IN_ALL
@@ -453,6 +552,13 @@ GMainContext *g_main_loop_get_context (GMainLoop    *loop);
 GLIB_AVAILABLE_IN_ALL
 GSource *g_source_new             (GSourceFuncs   *source_funcs,
                                    guint           struct_size);
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_IN_2_64
+void     g_source_set_dispose_function (GSource            *source,
+                                        GSourceDisposeFunc  dispose);
+G_GNUC_END_IGNORE_DEPRECATIONS
+
 GLIB_AVAILABLE_IN_ALL
 GSource *g_source_ref             (GSource        *source);
 GLIB_AVAILABLE_IN_ALL
@@ -532,21 +638,23 @@ void g_source_set_callback_indirect (GSource              *source,
 
 GLIB_AVAILABLE_IN_ALL
 void     g_source_add_poll            (GSource        *source,
-                       GPollFD        *fd);
+               GPollFD        *fd);
 GLIB_AVAILABLE_IN_ALL
 void     g_source_remove_poll         (GSource        *source,
-                       GPollFD        *fd);
+               GPollFD        *fd);
 
 GLIB_AVAILABLE_IN_ALL
 void     g_source_add_child_source    (GSource        *source,
-                       GSource        *child_source);
+               GSource        *child_source);
 GLIB_AVAILABLE_IN_ALL
 void     g_source_remove_child_source (GSource        *source,
-                       GSource        *child_source);
+               GSource        *child_source);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 GLIB_DEPRECATED_IN_2_28_FOR(g_source_get_time)
 void     g_source_get_current_time (GSource        *source,
                                     GTimeVal       *timeval);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 GLIB_AVAILABLE_IN_ALL
 gint64   g_source_get_time         (GSource        *source);
@@ -570,8 +678,11 @@ GSource *g_timeout_source_new_seconds (guint interval);
 
 /* Miscellaneous functions
  */
-GLIB_AVAILABLE_IN_ALL
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_DEPRECATED_IN_2_62_FOR(g_get_real_time)
 void   g_get_current_time                 (GTimeVal       *result);
+G_GNUC_END_IGNORE_DEPRECATIONS
+
 GLIB_AVAILABLE_IN_ALL
 gint64 g_get_monotonic_time               (void);
 GLIB_AVAILABLE_IN_ALL
@@ -616,7 +727,8 @@ void    g_clear_handle_id (guint           *tag_ptr,
         *_tag_ptr = 0;                                     \
         clear_func (_handle_id);                           \
       }                                                    \
-  } G_STMT_END
+  } G_STMT_END                                             \
+  GLIB_AVAILABLE_MACRO_IN_2_56
 
 /* Idles, child watchers and timeouts */
 GLIB_AVAILABLE_IN_ALL

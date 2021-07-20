@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "AudioBus.h"
 #include "AudioNode.h"
 #include "EventListener.h"
@@ -44,53 +45,63 @@ class AudioProcessingEvent;
 // The "onaudioprocess" attribute is an event listener which will get called periodically with an AudioProcessingEvent which has
 // AudioBuffers for each input and output.
 
-class ScriptProcessorNode final : public AudioNode {
+class ScriptProcessorNode final : public AudioNode, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(ScriptProcessorNode);
 public:
     // bufferSize must be one of the following values: 256, 512, 1024, 2048, 4096, 8192, 16384.
     // This value controls how frequently the onaudioprocess event handler is called and how many sample-frames need to be processed each call.
     // Lower numbers for bufferSize will result in a lower (better) latency. Higher numbers will be necessary to avoid audio breakup and glitches.
     // The value chosen must carefully balance between latency and audio quality.
-    static Ref<ScriptProcessorNode> create(AudioContext&, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
+    static Ref<ScriptProcessorNode> create(BaseAudioContext&, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
 
     virtual ~ScriptProcessorNode();
 
+    const char* activeDOMObjectName() const override { return "ScriptProcessorNode"; }
+
     // AudioNode
     void process(size_t framesToProcess) override;
-    void reset() override;
     void initialize() override;
     void uninitialize() override;
+    void didBecomeMarkedForDeletion() override;
 
     size_t bufferSize() const { return m_bufferSize; }
+
+    ExceptionOr<void> setChannelCount(unsigned) final;
+    ExceptionOr<void> setChannelCountMode(ChannelCountMode) final;
 
 private:
     double tailTime() const override;
     double latencyTime() const override;
+    bool requiresTailProcessing() const final;
 
-    ScriptProcessorNode(AudioContext&, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
+    ScriptProcessorNode(BaseAudioContext&, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
 
-    void fireProcessEvent();
+    bool virtualHasPendingActivity() const final;
+    void eventListenersDidChange() final;
+    void fireProcessEvent(unsigned doubleBufferIndex);
 
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
-    bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) override;
-    void removeAllEventListeners() override;
+    RefPtr<AudioBuffer> createInputBufferForJS(AudioBuffer*) const;
+    RefPtr<AudioBuffer> createOutputBufferForJS(AudioBuffer&) const;
 
     // Double buffering
     unsigned doubleBufferIndex() const { return m_doubleBufferIndex; }
     void swapBuffers() { m_doubleBufferIndex = 1 - m_doubleBufferIndex; }
-    unsigned m_doubleBufferIndex;
-    unsigned m_doubleBufferIndexForEvent;
+    unsigned m_doubleBufferIndex { 0 };
     Vector<RefPtr<AudioBuffer>> m_inputBuffers;
     Vector<RefPtr<AudioBuffer>> m_outputBuffers;
+    mutable RefPtr<AudioBuffer> m_cachedInputBufferForJS;
+    mutable RefPtr<AudioBuffer> m_cachedOutputBufferForJS;
 
     size_t m_bufferSize;
-    unsigned m_bufferReadWriteIndex;
-    volatile bool m_isRequestOutstanding;
+    unsigned m_bufferReadWriteIndex { 0 };
 
     unsigned m_numberOfInputChannels;
     unsigned m_numberOfOutputChannels;
 
     RefPtr<AudioBus> m_internalInputBus;
-    bool m_hasAudioProcessListener;
+    RefPtr<PendingActivity<ScriptProcessorNode>> m_pendingActivity;
+    Lock m_processLock;
+    bool m_hasAudioProcessEventListener { false };
 };
 
 } // namespace WebCore

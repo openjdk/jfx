@@ -1265,10 +1265,9 @@ void NotifyTouchInput(
 
     JNIEnv *env = GetEnv();
 
-    // TBD: set to 'true' if source device is a touch screen
-    // and to 'false' if source device is a touch pad.
-    // So far assume source device on Windows is always a touch screen.
-    const bool isDirect = true;
+    // Sets to 'true' if source device is a touch screen
+    // and to 'false' if source device is a touch pad/pen.
+    const bool isDirect = IsTouchEvent();
 
     jint modifiers = GetModifiers();
     env->CallStaticObjectMethod(gestureSupportCls,

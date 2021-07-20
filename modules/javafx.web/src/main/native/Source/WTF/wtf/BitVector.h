@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,8 @@ namespace WTF {
 // juggle a lot of variable-length BitVectors and you're worried about wasting
 // space.
 
-class BitVector {
+class BitVector final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     BitVector()
         : m_bitsOrPointer(makeInlineBits(0))
@@ -236,10 +237,17 @@ public:
         return bitCountSlow();
     }
 
+    bool isEmpty() const
+    {
+        if (isInline())
+            return !cleanseInlineBits(m_bitsOrPointer);
+        return isEmptySlow();
+    }
+
     size_t findBit(size_t index, bool value) const
     {
         size_t result = findBitFast(index, value);
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             size_t expectedResult = findBitSimple(index, value);
             if (result != expectedResult) {
                 dataLog("findBit(", index, ", ", value, ") on ", *this, " should have gotten ", expectedResult, " but got ", result, "\n");
@@ -290,6 +298,7 @@ public:
     }
 
     class iterator {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         iterator()
             : m_bitVector(nullptr)
@@ -453,6 +462,7 @@ private:
     WTF_EXPORT_PRIVATE void excludeSlow(const BitVector& other);
 
     WTF_EXPORT_PRIVATE size_t bitCountSlow() const;
+    WTF_EXPORT_PRIVATE bool isEmptySlow() const;
 
     WTF_EXPORT_PRIVATE bool equalsSlowCase(const BitVector& other) const;
     bool equalsSlowCaseFast(const BitVector& other) const;
@@ -479,13 +489,11 @@ private:
 struct BitVectorHash {
     static unsigned hash(const BitVector& vector) { return vector.hash(); }
     static bool equal(const BitVector& a, const BitVector& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<BitVector> {
-    typedef BitVectorHash Hash;
-};
+template<> struct DefaultHash<BitVector> : BitVectorHash { };
 
 template<> struct HashTraits<BitVector> : public CustomHashTraits<BitVector> { };
 

@@ -26,6 +26,8 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLProgram.h"
 #include <wtf/RefCounted.h>
 
@@ -35,22 +37,23 @@ class WebGLUniformLocation final : public RefCounted<WebGLUniformLocation> {
 public:
     ~WebGLUniformLocation() = default;
 
-    static Ref<WebGLUniformLocation> create(WebGLProgram*, GC3Dint location, GC3Denum type);
+    static Ref<WebGLUniformLocation> create(WebGLProgram*, GCGLint location, GCGLenum type);
 
     WebGLProgram* program() const;
 
-    GC3Dint location() const;
+    GCGLint location() const;
 
-    GC3Denum type() const;
-
-protected:
-    WebGLUniformLocation(WebGLProgram*, GC3Dint location, GC3Denum type);
+    GCGLenum type() const;
 
 private:
+    WebGLUniformLocation(WebGLProgram*, GCGLint location, GCGLenum type);
+
     RefPtr<WebGLProgram> m_program;
-    GC3Dint m_location;
+    GCGLint m_location;
     unsigned m_linkCount;
-    GC3Denum m_type;
+    GCGLenum m_type;
 };
 
 } // namespace WebCore
+
+#endif

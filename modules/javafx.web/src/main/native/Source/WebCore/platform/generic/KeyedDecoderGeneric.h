@@ -32,18 +32,20 @@ namespace WebCore {
 class KeyedDecoderGeneric final : public KeyedDecoder {
 public:
     KeyedDecoderGeneric(const uint8_t* data, size_t);
-    ~KeyedDecoderGeneric() override;
+
+    class Dictionary;
+    using Array = Vector<std::unique_ptr<Dictionary>>;
 
 private:
-    bool decodeBytes(const String& key, const uint8_t*&, size_t&) override;
-    bool decodeBool(const String& key, bool&) override;
-    bool decodeUInt32(const String& key, uint32_t&) override;
-    bool decodeUInt64(const String& key, uint64_t&) override;
-    bool decodeInt32(const String& key, int32_t&) override;
-    bool decodeInt64(const String& key, int64_t&) override;
-    bool decodeFloat(const String& key, float&) override;
-    bool decodeDouble(const String& key, double&) override;
-    bool decodeString(const String& key, String&) override;
+    WARN_UNUSED_RETURN bool decodeBytes(const String& key, const uint8_t*&, size_t&) override;
+    WARN_UNUSED_RETURN bool decodeBool(const String& key, bool&) override;
+    WARN_UNUSED_RETURN bool decodeUInt32(const String& key, uint32_t&) override;
+    WARN_UNUSED_RETURN bool decodeUInt64(const String& key, uint64_t&) override;
+    WARN_UNUSED_RETURN bool decodeInt32(const String& key, int32_t&) override;
+    WARN_UNUSED_RETURN bool decodeInt64(const String& key, int64_t&) override;
+    WARN_UNUSED_RETURN bool decodeFloat(const String& key, float&) override;
+    WARN_UNUSED_RETURN bool decodeDouble(const String& key, double&) override;
+    WARN_UNUSED_RETURN bool decodeString(const String& key, String&) override;
 
     bool beginObject(const String& key) override;
     void endObject() override;
@@ -52,6 +54,17 @@ private:
     bool beginArrayElement() override;
     void endArrayElement() override;
     void endArray() override;
+
+    template<typename T>
+    const T* getPointerFromDictionaryStack(const String& key);
+
+    template<typename T> WARN_UNUSED_RETURN
+    bool decodeSimpleValue(const String& key, T& result);
+
+    std::unique_ptr<Dictionary> m_rootDictionary;
+    Vector<Dictionary*, 16> m_dictionaryStack;
+    Vector<Array*, 16> m_arrayStack;
+    Vector<size_t, 16> m_arrayIndexStack;
 };
 
 } // namespace WebCore

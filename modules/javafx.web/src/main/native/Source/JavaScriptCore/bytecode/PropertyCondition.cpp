@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,6 +54,9 @@ void PropertyCondition::dumpInContext(PrintStream& out, DumpContext* context) co
     case Equivalence:
         out.print(m_header.type(), " of ", m_header.pointer(), " with ", inContext(requiredValue(), context));
         return;
+    case HasStaticProperty:
+        out.print(m_header.type(), " of ", m_header.pointer());
+        return;
     case HasPrototype:
         out.print(m_header.type(), " with prototype ", inContext(JSValue(prototype()), context));
         return;
@@ -86,6 +89,7 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
     case Absence:
     case AbsenceOfSetEffect:
     case Equivalence:
+    case HasStaticProperty:
         if (!structure->propertyAccessesAreCacheable()) {
             if (PropertyConditionInternal::verbose)
                 dataLog("Invalid because property accesses are not cacheable.\n");
@@ -248,7 +252,15 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
         }
 
         return true;
-    } }
+    }
+    case HasStaticProperty: {
+        if (isValidOffset(structure->getConcurrently(uid())))
+            return false;
+        if (structure->staticPropertiesReified())
+            return false;
+        return !!structure->findPropertyHashEntry(uid());
+    }
+    }
 
     RELEASE_ASSERT_NOT_REACHED();
     return false;
@@ -263,6 +275,7 @@ bool PropertyCondition::validityRequiresImpurePropertyWatchpoint(Structure* stru
     case Presence:
     case Absence:
     case Equivalence:
+    case HasStaticProperty:
         return structure->needImpurePropertyWatchpoint();
     case AbsenceOfSetEffect:
     case HasPrototype:
@@ -288,6 +301,7 @@ bool PropertyCondition::isStillValid(Structure* structure, JSObject* base) const
         break;
     case Presence:
     case Equivalence:
+    case HasStaticProperty:
         if (structure->typeInfo().getOwnPropertySlotIsImpure())
             return false;
         break;
@@ -320,14 +334,28 @@ bool PropertyCondition::isWatchableWhenValid(
             set = structure->propertyReplacementWatchpointSet(offset);
             break;
         case EnsureWatchability:
-            set = structure->ensurePropertyReplacementWatchpointSet(
-                *structure->vm(), offset);
+            set = structure->ensurePropertyReplacementWatchpointSet(structure->vm(), offset);
             break;
         }
 
         if (!set || !set->isStillValid())
             return false;
 
+        break;
+    }
+
+    case HasStaticProperty: {
+        // We just use the structure transition watchpoint for this. A structure S starts
+        // off with a property P in the static property hash table. If S transitions to
+        // S', either P remains in the static property table or not. If not, then we
+        // are no longer valid. So the above check of transitionWatchpointSetHasBeenInvalidated
+        // is sufficient.
+        //
+        // We could make this smarter in the future, since we sometimes reify static properties.
+        // We could make this adapt to looking at the object's storage for such reified custom
+        // functions, but we don't do that right now. We just allow this property condition to
+        // invalidate and create an Equivalence watchpoint for the materialized property sometime
+        // in the future.
         break;
     }
 
@@ -350,20 +378,6 @@ bool PropertyCondition::isWatchable(
 {
     return isStillValid(structure, base)
         && isWatchableWhenValid(structure, effort);
-}
-
-bool PropertyCondition::isStillLive() const
-{
-    if (hasPrototype() && prototype() && !Heap::isMarked(prototype()))
-        return false;
-
-    if (hasRequiredValue()
-        && requiredValue()
-        && requiredValue().isCell()
-        && !Heap::isMarked(requiredValue().asCell()))
-        return false;
-
-    return true;
 }
 
 void PropertyCondition::validateReferences(const TrackedReferences& tracked) const
@@ -417,6 +431,9 @@ void printInternal(PrintStream& out, JSC::PropertyCondition::Kind condition)
         return;
     case JSC::PropertyCondition::Equivalence:
         out.print("Equivalence");
+        return;
+    case JSC::PropertyCondition::HasStaticProperty:
+        out.print("HasStaticProperty");
         return;
     case JSC::PropertyCondition::HasPrototype:
         out.print("HasPrototype");

@@ -27,7 +27,6 @@
 #include "ConfigFile.h"
 
 #include "Options.h"
-#include <limits.h>
 #include <mutex>
 #include <stdio.h>
 #include <string.h>
@@ -314,7 +313,7 @@ void ConfigFile::parse()
                     while (*p && !isASCIISpace(*p) && *p != '=')
                         p++;
 
-                    builder.append(optionNameStart, p - optionNameStart);
+                    builder.appendCharacters(optionNameStart, p - optionNameStart);
 
                     while (*p && isASCIISpace(*p) && *p != '=')
                         p++;
@@ -336,7 +335,7 @@ void ConfigFile::parse()
                     while (*p && !isASCIISpace(*p))
                         p++;
 
-                    builder.append(optionValueStart, p - optionValueStart);
+                    builder.appendCharacters(optionValueStart, p - optionValueStart);
                     builder.append('\n');
 
                     while (*p && isASCIISpace(*p))
@@ -465,9 +464,8 @@ void ConfigFile::parse()
             WTF::setDataFile(logPathname);
 
         if (!jscOptionsBuilder.isEmpty()) {
-            const char* optionsStr = jscOptionsBuilder.toString().utf8().data();
-            Options::enableRestrictedOptions(true);
-            Options::setOptions(optionsStr);
+            JSC::Config::enableRestrictedOptions();
+            Options::setOptions(jscOptionsBuilder.toString().utf8().data());
         }
     } else
         WTF::dataLogF("Error in JSC Config file on or near line %u, parsing '%s'\n", scanner.lineNumber(), scanner.currentBuffer());

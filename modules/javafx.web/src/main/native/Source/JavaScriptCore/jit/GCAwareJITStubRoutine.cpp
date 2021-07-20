@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,7 @@
 #include "Heap.h"
 #include "VM.h"
 #include "JITStubRoutineSet.h"
-#include "JSCInlines.h"
-#include "SlotVisitor.h"
-#include "Structure.h"
+#include "JSCellInlines.h"
 #include <wtf/RefPtr.h>
 
 namespace JSC {
@@ -75,15 +73,12 @@ void GCAwareJITStubRoutine::deleteFromGC()
     delete this;
 }
 
-void GCAwareJITStubRoutine::markRequiredObjectsInternal(SlotVisitor&)
-{
-}
-
 MarkingGCAwareJITStubRoutine::MarkingGCAwareJITStubRoutine(
     const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, VM& vm, const JSCell* owner,
-    const Vector<JSCell*>& cells)
+    const Vector<JSCell*>& cells, Bag<CallLinkInfo>&& callLinkInfos)
     : GCAwareJITStubRoutine(code, vm)
     , m_cells(cells.size())
+    , m_callLinkInfos(WTFMove(callLinkInfos))
 {
     for (unsigned i = cells.size(); i--;)
         m_cells[i].set(vm, owner, cells[i]);
@@ -93,34 +88,60 @@ MarkingGCAwareJITStubRoutine::~MarkingGCAwareJITStubRoutine()
 {
 }
 
-void MarkingGCAwareJITStubRoutine::markRequiredObjectsInternal(SlotVisitor& visitor)
+template<typename Visitor>
+ALWAYS_INLINE void MarkingGCAwareJITStubRoutine::markRequiredObjectsInternalImpl(Visitor& visitor)
 {
     for (auto& entry : m_cells)
         visitor.append(entry);
 }
 
+void MarkingGCAwareJITStubRoutine::markRequiredObjectsInternal(AbstractSlotVisitor& visitor)
+{
+    markRequiredObjectsInternalImpl(visitor);
+}
+void MarkingGCAwareJITStubRoutine::markRequiredObjectsInternal(SlotVisitor& visitor)
+{
+    markRequiredObjectsInternalImpl(visitor);
+}
 
 GCAwareJITStubRoutineWithExceptionHandler::GCAwareJITStubRoutineWithExceptionHandler(
-    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, VM& vm,  const JSCell* owner, const Vector<JSCell*>& cells,
+    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, VM& vm,  const JSCell* owner, const Vector<JSCell*>& cells, Bag<CallLinkInfo>&& callLinkInfos,
     CodeBlock* codeBlockForExceptionHandlers, DisposableCallSiteIndex exceptionHandlerCallSiteIndex)
-    : MarkingGCAwareJITStubRoutine(code, vm, owner, cells)
+    : MarkingGCAwareJITStubRoutine(code, vm, owner, cells, WTFMove(callLinkInfos))
     , m_codeBlockWithExceptionHandler(codeBlockForExceptionHandlers)
+#if ENABLE(DFG_JIT)
+    , m_codeOriginPool(&m_codeBlockWithExceptionHandler->codeOrigins())
+#endif
     , m_exceptionHandlerCallSiteIndex(exceptionHandlerCallSiteIndex)
 {
     RELEASE_ASSERT(m_codeBlockWithExceptionHandler);
     ASSERT(!!m_codeBlockWithExceptionHandler->handlerForIndex(exceptionHandlerCallSiteIndex.bits()));
 }
 
+GCAwareJITStubRoutineWithExceptionHandler::~GCAwareJITStubRoutineWithExceptionHandler()
+{
+#if ENABLE(DFG_JIT)
+    // We delay deallocation of m_exceptionHandlerCallSiteIndex until GCAwareJITStubRoutineWithExceptionHandler gets destroyed.
+    // This means that CallSiteIndex can be reserved correctly so long as the code owned by GCAwareJITStubRoutineWithExceptionHandler is on the stack.
+    // This is important since CallSite can be queried so long as this code is on the stack: StackVisitor can retreive CallSiteIndex from the stack.
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+    if (m_codeOriginPool)
+        m_codeOriginPool->removeDisposableCallSiteIndex(m_exceptionHandlerCallSiteIndex);
+#endif
+}
+
 void GCAwareJITStubRoutineWithExceptionHandler::aboutToDie()
 {
     m_codeBlockWithExceptionHandler = nullptr;
+#if ENABLE(DFG_JIT)
+    m_codeOriginPool = nullptr;
+#endif
 }
 
 void GCAwareJITStubRoutineWithExceptionHandler::observeZeroRefCount()
 {
 #if ENABLE(DFG_JIT)
     if (m_codeBlockWithExceptionHandler) {
-        m_codeBlockWithExceptionHandler->jitCode()->dfgCommon()->removeDisposableCallSiteIndex(m_exceptionHandlerCallSiteIndex);
         m_codeBlockWithExceptionHandler->removeExceptionHandlerForCallSite(m_exceptionHandlerCallSiteIndex);
         m_codeBlockWithExceptionHandler = nullptr;
     }
@@ -136,21 +157,25 @@ Ref<JITStubRoutine> createJITStubRoutine(
     const JSCell* owner,
     bool makesCalls,
     const Vector<JSCell*>& cells,
+    Bag<CallLinkInfo>&& callLinkInfos,
     CodeBlock* codeBlockForExceptionHandlers,
     DisposableCallSiteIndex exceptionHandlerCallSiteIndex)
 {
-    if (!makesCalls)
+    if (!makesCalls) {
+        // Allocating CallLinkInfos means we should have calls.
+        ASSERT(callLinkInfos.isEmpty());
         return adoptRef(*new JITStubRoutine(code));
+    }
 
     if (codeBlockForExceptionHandlers) {
         RELEASE_ASSERT(JITCode::isOptimizingJIT(codeBlockForExceptionHandlers->jitType()));
-        return adoptRef(*new GCAwareJITStubRoutineWithExceptionHandler(code, vm, owner, cells, codeBlockForExceptionHandlers, exceptionHandlerCallSiteIndex));
+        return adoptRef(*new GCAwareJITStubRoutineWithExceptionHandler(code, vm, owner, cells, WTFMove(callLinkInfos), codeBlockForExceptionHandlers, exceptionHandlerCallSiteIndex));
     }
 
-    if (cells.isEmpty())
-        return adoptRef(*new GCAwareJITStubRoutine(code, vm));
+    if (cells.isEmpty() && callLinkInfos.isEmpty())
+        return GCAwareJITStubRoutine::create(code, vm);
 
-    return adoptRef(*new MarkingGCAwareJITStubRoutine(code, vm, owner, cells));
+    return adoptRef(*new MarkingGCAwareJITStubRoutine(code, vm, owner, cells, WTFMove(callLinkInfos)));
 }
 
 } // namespace JSC

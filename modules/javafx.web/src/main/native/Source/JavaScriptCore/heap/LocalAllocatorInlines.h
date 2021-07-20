@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,18 +25,19 @@
 
 #pragma once
 
+#include "HeapInlines.h"
 #include "LocalAllocator.h"
 
 namespace JSC {
 
-ALWAYS_INLINE void* LocalAllocator::allocate(GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+ALWAYS_INLINE void* LocalAllocator::allocate(Heap& heap, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(m_directory->heap()->expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        heap.verifyCanGC();
     return m_freeList.allocate(
         [&] () -> HeapCell* {
-            sanitizeStackForVM(m_directory->heap()->vm());
-            return static_cast<HeapCell*>(allocateSlowCase(deferralContext, failureMode));
+            sanitizeStackForVM(heap.vm());
+            return static_cast<HeapCell*>(allocateSlowCase(heap, deferralContext, failureMode));
         });
 }
 

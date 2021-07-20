@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BytecodeGenerator.h"
 #include "BytecodeStructs.h"
 #include "InterpreterInlines.h"
 #include "Opcode.h"
@@ -40,6 +41,8 @@ namespace JSC {
     CASE_OP(OpJfalse) \
     CASE_OP(OpJeqNull) \
     CASE_OP(OpJneqNull) \
+    CASE_OP(OpJundefinedOrNull) \
+    CASE_OP(OpJnundefinedOrNull) \
     CASE_OP(OpJneqPtr) \
     \
     CASE_OP(OpJless) \

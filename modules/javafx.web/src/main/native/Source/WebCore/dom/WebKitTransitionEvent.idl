@@ -24,8 +24,10 @@
  */
 
 [
-    Constructor(DOMString type, optional WebKitTransitionEventInit eventInitDict),
+    Exposed=Window
 ] interface WebKitTransitionEvent : Event {
+    constructor(DOMString type, optional WebKitTransitionEventInit eventInitDict);
+
     readonly attribute DOMString propertyName;
     readonly attribute double elapsedTime;
     readonly attribute DOMString pseudoElement;

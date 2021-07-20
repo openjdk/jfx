@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,10 +105,10 @@ static GlassWindow   * focusOwner; // currently focused GlassWindow - i.e. key e
 @end
 
 //Toplevel containers of all GlassWindows
-//once we support multiple screens on iOS - there will be one masterWindow/
-//masterWindowHost per screen
-static GlassMainWindow * masterWindow = nil;
-static GlassMainView * masterWindowHost = nil;
+//once we support multiple screens on iOS - there will be one mainWindow/
+//mainWindowHost per screen
+static GlassMainWindow * mainWindow = nil;
+static GlassMainView * mainWindowHost = nil;
 
 @interface GlassWindow (JavaAdditions)
 - (void)displaySubviews;
@@ -206,13 +206,62 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 
 @implementation GlassWindow
 
-+(GlassMainWindow *)  getMasterWindow {
-    return masterWindow;
++(GlassMainWindow *)  getMainWindow {
+    return mainWindow;
 }
 
-+(GlassMainView *) getMasterWindowHost {
-    return masterWindowHost;
++(GlassMainView *) getMainWindowHost {
+    return mainWindowHost;
 }
+
+- (BOOL) canBecomeFirstResponder {return YES;}
+
+- (BOOL)hasText {
+        return YES;
+}
+
+- (void)insertText:(NSString *)theText {
+    const char * inputString = [theText UTF8String];
+    for(GlassViewGL * subView in [self->hostView subviews]) {
+        if(subView != nil && [subView isKindOfClass:[GlassViewGL class]] == YES) {
+            [subView doInsertText:theText];
+        }
+    }
+}
+
+- (void)deleteBackward {
+    for(GlassViewGL * subView in [self->hostView subviews]) {
+        if(subView != nil && [subView isKindOfClass:[GlassViewGL class]] == YES) {
+            [subView doDeleteBackward];
+        }
+    }
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextFieldSkinIos_showSoftwareKeyboard
+(JNIEnv *env, jobject jTextFieldSkin)
+{
+    [focusOwner becomeFirstResponder];
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextFieldSkinIos_hideSoftwareKeyboard
+(JNIEnv *env, jobject jTextFieldSkin)
+{
+    [focusOwner resignFirstResponder];
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextAreaSkinIos_showSoftwareKeyboard
+(JNIEnv *env, jobject jTextAreaSkin)
+{
+    [focusOwner becomeFirstResponder];
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextAreaSkinIos_hideSoftwareKeyboard
+(JNIEnv *env, jobject jTextAreaSkin)
+{
+    [focusOwner resignFirstResponder];
+}
+
+
 // request subviews to repaint
 - (void) displaySubviews
 {
@@ -234,8 +283,8 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 
     [self windowWillClose];
 
-    [masterWindowHost release];
-    [masterWindow release];//decrease retaincount
+    [mainWindowHost release];
+    [mainWindow release];//decrease retaincount
 }
 
 
@@ -278,6 +327,10 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     return self;
 }
 
+- (UIKeyboardType) keyboardType
+{
+    return UIKeyboardTypeASCIICapable;
+}
 
 #pragma mark ---
 
@@ -775,7 +828,7 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
         }
 
 
-        if (masterWindow == nil) {
+        if (mainWindow == nil) {
             //We have to remove rootViewController of splashscreen UIWindow in order to avoid
             //StatusBar orientation change ...
             UIWindow *splashScreen = [[UIApplication sharedApplication] keyWindow];
@@ -785,26 +838,26 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
             CGRect applicationFrame = [screen bounds];
             GLASS_LOG("FRAME: %@", applicationFrame);
 
-            masterWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
-            masterWindowHost = [[GlassMainView alloc] initWithFrame:CGRectMake(0.0, 0.0, applicationFrame.size.width, applicationFrame.size.height)];
+            mainWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
+            mainWindowHost = [[GlassMainView alloc] initWithFrame:CGRectMake(0.0, 0.0, applicationFrame.size.width, applicationFrame.size.height)];
 
             // Set GlassViewController - responsible for orientation change, etc.
             GlassViewController *rvc = [[GlassViewController alloc] init];
-            [rvc setView:masterWindowHost];
-            [masterWindow setRootViewController:rvc];
+            [rvc setView:mainWindowHost];
+            [mainWindow setRootViewController:rvc];
             [rvc release];
 
-            [masterWindow setHidden:NO];
-            [masterWindowHost setHidden:NO];
+            [mainWindow setHidden:NO];
+            [mainWindowHost setHidden:NO];
         } else {
-            masterWindow = [masterWindow retain];//increase retain count per each GlassWindow
-            masterWindowHost = [masterWindowHost retain];
+            mainWindow = [mainWindow retain];//increase retain count per each GlassWindow
+            mainWindowHost = [mainWindowHost retain];
         }
 
-        [masterWindow setAutoresizesSubviews:YES];
-        [masterWindowHost setAutoresizesSubviews:NO];
+        [mainWindow setAutoresizesSubviews:YES];
+        [mainWindowHost setAutoresizesSubviews:NO];
 
-        [masterWindow makeKeyWindow];
+        [mainWindow makeKeyWindow];
 
         GLASS_LOG("GlassWindow _1createWindow");
         window = [[GlassWindow alloc] initWithScreen:screen jwindow:jWindow];
@@ -827,14 +880,14 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
             [window _setTransparent:NO];
         }
 
-        [masterWindowHost addSubview:window];
+        [mainWindowHost addSubview:window];
 
         if (jOwnerPtr != 0L)
         {
             GLASS_LOG("Adding %p window as usbview of owner window %lld", window, jOwnerPtr);
             window->owner = (UIWindow*)jlong_to_ptr(jOwnerPtr);
         } else {
-            NSArray *views = [masterWindowHost subviews];
+            NSArray *views = [mainWindowHost subviews];
             // if there exists any secondary stage, its owner is primary stage internally if
             // not set explicitly
             if ([views count] > 1) {
@@ -1631,25 +1684,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestInput
     jdouble myx, jdouble myy, jdouble myz, jdouble myt,
     jdouble mzx, jdouble mzy, jdouble mzz, jdouble mzt)
 {
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-
-    GlassWindow *window = getGlassWindow(env, ptr);
-
-    const char *str;
-    str = (*env)->GetStringUTFChars(env, text, NULL);
-    if (str == nil) {
-        return;
-    }
-    NSString *nsstr = [NSString stringWithUTF8String:str];
-    (*env)->ReleaseStringUTFChars(env, text, str);
-
-    [window requestInput:nsstr type:(int)type width:(double)width height:(double)height
-                     mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
-                     myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
-                     mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt];
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
+    fprintf(stderr, "We should never be here!\n");
+    return;
 }
 
 

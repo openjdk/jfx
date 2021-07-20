@@ -33,25 +33,27 @@ namespace WebCore {
 class Blob;
 
 class BlobEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(BlobEvent);
 public:
     struct Init : EventInit {
         RefPtr<Blob> data;
         double timecode;
     };
 
-    static Ref<BlobEvent> create(const AtomicString&, Init&&, IsTrusted = IsTrusted::No);
-    static Ref<BlobEvent> create(const AtomicString&, CanBubble, IsCancelable, Ref<Blob>&&);
+    static Ref<BlobEvent> create(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
 
     Blob& data() const { return m_blob.get(); }
+    double timecode() const { return m_timecode; }
 
 private:
-    BlobEvent(const AtomicString&, Init&&, IsTrusted);
-    BlobEvent(const AtomicString&, CanBubble, IsCancelable, Ref<Blob>&&);
+    BlobEvent(const AtomString&, Init&&, IsTrusted);
+    BlobEvent(const AtomString&, CanBubble, IsCancelable, Ref<Blob>&&);
 
     // Event
     EventInterface eventInterface() const final;
 
     Ref<Blob> m_blob;
+    double m_timecode { 0 };
 };
 
 } // namespace WebCore

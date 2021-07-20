@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Saam Barati. <saambarati1@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,7 +60,7 @@ struct BasicBlockKey {
 struct BasicBlockKeyHash {
     static unsigned hash(const BasicBlockKey& key) { return key.hash(); }
     static bool equal(const BasicBlockKey& a, const BasicBlockKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -68,13 +68,11 @@ struct BasicBlockKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::BasicBlockKey> {
-    typedef JSC::BasicBlockKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::BasicBlockKey> : JSC::BasicBlockKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::BasicBlockKey> : SimpleClassHashTraits<JSC::BasicBlockKey> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

@@ -38,22 +38,23 @@ namespace WebCore {
 class LayoutPoint {
 public:
     LayoutPoint() : m_x(0), m_y(0) { }
-    LayoutPoint(LayoutUnit x, LayoutUnit y) : m_x(x), m_y(y) { }
+    template<typename T, typename U> LayoutPoint(T x, U y) : m_x(x), m_y(y) { }
     LayoutPoint(const IntPoint& point) : m_x(point.x()), m_y(point.y()) { }
     explicit LayoutPoint(const FloatPoint& size) : m_x(size.x()), m_y(size.y()) { }
     explicit LayoutPoint(const LayoutSize& size) : m_x(size.width()), m_y(size.height()) { }
 
     static LayoutPoint zero() { return LayoutPoint(); }
+    bool isZero() const { return !m_x && !m_y; }
 
     LayoutUnit x() const { return m_x; }
     LayoutUnit y() const { return m_y; }
 
-    void setX(LayoutUnit x) { m_x = x; }
-    void setY(LayoutUnit y) { m_y = y; }
+    template<typename T> void setX(T x) { m_x = x; }
+    template<typename T> void setY(T y) { m_y = y; }
 
     void move(const LayoutSize& s) { move(s.width(), s.height()); }
     void moveBy(const LayoutPoint& offset) { move(offset.x(), offset.y()); }
-    void move(LayoutUnit dx, LayoutUnit dy) { m_x += dx; m_y += dy; }
+    template<typename T, typename U> void move(T dx, U dy) { m_x += dx; m_y += dy; }
 
     void scale(float s)
     {

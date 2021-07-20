@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,15 +27,54 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayLineItem.h"
+#include "ApplePayDetailsUpdateBase.h"
+#include <wtf/Optional.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-struct ApplePayPaymentMethodUpdate {
-    ApplePayLineItem newTotal;
-    Vector<ApplePayLineItem> newLineItems;
+struct ApplePayPaymentMethodUpdate final : public ApplePayDetailsUpdateBase {
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    String installmentGroupIdentifier;
+#endif // ENABLE(APPLE_PAY_INSTALLMENTS)
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<ApplePayPaymentMethodUpdate> decode(Decoder&);
 };
 
+template<class Encoder>
+void ApplePayPaymentMethodUpdate::encode(Encoder& encoder) const
+{
+    ApplePayDetailsUpdateBase::encode(encoder);
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    encoder << installmentGroupIdentifier;
+#endif // ENABLE(APPLE_PAY_INSTALLMENTS)
 }
+
+template<class Decoder>
+Optional<ApplePayPaymentMethodUpdate> ApplePayPaymentMethodUpdate::decode(Decoder& decoder)
+{
+    ApplePayPaymentMethodUpdate result;
+
+    if (!result.decodeBase(decoder))
+        return WTF::nullopt;
+
+#define DECODE(name, type) \
+    Optional<type> name; \
+    decoder >> name; \
+    if (!name) \
+        return WTF::nullopt; \
+    result.name = WTFMove(*name); \
+
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    DECODE(installmentGroupIdentifier, String)
+#endif // ENABLE(APPLE_PAY_INSTALLMENTS)
+
+#undef DECODE
+
+    return result;
+}
+
+} // namespace WebCore
 
 #endif

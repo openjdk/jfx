@@ -141,9 +141,9 @@ GType          gst_data_queue_get_type (void);
 
 GST_BASE_API
 GstDataQueue * gst_data_queue_new            (GstDataQueueCheckFullFunction checkfull,
-                          GstDataQueueFullCallback fullcallback,
-                          GstDataQueueEmptyCallback emptycallback,
-                          gpointer checkdata) G_GNUC_MALLOC;
+                GstDataQueueFullCallback fullcallback,
+                GstDataQueueEmptyCallback emptycallback,
+                gpointer checkdata) G_GNUC_MALLOC;
 GST_BASE_API
 gboolean       gst_data_queue_push           (GstDataQueue * queue, GstDataQueueItem * item);
 
@@ -177,9 +177,7 @@ void           gst_data_queue_get_level      (GstDataQueue * queue, GstDataQueue
 GST_BASE_API
 void           gst_data_queue_limits_changed (GstDataQueue * queue);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstDataQueue, gst_object_unref)
-#endif
 
 G_END_DECLS
 

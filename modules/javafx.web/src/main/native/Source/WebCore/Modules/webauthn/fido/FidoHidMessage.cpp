@@ -33,6 +33,8 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "FidoParsingUtils.h"
+#include <wtf/Optional.h>
+#include <wtf/Vector.h>
 
 namespace fido {
 
@@ -144,13 +146,14 @@ size_t FidoHidMessage::numPackets() const
 
 FidoHidMessage::FidoHidMessage(uint32_t channelId, FidoHidDeviceCommand type, const Vector<uint8_t>& data)
     : m_channelId(channelId)
+    , m_cmd(type)
 {
     uint8_t sequence = 0;
 
     size_t pos = data.size() > kHidInitPacketDataSize ? kHidInitPacketDataSize : data.size();
-    m_packets.append(std::make_unique<FidoHidInitPacket>(channelId, type, getInitPacketData(data), data.size()));
+    m_packets.append(makeUnique<FidoHidInitPacket>(channelId, type, getInitPacketData(data), data.size()));
     for (; pos < data.size(); pos += kHidContinuationPacketDataSize)
-        m_packets.append(std::make_unique<FidoHidContinuationPacket>(channelId, sequence++, getContinuationPacketData(data, pos)));
+        m_packets.append(makeUnique<FidoHidContinuationPacket>(channelId, sequence++, getContinuationPacketData(data, pos)));
 }
 
 FidoHidMessage::FidoHidMessage(std::unique_ptr<FidoHidInitPacket> initPacket, size_t remainingSize)

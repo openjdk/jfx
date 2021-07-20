@@ -23,14 +23,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGStringList {
+[
+    Exposed=Window
+] interface SVGStringList {
+    readonly attribute unsigned long length;
     readonly attribute unsigned long numberOfItems;
 
-    [MayThrowException] void clear();
-    [MayThrowException] DOMString initialize(DOMString item);
-    [MayThrowException] DOMString getItem(unsigned long index);
-    [MayThrowException] DOMString insertItemBefore(DOMString item, unsigned long index);
-    [MayThrowException] DOMString replaceItem(DOMString item, unsigned long index);
+    [MayThrowException] undefined clear();
+    [MayThrowException] DOMString initialize(DOMString newItem);
+    [MayThrowException] getter DOMString getItem(unsigned long index);
+    [MayThrowException] DOMString insertItemBefore(DOMString newItem, unsigned long index);
+    [MayThrowException] DOMString replaceItem(DOMString newItem, unsigned long index);
     [MayThrowException] DOMString removeItem(unsigned long index);
-    [MayThrowException] DOMString appendItem(DOMString item);
+    [MayThrowException] DOMString appendItem(DOMString newItem);
+    setter undefined (unsigned long index, DOMString newItem);
 };

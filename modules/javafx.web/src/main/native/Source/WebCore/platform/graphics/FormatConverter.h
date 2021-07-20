@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2010 Mozilla Corporation. All rights reserved.
  *
@@ -25,9 +25,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#pragma once
 
-#include "GraphicsContext3D.h"
+#if ENABLE(WEBGL)
+
+#include "GraphicsContextGL.h"
+#include "IntRect.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniqueArray.h>
 
@@ -35,43 +38,55 @@ namespace WebCore {
 
 class FormatConverter {
 public:
-    FormatConverter(unsigned width, unsigned height, const void* srcStart, void* dstStart, int srcStride, int dstStride)
-        : m_width(width)
-        , m_height(height)
-        , m_srcStart(srcStart)
-        , m_dstStart(dstStart)
-        , m_srcStride(srcStride)
-        , m_dstStride(dstStride)
-        , m_success(false)
+    FormatConverter(
+        const IntRect& sourceDataSubRectangle,
+        int depth,
+        int unpackImageHeight,
+        const void* srcStart,
+        void* dstStart,
+        int srcStride,
+        int srcRowOffset,
+        int dstStride)
+            : m_srcSubRectangle(sourceDataSubRectangle)
+            , m_depth(depth)
+            , m_unpackImageHeight(unpackImageHeight)
+            , m_srcStart(srcStart)
+            , m_dstStart(dstStart)
+            , m_srcStride(srcStride)
+            , m_srcRowOffset(srcRowOffset)
+            , m_dstStride(dstStride)
+            , m_success(false)
     {
         const unsigned MaxNumberOfComponents = 4;
         const unsigned MaxBytesPerComponent  = 4;
-        m_unpackedIntermediateSrcData = makeUniqueArray<uint8_t>((Checked<size_t>(m_width) * MaxNumberOfComponents * MaxBytesPerComponent).unsafeGet());
+        m_unpackedIntermediateSrcData = makeUniqueArray<uint8_t>((Checked<size_t>(m_srcSubRectangle.width()) * MaxNumberOfComponents * MaxBytesPerComponent).unsafeGet());
 
         ASSERT(m_unpackedIntermediateSrcData.get());
     }
 
-    void convert(GraphicsContext3D::DataFormat srcFormat, GraphicsContext3D::DataFormat dstFormat, GraphicsContext3D::AlphaOp);
+    void convert(GraphicsContextGL::DataFormat srcFormat, GraphicsContextGL::DataFormat dstFormat, GraphicsContextGL::AlphaOp);
     bool success() const { return m_success; }
 
 private:
-    template<GraphicsContext3D::DataFormat SrcFormat>
-    ALWAYS_INLINE void convert(GraphicsContext3D::DataFormat dstFormat, GraphicsContext3D::AlphaOp);
+    template<GraphicsContextGL::DataFormat SrcFormat>
+    ALWAYS_INLINE void convert(GraphicsContextGL::DataFormat dstFormat, GraphicsContextGL::AlphaOp);
 
-    template<GraphicsContext3D::DataFormat SrcFormat, GraphicsContext3D::DataFormat DstFormat>
-    ALWAYS_INLINE void convert(GraphicsContext3D::AlphaOp);
+    template<GraphicsContextGL::DataFormat SrcFormat, GraphicsContextGL::DataFormat DstFormat>
+    ALWAYS_INLINE void convert(GraphicsContextGL::AlphaOp);
 
-    template<GraphicsContext3D::DataFormat SrcFormat, GraphicsContext3D::DataFormat DstFormat, GraphicsContext3D::AlphaOp alphaOp>
+    template<GraphicsContextGL::DataFormat SrcFormat, GraphicsContextGL::DataFormat DstFormat, GraphicsContextGL::AlphaOp alphaOp>
     ALWAYS_INLINE void convert();
 
-    const unsigned m_width, m_height;
+    const IntRect& m_srcSubRectangle;
+    const int m_depth;
+    const int m_unpackImageHeight;
     const void* const m_srcStart;
     void* const m_dstStart;
-    const int m_srcStride, m_dstStride;
+    const int m_srcStride, m_srcRowOffset, m_dstStride;
     bool m_success;
     UniqueArray<uint8_t> m_unpackedIntermediateSrcData;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_3D)
+#endif // ENABLE(WEBGL)

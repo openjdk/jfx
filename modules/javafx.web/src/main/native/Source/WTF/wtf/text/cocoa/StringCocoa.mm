@@ -18,34 +18,28 @@
  *
  */
 
-#include "config.h"
-#include <wtf/text/WTFString.h>
+#import "config.h"
+#import <wtf/text/WTFString.h>
 
-#include <CoreFoundation/CFString.h>
+#import <CoreFoundation/CFString.h>
 
 namespace WTF {
 
-String::String(NSString *str)
+#if HAVE(SAFARI_FOR_WEBKIT_DEVELOPMENT_REQUIRING_EXTRA_SYMBOLS)
+String::String(NSString *string)
+    : String((__bridge CFStringRef)string) { }
+#endif
+
+RetainPtr<id> makeNSArrayElement(const String& vectorElement)
 {
-    if (!str)
-        return;
+    return adoptNS((__bridge_transfer id)vectorElement.createCFString().leakRef());
+}
 
-    CFIndex size = CFStringGetLength(reinterpret_cast<CFStringRef>(str));
-    if (!size)
-        m_impl = StringImpl::empty();
-    else {
-        Vector<LChar, 1024> lcharBuffer(size);
-        CFIndex usedBufLen;
-        CFIndex convertedsize = CFStringGetBytes(reinterpret_cast<CFStringRef>(str), CFRangeMake(0, size), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.data(), size, &usedBufLen);
-        if ((convertedsize == size) && (usedBufLen == size)) {
-            m_impl = StringImpl::create(lcharBuffer.data(), size);
-            return;
-        }
-
-        Vector<UChar, 1024> ucharBuffer(size);
-        CFStringGetCharacters(reinterpret_cast<CFStringRef>(str), CFRangeMake(0, size), ucharBuffer.data());
-        m_impl = StringImpl::create(ucharBuffer.data(), size);
-    }
+Optional<String> makeVectorElement(const String*, id arrayElement)
+{
+    if (![arrayElement isKindOfClass:NSString.class])
+        return WTF::nullopt;
+    return { { arrayElement } };
 }
 
 }

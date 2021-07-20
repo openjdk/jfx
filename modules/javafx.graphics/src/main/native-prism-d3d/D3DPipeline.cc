@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,9 +36,7 @@ typedef HRESULT WINAPI FnDirect3DCreate9Ex(UINT SDKVersion, IDirect3D9Ex**);
 FnDirect3DCreate9 * pD3D9FactoryFunction = 0;
 FnDirect3DCreate9Ex * pD3D9FactoryExFunction = 0;
 
-extern jboolean checkAndClearException(JNIEnv *env);
-
-jboolean checkAndClearException(JNIEnv *env) {
+static jboolean checkAndClearException(JNIEnv *env) {
     if (!env->ExceptionCheck()) {
         return JNI_FALSE;
     }
@@ -77,6 +75,7 @@ IDirect3D9Ex * Direct3DCreate9Ex() {
     return SUCCEEDED(hr) ? pD3D : 0;
 }
 
+#ifndef STATIC_BUILD
 BOOL APIENTRY DllMain( HANDLE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved)
@@ -91,6 +90,7 @@ BOOL APIENTRY DllMain( HANDLE hModule,
     }
     return TRUE;
 }
+#endif // STATIC_BUILD
 
 struct ConfigJavaStaticClass : IConfig {
     JNIEnv *_env; jclass _psClass;
@@ -112,10 +112,10 @@ struct ConfigJavaStaticClass : IConfig {
 /*
  * Class:     com_sun_prism_d3d_D3DPipeline
  * Method:    nInit
+ * Signature: (Ljava/lang/Class;Z)Z
  */
-
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DPipeline_nInit
-  (JNIEnv *env, jclass, jclass psClass)
+  (JNIEnv *env, jclass, jclass psClass, jboolean load)
 {
     if (D3DPipelineManager::GetInstance()) {
         D3DPipelineManager::SetErrorMessage("Double D3DPipelineManager initialization");
@@ -126,6 +126,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DPipeline_nInit
         D3DPipelineManager::SetErrorMessage("Wrong operating system version");
         return false;
     }
+
+#ifdef STATIC_BUILD
+    if (load) {
+        loadD3DLibrary();
+    }
+#endif // STATIC_BUILD
 
     TraceLn(NWT_TRACE_INFO, "D3DPipeline_nInit");
     D3DPipelineManager *pMgr = D3DPipelineManager::CreateInstance(ConfigJavaStaticClass(env, psClass));
@@ -146,14 +152,21 @@ JNIEXPORT jstring JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetErrorMessage(JN
 /*
  * Class:     com_sun_prism_d3d_D3DPipeline
  * Method:    nDispose
+ * Signature: (Z)V
  */
-
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DPipeline_nDispose(JNIEnv *pEnv, jclass)
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DPipeline_nDispose
+  (JNIEnv *pEnv, jclass, jboolean unload)
 {
     TraceLn(NWT_TRACE_INFO, "D3DPipeline_nDispose");
     if (D3DPipelineManager::GetInstance()) {
         D3DPipelineManager::DeleteInstance();
     }
+
+#ifdef STATIC_BUILD
+    if (unload) {
+        freeD3DLibrary();
+    }
+#endif // STATIC_BUILD
 }
 
 

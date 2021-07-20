@@ -49,13 +49,12 @@ public:
 
     bool setInlineStyleProperty(CSSPropertyID, CSSValueID identifier, bool important = false);
     bool setInlineStyleProperty(CSSPropertyID, CSSPropertyID identifier, bool important = false);
-    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, double value, CSSPrimitiveValue::UnitType, bool important = false);
+    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, double value, CSSUnitType, bool important = false);
     WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, const String& value, bool important = false);
     bool removeInlineStyleProperty(CSSPropertyID);
     void removeAllInlineStyleProperties();
 
-    static void synchronizeStyleAttributeInternal(StyledElement*);
-    void synchronizeStyleAttributeInternal() const { StyledElement::synchronizeStyleAttributeInternal(const_cast<StyledElement*>(this)); }
+    void synchronizeStyleAttributeInternal() const { const_cast<StyledElement*>(this)->synchronizeStyleAttributeInternalImpl(); }
 
     WEBCORE_EXPORT CSSStyleDeclaration& cssomStyle();
 #if ENABLE(CSS_TYPED_OM)
@@ -63,7 +62,7 @@ public:
 #endif
 
     const StyleProperties* presentationAttributeStyle() const;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) { }
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) { }
 
 protected:
     StyledElement(const QualifiedName& name, Document& document, ConstructionType type)
@@ -71,22 +70,23 @@ protected:
     {
     }
 
-    void attributeChanged(const QualifiedName&, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason = ModifiedDirectly) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = ModifiedDirectly) override;
 
     virtual bool isPresentationAttribute(const QualifiedName&) const { return false; }
 
     void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, CSSValueID identifier);
-    void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, double value, CSSPrimitiveValue::UnitType);
+    void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, double value, CSSUnitType);
     void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, const String& value);
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
 private:
-    void styleAttributeChanged(const AtomicString& newStyleString, AttributeModificationReason);
+    void styleAttributeChanged(const AtomString& newStyleString, AttributeModificationReason);
+    void synchronizeStyleAttributeInternalImpl();
 
     void inlineStyleChanged();
     PropertySetCSSStyleDeclaration* inlineStyleCSSOMWrapper();
-    void setInlineStyleFromString(const AtomicString&);
+    void setInlineStyleFromString(const AtomString&);
     MutableStyleProperties& ensureMutableInlineStyle();
 
     void rebuildPresentationAttributeStyle();

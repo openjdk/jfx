@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,10 @@ using namespace JSC;
 using namespace Bindings;
 using namespace HTMLNames;
 
-// JavaScript access to plug-in-exported properties for JSHTMLAppletElement, JSHTMLEmbedElement and JSHTMLObjectElement.
+// JavaScript access to plug-in-exported properties for JSHTMLEmbedElement and JSHTMLObjectElement.
+
+static JSC_DECLARE_HOST_FUNCTION(callPlugin);
+static JSC_DECLARE_CUSTOM_GETTER(pluginElementPropertyGetter);
 
 Instance* pluginInstance(HTMLElement& element)
 {
@@ -65,7 +68,7 @@ static JSObject* pluginScriptObjectFromPluginViewBase(JSHTMLElement* jsHTMLEleme
     return pluginScriptObjectFromPluginViewBase(pluginElement, jsHTMLElement->globalObject());
 }
 
-JSObject* pluginScriptObject(ExecState* exec, JSHTMLElement* jsHTMLElement)
+JSObject* pluginScriptObject(JSGlobalObject* lexicalGlobalObject, JSHTMLElement* jsHTMLElement)
 {
     HTMLElement& element = jsHTMLElement->wrapped();
     if (!is<HTMLPlugInElement>(element))
@@ -91,96 +94,104 @@ JSObject* pluginScriptObject(ExecState* exec, JSHTMLElement* jsHTMLElement)
     if (!instance || !instance->rootObject())
         return nullptr;
 
-    return instance->createRuntimeObject(exec);
+    return instance->createRuntimeObject(lexicalGlobalObject);
 }
 
-static EncodedJSValue pluginElementPropertyGetter(ExecState* exec, EncodedJSValue thisValue, PropertyName propertyName)
+JSC_DEFINE_CUSTOM_GETTER(pluginElementPropertyGetter, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName propertyName))
 {
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSHTMLElement* thisObject = jsDynamicCast<JSHTMLElement*>(vm, JSValue::decode(thisValue));
     if (!thisObject)
-        return throwVMTypeError(exec, scope);
-    JSObject* scriptObject = pluginScriptObject(exec, thisObject);
+        return throwVMTypeError(lexicalGlobalObject, scope);
+    JSObject* scriptObject = pluginScriptObject(lexicalGlobalObject, thisObject);
     if (!scriptObject)
         return JSValue::encode(jsUndefined());
 
-    return JSValue::encode(scriptObject->get(exec, propertyName));
+    return JSValue::encode(scriptObject->get(lexicalGlobalObject, propertyName));
 }
 
-bool pluginElementCustomGetOwnPropertySlot(JSHTMLElement* element, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool pluginElementCustomGetOwnPropertySlot(JSHTMLElement* element, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
 {
+    slot.setIsTaintedByOpaqueObject();
+
     if (!element->globalObject()->world().isNormal()) {
-        JSC::JSValue proto = element->getPrototypeDirect(exec->vm());
-        if (proto.isObject() && JSC::jsCast<JSC::JSObject*>(asObject(proto))->hasProperty(exec, propertyName))
+        JSC::JSValue proto = element->getPrototypeDirect(lexicalGlobalObject->vm());
+        if (proto.isObject() && JSC::jsCast<JSC::JSObject*>(asObject(proto))->hasProperty(lexicalGlobalObject, propertyName))
             return false;
     }
 
-    JSObject* scriptObject = pluginScriptObject(exec, element);
+    if (slot.isVMInquiry()) {
+        slot.setValue(element, static_cast<unsigned>(JSC::PropertyAttribute::None), jsUndefined());
+        return false; // Can't execute stuff below because they can call back into JS.
+    }
+
+    JSObject* scriptObject = pluginScriptObject(lexicalGlobalObject, element);
     if (!scriptObject)
         return false;
 
-    if (!scriptObject->hasProperty(exec, propertyName))
+    if (!scriptObject->hasProperty(lexicalGlobalObject, propertyName))
         return false;
 
     slot.setCustom(element, JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::DontEnum, pluginElementPropertyGetter);
     return true;
 }
 
-bool pluginElementCustomPut(JSHTMLElement* element, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot, bool& putResult)
+bool pluginElementCustomPut(JSHTMLElement* element, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot, bool& putResult)
 {
-    JSObject* scriptObject = pluginScriptObject(exec, element);
+    JSObject* scriptObject = pluginScriptObject(lexicalGlobalObject, element);
     if (!scriptObject)
         return false;
-    if (!scriptObject->hasProperty(exec, propertyName))
+    if (!scriptObject->hasProperty(lexicalGlobalObject, propertyName))
         return false;
-    putResult = scriptObject->methodTable(exec->vm())->put(scriptObject, exec, propertyName, value, slot);
+    putResult = scriptObject->methodTable(lexicalGlobalObject->vm())->put(scriptObject, lexicalGlobalObject, propertyName, value, slot);
     return true;
 }
 
-static EncodedJSValue JSC_HOST_CALL callPlugin(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(callPlugin, (JSGlobalObject* lexicalGlobalObject, CallFrame* callFrame))
 {
-    JSHTMLElement* element = jsCast<JSHTMLElement*>(exec->jsCallee());
+    JSHTMLElement* element = jsCast<JSHTMLElement*>(callFrame->jsCallee());
 
     // Get the plug-in script object.
-    JSObject* scriptObject = pluginScriptObject(exec, element);
+    JSObject* scriptObject = pluginScriptObject(lexicalGlobalObject, element);
     ASSERT(scriptObject);
 
-    size_t argumentCount = exec->argumentCount();
+    size_t argumentCount = callFrame->argumentCount();
     MarkedArgumentBuffer argumentList;
     for (size_t i = 0; i < argumentCount; i++)
-        argumentList.append(exec->argument(i));
+        argumentList.append(callFrame->argument(i));
     ASSERT(!argumentList.hasOverflowed());
 
-    CallData callData;
-    CallType callType = getCallData(exec->vm(), scriptObject, callData);
-    ASSERT(callType == CallType::Host);
+    auto callData = getCallData(lexicalGlobalObject->vm(), scriptObject);
+    ASSERT(callData.type == CallData::Type::Native);
 
     // Call the object.
-    JSValue result = call(exec, scriptObject, callType, callData, exec->thisValue(), argumentList);
+    JSValue result = call(lexicalGlobalObject, scriptObject, callData, callFrame->thisValue(), argumentList);
     return JSValue::encode(result);
 }
 
-CallType pluginElementCustomGetCallData(JSHTMLElement* element, CallData& callData)
+CallData pluginElementCustomGetCallData(JSHTMLElement* element)
 {
+    CallData callData;
+
     // First, ask the plug-in view base for its runtime object.
     if (JSObject* scriptObject = pluginScriptObjectFromPluginViewBase(element)) {
-        CallData scriptObjectCallData;
-
-        VM& vm = *scriptObject->vm();
-        if (scriptObject->methodTable(vm)->getCallData(scriptObject, scriptObjectCallData) == CallType::None)
-            return CallType::None;
-
-        callData.native.function = callPlugin;
-        return CallType::Host;
+        VM& vm = scriptObject->vm();
+        auto scriptObjectCallData = getCallData(vm, scriptObject);
+        if (scriptObjectCallData.type != CallData::Type::None) {
+            callData.type = CallData::Type::Native;
+            callData.native.function = callPlugin;
+        }
+    } else {
+        Instance* instance = pluginInstance(element->wrapped());
+        if (instance && instance->supportsInvokeDefaultMethod()) {
+            callData.type = CallData::Type::Native;
+            callData.native.function = callPlugin;
+        }
     }
 
-    Instance* instance = pluginInstance(element->wrapped());
-    if (!instance || !instance->supportsInvokeDefaultMethod())
-        return CallType::None;
-    callData.native.function = callPlugin;
-    return CallType::Host;
+    return callData;
 }
 
 } // namespace WebCore

@@ -1,7 +1,8 @@
 {
     "domain": "DOMDebugger",
     "description": "DOM debugging allows setting breakpoints on particular DOM operations and events. JavaScript execution will stop on these operations as if there was a regular breakpoint set.",
-    "availability": ["web"],
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page", "worker"],
     "types": [
         {
             "id": "DOMBreakpointType",
@@ -12,7 +13,7 @@
         {
             "id": "EventBreakpointType",
             "type": "string",
-            "enum": ["animation-frame", "listener", "timer"],
+            "enum": ["animation-frame", "interval", "listener", "timeout"],
             "description": "Event breakpoint type."
         }
     ],
@@ -22,7 +23,8 @@
             "description": "Sets breakpoint on particular operation with DOM.",
             "parameters": [
                 { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Identifier of the node to set breakpoint on." },
-                { "name": "type", "$ref": "DOMBreakpointType", "description": "Type of the operation to stop upon." }
+                { "name": "type", "$ref": "DOMBreakpointType", "description": "Type of the operation to stop upon." },
+                { "name": "options", "$ref": "Debugger.BreakpointOptions", "optional": true, "description": "Options to apply to this breakpoint to modify its behavior." }
             ]
         },
         {
@@ -38,7 +40,8 @@
             "description": "Sets breakpoint on particular event of given type.",
             "parameters": [
                 { "name": "breakpointType", "$ref": "EventBreakpointType" },
-                { "name": "eventName", "type": "string", "description": "The name of the event to stop on." }
+                { "name": "eventName", "type": "string", "optional": true, "description": "The name of the specific event to stop on." },
+                { "name": "options", "$ref": "Debugger.BreakpointOptions", "optional": true, "description": "Options to apply to this breakpoint to modify its behavior." }
             ]
         },
         {
@@ -46,7 +49,7 @@
             "description": "Removes breakpoint on particular event of given type.",
             "parameters": [
                 { "name": "breakpointType", "$ref": "EventBreakpointType" },
-                { "name": "eventName", "type": "string", "description": "The name of the event to stop on." }
+                { "name": "eventName", "type": "string", "optional": true, "description": "The name of the specific event to stop on." }
             ]
         },
         {
@@ -54,14 +57,16 @@
             "description": "Sets breakpoint on network activity for the given URL.",
             "parameters": [
                 { "name": "url", "type": "string", "description": "Resource URL substring or regular expression. All requests having this substring in the URL will get stopped upon. An empty string will pause on all requests." },
-                { "name": "isRegex", "type": "boolean", "optional": true, "description": "Whether the URL string is a regular expression." }
+                { "name": "isRegex", "type": "boolean", "optional": true, "description": "Whether the URL string is a regular expression." },
+                { "name": "options", "$ref": "Debugger.BreakpointOptions", "optional": true, "description": "Options to apply to this breakpoint to modify its behavior." }
             ]
         },
         {
             "name": "removeURLBreakpoint",
             "description": "Removes breakpoint from network activity for the given URL.",
             "parameters": [
-                { "name": "url", "type": "string", "description": "Resource URL substring. An empty string will stop pausing on all requests." }
+                { "name": "url", "type": "string", "description": "Resource URL substring. An empty string will stop pausing on all requests." },
+                { "name": "isRegex", "type": "boolean", "optional": true, "description": "Whether the URL string is a regular expression." }
             ]
         }
     ]

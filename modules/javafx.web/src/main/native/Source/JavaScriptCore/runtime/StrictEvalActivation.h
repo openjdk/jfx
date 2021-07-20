@@ -33,15 +33,20 @@ class StrictEvalActivation final : public JSScope {
 public:
     using Base = JSScope;
 
-    static StrictEvalActivation* create(ExecState* exec, JSScope* currentScope)
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
     {
-        VM& vm = exec->vm();
-        StrictEvalActivation* lexicalEnvironment = new (NotNull, allocateCell<StrictEvalActivation>(vm.heap)) StrictEvalActivation(exec, currentScope);
-        lexicalEnvironment->finishCreation(vm);
-        return lexicalEnvironment;
+        return vm.strictEvalActivationSpace<mode>();
     }
 
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
+    static StrictEvalActivation* create(VM& vm, Structure* structure, JSScope* currentScope)
+    {
+        StrictEvalActivation* scope = new (NotNull, allocateCell<StrictEvalActivation>(vm.heap)) StrictEvalActivation(vm, structure, currentScope);
+        scope->finishCreation(vm);
+        return scope;
+    }
+
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -51,7 +56,7 @@ public:
     DECLARE_INFO;
 
 private:
-    StrictEvalActivation(ExecState*, JSScope*);
+    StrictEvalActivation(VM&, Structure*, JSScope*);
 };
 
 } // namespace JSC

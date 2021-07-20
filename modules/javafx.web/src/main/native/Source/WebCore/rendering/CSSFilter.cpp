@@ -35,6 +35,7 @@
 #include "FEDropShadow.h"
 #include "FEGaussianBlur.h"
 #include "FEMerge.h"
+#include "FilterEffectRenderer.h"
 #include "Logging.h"
 #include "RenderLayer.h"
 #include "SVGElement.h"
@@ -109,23 +110,28 @@ RefPtr<FilterEffect> CSSFilter::buildReferenceFilter(RenderElement& renderer, Fi
         return nullptr;
     }
 
-    RefPtr<FilterEffect> effect;
-
-    auto builder = std::make_unique<SVGFilterBuilder>(&previousEffect);
+    auto builder = makeUnique<SVGFilterBuilder>(&previousEffect);
     m_sourceAlpha = builder->getEffectById(SourceAlpha::effectName());
+
+    RefPtr<FilterEffect> effect;
+    Vector<Ref<FilterEffect>> referenceEffects;
 
     for (auto& effectElement : childrenOfType<SVGFilterPrimitiveStandardAttributes>(*filter)) {
         effect = effectElement.build(builder.get(), *this);
-        if (!effect)
-            continue;
+        if (!effect) {
+            LOG_WITH_STREAM(Filters, stream << "CSSFilter " << this << " buildReferenceFilter: failed to build effect from " << effectElement);
+            return nullptr;
+        }
 
         effectElement.setStandardAttributes(effect.get());
         if (effectElement.renderer())
-            effect->setOperatingColorSpace(effectElement.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? ColorSpaceLinearRGB : ColorSpaceSRGB);
+            effect->setOperatingColorSpace(effectElement.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB : DestinationColorSpace::SRGB);
 
         builder->add(effectElement.result(), effect);
-        m_effects.append(*effect);
+        referenceEffects.append(*effect);
     }
+
+    m_effects.appendVector(WTFMove(referenceEffects));
     return effect;
 }
 
@@ -133,10 +139,9 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
 {
     m_hasFilterThatMovesPixels = operations.hasFilterThatMovesPixels();
     m_hasFilterThatShouldBeRestrictedBySecurityOrigin = operations.hasFilterThatShouldBeRestrictedBySecurityOrigin();
-    if (m_hasFilterThatMovesPixels)
-        m_outsets = operations.outsets();
 
     m_effects.clear();
+    m_outsets = { };
 
     RefPtr<FilterEffect> previousEffect = m_sourceGraphic.ptr();
     for (auto& operation : operations.operations()) {
@@ -221,11 +226,10 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
         case FilterOperation::INVERT: {
             auto& componentTransferOperation = downcast<BasicComponentTransferFilterOperation>(filterOperation);
             ComponentTransferFunction transferFunction;
-            transferFunction.type = FECOMPONENTTRANSFER_TYPE_TABLE;
-            Vector<float> transferParameters;
-            transferParameters.append(narrowPrecisionToFloat(componentTransferOperation.amount()));
-            transferParameters.append(narrowPrecisionToFloat(1 - componentTransferOperation.amount()));
-            transferFunction.tableValues = transferParameters;
+            transferFunction.type = FECOMPONENTTRANSFER_TYPE_LINEAR;
+            float amount = narrowPrecisionToFloat(componentTransferOperation.amount());
+            transferFunction.slope = 1 - 2 * amount;
+            transferFunction.intercept = amount;
 
             ComponentTransferFunction nullFunction;
             effect = FEComponentTransfer::create(*this, transferFunction, transferFunction, transferFunction, nullFunction);
@@ -237,11 +241,10 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
         case FilterOperation::OPACITY: {
             auto& componentTransferOperation = downcast<BasicComponentTransferFilterOperation>(filterOperation);
             ComponentTransferFunction transferFunction;
-            transferFunction.type = FECOMPONENTTRANSFER_TYPE_TABLE;
-            Vector<float> transferParameters;
-            transferParameters.append(0);
-            transferParameters.append(narrowPrecisionToFloat(componentTransferOperation.amount()));
-            transferFunction.tableValues = transferParameters;
+            transferFunction.type = FECOMPONENTTRANSFER_TYPE_LINEAR;
+            float amount = narrowPrecisionToFloat(componentTransferOperation.amount());
+            transferFunction.slope = amount;
+            transferFunction.intercept = 0;
 
             ComponentTransferFunction nullFunction;
             effect = FEComponentTransfer::create(*this, nullFunction, nullFunction, nullFunction, transferFunction);
@@ -290,7 +293,7 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
             // Unlike SVG Filters and CSSFilterImages, filter functions on the filter
             // property applied here should not clip to their primitive subregions.
             effect->setClipsToBounds(consumer == FilterConsumer::FilterFunction);
-            effect->setOperatingColorSpace(ColorSpaceSRGB);
+            effect->setOperatingColorSpace(DestinationColorSpace::SRGB);
 
             if (filterOperation.type() != FilterOperation::REFERENCE) {
                 effect->inputEffects().append(WTFMove(previousEffect));
@@ -305,6 +308,10 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
         return false;
 
     setMaxEffectRects(m_sourceDrawingRegion);
+#if USE(CORE_IMAGE)
+    if (!m_filterRenderer)
+        m_filterRenderer = FilterEffectRenderer::tryCreate(renderer.settings().coreImageAcceleratedFilterRenderEnabled(), m_effects.last().get());
+#endif
     return true;
 }
 
@@ -335,7 +342,8 @@ void CSSFilter::allocateBackingStoreIfNeeded(const GraphicsContext& targetContex
         setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), &targetContext, filterScale()));
 #else
         UNUSED_PARAM(targetContext);
-        setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), filterScale()));
+        RenderingMode mode = m_filterRenderer ? RenderingMode::Accelerated : renderingMode();
+        setSourceImage(ImageBuffer::create(logicalSize, mode, filterScale()));
 #endif
     }
     m_graphicsBufferAttached = true;
@@ -366,26 +374,32 @@ void CSSFilter::clearIntermediateResults()
 void CSSFilter::apply()
 {
     auto& effect = m_effects.last().get();
+    if (m_filterRenderer) {
+        m_filterRenderer->applyEffects(effect);
+        if (m_filterRenderer->hasResult()) {
+            effect.transformResultColorSpace(DestinationColorSpace::SRGB);
+            return;
+        }
+    }
     effect.apply();
-    effect.transformResultColorSpace(ColorSpaceSRGB);
+    effect.transformResultColorSpace(DestinationColorSpace::SRGB);
 }
 
 LayoutRect CSSFilter::computeSourceImageRectForDirtyRect(const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect)
 {
     // The result of this function is the area in the "filterBoxRect" that needs to be repainted, so that we fully cover the "dirtyRect".
     auto rectForRepaint = dirtyRect;
-    if (hasFilterThatMovesPixels()) {
-        // Note that the outsets are reversed here because we are going backwards -> we have the dirty rect and
-        // need to find out what is the rectangle that might influence the result inside that dirty rect.
-        rectForRepaint.move(-m_outsets.right(), -m_outsets.bottom());
-        rectForRepaint.expand(m_outsets.left() + m_outsets.right(), m_outsets.top() + m_outsets.bottom());
-    }
+    if (hasFilterThatMovesPixels())
+        rectForRepaint += outsets();
     rectForRepaint.intersect(filterBoxRect);
     return rectForRepaint;
 }
 
 ImageBuffer* CSSFilter::output() const
 {
+    if (m_filterRenderer && m_filterRenderer->hasResult())
+        return m_filterRenderer->output();
+
     return m_effects.last()->imageBufferResult();
 }
 
@@ -397,7 +411,6 @@ void CSSFilter::setSourceImageRect(const FloatRect& sourceImageRect)
     m_graphicsBufferAttached = false;
 }
 
-
 void CSSFilter::setMaxEffectRects(const FloatRect& effectRect)
 {
     for (auto& effect : m_effects)
@@ -407,9 +420,24 @@ void CSSFilter::setMaxEffectRects(const FloatRect& effectRect)
 IntRect CSSFilter::outputRect() const
 {
     auto& lastEffect = m_effects.last().get();
-    if (!lastEffect.hasResult())
+
+    if (lastEffect.hasResult() || (m_filterRenderer && m_filterRenderer->hasResult()))
+        return lastEffect.requestedRegionOfInputImageData(IntRect { m_filterRegion });
+
+    return { };
+}
+
+IntOutsets CSSFilter::outsets() const
+{
+    if (!m_hasFilterThatMovesPixels)
         return { };
-    return lastEffect.requestedRegionOfInputImageData(IntRect { m_filterRegion });
+
+    if (!m_outsets.isZero())
+        return m_outsets;
+
+    for (auto& effect : m_effects)
+        m_outsets += effect->outsets();
+    return m_outsets;
 }
 
 } // namespace WebCore

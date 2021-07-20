@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLSharedObject.h"
 #include <wtf/Vector.h>
 
@@ -43,49 +45,56 @@ public:
 
     static Ref<WebGLTexture> create(WebGLRenderingContextBase&);
 
-    void setTarget(GC3Denum target, GC3Dint maxLevel);
-    void setParameteri(GC3Denum pname, GC3Dint param);
-    void setParameterf(GC3Denum pname, GC3Dfloat param);
+    void setTarget(GCGLenum target, GCGLint maxLevel);
+#if !USE(ANGLE)
+    void setParameteri(GCGLenum pname, GCGLint param);
+    void setParameterf(GCGLenum pname, GCGLfloat param);
+#endif
 
-    GC3Denum getTarget() const { return m_target; }
+    GCGLenum getTarget() const { return m_target; }
 
+#if !USE(ANGLE)
     int getMinFilter() const { return m_minFilter; }
 
-    void setLevelInfo(GC3Denum target, GC3Dint level, GC3Denum internalFormat, GC3Dsizei width, GC3Dsizei height, GC3Denum type);
+    void setLevelInfo(GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLenum type);
 
     bool canGenerateMipmaps();
     // Generate all level information.
     void generateMipmapLevelInfo();
 
-    GC3Denum getInternalFormat(GC3Denum target, GC3Dint level) const;
-    GC3Denum getType(GC3Denum target, GC3Dint level) const;
-    GC3Dsizei getWidth(GC3Denum target, GC3Dint level) const;
-    GC3Dsizei getHeight(GC3Denum target, GC3Dint level) const;
-    bool isValid(GC3Denum target, GC3Dint level) const;
-    void markInvalid(GC3Denum target, GC3Dint level);
+    GCGLenum getInternalFormat(GCGLenum target, GCGLint level) const;
+    GCGLenum getType(GCGLenum target, GCGLint level) const;
+    GCGLsizei getWidth(GCGLenum target, GCGLint level) const;
+    GCGLsizei getHeight(GCGLenum target, GCGLint level) const;
+    bool isValid(GCGLenum target, GCGLint level) const;
+    void markInvalid(GCGLenum target, GCGLint level);
 
     // Whether width/height is NotPowerOfTwo.
-    static bool isNPOT(GC3Dsizei, GC3Dsizei);
+    static bool isNPOT(GCGLsizei, GCGLsizei);
 
     bool isNPOT() const;
     // Determine if texture sampling should always return [0, 0, 0, 1] (OpenGL ES 2.0 Sec 3.8.2).
     bool needToUseBlackTexture(TextureExtensionFlag) const;
 
+    bool immutable() const { return m_immutable; }
+    void setImmutable() { m_immutable = true; }
+
     bool isCompressed() const;
     void setCompressed();
+#endif
 
     bool hasEverBeenBound() const { return object() && m_target; }
 
-    static GC3Dint computeLevelCount(GC3Dsizei width, GC3Dsizei height);
-
-    bool immutable() const { return m_immutable; }
-    void setImmutable() { m_immutable = true; }
+    static GCGLint computeLevelCount(GCGLsizei width, GCGLsizei height);
 
 private:
     WebGLTexture(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
+    bool isTexture() const override { return true; }
+
+#if !USE(ANGLE)
     class LevelInfo {
     public:
         LevelInfo()
@@ -97,7 +106,7 @@ private:
         {
         }
 
-        void setInfo(GC3Denum internalFmt, GC3Dsizei w, GC3Dsizei h, GC3Denum tp)
+        void setInfo(GCGLenum internalFmt, GCGLsizei w, GCGLsizei h, GCGLenum tp)
         {
             valid = true;
             internalFormat = internalFmt;
@@ -107,26 +116,28 @@ private:
         }
 
         bool valid;
-        GC3Denum internalFormat;
-        GC3Dsizei width;
-        GC3Dsizei height;
-        GC3Denum type;
+        GCGLenum internalFormat;
+        GCGLsizei width;
+        GCGLsizei height;
+        GCGLenum type;
     };
 
-    bool isTexture() const override { return true; }
-
     void update();
+#endif // !USE(ANGLE)
 
-    int mapTargetToIndex(GC3Denum) const;
+    int mapTargetToIndex(GCGLenum) const;
 
-    const LevelInfo* getLevelInfo(GC3Denum target, GC3Dint level) const;
+#if !USE(ANGLE)
+    const LevelInfo* getLevelInfo(GCGLenum target, GCGLint level) const;
+#endif // !USE(ANGLE)
 
-    GC3Denum m_target;
+    GCGLenum m_target;
 
-    GC3Denum m_minFilter;
-    GC3Denum m_magFilter;
-    GC3Denum m_wrapS;
-    GC3Denum m_wrapT;
+#if !USE(ANGLE)
+    GCGLenum m_minFilter;
+    GCGLenum m_magFilter;
+    GCGLenum m_wrapS;
+    GCGLenum m_wrapT;
 
     Vector<Vector<LevelInfo>> m_info;
 
@@ -138,6 +149,9 @@ private:
     bool m_isHalfFloatType;
     bool m_isForWebGL1;
     bool m_immutable { false };
+#endif
 };
 
 } // namespace WebCore
+
+#endif

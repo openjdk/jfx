@@ -28,8 +28,7 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "FTLExitTimeObjectMaterialization.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "TrackedReferences.h"
 
 namespace JSC { namespace FTL {
@@ -38,7 +37,9 @@ ExitValue ExitValue::materializeNewObject(ExitTimeObjectMaterialization* data)
 {
     ExitValue result;
     result.m_kind = ExitValueMaterializeNewObject;
-    result.u.newObjectMaterializationData = data;
+    UnionType u;
+    u.newObjectMaterializationData = data;
+    result.m_value = WTFMove(u);
     return result;
 }
 
@@ -75,9 +76,6 @@ DataFormat ExitValue::dataFormat() const
 
     case ExitValueInJSStackAsDouble:
         return DataFormatDouble;
-
-    case ExitValueRecovery:
-        return recoveryFormat();
     }
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -110,9 +108,6 @@ void ExitValue::dumpInContext(PrintStream& out, DumpContext* context) const
     case ExitValueInJSStackAsDouble:
         out.print("InJSStackAsDouble:", virtualRegister());
         return;
-    case ExitValueRecovery:
-        out.print("Recovery(", recoveryOpcode(), ", arg", leftRecoveryArgument(), ", arg", rightRecoveryArgument(), ", ", recoveryFormat(), ")");
-        return;
     case ExitValueMaterializeNewObject:
         out.print("Materialize(", WTF::RawPointer(objectMaterialization()), ")");
         return;
@@ -123,7 +118,7 @@ void ExitValue::dumpInContext(PrintStream& out, DumpContext* context) const
 
 void ExitValue::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 void ExitValue::validateReferences(const TrackedReferences& trackedReferences) const

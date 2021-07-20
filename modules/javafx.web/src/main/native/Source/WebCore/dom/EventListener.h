@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,8 +21,10 @@
 #pragma once
 
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace JSC {
+class AbstractSlotVisitor;
 class JSObject;
 class SlotVisitor;
 }
@@ -31,8 +33,9 @@ namespace WebCore {
 
 class ScriptExecutionContext;
 class Event;
+class EventTarget;
 
-class EventListener : public RefCounted<EventListener> {
+class EventListener : public RefCounted<EventListener>, public CanMakeWeakPtr<EventListener> {
 public:
     enum Type {
         JSEventListenerType,
@@ -50,14 +53,22 @@ public:
     virtual void handleEvent(ScriptExecutionContext&, Event&) = 0;
     virtual bool wasCreatedFromMarkup() const { return false; }
 
+    virtual void visitJSFunction(JSC::AbstractSlotVisitor&) { }
     virtual void visitJSFunction(JSC::SlotVisitor&) { }
 
     virtual bool isAttribute() const { return false; }
     Type type() const { return m_type; }
 
+#if ASSERT_ENABLED
+    virtual void checkValidityForEventTarget(EventTarget&) { }
+#endif
+
 #if PLATFORM(JAVA)
     virtual bool isJavaEventListener() const { return false; }
 #endif
+
+    virtual JSC::JSObject* jsFunction() const { return nullptr; }
+    virtual JSC::JSObject* wrapper() const { return nullptr; }
 
 protected:
     explicit EventListener(Type type)

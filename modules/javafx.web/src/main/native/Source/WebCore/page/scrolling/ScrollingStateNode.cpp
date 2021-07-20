@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ScrollingStateNode.h"
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingStateFixedNode.h"
 #include "ScrollingStateTree.h"
@@ -51,26 +51,32 @@ ScrollingStateNode::ScrollingStateNode(const ScrollingStateNode& stateNode, Scro
     , m_changedProperties(stateNode.changedProperties())
     , m_scrollingStateTree(adoptiveTree)
 {
-    if (hasChangedProperty(Layer))
+    if (hasChangedProperty(Property::Layer))
         setLayer(stateNode.layer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
+
     scrollingStateTree().addNode(*this);
 }
 
 ScrollingStateNode::~ScrollingStateNode() = default;
 
-void ScrollingStateNode::setPropertyChanged(unsigned propertyBit)
+void ScrollingStateNode::setPropertyChanged(Property property)
 {
-    if (hasChangedProperty(propertyBit))
+    if (hasChangedProperty(property))
         return;
 
-    setPropertyChangedBit(propertyBit);
+    setPropertyChangedInternal(property);
     m_scrollingStateTree.setHasChangedProperties();
 }
 
-void ScrollingStateNode::setAllPropertiesChanged()
+OptionSet<ScrollingStateNode::Property> ScrollingStateNode::applicableProperties() const
 {
-    setPropertyChangedBit(Layer);
-    setPropertyChangedBit(ChildNodes);
+    return { Property::Layer, Property::ChildNodes };
+}
+
+void ScrollingStateNode::setPropertyChangesAfterReattach()
+{
+    auto allPropertiesForNodeType = applicableProperties();
+    setPropertiesChangedInternal(allPropertiesForNodeType);
     m_scrollingStateTree.setHasChangedProperties();
 }
 
@@ -100,9 +106,9 @@ void ScrollingStateNode::appendChild(Ref<ScrollingStateNode>&& childNode)
     childNode->setParent(this);
 
     if (!m_children)
-        m_children = std::make_unique<Vector<RefPtr<ScrollingStateNode>>>();
+        m_children = makeUnique<Vector<RefPtr<ScrollingStateNode>>>();
     m_children->append(WTFMove(childNode));
-    setPropertyChanged(ChildNodes);
+    setPropertyChanged(Property::ChildNodes);
 }
 
 void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t index)
@@ -111,11 +117,16 @@ void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t
 
     if (!m_children) {
         ASSERT(!index);
-        m_children = std::make_unique<Vector<RefPtr<ScrollingStateNode>>>();
+        m_children = makeUnique<Vector<RefPtr<ScrollingStateNode>>>();
     }
 
-    m_children->insert(index, WTFMove(childNode));
-    setPropertyChanged(ChildNodes);
+    if (index > m_children->size()) {
+        ASSERT_NOT_REACHED();  // Crash data suggest we can get here.
+        m_children->append(WTFMove(childNode));
+    } else
+        m_children->insert(index, WTFMove(childNode));
+
+    setPropertyChanged(Property::ChildNodes);
 }
 
 void ScrollingStateNode::removeFromParent()
@@ -139,7 +150,7 @@ void ScrollingStateNode::removeChildAtIndex(size_t index)
     ASSERT(m_children && index < m_children->size());
     if (m_children && index < m_children->size()) {
         m_children->remove(index);
-        setPropertyChanged(ChildNodes);
+        setPropertyChanged(Property::ChildNodes);
     }
 }
 
@@ -151,15 +162,6 @@ size_t ScrollingStateNode::indexOfChild(ScrollingStateNode& childNode) const
     return m_children->find(&childNode);
 }
 
-void ScrollingStateNode::reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction action)
-{
-    if (!m_children)
-        return;
-
-    for (auto& child : *m_children)
-        child->reconcileLayerPositionForViewportRect(viewportRect, action);
-}
-
 void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation)
 {
     if (layerRepresentation == m_layer)
@@ -167,7 +169,7 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
 
     m_layer = layerRepresentation;
 
-    setPropertyChanged(Layer);
+    setPropertyChanged(Property::Layer);
 }
 
 void ScrollingStateNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
@@ -214,4 +216,4 @@ String ScrollingStateNode::scrollingStateTreeAsText(ScrollingStateTreeAsTextBeha
 
 } // namespace WebCore
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

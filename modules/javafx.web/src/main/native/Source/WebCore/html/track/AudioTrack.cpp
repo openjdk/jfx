@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,46 +32,46 @@
 #include "config.h"
 #include "AudioTrack.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "HTMLMediaElement.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-const AtomicString& AudioTrack::alternativeKeyword()
+const AtomString& AudioTrack::alternativeKeyword()
 {
-    static NeverDestroyed<AtomicString> alternative("alternative", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alternative("alternative", AtomString::ConstructFromLiteral);
     return alternative;
 }
 
-const AtomicString& AudioTrack::descriptionKeyword()
+const AtomString& AudioTrack::descriptionKeyword()
 {
-    static NeverDestroyed<AtomicString> description("description", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> description("description", AtomString::ConstructFromLiteral);
     return description;
 }
 
-const AtomicString& AudioTrack::mainKeyword()
+const AtomString& AudioTrack::mainKeyword()
 {
-    static NeverDestroyed<AtomicString> main("main", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> main("main", AtomString::ConstructFromLiteral);
     return main;
 }
 
-const AtomicString& AudioTrack::mainDescKeyword()
+const AtomString& AudioTrack::mainDescKeyword()
 {
-    static NeverDestroyed<AtomicString> mainDesc("main-desc", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> mainDesc("main-desc", AtomString::ConstructFromLiteral);
     return mainDesc;
 }
 
-const AtomicString& AudioTrack::translationKeyword()
+const AtomString& AudioTrack::translationKeyword()
 {
-    static NeverDestroyed<AtomicString> translation("translation", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> translation("translation", AtomString::ConstructFromLiteral);
     return translation;
 }
 
-const AtomicString& AudioTrack::commentaryKeyword()
+const AtomString& AudioTrack::commentaryKeyword()
 {
-    static NeverDestroyed<AtomicString> commentary("commentary", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> commentary("commentary", AtomString::ConstructFromLiteral);
     return commentary;
 }
 
@@ -82,9 +82,6 @@ AudioTrack::AudioTrack(AudioTrackClient& client, AudioTrackPrivate& trackPrivate
     , m_enabled(trackPrivate.enabled())
 {
     m_private->setClient(this);
-#if !RELEASE_LOG_DISABLED
-    m_private->setLogger(logger(), logIdentifier());
-#endif
     updateKindFromPrivate();
 }
 
@@ -107,9 +104,10 @@ void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
 #endif
 
     updateKindFromPrivate();
+    setId(m_private->id());
 }
 
-bool AudioTrack::isValidKind(const AtomicString& value) const
+bool AudioTrack::isValidKind(const AtomString& value) const
 {
     return value == alternativeKeyword()
         || value == commentaryKeyword()
@@ -143,26 +141,27 @@ void AudioTrack::enabledChanged(bool enabled)
         m_client->audioTrackEnabledChanged(*this);
 }
 
-void AudioTrack::idChanged(const AtomicString& id)
+void AudioTrack::idChanged(const AtomString& id)
 {
     setId(id);
 }
 
-void AudioTrack::labelChanged(const AtomicString& label)
+void AudioTrack::labelChanged(const AtomString& label)
 {
     setLabel(label);
 }
 
-void AudioTrack::languageChanged(const AtomicString& language)
+void AudioTrack::languageChanged(const AtomString& language)
 {
     setLanguage(language);
 }
 
 void AudioTrack::willRemove()
 {
-    auto element = makeRefPtr(mediaElement());
+    auto element = makeRefPtr(mediaElement().get());
     if (!element)
         return;
+
     element->removeAudioTrack(*this);
 }
 
@@ -196,13 +195,18 @@ void AudioTrack::updateKindFromPrivate()
     }
 }
 
-void AudioTrack::setMediaElement(HTMLMediaElement* element)
+void AudioTrack::setMediaElement(WeakPtr<HTMLMediaElement> element)
 {
     TrackBase::setMediaElement(element);
-#if !RELEASE_LOG_DISABLED
-    m_private->setLogger(logger(), logIdentifier());
-#endif
 }
+
+#if !RELEASE_LOG_DISABLED
+void AudioTrack::setLogger(const Logger& logger, const void* logIdentifier)
+{
+    TrackBase::setLogger(logger, logIdentifier);
+    m_private->setLogger(logger, this->logIdentifier());
+}
+#endif
 
 } // namespace WebCore
 

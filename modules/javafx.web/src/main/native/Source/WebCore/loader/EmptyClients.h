@@ -40,6 +40,7 @@ namespace WebCore {
 
 class DiagnosticLoggingClient;
 class EditorClient;
+class HTMLImageElement;
 class PageConfiguration;
 
 class EmptyChromeClient : public ChromeClient {
@@ -61,7 +62,7 @@ class EmptyChromeClient : public ChromeClient {
     void focusedElementChanged(Element*) final { }
     void focusedFrameChanged(Frame*) final { }
 
-    Page* createWindow(Frame&, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
+    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
 
     bool canRunModal() final { return false; }
@@ -101,6 +102,11 @@ class EmptyChromeClient : public ChromeClient {
 
     KeyboardUIMode keyboardUIMode() final { return KeyboardAccessDefault; }
 
+    bool hoverSupportedByPrimaryPointingDevice() const final { return false; };
+    bool hoverSupportedByAnyAvailablePointingDevice() const final { return false; }
+    Optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const final { return WTF::nullopt; };
+    OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const final { return { }; }
+
     void invalidateRootView(const IntRect&) final { }
     void invalidateContentsAndRootView(const IntRect&) override { }
     void invalidateContentsForSlowScroll(const IntRect&) final { }
@@ -108,20 +114,18 @@ class EmptyChromeClient : public ChromeClient {
 
     IntPoint screenToRootView(const IntPoint& p) const final { return p; }
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
-
-#if PLATFORM(IOS_FAMILY)
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };
-#endif
+
+    void didFinishLoadingImageForElement(HTMLImageElement&) final { }
 
     PlatformPageClient platformPageClient() const final { return 0; }
     void contentsSizeChanged(Frame&, const IntSize&) const final { }
+    void intrinsicContentsSizeChanged(const IntSize&) const final { }
 
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned) final { }
+    void mouseDidMoveOverElement(const HitTestResult&, unsigned, const String&, TextDirection) final { }
 
-    void setToolTip(const String&, TextDirection) final { }
-
-    void print(Frame&) final { }
+    void print(Frame&, const StringWithDirection&) final { }
 
     void exceededDatabaseQuota(Frame&, const String&, DatabaseDetails) final { }
 
@@ -134,6 +138,15 @@ class EmptyChromeClient : public ChromeClient {
 
 #if ENABLE(DATALIST_ELEMENT)
     std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    bool canShowDataListSuggestionLabels() const final { return false; }
+#endif
+
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
+#endif
+
+#if ENABLE(APP_HIGHLIGHTS)
+    void storeAppHighlight(const AppHighlight&) const final;
 #endif
 
     void runOpenPanel(Frame&, FileChooser&) final;
@@ -143,17 +156,15 @@ class EmptyChromeClient : public ChromeClient {
     void elementDidFocus(Element&) final { }
     void elementDidBlur(Element&) final { }
 
-#if !PLATFORM(IOS_FAMILY)
     void setCursor(const Cursor&) final { }
     void setCursorHiddenUntilMouseMoves(bool) final { }
-#endif
 
     void scrollRectIntoView(const IntRect&) const final { }
 
     void attachRootGraphicsLayer(Frame&, GraphicsLayer*) final { }
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) final { }
     void setNeedsOneShotDrawingSynchronization() final { }
-    void scheduleCompositingLayerFlush() final { }
+    void triggerRenderingUpdate() final { }
 
 #if PLATFORM(WIN)
     void setLastSetCursorToCurrentCursor() final { }
@@ -168,8 +179,7 @@ class EmptyChromeClient : public ChromeClient {
 #if PLATFORM(IOS_FAMILY)
     void didReceiveMobileDocType(bool) final { }
     void setNeedsScrollNotifications(Frame&, bool) final { }
-    void observedContentChange(Frame&) final { }
-    void clearContentChangeObservers(Frame&) final { }
+    void didFinishContentChangeObserving(Frame&, WKContentChange) final { }
     void notifyRevealedSelectionByScrollingFrame(Frame&) final { }
     void didLayout(LayoutType) final { }
     void didStartOverflowScroll() final { }
@@ -181,8 +191,10 @@ class EmptyChromeClient : public ChromeClient {
     void addOrUpdateScrollingLayer(Node*, PlatformLayer*, PlatformLayer*, const IntSize&, bool, bool) final { }
     void removeScrollingLayer(Node*, PlatformLayer*, PlatformLayer*) final { }
 
-    void webAppOrientationsUpdated() final { };
-    void showPlaybackTargetPicker(bool, RouteSharingPolicy, const String&) final { };
+    void webAppOrientationsUpdated() final { }
+    void showPlaybackTargetPicker(bool, RouteSharingPolicy, const String&) final { }
+
+    bool showDataDetectorsUIForElement(const Element&, const Event&) final { return false; }
 #endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(ORIENTATION_EVENTS)
@@ -197,13 +209,13 @@ class EmptyChromeClient : public ChromeClient {
 
     bool isEmptyChromeClient() const final { return true; }
 
-    void didAssociateFormControls(const Vector<RefPtr<Element>>&) final { }
+    void didAssociateFormControls(const Vector<RefPtr<Element>>&, Frame&) final { }
     bool shouldNotifyOnFormChanges() final { return false; }
 
     RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) final { return nullptr; }
 };
 
 DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
-WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients();
+WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID);
 
 }

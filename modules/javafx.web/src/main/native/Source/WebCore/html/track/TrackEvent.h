@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "AudioTrack.h"
 #include "Event.h"
@@ -35,10 +35,11 @@
 namespace WebCore {
 
 class TrackEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(TrackEvent);
 public:
     virtual ~TrackEvent();
 
-    static Ref<TrackEvent> create(const AtomicString& type, CanBubble canBubble, IsCancelable cancelable, Ref<TrackBase>&& track)
+    static Ref<TrackEvent> create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<TrackBase>&& track)
     {
         return adoptRef(*new TrackEvent(type, canBubble, cancelable, WTFMove(track)));
     }
@@ -49,7 +50,7 @@ public:
         Optional<TrackEventTrack> track;
     };
 
-    static Ref<TrackEvent> create(const AtomicString& type, Init&& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<TrackEvent> create(const AtomString& type, Init&& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new TrackEvent(type, WTFMove(initializer), isTrusted));
     }
@@ -57,8 +58,8 @@ public:
     Optional<TrackEventTrack> track() const { return m_track; }
 
 private:
-    TrackEvent(const AtomicString& type, CanBubble, IsCancelable, Ref<TrackBase>&&);
-    TrackEvent(const AtomicString& type, Init&& initializer, IsTrusted);
+    TrackEvent(const AtomString& type, CanBubble, IsCancelable, Ref<TrackBase>&&);
+    TrackEvent(const AtomString& type, Init&& initializer, IsTrusted);
 
     EventInterface eventInterface() const override;
 
@@ -67,4 +68,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

@@ -30,8 +30,11 @@
 #include "DocumentFragment.h"
 #include "Editor.h"
 #include "EventNames.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(TextEvent);
 
 Ref<TextEvent> TextEvent::createForBindings()
 {
@@ -105,7 +108,7 @@ TextEvent::TextEvent(RefPtr<WindowProxy>&& view, const String& data, const Vecto
 
 TextEvent::~TextEvent() = default;
 
-void TextEvent::initTextEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view, const String& data)
+void TextEvent::initTextEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view, const String& data)
 {
     if (isBeingDispatched())
         return;

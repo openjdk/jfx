@@ -35,7 +35,7 @@
 namespace JSC { namespace DFG {
 
 // This calls operationCreateDirectArguments but then restores the value of lengthGPR.
-class CallCreateDirectArgumentsSlowPathGenerator : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
+class CallCreateDirectArgumentsSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
 public:
     CallCreateDirectArgumentsSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, GPRReg resultGPR, RegisteredStructure structure,
@@ -49,14 +49,14 @@ public:
         jit->silentSpillAllRegistersImpl(false, m_plans, resultGPR);
     }
 
-protected:
-    void generateInternal(SpeculativeJIT* jit) override
+private:
+    void generateInternal(SpeculativeJIT* jit) final
     {
         linkFrom(jit);
         for (unsigned i = 0; i < m_plans.size(); ++i)
             jit->silentSpill(m_plans[i]);
         jit->callOperation(
-            operationCreateDirectArguments, m_resultGPR, m_structure, m_lengthGPR, m_minCapacity);
+            operationCreateDirectArguments, m_resultGPR, &jit->vm(), m_structure, m_lengthGPR, m_minCapacity);
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
         jit->m_jit.exceptionCheck();
@@ -65,7 +65,6 @@ protected:
         jumpTo(jit);
     }
 
-private:
     GPRReg m_resultGPR;
     RegisteredStructure m_structure;
     GPRReg m_lengthGPR;

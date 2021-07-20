@@ -1,4 +1,4 @@
-# Copyright (C) 2011 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2019 Apple Inc. All rights reserved.
 # Copyright (C) 2012 Sony Network Entertainment. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -141,10 +141,10 @@ class Trie:
         str = makePadding(indent)
 
         if self.value != None:
-            print(str + "if (!isIdentPartIncludingEscape(code+%d, m_codeEnd)) {" % (len(self.fullPrefix)))
+            print(str + "if (LIKELY(cannotBeIdentPartOrEscapeStart(code[%d]))) {" % (len(self.fullPrefix)))
             print(str + "    internalShift<%d>();" % len(self.fullPrefix))
             print(str + "    if (shouldCreateIdentifier)")
-            print(str + ("        data->ident = &m_vm->propertyNames->%sKeyword;" % self.fullPrefix))
+            print(str + ("        data->ident = &m_vm.propertyNames->%sKeyword;" % self.fullPrefix))
             print(str + "    return " + self.value + ";")
             print(str + "}")
         rootIndex = len(self.fullPrefix)
@@ -184,10 +184,10 @@ class Trie:
     def printAsC(self):
         print("namespace JSC {")
         print("")
-        print("static ALWAYS_INLINE bool isIdentPartIncludingEscape(const LChar* code, const LChar* codeEnd);")
-        print("static ALWAYS_INLINE bool isIdentPartIncludingEscape(const UChar* code, const UChar* codeEnd);")
+        print("static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(LChar);")
+        print("static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(UChar);")
         # max length + 1 so we don't need to do any bounds checking at all
-        print("static const int maxTokenLength = %d;" % (self.maxLength() + 1))
+        print("static constexpr int maxTokenLength = %d;" % (self.maxLength() + 1))
         print("")
         print("template <>")
         print("template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::parseKeyword(JSTokenData* data)")

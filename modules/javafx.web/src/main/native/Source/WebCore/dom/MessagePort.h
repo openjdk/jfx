@@ -32,10 +32,11 @@
 #include "MessagePortChannel.h"
 #include "MessagePortIdentifier.h"
 #include "MessageWithMessagePorts.h"
+#include "PostMessageOptions.h"
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSObject;
 class JSValue;
 }
@@ -44,14 +45,14 @@ namespace WebCore {
 
 class Frame;
 
-class MessagePort final : public ActiveDOMObject, public EventTargetWithInlineData, public CanMakeWeakPtr<MessagePort> {
+class MessagePort final : public ActiveDOMObject, public EventTargetWithInlineData {
     WTF_MAKE_NONCOPYABLE(MessagePort);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(MessagePort);
 public:
     static Ref<MessagePort> create(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
     virtual ~MessagePort();
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
 
     void start();
     void close();
@@ -81,13 +82,6 @@ public:
     WEBCORE_EXPORT void ref() const;
     WEBCORE_EXPORT void deref() const;
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
-    void contextDestroyed() final;
-    void stop() final { close(); }
-    bool hasPendingActivity() const final;
-
     WEBCORE_EXPORT bool isLocallyReachable() const;
 
     // EventTargetWithInlineData.
@@ -96,13 +90,22 @@ public:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    void dispatchEvent(Event&) final;
+
+    TransferredMessagePort disentangle();
+    static Ref<MessagePort> entangle(ScriptExecutionContext&, TransferredMessagePort&&);
+
 private:
     explicit MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
 
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
-    bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) final;
+    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
 
-    void disentangle();
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
+    void contextDestroyed() final;
+    void stop() final { close(); }
+    bool virtualHasPendingActivity() const final;
 
     void registerLocalActivity();
 

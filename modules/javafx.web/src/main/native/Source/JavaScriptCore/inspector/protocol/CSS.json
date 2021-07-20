@@ -1,7 +1,8 @@
 {
     "domain": "CSS",
     "description": "This domain exposes CSS read/write operations. All CSS objects, like stylesheets, rules, and styles, have an associated <code>id</code> used in subsequent operations on the related object. Each object type has a specific <code>id</code> structure, and those are not interchangeable between objects of different kinds. CSS objects can be loaded using the <code>get*ForNode()</code> calls (which accept a DOM node id). Alternatively, a client can discover all the existing stylesheets with the <code>getAllStyleSheets()</code> method and subsequently load the required stylesheet contents using the <code>getStyleSheet[Text]()</code> methods.",
-    "availability": ["web"],
+    "debuggableTypes": ["itml", "page", "web-page"],
+    "targetTypes": ["itml", "page"],
     "types": [
         {
             "id": "StyleSheetId",
@@ -19,7 +20,7 @@
         {
             "id": "StyleSheetOrigin",
             "type": "string",
-            "enum": ["user", "user-agent", "inspector", "regular"],
+            "enum": ["user", "user-agent", "author", "inspector"],
             "description": "Stylesheet type: \"user\" for user stylesheets, \"user-agent\" for user-agent stylesheets, \"inspector\" for stylesheets created by the inspector (i.e. those holding the \"via inspector\" rules), \"regular\" for regular stylesheets."
         },
         {
@@ -32,11 +33,32 @@
             ]
         },
         {
+            "id": "PseudoId",
+            "type": "string",
+            "enum": [
+                "first-line",
+                "first-letter",
+                "highlight",
+                "marker",
+                "before",
+                "after",
+                "selection",
+                "scrollbar",
+                "scrollbar-thumb",
+                "scrollbar-button",
+                "scrollbar-track",
+                "scrollbar-track-piece",
+                "scrollbar-corner",
+                "resizer"
+            ],
+            "description": "Pseudo-style identifier (see <code>enum PseudoId</code> in <code>RenderStyleConstants.h</code>)."
+        },
+        {
             "id": "PseudoIdMatches",
             "type": "object",
             "description": "CSS rule collection for a single pseudo style.",
             "properties": [
-                { "name": "pseudoId", "type": "integer", "description": "Pseudo style identifier (see <code>enum PseudoId</code> in <code>RenderStyleConstants.h</code>)."},
+                { "name": "pseudoId", "$ref": "PseudoId" },
                 { "name": "matches", "type": "array", "items": { "$ref": "RuleMatch" }, "description": "Matches of CSS rules applicable to the pseudo style."}
             ]
         },
@@ -124,7 +146,7 @@
                 { "name": "sourceLine", "type": "integer", "description": "Line ordinal of the rule selector start character in the resource."},
                 { "name": "origin", "$ref": "StyleSheetOrigin", "description": "Parent stylesheet's origin."},
                 { "name": "style", "$ref": "CSSStyle", "description": "Associated style declaration." },
-                { "name": "media", "type": "array", "items": { "$ref": "CSSMedia" }, "optional": true, "description": "Media list array (for rules involving media queries). The array enumerates media queries starting with the innermost one, going outwards." }
+                { "name": "groupings", "type": "array", "items": { "$ref": "Grouping" }, "optional": true, "description": "Grouping list array (for rules involving @media/@supports). The array enumerates CSS groupings starting with the innermost one, going outwards." }
             ]
         },
         {
@@ -201,15 +223,47 @@
             ]
         },
         {
-            "id": "CSSMedia",
+            "id": "Grouping",
             "type": "object",
-            "description": "CSS media query descriptor.",
+            "description": "CSS @media (as well as other users of media queries, like @import, <style>, <link>, etc.) and @supports descriptor.",
             "properties": [
                 { "name": "text", "type": "string", "description": "Media query text." },
-                { "name": "source", "type": "string", "enum": ["mediaRule", "importRule", "linkedSheet", "inlineSheet"], "description": "Source of the media query: \"mediaRule\" if specified by a @media rule, \"importRule\" if specified by an @import rule, \"linkedSheet\" if specified by a \"media\" attribute in a linked stylesheet's LINK tag, \"inlineSheet\" if specified by a \"media\" attribute in an inline stylesheet's STYLE tag." },
-                { "name": "sourceURL", "type": "string", "optional": true, "description": "URL of the document containing the media query description." },
-                { "name": "sourceLine", "type": "integer", "optional": true, "description": "Line in the document containing the media query (not defined for the \"stylesheet\" source)." }
+                { "name": "type", "type": "string", "enum": ["media-rule", "media-import-rule", "media-link-node", "media-style-node", "supports-rule"], "description": "Source of the media query: \"media-rule\" if specified by a @media rule, \"media-import-rule\" if specified by an @import rule, \"media-link-node\" if specified by a \"media\" attribute in a linked style sheet's LINK tag, \"media-style-node\" if specified by a \"media\" attribute in an inline style sheet's STYLE tag, \"supports-rule\" if specified by an @supports rule, ." },
+                { "name": "sourceURL", "type": "string", "optional": true, "description": "URL of the document containing the CSS grouping." }
             ]
+        },
+        {
+            "id": "Font",
+            "type": "object",
+            "description": "A representation of WebCore::Font. Conceptually this is backed by either a font file on disk or from the network.",
+            "properties": [
+                { "name": "displayName", "type": "string", "description": "The display name defined by the font." },
+                { "name": "variationAxes", "type": "array", "items": { "$ref": "FontVariationAxis" }, "description": "The variation axes defined by the font." }
+            ]
+        },
+        {
+            "id": "FontVariationAxis",
+            "type": "object",
+            "description": "A single variation axis associated with a Font.",
+            "properties": [
+                { "name": "name", "type": "string", "optional": true, "description": "The name, generally human-readable, of the variation axis. Some axes may not provide a human-readable name distiguishable from the tag. This field is ommited when there is no name, or the name matches the tag exactly." },
+                { "name": "tag", "type": "string", "description": "The four character tag for the variation axis." },
+                { "name": "minimumValue", "type": "number", "description": "The minimum value that will affect the axis." },
+                { "name": "maximumValue", "type": "number", "description": "The maximum value that will affect the axis." },
+                { "name": "defaultValue", "type": "number", "description": "The value that is used for the axis when it is not otherwise controlled." }
+            ]
+        },
+        {
+            "id": "LayoutContextType",
+            "type": "string",
+            "enum": ["grid"],
+            "description": "The layout context type of a node."
+        },
+        {
+            "id": "LayoutContextTypeChangedMode",
+            "type": "string",
+            "enum": ["observed", "all"],
+            "description": "The mode for how layout context type changes are handled (default: <code>Observed</code>). <code>Observed</code> limits handling to those nodes already known to the frontend by other means (generally, this means the node is a visible item in the Elements tab). <code>All</code> informs the frontend of all layout context type changes and all nodes with a known layout context are sent to the frontend."
         }
     ],
     "commands": [
@@ -254,6 +308,16 @@
             ],
             "returns": [
                 { "name": "computedStyle", "type": "array", "items": { "$ref": "CSSComputedStyleProperty" }, "description": "Computed style for the specified DOM node." }
+            ]
+        },
+        {
+            "name": "getFontDataForNode",
+            "description": "Returns the primary font of the computed font cascade for a DOM node identified by <code>nodeId</code>.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "DOM.NodeId" }
+            ],
+            "returns": [
+                { "name": "primaryFont", "$ref": "Font", "description": "Computed primary font for the specified DOM node." }
             ]
         },
         {
@@ -305,6 +369,7 @@
         {
             "name": "setRuleSelector",
             "description": "Modifies the rule selector.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "ruleId", "$ref": "CSSRuleId" },
                 { "name": "selector", "type": "string" }
@@ -316,6 +381,7 @@
         {
             "name": "createStyleSheet",
             "description": "Creates a new special \"inspector\" stylesheet in the frame with given <code>frameId</code>.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "frameId", "$ref": "Network.FrameId", "description": "Identifier of the frame where the new \"inspector\" stylesheet should be created." }
             ],
@@ -326,6 +392,7 @@
         {
             "name": "addRule",
             "description": "Creates a new empty rule with the given <code>selector</code> in a stylesheet with given <code>styleSheetId</code>.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "styleSheetId", "$ref": "StyleSheetId" },
                 { "name": "selector", "type": "string" }
@@ -344,6 +411,7 @@
         {
             "name": "getSupportedSystemFontFamilyNames",
             "description": "Returns all supported system font family names.",
+            "targetTypes": ["page"],
             "returns": [
                 { "name": "fontFamilyNames", "type": "array", "items": { "type": "string" }, "description": "Supported system font families." }
             ]
@@ -351,9 +419,17 @@
         {
             "name": "forcePseudoState",
             "description": "Ensures that the given node will have specified pseudo-classes whenever its style is computed by the browser.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "DOM.NodeId", "description": "The element id for which to force the pseudo state." },
                 { "name": "forcedPseudoClasses", "type": "array", "items": { "type": "string", "enum": ["active", "focus", "hover", "visited"] }, "description": "Element pseudo classes to force when computing the element's style." }
+            ]
+        },
+        {
+            "name": "setLayoutContextTypeChangedMode",
+            "description": "Change how layout context type changes are handled for nodes. When the new mode would observe nodes the frontend has not yet recieved, those nodes will be sent to the frontend immediately.",
+            "parameters": [
+                { "name": "mode", "$ref": "LayoutContextTypeChangedMode", "description": "The mode for how layout context type changes are handled." }
             ]
         }
     ],
@@ -372,6 +448,7 @@
         {
             "name": "styleSheetAdded",
             "description": "Fired whenever an active document stylesheet is added.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "header", "$ref": "CSSStyleSheetHeader", "description": "Added stylesheet metainfo." }
             ]
@@ -379,8 +456,17 @@
         {
             "name": "styleSheetRemoved",
             "description": "Fired whenever an active document stylesheet is removed.",
+            "targetTypes": ["page"],
             "parameters": [
                 { "name": "styleSheetId", "$ref": "StyleSheetId", "description": "Identifier of the removed stylesheet." }
+            ]
+        },
+        {
+            "name": "nodeLayoutContextTypeChanged",
+            "description": "Called when a node's layout context type has changed.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Identifier of the node whose layout context type changed." },
+                { "name": "layoutContextType", "$ref": "LayoutContextType", "optional": true, "description": "The new layout context type of the node. When not provided, the <code>LayoutContextType</code> of the node is not a context for which Web Inspector has specific functionality." }
             ]
         }
     ]

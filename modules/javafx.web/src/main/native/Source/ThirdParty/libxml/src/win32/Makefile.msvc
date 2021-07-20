@@ -106,6 +106,11 @@ CFLAGS = $(CFLAGS) /D "NDEBUG" /O2
 LDFLAGS = $(LDFLAGS)
 !endif
 
+# append CFLAGS etc. passed on command line
+CPPFLAGS = $(CPPFLAGS) $(EXTRA_CPPFLAGS)
+CFLAGS = $(CFLAGS) $(EXTRA_CFLAGS)
+LDFLAGS = $(LDFLAGS) $(EXTRA_LDFLAGS)
+
 # Libxml object files.
 XML_OBJS = $(XML_INTDIR)\buf.obj\
 	$(XML_INTDIR)\c14n.obj\
@@ -274,9 +279,7 @@ UTILS = $(BINDIR)\xmllint.exe\
 	$(BINDIR)\testlimits.exe\
 	$(BINDIR)\testrecurse.exe
 	
-!if "$(WITH_THREADS)" == "yes" || "$(WITH_THREADS)" == "ctls" || "$(WITH_THREADS)" == "native"
-UTILS = $(UTILS) $(BINDIR)\testThreadsWin32.exe
-!else if "$(WITH_THREADS)" == "posix"
+!if "$(WITH_THREADS)" != "no"
 UTILS = $(UTILS) $(BINDIR)\testThreads.exe
 !endif
 

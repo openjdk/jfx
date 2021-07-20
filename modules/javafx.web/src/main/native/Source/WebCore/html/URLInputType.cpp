@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-const AtomicString& URLInputType::formControlType() const
+const AtomString& URLInputType::formControlType() const
 {
     return InputTypeNames::url();
 }
@@ -59,11 +59,6 @@ bool URLInputType::typeMismatch() const
 String URLInputType::typeMismatchText() const
 {
     return validationMessageTypeMismatchForURLText();
-}
-
-bool URLInputType::isURLField() const
-{
-    return true;
 }
 
 String URLInputType::sanitizeValue(const String& proposedValue) const

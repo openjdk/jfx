@@ -35,17 +35,22 @@
 #include "JSDOMBinding.h"
 #include "JSPerformanceMark.h"
 #include "JSPerformanceMeasure.h"
+#include "JSPerformancePaintTiming.h"
 #include "JSPerformanceResourceTiming.h"
 #include "PerformanceMark.h"
 #include "PerformanceMeasure.h"
+#include "PerformancePaintTiming.h"
 #include "PerformanceResourceTiming.h"
 
 
 namespace WebCore {
 using namespace JSC;
 
-JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<PerformanceEntry>&& entry)
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<PerformanceEntry>&& entry)
 {
+    if (is<PerformancePaintTiming>(entry))
+        return createWrapper<PerformancePaintTiming>(globalObject, WTFMove(entry));
+
     if (is<PerformanceResourceTiming>(entry))
         return createWrapper<PerformanceResourceTiming>(globalObject, WTFMove(entry));
 
@@ -58,9 +63,9 @@ JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<Perfor
     return createWrapper<PerformanceEntry>(globalObject, WTFMove(entry));
 }
 
-JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, PerformanceEntry& entry)
+JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, PerformanceEntry& entry)
 {
-    return wrap(state, globalObject, entry);
+    return wrap(lexicalGlobalObject, globalObject, entry);
 }
 
 } // namespace WebCore

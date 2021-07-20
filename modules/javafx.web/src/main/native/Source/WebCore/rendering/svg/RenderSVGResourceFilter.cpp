@@ -45,6 +45,7 @@
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(FilterData);
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceFilter);
 
 RenderSVGResourceFilter::RenderSVGResourceFilter(SVGFilterElement& element, RenderStyle&& style)
@@ -88,7 +89,7 @@ std::unique_ptr<SVGFilterBuilder> RenderSVGResourceFilter::buildPrimitives(SVGFi
     FloatRect targetBoundingBox = filter.targetBoundingBox();
 
     // Add effects to the builder
-    auto builder = std::make_unique<SVGFilterBuilder>(SourceGraphic::create(filter));
+    auto builder = makeUnique<SVGFilterBuilder>(SourceGraphic::create(filter));
     builder->setPrimitiveUnits(filterElement().primitiveUnits());
     builder->setTargetBoundingBox(targetBoundingBox);
 
@@ -102,7 +103,7 @@ std::unique_ptr<SVGFilterBuilder> RenderSVGResourceFilter::buildPrimitives(SVGFi
         element.setStandardAttributes(effect.get());
         effect->setEffectBoundaries(SVGLengthContext::resolveRectangle<SVGFilterPrimitiveStandardAttributes>(&element, filterElement().primitiveUnits(), targetBoundingBox));
         if (element.renderer())
-            effect->setOperatingColorSpace(element.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? ColorSpaceLinearRGB : ColorSpaceSRGB);
+            effect->setOperatingColorSpace(element.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB : DestinationColorSpace::SRGB);
         builder->add(element.result(), WTFMove(effect));
     }
     return builder;
@@ -122,7 +123,7 @@ bool RenderSVGResourceFilter::applyResource(RenderElement& renderer, const Rende
         return false; // Already built, or we're in a cycle, or we're marked for removal. Regardless, just do nothing more now.
     }
 
-    auto filterData = std::make_unique<FilterData>();
+    auto filterData = makeUnique<FilterData>();
     FloatRect targetBoundingBox = renderer.objectBoundingBox();
 
     filterData->boundaries = SVGLengthContext::resolveRectangle<SVGFilterElement>(&filterElement(), filterElement().filterUnits(), targetBoundingBox);
@@ -190,8 +191,8 @@ bool RenderSVGResourceFilter::applyResource(RenderElement& renderer, const Rende
     effectiveTransform.scale(scale.width(), scale.height());
     effectiveTransform.multiply(filterData->shearFreeAbsoluteTransform);
 
-    RenderingMode renderingMode = renderer.settings().acceleratedFiltersEnabled() ? Accelerated : Unaccelerated;
-    auto sourceGraphic = SVGRenderingContext::createImageBuffer(filterData->drawingRegion, effectiveTransform, ColorSpaceLinearRGB, renderingMode, context);
+    RenderingMode renderingMode = renderer.settings().acceleratedFiltersEnabled() ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
+    auto sourceGraphic = SVGRenderingContext::createImageBuffer(filterData->drawingRegion, effectiveTransform, DestinationColorSpace::LinearSRGB, renderingMode, context);
     if (!sourceGraphic) {
         ASSERT(!m_rendererFilterDataMap.contains(&renderer));
         filterData->savedContext = context;
@@ -270,7 +271,7 @@ void RenderSVGResourceFilter::postApplyResource(RenderElement& renderer, Graphic
             filterData.state = FilterData::Applying;
             lastEffect->apply();
             lastEffect->correctFilterResultIfNeeded();
-            lastEffect->transformResultColorSpace(ColorSpaceSRGB);
+            lastEffect->transformResultColorSpace(DestinationColorSpace::SRGB);
         }
         filterData.state = FilterData::Built;
 
@@ -285,7 +286,7 @@ void RenderSVGResourceFilter::postApplyResource(RenderElement& renderer, Graphic
             context->concatCTM(filterData.shearFreeAbsoluteTransform);
         }
     }
-    filterData.sourceGraphicBuffer.reset();
+    filterData.sourceGraphicBuffer = nullptr;
 
     LOG_WITH_STREAM(Filters, stream << "RenderSVGResourceFilter " << this << " postApplyResource done\n");
 }

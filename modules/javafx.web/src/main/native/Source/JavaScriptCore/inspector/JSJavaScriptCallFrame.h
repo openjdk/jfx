@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,22 @@
 
 #pragma once
 
-#include "JSDestructibleObject.h"
+#include "JSObject.h"
 #include "JavaScriptCallFrame.h"
 
 namespace Inspector {
 
-class JSJavaScriptCallFrame final : public JSC::JSDestructibleObject {
+class JSJavaScriptCallFrame final : public JSC::JSNonFinalObject {
 public:
-    typedef JSC::JSDestructibleObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags;
+    using Base = JSC::JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, JSC::SubspaceAccess mode>
+    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        return vm.javaScriptCallFrameSpace<mode>();
+    }
 
     DECLARE_INFO;
 
@@ -56,39 +63,37 @@ public:
     void releaseImpl();
 
     // Functions.
-    JSC::JSValue evaluateWithScopeExtension(JSC::ExecState*);
-    JSC::JSValue scopeDescriptions(JSC::ExecState*);
+    JSC::JSValue evaluateWithScopeExtension(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue scopeDescriptions(JSC::JSGlobalObject*);
 
     // Attributes.
-    JSC::JSValue caller(JSC::ExecState*) const;
-    JSC::JSValue sourceID(JSC::ExecState*) const;
-    JSC::JSValue line(JSC::ExecState*) const;
-    JSC::JSValue column(JSC::ExecState*) const;
-    JSC::JSValue functionName(JSC::ExecState*) const;
-    JSC::JSValue scopeChain(JSC::ExecState*) const;
-    JSC::JSValue thisObject(JSC::ExecState*) const;
-    JSC::JSValue type(JSC::ExecState*) const;
-    JSC::JSValue isTailDeleted(JSC::ExecState*) const;
+    JSC::JSValue caller(JSC::JSGlobalObject*) const;
+    JSC::JSValue sourceID(JSC::JSGlobalObject*) const;
+    JSC::JSValue line(JSC::JSGlobalObject*) const;
+    JSC::JSValue column(JSC::JSGlobalObject*) const;
+    JSC::JSValue functionName(JSC::JSGlobalObject*) const;
+    JSC::JSValue scopeChain(JSC::JSGlobalObject*) const;
+    JSC::JSValue thisObject(JSC::JSGlobalObject*) const;
+    JSC::JSValue type(JSC::JSGlobalObject*) const;
+    JSC::JSValue isTailDeleted(JSC::JSGlobalObject*) const;
 
     // Constants.
-    static const unsigned short GLOBAL_SCOPE = 0;
-    static const unsigned short WITH_SCOPE = 1;
-    static const unsigned short CLOSURE_SCOPE = 2;
-    static const unsigned short CATCH_SCOPE = 3;
-    static const unsigned short FUNCTION_NAME_SCOPE = 4;
-    static const unsigned short GLOBAL_LEXICAL_ENVIRONMENT_SCOPE = 5;
-    static const unsigned short NESTED_LEXICAL_SCOPE = 6;
-
-protected:
-    void finishCreation(JSC::VM&);
+    static constexpr unsigned short GLOBAL_SCOPE = 0;
+    static constexpr unsigned short WITH_SCOPE = 1;
+    static constexpr unsigned short CLOSURE_SCOPE = 2;
+    static constexpr unsigned short CATCH_SCOPE = 3;
+    static constexpr unsigned short FUNCTION_NAME_SCOPE = 4;
+    static constexpr unsigned short GLOBAL_LEXICAL_ENVIRONMENT_SCOPE = 5;
+    static constexpr unsigned short NESTED_LEXICAL_SCOPE = 6;
 
 private:
     JSJavaScriptCallFrame(JSC::VM&, JSC::Structure*, Ref<JavaScriptCallFrame>&&);
     ~JSJavaScriptCallFrame();
+    void finishCreation(JSC::VM&);
 
     JavaScriptCallFrame* m_impl;
 };
 
-JSC::JSValue toJS(JSC::ExecState*, JSC::JSGlobalObject*, JavaScriptCallFrame*);
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSC::JSGlobalObject*, JavaScriptCallFrame*);
 
 } // namespace Inspector

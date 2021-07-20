@@ -8,13 +8,15 @@
 #define __NUMBER_FORMATIMPL_H__
 
 #include "number_types.h"
-#include "number_stringbuilder.h"
+#include "formatted_string_builder.h"
 #include "number_patternstring.h"
+#include "number_usageprefs.h"
 #include "number_utils.h"
 #include "number_patternmodifier.h"
 #include "number_longnames.h"
 #include "number_compact.h"
 #include "number_microprops.h"
+#include "number_utypes.h"
 
 U_NAMESPACE_BEGIN namespace number {
 namespace impl {
@@ -29,14 +31,13 @@ class NumberFormatterImpl : public UMemory {
      * Builds a "safe" MicroPropsGenerator, which is thread-safe and can be used repeatedly.
      * The caller owns the returned NumberFormatterImpl.
      */
-    static NumberFormatterImpl *fromMacros(const MacroProps &macros, UErrorCode &status);
+    NumberFormatterImpl(const MacroProps &macros, UErrorCode &status);
 
     /**
      * Builds and evaluates an "unsafe" MicroPropsGenerator, which is cheaper but can be used only once.
      */
-    static void
-    applyStatic(const MacroProps &macros, DecimalQuantity &inValue, NumberStringBuilder &outString,
-                UErrorCode &status);
+    static int32_t formatStatic(const MacroProps &macros, UFormattedNumberData *results,
+                                UErrorCode &status);
 
     /**
      * Prints only the prefix and suffix; used for DecimalFormat getters.
@@ -44,23 +45,47 @@ class NumberFormatterImpl : public UMemory {
      * @return The index into the output at which the prefix ends and the suffix starts; in other words,
      *         the prefix length.
      */
-    static int32_t getPrefixSuffixStatic(const MacroProps& macros, int8_t signum,
-                                         StandardPlural::Form plural, NumberStringBuilder& outString,
+    static int32_t getPrefixSuffixStatic(const MacroProps& macros, Signum signum,
+                                         StandardPlural::Form plural, FormattedStringBuilder& outString,
                                          UErrorCode& status);
 
     /**
      * Evaluates the "safe" MicroPropsGenerator created by "fromMacros".
      */
-    void apply(DecimalQuantity& inValue, NumberStringBuilder& outString, UErrorCode& status) const;
+    int32_t format(UFormattedNumberData *results, UErrorCode &status) const;
+
+    /**
+     * Like format(), but saves the result into an output MicroProps without additional processing.
+     */
+    void preProcess(DecimalQuantity& inValue, MicroProps& microsOut, UErrorCode& status) const;
 
     /**
      * Like getPrefixSuffixStatic() but uses the safe compiled object.
      */
-    int32_t getPrefixSuffix(int8_t signum, StandardPlural::Form plural, NumberStringBuilder& outString,
+    int32_t getPrefixSuffix(Signum signum, StandardPlural::Form plural, FormattedStringBuilder& outString,
                             UErrorCode& status) const;
 
+    const MicroProps& getRawMicroProps() const {
+        return fMicros;
+    }
+
+    /**
+     * Synthesizes the output string from a MicroProps and DecimalQuantity.
+     * This method formats only the main number, not affixes.
+     */
+    static int32_t writeNumber(const MicroProps& micros, DecimalQuantity& quantity,
+                               FormattedStringBuilder& string, int32_t index, UErrorCode& status);
+
+    /**
+     * Adds the affixes.  Intended to be called immediately after formatNumber.
+     */
+    static int32_t writeAffixes(const MicroProps& micros, FormattedStringBuilder& string, int32_t start,
+                                int32_t end, UErrorCode& status);
+
   private:
-    // Head of the MicroPropsGenerator linked list:
+    // Head of the MicroPropsGenerator linked list. Subclasses' processQuantity
+    // methods process this list in a parent-first order, such that the last
+    // item added, which this points to, typically has its logic executed last.
     const MicroPropsGenerator *fMicroPropsGenerator = nullptr;
 
     // Tail of the list:
@@ -68,13 +93,20 @@ class NumberFormatterImpl : public UMemory {
 
     // Other fields possibly used by the number formatting pipeline:
     // TODO: Convert more of these LocalPointers to value objects to reduce the number of news?
+    LocalPointer<const UsagePrefsHandler> fUsagePrefsHandler;
+    LocalPointer<const UnitConversionHandler> fUnitConversionHandler;
     LocalPointer<const DecimalFormatSymbols> fSymbols;
     LocalPointer<const PluralRules> fRules;
     LocalPointer<const ParsedPatternInfo> fPatternInfo;
     LocalPointer<const ScientificHandler> fScientificHandler;
     LocalPointer<MutablePatternModifier> fPatternModifier;
-    LocalPointer<const ImmutablePatternModifier> fImmutablePatternModifier;
-    LocalPointer<const LongNameHandler> fLongNameHandler;
+    LocalPointer<ImmutablePatternModifier> fImmutablePatternModifier;
+    LocalPointer<LongNameHandler> fLongNameHandler;
+    // TODO: use a common base class that enables fLongNameHandler,
+    // fLongNameMultiplexer, and fMixedUnitLongNameHandler to be merged into one
+    // member?
+    LocalPointer<MixedUnitLongNameHandler> fMixedUnitLongNameHandler;
+    LocalPointer<const LongNameMultiplexer> fLongNameMultiplexer;
     LocalPointer<const CompactHandler> fCompactHandler;
 
     // Value objects possibly used by the number formatting pipeline:
@@ -85,10 +117,10 @@ class NumberFormatterImpl : public UMemory {
 
     NumberFormatterImpl(const MacroProps &macros, bool safe, UErrorCode &status);
 
-    void applyUnsafe(DecimalQuantity &inValue, NumberStringBuilder &outString, UErrorCode &status);
+    MicroProps& preProcessUnsafe(DecimalQuantity &inValue, UErrorCode &status);
 
-    int32_t getPrefixSuffixUnsafe(int8_t signum, StandardPlural::Form plural,
-                                  NumberStringBuilder& outString, UErrorCode& status);
+    int32_t getPrefixSuffixUnsafe(Signum signum, StandardPlural::Form plural,
+                                  FormattedStringBuilder& outString, UErrorCode& status);
 
     /**
      * If rulesPtr is non-null, return it.  Otherwise, return a PluralRules owned by this object for the
@@ -113,31 +145,13 @@ class NumberFormatterImpl : public UMemory {
     const MicroPropsGenerator *
     macrosToMicroGenerator(const MacroProps &macros, bool safe, UErrorCode &status);
 
-    /**
-     * Synthesizes the output string from a MicroProps and DecimalQuantity.
-     *
-     * @param micros
-     *            The MicroProps after the quantity has been consumed. Will not be mutated.
-     * @param quantity
-     *            The DecimalQuantity to be rendered. May be mutated.
-     * @param string
-     *            The output string. Will be mutated.
-     */
     static int32_t
-    microsToString(const MicroProps &micros, DecimalQuantity &quantity, NumberStringBuilder &string,
-                   UErrorCode &status);
+    writeIntegerDigits(const MicroProps &micros, DecimalQuantity &quantity, FormattedStringBuilder &string,
+                       int32_t index, UErrorCode &status);
 
     static int32_t
-    writeNumber(const MicroProps &micros, DecimalQuantity &quantity, NumberStringBuilder &string,
-                UErrorCode &status);
-
-    static int32_t
-    writeIntegerDigits(const MicroProps &micros, DecimalQuantity &quantity, NumberStringBuilder &string,
-                       UErrorCode &status);
-
-    static int32_t
-    writeFractionDigits(const MicroProps &micros, DecimalQuantity &quantity, NumberStringBuilder &string,
-                        UErrorCode &status);
+    writeFractionDigits(const MicroProps &micros, DecimalQuantity &quantity, FormattedStringBuilder &string,
+                        int32_t index, UErrorCode &status);
 };
 
 }  // namespace impl

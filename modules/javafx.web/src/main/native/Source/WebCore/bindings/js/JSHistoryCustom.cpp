@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,22 +30,26 @@
 #include "JSHistory.h"
 
 #include "SerializedScriptValue.h"
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
 
 using namespace JSC;
 
-JSValue JSHistory::state(ExecState& state) const
+JSValue JSHistory::state(JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(state, *this, wrapped().cachedState(), [this, &state] {
+    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().cachedState(), [this, &lexicalGlobalObject] {
         auto* serialized = wrapped().state();
-        return serialized ? serialized->deserialize(state, globalObject()) : jsNull();
+        return serialized ? serialized->deserialize(lexicalGlobalObject, globalObject()) : jsNull();
     });
 }
 
-void JSHistory::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSHistory::visitAdditionalChildren(Visitor& visitor)
 {
-    wrapped().cachedState().visit(visitor);
+    wrapped().cachedStateForGC().visit(visitor);
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSHistory);
 
 } // namespace WebCore

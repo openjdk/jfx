@@ -28,14 +28,11 @@
 
 #include "CodeBlock.h"
 #include "CodeBlockSetInlines.h"
-#include "HeapInlines.h"
 #include "HeapUtil.h"
 #include "JITStubRoutineSet.h"
 #include "JSCast.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include "MarkedBlockInlines.h"
-#include "Structure.h"
 #include <wtf/OSAllocator.h>
 
 namespace JSC {
@@ -68,6 +65,7 @@ void ConservativeRoots::grow()
 template<typename MarkHook>
 inline void ConservativeRoots::genericAddPointer(void* p, HeapVersion markingVersion, HeapVersion newlyAllocatedVersion, TinyBloomFilter filter, MarkHook& markHook)
 {
+    p = removeArrayPtrTag(p);
     markHook.mark(p);
 
     HeapUtil::findGCObjectPointersForMarking(

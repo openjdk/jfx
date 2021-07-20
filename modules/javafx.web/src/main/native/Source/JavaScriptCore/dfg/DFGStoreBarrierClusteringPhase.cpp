@@ -33,7 +33,7 @@
 #include "DFGInsertionSet.h"
 #include "DFGMayExit.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include <wtf/FastBitVector.h>
 
 namespace JSC { namespace DFG {
@@ -140,7 +140,7 @@ private:
                 CodeOrigin semanticOrigin = iter->semanticOrigin;
 
                 NodeType type;
-                if (Options::useConcurrentBarriers() && iter == m_neededBarriers.begin())
+                if (iter == m_neededBarriers.begin())
                     type = FencedStoreBarrier;
                 else
                     type = StoreBarrier;

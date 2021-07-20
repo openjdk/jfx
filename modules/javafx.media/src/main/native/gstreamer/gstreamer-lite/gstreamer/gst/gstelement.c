@@ -25,6 +25,13 @@
  * @title: GstElement
  * @short_description: Abstract base class for all pipeline elements
  * @see_also: #GstElementFactory, #GstPad
+ * @symbols:
+ * - GST_ELEMENT_METADATA_LONGNAME
+ * - GST_ELEMENT_METADATA_KLASS
+ * - GST_ELEMENT_METADATA_DESCRIPTION
+ * - GST_ELEMENT_METADATA_AUTHOR
+ * - GST_ELEMENT_METADATA_DOC_URI
+ * - GST_ELEMENT_METADATA_ICON_NAME
  *
  * GstElement is the abstract base class needed to construct an element that
  * can be used in a GStreamer pipeline. Please refer to the plugin writers
@@ -88,6 +95,7 @@
 #include "gstbus.h"
 #include "gsterror.h"
 #include "gstevent.h"
+#include "gstghostpad.h"
 #include "gstutils.h"
 #include "gstinfo.h"
 #include "gstquark.h"
@@ -152,6 +160,7 @@ static void gst_element_call_async_func (gpointer data, gpointer user_data);
 static GstObjectClass *parent_class = NULL;
 static guint gst_element_signals[LAST_SIGNAL] = { 0 };
 
+static GMutex _element_pool_lock;
 static GThreadPool *gst_element_pool = NULL;
 
 /* this is used in gstelementfactory.c:gst_element_register() */
@@ -187,19 +196,22 @@ gst_element_get_type (void)
   return gst_element_type;
 }
 
-static void
+static GThreadPool *
 gst_element_setup_thread_pool (void)
 {
   GError *err = NULL;
+  GThreadPool *pool;
 
   GST_DEBUG ("creating element thread pool");
-  gst_element_pool =
+  pool =
       g_thread_pool_new ((GFunc) gst_element_call_async_func, NULL, -1, FALSE,
       &err);
   if (err != NULL) {
     g_critical ("could not alloc threadpool %s", err->message);
     g_clear_error (&err);
   }
+
+  return pool;
 }
 
 static void
@@ -225,7 +237,7 @@ gst_element_class_init (GstElementClass * klass)
   gst_element_signals[PAD_ADDED] =
       g_signal_new ("pad-added", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstElementClass, pad_added), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
   /**
    * GstElement::pad-removed:
    * @gstelement: the object which received the signal
@@ -236,7 +248,7 @@ gst_element_class_init (GstElementClass * klass)
   gst_element_signals[PAD_REMOVED] =
       g_signal_new ("pad-removed", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstElementClass, pad_removed), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
   /**
    * GstElement::no-more-pads:
    * @gstelement: the object which received the signal
@@ -248,7 +260,7 @@ gst_element_class_init (GstElementClass * klass)
   gst_element_signals[NO_MORE_PADS] =
       g_signal_new ("no-more-pads", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (GstElementClass, no_more_pads), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 0);
+      NULL, NULL, G_TYPE_NONE, 0);
 
   gobject_class->dispose = gst_element_dispose;
   gobject_class->finalize = gst_element_finalize;
@@ -266,8 +278,6 @@ gst_element_class_init (GstElementClass * klass)
   klass->set_context = GST_DEBUG_FUNCPTR (gst_element_set_context_default);
 
   klass->elementfactory = NULL;
-
-  gst_element_setup_thread_pool ();
 }
 
 static void
@@ -579,6 +589,80 @@ gst_element_get_start_time (GstElement * element)
   return result;
 }
 
+/**
+ * gst_element_get_current_running_time:
+ * @element: a #GstElement.
+ *
+ * Returns the running time of the element. The running time is the
+ * element's clock time minus its base time. Will return GST_CLOCK_TIME_NONE
+ * if the element has no clock, or if its base time has not been set.
+ *
+ * Returns: the running time of the element, or GST_CLOCK_TIME_NONE if the
+ * element has no clock or its base time has not been set.
+ *
+ * Since: 1.18
+ */
+GstClockTime
+gst_element_get_current_running_time (GstElement * element)
+{
+  GstClockTime base_time, clock_time;
+
+  g_return_val_if_fail (GST_IS_ELEMENT (element), GST_CLOCK_TIME_NONE);
+
+  base_time = gst_element_get_base_time (element);
+
+  if (!GST_CLOCK_TIME_IS_VALID (base_time)) {
+    GST_DEBUG_OBJECT (element, "Could not determine base time");
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  clock_time = gst_element_get_current_clock_time (element);
+
+  if (!GST_CLOCK_TIME_IS_VALID (clock_time)) {
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  if (clock_time < base_time) {
+    GST_DEBUG_OBJECT (element, "Got negative current running time");
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  return clock_time - base_time;
+}
+
+/**
+ * gst_element_get_current_clock_time:
+ * @element: a #GstElement.
+ *
+ * Returns the current clock time of the element, as in, the time of the
+ * element's clock, or GST_CLOCK_TIME_NONE if there is no clock.
+ *
+ * Returns: the clock time of the element, or GST_CLOCK_TIME_NONE if there is
+ * no clock.
+ *
+ * Since: 1.18
+ */
+GstClockTime
+gst_element_get_current_clock_time (GstElement * element)
+{
+  GstClock *clock = NULL;
+  GstClockTime ret;
+
+  g_return_val_if_fail (GST_IS_ELEMENT (element), GST_CLOCK_TIME_NONE);
+
+  clock = gst_element_get_clock (element);
+
+  if (!clock) {
+    GST_DEBUG_OBJECT (element, "Element has no clock");
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  ret = gst_clock_get_time (clock);
+  gst_object_unref (clock);
+
+  return ret;
+}
+
 #if 0
 /**
  * gst_element_set_index:
@@ -640,9 +724,8 @@ gst_element_get_index (GstElement * element)
  * Adds a pad (link point) to @element. @pad's parent will be set to @element;
  * see gst_object_set_parent() for refcounting information.
  *
- * Pads are not automatically activated so elements should perform the needed
- * steps to activate the pad in case this pad is added in the PAUSED or PLAYING
- * state. See gst_pad_set_active() for more information about activating pads.
+ * Pads are automatically activated when added in the PAUSED or PLAYING
+ * state.
  *
  * The pad and the element should be unlocked when calling this function.
  *
@@ -685,9 +768,6 @@ gst_element_add_pad (GstElement * element, GstPad * pad)
   /* check for active pads */
   if (!active && (GST_STATE (element) > GST_STATE_READY ||
           GST_STATE_NEXT (element) == GST_STATE_PAUSED)) {
-    g_warning ("adding inactive pad '%s' to running element '%s', you need to "
-        "use gst_pad_set_active(pad,TRUE) before adding it.",
-        GST_STR_NULL (pad_name), GST_ELEMENT_NAME (element));
     gst_pad_set_active (pad, TRUE);
   }
 
@@ -803,6 +883,16 @@ gst_element_remove_pad (GstElement * element, GstPad * pad)
       gst_pad_unlink (peer, pad);
 
     gst_object_unref (peer);
+  }
+
+  /* if this is a ghost pad we also need to unset the target or it
+   * will stay linked although not allowed according to the topology.
+   *
+   * FIXME 2.0: Do this generically somehow from inside GstGhostPad
+   * when it gets unparented.
+   */
+  if (GST_IS_GHOST_PAD (pad)) {
+    gst_ghost_pad_set_target (GST_GHOST_PAD (pad), NULL);
   }
 
   GST_OBJECT_LOCK (element);
@@ -979,7 +1069,7 @@ gst_element_is_valid_request_template_name (const gchar * templ_name,
       if (next_specifier) {
         templ_postfix_len = templ_name - (templ_name_ptr + 2);
         name_postfix_len = name - name_ptr;
-    } else {
+      } else {
         templ_postfix_len = strlen (templ_name_ptr + 2);
         name_postfix_len = strlen (name_ptr);
       }
@@ -1108,10 +1198,10 @@ gst_element_get_request_pad (GstElement * element, const gchar * name)
 
   class = GST_ELEMENT_GET_CLASS (element);
 
-    templ = gst_element_class_get_request_pad_template (class, name);
+  templ = gst_element_class_get_request_pad_template (class, name);
   if (templ) {
     req_name = strstr (name, "%") ? NULL : name;
-      templ_found = TRUE;
+    templ_found = TRUE;
   } else {
     /* there is no % in the name, try to find a matching template */
     list = class->padtemplates;
@@ -1126,7 +1216,7 @@ gst_element_get_request_pad (GstElement * element, const gchar * name)
           req_name = name;
           break;
         }
-            }
+      }
       list = list->next;
     }
   }
@@ -1734,7 +1824,7 @@ gst_element_class_get_request_pad_template (GstElementClass *
 }
 
 /* get a random pad on element of the given direction.
- * The pad is random in a sense that it is the first pad that is (optionaly) linked.
+ * The pad is random in a sense that it is the first pad that is (optionally) linked.
  */
 static GstPad *
 gst_element_get_random_pad (GstElement * element,
@@ -2245,6 +2335,10 @@ gst_element_is_locked_state (GstElement * element)
  * Locks the state of an element, so state changes of the parent don't affect
  * this element anymore.
  *
+ * Note that this is racy if the state lock of the parent bin is not taken.
+ * The parent bin might've just checked the flag in another thread and as the
+ * next step proceed to change the child element's state.
+ *
  * MT safe.
  *
  * Returns: %TRUE if the state was changed, %FALSE if bad parameters were given
@@ -2448,7 +2542,7 @@ interrupted:
     if (pending)
       *pending = GST_STATE_VOID_PENDING;
 
-    GST_CAT_INFO_OBJECT (GST_CAT_STATES, element, "interruped");
+    GST_CAT_INFO_OBJECT (GST_CAT_STATES, element, "interrupted");
 
     GST_OBJECT_UNLOCK (element);
 
@@ -2986,14 +3080,14 @@ gst_element_change_state (GstElement * element, GstStateChange transition)
     case GST_STATE_CHANGE_SUCCESS:
       GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
           "element changed state SUCCESS");
-      /* we can commit the state now which will proceeed to
+      /* we can commit the state now which will proceed to
        * the next state */
       ret = gst_element_continue_state (element, ret);
       break;
     case GST_STATE_CHANGE_NO_PREROLL:
       GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
           "element changed state NO_PREROLL");
-      /* we can commit the state now which will proceeed to
+      /* we can commit the state now which will proceed to
        * the next state */
       ret = gst_element_continue_state (element, ret);
       break;
@@ -3040,7 +3134,7 @@ activate_pads (const GValue * vpad, GValue * ret, gboolean * active)
   if (!gst_pad_set_active (pad, *active)) {
     if (GST_PAD_PARENT (pad) != NULL) {
       cont = FALSE;
-    g_value_set_boolean (ret, FALSE);
+      g_value_set_boolean (ret, FALSE);
     }
   }
 
@@ -3226,8 +3320,8 @@ was_ok:
  *
  * Retrieves the factory that was used to create this element.
  *
- * Returns: (transfer none): the #GstElementFactory used for creating this
- *     element. no refcounting is needed.
+ * Returns: (transfer none) (nullable): the #GstElementFactory used for creating this
+ *     element or %NULL if element has not been registered (static element). no refcounting is needed.
  */
 GstElementFactory *
 gst_element_get_factory (GstElement * element)
@@ -3537,7 +3631,7 @@ gst_element_get_context_unlocked (GstElement * element,
  *
  * MT safe.
  *
- * Returns: (transfer full): A #GstContext or NULL
+ * Returns: (transfer full) (nullable): A #GstContext or NULL
  *
  * Since: 1.8
  */
@@ -3728,18 +3822,33 @@ gst_element_call_async (GstElement * element, GstElementCallAsyncFunc func,
   async_data->user_data = user_data;
   async_data->destroy_notify = destroy_notify;
 
-  g_thread_pool_push (gst_element_pool, async_data, NULL);
+  g_mutex_lock (&_element_pool_lock);
+  if (G_UNLIKELY (gst_element_pool == NULL))
+    gst_element_pool = gst_element_setup_thread_pool ();
+  g_thread_pool_push ((GThreadPool *) gst_element_pool, async_data, NULL);
+  g_mutex_unlock (&_element_pool_lock);
 }
 
 void
 _priv_gst_element_cleanup (void)
 {
+  g_mutex_lock (&_element_pool_lock);
   if (gst_element_pool) {
-    g_thread_pool_free (gst_element_pool, FALSE, TRUE);
-    gst_element_setup_thread_pool ();
+    g_thread_pool_free ((GThreadPool *) gst_element_pool, FALSE, TRUE);
+    gst_element_pool = NULL;
   }
+  g_mutex_unlock (&_element_pool_lock);
 }
 
+/**
+ * gst_make_element_message_details:
+ * @name: Name of the first field to set
+ * @...: variable arguments in the same form as #GstStructure
+ *
+ * Create a #GstStructure to be used with #gst_element_message_full_with_details
+ *
+ * Since: 1.10
+ */
 GstStructure *
 gst_make_element_message_details (const char *name, ...)
 {

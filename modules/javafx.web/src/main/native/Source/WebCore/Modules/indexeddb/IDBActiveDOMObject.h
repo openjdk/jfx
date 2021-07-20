@@ -38,7 +38,7 @@ public:
     Thread& originThread() const { return m_originThread.get(); }
 
     void contextDestroyed() final {
-        ASSERT(m_originThread.ptr() == &Thread::current());
+        ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
         Locker<Lock> lock(m_scriptExecutionContextLock);
         ActiveDOMObject::contextDestroyed();
@@ -49,8 +49,8 @@ public:
     {
         ASSERT(&originThread() == &object.originThread());
 
-        if (&object.originThread() == &Thread::current()) {
-            (object.*method)(arguments...);
+        if (canCurrentThreadAccessThreadLocalData(object.originThread())) {
+            (object.*method)(std::forward<Arguments>(arguments)...);
             return;
         }
 
@@ -65,7 +65,7 @@ public:
 
     void callFunctionOnOriginThread(WTF::Function<void ()>&& function)
     {
-        if (&originThread() == &Thread::current()) {
+        if (canCurrentThreadAccessThreadLocalData(originThread())) {
             function();
             return;
         }

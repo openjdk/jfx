@@ -45,11 +45,11 @@ public:
     uint64_t count() const { return m_counter; }
     void incCount() { m_counter++; }
 
-    JSValue toJS(ExecState*) const;
+    JSValue toJS(JSGlobalObject*) const;
 
 private:
-    unsigned m_id;
     OriginStack m_origin;
+    unsigned m_id;
     ExitKind m_exitKind;
     bool m_isWatchpoint;
     uint64_t m_counter;

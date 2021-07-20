@@ -49,6 +49,7 @@ static ALWAYS_INLINE void _xpc_object_validate(xpc_object_t object)
 
 typedef void* xpc_object_t;
 typedef void* xpc_connection_t;
+typedef void* xpc_endpoint_t;
 
 #define XPC_GLOBAL_OBJECT(object) (&(object))
 
@@ -121,9 +122,12 @@ void xpc_array_set_string(xpc_object_t, size_t index, const char* string);
 bool xpc_bool_get_value(xpc_object_t);
 void xpc_connection_cancel(xpc_connection_t);
 xpc_connection_t xpc_connection_create(const char* name, dispatch_queue_t);
+xpc_endpoint_t xpc_endpoint_create(xpc_connection_t);
+xpc_connection_t xpc_connection_create_from_endpoint(xpc_endpoint_t);
 xpc_connection_t xpc_connection_create_mach_service(const char* name, dispatch_queue_t, uint64_t flags);
 pid_t xpc_connection_get_pid(xpc_connection_t);
 void xpc_connection_resume(xpc_connection_t);
+void xpc_connection_suspend(xpc_connection_t);
 void xpc_connection_send_message(xpc_connection_t, xpc_object_t);
 void xpc_connection_send_message_with_reply(xpc_connection_t, xpc_object_t, dispatch_queue_t, xpc_handler_t);
 void xpc_connection_set_event_handler(xpc_connection_t, xpc_handler_t);
@@ -156,6 +160,8 @@ void xpc_connection_set_instance(xpc_connection_t, uuid_t);
 mach_port_t xpc_dictionary_copy_mach_send(xpc_object_t, const char*);
 void xpc_dictionary_set_mach_send(xpc_object_t, const char*, mach_port_t);
 
+void xpc_connection_set_bootstrap(xpc_connection_t, xpc_object_t);
+xpc_object_t xpc_copy_bootstrap();
 void xpc_connection_set_oneshot_instance(xpc_connection_t, uuid_t instance);
 
 void xpc_array_append_value(xpc_object_t xarray, xpc_object_t value);

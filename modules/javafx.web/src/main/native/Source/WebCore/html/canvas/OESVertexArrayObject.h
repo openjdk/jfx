@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "GraphicsTypes3D.h"
+#if ENABLE(WEBGL)
+
+#include "GraphicsTypesGL.h"
 #include "WebGLExtension.h"
 
 namespace WebCore {
@@ -34,12 +36,13 @@ class WebGLRenderingContextBase;
 class WebGLVertexArrayObjectOES;
 
 class OESVertexArrayObject final : public WebGLExtension {
+    WTF_MAKE_ISO_ALLOCATED(OESVertexArrayObject);
 public:
     explicit OESVertexArrayObject(WebGLRenderingContextBase&);
 
     RefPtr<WebGLVertexArrayObjectOES> createVertexArrayOES();
     void deleteVertexArrayOES(WebGLVertexArrayObjectOES*);
-    GC3Dboolean isVertexArrayOES(WebGLVertexArrayObjectOES*);
+    GCGLboolean isVertexArrayOES(WebGLVertexArrayObjectOES*);
     void bindVertexArrayOES(WebGLVertexArrayObjectOES*);
 
 private:
@@ -47,3 +50,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

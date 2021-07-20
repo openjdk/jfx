@@ -29,12 +29,13 @@
 #include "SVGFilterBuilder.h"
 #include "SVGFilterElement.h"
 #include "SVGUnitTypes.h"
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 struct FilterData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(FilterData);
     WTF_MAKE_NONCOPYABLE(FilterData);
 public:
     enum FilterDataState { PaintingSource, Applying, Built, CycleDetected, MarkedForRemoval };
@@ -43,7 +44,7 @@ public:
 
     RefPtr<SVGFilter> filter;
     std::unique_ptr<SVGFilterBuilder> builder;
-    std::unique_ptr<ImageBuffer> sourceGraphicBuffer;
+    RefPtr<ImageBuffer> sourceGraphicBuffer;
     GraphicsContext* savedContext { nullptr };
     AffineTransform shearFreeAbsoluteTransform;
     FloatRect boundaries;

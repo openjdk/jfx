@@ -29,8 +29,9 @@
 #include "ElementChildIterator.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLImageElement.h"
+#include "ImageLoader.h"
 #include "Logging.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -44,14 +45,10 @@ HTMLPictureElement::HTMLPictureElement(const QualifiedName& tagName, Document& d
 
 HTMLPictureElement::~HTMLPictureElement()
 {
-    document().removeViewportDependentPicture(*this);
-    document().removeAppearanceDependentPicture(*this);
 }
 
 void HTMLPictureElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
-    oldDocument.removeViewportDependentPicture(*this);
-    oldDocument.removeAppearanceDependentPicture(*this);
     HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
     sourcesChanged();
 }
@@ -64,40 +61,16 @@ Ref<HTMLPictureElement> HTMLPictureElement::create(const QualifiedName& tagName,
 void HTMLPictureElement::sourcesChanged()
 {
     for (auto& element : childrenOfType<HTMLImageElement>(*this))
-        element.selectImageSource();
-}
-
-bool HTMLPictureElement::viewportChangeAffectedPicture() const
-{
-    auto documentElement = makeRefPtr(document().documentElement());
-    MediaQueryEvaluator evaluator { document().printing() ? "print" : "screen", document(), documentElement ? documentElement->computedStyle() : nullptr };
-    for (auto& result : m_viewportDependentMediaQueryResults) {
-        LOG(MediaQueries, "HTMLPictureElement %p viewportChangeAffectedPicture evaluating media queries", this);
-        if (evaluator.evaluate(result.expression) != result.result)
-            return true;
-    }
-    return false;
-}
-
-bool HTMLPictureElement::appearanceChangeAffectedPicture() const
-{
-    auto documentElement = makeRefPtr(document().documentElement());
-    MediaQueryEvaluator evaluator { document().printing() ? "print" : "screen", document(), documentElement ? documentElement->computedStyle() : nullptr };
-    for (auto& result : m_appearanceDependentMediaQueryResults) {
-        LOG(MediaQueries, "HTMLPictureElement %p appearanceChangeAffectedPicture evaluating media queries", this);
-        if (evaluator.evaluate(result.expression) != result.result)
-            return true;
-    }
-    return false;
+        element.selectImageSource(RelevantMutation::Yes);
 }
 
 #if USE(SYSTEM_PREVIEW)
-bool HTMLPictureElement::isSystemPreviewImage() const
+bool HTMLPictureElement::isSystemPreviewImage()
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
+    if (!document().settings().systemPreviewEnabled())
         return false;
 
-    const auto* parent = parentElement();
+    auto* parent = parentElement();
     if (!is<HTMLAnchorElement>(parent))
         return false;
     return downcast<HTMLAnchorElement>(parent)->isSystemPreviewLink();

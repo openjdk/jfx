@@ -52,7 +52,7 @@ Ref<HTMLAreaElement> HTMLAreaElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new HTMLAreaElement(tagName, document));
 }
 
-void HTMLAreaElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == shapeAttr) {
         if (equalLettersIgnoringASCIICase(value, "default"))
@@ -83,7 +83,7 @@ void HTMLAreaElement::invalidateCachedRegion()
 bool HTMLAreaElement::mapMouseEvent(LayoutPoint location, const LayoutSize& size, HitTestResult& result)
 {
     if (m_lastSize != size) {
-        m_region = std::make_unique<Path>(getRegion(size));
+        m_region = makeUnique<Path>(getRegion(size));
         m_lastSize = size;
     }
 
@@ -210,10 +210,10 @@ bool HTMLAreaElement::isMouseFocusable() const
 bool HTMLAreaElement::isFocusable() const
 {
     RefPtr<HTMLImageElement> image = imageElement();
-    if (!image || !image->renderer() || image->renderer()->style().visibility() != Visibility::Visible)
+    if (!image || !image->isVisibleWithoutResolvingFullStyle())
         return false;
 
-    return supportsFocus() && Element::tabIndex() >= 0;
+    return supportsFocus() && tabIndexSetExplicitly().valueOr(0) >= 0;
 }
 
 void HTMLAreaElement::setFocus(bool shouldBeFocused)

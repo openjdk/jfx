@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,43 +22,40 @@
 #include "config.h"
 #include "SVGZoomAndPan.h"
 
+#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringParsingBuffer.h>
+
 namespace WebCore {
 
-SVGZoomAndPan::SVGZoomAndPan()
+template<typename CharacterType> static constexpr CharacterType disable[] = { 'd', 'i', 's', 'a', 'b', 'l', 'e' };
+template<typename CharacterType> static constexpr CharacterType magnify[] = { 'm', 'a', 'g', 'n', 'i', 'f', 'y' };
+
+template<typename CharacterType> static Optional<SVGZoomAndPanType> parseZoomAndPanGeneric(StringParsingBuffer<CharacterType>& buffer)
 {
-    registerAttributes();
+    if (skipCharactersExactly(buffer, disable<CharacterType>))
+        return SVGZoomAndPanDisable;
+
+    if (skipCharactersExactly(buffer, magnify<CharacterType>))
+        return SVGZoomAndPanMagnify;
+
+    return WTF::nullopt;
 }
 
-void SVGZoomAndPan::registerAttributes()
+Optional<SVGZoomAndPanType> SVGZoomAndPan::parseZoomAndPan(StringParsingBuffer<LChar>& buffer)
 {
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::zoomAndPanAttr, &SVGZoomAndPan::m_zoomAndPan>();
+    return parseZoomAndPanGeneric(buffer);
 }
 
-bool SVGZoomAndPan::parseZoomAndPan(const UChar*& start, const UChar* end)
+Optional<SVGZoomAndPanType> SVGZoomAndPan::parseZoomAndPan(StringParsingBuffer<UChar>& buffer)
 {
-    static const UChar disable[] = { 'd', 'i', 's', 'a', 'b', 'l', 'e' };
-    if (skipString(start, end, disable, WTF_ARRAY_LENGTH(disable))) {
-        m_zoomAndPan.setValue(SVGZoomAndPanDisable);
-        return true;
-    }
-
-    static const UChar magnify[] = { 'm', 'a', 'g', 'n', 'i', 'f', 'y' };
-    if (skipString(start, end, magnify, WTF_ARRAY_LENGTH(magnify))) {
-        m_zoomAndPan.setValue(SVGZoomAndPanMagnify);
-        return true;
-    }
-
-    return false;
+    return parseZoomAndPanGeneric(buffer);
 }
 
-void SVGZoomAndPan::parseAttribute(const QualifiedName& attributeName, const AtomicString& value)
+void SVGZoomAndPan::parseAttribute(const QualifiedName& attributeName, const AtomString& value)
 {
     if (attributeName != SVGNames::zoomAndPanAttr)
         return;
-    m_zoomAndPan.setValue(SVGPropertyTraits<SVGZoomAndPanType>::fromString(value));
+    m_zoomAndPan = SVGPropertyTraits<SVGZoomAndPanType>::fromString(value);
 }
 
 }

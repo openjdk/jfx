@@ -29,9 +29,9 @@
 
 #include "FormattingState.h"
 #include <wtf/IsoMalloc.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
-
 namespace Layout {
 
 // BlockFormattingState holds the state for a particular block formatting context tree.
@@ -39,14 +39,19 @@ class BlockFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(BlockFormattingState);
 public:
     BlockFormattingState(Ref<FloatingState>&&, LayoutState&);
-    virtual ~BlockFormattingState();
+    ~BlockFormattingState();
 
-    void setPositiveAndNegativeVerticalMargin(const Box& layoutBox, PositiveAndNegativeVerticalMargin verticalMargin) { m_positiveAndNegativeVerticalMargin.set(&layoutBox, verticalMargin); }
-    bool hasPositiveAndNegativeVerticalMargin(const Box& layoutBox) const { return m_positiveAndNegativeVerticalMargin.contains(&layoutBox); }
-    PositiveAndNegativeVerticalMargin positiveAndNegativeVerticalMargin(const Box& layoutBox) const { return m_positiveAndNegativeVerticalMargin.get(&layoutBox); }
+    void setUsedVerticalMargin(const Box& layoutBox, const UsedVerticalMargin& usedVerticalMargin) { m_usedVerticalMargins.set(&layoutBox, usedVerticalMargin); }
+    UsedVerticalMargin usedVerticalMargin(const Box& layoutBox) const { return m_usedVerticalMargins.get(&layoutBox); }
+    bool hasUsedVerticalMargin(const Box& layoutBox) const { return m_usedVerticalMargins.contains(&layoutBox); }
+
+    void setHasClearance(const Box& layoutBox) { m_clearanceSet.add(layoutBox); }
+    void clearHasClearance(const Box& layoutBox) { m_clearanceSet.remove(layoutBox); }
+    bool hasClearance(const Box& layoutBox) const { return m_clearanceSet.contains(layoutBox); }
 
 private:
-    HashMap<const Box*, PositiveAndNegativeVerticalMargin> m_positiveAndNegativeVerticalMargin;
+    HashMap<const Box*, UsedVerticalMargin> m_usedVerticalMargins;
+    WeakHashSet<const Box> m_clearanceSet;
 };
 
 }

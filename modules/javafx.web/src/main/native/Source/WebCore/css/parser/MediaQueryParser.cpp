@@ -39,7 +39,10 @@ namespace WebCore {
 
 RefPtr<MediaQuerySet> MediaQueryParser::parseMediaQuerySet(const String& queryString, MediaQueryParserContext context)
 {
-    return parseMediaQuerySet(CSSTokenizer(queryString).tokenRange(), context);
+    auto tokenizer = CSSTokenizer::tryCreate(queryString);
+    if (UNLIKELY(!tokenizer))
+        return nullptr;
+    return parseMediaQuerySet(tokenizer->tokenRange(), context);
 }
 
 RefPtr<MediaQuerySet> MediaQueryParser::parseMediaQuerySet(CSSParserTokenRange range, MediaQueryParserContext context)
@@ -194,7 +197,7 @@ void MediaQueryParser::readFeatureColon(CSSParserTokenType type, const CSSParser
 
 void MediaQueryParser::readFeatureValue(CSSParserTokenType type, const CSSParserToken& token, CSSParserTokenRange& range)
 {
-    if (type == DimensionToken && token.unitType() == CSSPrimitiveValue::UnitType::CSS_UNKNOWN) {
+    if (type == DimensionToken && token.unitType() == CSSUnitType::CSS_UNKNOWN) {
         range.consume();
         m_state = SkipUntilComma;
     } else {

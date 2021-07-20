@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009, 2011, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,15 @@
 #include "config.h"
 #include "JSWorkerGlobalScope.h"
 
+#include "JSDOMExceptionHandling.h"
 #include "WorkerGlobalScope.h"
 #include <JavaScriptCore/JSMicrotask.h>
-
 
 namespace WebCore {
 using namespace JSC;
 
-void JSWorkerGlobalScope::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSWorkerGlobalScope::visitAdditionalChildren(Visitor& visitor)
 {
     if (auto* location = wrapped().optionalLocation())
         visitor.addOpaqueRoot(location);
@@ -48,17 +49,19 @@ void JSWorkerGlobalScope::visitAdditionalChildren(SlotVisitor& visitor)
     wrapped().visitJSEventListeners(visitor);
 }
 
-JSValue JSWorkerGlobalScope::queueMicrotask(ExecState& state)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSWorkerGlobalScope);
+
+JSValue JSWorkerGlobalScope::queueMicrotask(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
 {
-    VM& vm = state.vm();
+    VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(state.argumentCount() < 1))
-        return throwException(&state, scope, createNotEnoughArgumentsError(&state));
+    if (UNLIKELY(callFrame.argumentCount() < 1))
+        return throwException(&lexicalGlobalObject, scope, createNotEnoughArgumentsError(&lexicalGlobalObject));
 
-    JSValue functionValue = state.uncheckedArgument(0);
-    if (UNLIKELY(!functionValue.isFunction(vm)))
-        return JSValue::decode(throwArgumentMustBeFunctionError(state, scope, 0, "callback", "WorkerGlobalScope", "queueMicrotask"));
+    JSValue functionValue = callFrame.uncheckedArgument(0);
+    if (UNLIKELY(!functionValue.isCallable(vm)))
+        return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback", "WorkerGlobalScope", "queueMicrotask"));
 
     scope.release();
     Base::queueMicrotask(JSC::createJSMicrotask(vm, functionValue));

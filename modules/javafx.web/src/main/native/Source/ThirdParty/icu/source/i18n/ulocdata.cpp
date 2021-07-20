@@ -172,7 +172,7 @@ ulocdata_getDelimiter(ULocaleData *uld, ULocaleDataDelimiterType type,
         return 0;
     }
 
-    delimiter = ures_getStringByKey(delimiterBundle, delimiterKeys[type], &len, &localStatus);
+    delimiter = ures_getStringByKeyWithFallback(delimiterBundle, delimiterKeys[type], &len, &localStatus);
     ures_close(delimiterBundle);
 
     if ( (localStatus == U_USING_DEFAULT_WARNING) && uld->noSubstitute ) {
@@ -372,7 +372,7 @@ ulocdata_getLocaleSeparator(ULocaleData *uld,
     p1=u_strstr(separator, sub1);
     if (p0!=NULL && p1!=NULL && p0<=p1) {
         separator = (const UChar *)p0 + subLen;
-        len = p1 - separator;
+        len = static_cast<int32_t>(p1 - separator);
         /* Desired separator is no longer zero-terminated; handle that if necessary */
         if (len < resultCapacity) {
             u_strncpy(result, separator, len);

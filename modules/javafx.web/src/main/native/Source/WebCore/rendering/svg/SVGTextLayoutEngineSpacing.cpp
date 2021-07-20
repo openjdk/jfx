@@ -21,13 +21,10 @@
 #include "SVGTextLayoutEngineSpacing.h"
 
 #include "FontCascade.h"
-#include "SVGLengthContext.h"
-#include "SVGRenderStyle.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
-#endif
+#include "SVGLengthContext.h"
+#include "SVGRenderStyle.h"
 
 namespace WebCore {
 
@@ -41,7 +38,7 @@ float SVGTextLayoutEngineSpacing::calculateCSSKerningAndSpacing(const SVGRenderS
 {
     float kerning = 0;
     auto kerningLength = style->kerning();
-    if (kerningLength.unitType() == LengthTypePercentage)
+    if (kerningLength.lengthType() == SVGLengthType::Percentage)
         kerning = kerningLength.valueAsPercentage() * m_font.pixelSize();
     else {
         SVGLengthContext lengthContext(contextElement);

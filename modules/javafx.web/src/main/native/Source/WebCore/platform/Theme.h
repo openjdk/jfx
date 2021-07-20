@@ -27,7 +27,6 @@
 
 #include "ThemeTypes.h"
 #include <wtf/Forward.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -58,7 +57,7 @@ public:
     virtual LengthSize controlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float zoomFactor) const;
 
     // Returns the minimum size for a control in zoomed coordinates.
-    virtual LengthSize minimumControlSize(ControlPart, const FontCascade&, float zoomFactor) const;
+    virtual LengthSize minimumControlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float zoomFactor) const;
 
     // Allows the theme to modify the existing padding/border.
     virtual LengthBox controlPadding(ControlPart, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const;
@@ -78,6 +77,7 @@ public:
 
     virtual void drawNamedImage(const String&, GraphicsContext&, const FloatRect&) const;
 
+    virtual bool userPrefersContrast() const;
     virtual bool userPrefersReducedMotion() const;
 
 protected:

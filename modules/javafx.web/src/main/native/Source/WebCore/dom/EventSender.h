@@ -30,17 +30,19 @@
 
 namespace WebCore {
 
+class Page;
+
 template<typename T> class EventSender {
     WTF_MAKE_NONCOPYABLE(EventSender); WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit EventSender(const AtomicString& eventType);
+    explicit EventSender(const AtomString& eventType);
 
-    const AtomicString& eventType() const { return m_eventType; }
+    const AtomString& eventType() const { return m_eventType; }
     void dispatchEventSoon(T&);
     void cancelEvent(T&);
-    void dispatchPendingEvents();
+    void dispatchPendingEvents(Page*);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool hasPendingEvents(T& sender) const
     {
         return m_dispatchSoonList.find(&sender) != notFound || m_dispatchingList.find(&sender) != notFound;
@@ -48,15 +50,15 @@ public:
 #endif
 
 private:
-    void timerFired() { dispatchPendingEvents(); }
+    void timerFired() { dispatchPendingEvents(nullptr); }
 
-    AtomicString m_eventType;
+    AtomString m_eventType;
     Timer m_timer;
     Vector<T*> m_dispatchSoonList;
     Vector<T*> m_dispatchingList;
 };
 
-template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
+template<typename T> EventSender<T>::EventSender(const AtomString& eventType)
     : m_eventType(eventType)
     , m_timer(*this, &EventSender::timerFired)
 {
@@ -83,7 +85,7 @@ template<typename T> void EventSender<T>::cancelEvent(T& sender)
     }
 }
 
-template<typename T> void EventSender<T>::dispatchPendingEvents()
+template<typename T> void EventSender<T>::dispatchPendingEvents(Page* page)
 {
     // Need to avoid re-entering this function; if new dispatches are
     // scheduled before the parent finishes processing the list, they
@@ -99,7 +101,10 @@ template<typename T> void EventSender<T>::dispatchPendingEvents()
     for (auto& event : m_dispatchingList) {
         if (T* sender = event) {
             event = nullptr;
-            sender->dispatchPendingEvent(this);
+            if (!page || sender->document().page() == page)
+                sender->dispatchPendingEvent(this);
+            else
+                dispatchEventSoon(*sender);
         }
     }
     m_dispatchingList.clear();

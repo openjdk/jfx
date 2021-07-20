@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Logger.h>
 
 namespace WTF {
@@ -42,34 +43,74 @@ public:
 
 #define LOGIDENTIFIER WTF::Logger::LogSiteIdentifier(logClassName(), __func__, logIdentifier())
 
+#if VERBOSE_RELEASE_LOG
+#define ALWAYS_LOG(...)     logger().logAlwaysVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ERROR_LOG(...)      logger().errorVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define WARNING_LOG(...)    logger().warningVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define INFO_LOG(...)       logger().infoVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define DEBUG_LOG(...)      logger().debugVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#else
 #define ALWAYS_LOG(...)     logger().logAlways(logChannel(), __VA_ARGS__)
 #define ERROR_LOG(...)      logger().error(logChannel(), __VA_ARGS__)
 #define WARNING_LOG(...)    logger().warning(logChannel(), __VA_ARGS__)
-#define NOTICE_LOG(...)     logger().notice(logChannel(), __VA_ARGS__)
 #define INFO_LOG(...)       logger().info(logChannel(), __VA_ARGS__)
 #define DEBUG_LOG(...)      logger().debug(logChannel(), __VA_ARGS__)
+#endif
+
 #define WILL_LOG(_level_)   logger().willLog(logChannel(), _level_)
 
-    const void* childLogIdentifier(uint64_t identifier) const
+#define ALWAYS_LOG_IF(condition, ...)     if (condition) ALWAYS_LOG(__VA_ARGS__)
+#define ERROR_LOG_IF(condition, ...)      if (condition) ERROR_LOG(__VA_ARGS__)
+#define WARNING_LOG_IF(condition, ...)    if (condition) WARNING_LOG(__VA_ARGS__)
+#define INFO_LOG_IF(condition, ...)       if (condition) INFO_LOG(__VA_ARGS__)
+#define DEBUG_LOG_IF(condition, ...)      if (condition) DEBUG_LOG(__VA_ARGS__)
+
+#define ALWAYS_LOG_IF_POSSIBLE(...)     if (loggerPtr()) loggerPtr()->logAlways(logChannel(), __VA_ARGS__)
+#define ERROR_LOG_IF_POSSIBLE(...)      if (loggerPtr()) loggerPtr()->error(logChannel(), __VA_ARGS__)
+#define WARNING_LOG_IF_POSSIBLE(...)    if (loggerPtr()) loggerPtr()->warning(logChannel(), __VA_ARGS__)
+#define INFO_LOG_IF_POSSIBLE(...)       if (loggerPtr()) loggerPtr()->info(logChannel(), __VA_ARGS__)
+#define DEBUG_LOG_IF_POSSIBLE(...)      if (loggerPtr()) loggerPtr()->debug(logChannel(), __VA_ARGS__)
+#define WILL_LOG_IF_POSSIBLE(_level_)   if (loggerPtr()) loggerPtr()->willLog(logChannel(), _level_)
+
+    static const void* childLogIdentifier(const void* parentIdentifier, uint64_t childIdentifier)
     {
-        static const int64_t parentMask = 0xffffffffffff0000l;
-        static const int64_t maskLowerWord = 0xffffl;
-        return reinterpret_cast<const void*>((reinterpret_cast<uint64_t>(logIdentifier()) & parentMask) | (identifier & maskLowerWord));
+        static constexpr uint64_t parentMask = 0xffffffffffff0000ull;
+        static constexpr uint64_t maskLowerWord = 0xffffull;
+        return reinterpret_cast<const void*>((reinterpret_cast<uint64_t>(parentIdentifier) & parentMask) | (childIdentifier & maskLowerWord));
     }
-#else
+
+    static const void* uniqueLogIdentifier()
+    {
+        uint64_t highWord = cryptographicallyRandomNumber();
+        uint64_t lowWord = cryptographicallyRandomNumber();
+        return reinterpret_cast<const void*>((highWord << 32) + lowWord);
+    }
+#else // RELEASE_LOG_DISABLED
 
 #define LOGIDENTIFIER (WTF::nullopt)
 
-#define ALWAYS_LOG(...)     ((void)0)
-#define ERROR_LOG(...)      ((void)0)
-#define ERROR_LOG(...)      ((void)0)
-#define WARNING_LOG(...)    ((void)0)
-#define NOTICE_LOG(...)     ((void)0)
-#define INFO_LOG(...)       ((void)0)
-#define DEBUG_LOG(...)      ((void)0)
-#define WILL_LOG(_level_)   false
+#define ALWAYS_LOG(channelName, ...)  (UNUSED_PARAM(channelName))
+#define ERROR_LOG(channelName, ...)   (UNUSED_PARAM(channelName))
+#define WARNING_LOG(channelName, ...) (UNUSED_PARAM(channelName))
+#define NOTICE_LOG(channelName, ...)  (UNUSED_PARAM(channelName))
+#define INFO_LOG(channelName, ...)    (UNUSED_PARAM(channelName))
+#define DEBUG_LOG(channelName, ...)   (UNUSED_PARAM(channelName))
+#define WILL_LOG(_level_)    false
 
-#endif
+#define ALWAYS_LOG_IF(condition, ...)     ((void)0)
+#define ERROR_LOG_IF(condition, ...)      ((void)0)
+#define WARNING_LOG_IF(condition, ...)    ((void)0)
+#define INFO_LOG_IF(condition, ...)       ((void)0)
+#define DEBUG_LOG_IF(condition, ...)      ((void)0)
+
+#define ALWAYS_LOG_IF_POSSIBLE(...)     ((void)0)
+#define ERROR_LOG_IF_POSSIBLE(...)      ((void)0)
+#define WARNING_LOG_IF_POSSIBLE(...)    ((void)0)
+#define INFO_LOG_IF_POSSIBLE(...)       ((void)0)
+#define DEBUG_LOG_IF_POSSIBLE(...)      ((void)0)
+#define WILL_LOG_IF_POSSIBLE(_level_)   ((void)0)
+
+#endif // RELEASE_LOG_DISABLED
 
 };
 

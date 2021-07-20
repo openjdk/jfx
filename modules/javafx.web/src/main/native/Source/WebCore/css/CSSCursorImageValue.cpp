@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006 Rob Buis <buis@kde.org>
  *           (C) 2008 Nikolas Zimmermann <zimmermann@kde.org>
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -54,15 +54,10 @@ CSSCursorImageValue::~CSSCursorImageValue()
 
 String CSSCursorImageValue::customCSSText() const
 {
-    StringBuilder result;
-    result.append(m_imageValue.get().cssText());
-    if (m_hasHotSpot) {
-        result.append(' ');
-        result.appendNumber(m_hotSpot.x());
-        result.append(' ');
-        result.appendNumber(m_hotSpot.y());
-    }
-    return result.toString();
+    String text = m_imageValue.get().cssText();
+    if (!m_hasHotSpot)
+        return text;
+    return makeString(text, ' ', m_hotSpot.x(), ' ', m_hotSpot.y());
 }
 
 // FIXME: Should this function take a TreeScope instead?
@@ -71,7 +66,7 @@ SVGCursorElement* CSSCursorImageValue::updateCursorElement(const Document& docum
     if (!m_originalURL.hasFragmentIdentifier())
         return nullptr;
 
-    auto element = SVGURIReference::targetElementFromIRIString(m_originalURL, document).element;
+    auto element = SVGURIReference::targetElementFromIRIString(m_originalURL.string(), document).element;
     if (!is<SVGCursorElement>(element))
         return nullptr;
 
@@ -100,17 +95,17 @@ void CSSCursorImageValue::cursorElementChanged(SVGCursorElement& cursorElement)
     m_hotSpot.setY(static_cast<int>(y));
 }
 
-std::pair<CachedImage*, float> CSSCursorImageValue::loadImage(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
+ImageWithScale CSSCursorImageValue::selectBestFitImage(const Document& document)
 {
     if (is<CSSImageSetValue>(m_imageValue.get()))
-        return downcast<CSSImageSetValue>(m_imageValue.get()).loadBestFitImage(loader, options);
+        return downcast<CSSImageSetValue>(m_imageValue.get()).selectBestFitImage(document);
 
-    if (auto* cursorElement = updateCursorElement(*loader.document())) {
+    if (auto* cursorElement = updateCursorElement(document)) {
         if (cursorElement->href() != downcast<CSSImageValue>(m_imageValue.get()).url())
-            m_imageValue = CSSImageValue::create(loader.document()->completeURL(cursorElement->href()), m_loadedFromOpaqueSource);
+            m_imageValue = CSSImageValue::create(document.completeURL(cursorElement->href()), m_loadedFromOpaqueSource);
     }
 
-    return { downcast<CSSImageValue>(m_imageValue.get()).loadImage(loader, options), 1 };
+    return { m_imageValue.ptr() , 1 };
 }
 
 bool CSSCursorImageValue::equals(const CSSCursorImageValue& other) const

@@ -34,7 +34,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 StyleSheetList::StyleSheetList(Document& document)
-    : m_document(&document)
+    : m_document(makeWeakPtr(document))
 {
 }
 
@@ -57,7 +57,7 @@ inline const Vector<RefPtr<StyleSheet>>& StyleSheetList::styleSheets() const
 Node* StyleSheetList::ownerNode() const
 {
     if (m_document)
-        return m_document;
+        return m_document.get();
     return m_shadowRoot;
 }
 
@@ -86,7 +86,7 @@ StyleSheet* StyleSheetList::item(unsigned index)
     return index < sheets.size() ? sheets[index].get() : 0;
 }
 
-CSSStyleSheet* StyleSheetList::namedItem(const AtomicString& name) const
+CSSStyleSheet* StyleSheetList::namedItem(const AtomString& name) const
 {
     // Support the named getter on document for backwards compatibility.
     if (!m_document)
@@ -103,10 +103,10 @@ CSSStyleSheet* StyleSheetList::namedItem(const AtomicString& name) const
     return nullptr;
 }
 
-Vector<AtomicString> StyleSheetList::supportedPropertyNames()
+Vector<AtomString> StyleSheetList::supportedPropertyNames()
 {
     // FIXME: Should be implemented.
-    return Vector<AtomicString>();
+    return Vector<AtomString>();
 }
 
 } // namespace WebCore

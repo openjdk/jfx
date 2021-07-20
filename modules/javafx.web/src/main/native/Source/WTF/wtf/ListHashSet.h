@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2011, Benjamin Poulain <ikipou@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -23,6 +23,10 @@
 
 #include <wtf/HashSet.h>
 
+#if CHECK_HASHTABLE_ITERATORS
+#include <wtf/WeakPtr.h>
+#endif
+
 namespace WTF {
 
 // ListHashSet: Just like HashSet, this class provides a Set
@@ -45,7 +49,11 @@ template<typename ValueArg> struct ListHashSetNode;
 template<typename HashArg> struct ListHashSetNodeHashFunctions;
 template<typename HashArg> struct ListHashSetTranslator;
 
-template<typename ValueArg, typename HashArg = typename DefaultHash<ValueArg>::Hash> class ListHashSet {
+template<typename ValueArg, typename HashArg = DefaultHash<ValueArg>> class ListHashSet final
+#if CHECK_HASHTABLE_ITERATORS
+    : public CanMakeWeakPtr<ListHashSet<ValueArg, HashArg>, WeakPtrFactoryInitialization::Eager>
+#endif
+{
     WTF_MAKE_FAST_ALLOCATED;
 private:
     typedef ListHashSetNode<ValueArg> Node;
@@ -164,11 +172,14 @@ private:
     Node* m_tail { nullptr };
 };
 
-template<typename ValueArg> struct ListHashSetNode {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    template<typename T>
-    ListHashSetNode(T&& value)
+template<typename ValueArg> struct ListHashSetNode
+#if CHECK_HASHTABLE_ITERATORS
+    : CanMakeWeakPtr<ListHashSetNode<ValueArg>, WeakPtrFactoryInitialization::Eager>
+#endif
+{
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    template<typename T> ListHashSetNode(T&& value)
         : m_value(std::forward<T>(value))
     {
     }
@@ -181,10 +192,11 @@ public:
 template<typename HashArg> struct ListHashSetNodeHashFunctions {
     template<typename T> static unsigned hash(const T& key) { return HashArg::hash(key->m_value); }
     template<typename T> static bool equal(const T& a, const T& b) { return HashArg::equal(a->m_value, b->m_value); }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 template<typename ValueArg, typename HashArg> class ListHashSetIterator {
+    WTF_MAKE_FAST_ALLOCATED;
 private:
     typedef ListHashSet<ValueArg, HashArg> ListHashSetType;
     typedef ListHashSetIterator<ValueArg, HashArg> iterator;
@@ -232,6 +244,7 @@ private:
 };
 
 template<typename ValueArg, typename HashArg> class ListHashSetConstIterator {
+    WTF_MAKE_FAST_ALLOCATED;
 private:
     typedef ListHashSet<ValueArg, HashArg> ListHashSetType;
     typedef ListHashSetIterator<ValueArg, HashArg> iterator;
@@ -245,6 +258,10 @@ private:
     ListHashSetConstIterator(const ListHashSetType* set, Node* position)
         : m_set(set)
         , m_position(position)
+#if CHECK_HASHTABLE_ITERATORS
+        , m_weakSet(makeWeakPtr(set))
+        , m_weakPosition(makeWeakPtr(position))
+#endif
     {
     }
 
@@ -261,6 +278,9 @@ public:
 
     const ValueType* get() const
     {
+#if CHECK_HASHTABLE_ITERATORS
+        ASSERT(m_weakPosition);
+#endif
         return std::addressof(m_position->m_value);
     }
 
@@ -269,8 +289,14 @@ public:
 
     const_iterator& operator++()
     {
+#if CHECK_HASHTABLE_ITERATORS
+        ASSERT(m_weakPosition);
+#endif
         ASSERT(m_position);
         m_position = m_position->m_next;
+#if CHECK_HASHTABLE_ITERATORS
+        m_weakPosition = makeWeakPtr(m_position);
+#endif
         return *this;
     }
 
@@ -278,11 +304,18 @@ public:
 
     const_iterator& operator--()
     {
+#if CHECK_HASHTABLE_ITERATORS
+        ASSERT(m_weakSet);
+        m_weakPosition.get();
+#endif
         ASSERT(m_position != m_set->m_head);
         if (!m_position)
             m_position = m_set->m_tail;
         else
             m_position = m_position->m_prev;
+#if CHECK_HASHTABLE_ITERATORS
+        m_weakPosition = makeWeakPtr(m_position);
+#endif
         return *this;
     }
 
@@ -301,8 +334,12 @@ public:
 private:
     Node* node() { return m_position; }
 
-    const ListHashSetType* m_set;
-    Node* m_position;
+    const ListHashSetType* m_set { nullptr };
+    Node* m_position { nullptr };
+#if CHECK_HASHTABLE_ITERATORS
+    WeakPtr<const ListHashSetType> m_weakSet;
+    WeakPtr<Node> m_weakPosition;
+#endif
 };
 
 template<typename HashFunctions>
@@ -349,9 +386,8 @@ inline ListHashSet<T, U>::ListHashSet(ListHashSet&& other)
 template<typename T, typename U>
 inline ListHashSet<T, U>& ListHashSet<T, U>::operator=(ListHashSet&& other)
 {
-    m_impl = WTFMove(other.m_impl);
-    m_head = std::exchange(other.m_head, nullptr);
-    m_tail = std::exchange(other.m_tail, nullptr);
+    ListHashSet movedSet(WTFMove(other));
+    swap(movedSet);
     return *this;
 }
 

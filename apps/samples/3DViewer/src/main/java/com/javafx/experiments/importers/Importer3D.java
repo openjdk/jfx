@@ -32,6 +32,7 @@
 package com.javafx.experiments.importers;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
@@ -122,7 +123,7 @@ public final class Importer3D {
             for (String name : names) {
                 try {
                     Class<?> clazz = Class.forName(name);
-                    Object obj = clazz.newInstance();
+                    Object obj = clazz.getDeclaredConstructor().newInstance();
                     if (obj instanceof Importer) {
                         Importer plugin = (Importer) obj;
                         if (plugin.isSupported(extension)) {
@@ -131,7 +132,8 @@ public final class Importer3D {
                             break;
                         }
                     }
-                } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+                         | InvocationTargetException | NoSuchMethodException e) {
                     // FAIL SILENTLY
                 }
             }

@@ -35,11 +35,16 @@ namespace JSC {
 class JSCell;
 class Structure;
 
-static const unsigned FirstInternalAttribute = 1 << 6; // Use for transitions that don't have to do with property additions.
+using TransitionPropertyAttributes = uint8_t;
 
-// Support for attributes used to indicate transitions not related to properties.
-// If any of these are used, the string portion of the key should be 0.
-enum class NonPropertyTransition : unsigned {
+enum class TransitionKind : uint8_t {
+    Unknown,
+    PropertyAddition,
+    PropertyDeletion,
+    PropertyAttributeChange,
+
+    // Support for transitions not related to properties.
+    // If any of these are used, the string portion of the key should be 0.
     AllocateUndecided,
     AllocateInt32,
     AllocateDouble,
@@ -50,89 +55,89 @@ enum class NonPropertyTransition : unsigned {
     AddIndexedAccessors,
     PreventExtensions,
     Seal,
-    Freeze
+    Freeze,
+
+    // Support for transitions related with private brand
+    SetBrand
 };
 
-inline unsigned toAttributes(NonPropertyTransition transition)
-{
-    return static_cast<unsigned>(transition) + FirstInternalAttribute;
-}
+static constexpr auto FirstNonPropertyTransitionKind = TransitionKind::AllocateUndecided;
 
-inline bool changesIndexingType(NonPropertyTransition transition)
+inline bool changesIndexingType(TransitionKind transition)
 {
     switch (transition) {
-    case NonPropertyTransition::AllocateUndecided:
-    case NonPropertyTransition::AllocateInt32:
-    case NonPropertyTransition::AllocateDouble:
-    case NonPropertyTransition::AllocateContiguous:
-    case NonPropertyTransition::AllocateArrayStorage:
-    case NonPropertyTransition::AllocateSlowPutArrayStorage:
-    case NonPropertyTransition::SwitchToSlowPutArrayStorage:
-    case NonPropertyTransition::AddIndexedAccessors:
+    case TransitionKind::AllocateUndecided:
+    case TransitionKind::AllocateInt32:
+    case TransitionKind::AllocateDouble:
+    case TransitionKind::AllocateContiguous:
+    case TransitionKind::AllocateArrayStorage:
+    case TransitionKind::AllocateSlowPutArrayStorage:
+    case TransitionKind::SwitchToSlowPutArrayStorage:
+    case TransitionKind::AddIndexedAccessors:
         return true;
     default:
         return false;
     }
 }
 
-inline IndexingType newIndexingType(IndexingType oldType, NonPropertyTransition transition)
+inline IndexingType newIndexingType(IndexingType oldType, TransitionKind transition)
 {
     switch (transition) {
-    case NonPropertyTransition::AllocateUndecided:
+    case TransitionKind::AllocateUndecided:
         ASSERT(!hasIndexedProperties(oldType));
         return oldType | UndecidedShape;
-    case NonPropertyTransition::AllocateInt32:
+    case TransitionKind::AllocateInt32:
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || oldType == CopyOnWriteArrayWithInt32);
         return (oldType & ~IndexingShapeAndWritabilityMask) | Int32Shape;
-    case NonPropertyTransition::AllocateDouble:
+    case TransitionKind::AllocateDouble:
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || oldType == CopyOnWriteArrayWithDouble);
         return (oldType & ~IndexingShapeAndWritabilityMask) | DoubleShape;
-    case NonPropertyTransition::AllocateContiguous:
+    case TransitionKind::AllocateContiguous:
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || hasDouble(oldType) || oldType == CopyOnWriteArrayWithContiguous);
         return (oldType & ~IndexingShapeAndWritabilityMask) | ContiguousShape;
-    case NonPropertyTransition::AllocateArrayStorage:
+    case TransitionKind::AllocateArrayStorage:
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || hasDouble(oldType) || hasContiguous(oldType));
         return (oldType & ~IndexingShapeAndWritabilityMask) | ArrayStorageShape;
-    case NonPropertyTransition::AllocateSlowPutArrayStorage:
+    case TransitionKind::AllocateSlowPutArrayStorage:
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || hasDouble(oldType) || hasContiguous(oldType));
         return (oldType & ~IndexingShapeAndWritabilityMask) | SlowPutArrayStorageShape;
-    case NonPropertyTransition::SwitchToSlowPutArrayStorage:
+    case TransitionKind::SwitchToSlowPutArrayStorage:
         ASSERT(hasArrayStorage(oldType));
         return (oldType & ~IndexingShapeAndWritabilityMask) | SlowPutArrayStorageShape;
-    case NonPropertyTransition::AddIndexedAccessors:
+    case TransitionKind::AddIndexedAccessors:
         return oldType | MayHaveIndexedAccessors;
     default:
         return oldType;
     }
 }
 
-inline bool preventsExtensions(NonPropertyTransition transition)
+inline bool preventsExtensions(TransitionKind transition)
 {
     switch (transition) {
-    case NonPropertyTransition::PreventExtensions:
-    case NonPropertyTransition::Seal:
-    case NonPropertyTransition::Freeze:
+    case TransitionKind::PreventExtensions:
+    case TransitionKind::Seal:
+    case TransitionKind::Freeze:
         return true;
     default:
         return false;
     }
 }
 
-inline bool setsDontDeleteOnAllProperties(NonPropertyTransition transition)
+inline bool setsDontDeleteOnAllProperties(TransitionKind transition)
 {
     switch (transition) {
-    case NonPropertyTransition::Seal:
-    case NonPropertyTransition::Freeze:
+    case TransitionKind::Seal:
+    case TransitionKind::Freeze:
         return true;
     default:
         return false;
     }
 }
 
-inline bool setsReadOnlyOnNonAccessorProperties(NonPropertyTransition transition)
+inline bool setsReadOnlyOnNonAccessorProperties(TransitionKind transition)
 {
     switch (transition) {
-    case NonPropertyTransition::Freeze:
+    case TransitionKind::Freeze:
         return true;
     default:
         return false;
@@ -140,15 +145,65 @@ inline bool setsReadOnlyOnNonAccessorProperties(NonPropertyTransition transition
 }
 
 class StructureTransitionTable {
-    static const intptr_t UsingSingleSlotFlag = 1;
+    static constexpr intptr_t UsingSingleSlotFlag = 1;
 
 
+#if CPU(ADDRESS64)
     struct Hash {
-        typedef std::pair<UniquedStringImpl*, unsigned> Key;
+        // Logically, Key is a tuple of (1) UniquedStringImpl*, (2) unsigned attributes, and (3) transitionKind.
+        struct Key {
+            friend struct Hash;
+            static_assert(WTF_OS_CONSTANT_EFFECTIVE_ADDRESS_WIDTH <= 48);
+            static constexpr unsigned attributesShift = 48;
+            static constexpr unsigned transitionKindShift = 56;
+            static constexpr uintptr_t stringMask = (1ULL << attributesShift) - 1;
+            static constexpr uintptr_t hashTableDeletedValue = 0x2;
+            static_assert(sizeof(TransitionPropertyAttributes) * 8 <= 8);
+            static_assert(sizeof(TransitionKind) * 8 <= 8);
+            static_assert(hashTableDeletedValue < alignof(UniquedStringImpl));
+
+            // Highest 8 bits are for TransitionKind; next 8 belong to TransitionPropertyAttributes.
+            // Remaining bits are for UniquedStringImpl*.
+            Key(UniquedStringImpl* impl, unsigned attributes, TransitionKind transitionKind)
+                : m_encodedData(bitwise_cast<uintptr_t>(impl) | (static_cast<uintptr_t>(attributes) << attributesShift) | (static_cast<uintptr_t>(transitionKind) << transitionKindShift))
+            {
+                ASSERT(impl == this->impl());
+                ASSERT(attributes <= UINT8_MAX);
+                ASSERT(attributes == this->attributes());
+                ASSERT(transitionKind != TransitionKind::Unknown);
+                ASSERT(transitionKind == this->transitionKind());
+            }
+
+            Key() = default;
+
+            Key(WTF::HashTableDeletedValueType)
+                : m_encodedData(hashTableDeletedValue)
+            { }
+
+            bool isHashTableDeletedValue() const { return m_encodedData == hashTableDeletedValue; }
+
+            UniquedStringImpl* impl() const { return bitwise_cast<UniquedStringImpl*>(m_encodedData & stringMask); }
+            TransitionPropertyAttributes attributes() const { return (m_encodedData >> attributesShift) & UINT8_MAX; }
+            TransitionKind transitionKind() const { return static_cast<TransitionKind>(m_encodedData >> transitionKindShift); }
+
+            friend bool operator==(const Key& a, const Key& b)
+            {
+                return a.m_encodedData == b.m_encodedData;
+            }
+
+            friend bool operator!=(const Key& a, const Key& b)
+            {
+                return a.m_encodedData != b.m_encodedData;
+            }
+
+        private:
+            uintptr_t m_encodedData { 0 };
+        };
+        using KeyTraits = SimpleClassHashTraits<Key>;
 
         static unsigned hash(const Key& p)
         {
-            return PtrHash<UniquedStringImpl*>::hash(p.first) + p.second;
+            return IntHash<uintptr_t>::hash(p.m_encodedData);
         }
 
         static bool equal(const Key& a, const Key& b)
@@ -156,10 +211,28 @@ class StructureTransitionTable {
             return a == b;
         }
 
-        static const bool safeToCompareToEmptyOrDeleted = true;
+        static constexpr bool safeToCompareToEmptyOrDeleted = true;
     };
+#else
+    struct Hash {
+        using Key = std::tuple<UniquedStringImpl*, unsigned, TransitionKind>;
+        using KeyTraits = HashTraits<Key>;
 
-    typedef WeakGCMap<Hash::Key, Structure, Hash> TransitionMap;
+        static unsigned hash(const Key& p)
+        {
+            return PtrHash<UniquedStringImpl*>::hash(std::get<0>(p)) + std::get<1>(p) + static_cast<unsigned>(std::get<2>(p));
+        }
+
+        static bool equal(const Key& a, const Key& b)
+        {
+            return a == b;
+        }
+
+        static constexpr bool safeToCompareToEmptyOrDeleted = true;
+    };
+#endif
+
+    typedef WeakGCMap<Hash::Key, Structure, Hash, Hash::KeyTraits> TransitionMap;
 
 public:
     StructureTransitionTable()
@@ -181,8 +254,8 @@ public:
     }
 
     void add(VM&, Structure*);
-    bool contains(UniquedStringImpl*, unsigned attributes) const;
-    Structure* get(UniquedStringImpl*, unsigned attributes) const;
+    bool contains(UniquedStringImpl*, unsigned attributes, TransitionKind) const;
+    Structure* get(UniquedStringImpl*, unsigned attributes, TransitionKind) const;
 
 private:
     friend class SingleSlotTransitionWeakOwner;

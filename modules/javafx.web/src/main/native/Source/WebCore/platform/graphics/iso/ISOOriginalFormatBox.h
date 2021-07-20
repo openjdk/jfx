@@ -29,13 +29,13 @@
 
 namespace WebCore {
 
-class WEBCORE_EXPORT ISOOriginalFormatBox : public ISOBox {
+class WEBCORE_EXPORT ISOOriginalFormatBox final : public ISOBox {
 public:
     static FourCC boxTypeName() { return "frma"; }
 
     FourCC dataFormat() const { return m_dataFormat; }
 
-protected:
+private:
     bool parse(JSC::DataView&, unsigned& offset) override;
 
     FourCC m_dataFormat { uint32_t { 0 } };

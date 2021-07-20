@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WebCoreTestSupport.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
 #include "InternalSettings.h"
 #include "Internals.h"
@@ -39,12 +40,19 @@
 #include "Page.h"
 #include "SWContextManager.h"
 #include "ServiceWorkerGlobalScope.h"
-#include "WheelEventTestTrigger.h"
+#include "WheelEventTestMonitor.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/IdentifierInlines.h>
+#include <JavaScriptCore/JITOperationList.h>
 #include <JavaScriptCore/JSValueRef.h>
 #include <wtf/URLParser.h>
+
+#if PLATFORM(COCOA)
+#include "UTIRegistry.h"
+#include "VersionChecks.h"
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 namespace WebCoreTestSupport {
 using namespace JSC;
@@ -52,58 +60,63 @@ using namespace WebCore;
 
 void injectInternalsObject(JSContextRef context)
 {
-    ExecState* exec = toJS(context);
-    JSLockHolder lock(exec);
-    JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
+    JSGlobalObject* lexicalGlobalObject = toJS(context);
+    VM& vm = lexicalGlobalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+    JSLockHolder lock(vm);
+    JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject);
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
     if (is<Document>(*scriptContext)) {
-        VM& vm = exec->vm();
-        globalObject->putDirect(vm, Identifier::fromString(&vm, Internals::internalsId), toJS(exec, globalObject, Internals::create(downcast<Document>(*scriptContext))));
+        globalObject->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(lexicalGlobalObject, globalObject, Internals::create(downcast<Document>(*scriptContext))));
+        Options::useDollarVM() = true;
         globalObject->exposeDollarVM(vm);
     }
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
 }
 
 void resetInternalsObject(JSContextRef context)
 {
-    ExecState* exec = toJS(context);
-    JSLockHolder lock(exec);
-    JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
+    JSGlobalObject* lexicalGlobalObject = toJS(context);
+    JSLockHolder lock(lexicalGlobalObject);
+    JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject);
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
     Page* page = downcast<Document>(scriptContext)->frame()->page();
     Internals::resetToConsistentState(*page);
     InternalSettings::from(page)->resetToConsistentState();
 }
 
-void monitorWheelEvents(WebCore::Frame& frame)
+void monitorWheelEvents(WebCore::Frame& frame, bool clearLatchingState)
 {
     Page* page = frame.page();
     if (!page)
         return;
 
-    page->ensureTestTrigger();
+    page->startMonitoringWheelEvents(clearLatchingState);
 }
 
-void setTestCallbackAndStartNotificationTimer(WebCore::Frame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
+void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, WebCore::Frame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
 {
     Page* page = frame.page();
-    if (!page || !page->expectsWheelEventTriggers())
+    if (!page || !page->isMonitoringWheelEvents())
         return;
 
     JSValueProtect(context, jsCallbackFunction);
 
-    page->ensureTestTrigger().setTestCallbackAndStartNotificationTimer([=](void) {
-        JSObjectCallAsFunction(context, jsCallbackFunction, nullptr, 0, nullptr, nullptr);
-        JSValueUnprotect(context, jsCallbackFunction);
-    });
+    if (auto wheelEventTestMonitor = page->wheelEventTestMonitor()) {
+        wheelEventTestMonitor->setTestCallbackAndStartMonitoring(expectWheelEndOrCancel, expectMomentumEnd, [=](void) {
+            JSObjectCallAsFunction(context, jsCallbackFunction, nullptr, 0, nullptr, nullptr);
+            JSValueUnprotect(context, jsCallbackFunction);
+        });
+    }
 }
 
-void clearWheelEventTestTrigger(WebCore::Frame& frame)
+void clearWheelEventTestMonitor(WebCore::Frame& frame)
 {
     Page* page = frame.page();
     if (!page)
         return;
 
-    page->clearTrigger();
+    page->clearWheelEventTestMonitor();
 }
 
 void setLogChannelToAccumulate(const String& name)
@@ -112,6 +125,13 @@ void setLogChannelToAccumulate(const String& name)
     WebCore::setLogChannelToAccumulate(name);
 #else
     UNUSED_PARAM(name);
+#endif
+}
+
+void clearAllLogChannelsToAccumulate()
+{
+#if !LOG_DISABLED
+    WebCore::clearAllLogChannelsToAccumulate();
 #endif
 }
 
@@ -124,7 +144,14 @@ void initializeLogChannelsIfNecessary()
 
 void setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
 {
-    InternalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
+    DeprecatedGlobalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
+}
+
+void setLinkedOnOrAfterEverythingForTesting()
+{
+#if PLATFORM(COCOA)
+    setApplicationSDKVersion(std::numeric_limits<uint32_t>::max());
+#endif
 }
 
 void installMockGamepadProvider()
@@ -152,13 +179,14 @@ void disconnectMockGamepad(unsigned gamepadIndex)
 #endif
 }
 
-void setMockGamepadDetails(unsigned gamepadIndex, const WTF::String& gamepadID, unsigned axisCount, unsigned buttonCount)
+void setMockGamepadDetails(unsigned gamepadIndex, const WTF::String& gamepadID, const WTF::String& mapping, unsigned axisCount, unsigned buttonCount)
 {
 #if ENABLE(GAMEPAD)
-    MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, axisCount, buttonCount);
+    MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, mapping, axisCount, buttonCount);
 #else
     UNUSED_PARAM(gamepadIndex);
     UNUSED_PARAM(gamepadID);
+    UNUSED_PARAM(mapping);
     UNUSED_PARAM(axisCount);
     UNUSED_PARAM(buttonCount);
 #endif
@@ -195,13 +223,36 @@ void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier)
         if (!script)
             return;
 
-        auto& state = *globalScope.execState();
-        JSLockHolder locker(state.vm());
-        auto* contextWrapper = script->workerGlobalScopeWrapper();
-        contextWrapper->putDirect(state.vm(), Identifier::fromString(&state, Internals::internalsId), toJS(&state, contextWrapper, ServiceWorkerInternals::create(identifier)));
+        auto& globalObject = *globalScope.globalObject();
+        auto& vm = globalObject.vm();
+        JSLockHolder locker(vm);
+        auto* contextWrapper = script->globalScopeWrapper();
+        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&globalObject, contextWrapper, ServiceWorkerInternals::create(identifier)));
     });
 #else
     UNUSED_PARAM(serviceWorkerIdentifier);
+#endif
+}
+
+#if PLATFORM(COCOA)
+void setAdditionalSupportedImageTypesForTesting(const WTF::String& imageTypes)
+{
+    WebCore::setAdditionalSupportedImageTypesForTesting(imageTypes);
+}
+#endif
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+extern const uintptr_t startOfJITOperationsInWebCoreTestSupport __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const uintptr_t endOfJITOperationsInWebCoreTestSupport __asm("section$end$__DATA_CONST$__jsc_ops");
+#endif
+
+void populateJITOperations()
+{
+#if ENABLE(JIT_OPERATION_VALIDATION)
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [] {
+        JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInWebCoreTestSupport, &endOfJITOperationsInWebCoreTestSupport);
+    });
 #endif
 }
 

@@ -26,30 +26,35 @@
 #pragma once
 
 #if ENABLE(WEB_AUTHN)
-
+#include "AuthenticationExtensionsClientInputs.h"
 #include "BufferSource.h"
 #include "PublicKeyCredentialDescriptor.h"
 #include "UserVerificationRequirement.h"
 #include <wtf/Forward.h>
+#endif // ENABLE(WEB_AUTHN)
 
 namespace WebCore {
 
 struct PublicKeyCredentialRequestOptions {
+#if ENABLE(WEB_AUTHN)
     BufferSource challenge;
     Optional<unsigned> timeout;
     mutable String rpId;
     Vector<PublicKeyCredentialDescriptor> allowCredentials;
     UserVerificationRequirement userVerification { UserVerificationRequirement::Preferred };
+    mutable Optional<AuthenticationExtensionsClientInputs> extensions;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<PublicKeyCredentialRequestOptions> decode(Decoder&);
+#endif // ENABLE(WEB_AUTHN)
 };
 
+#if ENABLE(WEB_AUTHN)
 // Not every member is encoded.
 template<class Encoder>
 void PublicKeyCredentialRequestOptions::encode(Encoder& encoder) const
 {
-    encoder << timeout << rpId << allowCredentials << userVerification;
+    encoder << timeout << rpId << allowCredentials << userVerification << extensions;
 }
 
 template<class Decoder>
@@ -74,9 +79,14 @@ Optional<PublicKeyCredentialRequestOptions> PublicKeyCredentialRequestOptions::d
         return WTF::nullopt;
     result.userVerification = WTFMove(*userVerification);
 
+    Optional<Optional<AuthenticationExtensionsClientInputs>> extensions;
+    decoder >> extensions;
+    if (!extensions)
+        return WTF::nullopt;
+    result.extensions = WTFMove(*extensions);
+
     return result;
 }
+#endif // ENABLE(WEB_AUTHN)
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_AUTHN)

@@ -130,6 +130,7 @@ public class WindowHelper {
         windowAccessor.notifyScaleChanged(window, newOutputScaleX, newOutputScaleY);
     }
 
+    @SuppressWarnings("removal")
     static AccessControlContext getAccessControlContext(Window window) {
         return windowAccessor.getAccessControlContext(window);
     }
@@ -169,6 +170,7 @@ public class WindowHelper {
 
         ReadOnlyObjectProperty<Screen> screenProperty(Window window);
 
+        @SuppressWarnings("removal")
         AccessControlContext getAccessControlContext(Window window);
     }
 }

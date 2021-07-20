@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,8 +44,10 @@ import java.util.stream.Collectors;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -275,6 +277,20 @@ public abstract class LightBase extends Node {
         } else if (newScene != null) {
             newScene.addLight(this);
         }
+    }
+
+    /**
+     * For use by implementing subclasses. Treat as protected.
+     *
+     * Creates and returns a SimpleDoubleProperty with an invalidation scheme.
+     */
+    DoubleProperty getLightDoubleProperty(String name, double initialValue) {
+        return new SimpleDoubleProperty(this, name, initialValue) {
+            @Override
+            protected void invalidated() {
+                NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);
+            }
+        };
     }
 
     private void markOwnerDirty() {

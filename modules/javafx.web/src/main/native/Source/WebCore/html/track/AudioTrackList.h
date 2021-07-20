@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "TrackListBase.h"
 
@@ -35,13 +35,15 @@ class AudioTrack;
 
 class AudioTrackList final : public TrackListBase {
 public:
-    static Ref<AudioTrackList> create(HTMLMediaElement* owner, ScriptExecutionContext* context)
+    static Ref<AudioTrackList> create(WeakPtr<HTMLMediaElement> owner, ScriptExecutionContext* context)
     {
-        return adoptRef(*new AudioTrackList(owner, context));
+        auto list = adoptRef(*new AudioTrackList(owner, context));
+        list->suspendIfNeeded();
+        return list;
     }
     virtual ~AudioTrackList();
 
-    AudioTrack* getTrackById(const AtomicString&) const;
+    AudioTrack* getTrackById(const AtomString&) const;
 
     AudioTrack* item(unsigned index) const;
     AudioTrack* lastItem() const { return item(length() - 1); }
@@ -51,10 +53,12 @@ public:
     EventTargetInterface eventTargetInterface() const override;
 
 private:
-    AudioTrackList(HTMLMediaElement*, ScriptExecutionContext*);
+    AudioTrackList(WeakPtr<HTMLMediaElement>, ScriptExecutionContext*);
+
     const char* activeDOMObjectName() const final;
 };
+static_assert(sizeof(AudioTrackList) == sizeof(TrackListBase), "");
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

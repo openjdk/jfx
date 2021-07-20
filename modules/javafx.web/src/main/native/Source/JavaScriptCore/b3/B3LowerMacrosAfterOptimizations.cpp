@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #if ENABLE(B3_JIT)
 
 #include "AirArg.h"
-#include "B3BasicBlockInlines.h"
 #include "B3BlockInsertionSet.h"
 #include "B3CCallValue.h"
 #include "B3ConstDoubleValue.h"
@@ -37,6 +36,7 @@
 #include "B3ConstPtrValue.h"
 #include "B3InsertionSetInlines.h"
 #include "B3PhaseScope.h"
+#include "B3ValueInlines.h"
 
 namespace JSC { namespace B3 {
 
@@ -97,11 +97,10 @@ private:
                     break;
 
                 Value* functionAddress = nullptr;
-                if (m_value->type() == Double) {
-                    double (*ceilDouble)(double) = ceil;
-                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunctionPtr(ceilDouble, B3CCallPtrTag));
-                } else if (m_value->type() == Float)
-                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunctionPtr(ceilf, B3CCallPtrTag));
+                if (m_value->type() == Double)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::ceilDouble));
+                else if (m_value->type() == Float)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::ceilFloat));
                 else
                     RELEASE_ASSERT_NOT_REACHED();
 
@@ -119,11 +118,10 @@ private:
                     break;
 
                 Value* functionAddress = nullptr;
-                if (m_value->type() == Double) {
-                    double (*floorDouble)(double) = floor;
-                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunctionPtr(floorDouble, B3CCallPtrTag));
-                } else if (m_value->type() == Float)
-                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunctionPtr(floorf, B3CCallPtrTag));
+                if (m_value->type() == Double)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::floorDouble));
+                else if (m_value->type() == Float)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::floorFloat));
                 else
                     RELEASE_ASSERT_NOT_REACHED();
 
@@ -137,7 +135,7 @@ private:
                 break;
             }
             case Neg: {
-                if (!isFloat(m_value->type()))
+                if (!m_value->type().isFloat())
                     break;
 
                 // X86 is odd in that it requires this.

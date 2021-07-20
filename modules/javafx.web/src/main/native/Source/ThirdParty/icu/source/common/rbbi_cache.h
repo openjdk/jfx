@@ -95,7 +95,7 @@ class RuleBasedBreakIterator::BreakCache: public UMemory {
                                 fTextIdx = fBI->fPosition = fBoundaries[fBufIdx];
                                 fBI->fRuleStatusIndex = fStatuses[fBufIdx];
                             }
-                };
+                }
 
 
     void        nextOL();
@@ -126,13 +126,13 @@ class RuleBasedBreakIterator::BreakCache: public UMemory {
      * Additional boundaries, either preceding or following, may be added
      * to the cache as a side effect.
      *
-     * Return FALSE if the operation failed.
+     * Return false if the operation failed.
      */
     UBool populateNear(int32_t position, UErrorCode &status);
 
     /**
      *  Add boundary(s) to the cache following the current last boundary.
-     *  Return FALSE if at the end of the text, and no more boundaries can be added.
+     *  Return false if at the end of the text, and no more boundaries can be added.
      *  Leave iteration position at the first newly added boundary, or unchanged if no boundary was added.
      */
     UBool populateFollowing();
@@ -170,7 +170,7 @@ class RuleBasedBreakIterator::BreakCache: public UMemory {
      *  Fails if the requested position is outside of the range of boundaries currently held by the cache.
      *  The startPosition must be on a code point boundary.
      *
-     *  Return TRUE if successful, FALSE if the specified position is after
+     *  Return true if successful, false if the specified position is after
      *  the last cached boundary or before the first.
      */
     UBool                   seek(int32_t startPosition);
@@ -178,7 +178,7 @@ class RuleBasedBreakIterator::BreakCache: public UMemory {
     void dumpCache();
 
   private:
-    static inline int32_t   modChunkSize(int index) { return index & (CACHE_SIZE - 1); };
+    static inline int32_t   modChunkSize(int index) { return index & (CACHE_SIZE - 1); }
 
     static constexpr int32_t CACHE_SIZE = 128;
     static_assert((CACHE_SIZE & (CACHE_SIZE-1)) == 0, "CACHE_SIZE must be power of two.");

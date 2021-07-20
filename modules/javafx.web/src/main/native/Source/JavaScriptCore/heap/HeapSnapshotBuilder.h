@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "SlotVisitor.h"
+#include "HeapAnalyzer.h"
 #include <functional>
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
-#include <wtf/text/UniquedStringImpl.h>
-#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
@@ -102,13 +102,13 @@ struct HeapSnapshotEdge {
     EdgeType type;
 };
 
-class JS_EXPORT_PRIVATE HeapSnapshotBuilder {
+class JS_EXPORT_PRIVATE HeapSnapshotBuilder final : public HeapAnalyzer {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum SnapshotType { InspectorSnapshot, GCDebuggingSnapshot };
 
     HeapSnapshotBuilder(HeapProfiler&, SnapshotType = SnapshotType::InspectorSnapshot);
-    ~HeapSnapshotBuilder();
+    ~HeapSnapshotBuilder() final;
 
     static void resetNextAvailableObjectIdentifier();
 
@@ -116,17 +116,17 @@ public:
     void buildSnapshot();
 
     // A root or marked cell.
-    void appendNode(JSCell*);
+    void analyzeNode(JSCell*) final;
 
     // A reference from one cell to another.
-    void appendEdge(JSCell* from, JSCell* to, SlotVisitor::RootMarkReason);
-    void appendPropertyNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* propertyName);
-    void appendVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* variableName);
-    void appendIndexEdge(JSCell* from, JSCell* to, uint32_t index);
+    void analyzeEdge(JSCell* from, JSCell* to, RootMarkReason) final;
+    void analyzePropertyNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* propertyName) final;
+    void analyzeVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* variableName) final;
+    void analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t index) final;
 
-    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*);
-    void setWrappedObjectForCell(JSCell*, void*);
-    void setLabelForCell(JSCell*, const String&);
+    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*) final;
+    void setWrappedObjectForCell(JSCell*, void*) final;
+    void setLabelForCell(JSCell*, const String&) final;
 
     String json();
     String json(Function<bool (const HeapSnapshotNode&)> allowNodeCallback);
@@ -143,7 +143,7 @@ private:
 
     struct RootData {
         const char* reachabilityFromOpaqueRootReasons { nullptr };
-        SlotVisitor::RootMarkReason markReason { SlotVisitor::RootMarkReason::None };
+        RootMarkReason markReason { RootMarkReason::None };
     };
 
     HeapProfiler& m_profiler;
@@ -156,6 +156,7 @@ private:
     HashMap<JSCell*, RootData> m_rootData;
     HashMap<JSCell*, void*> m_wrappedObjectPointers;
     HashMap<JSCell*, String> m_cellLabels;
+    HashSet<JSCell*> m_appendedCells;
     SnapshotType m_snapshotType;
 };
 

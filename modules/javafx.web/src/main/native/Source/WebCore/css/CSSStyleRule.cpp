@@ -91,18 +91,17 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
         return;
 
     CSSParser p(parserContext());
-    CSSSelectorList selectorList;
-    p.parseSelector(selectorText, selectorList);
-    if (!selectorList.isValid())
+    auto selectorList = p.parseSelector(selectorText);
+    if (!selectorList)
         return;
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
-    if (selectorList.componentCount() > RuleData::maximumSelectorComponentCount)
+    if (selectorList->componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return;
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
 
-    m_styleRule->wrapperAdoptSelectorList(WTFMove(selectorList));
+    m_styleRule->wrapperAdoptSelectorList(WTFMove(*selectorList));
 
     if (hasCachedSelectorText()) {
         selectorTextCache().remove(this);
@@ -112,15 +111,10 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
 
 String CSSStyleRule::cssText() const
 {
-    StringBuilder result;
-    result.append(selectorText());
-    result.appendLiteral(" { ");
-    String decls = m_styleRule->properties().asText();
-    result.append(decls);
-    if (!decls.isEmpty())
-        result.append(' ');
-    result.append('}');
-    return result.toString();
+    String declarations = m_styleRule->properties().asText();
+    if (declarations.isEmpty())
+        return makeString(selectorText(), " { }");
+    return makeString(selectorText(), " { ", declarations, " }");
 }
 
 void CSSStyleRule::reattach(StyleRuleBase& rule)

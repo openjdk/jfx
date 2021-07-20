@@ -116,7 +116,7 @@ static const uint8_t flagsOffset[256]={
  *               moved to the last uint16_t of the value, use +1 for beginning of next slot
  * @param value (out) int32_t or uint32_t output if hasSlot, otherwise not modified
  */
-#define GET_SLOT_VALUE(excWord, idx, pExc16, value) \
+#define GET_SLOT_VALUE(excWord, idx, pExc16, value) UPRV_BLOCK_MACRO_BEGIN { \
     if(((excWord)&UCASE_EXC_DOUBLE_SLOTS)==0) { \
         (pExc16)+=SLOT_OFFSET(excWord, idx); \
         (value)=*pExc16; \
@@ -124,7 +124,8 @@ static const uint8_t flagsOffset[256]={
         (pExc16)+=2*SLOT_OFFSET(excWord, idx); \
         (value)=*pExc16++; \
         (value)=((value)<<16)|*pExc16; \
-    }
+    } \
+} UPRV_BLOCK_MACRO_END
 
 /* simple case mappings ----------------------------------------------------- */
 
@@ -270,6 +271,7 @@ ucase_addCaseClosure(UChar32 c, const USetAdder *sa) {
             }
         }
         if(HAS_SLOT(excWord, UCASE_EXC_DELTA)) {
+            pe=pe0;
             int32_t delta;
             GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe, delta);
             sa->add(sa->set, (excWord&UCASE_EXC_DELTA_IS_NEGATIVE)==0 ? c+delta : c-delta);
@@ -705,6 +707,7 @@ ucase_isCaseSensitive(UChar32 c) {
 #define is_r(c) ((c)=='r' || (c)=='R')
 #define is_t(c) ((c)=='t' || (c)=='T')
 #define is_u(c) ((c)=='u' || (c)=='U')
+#define is_y(c) ((c)=='y' || (c)=='Y')
 #define is_z(c) ((c)=='z' || (c)=='Z')
 
 /* separator? */
@@ -802,6 +805,18 @@ ucase_getCaseLocale(const char *locale) {
                     return UCASE_LOC_DUTCH;
                 }
             }
+        } else if(c=='h') {
+            /* hy or hye? *not* hyw */
+            c=*locale++;
+            if(is_y(c)) {
+                c=*locale++;
+                if(is_e(c)) {
+                    c=*locale;
+                }
+                if(is_sep(c)) {
+                    return UCASE_LOC_ARMENIAN;
+                }
+            }
         }
     } else {
         // uppercase c
@@ -864,6 +879,18 @@ ucase_getCaseLocale(const char *locale) {
                 }
                 if(is_sep(c)) {
                     return UCASE_LOC_DUTCH;
+                }
+            }
+        } else if(c=='H') {
+            /* hy or hye? *not* hyw */
+            c=*locale++;
+            if(is_y(c)) {
+                c=*locale++;
+                if(is_e(c)) {
+                    c=*locale;
+                }
+                if(is_sep(c)) {
+                    return UCASE_LOC_ARMENIAN;
                 }
             }
         }
@@ -1167,7 +1194,7 @@ ucase_toFullLower(UChar32 c,
 
         if(HAS_SLOT(excWord, UCASE_EXC_DELTA) && UCASE_IS_UPPER_OR_TITLE(props)) {
             int32_t delta;
-            GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe, delta);
+            GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe2, delta);
             return (excWord&UCASE_EXC_DELTA_IS_NEGATIVE)==0 ? c+delta : c-delta;
         }
         if(HAS_SLOT(excWord, UCASE_EXC_LOWER)) {
@@ -1227,6 +1254,17 @@ toUpperOrTitle(UChar32 c,
                  */
                 *pString=nullptr;
                 return 0; /* remove the dot (continue without output) */
+            } else if(c==0x0587) {
+                // See ICU-13416:
+                // և ligature ech-yiwn
+                // uppercases to ԵՒ=ech+yiwn by default and in Western Armenian,
+                // but to ԵՎ=ech+vew in Eastern Armenian.
+                if(loc==UCASE_LOC_ARMENIAN) {
+                    *pString=upperNotTitle ? u"ԵՎ" : u"Եվ";
+                } else {
+                    *pString=upperNotTitle ? u"ԵՒ" : u"Եւ";
+                }
+                return 2;
             } else {
                 /* no known conditional special case mapping, use a normal mapping */
             }
@@ -1261,7 +1299,7 @@ toUpperOrTitle(UChar32 c,
 
         if(HAS_SLOT(excWord, UCASE_EXC_DELTA) && UCASE_GET_TYPE(props)==UCASE_LOWER) {
             int32_t delta;
-            GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe, delta);
+            GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe2, delta);
             return (excWord&UCASE_EXC_DELTA_IS_NEGATIVE)==0 ? c+delta : c-delta;
         }
         if(!upperNotTitle && HAS_SLOT(excWord, UCASE_EXC_TITLE)) {
@@ -1469,7 +1507,7 @@ ucase_toFullFolding(UChar32 c,
         }
         if(HAS_SLOT(excWord, UCASE_EXC_DELTA) && UCASE_IS_UPPER_OR_TITLE(props)) {
             int32_t delta;
-            GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe, delta);
+            GET_SLOT_VALUE(excWord, UCASE_EXC_DELTA, pe2, delta);
             return (excWord&UCASE_EXC_DELTA_IS_NEGATIVE)==0 ? c+delta : c-delta;
         }
         if(HAS_SLOT(excWord, UCASE_EXC_FOLD)) {

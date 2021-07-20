@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -355,6 +355,7 @@ ULONG GlassApplication::GetAccessibilityCount()
 
 extern "C" {
 
+#ifndef STATIC_BUILD
 BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
     if (dwReason == DLL_PROCESS_ATTACH) {
@@ -362,6 +363,7 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
     }
     return TRUE;
 }
+#endif
 
 /*
  * Class:     com_sun_glass_ui_win_WinApplication
@@ -371,6 +373,11 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
   (JNIEnv *env, jclass cls, jfloat overrideUIScale)
 {
+#ifdef STATIC_BUILD
+    HINSTANCE hInstExe = ::GetModuleHandle(NULL);
+    GlassApplication::SetHInstance((HINSTANCE)hInstExe);
+#endif
+
     GlassApplication::overrideUIScale = overrideUIScale;
 
     javaIDs.Application.reportExceptionMID =

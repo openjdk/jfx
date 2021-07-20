@@ -38,53 +38,51 @@ using namespace JSC;
 
 namespace WebCore {
 
-static inline JSC::JSValue callFunction(JSC::ExecState& state, JSC::JSValue jsFunction, JSC::JSValue thisValue, const JSC::ArgList& arguments)
+auto DOMPromise::whenSettled(std::function<void()>&& callback) -> IsCallbackRegistered
 {
-    VM& vm = state.vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSC::CallData callData;
-    auto callType = JSC::getCallData(vm, jsFunction, callData);
-    ASSERT(callType != JSC::CallType::None);
-    auto result = call(&state, jsFunction, callType, callData, thisValue, arguments);
-
-    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception() || isTerminatedExecutionException(state.vm(), scope.exception()));
-
-    return result;
+    return whenPromiseIsSettled(globalObject(), promise(), WTFMove(callback));
 }
 
-void DOMPromise::whenSettled(std::function<void()>&& callback)
+auto DOMPromise::whenPromiseIsSettled(JSDOMGlobalObject* globalObject, JSC::JSObject* promise, Function<void()>&& callback) -> IsCallbackRegistered
 {
-    whenPromiseIsSettled(globalObject(), promise(), WTFMove(callback));
-}
-
-void DOMPromise::whenPromiseIsSettled(JSDOMGlobalObject* globalObject, JSC::JSObject* promise, std::function<void()>&& callback)
-{
-    auto& state = *globalObject->globalExec();
-    auto& vm = state.vm();
+    auto& lexicalGlobalObject = *globalObject;
+    auto& vm = lexicalGlobalObject.vm();
     JSLockHolder lock(vm);
-    auto* handler = JSC::JSNativeStdFunction::create(vm, globalObject, 1, String { }, [callback = WTFMove(callback)] (ExecState*) mutable {
+    auto* handler = JSC::JSNativeStdFunction::create(vm, globalObject, 1, String { }, [callback = WTFMove(callback)] (JSGlobalObject*, CallFrame*) mutable {
         callback();
         return JSC::JSValue::encode(JSC::jsUndefined());
     });
 
+    auto scope = DECLARE_THROW_SCOPE(vm);
     const JSC::Identifier& privateName = vm.propertyNames->builtinNames().thenPrivateName();
-    auto thenFunction = promise->get(&state, privateName);
-    ASSERT(thenFunction.isFunction(vm));
+    auto thenFunction = promise->get(&lexicalGlobalObject, privateName);
+
+    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    if (scope.exception())
+        return IsCallbackRegistered::No;
+
+    ASSERT(thenFunction.isCallable(vm));
 
     JSC::MarkedArgumentBuffer arguments;
     arguments.append(handler);
     arguments.append(handler);
-    callFunction(state, thenFunction, promise, arguments);
+
+    auto callData = JSC::getCallData(vm, thenFunction);
+    ASSERT(callData.type != JSC::CallData::Type::None);
+    call(&lexicalGlobalObject, thenFunction, callData, promise, arguments);
+
+    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    return scope.exception() ? IsCallbackRegistered::No : IsCallbackRegistered::Yes;
 }
 
 JSC::JSValue DOMPromise::result() const
 {
-    return promise()->result(m_globalObject->globalExec()->vm());
+    return promise()->result(m_globalObject->vm());
 }
 
 DOMPromise::Status DOMPromise::status() const
 {
-    switch (promise()->status(m_globalObject->globalExec()->vm())) {
+    switch (promise()->status(m_globalObject->vm())) {
     case JSC::JSPromise::Status::Pending:
         return Status::Pending;
     case JSC::JSPromise::Status::Fulfilled:

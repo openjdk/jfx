@@ -29,6 +29,7 @@
 #include "CSSValue.h"
 #include "ComputedEffectTiming.h"
 #include "RenderStyle.h"
+#include "Styleable.h"
 #include "WebAnimation.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -44,11 +45,14 @@ namespace WebCore {
 class CSSAnimation;
 class CSSTransition;
 class DeclarativeAnimation;
-class Element;
 
-class AnimationTimeline : public RefCounted<AnimationTimeline> {
+class AnimationTimeline : public RefCounted<AnimationTimeline>, public CanMakeWeakPtr<AnimationTimeline> {
 public:
+    virtual ~AnimationTimeline();
+
     virtual bool isDocumentTimeline() const { return false; }
+
+    const AnimationCollection& relevantAnimations() const { return m_animations; }
 
     void forgetAnimation(WebAnimation*);
     virtual void animationTimingDidChange(WebAnimation&);
@@ -57,40 +61,29 @@ public:
     Optional<double> bindingsCurrentTime();
     virtual Optional<Seconds> currentTime() { return m_currentTime; }
 
-    enum class Ordering : uint8_t { Sorted, Unsorted };
-    Vector<RefPtr<WebAnimation>> animationsForElement(Element&, Ordering ordering = Ordering::Unsorted) const;
-    void elementWasRemoved(Element&);
-    void removeAnimationsForElement(Element&);
-    void cancelDeclarativeAnimationsForElement(Element&);
-    virtual void animationWasAddedToElement(WebAnimation&, Element&);
-    virtual void animationWasRemovedFromElement(WebAnimation&, Element&);
-    void removeDeclarativeAnimationFromListsForOwningElement(WebAnimation&, Element&);
+    void elementWasRemoved(const Styleable&);
 
-    void updateCSSAnimationsForElement(Element&, const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle);
-    void updateCSSTransitionsForElement(Element&, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle);
+    void willChangeRendererForStyleable(const Styleable&);
+    void cancelDeclarativeAnimationsForStyleable(const Styleable&, WebAnimation::Silently);
 
-    using ElementToAnimationsMap = HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>>;
-    using PropertyToTransitionMap = HashMap<CSSPropertyID, RefPtr<CSSTransition>>;
+    void animationWasAddedToStyleable(WebAnimation&, const Styleable&);
+    void animationWasRemovedFromStyleable(WebAnimation&, const Styleable&);
 
-    virtual ~AnimationTimeline();
+    void removeDeclarativeAnimationFromListsForOwningElement(WebAnimation&, const Styleable&);
+
+    void updateCSSAnimationsForStyleable(const Styleable&, const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle, const RenderStyle* parentElementStyle);
+    void updateCSSTransitionsForStyleable(const Styleable&, const RenderStyle& currentStyle, const RenderStyle& newStyle);
 
 protected:
     explicit AnimationTimeline();
 
-    ListHashSet<WebAnimation*> m_allAnimations;
-    ListHashSet<RefPtr<WebAnimation>> m_animations;
-    HashMap<Element*, PropertyToTransitionMap> m_elementToCompletedCSSTransitionByCSSPropertyID;
+    Vector<WeakPtr<WebAnimation>> m_allAnimations;
+    AnimationCollection m_animations;
 
 private:
-    RefPtr<WebAnimation> cssAnimationForElementAndProperty(Element&, CSSPropertyID);
-    PropertyToTransitionMap& ensureRunningTransitionsByProperty(Element&);
-    void cancelDeclarativeAnimation(DeclarativeAnimation&);
-
-    ElementToAnimationsMap m_elementToAnimationsMap;
-    ElementToAnimationsMap m_elementToCSSAnimationsMap;
-    ElementToAnimationsMap m_elementToCSSTransitionsMap;
-    HashMap<Element*, HashMap<String, RefPtr<CSSAnimation>>> m_elementToCSSAnimationByName;
-    HashMap<Element*, PropertyToTransitionMap> m_elementToRunningCSSTransitionByCSSPropertyID;
+    void updateGlobalPosition(WebAnimation&);
+    void updateCSSTransitionsForStyleableAndProperty(const Styleable&, CSSPropertyID, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle, const MonotonicTime);
+    void removeCSSAnimationCreatedByMarkup(const Styleable&, CSSAnimation&);
 
     Markable<Seconds, Seconds::MarkableTraits> m_currentTime;
 };

@@ -55,6 +55,7 @@ import java.util.HashMap;
  * Quantum Renderer
  */
 final class QuantumRenderer extends ThreadPoolExecutor  {
+    @SuppressWarnings("removal")
     private static boolean usePurgatory = // TODO - deprecate
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("decora.purgatory"));
 
@@ -132,6 +133,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
     private class QuantumThreadFactory implements ThreadFactory {
         final AtomicInteger threadNumber = new AtomicInteger(0);
 
+        @SuppressWarnings("removal")
         @Override public Thread newThread(Runnable r) {
             final PipelineRunnable pipeline = new PipelineRunnable(r);
             _renderer =
@@ -191,6 +193,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
         }
     }
 
+    @SuppressWarnings("removal")
     protected void stopRenderer() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             shutdown();

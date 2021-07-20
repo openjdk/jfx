@@ -28,8 +28,9 @@
 #include <wtf/Assertions.h>
 
 class CheckedBoolean {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     CheckedBoolean(const CheckedBoolean& other)
         : m_value(other.m_value)
         , m_checked(false)
@@ -40,7 +41,7 @@ public:
 
     CheckedBoolean(bool value)
         : m_value(value)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         , m_checked(false)
 #endif
     {
@@ -53,7 +54,7 @@ public:
 
     operator bool()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         m_checked = true;
 #endif
         return m_value;
@@ -61,7 +62,7 @@ public:
 
 private:
     bool m_value;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     mutable bool m_checked;
 #endif
 };

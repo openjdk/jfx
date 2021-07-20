@@ -34,10 +34,9 @@
 
 namespace PAL {
 
-static char * const loggingEnvironmentVariable = "WebCoreLogging";
-
 String logLevelString()
 {
+    static constexpr const char* loggingEnvironmentVariable = "WebCoreLogging";
     DWORD length = GetEnvironmentVariableA(loggingEnvironmentVariable, 0, 0);
     if (!length)
         return emptyString();

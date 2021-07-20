@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,23 +32,23 @@
 
 #include "ArrayBuffer.h"
 #include "JSArrayBuffer.h"
+#include "ObjectConstructor.h"
 
 namespace JSC {
 
 const ClassInfo JSWebAssemblyMemory::s_info = { "WebAssembly.Memory", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyMemory) };
 
-JSWebAssemblyMemory* JSWebAssemblyMemory::create(ExecState* exec, VM& vm, Structure* structure)
+JSWebAssemblyMemory* JSWebAssemblyMemory::tryCreate(JSGlobalObject* globalObject, VM& vm, Structure* structure)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* globalObject = exec->lexicalGlobalObject();
 
     auto exception = [&] (JSObject* error) {
-        throwException(exec, throwScope, error);
+        throwException(globalObject, throwScope, error);
         return nullptr;
     };
 
     if (!globalObject->webAssemblyEnabled())
-        return exception(createEvalError(exec, globalObject->webAssemblyDisabledErrorMessage()));
+        return exception(createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
 
     auto* memory = new (NotNull, allocateCell<JSWebAssemblyMemory>(vm.heap)) JSWebAssemblyMemory(vm, structure);
     memory->finishCreation(vm);
@@ -73,22 +73,39 @@ JSWebAssemblyMemory::JSWebAssemblyMemory(VM& vm, Structure* structure)
 {
 }
 
-JSArrayBuffer* JSWebAssemblyMemory::buffer(VM& vm, JSGlobalObject* globalObject)
+JSArrayBuffer* JSWebAssemblyMemory::buffer(JSGlobalObject* globalObject)
 {
-    if (m_bufferWrapper)
-        return m_bufferWrapper.get();
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    // We can't use a ref here since it doesn't have a copy constructor...
-    Ref<Wasm::Memory> protectedMemory = m_memory.get();
-    auto destructor = [protectedMemory = WTFMove(protectedMemory)] (void*) { };
-    m_buffer = ArrayBuffer::createFromBytes(memory().memory(), memory().size(), WTFMove(destructor));
+    auto* wrapper = m_bufferWrapper.get();
+    if (wrapper) {
+        if (m_memory->sharingMode() == Wasm::MemorySharingMode::Default)
+            return wrapper;
+
+        ASSERT(m_memory->sharingMode() == Wasm::MemorySharingMode::Shared);
+        // If SharedArrayBuffer's underlying memory is not grown, we continue using cached wrapper.
+        if (wrapper->impl()->byteLength() == memory().size())
+            return wrapper;
+    }
+
+    Ref<Wasm::MemoryHandle> protectedHandle = m_memory->handle();
+    auto destructor = createSharedTask<void(void*)>([protectedHandle = WTFMove(protectedHandle)] (void*) { });
+    m_buffer = ArrayBuffer::createFromBytes(m_memory->memory(), m_memory->size(), WTFMove(destructor));
     m_buffer->makeWasmMemory();
-    m_bufferWrapper.set(vm, this, JSArrayBuffer::create(vm, globalObject->m_arrayBufferStructure.get(), m_buffer.get()));
+    if (m_memory->sharingMode() == Wasm::MemorySharingMode::Shared)
+        m_buffer->makeShared();
+    auto* arrayBuffer = JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(m_buffer->sharingMode()), m_buffer.get());
+    if (m_memory->sharingMode() == Wasm::MemorySharingMode::Shared) {
+        objectConstructorFreeze(globalObject, arrayBuffer);
+        RETURN_IF_EXCEPTION(throwScope, { });
+    }
+    m_bufferWrapper.set(vm, this, arrayBuffer);
     RELEASE_ASSERT(m_bufferWrapper);
     return m_bufferWrapper.get();
 }
 
-Wasm::PageCount JSWebAssemblyMemory::grow(VM& vm, ExecState* exec, uint32_t delta)
+Wasm::PageCount JSWebAssemblyMemory::grow(VM& vm, JSGlobalObject* globalObject, uint32_t delta)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
@@ -96,16 +113,16 @@ Wasm::PageCount JSWebAssemblyMemory::grow(VM& vm, ExecState* exec, uint32_t delt
     if (!grown) {
         switch (grown.error()) {
         case Wasm::Memory::GrowFailReason::InvalidDelta:
-            throwException(exec, throwScope, createRangeError(exec, "WebAssembly.Memory.grow expects the delta to be a valid page count"_s));
+            throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory.grow expects the delta to be a valid page count"_s));
             break;
         case Wasm::Memory::GrowFailReason::InvalidGrowSize:
-            throwException(exec, throwScope, createRangeError(exec, "WebAssembly.Memory.grow expects the grown size to be a valid page count"_s));
+            throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory.grow expects the grown size to be a valid page count"_s));
             break;
         case Wasm::Memory::GrowFailReason::WouldExceedMaximum:
-            throwException(exec, throwScope, createRangeError(exec, "WebAssembly.Memory.grow would exceed the memory's declared maximum size"_s));
+            throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory.grow would exceed the memory's declared maximum size"_s));
             break;
         case Wasm::Memory::GrowFailReason::OutOfMemory:
-            throwException(exec, throwScope, createOutOfMemoryError(exec));
+            throwException(globalObject, throwScope, createOutOfMemoryError(globalObject));
             break;
         }
         return Wasm::PageCount();
@@ -117,9 +134,9 @@ Wasm::PageCount JSWebAssemblyMemory::grow(VM& vm, ExecState* exec, uint32_t delt
 void JSWebAssemblyMemory::growSuccessCallback(VM& vm, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount)
 {
     // We need to clear out the old array buffer because it might now be pointing to stale memory.
-    // Neuter the old array.
     if (m_buffer) {
-        m_buffer->neuter(vm);
+        if (m_memory->sharingMode() == Wasm::MemorySharingMode::Default)
+            m_buffer->detach(vm);
         m_buffer = nullptr;
         m_bufferWrapper.clear();
     }
@@ -139,12 +156,11 @@ void JSWebAssemblyMemory::finishCreation(VM& vm)
 void JSWebAssemblyMemory::destroy(JSCell* cell)
 {
     auto memory = static_cast<JSWebAssemblyMemory*>(cell);
-    ASSERT(memory->classInfo() == info());
-
     memory->JSWebAssemblyMemory::~JSWebAssemblyMemory();
 }
 
-void JSWebAssemblyMemory::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWebAssemblyMemory::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<JSWebAssemblyMemory*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -153,6 +169,8 @@ void JSWebAssemblyMemory::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_bufferWrapper);
     visitor.reportExtraMemoryVisited(thisObject->memory().size());
 }
+
+DEFINE_VISIT_CHILDREN(JSWebAssemblyMemory);
 
 } // namespace JSC
 

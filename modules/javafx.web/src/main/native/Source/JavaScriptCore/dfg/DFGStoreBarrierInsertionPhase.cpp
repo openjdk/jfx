@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ namespace JSC { namespace DFG {
 namespace {
 
 namespace DFGStoreBarrierInsertionPhaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 enum class PhaseMode {
@@ -95,8 +95,8 @@ public:
         case PhaseMode::Global: {
             DFG_ASSERT(m_graph, nullptr, m_graph.m_form == SSA);
 
-            m_state = std::make_unique<InPlaceAbstractState>(m_graph);
-            m_interpreter = std::make_unique<AbstractInterpreter<InPlaceAbstractState>>(m_graph, *m_state);
+            m_state = makeUnique<InPlaceAbstractState>(m_graph);
+            m_interpreter = makeUnique<AbstractInterpreter<InPlaceAbstractState>>(m_graph, *m_state);
 
             m_isConverged = false;
 
@@ -107,8 +107,8 @@ public:
             // towards believing that all nodes need barriers. "Needing a barrier" is like
             // saying that the node is in a past epoch. "Not needing a barrier" is like saying
             // that the node is in the current epoch.
-            m_stateAtHead = std::make_unique<BlockMap<HashSet<Node*>>>(m_graph);
-            m_stateAtTail = std::make_unique<BlockMap<HashSet<Node*>>>(m_graph);
+            m_stateAtHead = makeUnique<BlockMap<HashSet<Node*>>>(m_graph);
+            m_stateAtTail = makeUnique<BlockMap<HashSet<Node*>>>(m_graph);
 
             BlockList postOrder = m_graph.blocksInPostOrder();
 
@@ -266,11 +266,29 @@ private:
                 break;
             }
 
+            case PutPrivateNameById: {
+                // We emit IC code when we have a non-null cacheableIdentifier and we need to introduce a
+                // barrier for it. On PutPrivateName, we perform store barrier during slow path execution.
+                considerBarrier(m_node->child1());
+                break;
+            }
+
+            case SetPrivateBrand:
             case PutById:
             case PutByIdFlush:
             case PutByIdDirect:
             case PutStructure: {
                 considerBarrier(m_node->child1());
+                break;
+            }
+
+            case DeleteById:
+            case DeleteByVal: {
+                // If child1 is not a cell-speculated, we call a generic implementation which emits write-barrier in C++ side.
+                // FIXME: We should consider accept base:UntypedUse.
+                // https://bugs.webkit.org/show_bug.cgi?id=209396
+                if (isCell(m_node->child1().useKind()))
+                    considerBarrier(m_node->child1());
                 break;
             }
 
@@ -281,12 +299,14 @@ private:
 
             case PutClosureVar:
             case PutToArguments:
-            case SetRegExpObjectLastIndex: {
+            case SetRegExpObjectLastIndex:
+            case PutInternalField: {
                 considerBarrier(m_node->child1(), m_node->child2());
                 break;
             }
 
-            case MultiPutByOffset: {
+            case MultiPutByOffset:
+            case MultiDeleteByOffset: {
                 considerBarrier(m_node->child1());
                 break;
             }
@@ -320,9 +340,12 @@ private:
 
             switch (m_node->op()) {
             case NewObject:
+            case NewGenerator:
+            case NewAsyncGenerator:
             case NewArray:
             case NewArrayWithSize:
             case NewArrayBuffer:
+            case NewInternalFieldObject:
             case NewTypedArray:
             case NewRegexp:
             case NewStringObject:
@@ -334,6 +357,7 @@ private:
             case CreateDirectArguments:
             case CreateScopedArguments:
             case CreateClonedArguments:
+            case CreateArgumentsButterfly:
             case NewFunction:
             case NewGeneratorFunction:
             case NewAsyncGeneratorFunction:
@@ -467,6 +491,7 @@ private:
 
         // FIXME: We could support StoreBarrier(UntypedUse:). That would be sort of cool.
         // But right now we don't need it.
+        // https://bugs.webkit.org/show_bug.cgi?id=209396
 
         DFG_ASSERT(m_graph, m_node, isCell(base.useKind()), m_node->op(), base.useKind());
 
@@ -478,13 +503,7 @@ private:
         if (clobbersExitState(m_graph, m_node))
             origin = origin.withInvalidExit();
 
-        NodeType type;
-        if (Options::useConcurrentBarriers())
-            type = FencedStoreBarrier;
-        else
-            type = StoreBarrier;
-
-        m_insertionSet.insertNode(nodeIndex, SpecNone, type, origin, base);
+        m_insertionSet.insertNode(nodeIndex, SpecNone, FencedStoreBarrier, origin, base);
     }
 
     bool reallyInsertBarriers()

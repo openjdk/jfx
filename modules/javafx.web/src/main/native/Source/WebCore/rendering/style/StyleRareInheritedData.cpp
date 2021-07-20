@@ -23,15 +23,15 @@
 #include "StyleRareInheritedData.h"
 
 #include "CursorList.h"
-#include "DataRef.h"
 #include "QuotesData.h"
 #include "RenderStyle.h"
 #include "RenderStyleConstants.h"
 #include "ShadowData.h"
+#include "StyleColorScheme.h"
 #include "StyleCustomPropertyData.h"
 #include "StyleFilterData.h"
 #include "StyleImage.h"
-#include "StyleSupportedColorSchemes.h"
+#include <wtf/DataRef.h>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -42,20 +42,18 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     float firstFloat;
     Color colors[9];
     void* ownPtrs[1];
-    AtomicString atomicStrings[5];
+    AtomString atomStrings[6];
     void* refPtrs[3];
     Length lengths[2];
     float secondFloat;
     TextUnderlineOffset offset;
     TextDecorationThickness thickness;
-    unsigned bitfields[4];
+    void* customPropertyDataRefs[1];
+    unsigned bitfields[6];
     short pagedMediaShorts[2];
-    unsigned unsigneds[1];
+    TabSize tabSize;
     short hyphenationShorts[3];
 
-#if PLATFORM(IOS_FAMILY)
-    Color compositionColor; // FIXME: this has gone.
-#endif
 #if ENABLE(TEXT_AUTOSIZING)
     TextSizeAdjustment textSizeAdjust;
 #endif
@@ -69,16 +67,17 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
-    StyleSupportedColorSchemes supportedColorSchemes;
+    StyleColorScheme colorScheme;
 #endif
-
-    void* customPropertyDataRefs[1];
 };
 
 COMPILE_ASSERT(sizeof(StyleRareInheritedData) <= sizeof(GreaterThanOrSameSizeAsStyleRareInheritedData), StyleRareInheritedData_should_bit_pack);
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
+
 StyleRareInheritedData::StyleRareInheritedData()
     : listStyleImage(RenderStyle::initialListStyleImage())
+    , listStyleStringValue(RenderStyle::initialListStyleStringValue())
     , textStrokeWidth(RenderStyle::initialTextStrokeWidth())
     , indent(RenderStyle::initialTextIndent())
     , effectiveZoom(RenderStyle::initialZoom())
@@ -106,14 +105,12 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textIndentLine(RenderStyle::initialTextIndentLine())
     , textIndentType(RenderStyle::initialTextIndentType())
 #endif
-    , lineBoxContain(RenderStyle::initialLineBoxContain())
-#if ENABLE(CSS_IMAGE_ORIENTATION)
+    , lineBoxContain(static_cast<unsigned>(RenderStyle::initialLineBoxContain().toRaw()))
     , imageOrientation(RenderStyle::initialImageOrientation())
-#endif
     , imageRendering(static_cast<unsigned>(RenderStyle::initialImageRendering()))
     , lineSnap(static_cast<unsigned>(RenderStyle::initialLineSnap()))
     , lineAlign(static_cast<unsigned>(RenderStyle::initialLineAlign()))
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     , useTouchOverflowScrolling(RenderStyle::initialUseTouchOverflowScrolling())
 #endif
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -137,6 +134,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , joinStyle(RenderStyle::initialJoinStyle())
     , hasSetStrokeWidth(false)
     , hasSetStrokeColor(false)
+    , mathStyle(static_cast<unsigned>(RenderStyle::initialMathStyle()))
+    , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
     , miterLimit(RenderStyle::initialStrokeMiterLimit())
@@ -156,7 +155,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , tapHighlightColor(RenderStyle::initialTapHighlightColor())
 #endif
 #if ENABLE(DARK_MODE_CSS)
-    , supportedColorSchemes(RenderStyle::initialSupportedColorSchemes())
+    , colorScheme(RenderStyle::initialColorScheme())
 #endif
 {
 }
@@ -164,6 +163,7 @@ StyleRareInheritedData::StyleRareInheritedData()
 inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
     : RefCounted<StyleRareInheritedData>()
     , listStyleImage(o.listStyleImage)
+    , listStyleStringValue(o.listStyleStringValue)
     , textStrokeColor(o.textStrokeColor)
     , textStrokeWidth(o.textStrokeWidth)
     , textFillColor(o.textFillColor)
@@ -173,7 +173,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , visitedLinkTextEmphasisColor(o.visitedLinkTextEmphasisColor)
     , caretColor(o.caretColor)
     , visitedLinkCaretColor(o.visitedLinkCaretColor)
-    , textShadow(o.textShadow ? std::make_unique<ShadowData>(*o.textShadow) : nullptr)
+    , textShadow(o.textShadow ? makeUnique<ShadowData>(*o.textShadow) : nullptr)
     , cursorData(o.cursorData)
     , indent(o.indent)
     , effectiveZoom(o.effectiveZoom)
@@ -202,13 +202,11 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textIndentType(o.textIndentType)
 #endif
     , lineBoxContain(o.lineBoxContain)
-#if ENABLE(CSS_IMAGE_ORIENTATION)
     , imageOrientation(o.imageOrientation)
-#endif
     , imageRendering(o.imageRendering)
     , lineSnap(o.lineSnap)
     , lineAlign(o.lineAlign)
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     , useTouchOverflowScrolling(o.useTouchOverflowScrolling)
 #endif
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -232,6 +230,9 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , joinStyle(o.joinStyle)
     , hasSetStrokeWidth(o.hasSetStrokeWidth)
     , hasSetStrokeColor(o.hasSetStrokeColor)
+    , mathStyle(o.mathStyle)
+    , effectiveTouchActions(o.effectiveTouchActions)
+    , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
     , strokeColor(o.strokeColor)
     , visitedLinkStrokeColor(o.visitedLinkStrokeColor)
@@ -254,7 +255,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , tapHighlightColor(o.tapHighlightColor)
 #endif
 #if ENABLE(DARK_MODE_CSS)
-    , supportedColorSchemes(o.supportedColorSchemes)
+    , colorScheme(o.colorScheme)
 #endif
 {
 }
@@ -296,14 +297,14 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && overflowWrap == o.overflowWrap
         && nbspMode == o.nbspMode
         && lineBreak == o.lineBreak
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
         && useTouchOverflowScrolling == o.useTouchOverflowScrolling
 #endif
 #if ENABLE(TEXT_AUTOSIZING)
         && textSizeAdjust == o.textSizeAdjust
 #endif
 #if ENABLE(DARK_MODE_CSS)
-        && supportedColorSchemes == o.supportedColorSchemes
+        && colorScheme == o.colorScheme
 #endif
         && userSelect == o.userSelect
         && speakAs == o.speakAs
@@ -329,9 +330,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && appleColorFilter == o.appleColorFilter
         && tabSize == o.tabSize
         && lineGrid == o.lineGrid
-#if ENABLE(CSS_IMAGE_ORIENTATION)
         && imageOrientation == o.imageOrientation
-#endif
         && imageRendering == o.imageRendering
 #if ENABLE(CSS_IMAGE_RESOLUTION)
         && imageResolutionSource == o.imageResolutionSource
@@ -354,12 +353,16 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && joinStyle == o.joinStyle
         && hasSetStrokeWidth == o.hasSetStrokeWidth
         && hasSetStrokeColor == o.hasSetStrokeColor
+        && mathStyle == o.mathStyle
+        && effectiveTouchActions == o.effectiveTouchActions
+        && eventListenerRegionTypes == o.eventListenerRegionTypes
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor
         && miterLimit == o.miterLimit
         && customProperties == o.customProperties
-        && arePointingToEqualData(listStyleImage, o.listStyleImage);
+        && arePointingToEqualData(listStyleImage, o.listStyleImage)
+        && listStyleStringValue == o.listStyleStringValue;
 }
 
 bool StyleRareInheritedData::hasColorFilters() const

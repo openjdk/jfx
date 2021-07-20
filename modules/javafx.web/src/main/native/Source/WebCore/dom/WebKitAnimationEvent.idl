@@ -24,13 +24,17 @@
  */
 
 [
-    Constructor(DOMString type, optional WebKitAnimationEventInit eventInitDict),
+    Exposed=Window
 ] interface WebKitAnimationEvent : Event {
+    constructor(DOMString type, optional WebKitAnimationEventInit eventInitDict);
+
     readonly attribute DOMString animationName;
     readonly attribute double elapsedTime;
+    readonly attribute DOMString pseudoElement;
 };
 
 dictionary WebKitAnimationEventInit : EventInit {
     DOMString animationName = "";
     double elapsedTime = 0;
+    DOMString pseudoElement = "";
 };

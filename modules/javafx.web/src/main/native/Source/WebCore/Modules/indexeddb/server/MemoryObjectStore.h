@@ -29,11 +29,16 @@
 
 #include "IDBKeyData.h"
 #include "IDBObjectStoreInfo.h"
+#include "IndexKey.h"
 #include "MemoryIndex.h"
 #include "MemoryObjectStoreCursor.h"
 #include "ThreadSafeDataBuffer.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
+
+namespace PAL {
+class SessionID;
+}
 
 namespace WebCore {
 
@@ -47,18 +52,19 @@ struct IDBKeyRangeData;
 
 namespace IndexedDB {
 enum class GetAllType;
-enum class IndexRecordType;
+enum class IndexRecordType : bool;
 }
 
 namespace IDBServer {
 
+class IDBSerializationContext;
 class MemoryBackingStoreTransaction;
 
 typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, IDBKeyDataHash, IDBKeyDataHashTraits> KeyValueMap;
 
 class MemoryObjectStore : public RefCounted<MemoryObjectStore> {
 public:
-    static Ref<MemoryObjectStore> create(const IDBObjectStoreInfo&);
+    static Ref<MemoryObjectStore> create(PAL::SessionID, const IDBObjectStoreInfo&);
 
     ~MemoryObjectStore();
 
@@ -75,6 +81,7 @@ public:
     void deleteRecord(const IDBKeyData&);
     void deleteRange(const IDBKeyRangeData&);
     IDBError addRecord(MemoryBackingStoreTransaction&, const IDBKeyData&, const IDBValue&);
+    IDBError addRecord(MemoryBackingStoreTransaction&, const IDBKeyData&, const IndexIDToIndexKeyMap&, const IDBValue&);
 
     uint64_t currentKeyGeneratorValue() const { return m_keyGeneratorValue; }
     void setKeyGeneratorValue(uint64_t value) { m_keyGeneratorValue = value; }
@@ -104,12 +111,12 @@ public:
     void renameIndex(MemoryIndex&, const String& newName);
 
 private:
-    MemoryObjectStore(const IDBObjectStoreInfo&);
+    MemoryObjectStore(PAL::SessionID, const IDBObjectStoreInfo&);
 
     IDBKeyDataSet::iterator lowestIteratorInRange(const IDBKeyRangeData&, bool reverse) const;
 
     IDBError populateIndexWithExistingRecords(MemoryIndex&);
-    IDBError updateIndexesForPutRecord(const IDBKeyData&, const ThreadSafeDataBuffer& value);
+    IDBError updateIndexesForPutRecord(const IDBKeyData&, const IndexIDToIndexKeyMap&);
     void updateIndexesForDeleteRecord(const IDBKeyData& value);
     void updateCursorsForPutRecord(IDBKeyDataSet::iterator);
     void updateCursorsForDeleteRecord(const IDBKeyData&);
@@ -128,6 +135,8 @@ private:
     HashMap<uint64_t, RefPtr<MemoryIndex>> m_indexesByIdentifier;
     HashMap<String, RefPtr<MemoryIndex>> m_indexesByName;
     HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryObjectStoreCursor>> m_cursors;
+
+    Ref<IDBSerializationContext> m_serializationContext;
 };
 
 } // namespace IDBServer

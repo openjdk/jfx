@@ -72,6 +72,10 @@ public class FileReaderTest extends TestBase {
                                             "result = reader.result;" +
                                             "latch.countDown();" +
                                         "};" +
+                                        "reader.onabort = () => {" +
+                                            "result = 'failed due to abort';" +
+                                            "latch.countDown();" +
+                                        "};" +
                                         "reader.onerror = () => {" +
                                             "result = 'failed due to error';" +
                                             "latch.countDown();" +
@@ -261,7 +265,7 @@ public class FileReaderTest extends TestBase {
     @Test public void testAbort() {
         loadFileReaderTestScript(getScriptString("readAsText", "", true));
         submit(() -> {
-            assertEquals("Unexpected file content received", "failed due to error",
+            assertEquals("Unexpected file content received", "failed due to abort",
                           getEngine().executeScript("window.result"));
         });
     }

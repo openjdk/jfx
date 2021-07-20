@@ -34,6 +34,7 @@
 #  include "config.h"
 #endif
 
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include "math-compat.h"
 #include "gst-i18n-lib.h"
@@ -471,13 +472,13 @@ gst_tag_lookup (const gchar * tag_name)
 }
 
 /**
- * gst_tag_register:
+ * gst_tag_register: (skip)
  * @name: the name or identifier string
  * @flag: a flag describing the type of tag info
  * @type: the type this data is in
  * @nick: human-readable name
  * @blurb: a human-readable description about this tag
- * @func: (allow-none) (scope call): function for merging multiple values of this tag, or %NULL
+ * @func: (allow-none): function for merging multiple values of this tag, or %NULL
  *
  * Registers a new tag type for the use with GStreamer's type system. If a type
  * with that name is already registered, that one is used.
@@ -515,13 +516,13 @@ gst_tag_register (const gchar * name, GstTagFlag flag, GType type,
 }
 
 /**
- * gst_tag_register_static:
+ * gst_tag_register_static: (skip)
  * @name: the name or identifier string (string constant)
  * @flag: a flag describing the type of tag info
  * @type: the type this data is in
  * @nick: human-readable name or short description (string constant)
  * @blurb: a human-readable description for this tag (string constant)
- * @func: (allow-none) (scope call): function for merging multiple values of this tag, or %NULL
+ * @func: (allow-none): function for merging multiple values of this tag, or %NULL
  *
  * Registers a new tag type for the use with GStreamer's type system.
  *
@@ -614,7 +615,7 @@ gst_tag_get_nick (const gchar * tag)
   g_return_val_if_fail (tag != NULL, NULL);
   info = gst_tag_lookup (tag);
   if (!info) {
-    GST_WARNING ("Uknown tag: %s", tag);
+    GST_WARNING ("Unknown tag: %s", tag);
 
     return tag;
   }
@@ -718,6 +719,10 @@ __gst_tag_list_free (GstTagList * list)
 #endif
 
   gst_structure_free (GST_TAG_LIST_STRUCTURE (list));
+
+#ifdef USE_POISONING
+  memset (list, 0xff, sizeof (GstTagListImpl));
+#endif
 
   g_slice_free1 (sizeof (GstTagListImpl), list);
 }
@@ -950,24 +955,35 @@ gst_tag_list_is_empty (const GstTagList * list)
 }
 
 static gboolean
-gst_tag_list_fields_equal (const GValue * value1, const GValue * value2)
+gst_tag_list_fields_equal (GQuark field_id, const GValue * value2,
+    gpointer data)
 {
+  const GstStructure *struct1 = (const GstStructure *) data;
+  const GValue *value1 = gst_structure_id_get_value (struct1, field_id);
   gdouble d1, d2;
+
+  if (value1 == NULL) {
+    /* no value with this field id, clearly not equal */
+    return FALSE;
+  }
 
   if (gst_value_compare (value1, value2) == GST_VALUE_EQUAL)
     return TRUE;
 
   /* fields not equal: add some tolerance for doubles, otherwise bail out */
-  if (!G_VALUE_HOLDS_DOUBLE (value1) || !G_VALUE_HOLDS_DOUBLE (value2))
-    return FALSE;
+  if ((G_VALUE_TYPE (value1) == G_VALUE_TYPE (value2)) &&
+      G_VALUE_TYPE (value1) == G_TYPE_DOUBLE) {
+    d1 = g_value_get_double (value1);
+    d2 = g_value_get_double (value2);
 
-  d1 = g_value_get_double (value1);
-  d2 = g_value_get_double (value2);
+    /* This will only work for 'normal' values and values around 0,
+     * which should be good enough for our purposes here
+     * FIXME: maybe add this to gst_value_compare_double() ? */
+    return (fabs (d1 - d2) < 0.0000001);
 
-  /* This will only work for 'normal' values and values around 0,
-   * which should be good enough for our purposes here
-   * FIXME: maybe add this to gst_value_compare_double() ? */
-  return (fabs (d1 - d2) < 0.0000001);
+  }
+
+  return FALSE;
 }
 
 /**
@@ -983,7 +999,6 @@ gboolean
 gst_tag_list_is_equal (const GstTagList * list1, const GstTagList * list2)
 {
   const GstStructure *s1, *s2;
-  gint num_fields1, num_fields2, i;
 
   g_return_val_if_fail (GST_IS_TAG_LIST (list1), FALSE);
   g_return_val_if_fail (GST_IS_TAG_LIST (list2), FALSE);
@@ -994,28 +1009,14 @@ gst_tag_list_is_equal (const GstTagList * list1, const GstTagList * list2)
   s1 = GST_TAG_LIST_STRUCTURE (list1);
   s2 = GST_TAG_LIST_STRUCTURE (list2);
 
-  num_fields1 = gst_structure_n_fields (s1);
-  num_fields2 = gst_structure_n_fields (s2);
+  if (G_UNLIKELY (s1 == s2))
+    return TRUE;
 
-  if (num_fields1 != num_fields2)
+  if (gst_structure_n_fields (s1) != gst_structure_n_fields (s2)) {
     return FALSE;
-
-  for (i = 0; i < num_fields1; i++) {
-    const GValue *value1, *value2;
-    const gchar *tag_name;
-
-    tag_name = gst_structure_nth_field_name (s1, i);
-    value1 = gst_structure_get_value (s1, tag_name);
-    value2 = gst_structure_get_value (s2, tag_name);
-
-    if (value2 == NULL)
-      return FALSE;
-
-    if (!gst_tag_list_fields_equal (value1, value2))
-      return FALSE;
   }
 
-  return TRUE;
+  return gst_structure_foreach (s1, gst_tag_list_fields_equal, (gpointer) s2);
 }
 
 typedef struct
@@ -1299,7 +1300,7 @@ gst_tag_list_add_valist (GstTagList * list, GstTagMergeMode mode,
       g_warning ("%s: %s", G_STRLOC, error);
       g_free (error);
       /* we purposely leak the value here, it might not be
-       * in a sane state if an error condition occoured
+       * in a sane state if an error condition occurred
        */
       return;
     }
@@ -2061,4 +2062,124 @@ gst_tag_list_get_sample_index (const GstTagList * list,
     return FALSE;
   *sample = g_value_dup_boxed (v);
   return (*sample != NULL);
+}
+
+/**
+ * gst_tag_list_copy:
+ * @taglist: a #GstTagList.
+ *
+ * Creates a new #GstTagList as a copy of the old @taglist. The new taglist
+ * will have a refcount of 1, owned by the caller, and will be writable as
+ * a result.
+ *
+ * Note that this function is the semantic equivalent of a gst_tag_list_ref()
+ * followed by a gst_tag_list_make_writable(). If you only want to hold on to a
+ * reference to the data, you should use gst_tag_list_ref().
+ *
+ * When you are finished with the taglist, call gst_tag_list_unref() on it.
+ *
+ * Returns: the new #GstTagList
+ */
+GstTagList *(gst_tag_list_copy) (const GstTagList * taglist)
+{
+  return GST_TAG_LIST (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
+}
+
+/**
+ * gst_tag_list_ref: (skip)
+ * @taglist: the #GstTagList to reference
+ *
+ * Add a reference to a #GstTagList mini object.
+ *
+ * From this point on, until the caller calls gst_tag_list_unref() or
+ * gst_tag_list_make_writable(), it is guaranteed that the taglist object will
+ * not change. To use a #GstTagList object, you must always have a refcount on
+ * it -- either the one made implicitly by e.g. gst_tag_list_new(), or via
+ * taking one explicitly with this function.
+ *
+ * Returns: the same #GstTagList mini object.
+ */
+GstTagList *
+gst_tag_list_ref (GstTagList * taglist)
+{
+  return (GstTagList *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (taglist));
+}
+
+/**
+ * gst_tag_list_unref: (skip)
+ * @taglist: a #GstTagList.
+ *
+ * Unref a #GstTagList, and and free all its memory when the refcount reaches 0.
+ */
+void
+gst_tag_list_unref (GstTagList * taglist)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (taglist));
+}
+
+/**
+ * gst_clear_tag_list: (skip)
+ * @taglist_ptr: a pointer to a #GstTagList reference
+ *
+ * Clears a reference to a #GstTagList.
+ *
+ * @taglist_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the taglist is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+void
+gst_clear_tag_list (GstTagList ** taglist_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) taglist_ptr);
+}
+
+/**
+ * gst_tag_list_replace:
+ * @old_taglist: (inout) (transfer full) (nullable): pointer to a pointer to a
+ *     #GstTagList to be replaced.
+ * @new_taglist: (transfer none) (allow-none): pointer to a #GstTagList that
+ *     will replace the tag list pointed to by @old_taglist.
+ *
+ * Modifies a pointer to a #GstTagList to point to a different #GstTagList. The
+ * modification is done atomically (so this is useful for ensuring thread
+ * safety in some cases), and the reference counts are updated appropriately
+ * (the old tag list is unreffed, the new is reffed).
+ *
+ * Either @new_taglist or the #GstTagList pointed to by @old_taglist may be
+ * %NULL.
+ *
+ * Returns: %TRUE if @new_taglist was different from @old_taglist
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_tag_list_replace (GstTagList ** old_taglist, GstTagList * new_taglist)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_taglist,
+      (GstMiniObject *) new_taglist);
+}
+
+/**
+ * gst_tag_list_take:
+ * @old_taglist: (inout) (transfer full): pointer to a pointer to a #GstTagList
+ *     to be replaced.
+ * @new_taglist: (transfer full) (allow-none): pointer to a #GstTagList that
+ *     will replace the taglist pointed to by @old_taglist.
+ *
+ * Modifies a pointer to a #GstTagList to point to a different #GstTagList.
+ * This function is similar to gst_tag_list_replace() except that it takes
+ * ownership of @new_taglist.
+ *
+ * Returns: %TRUE if @new_taglist was different from @old_taglist
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_tag_list_take (GstTagList ** old_taglist, GstTagList * new_taglist)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_taglist,
+      (GstMiniObject *) new_taglist);
 }

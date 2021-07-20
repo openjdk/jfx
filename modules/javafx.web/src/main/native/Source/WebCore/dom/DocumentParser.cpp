@@ -26,14 +26,15 @@
 #include "config.h"
 #include "DocumentParser.h"
 
+#include "Document.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
 
 DocumentParser::DocumentParser(Document& document)
-    : m_state(ParsingState)
+    : m_state(ParserState::Parsing)
     , m_documentWasLoadedAsPartOfNavigation(false)
-    , m_document(&document)
+    , m_document(makeWeakPtr(document))
 {
 }
 
@@ -47,23 +48,23 @@ DocumentParser::~DocumentParser()
 
 void DocumentParser::startParsing()
 {
-    m_state = ParsingState;
+    m_state = ParserState::Parsing;
 }
 
 void DocumentParser::prepareToStopParsing()
 {
-    ASSERT(m_state == ParsingState);
-    m_state = StoppingState;
+    ASSERT(m_state == ParserState::Parsing);
+    m_state = ParserState::Stopping;
 }
 
 void DocumentParser::stopParsing()
 {
-    m_state = StoppedState;
+    m_state = ParserState::Stopped;
 }
 
 void DocumentParser::detach()
 {
-    m_state = DetachedState;
+    m_state = ParserState::Detached;
     m_document = nullptr;
 }
 

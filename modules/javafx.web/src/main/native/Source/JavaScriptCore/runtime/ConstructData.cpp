@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,39 +27,43 @@
 #include "ConstructData.h"
 
 #include "Interpreter.h"
-#include "JSCInlines.h"
-#include "JSFunction.h"
 #include "JSGlobalObject.h"
+#include "JSObjectInlines.h"
 #include "ScriptProfilingScope.h"
 
 namespace JSC {
 
-JSObject* construct(ExecState* exec, JSValue constructorObject, const ArgList& args, const char* errorMessage)
+JSObject* construct(JSGlobalObject* globalObject, JSValue constructorObject, const ArgList& args, const char* errorMessage)
 {
-    VM& vm = exec->vm();
+    return construct(globalObject, constructorObject, constructorObject, args, errorMessage);
+}
+
+JSObject* construct(JSGlobalObject* globalObject, JSValue constructorObject, JSValue newTarget, const ArgList& args, const char* errorMessage)
+{
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    ConstructData constructData;
-    ConstructType constructType = getConstructData(vm, constructorObject, constructData);
-    if (constructType == ConstructType::None)
-        return throwTypeError(exec, scope, errorMessage);
+    auto constructData = getConstructData(vm, constructorObject);
+    if (UNLIKELY(constructData.type == CallData::Type::None)) {
+        throwTypeError(globalObject, scope, errorMessage);
+        return nullptr;
+    }
 
-    RELEASE_AND_RETURN(scope, construct(exec, constructorObject, constructType, constructData, args, constructorObject));
+    RELEASE_AND_RETURN(scope, construct(globalObject, constructorObject, constructData, args, newTarget));
 }
 
-
-JSObject* construct(ExecState* exec, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args, JSValue newTarget)
+JSObject* construct(JSGlobalObject* globalObject, JSValue constructorObject, const CallData& constructData, const ArgList& args, JSValue newTarget)
 {
-    VM& vm = exec->vm();
-    ASSERT(constructType == ConstructType::JS || constructType == ConstructType::Host);
-    return vm.interpreter->executeConstruct(exec, asObject(constructorObject), constructType, constructData, args, newTarget);
+    VM& vm = globalObject->vm();
+    ASSERT(constructData.type == CallData::Type::JS || constructData.type == CallData::Type::Native);
+    return vm.interpreter->executeConstruct(globalObject, asObject(constructorObject), constructData, args, newTarget);
 }
 
-JSObject* profiledConstruct(ExecState* exec, ProfilingReason reason, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args, JSValue newTarget)
+JSObject* profiledConstruct(JSGlobalObject* globalObject, ProfilingReason reason, JSValue constructorObject, const CallData& constructData, const ArgList& args, JSValue newTarget)
 {
-    VM& vm = exec->vm();
-    ScriptProfilingScope profilingScope(vm.vmEntryGlobalObject(exec), reason);
-    return construct(exec, constructorObject, constructType, constructData, args, newTarget);
+    VM& vm = globalObject->vm();
+    ScriptProfilingScope profilingScope(vm.deprecatedVMEntryGlobalObject(globalObject), reason);
+    return construct(globalObject, constructorObject, constructData, args, newTarget);
 }
 
 } // namespace JSC

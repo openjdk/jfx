@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.List;
 
 public final class MonocleApplication extends Application {
 
@@ -110,6 +111,7 @@ public final class MonocleApplication extends Application {
     @Override
     protected void runLoop(Runnable launchable) {
         runnableProcessor.invokeLater(launchable);
+        @SuppressWarnings("removal")
         long stackSize = AccessController.doPrivileged(
                 (PrivilegedAction<Long>)
                         () -> Long.getLong("monocle.stackSize", 0));
@@ -219,21 +221,29 @@ public final class MonocleApplication extends Application {
 
     @Override
     protected Screen[] staticScreen_getScreens() {
-        NativeScreen ns = platform.getScreen();
-        Screen screen = new Screen(1l, // dummy native pointer;
-                                   ns.getDepth(),
-                                   0, 0, ns.getWidth(), ns.getHeight(),
-                                   0, 0, ns.getWidth(), ns.getHeight(),
-                                   0, 0, ns.getWidth(), ns.getHeight(),
-                                   ns.getDPI(), ns.getDPI(),
-                                   ns.getScale(), ns.getScale(),
-                                   ns.getScale(), ns.getScale());
-        // Move the cursor to the middle of the screen
-        MouseState mouseState = new MouseState();
-        mouseState.setX(ns.getWidth() / 2);
-        mouseState.setY(ns.getHeight() / 2);
-        MouseInput.getInstance().setState(mouseState, false);
-        return new Screen[] { screen };
+        List<NativeScreen> screens = platform.getScreens();
+        Screen[] answer = new Screen[screens.size()];
+        int cnt = 0;
+        for (NativeScreen ns: screens) {
+            Screen screen = new Screen(ns.getNativeHandle(),
+                    ns.getDepth(),
+                    ns.getOffsetX(), ns.getOffsetY(), ns.getWidth(), ns.getHeight(),
+                    ns.getOffsetX(), ns.getOffsetY(), ns.getWidth(), ns.getHeight(),
+                    ns.getOffsetX(), ns.getOffsetY(), ns.getWidth(), ns.getHeight(),
+                    ns.getDPI(), ns.getDPI(),
+                    1.f, 1.f, ns.getScale(), ns.getScale());
+            answer[cnt] = screen;
+            // The first screen is the primaryscreen, we set the cursor to that one.
+            if (cnt == 0) {
+                // Move the cursor to the middle of the screen
+                MouseState mouseState = new MouseState();
+                mouseState.setX(ns.getWidth() / 2);
+                mouseState.setY(ns.getHeight() / 2);
+                MouseInput.getInstance().setState(mouseState, false);
+            }
+            cnt++;
+        }
+        return answer;
     }
 
     @Override

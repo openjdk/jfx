@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "EventTrackingRegions.h"
 #include "ScrollTypes.h"
@@ -45,40 +45,11 @@ public:
 
     virtual ~ScrollingStateFrameScrollingNode();
 
-    enum ChangedProperty {
-        FrameScaleFactor = NumScrollingStateNodeBits,
-        EventTrackingRegion,
-        ReasonsForSynchronousScrolling,
-        RootContentsLayer,
-        ScrolledContentsLayer,
-        CounterScrollingLayer,
-        InsetClipLayer,
-        ContentShadowLayer,
-        HeaderHeight,
-        FooterHeight,
-        HeaderLayer,
-        FooterLayer,
-        VerticalScrollbarLayer,
-        HorizontalScrollbarLayer,
-        PainterForScrollbar,
-        BehaviorForFixedElements,
-        TopContentInset,
-        FixedElementsLayoutRelativeToFrame,
-        VisualViewportEnabled,
-        AsyncFrameOrOverflowScrollingEnabled,
-        LayoutViewport,
-        MinLayoutViewportOrigin,
-        MaxLayoutViewportOrigin,
-    };
-
     float frameScaleFactor() const { return m_frameScaleFactor; }
     WEBCORE_EXPORT void setFrameScaleFactor(float);
 
     const EventTrackingRegions& eventTrackingRegions() const { return m_eventTrackingRegions; }
     WEBCORE_EXPORT void setEventTrackingRegions(const EventTrackingRegions&);
-
-    SynchronousScrollingReasons synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
-    WEBCORE_EXPORT void setSynchronousScrollingReasons(SynchronousScrollingReasons);
 
     ScrollBehaviorForFixedElements scrollBehaviorForFixedElements() const { return m_behaviorForFixed; }
     WEBCORE_EXPORT void setScrollBehaviorForFixedElements(ScrollBehaviorForFixedElements);
@@ -91,6 +62,9 @@ public:
 
     FloatPoint maxLayoutViewportOrigin() const { return m_maxLayoutViewportOrigin; }
     WEBCORE_EXPORT void setMaxLayoutViewportOrigin(const FloatPoint&);
+
+    Optional<FloatSize> overrideVisualViewportSize() const { return m_overrideVisualViewportSize; };
+    WEBCORE_EXPORT void setOverrideVisualViewportSize(Optional<FloatSize>);
 
     int headerHeight() const { return m_headerHeight; }
     WEBCORE_EXPORT void setHeaderHeight(int);
@@ -126,27 +100,22 @@ public:
     const LayerRepresentation& footerLayer() const { return m_footerLayer; }
     WEBCORE_EXPORT void setFooterLayer(const LayerRepresentation&);
 
-    const LayerRepresentation& verticalScrollbarLayer() const { return m_verticalScrollbarLayer; }
-    WEBCORE_EXPORT void setVerticalScrollbarLayer(const LayerRepresentation&);
-
-    const LayerRepresentation& horizontalScrollbarLayer() const { return m_horizontalScrollbarLayer; }
-    WEBCORE_EXPORT void setHorizontalScrollbarLayer(const LayerRepresentation&);
+    // True when the visual viewport is smaller than the layout viewport, indicating that panning should be possible.
+    bool visualViewportIsSmallerThanLayoutViewport() const { return m_visualViewportIsSmallerThanLayoutViewport; }
+    WEBCORE_EXPORT void setVisualViewportIsSmallerThanLayoutViewport(bool);
 
     // These are more like Settings, and should probably move to the Scrolling{State}Tree itself.
     bool fixedElementsLayoutRelativeToFrame() const { return m_fixedElementsLayoutRelativeToFrame; }
     WEBCORE_EXPORT void setFixedElementsLayoutRelativeToFrame(bool);
 
-    bool visualViewportEnabled() const { return m_visualViewportEnabled; };
-    WEBCORE_EXPORT void setVisualViewportEnabled(bool);
-
     bool asyncFrameOrOverflowScrollingEnabled() const { return m_asyncFrameOrOverflowScrollingEnabled; }
     void setAsyncFrameOrOverflowScrollingEnabled(bool);
 
-#if PLATFORM(MAC)
-    NSScrollerImp *verticalScrollerImp() const { return m_verticalScrollerImp.get(); }
-    NSScrollerImp *horizontalScrollerImp() const { return m_horizontalScrollerImp.get(); }
-#endif
-    void setScrollerImpsFromScrollbars(Scrollbar* verticalScrollbar, Scrollbar* horizontalScrollbar);
+    bool scrollingPerformanceTestingEnabled() const { return m_scrollingPerformanceTestingEnabled; }
+    WEBCORE_EXPORT void setScrollingPerformanceTestingEnabled(bool);
+
+    bool wheelEventGesturesBecomeNonBlocking() const { return m_wheelEventGesturesBecomeNonBlocking; }
+    WEBCORE_EXPORT void setWheelEventGesturesBecomeNonBlocking(bool);
 
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
@@ -154,7 +123,7 @@ private:
     ScrollingStateFrameScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateFrameScrollingNode(const ScrollingStateFrameScrollingNode&, ScrollingStateTree&);
 
-    void setAllPropertiesChanged() override;
+    OptionSet<ScrollingStateNode::Property> applicableProperties() const final;
 
     LayerRepresentation m_rootContentsLayer;
     LayerRepresentation m_counterScrollingLayer;
@@ -162,35 +131,28 @@ private:
     LayerRepresentation m_contentShadowLayer;
     LayerRepresentation m_headerLayer;
     LayerRepresentation m_footerLayer;
-    LayerRepresentation m_verticalScrollbarLayer;
-    LayerRepresentation m_horizontalScrollbarLayer;
-
-#if PLATFORM(MAC)
-    RetainPtr<NSScrollerImp> m_verticalScrollerImp;
-    RetainPtr<NSScrollerImp> m_horizontalScrollerImp;
-#endif
 
     EventTrackingRegions m_eventTrackingRegions;
-    FloatPoint m_requestedScrollPosition;
 
     FloatRect m_layoutViewport;
     FloatPoint m_minLayoutViewportOrigin;
     FloatPoint m_maxLayoutViewportOrigin;
+    Optional<FloatSize> m_overrideVisualViewportSize;
 
     float m_frameScaleFactor { 1 };
     float m_topContentInset { 0 };
     int m_headerHeight { 0 };
     int m_footerHeight { 0 };
-    SynchronousScrollingReasons m_synchronousScrollingReasons { 0 };
     ScrollBehaviorForFixedElements m_behaviorForFixed { StickToDocumentBounds };
-    bool m_requestedScrollPositionRepresentsProgrammaticScroll { false };
     bool m_fixedElementsLayoutRelativeToFrame { false };
-    bool m_visualViewportEnabled { false };
+    bool m_visualViewportIsSmallerThanLayoutViewport { false };
     bool m_asyncFrameOrOverflowScrollingEnabled { false };
+    bool m_wheelEventGesturesBecomeNonBlocking { false };
+    bool m_scrollingPerformanceTestingEnabled { false };
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateFrameScrollingNode, isFrameScrollingNode())
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

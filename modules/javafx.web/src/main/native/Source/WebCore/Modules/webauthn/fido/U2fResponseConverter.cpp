@@ -49,9 +49,6 @@ namespace {
 const uint8_t uncompressedKey = 0x04;
 // https://www.w3.org/TR/webauthn/#flags
 const uint8_t makeCredentialFlags = 0b01000001; // UP and AT are set.
-// https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#registration-response-message-success
-const uint8_t minSignatureLength = 71;
-const uint8_t maxSignatureLength = 73;
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#authentication-response-message-success
 const size_t flagIndex = 0;
 const size_t counterIndex = 1;
@@ -133,7 +130,7 @@ static cbor::CBORValue::MapValue createFidoAttestationStatementFromU2fRegisterRe
 
     Vector<uint8_t> signature;
     signature.append(u2fData.data() + offset, u2fData.size() - offset);
-    if (signature.size() < minSignatureLength || signature.size() > maxSignatureLength)
+    if (signature.isEmpty())
         return { };
 
     cbor::CBORValue::MapValue attestationStatementMap;
@@ -147,15 +144,15 @@ static cbor::CBORValue::MapValue createFidoAttestationStatementFromU2fRegisterRe
 
 } // namespace
 
-Optional<PublicKeyCredentialData> readU2fRegisterResponse(const String& rpId, const Vector<uint8_t>& u2fData)
+RefPtr<AuthenticatorAttestationResponse> readU2fRegisterResponse(const String& rpId, const Vector<uint8_t>& u2fData, const AttestationConveyancePreference& attestation)
 {
     auto publicKey = extractECPublicKeyFromU2fRegistrationResponse(u2fData);
     if (publicKey.isEmpty())
-        return WTF::nullopt;
+        return nullptr;
 
     auto attestedCredentialData = createAttestedCredentialDataFromU2fRegisterResponse(u2fData, publicKey);
     if (attestedCredentialData.isEmpty())
-        return WTF::nullopt;
+        return nullptr;
 
     // Extract the credentialId for packing into the response data.
     auto credentialId = extractCredentialIdFromU2fRegistrationResponse(u2fData);
@@ -166,17 +163,17 @@ Optional<PublicKeyCredentialData> readU2fRegisterResponse(const String& rpId, co
 
     auto fidoAttestationStatement = createFidoAttestationStatementFromU2fRegisterResponse(u2fData, kU2fKeyHandleOffset + credentialId.size());
     if (fidoAttestationStatement.empty())
-        return WTF::nullopt;
+        return nullptr;
 
-    auto attestationObject = buildAttestationObject(WTFMove(authData), "fido-u2f", WTFMove(fidoAttestationStatement));
+    auto attestationObject = buildAttestationObject(WTFMove(authData), "fido-u2f", WTFMove(fidoAttestationStatement), attestation);
 
-    return PublicKeyCredentialData { ArrayBuffer::create(credentialId.data(), credentialId.size()), true, nullptr, ArrayBuffer::create(attestationObject.data(), attestationObject.size()), nullptr, nullptr, nullptr };
+    return AuthenticatorAttestationResponse::create(credentialId, attestationObject);
 }
 
-Optional<PublicKeyCredentialData> readU2fSignResponse(const String& rpId, const Vector<uint8_t>& keyHandle, const Vector<uint8_t>& u2fData)
+RefPtr<AuthenticatorAssertionResponse> readU2fSignResponse(const String& rpId, const Vector<uint8_t>& keyHandle, const Vector<uint8_t>& u2fData)
 {
     if (keyHandle.isEmpty() || u2fData.size() <= signatureIndex)
-        return WTF::nullopt;
+        return nullptr;
 
     // 1 byte flags, 4 bytes counter
     auto flags = u2fData[flagIndex];
@@ -186,7 +183,11 @@ Optional<PublicKeyCredentialData> readU2fSignResponse(const String& rpId, const 
     counter += u2fData[counterIndex + 3];
     auto authData = buildAuthData(rpId, flags, counter, { });
 
-    return PublicKeyCredentialData { ArrayBuffer::create(keyHandle.data(), keyHandle.size()), false, nullptr, nullptr, ArrayBuffer::create(authData.data(), authData.size()), ArrayBuffer::create(u2fData.data() + signatureIndex, u2fData.size() - signatureIndex), nullptr };
+    // FIXME: Find a way to remove the need of constructing a vector here.
+    Vector<uint8_t> signature;
+    signature.append(u2fData.data() + signatureIndex, u2fData.size() - signatureIndex);
+
+    return AuthenticatorAssertionResponse::create(keyHandle, authData, signature, { });
 }
 
 } // namespace fido

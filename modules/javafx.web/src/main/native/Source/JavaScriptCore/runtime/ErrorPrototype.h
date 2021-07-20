@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,23 +26,44 @@ namespace JSC {
 
 class ObjectPrototype;
 
-class ErrorPrototype : public JSNonFinalObject {
+// Superclass for ErrorPrototype, NativeErrorPrototype, and AggregateErrorPrototype.
+class ErrorPrototypeBase : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = JSNonFinalObject;
 
-    static ErrorPrototype* create(VM&, JSGlobalObject*, Structure*);
+protected:
+    ErrorPrototypeBase(VM&, Structure*);
+    void finishCreation(VM&, const String&);
+};
+
+class ErrorPrototype final : public ErrorPrototypeBase {
+public:
+    using Base = ErrorPrototypeBase;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ErrorPrototypeBase, Base);
+        return &vm.plainObjectSpace;
+    }
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
+    static ErrorPrototype* create(VM& vm, JSGlobalObject*, Structure* structure)
+    {
+        ErrorPrototype* prototype = new (NotNull, allocateCell<ErrorPrototype>(vm.heap)) ErrorPrototype(vm, structure);
+        prototype->finishCreation(vm, "Error"_s);
+        return prototype;
+    }
+
+private:
     ErrorPrototype(VM&, Structure*);
-    void finishCreation(VM&, const String&);
 };
 
 } // namespace JSC

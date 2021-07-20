@@ -52,7 +52,6 @@
 #include "RenderTreeUpdater.h"
 #include "RenderWidget.h"
 #include "RootInlineBox.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
@@ -75,15 +74,25 @@ static void dispatchChildRemovalEvents(Ref<Node>&);
 ChildNodesLazySnapshot* ChildNodesLazySnapshot::latestSnapshot;
 
 unsigned ScriptDisallowedScope::s_count = 0;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 ScriptDisallowedScope::EventAllowedScope* ScriptDisallowedScope::EventAllowedScope::s_currentScope = nullptr;
 #endif
 
-ALWAYS_INLINE NodeVector ContainerNode::removeAllChildrenWithScriptAssertion(ChildChangeSource source, DeferChildrenChanged deferChildrenChanged)
+ALWAYS_INLINE NodeVector ContainerNode::removeAllChildrenWithScriptAssertion(ChildChange::Source source, DeferChildrenChanged deferChildrenChanged)
 {
     auto children = collectChildNodes(*this);
 
-    if (source == ContainerNode::ChildChangeSource::API) {
+    if (UNLIKELY(isDocumentFragmentForInnerOuterHTML())) {
+        ScriptDisallowedScope::InMainThread scriptDisallowedScope;
+        RELEASE_ASSERT(!connectedSubframeCount() && !hasRareData() && !wrapper());
+        ASSERT(!weakPtrFactory().isInitialized());
+        while (RefPtr<Node> child = m_firstChild)
+            removeBetween(nullptr, child->nextSibling(), *child);
+        document().incDOMTreeVersion();
+        return children;
+    }
+
+    if (source == ChildChange::Source::API) {
         ChildListMutationScope mutation(*this);
         for (auto& child : children) {
             mutation.willRemoveChild(child.get());
@@ -91,7 +100,7 @@ ALWAYS_INLINE NodeVector ContainerNode::removeAllChildrenWithScriptAssertion(Chi
             dispatchChildRemovalEvents(child);
         }
     } else {
-        ASSERT(source == ContainerNode::ChildChangeSource::Parser);
+        ASSERT(source == ChildChange::Source::Parser);
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         if (UNLIKELY(document().hasMutationObserversOfType(MutationObserver::ChildList))) {
             ChildListMutationScope mutation(*this);
@@ -112,16 +121,20 @@ ALWAYS_INLINE NodeVector ContainerNode::removeAllChildrenWithScriptAssertion(Chi
 
     while (RefPtr<Node> child = m_firstChild) {
         removeBetween(nullptr, child->nextSibling(), *child);
-        notifyChildNodeRemoved(*this, *child);
+        auto subtreeObservability = notifyChildNodeRemoved(*this, *child);
+        if (source == ChildChange::Source::API && subtreeObservability == RemovedSubtreeObservability::MaybeObservableByRefPtr)
+            willCreatePossiblyOrphanedTreeByRemoval(child.get());
     }
 
+    ASSERT_WITH_SECURITY_IMPLICATION(!document().selection().selection().isOrphan());
+
     if (deferChildrenChanged == DeferChildrenChanged::No)
-        childrenChanged(ContainerNode::ChildChange { ContainerNode::AllChildrenRemoved, nullptr, nullptr, source });
+        childrenChanged(ContainerNode::ChildChange { ChildChange::Type::AllChildrenRemoved, nullptr, nullptr, source });
 
     return children;
 }
 
-ALWAYS_INLINE bool ContainerNode::removeNodeWithScriptAssertion(Node& childToRemove, ChildChangeSource source)
+ALWAYS_INLINE bool ContainerNode::removeNodeWithScriptAssertion(Node& childToRemove, ChildChange::Source source)
 {
     Ref<Node> protectedChildToRemove(childToRemove);
     ASSERT_WITH_SECURITY_IMPLICATION(childToRemove.parentNode() == this);
@@ -131,14 +144,14 @@ ALWAYS_INLINE bool ContainerNode::removeNodeWithScriptAssertion(Node& childToRem
     }
 
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(childToRemove));
-    if (source == ContainerNode::ChildChangeSource::API) {
+    if (source == ChildChange::Source::API) {
         childToRemove.notifyMutationObserversNodeWillDetach();
         dispatchChildRemovalEvents(protectedChildToRemove);
         if (childToRemove.parentNode() != this)
             return false;
     }
 
-    if (source == ContainerNode::ChildChangeSource::Parser) {
+    if (source == ChildChange::Source::Parser) {
         // FIXME: Merge these two code paths. It's a bug in the parser not to update connectedSubframeCount in time.
         disconnectSubframesIfNeeded(*this, DescendantsOnly);
     } else {
@@ -150,6 +163,7 @@ ALWAYS_INLINE bool ContainerNode::removeNodeWithScriptAssertion(Node& childToRem
         return false;
 
     ChildChange change;
+    RemovedSubtreeObservability subtreeObservability;
     {
         WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
@@ -165,13 +179,22 @@ ALWAYS_INLINE bool ContainerNode::removeNodeWithScriptAssertion(Node& childToRem
         RefPtr<Node> previousSibling = childToRemove.previousSibling();
         RefPtr<Node> nextSibling = childToRemove.nextSibling();
         removeBetween(previousSibling.get(), nextSibling.get(), childToRemove);
-        notifyChildNodeRemoved(*this, childToRemove);
+        subtreeObservability = notifyChildNodeRemoved(*this, childToRemove);
 
-        change.type = is<Element>(childToRemove) ? ElementRemoved : (is<Text>(childToRemove) ? TextRemoved : NonContentsChildRemoved);
+        change.type = is<Element>(childToRemove) ?
+            ChildChange::Type::ElementRemoved :
+            (is<Text>(childToRemove) ?
+                ChildChange::Type::TextRemoved :
+                ChildChange::Type::NonContentsChildRemoved);
         change.previousSiblingElement = (!previousSibling || is<Element>(*previousSibling)) ? downcast<Element>(previousSibling.get()) : ElementTraversal::previousSibling(*previousSibling);
         change.nextSiblingElement = (!nextSibling || is<Element>(*nextSibling)) ? downcast<Element>(nextSibling.get()) : ElementTraversal::nextSibling(*nextSibling);
         change.source = source;
     }
+
+    if (source == ChildChange::Source::API && subtreeObservability == RemovedSubtreeObservability::MaybeObservableByRefPtr)
+        willCreatePossiblyOrphanedTreeByRemoval(&childToRemove);
+
+    ASSERT_WITH_SECURITY_IMPLICATION(!document().selection().selection().isOrphan());
 
     // FIXME: Move childrenChanged into ScriptDisallowedScope block.
     childrenChanged(change);
@@ -183,7 +206,7 @@ enum class ReplacedAllChildren { No, Yes };
 
 template<typename DOMInsertionWork>
 static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode& containerNode, Node& child,
-    ContainerNode::ChildChangeSource source, ReplacedAllChildren replacedAllChildren, DOMInsertionWork doNodeInsertion)
+    ContainerNode::ChildChange::Source source, ReplacedAllChildren replacedAllChildren, DOMInsertionWork doNodeInsertion)
 {
     NodeVector postInsertionNotificationTargets;
     {
@@ -199,10 +222,14 @@ static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode&
 
     // FIXME: Move childrenChanged into ScriptDisallowedScope block.
     if (replacedAllChildren == ReplacedAllChildren::Yes)
-        containerNode.childrenChanged(ContainerNode::ChildChange { ContainerNode::AllChildrenReplaced, nullptr, nullptr, source });
+        containerNode.childrenChanged(ContainerNode::ChildChange { ContainerNode::ChildChange::Type::AllChildrenReplaced, nullptr, nullptr, source });
     else {
         containerNode.childrenChanged(ContainerNode::ChildChange {
-            child.isElementNode() ? ContainerNode::ElementInserted : (child.isTextNode() ? ContainerNode::TextInserted : ContainerNode::NonContentsChildInserted),
+            child.isElementNode() ?
+                ContainerNode::ChildChange::Type::ElementInserted :
+                (child.isTextNode() ?
+                    ContainerNode::ChildChange::Type::TextInserted :
+                    ContainerNode::ChildChange::Type::NonContentsChildInserted),
             ElementTraversal::previousSibling(child),
             ElementTraversal::nextSibling(child),
             source
@@ -213,22 +240,30 @@ static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode&
     for (auto& target : postInsertionNotificationTargets)
         target->didFinishInsertingNode();
 
-    if (source == ContainerNode::ChildChangeSource::API)
+    if (source == ContainerNode::ChildChange::Source::API)
         dispatchChildInsertionEvents(child);
 }
 
-static ExceptionOr<void> collectChildrenAndRemoveFromOldParent(Node& node, NodeVector& nodes)
+ExceptionOr<void> ContainerNode::removeSelfOrChildNodesForInsertion(Node& child, NodeVector& nodesForInsertion)
 {
-    if (!is<DocumentFragment>(node)) {
-        nodes.append(node);
-        auto* oldParent = node.parentNode();
+    if (!is<DocumentFragment>(child)) {
+        nodesForInsertion.append(child);
+        auto oldParent = makeRefPtr(child.parentNode());
         if (!oldParent)
             return { };
-        return oldParent->removeChild(node);
+        return oldParent->removeChild(child);
     }
 
-    nodes = collectChildNodes(node);
-    downcast<DocumentFragment>(node).removeChildren();
+    auto& fragment = downcast<DocumentFragment>(child);
+    if (!fragment.hasChildNodes())
+        return { };
+
+    auto removedChildNodes = fragment.removeAllChildrenWithScriptAssertion(ContainerNode::ChildChange::Source::API);
+    nodesForInsertion.swap(removedChildNodes);
+
+    fragment.rebuildSVGExtensionsElementsIfNecessary();
+    fragment.dispatchSubtreeModifiedEvent();
+
     return { };
 }
 
@@ -262,7 +297,7 @@ void ContainerNode::takeAllChildrenFrom(ContainerNode* oldParent)
 {
     ASSERT(oldParent);
 
-    auto children = oldParent->removeAllChildrenWithScriptAssertion(ChildChangeSource::Parser);
+    auto children = oldParent->removeAllChildrenWithScriptAssertion(ChildChange::Source::Parser);
 
     // FIXME: assert that we don't dispatch events here since this container node is still disconnected.
     for (auto& child : children) {
@@ -311,7 +346,8 @@ static bool containsIncludingHostElements(const Node& possibleAncestor, const No
     return false;
 }
 
-static inline ExceptionOr<void> checkAcceptChild(ContainerNode& newParent, Node& newChild, const Node* refChild, Document::AcceptChildOperation operation)
+enum class ShouldValidateChildParent { No, Yes };
+static inline ExceptionOr<void> checkAcceptChild(ContainerNode& newParent, Node& newChild, const Node* refChild, Document::AcceptChildOperation operation, ShouldValidateChildParent shouldValidateChildParent)
 {
     if (containsIncludingHostElements(newChild, newParent))
         return Exception { HierarchyRequestError };
@@ -320,7 +356,7 @@ static inline ExceptionOr<void> checkAcceptChild(ContainerNode& newParent, Node&
     if ((newChild.isElementNode() || newChild.isTextNode()) && newParent.isElementNode()) {
         ASSERT(!newParent.isDocumentTypeNode());
         ASSERT(isChildTypeAllowed(newParent, newChild));
-        if (operation == Document::AcceptChildOperation::InsertOrAdd && refChild && refChild->parentNode() != &newParent)
+        if (shouldValidateChildParent == ShouldValidateChildParent::Yes && refChild && refChild->parentNode() != &newParent)
             return Exception { NotFoundError };
         return { };
     }
@@ -330,7 +366,7 @@ static inline ExceptionOr<void> checkAcceptChild(ContainerNode& newParent, Node&
     if (newChild.isPseudoElement())
         return Exception { HierarchyRequestError };
 
-    if (operation == Document::AcceptChildOperation::InsertOrAdd && refChild && refChild->parentNode() != &newParent)
+    if (shouldValidateChildParent == ShouldValidateChildParent::Yes && refChild && refChild->parentNode() != &newParent)
         return Exception { NotFoundError };
 
     if (is<Document>(newParent)) {
@@ -354,13 +390,13 @@ static inline ExceptionOr<void> checkAcceptChildGuaranteedNodeTypes(ContainerNod
 // https://dom.spec.whatwg.org/#concept-node-ensure-pre-insertion-validity
 ExceptionOr<void> ContainerNode::ensurePreInsertionValidity(Node& newChild, Node* refChild)
 {
-    return checkAcceptChild(*this, newChild, refChild, Document::AcceptChildOperation::InsertOrAdd);
+    return checkAcceptChild(*this, newChild, refChild, Document::AcceptChildOperation::InsertOrAdd, ShouldValidateChildParent::Yes);
 }
 
 // https://dom.spec.whatwg.org/#concept-node-replace
-static inline ExceptionOr<void> checkPreReplacementValidity(ContainerNode& newParent, Node& newChild, Node& oldChild)
+static inline ExceptionOr<void> checkPreReplacementValidity(ContainerNode& newParent, Node& newChild, Node& oldChild, ShouldValidateChildParent shouldValidateChildParent)
 {
-    return checkAcceptChild(newParent, newChild, &oldChild, Document::AcceptChildOperation::Replace);
+    return checkAcceptChild(newParent, newChild, &oldChild, Document::AcceptChildOperation::Replace, shouldValidateChildParent);
 }
 
 ExceptionOr<void> ContainerNode::insertBefore(Node& newChild, Node* refChild)
@@ -385,17 +421,17 @@ ExceptionOr<void> ContainerNode::insertBefore(Node& newChild, Node* refChild)
     Ref<Node> next(*refChild);
 
     NodeVector targets;
-    auto removeResult = collectChildrenAndRemoveFromOldParent(newChild, targets);
+    auto removeResult = removeSelfOrChildNodesForInsertion(newChild, targets);
     if (removeResult.hasException())
         return removeResult.releaseException();
     if (targets.isEmpty())
         return { };
 
-    // We need this extra check because collectChildrenAndRemoveFromOldParent() can fire mutation events.
+    // We need this extra check because removeSelfOrChildNodesForInsertion() can fire mutation events.
     for (auto& child : targets) {
         auto checkAcceptResult = checkAcceptChildGuaranteedNodeTypes(*this, child);
-    if (checkAcceptResult.hasException())
-        return checkAcceptResult.releaseException();
+        if (checkAcceptResult.hasException())
+            return checkAcceptResult.releaseException();
     }
 
     InspectorInstrumentation::willInsertDOMNode(document(), *this);
@@ -411,7 +447,7 @@ ExceptionOr<void> ContainerNode::insertBefore(Node& newChild, Node* refChild)
         if (child->parentNode())
             break;
 
-        executeNodeInsertionWithScriptAssertion(*this, child.get(), ChildChangeSource::API, ReplacedAllChildren::No, [&] {
+        executeNodeInsertionWithScriptAssertion(*this, child.get(), ChildChange::Source::API, ReplacedAllChildren::No, [&] {
             child->setTreeScopeRecursively(treeScope());
             insertBeforeCommon(next, child);
         });
@@ -470,7 +506,7 @@ void ContainerNode::parserInsertBefore(Node& newChild, Node& nextChild)
     if (nextChild.previousSibling() == &newChild || &nextChild == &newChild) // nothing to do
         return;
 
-    executeNodeInsertionWithScriptAssertion(*this, newChild, ChildChangeSource::Parser, ReplacedAllChildren::No, [&] {
+    executeNodeInsertionWithScriptAssertion(*this, newChild, ChildChange::Source::Parser, ReplacedAllChildren::No, [&] {
         if (&document() != &newChild.document())
             document().adoptNode(newChild);
 
@@ -489,13 +525,9 @@ ExceptionOr<void> ContainerNode::replaceChild(Node& newChild, Node& oldChild)
     Ref<ContainerNode> protectedThis(*this);
 
     // Make sure replacing the old child with the new is ok
-    auto validityResult = checkPreReplacementValidity(*this, newChild, oldChild);
+    auto validityResult = checkPreReplacementValidity(*this, newChild, oldChild, ShouldValidateChildParent::Yes);
     if (validityResult.hasException())
         return validityResult.releaseException();
-
-    // NotFoundError: Raised if oldChild is not a child of this node.
-    if (oldChild.parentNode() != this)
-        return Exception { NotFoundError };
 
     RefPtr<Node> refChild = oldChild.nextSibling();
     if (refChild.get() == &newChild)
@@ -504,16 +536,16 @@ ExceptionOr<void> ContainerNode::replaceChild(Node& newChild, Node& oldChild)
     NodeVector targets;
     {
         ChildListMutationScope mutation(*this);
-        auto collectResult = collectChildrenAndRemoveFromOldParent(newChild, targets);
+        auto collectResult = removeSelfOrChildNodesForInsertion(newChild, targets);
         if (collectResult.hasException())
             return collectResult.releaseException();
     }
 
-    // Do this one more time because collectChildrenAndRemoveFromOldParent() fires a MutationEvent.
+    // Do this one more time because removeSelfOrChildNodesForInsertion() fires a MutationEvent.
     for (auto& child : targets) {
-        validityResult = checkPreReplacementValidity(*this, child, oldChild);
-    if (validityResult.hasException())
-        return validityResult.releaseException();
+        validityResult = checkPreReplacementValidity(*this, child, oldChild, ShouldValidateChildParent::No);
+        if (validityResult.hasException())
+            return validityResult.releaseException();
     }
 
     // Remove the node we're replacing.
@@ -529,10 +561,10 @@ ExceptionOr<void> ContainerNode::replaceChild(Node& newChild, Node& oldChild)
 
         // Does this one more time because removeChild() fires a MutationEvent.
         for (auto& child : targets) {
-            validityResult = checkPreReplacementValidity(*this, child, oldChild);
-        if (validityResult.hasException())
-            return validityResult.releaseException();
-    }
+            validityResult = checkPreReplacementValidity(*this, child, oldChild, ShouldValidateChildParent::No);
+            if (validityResult.hasException())
+                return validityResult.releaseException();
+        }
     }
 
     InspectorInstrumentation::willInsertDOMNode(document(), *this);
@@ -548,7 +580,7 @@ ExceptionOr<void> ContainerNode::replaceChild(Node& newChild, Node& oldChild)
         if (child->parentNode())
             break;
 
-        executeNodeInsertionWithScriptAssertion(*this, child.get(), ChildChangeSource::API, ReplacedAllChildren::No, [&] {
+        executeNodeInsertionWithScriptAssertion(*this, child.get(), ChildChange::Source::API, ReplacedAllChildren::No, [&] {
             child->setTreeScopeRecursively(treeScope());
             if (refChild)
                 insertBeforeCommon(*refChild, child.get());
@@ -578,7 +610,7 @@ ExceptionOr<void> ContainerNode::removeChild(Node& oldChild)
     if (oldChild.parentNode() != this)
         return Exception { NotFoundError };
 
-    if (!removeNodeWithScriptAssertion(oldChild, ChildChangeSource::API))
+    if (!removeNodeWithScriptAssertion(oldChild, ChildChange::Source::API))
         return Exception { NotFoundError };
 
     rebuildSVGExtensionsElementsIfNecessary();
@@ -623,7 +655,7 @@ void ContainerNode::removeBetween(Node* previousChild, Node* nextChild, Node& ol
 
 void ContainerNode::parserRemoveChild(Node& oldChild)
 {
-    removeNodeWithScriptAssertion(oldChild, ChildChangeSource::Parser);
+    removeNodeWithScriptAssertion(oldChild, ChildChange::Source::Parser);
 }
 
 // https://dom.spec.whatwg.org/#concept-node-replace-all
@@ -634,12 +666,14 @@ void ContainerNode::replaceAllChildren(std::nullptr_t)
 }
 
 // https://dom.spec.whatwg.org/#concept-node-replace-all
-void ContainerNode::replaceAllChildren(Ref<Node>&& node)
+void ContainerNode::replaceAllChildrenWithNewText(const String& text)
 {
-    // This function assumes the input node is not a DocumentFragment and is parentless to decrease complexity.
-    ASSERT(!is<DocumentFragment>(node));
-    ASSERT(!node->parentNode());
+    if (text.isEmpty()) {
+        replaceAllChildren(nullptr);
+        return;
+    }
 
+    auto node = document().createTextNode(text);
     if (!hasChildNodes()) {
         // appendChildWithoutPreInsertionValidityCheck() can only throw when node has a parent and we already asserted it doesn't.
         auto result = appendChildWithoutPreInsertionValidityCheck(node);
@@ -649,9 +683,9 @@ void ContainerNode::replaceAllChildren(Ref<Node>&& node)
 
     Ref<ContainerNode> protectedThis(*this);
     ChildListMutationScope mutation(*this);
-    removeAllChildrenWithScriptAssertion(ChildChangeSource::API, DeferChildrenChanged::Yes);
+    removeAllChildrenWithScriptAssertion(ChildChange::Source::API, DeferChildrenChanged::Yes);
 
-    executeNodeInsertionWithScriptAssertion(*this, node.get(), ChildChangeSource::API, ReplacedAllChildren::Yes, [&] {
+    executeNodeInsertionWithScriptAssertion(*this, node.get(), ChildChange::Source::API, ReplacedAllChildren::Yes, [&] {
         ASSERT(!ensurePreInsertionValidity(node, nullptr).hasException());
         InspectorInstrumentation::willInsertDOMNode(document(), *this);
         node->setTreeScopeRecursively(treeScope());
@@ -676,7 +710,7 @@ void ContainerNode::removeChildren()
         return;
 
     Ref<ContainerNode> protectedThis(*this);
-    removeAllChildrenWithScriptAssertion(ChildChangeSource::API);
+    removeAllChildrenWithScriptAssertion(ChildChange::Source::API);
 
     rebuildSVGExtensionsElementsIfNecessary();
     dispatchSubtreeModifiedEvent();
@@ -701,18 +735,18 @@ ExceptionOr<void> ContainerNode::appendChildWithoutPreInsertionValidityCheck(Nod
     Ref<ContainerNode> protectedThis(*this);
 
     NodeVector targets;
-    auto removeResult = collectChildrenAndRemoveFromOldParent(newChild, targets);
+    auto removeResult = removeSelfOrChildNodesForInsertion(newChild, targets);
     if (removeResult.hasException())
         return removeResult.releaseException();
 
     if (targets.isEmpty())
         return { };
 
-    // We need this extra check because collectChildrenAndRemoveFromOldParent() can fire mutation events.
+    // We need this extra check because removeSelfOrChildNodesForInsertion() can fire mutation events.
     for (auto& child : targets) {
         auto nodeTypeResult = checkAcceptChildGuaranteedNodeTypes(*this, child);
-    if (nodeTypeResult.hasException())
-        return nodeTypeResult.releaseException();
+        if (nodeTypeResult.hasException())
+            return nodeTypeResult.releaseException();
     }
 
     InspectorInstrumentation::willInsertDOMNode(document(), *this);
@@ -727,7 +761,7 @@ ExceptionOr<void> ContainerNode::appendChildWithoutPreInsertionValidityCheck(Nod
             break;
 
         // Append child to the end of the list
-        executeNodeInsertionWithScriptAssertion(*this, child.get(), ChildChangeSource::API, ReplacedAllChildren::No, [&] {
+        executeNodeInsertionWithScriptAssertion(*this, child.get(), ChildChange::Source::API, ReplacedAllChildren::No, [&] {
             child->setTreeScopeRecursively(treeScope());
             appendChildCommon(child);
         });
@@ -743,7 +777,7 @@ void ContainerNode::parserAppendChild(Node& newChild)
     ASSERT(!newChild.isDocumentFragment());
     ASSERT(!hasTagName(HTMLNames::templateTag));
 
-    executeNodeInsertionWithScriptAssertion(*this, newChild, ChildChangeSource::Parser, ReplacedAllChildren::No, [&] {
+    executeNodeInsertionWithScriptAssertion(*this, newChild, ChildChange::Source::Parser, ReplacedAllChildren::No, [&] {
         if (&document() != &newChild.document())
             document().adoptNode(newChild);
 
@@ -753,19 +787,28 @@ void ContainerNode::parserAppendChild(Node& newChild)
     });
 }
 
+ExceptionOr<void> ContainerNode::appendChild(ChildChange::Source source, Node& newChild)
+{
+    if (source == ChildChange::Source::Parser) {
+        parserAppendChild(newChild);
+        return { };
+    }
+    return appendChild(newChild);
+}
+
 static bool affectsElements(const ContainerNode::ChildChange& change)
 {
     switch (change.type) {
-    case ContainerNode::ElementInserted:
-    case ContainerNode::ElementRemoved:
-    case ContainerNode::AllChildrenRemoved:
-    case ContainerNode::AllChildrenReplaced:
+    case ContainerNode::ChildChange::Type::ElementInserted:
+    case ContainerNode::ChildChange::Type::ElementRemoved:
+    case ContainerNode::ChildChange::Type::AllChildrenRemoved:
+    case ContainerNode::ChildChange::Type::AllChildrenReplaced:
         return true;
-    case ContainerNode::TextInserted:
-    case ContainerNode::TextRemoved:
-    case ContainerNode::TextChanged:
-    case ContainerNode::NonContentsChildInserted:
-    case ContainerNode::NonContentsChildRemoved:
+    case ContainerNode::ChildChange::Type::TextInserted:
+    case ContainerNode::ChildChange::Type::TextRemoved:
+    case ContainerNode::ChildChange::Type::TextChanged:
+    case ContainerNode::ChildChange::Type::NonContentsChildInserted:
+    case ContainerNode::ChildChange::Type::NonContentsChildRemoved:
         return false;
     }
     ASSERT_NOT_REACHED();
@@ -782,7 +825,7 @@ void ContainerNode::childrenChanged(const ChildChange& change)
     // FIXME: Unclear why it's always safe to skip this when parser is adding children.
     // FIXME: Seems like it's equally safe to skip for TextInserted and TextRemoved as for TextChanged.
     // FIXME: Should use switch for change type so we remember to update when adding new types.
-    if (change.source == ChildChangeSource::API && change.type != TextChanged)
+    if (change.source == ChildChange::Source::API && change.type != ChildChange::Type::TextChanged)
         document().updateRangesAfterChildrenChanged(*this);
 
     invalidateNodeListAndCollectionCachesInAncestors();
@@ -842,10 +885,6 @@ static void dispatchChildRemovalEvents(Ref<Node>& child)
     if (child->isInShadowTree())
         return;
 
-    // FIXME: This doesn't belong in dispatchChildRemovalEvents.
-    // FIXME: Nodes removed from a shadow tree should also be kept alive.
-    willCreatePossiblyOrphanedTreeByRemoval(child.ptr());
-
     Ref<Document> document = child->document();
 
     // dispatch pre-removal mutation events
@@ -875,7 +914,7 @@ ExceptionOr<Ref<NodeList>> ContainerNode::querySelectorAll(const String& selecto
     return query.releaseReturnValue().queryAll(*this);
 }
 
-Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomicString& qualifiedName)
+Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomString& qualifiedName)
 {
     ASSERT(!qualifiedName.isNull());
 
@@ -887,7 +926,7 @@ Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomicString& qual
     return ensureRareData().ensureNodeLists().addCachedCollection<TagCollection>(*this, ByTag, qualifiedName);
 }
 
-Ref<HTMLCollection> ContainerNode::getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName)
+Ref<HTMLCollection> ContainerNode::getElementsByTagNameNS(const AtomString& namespaceURI, const AtomString& localName)
 {
     ASSERT(!localName.isNull());
     return ensureRareData().ensureNodeLists().addCachedTagCollectionNS(*this, namespaceURI.isEmpty() ? nullAtom() : namespaceURI, localName);
@@ -895,18 +934,18 @@ Ref<HTMLCollection> ContainerNode::getElementsByTagNameNS(const AtomicString& na
 
 Ref<NodeList> ContainerNode::getElementsByName(const String& elementName)
 {
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<NameNodeList>(*this, elementName);
+    return ensureRareData().ensureNodeLists().addCacheWithAtomName<NameNodeList>(*this, elementName);
 }
 
-Ref<HTMLCollection> ContainerNode::getElementsByClassName(const AtomicString& classNames)
+Ref<HTMLCollection> ContainerNode::getElementsByClassName(const AtomString& classNames)
 {
     return ensureRareData().ensureNodeLists().addCachedCollection<ClassCollection>(*this, ByClass, classNames);
 }
 
-Ref<RadioNodeList> ContainerNode::radioNodeList(const AtomicString& name)
+Ref<RadioNodeList> ContainerNode::radioNodeList(const AtomString& name)
 {
     ASSERT(hasTagName(HTMLNames::formTag) || hasTagName(HTMLNames::fieldsetTag));
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<RadioNodeList>(*this, name);
+    return ensureRareData().ensureNodeLists().addCacheWithAtomName<RadioNodeList>(*this, name);
 }
 
 Ref<HTMLCollection> ContainerNode::children()
@@ -927,7 +966,7 @@ Element* ContainerNode::lastElementChild() const
 unsigned ContainerNode::childElementCount() const
 {
     auto children = childrenOfType<Element>(*this);
-    return std::distance(children.begin(), children.end());
+    return std::distance(children.begin(), { });
 }
 
 ExceptionOr<void> ContainerNode::append(Vector<NodeOrString>&& vector)
@@ -954,6 +993,37 @@ ExceptionOr<void> ContainerNode::prepend(Vector<NodeOrString>&& vector)
         return { };
 
     return insertBefore(*node, firstChild());
+}
+
+// https://dom.spec.whatwg.org/#dom-parentnode-replacechildren
+ExceptionOr<void> ContainerNode::replaceChildren(Vector<NodeOrString>&& vector)
+{
+    // step 1
+    auto result = convertNodesOrStringsIntoNode(WTFMove(vector));
+    if (result.hasException())
+        return result.releaseException();
+    auto node = result.releaseReturnValue();
+
+    // step 2
+    if (node) {
+        if (auto checkResult = ensurePreInsertionValidity(*node, nullptr); checkResult.hasException())
+            return checkResult;
+    }
+
+    // step 3
+    auto protectedThis = makeRef(*this);
+    ChildListMutationScope mutation(*this);
+    removeAllChildrenWithScriptAssertion(ChildChange::Source::API, DeferChildrenChanged::No);
+
+    if (node) {
+        if (auto appendResult = appendChildWithoutPreInsertionValidityCheck(*node); appendResult.hasException())
+            return appendResult;
+    }
+
+    rebuildSVGExtensionsElementsIfNecessary();
+    dispatchSubtreeModifiedEvent();
+
+    return { };
 }
 
 HTMLCollection* ContainerNode::cachedHTMLCollection(CollectionType type)

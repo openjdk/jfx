@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,11 @@
 #include "config.h"
 #include "MarkingConstraintSet.h"
 
-#include "JSCInlines.h"
 #include "MarkingConstraintSolver.h"
 #include "Options.h"
 #include "SimpleMarkingConstraint.h"
 #include "SuperSampler.h"
 #include <wtf/Function.h>
-#include <wtf/TimeWithDynamicClockType.h>
 
 namespace JSC {
 
@@ -65,9 +63,9 @@ void MarkingConstraintSet::didStartMarking()
     m_iteration = 1;
 }
 
-void MarkingConstraintSet::add(CString abbreviatedName, CString name, ::Function<void(SlotVisitor&)> function, ConstraintVolatility volatility, ConstraintConcurrency concurrency, ConstraintParallelism parallelism)
+void MarkingConstraintSet::add(CString abbreviatedName, CString name, MarkingConstraintExecutorPair&& executors, ConstraintVolatility volatility, ConstraintConcurrency concurrency, ConstraintParallelism parallelism)
 {
-    add(std::make_unique<SimpleMarkingConstraint>(WTFMove(abbreviatedName), WTFMove(name), WTFMove(function), volatility, concurrency, parallelism));
+    add(makeUnique<SimpleMarkingConstraint>(WTFMove(abbreviatedName), WTFMove(name), WTFMove(executors), volatility, concurrency, parallelism));
 }
 
 void MarkingConstraintSet::add(
@@ -83,8 +81,7 @@ void MarkingConstraintSet::add(
 bool MarkingConstraintSet::executeConvergence(SlotVisitor& visitor)
 {
     bool result = executeConvergenceImpl(visitor);
-    if (Options::logGC())
-        dataLog(" ");
+    dataLogIf(Options::logGC(), " ");
     return result;
 }
 
@@ -104,8 +101,7 @@ bool MarkingConstraintSet::executeConvergenceImpl(SlotVisitor& visitor)
 
     unsigned iteration = m_iteration++;
 
-    if (Options::logGC())
-        dataLog("i#", iteration, ":");
+    dataLogIf(Options::logGC(), "i#", iteration, ":");
 
     if (iteration == 1) {
         // First iteration is before any visitor draining, so it's unlikely to trigger any constraints
@@ -170,12 +166,11 @@ bool MarkingConstraintSet::executeConvergenceImpl(SlotVisitor& visitor)
     return !solver.didVisitSomething();
 }
 
-void MarkingConstraintSet::executeAll(SlotVisitor& visitor)
+void MarkingConstraintSet::executeAllSynchronously(AbstractSlotVisitor& visitor)
 {
     for (auto& constraint : m_set)
-        constraint->execute(visitor);
-    if (Options::logGC())
-        dataLog(" ");
+        constraint->executeSynchronously(visitor);
+    dataLogIf(Options::logGC(), " ");
 }
 
 } // namespace JSC

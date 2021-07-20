@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,35 +26,27 @@
 
 #pragma once
 
-#if ENABLE(INTL)
-
 #include "InternalFunction.h"
 #include "IntlObject.h"
 
 namespace JSC {
 
-class IntlCollator;
 class IntlCollatorPrototype;
 
 class IntlCollatorConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static IntlCollatorConstructor* create(VM&, Structure*, IntlCollatorPrototype*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-    Structure* collatorStructure(VM& vm) const { return globalObject(vm)->collatorStructure(); }
-
-protected:
-    void finishCreation(VM&, IntlCollatorPrototype*);
-
 private:
     IntlCollatorConstructor(VM&, Structure*);
+    void finishCreation(VM&, IntlCollatorPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(IntlCollatorConstructor, InternalFunction);
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

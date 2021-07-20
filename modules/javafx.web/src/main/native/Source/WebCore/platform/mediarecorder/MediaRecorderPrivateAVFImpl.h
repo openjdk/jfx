@@ -24,35 +24,48 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) && HAVE(AVASSETWRITERDELEGATE)
 
+#include "CAAudioStreamDescription.h"
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderPrivateWriterCocoa.h"
+
+using CVPixelBufferRef = struct __CVBuffer*;
+typedef const struct opaqueCMFormatDescription* CMFormatDescriptionRef;
 
 namespace WebCore {
 
 class MediaStreamPrivate;
+class WebAudioBufferList;
 
-class MediaRecorderPrivateAVFImpl final : public MediaRecorderPrivate {
+class MediaRecorderPrivateAVFImpl final
+    : public MediaRecorderPrivate {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static std::unique_ptr<MediaRecorderPrivateAVFImpl> create(const MediaStreamPrivate&);
+    static std::unique_ptr<MediaRecorderPrivateAVFImpl> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
+    ~MediaRecorderPrivateAVFImpl();
 
 private:
-    MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&&, String&& audioTrackId, String&& videoTrackId);
+    explicit MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&&);
 
-    friend std::unique_ptr<MediaRecorderPrivateAVFImpl> std::make_unique<MediaRecorderPrivateAVFImpl>(Ref<MediaRecorderPrivateWriter>&&, String&&, String&&);
+    // MediaRecorderPrivate
+    void videoSampleAvailable(MediaSample&) final;
+    void fetchData(FetchDataCallback&&) final;
+    void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
+    void startRecording(StartRecordingCallback&&) final;
+    const String& mimeType() const final;
 
-    void sampleBufferUpdated(MediaStreamTrackPrivate&, MediaSample&) final;
-    void audioSamplesAvailable(MediaStreamTrackPrivate&, const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
-    RefPtr<SharedBuffer> fetchData() final;
-    const String& mimeType() final;
-    void stopRecording();
+    void stopRecording(CompletionHandler<void()>&&) final;
+    void pauseRecording(CompletionHandler<void()>&&) final;
+    void resumeRecording(CompletionHandler<void()>&&) final;
 
     Ref<MediaRecorderPrivateWriter> m_writer;
-    String m_recordedAudioTrackID;
-    String m_recordedVideoTrackID;
+    RetainPtr<CVPixelBufferRef> m_blackFrame;
+    RetainPtr<CMFormatDescriptionRef> m_blackFrameDescription;
+    CAAudioStreamDescription m_description;
+    std::unique_ptr<WebAudioBufferList> m_audioBuffer;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_STREAM) && HAVE(AVASSETWRITERDELEGATE)

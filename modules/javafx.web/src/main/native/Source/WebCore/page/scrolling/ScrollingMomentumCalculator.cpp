@@ -29,6 +29,8 @@
 #include "FloatPoint.h"
 #include "FloatSize.h"
 
+#if ENABLE(CSS_SCROLL_SNAP)
+
 namespace WebCore {
 
 static const Seconds scrollSnapAnimationDuration = 1_s;
@@ -38,7 +40,7 @@ static inline float projectedInertialScrollDistance(float initialWheelDelta)
     // by multiplying the initial wheel delta by a constant factor. By running a few experiments (i.e. logging scroll destination and initial
     // wheel delta for many scroll gestures) we determined that this is a reasonable way to approximate where scrolling will take us without
     // using _NSScrollingMomentumCalculator.
-    const static double inertialScrollPredictionFactor = 16.7;
+    static constexpr double inertialScrollPredictionFactor = 16.7;
     return inertialScrollPredictionFactor * initialWheelDelta;
 }
 
@@ -71,7 +73,7 @@ FloatSize ScrollingMomentumCalculator::predictedDestinationOffset()
 
 std::unique_ptr<ScrollingMomentumCalculator> ScrollingMomentumCalculator::create(const FloatSize& viewportSize, const FloatSize& contentSize, const FloatPoint& initialOffset, const FloatSize& initialDelta, const FloatSize& initialVelocity)
 {
-    return std::make_unique<BasicScrollingMomentumCalculator>(viewportSize, contentSize, initialOffset, initialDelta, initialVelocity);
+    return makeUnique<BasicScrollingMomentumCalculator>(viewportSize, contentSize, initialOffset, initialDelta, initialVelocity);
 }
 
 void ScrollingMomentumCalculator::setPlatformMomentumScrollingPredictionEnabled(bool)
@@ -233,3 +235,5 @@ float BasicScrollingMomentumCalculator::animationProgressAfterElapsedTime(Second
 }
 
 }; // namespace WebCore
+
+#endif // ENABLE(CSS_SCROLL_SNAP)

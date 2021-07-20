@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,12 @@
 #include "InternalFunctionAllocationProfile.h"
 #include "JSCast.h"
 #include "ObjectAllocationProfile.h"
+#include "PackedCellPtr.h"
 #include "Watchpoint.h"
 
 namespace JSC {
 
+class ExecutableBase;
 class JSGlobalObject;
 class LLIntOffsetsExtractor;
 namespace DFG {
@@ -47,25 +49,34 @@ class FunctionRareData final : public JSCell {
 
 public:
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static FunctionRareData* create(VM&);
+    static FunctionRareData* create(VM&, ExecutableBase*);
 
-    static const bool needsDestruction = true;
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.functionRareDataSpace<mode>();
+    }
+
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_INFO;
 
-    static inline ptrdiff_t offsetOfObjectAllocationProfile()
-    {
-        return OBJECT_OFFSETOF(FunctionRareData, m_objectAllocationProfile);
-    }
+    static inline ptrdiff_t offsetOfObjectAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_objectAllocationProfile); }
+    static inline ptrdiff_t offsetOfAllocationProfileWatchpointSet() { return OBJECT_OFFSETOF(FunctionRareData, m_allocationProfileWatchpointSet); }
+    static inline ptrdiff_t offsetOfInternalFunctionAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_internalFunctionAllocationProfile); }
+    static inline ptrdiff_t offsetOfBoundFunctionStructure() { return OBJECT_OFFSETOF(FunctionRareData, m_boundFunctionStructure); }
+    static inline ptrdiff_t offsetOfExecutable() { return OBJECT_OFFSETOF(FunctionRareData, m_executable); }
+    static inline ptrdiff_t offsetOfAllocationProfileClearingWatchpoint() { return OBJECT_OFFSETOF(FunctionRareData, m_allocationProfileClearingWatchpoint); }
 
-    ObjectAllocationProfile* objectAllocationProfile()
+    ObjectAllocationProfileWithPrototype* objectAllocationProfile()
     {
         return &m_objectAllocationProfile;
     }
@@ -75,7 +86,7 @@ public:
 
     InlineWatchpointSet& allocationProfileWatchpointSet()
     {
-        return m_objectAllocationProfileWatchpoint;
+        return m_allocationProfileWatchpointSet;
     }
 
     void clear(const char* reason);
@@ -85,49 +96,53 @@ public:
     bool isObjectAllocationProfileInitialized() { return !m_objectAllocationProfile.isNull(); }
 
     Structure* internalFunctionAllocationStructure() { return m_internalFunctionAllocationProfile.structure(); }
-    Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* globalObject, JSObject* prototype, Structure* baseStructure)
+    Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* baseGlobalObject, JSObject* prototype, Structure* baseStructure)
     {
-        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, globalObject, this, prototype, baseStructure);
+        initializeAllocationProfileWatchpointSet();
+        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure);
     }
-    void clearInternalFunctionAllocationProfile()
+    void clearInternalFunctionAllocationProfile(const char* reason)
     {
         m_internalFunctionAllocationProfile.clear();
+        m_allocationProfileWatchpointSet.fireAll(vm(), reason);
+    }
+
+    void initializeAllocationProfileWatchpointSet()
+    {
+        if (m_allocationProfileWatchpointSet.isStillValid())
+            m_allocationProfileWatchpointSet.startWatching();
     }
 
     Structure* getBoundFunctionStructure() { return m_boundFunctionStructure.get(); }
     void setBoundFunctionStructure(VM& vm, Structure* structure) { m_boundFunctionStructure.set(vm, this, structure); }
+
+    ExecutableBase* executable() const { return m_executable.get(); }
 
     bool hasReifiedLength() const { return m_hasReifiedLength; }
     void setHasReifiedLength() { m_hasReifiedLength = true; }
     bool hasReifiedName() const { return m_hasReifiedName; }
     void setHasReifiedName() { m_hasReifiedName = true; }
 
-    bool hasAllocationProfileClearingWatchpoint() const { return !!m_allocationProfileClearingWatchpoint; }
-    Watchpoint* createAllocationProfileClearingWatchpoint()
+    bool hasModifiedLengthForNonHostFunction() const { return m_hasModifiedLengthForNonHostFunction; }
+    void setHasModifiedLengthForNonHostFunction()
     {
-        RELEASE_ASSERT(!hasAllocationProfileClearingWatchpoint());
-        m_allocationProfileClearingWatchpoint = std::make_unique<AllocationProfileClearingWatchpoint>(this);
-        return m_allocationProfileClearingWatchpoint.get();
+        m_hasModifiedLengthForNonHostFunction = true;
+    }
+    bool hasModifiedNameForNonHostFunction() const { return m_hasModifiedNameForNonHostFunction; }
+    void setHasModifiedNameForNonHostFunction()
+    {
+        m_hasModifiedNameForNonHostFunction = true;
     }
 
-protected:
-    FunctionRareData(VM&);
-    ~FunctionRareData();
+    bool hasAllocationProfileClearingWatchpoint() const { return !!m_allocationProfileClearingWatchpoint; }
+    Watchpoint* createAllocationProfileClearingWatchpoint();
+    class AllocationProfileClearingWatchpoint;
 
 private:
-
-    class AllocationProfileClearingWatchpoint : public Watchpoint {
-    public:
-        AllocationProfileClearingWatchpoint(FunctionRareData* rareData)
-            : m_rareData(rareData)
-        { }
-    protected:
-        void fireInternal(VM&, const FireDetail&) override;
-    private:
-        FunctionRareData* m_rareData;
-    };
-
     friend class LLIntOffsetsExtractor;
+
+    explicit FunctionRareData(VM&, ExecutableBase*);
+    ~FunctionRareData();
 
     // Ideally, there would only be one allocation profile for subclassing but due to Reflect.construct we
     // have two. There are some pros and cons in comparison to our current system to using the same profile
@@ -142,13 +157,37 @@ private:
     //
     // We don't really care about 1) since this memory is rare and small in total. 2) is unfortunate but is
     // probably outweighed by the cost of 3).
-    ObjectAllocationProfile m_objectAllocationProfile;
-    InlineWatchpointSet m_objectAllocationProfileWatchpoint;
+    ObjectAllocationProfileWithPrototype m_objectAllocationProfile;
+    InlineWatchpointSet m_allocationProfileWatchpointSet;
     InternalFunctionAllocationProfile m_internalFunctionAllocationProfile;
     WriteBarrier<Structure> m_boundFunctionStructure;
+    WriteBarrier<ExecutableBase> m_executable;
     std::unique_ptr<AllocationProfileClearingWatchpoint> m_allocationProfileClearingWatchpoint;
-    bool m_hasReifiedLength { false };
-    bool m_hasReifiedName { false };
+    bool m_hasReifiedLength : 1;
+    bool m_hasReifiedName : 1;
+    bool m_hasModifiedLengthForNonHostFunction : 1;
+    bool m_hasModifiedNameForNonHostFunction : 1;
 };
+
+class FunctionRareData::AllocationProfileClearingWatchpoint final : public Watchpoint {
+public:
+    AllocationProfileClearingWatchpoint(FunctionRareData* rareData)
+        : Watchpoint(Watchpoint::Type::FunctionRareDataAllocationProfileClearing)
+        , m_rareData(rareData)
+    { }
+
+    void fireInternal(VM&, const FireDetail&);
+
+private:
+    // Own destructor may not be called. Keep members trivially destructible.
+    JSC_WATCHPOINT_FIELD(PackedCellPtr<FunctionRareData>, m_rareData);
+};
+
+inline Watchpoint* FunctionRareData::createAllocationProfileClearingWatchpoint()
+{
+    RELEASE_ASSERT(!hasAllocationProfileClearingWatchpoint());
+    m_allocationProfileClearingWatchpoint = makeUnique<AllocationProfileClearingWatchpoint>(this);
+    return m_allocationProfileClearingWatchpoint.get();
+}
 
 } // namespace JSC

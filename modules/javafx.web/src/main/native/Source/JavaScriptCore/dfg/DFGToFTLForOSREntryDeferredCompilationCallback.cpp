@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,6 @@
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
 #include "FTLForOSREntryJITCode.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -52,11 +51,9 @@ Ref<ToFTLForOSREntryDeferredCompilationCallback>ToFTLForOSREntryDeferredCompilat
 void ToFTLForOSREntryDeferredCompilationCallback::compilationDidBecomeReadyAsynchronously(
     CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock)
 {
-    if (Options::verboseOSR()) {
-        dataLog(
-            "Optimizing compilation of ", *codeBlock, " (for ", *profiledDFGCodeBlock,
-            ") did become ready.\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        "Optimizing compilation of ", *codeBlock, " (for ", *profiledDFGCodeBlock,
+        ") did become ready.");
 
     *m_forcedOSREntryTrigger = JITCode::TriggerReason::CompilationDone;
 }
@@ -64,18 +61,16 @@ void ToFTLForOSREntryDeferredCompilationCallback::compilationDidBecomeReadyAsync
 void ToFTLForOSREntryDeferredCompilationCallback::compilationDidComplete(
     CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationResult result)
 {
-    if (Options::verboseOSR()) {
-        dataLog(
-            "Optimizing compilation of ", *codeBlock, " (for ", *profiledDFGCodeBlock,
-            ") result: ", result, "\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        "Optimizing compilation of ", *codeBlock, " (for ", *profiledDFGCodeBlock,
+        ") result: ", result);
 
     JITCode* jitCode = profiledDFGCodeBlock->jitCode()->dfg();
 
     switch (result) {
     case CompilationSuccessful: {
-        jitCode->setOSREntryBlock(*codeBlock->vm(), profiledDFGCodeBlock, codeBlock);
-        unsigned osrEntryBytecode = codeBlock->jitCode()->ftlForOSREntry()->bytecodeIndex();
+        jitCode->setOSREntryBlock(codeBlock->vm(), profiledDFGCodeBlock, codeBlock);
+        BytecodeIndex osrEntryBytecode = codeBlock->jitCode()->ftlForOSREntry()->bytecodeIndex();
         jitCode->tierUpEntryTriggers.set(osrEntryBytecode, JITCode::TriggerReason::CompilationDone);
         break;
     }

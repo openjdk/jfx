@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,22 +102,24 @@ public class FXCollections {
     }
 
     /**
-     * Constructs an ObservableList that is backed by the specified list.
-     * Mutation operations on the ObservableList instance will be reported
-     * to observers that have registered on that instance.<br>
-     * Note that mutation operations made directly to the underlying list are
-     * <em>not</em> reported to observers of any ObservableList that
+     * Constructs an {@code ObservableList} that is backed by the specified list and listens to changes in observables of its items.
+     * Mutation operations made directly to the underlying list are
+     * <em>not</em> reported to observers of any {@code ObservableList} that
      * wraps it.
-     * <br>
-     * This list also reports mutations of the elements in it by using <code>extractor</code>.
-     * Observable objects returned by extractor (applied to each list element) are listened for changes
-     * and transformed into "update" change of ListChangeListener.
+     * <p>
+     * The {@code extractor} returns observables (usually properties) of the objects in the created list. These observables are
+     * listened for changes, and the user is notified of these through an
+     * {@linkplain ListChangeListener.Change#wasUpdated() update} change of an attached {@code ListChangeListener}. These changes
+     * are unrelated to the changes made to the observable list itself using methods such as {@code add} and {@code remove}.
+     * <p>
+     * For example, a list of {@code Shape}s can listen to changes in the shapes' {@code fill} property.
      *
-     * @param <E> The type of List to be wrapped
-     * @param list a concrete List that backs this ObservableList
-     * @param extractor element to Observable[] convertor
+     * @param <E> The type of {@code List} to be wrapped
+     * @param list a concrete {@code List} that backs this {@code ObservableList}
+     * @param extractor element to {@code Observable[]} converter
+     * @return a newly created {@code ObservableList}
+     * @see #observableArrayList(javafx.util.Callback)
      * @since JavaFX 2.1
-     * @return a newly created ObservableList
      */
     public static <E> ObservableList<E> observableList(List<E> list, Callback<E, Observable[]> extractor) {
         if (list == null || extractor == null) {
@@ -307,7 +309,7 @@ public class FXCollections {
     }
 
     /**
-     * Creates a new empty observable list that is backed by an arraylist.
+     * Creates a new empty observable list that is backed by an array list.
      * @see #observableList(java.util.List)
      * @param <E> The type of List to be wrapped
      * @return a newly created ObservableList
@@ -318,14 +320,20 @@ public class FXCollections {
     }
 
     /**
-     * Creates a new empty observable list backed by an arraylist.
+     * Creates a new empty {@code ObservableList} that is backed by an array list and listens to changes in observables of its items.
+     * <p>
+     * The {@code extractor} returns observables (usually properties) of the objects in the created list. These observables are
+     * listened for changes and the user is notified of these through an
+     * {@linkplain ListChangeListener.Change#wasUpdated() update} change of an attached {@code ListChangeListener}. These changes
+     * are unrelated to the changes made to the observable list itself using methods such as {@code add} and {@code remove}.
+     * <p>
+     * For example, a list of {@code Shape}s can listen to changes in the shapes' {@code fill} property.
      *
-     * This list reports element updates.
-     * @param <E> The type of List to be wrapped
-     * @param extractor element to Observable[] convertor. Observable objects are listened for changes on the element.
+     * @param <E> The type of {@code List} to be wrapped
+     * @param extractor element to {@code Observable[]} converter
+     * @return a newly created {@code ObservableList}
      * @see #observableList(java.util.List, javafx.util.Callback)
      * @since JavaFX 2.1
-     * @return a newly created ObservableList
      */
     public static <E> ObservableList<E> observableArrayList(Callback<E, Observable[]> extractor) {
         return observableList(new ArrayList(), extractor);
@@ -369,7 +377,7 @@ public class FXCollections {
 
     /**
      * Concatenates more observable lists into one. The resulting list
-     * would be backed by an arraylist.
+     * would be backed by an array list.
      * @param <E> The type of List to be wrapped
      * @param lists lists to concatenate
      * @return new observable array list concatenated from the arguments
@@ -576,7 +584,7 @@ public class FXCollections {
     }
 
     /**
-     * Reverse the order in the list
+     * Reverses the order in the list.
      * Fires only <b>one</b> change notification on the list.
      * @param list the list to be reversed
      * @see Collections#reverse(java.util.List)
@@ -1008,6 +1016,11 @@ public class FXCollections {
             this.mutex = mutex;
         }
 
+        SynchronizedList(List<T> list) {
+            this.backingList = list;
+            this.mutex = this;
+        }
+
         @Override
         public int size() {
             synchronized(mutex) {
@@ -1197,17 +1210,13 @@ public class FXCollections {
         private final ObservableList<T> backingList;
         private final ListChangeListener<T> listener;
 
-        SynchronizedObservableList(ObservableList<T> seq, Object mutex) {
-            super(seq, mutex);
+        SynchronizedObservableList(ObservableList<T> seq) {
+            super(seq);
             this.backingList = seq;
             listener = c -> {
                 ListListenerHelper.fireValueChangedEvent(helper, new SourceAdapterChange<T>(SynchronizedObservableList.this, c));
             };
             backingList.addListener(new WeakListChangeListener<T>(listener));
-        }
-
-        SynchronizedObservableList(ObservableList<T> seq) {
-            this(seq, new Object());
         }
 
         @Override
@@ -1774,7 +1783,8 @@ public class FXCollections {
         }
 
         SynchronizedSet(Set<E> set) {
-            this(set, new Object());
+            this.backingSet = set;
+            this.mutex = this;
         }
 
         @Override
@@ -1890,17 +1900,13 @@ public class FXCollections {
         private SetListenerHelper listenerHelper;
         private final SetChangeListener<E> listener;
 
-        SynchronizedObservableSet(ObservableSet<E> set, Object mutex) {
-            super(set, mutex);
+        SynchronizedObservableSet(ObservableSet<E> set) {
+            super(set);
             backingSet = set;
             listener = c -> {
                 SetListenerHelper.fireValueChangedEvent(listenerHelper, new SetAdapterChange<E>(SynchronizedObservableSet.this, c));
             };
             backingSet.addListener(new WeakSetChangeListener<E>(listener));
-        }
-
-        SynchronizedObservableSet(ObservableSet<E> set) {
-            this(set, new Object());
         }
 
         @Override
@@ -2552,13 +2558,9 @@ public class FXCollections {
         final Object mutex;
         private final Map<K, V> backingMap;
 
-        SynchronizedMap(Map<K, V> map, Object mutex) {
-            backingMap = map;
-            this.mutex = mutex;
-        }
-
         SynchronizedMap(Map<K, V> map) {
-            this(map, new Object());
+            backingMap = map;
+            this.mutex = this;
         }
 
         @Override
@@ -2784,17 +2786,13 @@ public class FXCollections {
         private MapListenerHelper listenerHelper;
         private final MapChangeListener<K, V> listener;
 
-        SynchronizedObservableMap(ObservableMap<K, V> map, Object mutex) {
-            super(map, mutex);
+        SynchronizedObservableMap(ObservableMap<K, V> map) {
+            super(map);
             backingMap = map;
             listener = c -> {
                 MapListenerHelper.fireValueChangedEvent(listenerHelper, new MapAdapterChange<K, V>(SynchronizedObservableMap.this, c));
             };
             backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
-        }
-
-        SynchronizedObservableMap(ObservableMap<K, V> map) {
-            this(map, new Object());
         }
 
         @Override

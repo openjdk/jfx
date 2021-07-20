@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,7 @@
 #include "config.h"
 #include "SmallStrings.h"
 
-#include "JSGlobalObject.h"
-#include "JSString.h"
-#include "JSCInlines.h"
-#include <wtf/Noncopyable.h>
+#include "JSCJSValueInlines.h"
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -51,7 +48,7 @@ void SmallStrings::initializeCommonStrings(VM& vm)
     for (unsigned i = 0; i < singleCharacterStringCount; ++i) {
         ASSERT(!m_singleCharacterStrings[i]);
         const LChar string[] = { static_cast<LChar>(i) };
-        m_singleCharacterStrings[i] = JSString::createHasOtherOwner(vm, AtomicStringImpl::add(string, 1).releaseNonNull());
+        m_singleCharacterStrings[i] = JSString::createHasOtherOwner(vm, AtomStringImpl::add(string, 1).releaseNonNull());
         ASSERT(m_needsToBeVisited);
     }
 
@@ -61,11 +58,16 @@ void SmallStrings::initializeCommonStrings(VM& vm)
     initialize(&vm, m_objectStringStart, "[object ");
     initialize(&vm, m_nullObjectString, "[object Null]");
     initialize(&vm, m_undefinedObjectString, "[object Undefined]");
+    initialize(&vm, m_boundPrefixString, "bound ");
+    initialize(&vm, m_notEqualString, "not-equal");
+    initialize(&vm, m_timedOutString, "timed-out");
+    initialize(&vm, m_okString, "ok");
 
     setIsInitialized(true);
 }
 
-void SmallStrings::visitStrongReferences(SlotVisitor& visitor)
+template<typename Visitor>
+void SmallStrings::visitStrongReferences(Visitor& visitor)
 {
     m_needsToBeVisited = false;
     visitor.appendUnbarriered(m_emptyString);
@@ -77,7 +79,14 @@ void SmallStrings::visitStrongReferences(SlotVisitor& visitor)
     visitor.appendUnbarriered(m_objectStringStart);
     visitor.appendUnbarriered(m_nullObjectString);
     visitor.appendUnbarriered(m_undefinedObjectString);
+    visitor.appendUnbarriered(m_boundPrefixString);
+    visitor.appendUnbarriered(m_notEqualString);
+    visitor.appendUnbarriered(m_timedOutString);
+    visitor.appendUnbarriered(m_okString);
 }
+
+template void SmallStrings::visitStrongReferences(AbstractSlotVisitor&);
+template void SmallStrings::visitStrongReferences(SlotVisitor&);
 
 SmallStrings::~SmallStrings()
 {
@@ -88,12 +97,12 @@ Ref<StringImpl> SmallStrings::singleCharacterStringRep(unsigned char character)
     if (LIKELY(m_isInitialized))
         return *const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl());
     const LChar string[] = { static_cast<LChar>(character) };
-    return AtomicStringImpl::add(string, 1).releaseNonNull();
+    return AtomStringImpl::add(string, 1).releaseNonNull();
 }
 
 void SmallStrings::initialize(VM* vm, JSString*& string, const char* value)
 {
-    string = JSString::create(*vm, AtomicStringImpl::add(value).releaseNonNull());
+    string = JSString::create(*vm, AtomStringImpl::add(value).releaseNonNull());
     ASSERT(m_needsToBeVisited);
 }
 

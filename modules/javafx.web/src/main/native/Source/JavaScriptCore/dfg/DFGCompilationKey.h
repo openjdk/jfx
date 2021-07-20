@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,13 +38,13 @@ namespace DFG {
 class CompilationKey {
 public:
     CompilationKey()
-        : m_profiledBlock(0)
+        : m_profiledBlock(nullptr)
         , m_mode(InvalidCompilationMode)
     {
     }
 
     CompilationKey(WTF::HashTableDeletedValueType)
-        : m_profiledBlock(0)
+        : m_profiledBlock(nullptr)
         , m_mode(DFGMode)
     {
     }
@@ -89,7 +89,7 @@ private:
 struct CompilationKeyHash {
     static unsigned hash(const CompilationKey& key) { return key.hash(); }
     static bool equal(const CompilationKey& a, const CompilationKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::DFG
@@ -97,9 +97,7 @@ struct CompilationKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::CompilationKey> {
-    typedef JSC::DFG::CompilationKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::DFG::CompilationKey> : JSC::DFG::CompilationKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::CompilationKey> : SimpleClassHashTraits<JSC::DFG::CompilationKey> { };

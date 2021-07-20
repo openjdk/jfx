@@ -28,28 +28,18 @@
 
 #include "BiquadProcessor.h"
 
+#include "AudioUtilities.h"
 #include "BiquadDSPKernel.h"
 
 namespace WebCore {
 
-BiquadProcessor::BiquadProcessor(AudioContext& context, float sampleRate, size_t numberOfChannels, bool autoInitialize)
+BiquadProcessor::BiquadProcessor(BaseAudioContext& context, float sampleRate, size_t numberOfChannels, bool autoInitialize)
     : AudioDSPKernelProcessor(sampleRate, numberOfChannels)
-    , m_type(BiquadFilterType::Lowpass)
-    , m_parameter1(0)
-    , m_parameter2(0)
-    , m_parameter3(0)
-    , m_parameter4(0)
-    , m_filterCoefficientsDirty(true)
-    , m_hasSampleAccurateValues(false)
+    , m_parameter1(AudioParam::create(context, "frequency", 350.0, 0.0, 0.5 * sampleRate, AutomationRate::ARate))
+    , m_parameter2(AudioParam::create(context, "Q", 1, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_parameter3(AudioParam::create(context, "gain", 0.0, -FLT_MAX, 40 * std::log10(std::numeric_limits<float>::max()), AutomationRate::ARate))
+    , m_parameter4(AudioParam::create(context, "detune", 0.0, -153600, 153600, AutomationRate::ARate))
 {
-    double nyquist = 0.5 * this->sampleRate();
-
-    // Create parameters for BiquadFilterNode.
-    m_parameter1 = AudioParam::create(context, "frequency", 350.0, 10.0, nyquist);
-    m_parameter2 = AudioParam::create(context, "Q", 1, 0.0001, 1000.0);
-    m_parameter3 = AudioParam::create(context, "gain", 0.0, -40, 40);
-    m_parameter4 = AudioParam::create(context, "detune", 0.0, -4800, 4800);
-
     if (autoInitialize)
         initialize();
 }
@@ -62,7 +52,7 @@ BiquadProcessor::~BiquadProcessor()
 
 std::unique_ptr<AudioDSPKernel> BiquadProcessor::createKernel()
 {
-    return std::make_unique<BiquadDSPKernel>(this);
+    return makeUnique<BiquadDSPKernel>(this);
 }
 
 void BiquadProcessor::checkForDirtyCoefficients()
@@ -76,6 +66,11 @@ void BiquadProcessor::checkForDirtyCoefficients()
     if (m_parameter1->hasSampleAccurateValues() || m_parameter2->hasSampleAccurateValues() || m_parameter3->hasSampleAccurateValues() || m_parameter4->hasSampleAccurateValues()) {
         m_filterCoefficientsDirty = true;
         m_hasSampleAccurateValues = true;
+
+        m_shouldUseARate = m_parameter1->automationRate() == AutomationRate::ARate
+            || m_parameter2->automationRate() == AutomationRate::ARate
+            || m_parameter3->automationRate() == AutomationRate::ARate
+            || m_parameter4->automationRate() == AutomationRate::ARate;
     } else {
         if (m_hasJustReset) {
             // Snap to exact values first time after reset, then smooth for subsequent changes.
@@ -111,6 +106,17 @@ void BiquadProcessor::process(const AudioBus* source, AudioBus* destination, siz
         m_kernels[i]->process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
 }
 
+void BiquadProcessor::processOnlyAudioParams(size_t framesToProcess)
+{
+    float values[AudioUtilities::renderQuantumSize];
+    ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
+
+    m_parameter1->calculateSampleAccurateValues(values, framesToProcess);
+    m_parameter2->calculateSampleAccurateValues(values, framesToProcess);
+    m_parameter3->calculateSampleAccurateValues(values, framesToProcess);
+    m_parameter4->calculateSampleAccurateValues(values, framesToProcess);
+}
+
 void BiquadProcessor::setType(BiquadFilterType type)
 {
     if (type != m_type) {
@@ -119,14 +125,22 @@ void BiquadProcessor::setType(BiquadFilterType type)
     }
 }
 
-void BiquadProcessor::getFrequencyResponse(int nFrequencies, const float* frequencyHz, float* magResponse, float* phaseResponse)
+void BiquadProcessor::getFrequencyResponse(unsigned nFrequencies, const float* frequencyHz, float* magResponse, float* phaseResponse)
 {
     // Compute the frequency response on a separate temporary kernel
     // to avoid interfering with the processing running in the audio
     // thread on the main kernels.
 
-    auto responseKernel = std::make_unique<BiquadDSPKernel>(this);
+    auto responseKernel = makeUnique<BiquadDSPKernel>(this);
 
+    // Get a copy of the current biquad filter coefficients so we can update
+    // |responseKernel| with these values.
+    float cutoffFrequency = parameter1().value();
+    float q = parameter2().value();
+    float gain = parameter3().value();
+    float detune = parameter4().value();
+
+    responseKernel->updateCoefficients(1, &cutoffFrequency, &q, &gain, &detune);
     responseKernel->getFrequencyResponse(nFrequencies, frequencyHz, magResponse, phaseResponse);
 }
 

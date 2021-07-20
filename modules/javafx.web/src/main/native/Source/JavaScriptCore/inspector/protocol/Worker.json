@@ -1,6 +1,7 @@
 {
     "domain": "Worker",
-    "availability": ["web"],
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page"],
     "commands": [
         {
             "name": "enable",
@@ -31,7 +32,8 @@
             "name": "workerCreated",
             "parameters": [
                 { "name": "workerId", "type": "string" },
-                { "name": "url", "type": "string" }
+                { "name": "url", "type": "string" },
+                { "name": "name", "type": "string" }
             ]
         },
         {

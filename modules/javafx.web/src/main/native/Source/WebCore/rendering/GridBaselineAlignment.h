@@ -26,6 +26,10 @@
 #pragma once
 
 #include "GridLayoutFunctions.h"
+#include "RenderStyleConstants.h"
+#include "WritingMode.h"
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 
@@ -159,7 +163,7 @@ private:
     bool isOrthogonalChildForBaseline(const RenderBox&) const;
     bool isParallelToBaselineAxisForChild(const RenderBox&, GridAxis) const;
 
-    typedef HashMap<unsigned, std::unique_ptr<BaselineContext>, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BaselineContextsMap;
+    typedef HashMap<unsigned, std::unique_ptr<BaselineContext>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BaselineContextsMap;
 
     // Grid Container's WritingMode, used to determine grid item's orthogonality.
     WritingMode m_blockFlow;

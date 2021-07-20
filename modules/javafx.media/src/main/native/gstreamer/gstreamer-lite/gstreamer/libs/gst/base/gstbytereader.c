@@ -33,6 +33,47 @@
  * @title: GstByteReader
  * @short_description: Reads different integer, string and floating point
  *     types from a memory buffer
+ * @symbols:
+ * - gst_byte_reader_skip_unchecked
+ * - gst_byte_reader_get_uint8_unchecked
+ * - gst_byte_reader_peek_uint8_unchecked
+ * - gst_byte_reader_get_int8_unchecked
+ * - gst_byte_reader_peek_int8_unchecked
+ * - gst_byte_reader_get_uint16_le_unchecked
+ * - gst_byte_reader_get_uint16_be_unchecked
+ * - gst_byte_reader_peek_uint16_le_unchecked
+ * - gst_byte_reader_peek_uint16_be_unchecked
+ * - gst_byte_reader_get_int16_le_unchecked
+ * - gst_byte_reader_get_int16_be_unchecked
+ * - gst_byte_reader_peek_int16_le_unchecked
+ * - gst_byte_reader_peek_int16_be_unchecked
+ * - gst_byte_reader_get_uint24_le_unchecked
+ * - gst_byte_reader_get_uint24_be_unchecked
+ * - gst_byte_reader_peek_uint24_le_unchecked
+ * - gst_byte_reader_peek_uint24_be_unchecked
+ * - gst_byte_reader_get_int24_le_unchecked
+ * - gst_byte_reader_get_int24_be_unchecked
+ * - gst_byte_reader_peek_int24_le_unchecked
+ * - gst_byte_reader_peek_int24_be_unchecked
+ * - gst_byte_reader_get_uint32_le_unchecked
+ * - gst_byte_reader_get_uint32_be_unchecked
+ * - gst_byte_reader_peek_uint32_le_unchecked
+ * - gst_byte_reader_peek_uint32_be_unchecked
+ * - gst_byte_reader_get_int32_le_unchecked
+ * - gst_byte_reader_get_int32_be_unchecked
+ * - gst_byte_reader_peek_int32_le_unchecked
+ * - gst_byte_reader_peek_int32_be_unchecked
+ * - gst_byte_reader_get_float32_le_unchecked
+ * - gst_byte_reader_get_float32_be_unchecked
+ * - gst_byte_reader_get_float64_le_unchecked
+ * - gst_byte_reader_get_float64_be_unchecked
+ * - gst_byte_reader_peek_float32_le_unchecked
+ * - gst_byte_reader_peek_float32_be_unchecked
+ * - gst_byte_reader_peek_float64_le_unchecked
+ * - gst_byte_reader_peek_float64_be_unchecked
+ * - gst_byte_reader_peek_data_unchecked
+ * - gst_byte_reader_get_data_unchecked
+ * - gst_byte_reader_dup_data_unchecked
  *
  * #GstByteReader provides a byte reader that can read different integer and
  * floating point types from a memory buffer. It provides functions for reading

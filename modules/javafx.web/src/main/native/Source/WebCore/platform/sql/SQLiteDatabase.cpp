@@ -30,11 +30,13 @@
 #include "DatabaseAuthorizer.h"
 #include "Logging.h"
 #include "MemoryRelease.h"
+#include "SQLiteDatabaseTracker.h"
 #include "SQLiteFileSystem.h"
 #include "SQLiteStatement.h"
 #include <mutex>
 #include <sqlite3.h>
 #include <thread>
+#include <wtf/FileSystem.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -69,6 +71,15 @@ static void initializeSQLiteIfNecessary()
     });
 }
 
+static bool isDatabaseOpeningForbidden = false;
+static Lock isDatabaseOpeningForbiddenMutex;
+
+void SQLiteDatabase::setIsDatabaseOpeningForbidden(bool isForbidden)
+{
+    auto locker = holdLock(isDatabaseOpeningForbiddenMutex);
+    isDatabaseOpeningForbidden = isForbidden;
+}
+
 SQLiteDatabase::SQLiteDatabase() = default;
 
 SQLiteDatabase::~SQLiteDatabase()
@@ -76,20 +87,41 @@ SQLiteDatabase::~SQLiteDatabase()
     close();
 }
 
-bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
+bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
 {
     initializeSQLiteIfNecessary();
 
     close();
 
-    m_openError = SQLiteFileSystem::openDatabase(filename, &m_db, forWebSQLDatabase);
-    if (m_openError != SQLITE_OK) {
-        m_openErrorMessage = m_db ? sqlite3_errmsg(m_db) : "sqlite_open returned null";
-        LOG_ERROR("SQLite database failed to load from %s\nCause - %s", filename.ascii().data(),
-            m_openErrorMessage.data());
-        sqlite3_close(m_db);
-        m_db = 0;
-        return false;
+    {
+        auto locker = holdLock(isDatabaseOpeningForbiddenMutex);
+        if (isDatabaseOpeningForbidden) {
+            m_openErrorMessage = "opening database is forbidden";
+            return false;
+        }
+
+        int flags = SQLITE_OPEN_AUTOPROXY;
+        switch (openMode) {
+        case OpenMode::ReadOnly:
+            flags |= SQLITE_OPEN_READONLY;
+            break;
+        case OpenMode::ReadWrite:
+            flags |= SQLITE_OPEN_READWRITE;
+            break;
+        case OpenMode::ReadWriteCreate:
+            flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+            break;
+        }
+
+        m_openError = sqlite3_open_v2(FileSystem::fileSystemRepresentation(filename).data(), &m_db, flags, nullptr);
+        if (m_openError != SQLITE_OK) {
+            m_openErrorMessage = m_db ? sqlite3_errmsg(m_db) : "sqlite_open returned null";
+            LOG_ERROR("SQLite database failed to load from %s\nCause - %s", filename.ascii().data(),
+                m_openErrorMessage.data());
+            sqlite3_close(m_db);
+            m_db = 0;
+            return false;
+        }
     }
 
     overrideUnauthorizedFunctions();
@@ -108,9 +140,62 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
     else
         m_openErrorMessage = "sqlite_open returned null";
 
-    if (!SQLiteStatement(*this, "PRAGMA temp_store = MEMORY;"_s).executeCommand())
-        LOG_ERROR("SQLite database could not set temp_store to memory");
+    {
+        SQLiteTransactionInProgressAutoCounter transactionCounter;
+        if (!SQLiteStatement(*this, "PRAGMA temp_store = MEMORY;"_s).executeCommand())
+            LOG_ERROR("SQLite database could not set temp_store to memory");
+    }
 
+    if (openMode != OpenMode::ReadOnly)
+        useWALJournalMode();
+
+    String shmFileName = makeString(filename, "-shm"_s);
+    if (FileSystem::fileExists(shmFileName)) {
+        if (!FileSystem::isSafeToUseMemoryMapForPath(shmFileName)) {
+            RELEASE_LOG_FAULT(SQLDatabase, "Opened an SQLite database with a Class A -shm file. This may trigger a crash when the user locks the device. (%s)", shmFileName.latin1().data());
+            FileSystem::makeSafeToUseMemoryMapForPath(shmFileName);
+        }
+    }
+
+    return isOpen();
+}
+
+static int walAutomaticTruncationHook(void* context, sqlite3* db, const char* dbName, int walPageCount)
+{
+    UNUSED_PARAM(context);
+
+    static constexpr int checkpointThreshold = 1000; // matches SQLITE_DEFAULT_WAL_AUTOCHECKPOINT
+
+    if (walPageCount >= checkpointThreshold) {
+        int newWalPageCount = 0;
+        int result = sqlite3_wal_checkpoint_v2(db, dbName, SQLITE_CHECKPOINT_TRUNCATE, &newWalPageCount, nullptr);
+
+#if LOG_DISABLED
+        UNUSED_VARIABLE(result);
+#else
+        if (result != SQLITE_OK || newWalPageCount) {
+            LOG(SQLDatabase, "Can't fully checkpoint SQLite db %p", db);
+
+            sqlite3_stmt* stmt = nullptr;
+            while ((stmt = sqlite3_next_stmt(db, stmt))) {
+                if (sqlite3_stmt_busy(stmt))
+                    LOG(SQLDatabase, "SQLite db %p has busy stmt %p blocking checkpoint: %s", db, stmt, sqlite3_sql(stmt));
+            }
+        }
+#endif
+    }
+
+    return SQLITE_OK;
+}
+
+void SQLiteDatabase::enableAutomaticWALTruncation()
+{
+    sqlite3_wal_hook(m_db, walAutomaticTruncationHook, nullptr);
+}
+
+void SQLiteDatabase::useWALJournalMode()
+{
+    m_useWAL = true;
     {
         SQLiteStatement walStatement(*this, "PRAGMA journal_mode=WAL;"_s);
         if (walStatement.prepareAndStep() == SQLITE_ROW) {
@@ -124,6 +209,7 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
     }
 
     {
+        SQLiteTransactionInProgressAutoCounter transactionCounter;
         SQLiteStatement checkpointStatement(*this, "PRAGMA wal_checkpoint(TRUNCATE)"_s);
         if (checkpointStatement.prepareAndStep() == SQLITE_ROW) {
             if (checkpointStatement.getColumnInt(0))
@@ -131,8 +217,6 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
         } else
             LOG_ERROR("SQLite database failed to checkpoint: %s", lastErrorMsg());
     }
-
-    return isOpen();
 }
 
 void SQLiteDatabase::close()
@@ -145,7 +229,11 @@ void SQLiteDatabase::close()
             LockHolder locker(m_databaseClosingMutex);
             m_db = 0;
         }
-        sqlite3_close(db);
+        if (m_useWAL) {
+            SQLiteTransactionInProgressAutoCounter transactionCounter;
+            sqlite3_close(db);
+        } else
+            sqlite3_close(db);
     }
 
     m_openingThread = nullptr;
@@ -383,7 +471,7 @@ const char* SQLiteDatabase::lastErrorMsg()
     return m_openErrorMessage.isNull() ? notOpenErrorMessage : m_openErrorMessage.data();
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 void SQLiteDatabase::disableThreadingChecks()
 {
     // Note that SQLite could be compiled with -DTHREADSAFE, or you may have turned off the mutexes.

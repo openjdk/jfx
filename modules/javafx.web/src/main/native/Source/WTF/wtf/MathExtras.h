@@ -26,6 +26,7 @@
 #pragma once
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <float.h>
 #include <limits>
@@ -39,35 +40,35 @@
 #endif
 
 #ifndef M_PI
-const double piDouble = 3.14159265358979323846;
-const float piFloat = 3.14159265358979323846f;
+constexpr double piDouble = 3.14159265358979323846;
+constexpr float piFloat = 3.14159265358979323846f;
 #else
-const double piDouble = M_PI;
-const float piFloat = static_cast<float>(M_PI);
+constexpr double piDouble = M_PI;
+constexpr float piFloat = static_cast<float>(M_PI);
 #endif
 
 #ifndef M_PI_2
-const double piOverTwoDouble = 1.57079632679489661923;
-const float piOverTwoFloat = 1.57079632679489661923f;
+constexpr double piOverTwoDouble = 1.57079632679489661923;
+constexpr float piOverTwoFloat = 1.57079632679489661923f;
 #else
-const double piOverTwoDouble = M_PI_2;
-const float piOverTwoFloat = static_cast<float>(M_PI_2);
+constexpr double piOverTwoDouble = M_PI_2;
+constexpr float piOverTwoFloat = static_cast<float>(M_PI_2);
 #endif
 
 #ifndef M_PI_4
-const double piOverFourDouble = 0.785398163397448309616;
-const float piOverFourFloat = 0.785398163397448309616f;
+constexpr double piOverFourDouble = 0.785398163397448309616;
+constexpr float piOverFourFloat = 0.785398163397448309616f;
 #else
-const double piOverFourDouble = M_PI_4;
-const float piOverFourFloat = static_cast<float>(M_PI_4);
+constexpr double piOverFourDouble = M_PI_4;
+constexpr float piOverFourFloat = static_cast<float>(M_PI_4);
 #endif
 
 #ifndef M_SQRT2
-const double sqrtOfTwoDouble = 1.41421356237309504880;
-const float sqrtOfTwoFloat = 1.41421356237309504880f;
+constexpr double sqrtOfTwoDouble = 1.41421356237309504880;
+constexpr float sqrtOfTwoFloat = 1.41421356237309504880f;
 #else
-const double sqrtOfTwoDouble = M_SQRT2;
-const float sqrtOfTwoFloat = static_cast<float>(M_SQRT2);
+constexpr double sqrtOfTwoDouble = M_SQRT2;
+constexpr float sqrtOfTwoFloat = static_cast<float>(M_SQRT2);
 #endif
 
 #if COMPILER(MSVC)
@@ -99,23 +100,41 @@ extern "C" inline double wtf_atan2(double x, double y)
 
 #endif // COMPILER(MSVC)
 
-inline double deg2rad(double d)  { return d * piDouble / 180.0; }
-inline double rad2deg(double r)  { return r * 180.0 / piDouble; }
-inline double deg2grad(double d) { return d * 400.0 / 360.0; }
-inline double grad2deg(double g) { return g * 360.0 / 400.0; }
-inline double turn2deg(double t) { return t * 360.0; }
-inline double deg2turn(double d) { return d / 360.0; }
-inline double rad2grad(double r) { return r * 200.0 / piDouble; }
-inline double grad2rad(double g) { return g * piDouble / 200.0; }
+constexpr double radiansPerDegreeDouble = piDouble / 180.0;
+constexpr double degreesPerRadianDouble = 180.0 / piDouble;
+constexpr double gradientsPerDegreeDouble = 400.0 / 360.0;
+constexpr double degreesPerGradientDouble = 360.0 / 400.0;
+constexpr double turnsPerDegreeDouble = 1.0 / 360.0;
+constexpr double degreesPerTurnDouble = 360.0;
 
-inline float deg2rad(float d)  { return d * piFloat / 180.0f; }
-inline float rad2deg(float r)  { return r * 180.0f / piFloat; }
-inline float deg2grad(float d) { return d * 400.0f / 360.0f; }
-inline float grad2deg(float g) { return g * 360.0f / 400.0f; }
-inline float turn2deg(float t) { return t * 360.0f; }
-inline float deg2turn(float d) { return d / 360.0f; }
-inline float rad2grad(float r) { return r * 200.0f / piFloat; }
-inline float grad2rad(float g) { return g * piFloat / 200.0f; }
+constexpr inline double deg2rad(double d)  { return d * radiansPerDegreeDouble; }
+constexpr inline double rad2deg(double r)  { return r * degreesPerRadianDouble; }
+constexpr inline double deg2grad(double d) { return d * gradientsPerDegreeDouble; }
+constexpr inline double grad2deg(double g) { return g * degreesPerGradientDouble; }
+constexpr inline double deg2turn(double d) { return d * turnsPerDegreeDouble; }
+constexpr inline double turn2deg(double t) { return t * degreesPerTurnDouble; }
+
+
+// Note that these differ from the casting the double values above in their rounding errors.
+constexpr float radiansPerDegreeFloat = piFloat / 180.0f;
+constexpr float degreesPerRadianFloat = 180.0f / piFloat;
+constexpr float gradientsPerDegreeFloat= 400.0f / 360.0f;
+constexpr float degreesPerGradientFloat = 360.0f / 400.0f;
+constexpr float turnsPerDegreeFloat = 1.0f / 360.0f;
+constexpr float degreesPerTurnFloat = 360.0f;
+
+constexpr inline float deg2rad(float d)  { return d * radiansPerDegreeFloat; }
+constexpr inline float rad2deg(float r)  { return r * degreesPerRadianFloat; }
+constexpr inline float deg2grad(float d) { return d * gradientsPerDegreeFloat; }
+constexpr inline float grad2deg(float g) { return g * degreesPerGradientFloat; }
+constexpr inline float deg2turn(float d) { return d * turnsPerDegreeFloat; }
+constexpr inline float turn2deg(float t) { return t * degreesPerTurnFloat; }
+
+// Treat theses as conversions through the cannonical unit for angles, which is degrees.
+constexpr inline double rad2grad(double r) { return deg2grad(rad2deg(r)); }
+constexpr inline double grad2rad(double g) { return deg2rad(grad2deg(g)); }
+constexpr inline float rad2grad(float r) { return deg2grad(rad2deg(r)); }
+constexpr inline float grad2rad(float g) { return deg2rad(grad2deg(g)); }
 
 // std::numeric_limits<T>::min() returns the smallest positive value for floating point types
 template<typename T> constexpr T defaultMinimumForClamp() { return std::numeric_limits<T>::min(); }
@@ -301,22 +320,6 @@ template<typename T> constexpr bool hasTwoOrMoreBitsSet(T value)
     return !hasZeroOrOneBitsSet(value);
 }
 
-// FIXME: Some Darwin projects shamelessly include WTF headers and don't build with C++14... See: rdar://problem/45395767
-// Since C++11 and before don't support constexpr statements we can't mark this function constexpr.
-#if !defined(WTF_CPP_STD_VER) || WTF_CPP_STD_VER >= 14
-template <typename T> constexpr unsigned getLSBSet(T value)
-{
-    typedef typename std::make_unsigned<T>::type UnsignedT;
-    unsigned result = 0;
-
-    UnsignedT unsignedValue = static_cast<UnsignedT>(value);
-    while (unsignedValue >>= 1)
-        ++result;
-
-    return result;
-}
-#endif
-
 template<typename T> inline T divideRoundedUp(T a, T b)
 {
     return (a + b - 1) / b;
@@ -406,6 +409,19 @@ inline void decomposeDouble(double number, bool& sign, int32_t& exponent, uint64
         mantissa |= 0x10000000000000ull;
 }
 
+template<typename T> constexpr unsigned countOfBits = sizeof(T) * CHAR_BIT;
+template<typename T> constexpr unsigned countOfMagnitudeBits = countOfBits<T> - std::is_signed_v<T>;
+
+constexpr float powerOfTwo(unsigned e)
+{
+    float p = 1;
+    while (e--)
+        p *= 2;
+    return p;
+}
+
+template<typename T> constexpr float maxPlusOne = powerOfTwo(countOfMagnitudeBits<T>);
+
 // Calculate d % 2^{64}.
 inline void doubleToInteger(double d, unsigned long long& value)
 {
@@ -413,7 +429,7 @@ inline void doubleToInteger(double d, unsigned long long& value)
         value = 0;
     else {
         // -2^{64} < fmodValue < 2^{64}.
-        double fmodValue = fmod(trunc(d), std::numeric_limits<unsigned long long>::max() + 1.0);
+        double fmodValue = fmod(trunc(d), maxPlusOne<unsigned long long>);
         if (fmodValue >= 0) {
             // 0 <= fmodValue < 2^{64}.
             // 0 <= value < 2^{64}. This cast causes no loss.
@@ -579,44 +595,6 @@ inline bool rangesOverlap(T leftMin, T leftMax, T rightMin, T rightMax)
     return nonEmptyRangesOverlap(leftMin, leftMax, rightMin, rightMax);
 }
 
-// This mask is not necessarily the minimal mask, specifically if size is
-// a power of 2. It has the advantage that it's fast to compute, however.
-inline uint32_t computeIndexingMask(uint32_t size)
-{
-    return static_cast<uint64_t>(static_cast<uint32_t>(-1)) >> std::clz(size);
-}
-
-constexpr unsigned preciseIndexMaskShiftForSize(unsigned size)
-{
-    return size * 8 - 1;
-}
-
-template<typename T>
-constexpr unsigned preciseIndexMaskShift()
-{
-    return preciseIndexMaskShiftForSize(sizeof(T));
-}
-
-template<typename T>
-T opaque(T pointer)
-{
-#if !OS(WINDOWS)
-    asm("" : "+r"(pointer));
-#endif
-    return pointer;
-}
-
-// This masks the given pointer with 0xffffffffffffffff (ptrwidth) if `index <
-// length`. Otherwise, it masks the pointer with 0. Similar to Linux kernel's array_ptr.
-template<typename T>
-inline T* preciseIndexMaskPtr(uintptr_t index, uintptr_t length, T* value)
-{
-    uintptr_t result = bitwise_cast<uintptr_t>(value) & static_cast<uintptr_t>(
-        static_cast<intptr_t>(index - opaque(length)) >>
-        static_cast<intptr_t>(preciseIndexMaskShift<T*>()));
-    return bitwise_cast<T*>(result);
-}
-
 template<typename VectorType, typename RandomFunc>
 void shuffleVector(VectorType& vector, size_t size, const RandomFunc& randomFunc)
 {
@@ -630,88 +608,128 @@ void shuffleVector(VectorType& vector, const RandomFunc& randomFunc)
     shuffleVector(vector, vector.size(), randomFunc);
 }
 
-inline unsigned clz32(uint32_t number)
+template <typename T>
+constexpr unsigned clzConstexpr(T value)
 {
-#if COMPILER(GCC_COMPATIBLE)
-    if (number)
-        return __builtin_clz(number);
-    return 32;
-#elif COMPILER(MSVC)
-    // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
-    // So we use bit-scan-reverse operation to calculate clz.
-    unsigned long ret = 0;
-    if (_BitScanReverse(&ret, number))
-        return 31 - ret;
-    return 32;
-#else
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
     unsigned zeroCount = 0;
-    for (int i = 31; i >= 0; i--) {
-        if (!(number >> i))
-            zeroCount++;
-        else
+    for (int i = bitSize - 1; i >= 0; i--) {
+        if (uValue >> i)
             break;
+        zeroCount++;
     }
     return zeroCount;
-#endif
 }
 
-inline unsigned clz64(uint64_t number)
+template<typename T>
+inline unsigned clz(T value)
 {
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
 #if COMPILER(GCC_COMPATIBLE)
-    if (number)
-        return __builtin_clzll(number);
-    return 64;
+    constexpr unsigned bitSize64 = sizeof(uint64_t) * CHAR_BIT;
+    if (uValue)
+        return __builtin_clzll(uValue) - (bitSize64 - bitSize);
+    return bitSize;
 #elif COMPILER(MSVC) && !CPU(X86)
     // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
     // So we use bit-scan-reverse operation to calculate clz.
     // _BitScanReverse64 is defined in X86_64 and ARM in MSVC supported environments.
     unsigned long ret = 0;
-    if (_BitScanReverse64(&ret, number))
-        return 63 - ret;
-    return 64;
+    if (_BitScanReverse64(&ret, uValue))
+        return bitSize - 1 - ret;
+    return bitSize;
 #else
-    unsigned zeroCount = 0;
-    for (int i = 63; i >= 0; i--) {
-        if (!(number >> i))
-            zeroCount++;
-        else
-            break;
-    }
-    return zeroCount;
+    UNUSED_PARAM(bitSize);
+    UNUSED_PARAM(uValue);
+    return clzConstexpr(value);
 #endif
 }
 
-inline unsigned ctz32(uint32_t number)
+template <typename T>
+constexpr unsigned ctzConstexpr(T value)
 {
-#if COMPILER(GCC_COMPATIBLE)
-    if (number)
-        return __builtin_ctz(number);
-    return 32;
-#elif COMPILER(MSVC) && !CPU(X86)
-    unsigned long ret = 0;
-    if (_BitScanForward(&ret, number))
-        return ret;
-    return 32;
-#else
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
     unsigned zeroCount = 0;
-    for (unsigned i = 0; i < 32; i++) {
-        if (number & 1)
+    for (unsigned i = 0; i < bitSize; i++) {
+        if (uValue & 1)
             break;
 
         zeroCount++;
-        number >>= 1;
+        uValue >>= 1;
     }
     return zeroCount;
+}
+
+template<typename T>
+inline unsigned ctz(T value)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
+#if COMPILER(GCC_COMPATIBLE)
+    if (uValue)
+        return __builtin_ctzll(uValue);
+    return bitSize;
+#elif COMPILER(MSVC) && !CPU(X86)
+    unsigned long ret = 0;
+    if (_BitScanForward64(&ret, uValue))
+        return ret;
+    return bitSize;
+#else
+    UNUSED_PARAM(bitSize);
+    UNUSED_PARAM(uValue);
+    return ctzConstexpr(value);
 #endif
+}
+
+template<typename T>
+inline unsigned getLSBSet(T t)
+{
+    ASSERT(t);
+    return ctz(t);
+}
+
+template<typename T>
+constexpr unsigned getLSBSetConstexpr(T t)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(t);
+    return ctzConstexpr(t);
+}
+
+template<typename T>
+inline unsigned getMSBSet(T t)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+    ASSERT(t);
+    return bitSize - 1 - clz(t);
+}
+
+template<typename T>
+constexpr unsigned getMSBSetConstexpr(T t)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(t);
+    return bitSize - 1 - clzConstexpr(t);
 }
 
 } // namespace WTF
 
-using WTF::opaque;
-using WTF::preciseIndexMaskPtr;
-using WTF::preciseIndexMaskShift;
-using WTF::preciseIndexMaskShiftForSize;
 using WTF::shuffleVector;
-using WTF::clz32;
-using WTF::clz64;
-using WTF::ctz32;
+using WTF::clz;
+using WTF::ctz;
+using WTF::getLSBSet;
+using WTF::getMSBSet;

@@ -33,14 +33,11 @@
 #include "SecurityOrigin.h"
 #include "ServiceWorkerIdentifier.h"
 #include <wtf/RefPtr.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-namespace ContentExtensions {
-struct BlockedStatus;
-}
-
+struct ContentRuleListResults;
 class Document;
 class FrameLoader;
 struct ServiceWorkerRegistrationData;
@@ -66,8 +63,8 @@ public:
     void setPriority(Optional<ResourceLoadPriority>&& priority) { m_priority = WTFMove(priority); }
 
     void setInitiator(Element&);
-    void setInitiator(const AtomicString& name);
-    const AtomicString& initiatorName() const;
+    void setInitiator(const AtomString& name);
+    const AtomString& initiatorName() const;
 
     bool allowsCaching() const { return m_options.cachingPolicy == CachingPolicy::AllowCaching; }
     void setCachingPolicy(CachingPolicy policy) { m_options.cachingPolicy = policy;  }
@@ -78,12 +75,11 @@ public:
 
     void setDestinationIfNotSet(FetchOptions::Destination);
 
-    void deprecatedSetAsPotentiallyCrossOrigin(const String&, Document&); // Use WebCore::createPotentialAccessControlRequest() instead.
-
     void updateForAccessControl(Document&);
 
     void updateReferrerPolicy(ReferrerPolicy);
-    void updateReferrerOriginAndUserAgentHeaders(FrameLoader&);
+    void updateReferrerAndOriginHeaders(FrameLoader&);
+    void updateUserAgentHeader(FrameLoader&);
     void upgradeInsecureRequestIfNeeded(Document&);
     void setAcceptHeaderIfNone(CachedResource::Type);
     void updateAccordingCacheMode();
@@ -91,7 +87,7 @@ public:
 
     void removeFragmentIdentifierIfNeeded();
 #if ENABLE(CONTENT_EXTENSIONS)
-    void applyBlockedStatus(const ContentExtensions::BlockedStatus&, Page*);
+    void applyResults(ContentRuleListResults&&, Page*);
 #endif
     void setDomainForCachePartition(Document&);
     void setDomainForCachePartition(const String&);
@@ -106,6 +102,7 @@ public:
     void clearFragmentIdentifier() { m_fragmentIdentifier = { }; }
 
     static String splitFragmentIdentifierFromRequestURL(ResourceRequest&);
+    static String acceptHeaderValueFromType(CachedResource::Type);
 
 #if ENABLE(SERVICE_WORKER)
     void setClientIdentifierIfNeeded(DocumentIdentifier);
@@ -119,7 +116,7 @@ private:
     ResourceLoaderOptions m_options;
     Optional<ResourceLoadPriority> m_priority;
     RefPtr<Element> m_initiatorElement;
-    AtomicString m_initiatorName;
+    AtomString m_initiatorName;
     RefPtr<SecurityOrigin> m_origin;
     String m_fragmentIdentifier;
     bool m_isLinkPreload { false };

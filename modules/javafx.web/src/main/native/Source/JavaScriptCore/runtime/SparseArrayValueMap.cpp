@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,11 @@
 #include "config.h"
 #include "SparseArrayValueMap.h"
 
-#include "ClassInfo.h"
 #include "GetterSetter.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
+#include "JSObjectInlines.h"
 #include "PropertySlot.h"
-#include "SlotVisitor.h"
-#include "Structure.h"
+#include "StructureInlines.h"
 #include "TypeError.h"
 
 namespace JSC {
@@ -96,9 +94,9 @@ void SparseArrayValueMap::remove(unsigned i)
     m_map.remove(i);
 }
 
-bool SparseArrayValueMap::putEntry(ExecState* exec, JSObject* array, unsigned i, JSValue value, bool shouldThrow)
+bool SparseArrayValueMap::putEntry(JSGlobalObject* globalObject, JSObject* array, unsigned i, JSValue value, bool shouldThrow)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(value);
 
@@ -110,15 +108,15 @@ bool SparseArrayValueMap::putEntry(ExecState* exec, JSObject* array, unsigned i,
     // extensible, this is not the right thing to have done - so remove again.
     if (result.isNewEntry && !array->isStructureExtensible(vm)) {
         remove(result.iterator);
-        return typeError(exec, scope, shouldThrow, ReadonlyPropertyWriteError);
+        return typeError(globalObject, scope, shouldThrow, ReadonlyPropertyWriteError);
     }
 
-    RELEASE_AND_RETURN(scope, entry.put(exec, array, this, value, shouldThrow));
+    RELEASE_AND_RETURN(scope, entry.put(globalObject, array, this, value, shouldThrow));
 }
 
-bool SparseArrayValueMap::putDirect(ExecState* exec, JSObject* array, unsigned i, JSValue value, unsigned attributes, PutDirectIndexMode mode)
+bool SparseArrayValueMap::putDirect(JSGlobalObject* globalObject, JSObject* array, unsigned i, JSValue value, unsigned attributes, PutDirectIndexMode mode)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(value);
 
@@ -132,11 +130,11 @@ bool SparseArrayValueMap::putDirect(ExecState* exec, JSObject* array, unsigned i
     // extensible, this is not the right thing to have done - so remove again.
     if (mode != PutDirectIndexLikePutDirect && result.isNewEntry && !array->isStructureExtensible(vm)) {
         remove(result.iterator);
-        return typeError(exec, scope, shouldThrow, NonExtensibleObjectPropertyDefineError);
+        return typeError(globalObject, scope, shouldThrow, NonExtensibleObjectPropertyDefineError);
     }
 
     if (entry.attributes() & PropertyAttribute::ReadOnly)
-        return typeError(exec, scope, shouldThrow, ReadonlyPropertyWriteError);
+        return typeError(globalObject, scope, shouldThrow, ReadonlyPropertyWriteError);
 
     entry.forceSet(vm, this, value, attributes);
     return true;
@@ -190,20 +188,20 @@ JSValue SparseArrayEntry::getConcurrently() const
     return attributesDependency.consume(this)->Base::get();
 }
 
-bool SparseArrayEntry::put(ExecState* exec, JSValue thisValue, SparseArrayValueMap* map, JSValue value, bool shouldThrow)
+bool SparseArrayEntry::put(JSGlobalObject* globalObject, JSValue thisValue, SparseArrayValueMap* map, JSValue value, bool shouldThrow)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!(m_attributes & PropertyAttribute::Accessor)) {
         if (m_attributes & PropertyAttribute::ReadOnly)
-            return typeError(exec, scope, shouldThrow, ReadonlyPropertyWriteError);
+            return typeError(globalObject, scope, shouldThrow, ReadonlyPropertyWriteError);
 
         set(vm, map, value);
         return true;
     }
 
-    RELEASE_AND_RETURN(scope, callSetter(exec, thisValue, Base::get(), value, shouldThrow ? StrictMode : NotStrictMode));
+    RELEASE_AND_RETURN(scope, callSetter(globalObject, thisValue, Base::get(), value, shouldThrow ? ECMAMode::strict() : ECMAMode::sloppy()));
 }
 
 JSValue SparseArrayEntry::getNonSparseMode() const
@@ -212,10 +210,12 @@ JSValue SparseArrayEntry::getNonSparseMode() const
     return Base::get();
 }
 
-void SparseArrayValueMap::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void SparseArrayValueMap::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
-    Base::visitChildren(cell, visitor);
     SparseArrayValueMap* thisObject = jsCast<SparseArrayValueMap*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(cell, visitor);
     {
         auto locker = holdLock(thisObject->cellLock());
         for (auto& entry : thisObject->m_map)
@@ -223,6 +223,8 @@ void SparseArrayValueMap::visitChildren(JSCell* cell, SlotVisitor& visitor)
     }
     visitor.reportExtraMemoryVisited(thisObject->m_reportedCapacity * sizeof(Map::KeyValuePairType));
 }
+
+DEFINE_VISIT_CHILDREN(SparseArrayValueMap);
 
 } // namespace JSC
 

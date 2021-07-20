@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,7 +98,7 @@ public:
     // Methods to set labels for the disassembler.
     void setStartOfCode()
     {
-        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(0, nullptr));
+        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(BytecodeIndex(0)));
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
@@ -123,7 +123,7 @@ public:
 
     CallSiteIndex addCallSite(CodeOrigin codeOrigin)
     {
-        return m_jitCode->common.addCodeOrigin(codeOrigin);
+        return m_jitCode->common.codeOrigins->addCodeOrigin(codeOrigin);
     }
 
     CallSiteIndex emitStoreCodeOrigin(CodeOrigin codeOrigin)
@@ -135,7 +135,7 @@ public:
 
     void emitStoreCallSiteIndex(CallSiteIndex callSite)
     {
-        store32(TrustedImm32(callSite.bits()), tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+        store32(TrustedImm32(callSite.bits()), tagFor(CallFrameSlot::argumentCountIncludingThis));
     }
 
     // Add a call out from JIT code, without an exception check.
@@ -146,18 +146,18 @@ public:
         return functionCall;
     }
 
+    Call appendOperationCall(const FunctionPtr<OperationPtrTag> function)
+    {
+        Call functionCall = call(OperationPtrTag);
+        m_calls.append(CallLinkRecord(functionCall, function));
+        return functionCall;
+    }
+
     void exceptionCheck();
 
     void exceptionCheckWithCallFrameRollback()
     {
-        m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(*vm()));
-    }
-
-    // Add a call out from JIT code, with a fast exception check that tests if the return value is zero.
-    void fastExceptionCheck()
-    {
-        callExceptionFuzz(*vm());
-        m_exceptionChecks.append(branchTestPtr(Zero, GPRInfo::returnValueGPR));
+        m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(vm()));
     }
 
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
@@ -182,9 +182,24 @@ public:
         m_getByIdsWithThis.append(InlineCacheWrapper<JITGetByIdWithThisGenerator>(gen, slowPath));
     }
 
+    void addGetByVal(const JITGetByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_getByVals.append(InlineCacheWrapper<JITGetByValGenerator>(gen, slowPath));
+    }
+
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_putByIds.append(InlineCacheWrapper<JITPutByIdGenerator>(gen, slowPath));
+    }
+
+    void addDelById(const JITDelByIdGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_delByIds.append(InlineCacheWrapper<JITDelByIdGenerator>(gen, slowPath));
+    }
+
+    void addDelByVal(const JITDelByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_delByVals.append(InlineCacheWrapper<JITDelByValGenerator>(gen, slowPath));
     }
 
     void addInstanceOf(const JITInstanceOfGenerator& gen, SlowPathGenerator* slowPath)
@@ -195,6 +210,11 @@ public:
     void addInById(const JITInByIdGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_inByIds.append(InlineCacheWrapper<JITInByIdGenerator>(gen, slowPath));
+    }
+
+    void addPrivateBrandAccess(const JITPrivateBrandAccessGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_privateBrandAccesses.append(InlineCacheWrapper<JITPrivateBrandAccessGenerator>(gen, slowPath));
     }
 
     void addJSCall(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo* info)
@@ -254,7 +274,7 @@ public:
 
     PCToCodeOriginMapBuilder& pcToCodeOriginMapBuilder() { return m_pcToCodeOriginMapBuilder; }
 
-    VM* vm() { return &m_graph.m_vm; }
+    VM& vm() { return m_graph.m_vm; }
 
 private:
     friend class OSRExitJumpPlaceholder;
@@ -341,9 +361,13 @@ private:
 
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
     Vector<InlineCacheWrapper<JITGetByIdWithThisGenerator>, 4> m_getByIdsWithThis;
+    Vector<InlineCacheWrapper<JITGetByValGenerator>, 4> m_getByVals;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
+    Vector<InlineCacheWrapper<JITDelByIdGenerator>, 4> m_delByIds;
+    Vector<InlineCacheWrapper<JITDelByValGenerator>, 4> m_delByVals;
     Vector<InlineCacheWrapper<JITInByIdGenerator>, 4> m_inByIds;
     Vector<InlineCacheWrapper<JITInstanceOfGenerator>, 4> m_instanceOfs;
+    Vector<InlineCacheWrapper<JITPrivateBrandAccessGenerator>, 4> m_privateBrandAccesses;
     Vector<JSCallRecord, 4> m_jsCalls;
     Vector<JSDirectCallRecord, 4> m_jsDirectCalls;
     Vector<JSDirectTailCallRecord, 4> m_jsDirectTailCalls;

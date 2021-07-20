@@ -51,22 +51,23 @@ class LayoutSize {
 public:
     LayoutSize() : m_width(0), m_height(0) { }
     LayoutSize(const IntSize& size) : m_width(size.width()), m_height(size.height()) { }
-    LayoutSize(LayoutUnit width, LayoutUnit height) : m_width(width), m_height(height) { }
+    template<typename T, typename U> LayoutSize(T width, U height) : m_width(width), m_height(height) { }
 
     explicit LayoutSize(const FloatSize& size) : m_width(size.width()), m_height(size.height()) { }
 
     LayoutUnit width() const { return m_width; }
     LayoutUnit height() const { return m_height; }
 
-    void setWidth(LayoutUnit width) { m_width = width; }
-    void setHeight(LayoutUnit height) { m_height = height; }
+    template<typename T> void setWidth(T width) { m_width = width; }
+    template<typename T> void setHeight(T height) { m_height = height; }
 
     bool isEmpty() const { return m_width <= 0 || m_height <= 0; }
     bool isZero() const { return !m_width && !m_height; }
 
     float aspectRatio() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
 
-    void expand(LayoutUnit width, LayoutUnit height)
+    template<typename T, typename U>
+    void expand(T width, U height)
     {
         m_width += width;
         m_height += height;
@@ -135,6 +136,11 @@ public:
         return LayoutSize(width(), width() * aspectRatio.height() / aspectRatio.width());
     }
 
+    bool mightBeSaturated() const
+    {
+        return m_width.mightBeSaturated() || m_height.mightBeSaturated();
+    }
+
 private:
     LayoutUnit m_width;
     LayoutUnit m_height;
@@ -184,6 +190,11 @@ inline IntSize flooredIntSize(const LayoutSize& s)
     return IntSize(s.width().floor(), s.height().floor());
 }
 
+inline IntSize ceiledIntSize(const LayoutSize& s)
+{
+    return IntSize(s.width().ceil(), s.height().ceil());
+}
+
 inline IntSize roundedIntSize(const LayoutSize& s)
 {
     return IntSize(s.width().round(), s.height().round());
@@ -192,6 +203,11 @@ inline IntSize roundedIntSize(const LayoutSize& s)
 inline FloatSize floorSizeToDevicePixels(const LayoutSize& size, float pixelSnappingFactor)
 {
     return FloatSize(floorToDevicePixel(size.width(), pixelSnappingFactor), floorToDevicePixel(size.height(), pixelSnappingFactor));
+}
+
+inline FloatSize roundSizeToDevicePixels(const LayoutSize& size, float pixelSnappingFactor)
+{
+    return FloatSize(roundToDevicePixel(size.width(), pixelSnappingFactor), roundToDevicePixel(size.height(), pixelSnappingFactor));
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const LayoutSize&);

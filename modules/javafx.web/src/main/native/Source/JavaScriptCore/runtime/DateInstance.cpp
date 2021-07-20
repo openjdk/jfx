@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,15 +22,10 @@
 #include "config.h"
 #include "DateInstance.h"
 
-#include "JSDateMath.h"
-#include "JSGlobalObject.h"
 #include "JSCInlines.h"
-#include <math.h>
-#include <wtf/MathExtras.h>
+#include "JSDateMath.h"
 
 namespace JSC {
-
-using namespace WTF;
 
 const ClassInfo DateInstance::s_info = {"Date", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DateInstance)};
 
@@ -52,40 +47,38 @@ void DateInstance::finishCreation(VM& vm, double time)
     m_internalNumber = timeClip(time);
 }
 
-void DateInstance::destroy(JSCell* cell)
+String DateInstance::toStringName(const JSObject*, JSGlobalObject*)
 {
-    static_cast<DateInstance*>(cell)->DateInstance::~DateInstance();
+    return "Date"_s;
 }
 
-const GregorianDateTime* DateInstance::calculateGregorianDateTime(ExecState* exec) const
+const GregorianDateTime* DateInstance::calculateGregorianDateTime(DateCache& cache) const
 {
     double milli = internalNumber();
     if (std::isnan(milli))
-        return 0;
+        return nullptr;
 
-    VM& vm = exec->vm();
     if (!m_data)
-        m_data = vm.dateInstanceCache.add(milli);
+        m_data = cache.cachedDateInstanceData(milli);
 
     if (m_data->m_gregorianDateTimeCachedForMS != milli) {
-        msToGregorianDateTime(vm, milli, WTF::LocalTime, m_data->m_cachedGregorianDateTime);
+        cache.msToGregorianDateTime(milli, WTF::LocalTime, m_data->m_cachedGregorianDateTime);
         m_data->m_gregorianDateTimeCachedForMS = milli;
     }
     return &m_data->m_cachedGregorianDateTime;
 }
 
-const GregorianDateTime* DateInstance::calculateGregorianDateTimeUTC(ExecState* exec) const
+const GregorianDateTime* DateInstance::calculateGregorianDateTimeUTC(DateCache& cache) const
 {
     double milli = internalNumber();
     if (std::isnan(milli))
-        return 0;
+        return nullptr;
 
-    VM& vm = exec->vm();
     if (!m_data)
-        m_data = vm.dateInstanceCache.add(milli);
+        m_data = cache.cachedDateInstanceData(milli);
 
     if (m_data->m_gregorianDateTimeUTCCachedForMS != milli) {
-        msToGregorianDateTime(vm, milli, WTF::UTCTime, m_data->m_cachedGregorianDateTimeUTC);
+        cache.msToGregorianDateTime(milli, WTF::UTCTime, m_data->m_cachedGregorianDateTimeUTC);
         m_data->m_gregorianDateTimeUTCCachedForMS = milli;
     }
     return &m_data->m_cachedGregorianDateTimeUTC;

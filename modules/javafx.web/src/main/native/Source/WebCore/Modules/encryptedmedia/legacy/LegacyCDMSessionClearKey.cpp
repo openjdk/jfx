@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include "Logging.h"
 #include "TextEncoding.h"
 #include "WebKitMediaKeyError.h"
-#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/VM.h>
@@ -101,15 +101,15 @@ bool CDMSessionClearKey::update(Uint8Array* rawKeysData, RefPtr<Uint8Array>& nex
         JSLockHolder lock(vm);
         auto scope = DECLARE_THROW_SCOPE(vm);
         auto* globalObject = JSGlobalObject::create(vm, JSGlobalObject::createStructure(vm, jsNull()));
-        auto& state = *globalObject->globalExec();
+        auto& lexicalGlobalObject = *globalObject;
 
-        auto keysDataValue = JSONParse(&state, rawKeysString);
+        auto keysDataValue = JSONParse(&lexicalGlobalObject, rawKeysString);
         if (scope.exception() || !keysDataValue.isObject()) {
             LOG(Media, "CDMSessionClearKey::update(%p) - failed: invalid JSON", this);
             break;
         }
 
-        auto keysArrayValue = asObject(keysDataValue)->get(&state, Identifier::fromString(&state, "keys"));
+        auto keysArrayValue = asObject(keysDataValue)->get(&lexicalGlobalObject, Identifier::fromString(vm, "keys"));
         if (scope.exception() || !isJSArray(keysArrayValue)) {
             LOG(Media, "CDMSessionClearKey::update(%p) - failed: keys array missing or empty", this);
             break;
@@ -124,7 +124,7 @@ bool CDMSessionClearKey::update(Uint8Array* rawKeysData, RefPtr<Uint8Array>& nex
 
         bool foundValidKey = false;
         for (unsigned i = 0; i < length; ++i) {
-            auto keyValue = keysArray->getIndex(&state, i);
+            auto keyValue = keysArray->getIndex(&lexicalGlobalObject, i);
 
             if (scope.exception() || !keyValue.isObject()) {
                 LOG(Media, "CDMSessionClearKey::update(%p) - failed: null keyDictionary", this);
@@ -133,12 +133,12 @@ bool CDMSessionClearKey::update(Uint8Array* rawKeysData, RefPtr<Uint8Array>& nex
 
             auto keyObject = asObject(keyValue);
 
-            auto getStringProperty = [&scope, &state, &keyObject](const char* name) -> String {
-                auto value = keyObject->get(&state, Identifier::fromString(&state, name));
+            auto getStringProperty = [&scope, &lexicalGlobalObject, &keyObject, &vm](const char* name) -> String {
+                auto value = keyObject->get(&lexicalGlobalObject, Identifier::fromString(vm, name));
                 if (scope.exception() || !value.isString())
                     return { };
 
-                auto string = asString(value)->value(&state);
+                auto string = asString(value)->value(&lexicalGlobalObject);
                 if (scope.exception())
                     return { };
 

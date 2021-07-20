@@ -103,8 +103,9 @@ gboolean                gst_element_register                    (GstPlugin *plug
  * @GST_ELEMENT_FACTORY_TYPE_PARSER: Parser elements
  * @GST_ELEMENT_FACTORY_TYPE_PAYLOADER: Payloader elements
  * @GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER: Depayloader elements
- * @GST_ELEMENT_FACTORY_TYPE_DECRYPTOR: Elements handling decryption (Since 1.6)
- * @GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR: Elements handling encryption (Since 1.6)
+ * @GST_ELEMENT_FACTORY_TYPE_DECRYPTOR: Elements handling decryption (Since: 1.6)
+ * @GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR: Elements handling encryption (Since: 1.6)
+ * @GST_ELEMENT_FACTORY_TYPE_HARDWARE: Hardware based elements (Since: 1.18)
  * @GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS: Private, do not use
  * @GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO: Elements handling video media types
  * @GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO: Elements handling audio media types
@@ -120,6 +121,11 @@ gboolean                gst_element_register                    (GstPlugin *plug
  * matching the specified media types will be selected.
  */
 
+/**
+ * GstElementFactoryListType:
+ *
+ * A type defining the type of an element factory.
+ */
 typedef guint64 GstElementFactoryListType;
 
 #define  GST_ELEMENT_FACTORY_TYPE_DECODER        ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 0))
@@ -134,6 +140,7 @@ typedef guint64 GstElementFactoryListType;
 #define  GST_ELEMENT_FACTORY_TYPE_FORMATTER      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 9))
 #define  GST_ELEMENT_FACTORY_TYPE_DECRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 10))
 #define  GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 11))
+#define  GST_ELEMENT_FACTORY_TYPE_HARDWARE      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 12))
 
 #define  GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS   ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 48))
 
@@ -210,6 +217,17 @@ typedef guint64 GstElementFactoryListType;
 #define GST_ELEMENT_FACTORY_KLASS_MEDIA_SUBTITLE        "Subtitle"
 #define GST_ELEMENT_FACTORY_KLASS_MEDIA_METADATA        "Metadata"
 
+/**
+ * GST_ELEMENT_FACTORY_KLASS_HARDWARE:
+ *
+ * Elements interacting with hardware devices should specify this classifier in
+ * their metadata. You may need to put the element in "READY" state to test if
+ * the hardware is present in the system.
+ *
+ * Since: 1.16
+ */
+#define GST_ELEMENT_FACTORY_KLASS_HARDWARE              "Hardware"
+
 GST_API
 gboolean      gst_element_factory_list_is_type      (GstElementFactory *factory,
                                                      GstElementFactoryListType type);
@@ -223,9 +241,7 @@ GST_API
 GList *       gst_element_factory_list_filter       (GList *list, const GstCaps *caps,
                                                      GstPadDirection direction,
                                                      gboolean subsetonly) G_GNUC_MALLOC;
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstElementFactory, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -40,7 +40,7 @@
  * Further assumptions for all UTFs:
  * - u_charMirror(c) needs the same number of code units as c
  */
-#if UTF_SIZE==8
+#if defined(UTF_SIZE) && UTF_SIZE==8
 # error reimplement ubidi_writeReordered() for UTF-8, see comment above
 #endif
 
@@ -346,6 +346,13 @@ ubidi_writeReverse(const UChar *src, int32_t srcLength,
     return u_terminateUChars(dest, destSize, destLength, pErrorCode);
 }
 
+// Ticket 20907 - The optimizer in MSVC/Visual Studio versions below 16.4 has trouble with this
+// function on Windows ARM64. As a work-around, we disable optimizations for this function.
+// This work-around could/should be removed once the following versions of Visual Studio are no
+// longer supported: All versions of VS2017, and versions of VS2019 below 16.4.
+#if (defined(_MSC_VER) && (defined(_M_ARM64)) && (_MSC_VER < 1924))
+#pragma optimize( "", off )
+#endif
 U_CAPI int32_t U_EXPORT2
 ubidi_writeReordered(UBiDi *pBiDi,
                      UChar *dest, int32_t destSize,
@@ -638,3 +645,6 @@ ubidi_writeReordered(UBiDi *pBiDi,
 
     return u_terminateUChars(saveDest, destCapacity, destCapacity-destSize, pErrorCode);
 }
+#if (defined(_MSC_VER) && (defined(_M_ARM64)) && (_MSC_VER < 1924))
+#pragma optimize( "", on )
+#endif

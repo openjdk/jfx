@@ -51,9 +51,9 @@ class TextFieldInputType : public InputType, protected SpinButtonElement::SpinBu
 #endif
 {
 protected:
-    explicit TextFieldInputType(HTMLInputElement&);
+    explicit TextFieldInputType(Type, HTMLInputElement&);
     virtual ~TextFieldInputType();
-    void handleKeydownEvent(KeyboardEvent&) override;
+    ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) override;
     void handleKeydownEventForSpinButton(KeyboardEvent&);
 #if ENABLE(DATALIST_ELEMENT)
     void handleClickEvent(MouseEvent&) final;
@@ -70,7 +70,7 @@ protected:
 #endif
 
     virtual bool needsContainer() const;
-    void createShadowSubtree() override;
+    void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool) override;
     void destroyShadowSubtree() override;
     void attributeChanged(const QualifiedName&) override;
     void disabledStateChanged() final;
@@ -81,6 +81,7 @@ protected:
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior) override;
     void updateInnerTextValue() final;
     String sanitizeValue(const String&) const override;
+    bool valueMissing(const String&) const final;
 
     virtual String convertFromVisibleValue(const String&) const;
     virtual void didSetValueByUserEdit();
@@ -88,9 +89,7 @@ protected:
 private:
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
-    bool isTextField() const final;
     bool isEmptyValue() const final;
-    bool valueMissing(const String&) const final;
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) final;
     void forwardEvent(Event&) final;
     bool shouldSubmitImplicitly(Event&) final;
@@ -126,20 +125,24 @@ private:
 #if ENABLE(DATALIST_ELEMENT)
     void createDataListDropdownIndicator();
     bool isPresentingAttachedView() const final;
-    void listAttributeTargetChanged() final;
+    bool isFocusingWithDataListDropdown() const final;
+    void dataListMayHaveChanged() final;
     void displaySuggestions(DataListSuggestionActivationType);
     void closeSuggestions();
 
     // DataListSuggestionsClient
     IntRect elementRectInRootViewCoordinates() const final;
-    Vector<String> suggestions() final;
+    Vector<DataListSuggestion> suggestions() final;
     void didSelectDataListOption(const String&) final;
     void didCloseSuggestions() final;
 
+    bool shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() const;
+
     void dataListButtonElementWasClicked() final;
+    bool m_isFocusingWithDataListDropdown { false };
     RefPtr<DataListButtonElement> m_dataListDropdownIndicator;
 
-    std::pair<String, Vector<String>> m_cachedSuggestions;
+    std::pair<String, Vector<DataListSuggestion>> m_cachedSuggestions;
     std::unique_ptr<DataListSuggestionPicker> m_suggestionPicker;
 #endif
 

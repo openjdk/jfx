@@ -35,8 +35,9 @@ namespace WebCore {
 class PaymentContact;
 
 class ApplePayShippingContactSelectedEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(ApplePayShippingContactSelectedEvent);
 public:
-    static Ref<ApplePayShippingContactSelectedEvent> create(const AtomicString& type, unsigned version, const PaymentContact& shippingContact)
+    static Ref<ApplePayShippingContactSelectedEvent> create(const AtomString& type, unsigned version, const PaymentContact& shippingContact)
     {
         return adoptRef(*new ApplePayShippingContactSelectedEvent(type, version, shippingContact));
     }
@@ -46,7 +47,7 @@ public:
     const ApplePayPaymentContact& shippingContact() const { return m_shippingContact; }
 
 private:
-    ApplePayShippingContactSelectedEvent(const AtomicString& type, unsigned version, const PaymentContact&);
+    ApplePayShippingContactSelectedEvent(const AtomString& type, unsigned version, const PaymentContact&);
 
     // Event.
     EventInterface eventInterface() const override;

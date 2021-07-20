@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "JSBigInt.h"
 #include "JSWrapperObject.h"
 
 namespace JSC {
@@ -35,24 +34,29 @@ class BigIntObject final : public JSWrapperObject {
 public:
     using Base = JSWrapperObject;
 
-    static BigIntObject* create(VM&, JSGlobalObject*, JSBigInt*);
+    template<typename, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.bigIntObjectSpace<mode>();
+    }
+
+    JS_EXPORT_PRIVATE static BigIntObject* create(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
-    JSBigInt* internalValue() const { return asBigInt(JSWrapperObject::internalValue()); }
+    JSValue internalValue() const { return JSWrapperObject::internalValue(); }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
+    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
 
-    static String toStringName(const JSObject*, ExecState*);
-
-protected:
-    JS_EXPORT_PRIVATE void finishCreation(VM&, JSBigInt*);
+private:
+    JS_EXPORT_PRIVATE void finishCreation(VM&, JSValue);
     JS_EXPORT_PRIVATE BigIntObject(VM&, Structure*);
 };
+static_assert(sizeof(BigIntObject) == sizeof(JSWrapperObject));
 
 } // namespace JSC

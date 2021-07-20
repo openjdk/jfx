@@ -227,14 +227,16 @@ struct _GstVideoCodecFrame
 {
   /*< private >*/
   gint ref_count;
-
   guint32 flags;
 
   /*< public >*/
   guint32 system_frame_number;  /* ED */
+
+  /*< private >*/
   guint32 decode_frame_number;  /* ED */
   guint32 presentation_frame_number; /* ED */
 
+  /*< public >*/
   GstClockTime dts;       /* ED */
   GstClockTime pts;       /* ED */
   GstClockTime duration;  /* ED */
@@ -250,6 +252,7 @@ struct _GstVideoCodecFrame
 
   /* Events that should be pushed downstream *before*
    * the next output_buffer */
+  /* FIXME 2.0: Use a GQueue or similar */
   GList *events;        /* ED */
 
   gpointer       user_data;
@@ -259,6 +262,7 @@ struct _GstVideoCodecFrame
     struct {
       GstClockTime ts;
       GstClockTime ts2;
+      guint num_subframes;
     } ABI;
     gpointer padding[GST_PADDING_LARGE];
   } abidata;
@@ -289,19 +293,15 @@ void                 gst_video_codec_frame_unref (GstVideoCodecFrame * frame);
 
 GST_VIDEO_API
 void                 gst_video_codec_frame_set_user_data (GstVideoCodecFrame *frame,
-                                  gpointer user_data,
-                                          GDestroyNotify notify);
+                      gpointer user_data,
+                                  GDestroyNotify notify);
 
 GST_VIDEO_API
 gpointer             gst_video_codec_frame_get_user_data (GstVideoCodecFrame *frame);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoCodecFrame, gst_video_codec_frame_unref)
-#endif
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoCodecState, gst_video_codec_state_unref)
-#endif
 
 G_END_DECLS
 

@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-const AtomicString& CheckboxInputType::formControlType() const
+const AtomString& CheckboxInputType::formControlType() const
 {
     return InputTypeNames::checkbox();
 }
@@ -90,11 +90,6 @@ void CheckboxInputType::didDispatchClick(Event& event, const InputElementClickSt
 
     // The work we did in willDispatchClick was default handling.
     event.setDefaultHandled();
-}
-
-bool CheckboxInputType::isCheckbox() const
-{
-    return true;
 }
 
 bool CheckboxInputType::matchesIndeterminatePseudoClass() const

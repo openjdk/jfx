@@ -23,9 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary AudioConfiguration {
+[
+    EnabledBySetting=MediaCapabilities,
+    JSGenerateToJSObject,
+] dictionary AudioConfiguration {
   required DOMString contentType;
   DOMString channels;
   unsigned long long bitrate;
   unsigned long samplerate;
+  boolean spatialRendering;
 };

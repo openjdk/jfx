@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,9 @@ namespace JSC { namespace DFG {
     /* Nodes for handling functions (both as call and as construct). */\
     macro(ToThis, NodeResultJS) \
     macro(CreateThis, NodeResultJS) /* Note this is not MustGenerate since we're returning it anyway. */ \
+    macro(CreatePromise, NodeResultJS | NodeMustGenerate) \
+    macro(CreateGenerator, NodeResultJS | NodeMustGenerate) \
+    macro(CreateAsyncGenerator, NodeResultJS | NodeMustGenerate) \
     macro(GetCallee, NodeResultJS) \
     macro(SetCallee, NodeMustGenerate) \
     macro(GetArgumentCountIncludingThis, NodeResultInt32) \
@@ -71,13 +74,15 @@ namespace JSC { namespace DFG {
     macro(GetLocal, NodeResultJS | NodeMustGenerate) \
     macro(SetLocal, 0) \
     \
+    /* These are used in SSA form to represent OSR availability on the stack. As long as a local is */\
+    /* available on the stack from all paths into a merge point we don't need to have a Phi. Since OSR */\
+    /* exits are rare this is preferable to representing availability directly in SSA. */\
     macro(PutStack, NodeMustGenerate) \
     macro(KillStack, NodeMustGenerate) \
     macro(GetStack, NodeResultJS) \
     \
     macro(MovHint, NodeMustGenerate) \
-    macro(ZombieHint, NodeMustGenerate) \
-    macro(ExitOK, NodeMustGenerate) /* Indicates that exit state is intact. */ \
+    macro(ExitOK, NodeMustGenerate) /* Indicates that exit state is intact and it is safe to exit back to the beginning of the exit origin. */ \
     macro(Phantom, NodeMustGenerate) \
     macro(Check, NodeMustGenerate) /* Used if we want just a type check but not liveness. Non-checking uses will be removed. */\
     macro(CheckVarargs, NodeMustGenerate | NodeHasVarArgs) /* Used if we want just a type check but not liveness. Non-checking uses will be removed. */\
@@ -103,23 +108,28 @@ namespace JSC { namespace DFG {
     macro(CheckTierUpAndOSREnter, NodeMustGenerate) \
     macro(CheckTierUpAtReturn, NodeMustGenerate) \
     \
-    /* Marker for an argument being set at the prologue of a function. */\
-    macro(SetArgument, 0) \
+    /* Marker for an argument being set at the prologue of a function. The argument is guaranteed to be set after this node. */\
+    macro(SetArgumentDefinitely, 0) \
+    /* A marker like the above that we use to track variable liveness and OSR exit state. However, it's not guaranteed to be set. To verify it was set, you'd need to check the actual argument length. We use this for varargs when we're unsure how many argument may actually end up on the stack. */\
+    macro(SetArgumentMaybe, 0) \
     \
     /* Marker of location in the IR where we may possibly perform jump replacement to */\
     /* invalidate this code block. */\
     macro(InvalidationPoint, NodeMustGenerate) \
     \
     /* Nodes for bitwise operations. */\
-    macro(ArithBitNot, NodeResultInt32 | NodeMustGenerate) \
+    macro(ValueBitNot, NodeResultJS | NodeMustGenerate) \
+    macro(ArithBitNot, NodeResultInt32) \
     macro(ValueBitAnd, NodeResultJS | NodeMustGenerate) \
     macro(ArithBitAnd, NodeResultInt32) \
     macro(ValueBitOr, NodeResultJS | NodeMustGenerate) \
     macro(ArithBitOr, NodeResultInt32) \
     macro(ValueBitXor, NodeResultJS | NodeMustGenerate) \
     macro(ArithBitXor, NodeResultInt32) \
-    macro(BitLShift, NodeResultInt32) \
-    macro(BitRShift, NodeResultInt32) \
+    macro(ArithBitLShift, NodeResultInt32) \
+    macro(ValueBitLShift, NodeResultJS | NodeMustGenerate) \
+    macro(ArithBitRShift, NodeResultInt32) \
+    macro(ValueBitRShift, NodeResultJS | NodeMustGenerate) \
     macro(BitURShift, NodeResultInt32) \
     /* Bitwise operators call ToInt32 on their operands. */\
     macro(ValueToInt32, NodeResultInt32) \
@@ -167,7 +177,10 @@ namespace JSC { namespace DFG {
     macro(ArithSqrt, NodeResultDouble | NodeMustGenerate) \
     macro(ArithUnary, NodeResultDouble | NodeMustGenerate) \
     \
-    /* BigInt is a valid operand for negate operations */\
+    /* BigInt is a valid operand for these three operations */\
+    /* Inc and Dec don't update their operand in-place, they are typically combined with some form of SetLocal */\
+    macro(Inc, NodeResultJS | NodeMustGenerate) \
+    macro(Dec, NodeResultJS | NodeMustGenerate) \
     macro(ValueNegate, NodeResultJS | NodeMustGenerate) \
     \
     /* Add of values may either be arithmetic, or result in string concatenation. */\
@@ -176,6 +189,8 @@ namespace JSC { namespace DFG {
     macro(ValueSub, NodeResultJS | NodeMustGenerate) \
     macro(ValueMul, NodeResultJS | NodeMustGenerate) \
     macro(ValueDiv, NodeResultJS | NodeMustGenerate) \
+    macro(ValuePow, NodeResultJS | NodeMustGenerate) \
+    macro(ValueMod, NodeResultJS | NodeMustGenerate) \
     \
     /* Add of values that always convers its inputs to strings. May have two or three kids. */\
     macro(StrCat, NodeResultJS | NodeMustGenerate) \
@@ -189,11 +204,16 @@ namespace JSC { namespace DFG {
     macro(GetByValWithThis, NodeResultJS | NodeMustGenerate) \
     macro(GetMyArgumentByVal, NodeResultJS | NodeMustGenerate) \
     macro(GetMyArgumentByValOutOfBounds, NodeResultJS | NodeMustGenerate) \
+    macro(VarargsLength, NodeMustGenerate | NodeResultInt32) \
     macro(LoadVarargs, NodeMustGenerate) \
     macro(ForwardVarargs, NodeMustGenerate) \
     macro(PutByValDirect, NodeMustGenerate | NodeHasVarArgs) \
     macro(PutByVal, NodeMustGenerate | NodeHasVarArgs) \
     macro(PutByValAlias, NodeMustGenerate | NodeHasVarArgs) \
+    macro(PutPrivateName, NodeMustGenerate) \
+    macro(PutPrivateNameById, NodeMustGenerate) \
+    macro(CheckPrivateBrand, NodeMustGenerate) \
+    macro(SetPrivateBrand, NodeMustGenerate) \
     macro(TryGetById, NodeResultJS) \
     macro(GetById, NodeResultJS | NodeMustGenerate) \
     macro(GetByIdFlush, NodeResultJS | NodeMustGenerate) \
@@ -223,6 +243,11 @@ namespace JSC { namespace DFG {
     macro(GetButterfly, NodeResultStorage) \
     macro(NukeStructureAndSetButterfly, NodeMustGenerate) \
     macro(CheckArray, NodeMustGenerate) \
+    macro(CheckArrayOrEmpty, NodeMustGenerate) \
+    macro(GetPrivateName, NodeResultJS | NodeMustGenerate) \
+    macro(GetPrivateNameById, NodeResultJS | NodeMustGenerate) \
+    /* This checks if the edge is a typed array and if it is detached. */ \
+    macro(CheckDetached, NodeMustGenerate) \
     macro(Arrayify, NodeMustGenerate) \
     macro(ArrayifyToStructure, NodeMustGenerate) \
     macro(GetIndexedPropertyStorage, NodeResultStorage) \
@@ -234,6 +259,7 @@ namespace JSC { namespace DFG {
     macro(MultiGetByOffset, NodeResultJS | NodeMustGenerate) \
     macro(PutByOffset, NodeMustGenerate) \
     macro(MultiPutByOffset, NodeMustGenerate) \
+    macro(MultiDeleteByOffset, NodeMustGenerate | NodeResultJS) \
     macro(GetArrayLength, NodeResultInt32) \
     macro(GetVectorLength, NodeResultInt32) \
     macro(GetTypedArrayByteOffset, NodeResultInt32) \
@@ -254,26 +280,29 @@ namespace JSC { namespace DFG {
     macro(GetRegExpObjectLastIndex, NodeResultJS) \
     macro(SetRegExpObjectLastIndex, NodeMustGenerate) \
     macro(RecordRegExpCachedResult, NodeMustGenerate | NodeHasVarArgs) \
-    macro(CheckCell, NodeMustGenerate) \
+    macro(CheckIsConstant, NodeMustGenerate) \
     macro(CheckNotEmpty, NodeMustGenerate) \
     macro(AssertNotEmpty, NodeMustGenerate) \
-    macro(CheckBadCell, NodeMustGenerate) \
+    macro(CheckBadValue, NodeMustGenerate) \
+    macro(AssertInBounds, NodeMustGenerate) \
     macro(CheckInBounds, NodeMustGenerate | NodeResultJS) \
-    macro(CheckStringIdent, NodeMustGenerate) \
+    macro(CheckIdent, NodeMustGenerate) \
     macro(CheckTypeInfoFlags, NodeMustGenerate) /* Takes an OpInfo with the flags you want to test are set */\
-    macro(CheckSubClass, NodeMustGenerate) \
+    macro(CheckJSCast, NodeMustGenerate) /* This is the same as jsCast but as a speculation rather than assertion */\
+    macro(CheckNotJSCast, NodeMustGenerate) \
     macro(ParseInt, NodeMustGenerate | NodeResultJS) \
     macro(GetPrototypeOf, NodeMustGenerate | NodeResultJS) \
     macro(ObjectCreate, NodeMustGenerate | NodeResultJS) \
     macro(ObjectKeys, NodeMustGenerate | NodeResultJS) \
+    macro(ObjectGetOwnPropertyNames, NodeMustGenerate | NodeResultJS) \
     \
     /* Atomics object functions. */\
     macro(AtomicsAdd, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsAnd, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsCompareExchange, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsExchange, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
-    macro(AtomicsIsLockFree, NodeResultBoolean) \
-    macro(AtomicsLoad, NodeResultJS | NodeMustGenerate) \
+    macro(AtomicsIsLockFree, NodeResultBoolean | NodeHasVarArgs) \
+    macro(AtomicsLoad, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsOr, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsStore, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsSub, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
@@ -296,6 +325,7 @@ namespace JSC { namespace DFG {
     \
     /* Optimizations for string access */ \
     macro(StringCharCodeAt, NodeResultInt32) \
+    macro(StringCodePointAt, NodeResultInt32) \
     macro(StringCharAt, NodeResultJS) \
     macro(StringFromCharCode, NodeResultJS | NodeMustGenerate) \
     \
@@ -332,10 +362,13 @@ namespace JSC { namespace DFG {
     \
     /* Allocations. */\
     macro(NewObject, NodeResultJS) \
+    macro(NewGenerator, NodeResultJS) \
+    macro(NewAsyncGenerator, NodeResultJS) \
     macro(NewArray, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpread, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSize, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayBuffer, NodeResultJS) \
+    macro(NewInternalFieldObject, NodeResultJS) \
     macro(NewTypedArray, NodeResultJS | NodeMustGenerate) \
     macro(NewRegexp, NodeResultJS) \
     macro(NewSymbol, NodeResultJS) \
@@ -354,6 +387,8 @@ namespace JSC { namespace DFG {
     macro(PhantomNewGeneratorFunction, NodeResultJS | NodeMustGenerate) \
     macro(PhantomNewAsyncFunction, NodeResultJS | NodeMustGenerate) \
     macro(PhantomNewAsyncGeneratorFunction, NodeResultJS | NodeMustGenerate) \
+    macro(PhantomNewInternalFieldObject, NodeResultJS | NodeMustGenerate) \
+    macro(MaterializeNewInternalFieldObject, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomCreateActivation, NodeResultJS | NodeMustGenerate) \
     macro(MaterializeCreateActivation, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomNewRegexp, NodeResultJS | NodeMustGenerate) \
@@ -366,23 +401,30 @@ namespace JSC { namespace DFG {
     \
     macro(IsCellWithType, NodeResultBoolean) \
     macro(IsEmpty, NodeResultBoolean) \
-    macro(IsUndefined, NodeResultBoolean) \
+    macro(TypeOfIsUndefined, NodeResultBoolean) \
+    macro(TypeOfIsObject, NodeResultBoolean) \
+    macro(TypeOfIsFunction, NodeResultBoolean) \
     macro(IsUndefinedOrNull, NodeResultBoolean) \
     macro(IsBoolean, NodeResultBoolean) \
     macro(IsNumber, NodeResultBoolean) \
+    /* IsBigInt is only used when USE_BIGINT32. Otherwise we emit IsCellWithType */\
+    macro(IsBigInt, NodeResultBoolean) \
     macro(NumberIsInteger, NodeResultBoolean) \
     macro(IsObject, NodeResultBoolean) \
-    macro(IsObjectOrNull, NodeResultBoolean) \
-    macro(IsFunction, NodeResultBoolean) \
+    macro(IsCallable, NodeResultBoolean) \
+    macro(IsConstructor, NodeResultBoolean) \
     macro(IsTypedArrayView, NodeResultBoolean) \
     macro(TypeOf, NodeResultJS) \
     macro(LogicalNot, NodeResultBoolean) \
     macro(ToPrimitive, NodeResultJS | NodeMustGenerate) \
+    macro(ToPropertyKey, NodeResultJS | NodeMustGenerate) \
     macro(ToString, NodeResultJS | NodeMustGenerate) \
     macro(ToNumber, NodeResultJS | NodeMustGenerate) \
+    macro(ToNumeric, NodeResultJS | NodeMustGenerate) \
     macro(ToObject, NodeResultJS | NodeMustGenerate) \
     macro(CallObjectConstructor, NodeResultJS) \
     macro(CallStringConstructor, NodeResultJS | NodeMustGenerate) \
+    macro(CallNumberConstructor, NodeResultJS | NodeMustGenerate) \
     macro(NumberToStringWithRadix, NodeResultJS | NodeMustGenerate) \
     macro(NumberToStringWithValidRadixConstant, NodeResultJS) \
     macro(MakeRope, NodeResultJS) \
@@ -392,6 +434,9 @@ namespace JSC { namespace DFG {
     macro(ProfileControlFlow, NodeMustGenerate) \
     macro(SetFunctionName, NodeMustGenerate) \
     macro(HasOwnProperty, NodeResultBoolean) \
+    \
+    macro(GetInternalField, NodeResultJS) \
+    macro(PutInternalField, NodeMustGenerate) \
     \
     macro(CreateActivation, NodeResultJS) \
     macro(PushWithScope, NodeResultJS | NodeMustGenerate) \
@@ -405,6 +450,7 @@ namespace JSC { namespace DFG {
     macro(CreateScopedArguments, NodeResultJS) \
     macro(CreateClonedArguments, NodeResultJS) \
     macro(PhantomClonedArguments, NodeResultJS | NodeMustGenerate) \
+    macro(CreateArgumentsButterfly, NodeResultJS) \
     macro(GetFromArguments, NodeResultJS) \
     macro(PutToArguments, NodeMustGenerate) \
     macro(GetArgument, NodeResultJS) \
@@ -452,9 +498,13 @@ namespace JSC { namespace DFG {
     \
     /* For-in enumeration opcodes */\
     macro(GetEnumerableLength, NodeMustGenerate | NodeResultJS) \
-    macro(HasIndexedProperty, NodeResultBoolean | NodeHasVarArgs) \
-    macro(HasStructureProperty, NodeResultBoolean) \
-    macro(HasGenericProperty, NodeResultBoolean) \
+    /* Must generate because of Proxies on the prototype chain */ \
+    macro(HasIndexedProperty, NodeMustGenerate | NodeResultBoolean | NodeHasVarArgs) \
+    macro(HasEnumerableIndexedProperty, NodeMustGenerate | NodeResultBoolean | NodeHasVarArgs) \
+    macro(HasEnumerableStructureProperty, NodeResultBoolean) \
+    macro(HasEnumerableProperty, NodeResultBoolean) \
+    macro(HasOwnStructureProperty, NodeResultBoolean | NodeMustGenerate) \
+    macro(InStructureProperty, NodeMustGenerate | NodeResultBoolean) \
     macro(GetDirectPname, NodeMustGenerate | NodeHasVarArgs | NodeResultJS) \
     macro(GetPropertyEnumerator, NodeMustGenerate | NodeResultJS) \
     macro(GetEnumeratorStructurePname, NodeMustGenerate | NodeResultJS) \
@@ -492,13 +542,19 @@ namespace JSC { namespace DFG {
     \
     /* Used to provide feedback to the IC profiler. */ \
     macro(FilterCallLinkStatus, NodeMustGenerate) \
-    macro(FilterGetByIdStatus, NodeMustGenerate) \
+    macro(FilterGetByStatus, NodeMustGenerate) \
     macro(FilterInByIdStatus, NodeMustGenerate) \
     macro(FilterPutByIdStatus, NodeMustGenerate) \
+    macro(FilterDeleteByStatus, NodeMustGenerate) \
+    macro(FilterCheckPrivateBrandStatus, NodeMustGenerate) \
+    macro(FilterSetPrivateBrandStatus, NodeMustGenerate) \
     /* Data view access */ \
     macro(DataViewGetInt, NodeMustGenerate | NodeResultJS) /* The gets are must generate for now because they do bounds checks */ \
     macro(DataViewGetFloat, NodeMustGenerate | NodeResultDouble) \
     macro(DataViewSet, NodeMustGenerate | NodeMustGenerate | NodeHasVarArgs) \
+    /* Date access */ \
+    macro(DateGetInt32OrNaN, NodeResultJS) \
+    macro(DateGetTime, NodeResultDouble) \
 
 
 // This enum generates a monotonically increasing id for all Node types,
@@ -509,6 +565,10 @@ enum NodeType {
 #undef DFG_OP_ENUM
     LastNodeType
 };
+
+#define DFG_OP_COUNT(opcode, flags) + 1
+constexpr unsigned numberOfNodeTypes = FOR_EACH_DFG_OP(DFG_OP_COUNT);
+#undef DFG_OP_COUNT
 
 // Specifies the default flags for each node.
 inline NodeFlags defaultFlags(NodeType op)
@@ -542,7 +602,7 @@ inline bool isAtomicsIntrinsic(NodeType op)
     }
 }
 
-static const unsigned maxNumExtraAtomicsArgs = 2;
+static constexpr unsigned maxNumExtraAtomicsArgs = 2;
 
 inline unsigned numExtraAtomicsArgs(NodeType op)
 {

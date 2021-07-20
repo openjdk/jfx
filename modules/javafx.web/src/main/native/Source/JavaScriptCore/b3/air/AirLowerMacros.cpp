@@ -32,7 +32,6 @@
 #include "AirCode.h"
 #include "AirEmitShuffle.h"
 #include "AirInsertionSet.h"
-#include "AirInstInlines.h"
 #include "AirPhaseScope.h"
 #include "B3CCallValue.h"
 #include "B3ValueInlines.h"
@@ -99,8 +98,9 @@ void lowerMacros(Code& code)
                     inst.kind.effects = true;
 
                 Tmp result = cCallResult(value->type());
-                switch (value->type()) {
+                switch (value->type().kind()) {
                 case Void:
+                case Tuple:
                     break;
                 case Float:
                     insertionSet.insert(instIndex + 1, MoveFloat, value, result, resultDst);

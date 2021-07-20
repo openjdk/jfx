@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-class WEBCORE_EXPORT ISOTrackEncryptionBox : public ISOFullBox {
+class WEBCORE_EXPORT ISOTrackEncryptionBox final : public ISOFullBox {
 public:
     static FourCC boxTypeName() { return "tenc"; }
 
@@ -40,7 +40,7 @@ public:
     Vector<uint8_t> defaultKID() const { return m_defaultKID; }
     Vector<uint8_t> defaultConstantIV() const { return m_defaultConstantIV; }
 
-protected:
+private:
     bool parse(JSC::DataView&, unsigned& offset) override;
 
     Optional<int8_t> m_defaultCryptByteBlock;

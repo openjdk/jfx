@@ -36,9 +36,10 @@ namespace WebCore {
 // ReverbAccumulationBuffer is a circular delay buffer with one client reading from it and multiple clients
 // writing/accumulating to it at different delay offsets from the read position.  The read operation will zero the memory
 // just read from the buffer, so it will be ready for accumulation the next time around.
-class ReverbAccumulationBuffer {
+class ReverbAccumulationBuffer final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    ReverbAccumulationBuffer(size_t length);
+    explicit ReverbAccumulationBuffer(size_t length);
 
     // This will read from, then clear-out numberOfFrames
     void readAndClear(float* destination, size_t numberOfFrames);
@@ -58,8 +59,8 @@ public:
 
 private:
     AudioFloatArray m_buffer;
-    size_t m_readIndex;
-    size_t m_readTimeFrame; // for debugging (frame on continuous timeline)
+    size_t m_readIndex { 0 };
+    size_t m_readTimeFrame { 0 }; // for debugging (frame on continuous timeline)
 };
 
 } // namespace WebCore

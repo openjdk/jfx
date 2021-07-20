@@ -35,7 +35,7 @@
 #include <ctype.h>
 
 #include "gstring.h"
-
+#include "guriprivate.h"
 #include "gprintf.h"
 
 
@@ -412,16 +412,18 @@ g_string_set_size (GString *string,
  * @pos: position in @string where insertion should
  *       happen, or -1 for at the end
  * @val: bytes to insert
- * @len: number of bytes of @val to insert
+ * @len: number of bytes of @val to insert, or -1 for all of @val
  *
  * Inserts @len bytes of @val into @string at @pos.
- * Because @len is provided, @val may contain embedded
- * nuls and need not be nul-terminated. If @pos is -1,
- * bytes are inserted at the end of the string.
  *
- * Since this function does not stop at nul bytes, it is
- * the caller's responsibility to ensure that @val has at
- * least @len addressable bytes.
+ * If @len is positive, @val may contain embedded nuls and need
+ * not be nul-terminated. It is the caller's responsibility to
+ * ensure that @val has at least @len addressable bytes.
+ *
+ * If @len is negative, @val must be nul-terminated and @len
+ * is considered to request the entire string length.
+ *
+ * If @pos is -1, bytes are inserted at the end of the string.
  *
  * Returns: (transfer none): @string
  */
@@ -431,6 +433,8 @@ g_string_insert_len (GString     *string,
                      const gchar *val,
                      gssize       len)
 {
+  gsize len_unsigned, pos_unsigned;
+
   g_return_val_if_fail (string != NULL, NULL);
   g_return_val_if_fail (len == 0 || val != NULL, string);
 
@@ -439,11 +443,15 @@ g_string_insert_len (GString     *string,
 
   if (len < 0)
     len = strlen (val);
+  len_unsigned = len;
 
   if (pos < 0)
-    pos = string->len;
+    pos_unsigned = string->len;
   else
-    g_return_val_if_fail (pos <= string->len, string);
+    {
+      pos_unsigned = pos;
+      g_return_val_if_fail (pos_unsigned <= string->len, string);
+    }
 
   /* Check whether val represents a substring of string.
    * This test probably violates chapter and verse of the C standards,
@@ -455,77 +463,52 @@ g_string_insert_len (GString     *string,
       gsize offset = val - string->str;
       gsize precount = 0;
 
-      g_string_maybe_expand (string, len);
+      g_string_maybe_expand (string, len_unsigned);
       val = string->str + offset;
       /* At this point, val is valid again.  */
 
       /* Open up space where we are going to insert.  */
-      if (pos < string->len)
-        memmove (string->str + pos + len, string->str + pos, string->len - pos);
+      if (pos_unsigned < string->len)
+        memmove (string->str + pos_unsigned + len_unsigned,
+                 string->str + pos_unsigned, string->len - pos_unsigned);
 
       /* Move the source part before the gap, if any.  */
-      if (offset < pos)
+      if (offset < pos_unsigned)
         {
-          precount = MIN (len, pos - offset);
-          memcpy (string->str + pos, val, precount);
+          precount = MIN (len_unsigned, pos_unsigned - offset);
+          memcpy (string->str + pos_unsigned, val, precount);
         }
 
       /* Move the source part after the gap, if any.  */
-      if (len > precount)
-        memcpy (string->str + pos + precount,
-                val + /* Already moved: */ precount + /* Space opened up: */ len,
-                len - precount);
+      if (len_unsigned > precount)
+        memcpy (string->str + pos_unsigned + precount,
+                val + /* Already moved: */ precount +
+                      /* Space opened up: */ len_unsigned,
+                len_unsigned - precount);
     }
   else
     {
-      g_string_maybe_expand (string, len);
+      g_string_maybe_expand (string, len_unsigned);
 
       /* If we aren't appending at the end, move a hunk
        * of the old string to the end, opening up space
        */
-      if (pos < string->len)
-        memmove (string->str + pos + len, string->str + pos, string->len - pos);
+      if (pos_unsigned < string->len)
+        memmove (string->str + pos_unsigned + len_unsigned,
+                 string->str + pos_unsigned, string->len - pos_unsigned);
 
       /* insert the new string */
-      if (len == 1)
-        string->str[pos] = *val;
+      if (len_unsigned == 1)
+        string->str[pos_unsigned] = *val;
       else
-        memcpy (string->str + pos, val, len);
+        memcpy (string->str + pos_unsigned, val, len_unsigned);
     }
 
-  string->len += len;
+  string->len += len_unsigned;
 
   string->str[string->len] = 0;
 
   return string;
-}
-
-#define SUB_DELIM_CHARS  "!$&'()*+,;="
-
-static gboolean
-is_valid (char        c,
-          const char *reserved_chars_allowed)
-{
-  if (g_ascii_isalnum (c) ||
-      c == '-' ||
-      c == '.' ||
-      c == '_' ||
-      c == '~')
-    return TRUE;
-
-  if (reserved_chars_allowed &&
-      strchr (reserved_chars_allowed, c) != NULL)
-    return TRUE;
-
-  return FALSE;
-}
-
-static gboolean
-gunichar_ok (gunichar c)
-{
-  return
-    (c != (gunichar) -2) &&
-    (c != (gunichar) -1);
 }
 
 /**
@@ -536,7 +519,7 @@ gunichar_ok (gunichar c)
  *     to be used, or %NULL
  * @allow_utf8: set %TRUE if the escaped string may include UTF8 characters
  *
- * Appends @unescaped to @string, escaped any characters that
+ * Appends @unescaped to @string, escaping any characters that
  * are reserved in URIs using URI-style escape sequences.
  *
  * Returns: (transfer none): @string
@@ -549,38 +532,8 @@ g_string_append_uri_escaped (GString     *string,
                              const gchar *reserved_chars_allowed,
                              gboolean     allow_utf8)
 {
-  unsigned char c;
-  const gchar *end;
-  static const gchar hex[16] = "0123456789ABCDEF";
-
-  g_return_val_if_fail (string != NULL, NULL);
-  g_return_val_if_fail (unescaped != NULL, NULL);
-
-  end = unescaped + strlen (unescaped);
-
-  while ((c = *unescaped) != 0)
-    {
-      if (c >= 0x80 && allow_utf8 &&
-          gunichar_ok (g_utf8_get_char_validated (unescaped, end - unescaped)))
-        {
-          int len = g_utf8_skip [c];
-          g_string_append_len (string, unescaped, len);
-          unescaped += len;
-        }
-      else if (is_valid (c, reserved_chars_allowed))
-        {
-          g_string_append_c (string, c);
-          unescaped++;
-        }
-      else
-        {
-          g_string_append_c (string, '%');
-          g_string_append_c (string, hex[((guchar)c) >> 4]);
-          g_string_append_c (string, hex[((guchar)c) & 0xf]);
-          unescaped++;
-        }
-    }
-
+  _uri_encoder (string, (const guchar *) unescaped, strlen (unescaped),
+                reserved_chars_allowed, allow_utf8);
   return string;
 }
 
@@ -605,15 +558,17 @@ g_string_append (GString     *string,
  * g_string_append_len:
  * @string: a #GString
  * @val: bytes to append
- * @len: number of bytes of @val to use
+ * @len: number of bytes of @val to use, or -1 for all of @val
  *
- * Appends @len bytes of @val to @string. Because @len is
- * provided, @val may contain embedded nuls and need not
- * be nul-terminated.
+ * Appends @len bytes of @val to @string.
  *
- * Since this function does not stop at nul bytes, it is
- * the caller's responsibility to ensure that @val has at
- * least @len addressable bytes.
+ * If @len is positive, @val may contain embedded nuls and need
+ * not be nul-terminated. It is the caller's responsibility to
+ * ensure that @val has at least @len addressable bytes.
+ *
+ * If @len is negative, @val must be nul-terminated and @len
+ * is considered to request the entire string length. This
+ * makes g_string_append_len() equivalent to g_string_append().
  *
  * Returns: (transfer none): @string
  */
@@ -685,15 +640,17 @@ g_string_prepend (GString     *string,
  * g_string_prepend_len:
  * @string: a #GString
  * @val: bytes to prepend
- * @len: number of bytes in @val to prepend
+ * @len: number of bytes in @val to prepend, or -1 for all of @val
  *
  * Prepends @len bytes of @val to @string.
- * Because @len is provided, @val may contain
- * embedded nuls and need not be nul-terminated.
  *
- * Since this function does not stop at nul bytes,
- * it is the caller's responsibility to ensure that
- * @val has at least @len addressable bytes.
+ * If @len is positive, @val may contain embedded nuls and need
+ * not be nul-terminated. It is the caller's responsibility to
+ * ensure that @val has at least @len addressable bytes.
+ *
+ * If @len is negative, @val must be nul-terminated and @len
+ * is considered to request the entire string length. This
+ * makes g_string_prepend_len() equivalent to g_string_prepend().
  *
  * Returns: (transfer none): @string
  */
@@ -777,6 +734,8 @@ g_string_insert_c (GString *string,
                    gssize   pos,
                    gchar    c)
 {
+  gsize pos_unsigned;
+
   g_return_val_if_fail (string != NULL, NULL);
 
   g_string_maybe_expand (string, 1);
@@ -784,13 +743,15 @@ g_string_insert_c (GString *string,
   if (pos < 0)
     pos = string->len;
   else
-    g_return_val_if_fail (pos <= string->len, string);
+    g_return_val_if_fail ((gsize) pos <= string->len, string);
+  pos_unsigned = pos;
 
   /* If not just an append, move the old stuff */
-  if (pos < string->len)
-    memmove (string->str + pos + 1, string->str + pos, string->len - pos);
+  if (pos_unsigned < string->len)
+    memmove (string->str + pos_unsigned + 1,
+             string->str + pos_unsigned, string->len - pos_unsigned);
 
-  string->str[pos] = c;
+  string->str[pos_unsigned] = c;
 
   string->len += 1;
 
@@ -859,10 +820,10 @@ g_string_insert_unichar (GString  *string,
   if (pos < 0)
     pos = string->len;
   else
-    g_return_val_if_fail (pos <= string->len, string);
+    g_return_val_if_fail ((gsize) pos <= string->len, string);
 
   /* If not just an append, move the old stuff */
-  if (pos < string->len)
+  if ((gsize) pos < string->len)
     memmove (string->str + pos + charlen, string->str + pos, string->len - pos);
 
   dest = string->str + pos;
@@ -969,21 +930,28 @@ g_string_erase (GString *string,
                 gssize   pos,
                 gssize   len)
 {
+  gsize len_unsigned, pos_unsigned;
+
   g_return_val_if_fail (string != NULL, NULL);
   g_return_val_if_fail (pos >= 0, string);
-  g_return_val_if_fail (pos <= string->len, string);
+  pos_unsigned = pos;
+
+  g_return_val_if_fail (pos_unsigned <= string->len, string);
 
   if (len < 0)
-    len = string->len - pos;
+    len_unsigned = string->len - pos_unsigned;
   else
     {
-      g_return_val_if_fail (pos + len <= string->len, string);
+      len_unsigned = len;
+      g_return_val_if_fail (pos_unsigned + len_unsigned <= string->len, string);
 
-      if (pos + len < string->len)
-        memmove (string->str + pos, string->str + pos + len, string->len - (pos + len));
+      if (pos_unsigned + len_unsigned < string->len)
+        memmove (string->str + pos_unsigned,
+                 string->str + pos_unsigned + len_unsigned,
+                 string->len - (pos_unsigned + len_unsigned));
     }
 
-  string->len -= len;
+  string->len -= len_unsigned;
 
   string->str[string->len] = 0;
 
@@ -1123,7 +1091,7 @@ g_string_up (GString *string)
 /**
  * g_string_append_vprintf:
  * @string: a #GString
- * @format: the string format. See the printf() documentation
+ * @format: (not nullable): the string format. See the printf() documentation
  * @args: the list of arguments to insert in the output
  *
  * Appends a formatted string onto the end of a #GString.
@@ -1158,7 +1126,7 @@ g_string_append_vprintf (GString     *string,
 /**
  * g_string_vprintf:
  * @string: a #GString
- * @format: the string format. See the printf() documentation
+ * @format: (not nullable): the string format. See the printf() documentation
  * @args: the parameters to insert into the format string
  *
  * Writes a formatted string into a #GString.

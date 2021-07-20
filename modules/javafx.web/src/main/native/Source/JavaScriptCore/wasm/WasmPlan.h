@@ -32,6 +32,7 @@
 #include "WasmEmbedder.h"
 #include "WasmModuleInformation.h"
 #include <wtf/Bag.h>
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/SharedTask.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
@@ -42,6 +43,7 @@ class CallLinkInfo;
 
 namespace Wasm {
 
+class CodeBlock;
 struct Context;
 
 class Plan : public ThreadSafeRefCounted<Plan> {
@@ -50,7 +52,6 @@ public:
     using CompletionTask = RefPtr<SharedTask<CallbackType>>;
 
     static CompletionTask dontFinalize() { return createSharedTask<CallbackType>([](Plan&) { }); }
-    Plan(Context*, Ref<ModuleInformation>, CompletionTask&&, CreateEmbedderWrapper&&, ThrowWasmException);
     Plan(Context*, Ref<ModuleInformation>, CompletionTask&&);
 
     // Note: This constructor should only be used if you are not actually building a module e.g. validation/function tests
@@ -64,9 +65,9 @@ public:
     void setMode(MemoryMode mode) { m_mode = mode; }
     MemoryMode mode() const { return m_mode; }
 
-    const String& errorMessage() const { return m_errorMessage; }
+    String errorMessage() const { return crossThreadCopy(m_errorMessage); }
 
-    bool WARN_UNUSED_RETURN failed() const { return !errorMessage().isNull(); }
+    bool WARN_UNUSED_RETURN failed() const { return !m_errorMessage.isNull(); }
     virtual bool hasWork() const = 0;
     enum CompilationEffort { All, Partial };
     virtual void work(CompilationEffort = All) = 0;
@@ -83,12 +84,13 @@ protected:
     virtual bool isComplete() const = 0;
     virtual void complete(const AbstractLocker&) = 0;
 
+#if ENABLE(WEBASSEMBLY_B3JIT)
+    static void updateCallSitesToCallUs(CodeBlock&, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace);
+#endif
+
     Ref<ModuleInformation> m_moduleInformation;
 
     Vector<std::pair<Context*, CompletionTask>, 1> m_completionTasks;
-
-    CreateEmbedderWrapper m_createEmbedderWrapper;
-    ThrowWasmException m_throwWasmException { nullptr };
 
     String m_errorMessage;
     MemoryMode m_mode { MemoryMode::BoundsChecking };

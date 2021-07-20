@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,13 @@
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/ApplePaySessionAdditions.h>
+#endif
+
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSValue;
 }
 
@@ -53,11 +58,15 @@ struct ApplePayLineItem;
 struct ApplePayPaymentRequest;
 struct ApplePayShippingMethod;
 struct ApplePayPaymentAuthorizationResult;
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+struct ApplePayPaymentMethodModeUpdate;
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
 struct ApplePayPaymentMethodUpdate;
 struct ApplePayShippingContactUpdate;
 struct ApplePayShippingMethodUpdate;
 
 class ApplePaySession final : public PaymentSession, public ActiveDOMObject, public EventTargetWithInlineData {
+    WTF_MAKE_ISO_ALLOCATED(ApplePaySession);
 public:
     static ExceptionOr<Ref<ApplePaySession>> create(Document&, unsigned version, ApplePayPaymentRequest&&);
     virtual ~ApplePaySession();
@@ -71,14 +80,14 @@ public:
     static const unsigned short STATUS_PIN_INCORRECT = 6;
     static const unsigned short STATUS_PIN_LOCKOUT = 7;
 
-    static ExceptionOr<bool> supportsVersion(ScriptExecutionContext&, unsigned version);
-    static ExceptionOr<bool> canMakePayments(ScriptExecutionContext&);
-    static ExceptionOr<void> canMakePaymentsWithActiveCard(ScriptExecutionContext&, const String& merchantIdentifier, Ref<DeferredPromise>&&);
-    static ExceptionOr<void> openPaymentSetup(ScriptExecutionContext&, const String& merchantIdentifier, Ref<DeferredPromise>&&);
+    static ExceptionOr<bool> supportsVersion(Document&, unsigned version);
+    static ExceptionOr<bool> canMakePayments(Document&);
+    static ExceptionOr<void> canMakePaymentsWithActiveCard(Document&, const String& merchantIdentifier, Ref<DeferredPromise>&&);
+    static ExceptionOr<void> openPaymentSetup(Document&, const String& merchantIdentifier, Ref<DeferredPromise>&&);
 
-    ExceptionOr<void> begin();
+    ExceptionOr<void> begin(Document&);
     ExceptionOr<void> abort();
-    ExceptionOr<void> completeMerchantValidation(JSC::ExecState&, JSC::JSValue merchantSession);
+    ExceptionOr<void> completeMerchantValidation(JSC::JSGlobalObject&, JSC::JSValue merchantSession);
     ExceptionOr<void> completeShippingMethodSelection(ApplePayShippingMethodUpdate&&);
     ExceptionOr<void> completeShippingContactSelection(ApplePayShippingContactUpdate&&);
     ExceptionOr<void> completePaymentMethodSelection(ApplePayPaymentMethodUpdate&&);
@@ -100,8 +109,8 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const override;
-    bool canSuspendForDocumentSuspension() const override;
     void stop() override;
+    void suspend(ReasonForSuspension) override;
 
     // EventTargetWithInlineData.
     EventTargetInterface eventTargetInterface() const override { return ApplePaySessionEventTargetInterfaceType; }
@@ -113,10 +122,13 @@ private:
     unsigned version() const override;
     void validateMerchant(URL&&) override;
     void didAuthorizePayment(const Payment&) override;
-    void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&) override;
+    void didSelectShippingMethod(const ApplePayShippingMethod&) override;
     void didSelectShippingContact(const PaymentContact&) override;
     void didSelectPaymentMethod(const PaymentMethod&) override;
-    void didCancelPaymentSession() override;
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    void didChangePaymentMethodMode(String&& paymentMethodMode) override;
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    void didCancelPaymentSession(PaymentSessionError&&) override;
 
     PaymentCoordinator& paymentCoordinator() const;
 
@@ -127,7 +139,11 @@ private:
     bool canCompleteShippingMethodSelection() const;
     bool canCompleteShippingContactSelection() const;
     bool canCompletePaymentMethodSelection() const;
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    bool canCompletePaymentMethodModeChange() const;
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     bool canCompletePayment() const;
+    bool canSuspendWithoutCanceling() const;
 
     bool isFinalState() const;
     void didReachFinalState();
@@ -139,6 +155,9 @@ private:
         ShippingMethodSelected,
         ShippingContactSelected,
         PaymentMethodSelected,
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+        PaymentMethodModeChanged,
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
         CancelRequested,
         Authorized,
         Completed,
@@ -155,6 +174,10 @@ private:
 
     const ApplePaySessionPaymentRequest m_paymentRequest;
     unsigned m_version;
+
+#if defined(ApplePaySessionAdditions_declarations)
+    ApplePaySessionAdditions_declarations
+#endif
 };
 
 }

@@ -32,9 +32,4 @@ namespace JSC {
 
 const ClassInfo JSWeakMap::s_info = { "WeakMap", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWeakMap) };
 
-String JSWeakMap::toStringName(const JSObject*, ExecState*)
-{
-    return "Object"_s;
-}
-
 }

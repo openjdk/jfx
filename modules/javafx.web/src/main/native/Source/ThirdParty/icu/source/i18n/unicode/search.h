@@ -14,6 +14,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 /**
  * \file
  * \brief C++ API: SearchIterator object.
@@ -70,8 +72,7 @@ U_NAMESPACE_BEGIN
  * UErrorCode      error = U_ZERO_ERROR;
  * for (int pos = iter->first(error); pos != USEARCH_DONE;
  *                               pos = iter->next(error)) {
- *     printf("Found match at %d pos, length is %d\n", pos,
- *                                             iter.getMatchLength());
+ *     printf("Found match at %d pos, length is %d\n", pos, iter.getMatchedLength());
  * }
  * </code></pre>
  *
@@ -266,9 +267,9 @@ public:
     /**
      * Equality operator.
      * @param that SearchIterator instance to be compared.
-     * @return TRUE if both BreakIterators are of the same class, have the
+     * @return true if both BreakIterators are of the same class, have the
      *         same behavior, terates over the same text and have the same
-     *         attributes. FALSE otherwise.
+     *         attributes. false otherwise.
      * @stable ICU 2.0
      */
     virtual UBool operator==(const SearchIterator &that) const;
@@ -276,7 +277,7 @@ public:
     /**
      * Not-equal operator.
      * @param that SearchIterator instance to be compared.
-     * @return FALSE if operator== returns TRUE, and vice versa.
+     * @return false if operator== returns true, and vice versa.
      * @stable ICU 2.0
      */
     UBool operator!=(const SearchIterator &that) const;
@@ -572,6 +573,8 @@ inline UBool SearchIterator::operator!=(const SearchIterator &that) const
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_COLLATION */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif
 

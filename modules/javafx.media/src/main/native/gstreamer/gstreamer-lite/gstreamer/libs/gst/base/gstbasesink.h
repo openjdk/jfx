@@ -151,7 +151,12 @@ struct _GstBaseSink {
 struct _GstBaseSinkClass {
   GstElementClass parent_class;
 
-  /* get caps from subclass */
+  /**
+   * GstBaseSink::get_caps:
+   * @filter: (in) (nullable):
+   *
+   * Called to get sink pad caps from the subclass.
+   */
   GstCaps*      (*get_caps)     (GstBaseSink *sink, GstCaps *filter);
   /* notify subclass of new caps */
   gboolean      (*set_caps)     (GstBaseSink *sink, GstCaps *caps);
@@ -310,6 +315,13 @@ void            gst_base_sink_set_max_bitrate   (GstBaseSink *sink, guint64 max_
 GST_BASE_API
 guint64         gst_base_sink_get_max_bitrate   (GstBaseSink *sink);
 
+/* processing deadline */
+GST_BASE_API
+void            gst_base_sink_set_processing_deadline  (GstBaseSink *sink, GstClockTime processing_deadline);
+
+GST_BASE_API
+GstClockTime    gst_base_sink_get_processing_deadline  (GstBaseSink *sink);
+
 GST_BASE_API
 GstClockReturn  gst_base_sink_wait_clock        (GstBaseSink *sink, GstClockTime time,
                                                  GstClockTimeDiff * jitter);
@@ -317,9 +329,10 @@ GST_BASE_API
 GstFlowReturn   gst_base_sink_wait              (GstBaseSink *sink, GstClockTime time,
                                                  GstClockTimeDiff *jitter);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+GST_BASE_API
+GstStructure    *gst_base_sink_get_stats (GstBaseSink * sink);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSink, gst_object_unref)
-#endif
 
 G_END_DECLS
 

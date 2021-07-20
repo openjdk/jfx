@@ -31,6 +31,7 @@
 #include "config.h"
 #include "PlatformLocale.h"
 
+#include "DateComponents.h"
 #include "DateTimeFormat.h"
 #include "LocalizedStrings.h"
 #include <wtf/text/StringBuilder.h>
@@ -325,45 +326,40 @@ String Locale::convertFromLocalizedNumber(const String& localized)
 }
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
-#if !PLATFORM(IOS_FAMILY)
 String Locale::formatDateTime(const DateComponents& date, FormatType formatType)
 {
-    if (date.type() == DateComponents::Invalid)
+    if (date.type() == DateComponentsType::Invalid)
         return String();
-#if !ENABLE(INPUT_TYPE_WEEK)
-    if (date.type() == DateComponents::Week)
-        return String();
-#endif
 
     DateTimeStringBuilder builder(*this, date);
     switch (date.type()) {
-    case DateComponents::Time:
+    case DateComponentsType::Time:
         builder.build(formatType == FormatTypeShort ? shortTimeFormat() : timeFormat());
         break;
-    case DateComponents::Date:
+    case DateComponentsType::Date:
         builder.build(dateFormat());
         break;
-    case DateComponents::Month:
+    case DateComponentsType::Month:
         builder.build(formatType == FormatTypeShort ? shortMonthFormat() : monthFormat());
         break;
-    case DateComponents::Week:
-#if ENABLE(INPUT_TYPE_WEEK)
-        builder.build(weekFormatInLDML());
+    case DateComponentsType::Week:
+        // FIXME: Add support for formatting weeks.
         break;
-#endif
-    case DateComponents::DateTime:
-    case DateComponents::DateTimeLocal:
+    case DateComponentsType::DateTimeLocal:
         builder.build(formatType == FormatTypeShort ? dateTimeFormatWithoutSeconds() : dateTimeFormatWithSeconds());
         break;
-    case DateComponents::Invalid:
+    case DateComponentsType::Invalid:
         ASSERT_NOT_REACHED();
         break;
     }
     return builder.toString();
 }
-#endif // !PLATFORM(IOS_FAMILY)
 
+String Locale::localizedDecimalSeparator()
+{
+    initializeLocaleData();
+    return m_decimalSymbols[DecimalSeparatorIndex];
+}
 #endif
 
 }

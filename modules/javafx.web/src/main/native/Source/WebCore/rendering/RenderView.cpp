@@ -24,7 +24,6 @@
 #include "Document.h"
 #include "Element.h"
 #include "FloatQuad.h"
-#include "FloatingObjects.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
@@ -138,7 +137,7 @@ LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType) const
     if (document().isPluginDocument() && frameView().useFixedLayout())
         return frameView().fixedLayoutSize().height();
 #endif
-    return isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth();
+    return isHorizontalWritingMode() ? frameView().layoutSize().height() : frameView().layoutSize().width();
 }
 
 bool RenderView::isChildAllowed(const RenderObject& child, const RenderStyle&) const
@@ -208,7 +207,7 @@ LayoutUnit RenderView::clientLogicalWidthForFixedPosition() const
 {
     // FIXME: If the FrameView's fixedVisibleContentRect() is not empty, perhaps it should be consulted here too?
     if (frameView().fixedElementsLayoutRelativeToFrame())
-        return (isHorizontalWritingMode() ? frameView().visibleWidth() : frameView().visibleHeight()) / frameView().frame().frameScaleFactor();
+        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleWidth() : frameView().visibleHeight()) / frameView().frame().frameScaleFactor());
 
 #if PLATFORM(IOS_FAMILY)
     if (frameView().useCustomFixedPositionLayoutRect())
@@ -225,7 +224,7 @@ LayoutUnit RenderView::clientLogicalHeightForFixedPosition() const
 {
     // FIXME: If the FrameView's fixedVisibleContentRect() is not empty, perhaps it should be consulted here too?
     if (frameView().fixedElementsLayoutRelativeToFrame())
-        return (isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth()) / frameView().frame().frameScaleFactor();
+        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth()) / frameView().frame().frameScaleFactor());
 
 #if PLATFORM(IOS_FAMILY)
     if (frameView().useCustomFixedPositionLayoutRect())
@@ -238,17 +237,17 @@ LayoutUnit RenderView::clientLogicalHeightForFixedPosition() const
     return clientLogicalHeight();
 }
 
-void RenderView::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
 {
     // If a container was specified, and was not nullptr or the RenderView,
     // then we should have found it by now.
-    ASSERT_ARG(repaintContainer, !repaintContainer || repaintContainer == this);
+    ASSERT_ARG(ancestorContainer, !ancestorContainer || ancestorContainer == this);
     ASSERT_UNUSED(wasFixed, !wasFixed || *wasFixed == (mode & IsFixed));
 
     if (mode & IsFixed)
         transformState.move(toLayoutSize(frameView().scrollPositionRespectingCustomFixedPosition()));
 
-    if (!repaintContainer && mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
+    if (!ancestorContainer && mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
         getTransformFromContainer(nullptr, LayoutSize(), t);
         transformState.applyTransform(t);
@@ -421,7 +420,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         const Color& backgroundColor = (settings().backgroundShouldExtendBeyondPage() && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
         if (backgroundColor.isVisible()) {
             CompositeOperator previousOperator = paintInfo.context().compositeOperation();
-            paintInfo.context().setCompositeOperation(CompositeCopy);
+            paintInfo.context().setCompositeOperation(CompositeOperator::Copy);
             paintInfo.context().fillRect(paintInfo.rect, backgroundColor);
             paintInfo.context().setCompositeOperation(previousOperator);
         } else
@@ -492,7 +491,7 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
     // FIXME: Maybe there should be a region type that does this automatically.
     static const unsigned maximumRepaintRegionGridSize = 16 * 16;
     if (m_accumulatedRepaintRegion->gridSize() > maximumRepaintRegionGridSize)
-        m_accumulatedRepaintRegion = std::make_unique<Region>(m_accumulatedRepaintRegion->bounds());
+        m_accumulatedRepaintRegion = makeUnique<Region>(m_accumulatedRepaintRegion->bounds());
 }
 
 void RenderView::flushAccumulatedRepaintRegion() const
@@ -514,14 +513,6 @@ void RenderView::repaintViewAndCompositedLayers()
         compositor.repaintCompositedLayers();
 }
 
-LayoutRect RenderView::visualOverflowRect() const
-{
-    if (frameView().paintsEntireContents())
-        return layoutOverflowRect();
-
-    return RenderBlockFlow::visualOverflowRect();
-}
-
 Optional<LayoutRect> RenderView::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
     // If a container was specified, and was not nullptr or the RenderView,
@@ -541,7 +532,7 @@ Optional<LayoutRect> RenderView::computeVisibleRectInContainer(const LayoutRect&
             adjustedRect.setX(viewWidth() - adjustedRect.maxX());
     }
 
-    if (context.m_hasPositionFixedDescendant)
+    if (context.hasPositionFixedDescendant)
         adjustedRect.moveBy(frameView().scrollPositionRespectingCustomFixedPosition());
 
     // Apply our transform if we have one (because of full page zooming).
@@ -670,6 +661,11 @@ IntSize RenderView::viewportSizeForCSSViewportUnits() const
     return frameView().viewportSizeForCSSViewportUnits();
 }
 
+Node* RenderView::nodeForHitTest() const
+{
+    return document().documentElement();
+}
+
 void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
 {
     if (result.innerNode())
@@ -678,8 +674,7 @@ void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& p
     if (multiColumnFlow() && multiColumnFlow()->firstMultiColumnSet())
         return multiColumnFlow()->firstMultiColumnSet()->updateHitTestResult(result, point);
 
-    Node* node = document().documentElement();
-    if (node) {
+    if (auto* node = nodeForHitTest()) {
         result.setInnerNode(node);
         if (!result.innerNonSharedNode())
             result.setInnerNonSharedNode(node);
@@ -724,7 +719,7 @@ bool RenderView::usesCompositing() const
 RenderLayerCompositor& RenderView::compositor()
 {
     if (!m_compositor)
-        m_compositor = std::make_unique<RenderLayerCompositor>(*this);
+        m_compositor = makeUnique<RenderLayerCompositor>(*this);
 
     return *m_compositor;
 }
@@ -735,17 +730,10 @@ void RenderView::setIsInWindow(bool isInWindow)
         m_compositor->setIsInWindow(isInWindow);
 }
 
-void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    RenderBlockFlow::styleDidChange(diff, oldStyle);
-
-    frameView().styleDidChange();
-}
-
 ImageQualityController& RenderView::imageQualityController()
 {
     if (!m_imageQualityController)
-        m_imageQualityController = std::make_unique<ImageQualityController>(*this);
+        m_imageQualityController = makeUnique<ImageQualityController>(*this);
     return *m_imageQualityController;
 }
 
@@ -809,7 +797,7 @@ void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer
         images.removeFirst(&image);
 }
 
-void RenderView::resumePausedImageAnimationsIfNeeded(IntRect visibleRect)
+void RenderView::resumePausedImageAnimationsIfNeeded(const IntRect& visibleRect)
 {
     Vector<std::pair<RenderElement*, CachedImage*>, 10> toRemove;
     for (auto& it : m_renderersWithPausedImageAnimation) {
@@ -834,7 +822,7 @@ RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator(RenderView* view)
 
     m_wasAccumulatingRepaintRegion = !!rootRenderView->m_accumulatedRepaintRegion;
     if (!m_wasAccumulatingRepaintRegion)
-        rootRenderView->m_accumulatedRepaintRegion = std::make_unique<Region>();
+        rootRenderView->m_accumulatedRepaintRegion = makeUnique<Region>();
     m_rootView = makeWeakPtr(*rootRenderView);
 }
 
@@ -883,6 +871,24 @@ unsigned RenderView::pageCount() const
         return multiColumnFlow()->firstMultiColumnSet()->columnCount();
 
     return 0;
+}
+
+void RenderView::layerChildrenChangedDuringStyleChange(RenderLayer& layer)
+{
+    if (!m_styleChangeLayerMutationRoot) {
+        m_styleChangeLayerMutationRoot = makeWeakPtr(layer);
+        return;
+    }
+
+    RenderLayer* commonAncestor = m_styleChangeLayerMutationRoot->commonAncestorWithLayer(layer);
+    m_styleChangeLayerMutationRoot = makeWeakPtr(commonAncestor);
+}
+
+RenderLayer* RenderView::takeStyleChangeLayerTreeMutationRoot()
+{
+    auto* result = m_styleChangeLayerMutationRoot.get();
+    m_styleChangeLayerMutationRoot.clear();
+    return result;
 }
 
 #if ENABLE(CSS_SCROLL_SNAP)

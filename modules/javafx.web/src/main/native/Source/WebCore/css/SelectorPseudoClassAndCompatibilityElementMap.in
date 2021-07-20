@@ -3,6 +3,8 @@
 -webkit-any-link, PseudoClassAnyLinkDeprecated, PseudoElementUnknown
 -webkit-autofill
 -webkit-autofill-strong-password
+-webkit-autofill-strong-password-viewable
+-webkit-direct-focus
 -webkit-drag
 -webkit-full-page-media
 active
@@ -27,6 +29,7 @@ first-letter, PseudoClassUnknown, PseudoElementFirstLetter
 first-line, PseudoClassUnknown, PseudoElementFirstLine
 first-of-type
 focus
+focus-visible
 focus-within
 #if ENABLE(ATTACHMENT_ELEMENT)
 has-attachment
@@ -38,6 +41,7 @@ in-range
 increment
 indeterminate
 invalid
+is
 lang
 last-child
 last-of-type
@@ -68,6 +72,7 @@ target
 valid
 vertical
 visited
+where
 window-inactive
 
 #if ENABLE(FULLSCREEN_API)
@@ -78,7 +83,11 @@ window-inactive
 -webkit-full-screen-controls-hidden
 #endif
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(PICTURE_IN_PICTURE_API)
+picture-in-picture
+#endif
+
+#if ENABLE(VIDEO)
 future
 past
 #endif

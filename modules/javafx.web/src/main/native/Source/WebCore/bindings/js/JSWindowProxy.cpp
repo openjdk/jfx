@@ -37,6 +37,7 @@
 #include "JSEventTarget.h"
 #include "JSRemoteDOMWindow.h"
 #include "ScriptController.h"
+#include "WebCoreJSClientData.h"
 #include <JavaScriptCore/Debugger.h>
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/StrongInlines.h>
@@ -76,7 +77,7 @@ void JSWindowProxy::destroy(JSCell* cell)
 
 void JSWindowProxy::setWindow(VM& vm, JSDOMGlobalObject& window)
 {
-    ASSERT(window.classInfo() == JSDOMWindow::info() || window.classInfo() == JSRemoteDOMWindow::info());
+    ASSERT(window.classInfo(vm) == JSDOMWindow::info() || window.classInfo(vm) == JSRemoteDOMWindow::info());
     setTarget(vm, &window);
     structure(vm)->setGlobalObject(vm, &window);
     GCController::singleton().garbageCollectSoon();
@@ -95,23 +96,26 @@ void JSWindowProxy::setWindow(AbstractDOMWindow& domWindow)
 
     // Explicitly protect the prototype so it isn't collected when we allocate the global object.
     // (Once the global object is fully constructed, it will mark its own prototype.)
-    // FIXME: Why do we need to protect this when there's a pointer to it on the stack?
-    // Perhaps the issue is that structure objects aren't seen when scanning the stack?
-    Strong<JSNonFinalObject> prototype(vm, isRemoteDOMWindow ? static_cast<JSNonFinalObject*>(JSRemoteDOMWindowPrototype::create(vm, nullptr, &prototypeStructure)) : static_cast<JSNonFinalObject*>(JSDOMWindowPrototype::create(vm, nullptr, &prototypeStructure)));
+    JSNonFinalObject* prototype = isRemoteDOMWindow ? static_cast<JSNonFinalObject*>(JSRemoteDOMWindowPrototype::create(vm, nullptr, &prototypeStructure)) : static_cast<JSNonFinalObject*>(JSDOMWindowPrototype::create(vm, nullptr, &prototypeStructure));
+    JSC::EnsureStillAliveScope protectedPrototype(prototype);
 
     JSDOMGlobalObject* window = nullptr;
     if (isRemoteDOMWindow) {
-        auto& windowStructure = *JSRemoteDOMWindow::createStructure(vm, nullptr, prototype.get());
+        auto& windowStructure = *JSRemoteDOMWindow::createStructure(vm, nullptr, prototype);
         window = JSRemoteDOMWindow::create(vm, &windowStructure, downcast<RemoteDOMWindow>(domWindow), this);
     } else {
-        auto& windowStructure = *JSDOMWindow::createStructure(vm, nullptr, prototype.get());
-        window = JSDOMWindow::create(vm, &windowStructure, downcast<DOMWindow>(domWindow), this);
+        auto& localWindow = downcast<DOMWindow>(domWindow);
+        auto& windowStructure = *JSDOMWindow::createStructure(vm, nullptr, prototype);
+        window = JSDOMWindow::create(vm, &windowStructure, localWindow, this);
+        if (!localWindow.document()->haveInitializedSecurityOrigin())
+            localWindow.setAsWrappedWithoutInitializedSecurityOrigin();
     }
 
     prototype->structure(vm)->setGlobalObject(vm, window);
 
     auto& propertiesStructure = *JSDOMWindowProperties::createStructure(vm, window, JSEventTarget::prototype(vm, *window));
     auto& properties = *JSDOMWindowProperties::create(&propertiesStructure, *window);
+    properties.didBecomePrototype();
     prototype->structure(vm)->setPrototypeWithoutTransition(vm, &properties);
 
     setWindow(vm, *window);
@@ -145,9 +149,9 @@ AbstractDOMWindow& JSWindowProxy::wrapped() const
     return jsCast<JSDOMWindowBase*>(window)->wrapped();
 }
 
-JSValue toJS(ExecState* state, WindowProxy& windowProxy)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, WindowProxy& windowProxy)
 {
-    auto* jsWindowProxy = windowProxy.jsWindowProxy(currentWorld(*state));
+    auto* jsWindowProxy = windowProxy.jsWindowProxy(currentWorld(*lexicalGlobalObject));
     return jsWindowProxy ? JSValue(jsWindowProxy) : jsNull();
 }
 
@@ -164,6 +168,11 @@ WindowProxy* JSWindowProxy::toWrapped(VM& vm, JSValue value)
     if (object->inherits<JSWindowProxy>(vm))
         return jsCast<JSWindowProxy*>(object)->windowProxy();
     return nullptr;
+}
+
+JSC::IsoSubspace* JSWindowProxy::subspaceForImpl(JSC::VM& vm)
+{
+    return &static_cast<JSVMClientData*>(vm.clientData)->windowProxySpace();
 }
 
 } // namespace WebCore

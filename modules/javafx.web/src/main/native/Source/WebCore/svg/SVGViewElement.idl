@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGViewElement : SVGElement {
-    [NewObject] readonly attribute SVGStringList viewTarget;
+[
+    Exposed=Window
+] interface SVGViewElement : SVGElement {
 };
 
-SVGViewElement implements SVGExternalResourcesRequired;
-SVGViewElement implements SVGFitToViewBox;
-SVGViewElement implements SVGZoomAndPan;
+SVGViewElement includes SVGFitToViewBox;
+SVGViewElement includes SVGZoomAndPan;

@@ -17,9 +17,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface HTMLMarqueeElement : HTMLElement {
-    void start();
-    void stop();
+[
+    ActiveDOMObject,
+    Exposed=Window
+] interface HTMLMarqueeElement : HTMLElement {
+    undefined start();
+    undefined stop();
     
     [CEReactions=NotNeeded, Reflect] attribute DOMString behavior;
     [CEReactions=NotNeeded, Reflect] attribute DOMString bgColor;

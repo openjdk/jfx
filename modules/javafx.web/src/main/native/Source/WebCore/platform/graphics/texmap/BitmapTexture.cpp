@@ -27,24 +27,24 @@
 #include "config.h"
 #include "BitmapTexture.h"
 
+#include "GraphicsContext.h"
 #include "GraphicsLayer.h"
 #include "ImageBuffer.h"
 #include "TextureMapper.h"
 
 namespace WebCore {
 
-void BitmapTexture::updateContents(TextureMapper&, GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& offset, float scale)
+void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& offset, float scale)
 {
     // Making an unconditionally unaccelerated buffer here is OK because this code
     // isn't used by any platforms that respect the accelerated bit.
-    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(targetRect.size(), Unaccelerated);
-
+    auto imageBuffer = ImageBuffer::create(targetRect.size(), RenderingMode::Unaccelerated);
     if (!imageBuffer)
         return;
 
     GraphicsContext& context = imageBuffer->context();
-    context.setImageInterpolationQuality(InterpolationDefault);
-    context.setTextDrawingMode(TextModeFill);
+    context.setImageInterpolationQuality(InterpolationQuality::Default);
+    context.setTextDrawingMode(TextDrawingMode::Fill);
 
     IntRect sourceRect(targetRect);
     sourceRect.setLocation(offset);
@@ -53,6 +53,11 @@ void BitmapTexture::updateContents(TextureMapper&, GraphicsLayer* sourceLayer, c
     context.translate(-sourceRect.x(), -sourceRect.y());
 
     sourceLayer->paintGraphicsLayerContents(context, sourceRect);
+
+#if USE(DIRECT2D)
+    // We can't access the bits in the image buffer with an active beginDraw.
+    context.endDraw();
+#endif
 
     RefPtr<Image> image = imageBuffer->copyImage(DontCopyBackingStore);
     if (!image)

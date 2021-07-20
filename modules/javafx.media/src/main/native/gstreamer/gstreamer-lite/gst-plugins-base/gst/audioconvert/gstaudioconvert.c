@@ -110,7 +110,6 @@
 #include <string.h>
 
 #include "gstaudioconvert.h"
-#include "plugin.h"
 
 GST_DEBUG_CATEGORY (audio_convert_debug);
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_PERFORMANCE);
@@ -138,6 +137,8 @@ static gboolean gst_audio_convert_transform_meta (GstBaseTransform * trans,
     GstBuffer * outbuf, GstMeta * meta, GstBuffer * inbuf);
 static GstFlowReturn gst_audio_convert_submit_input_buffer (GstBaseTransform *
     base, gboolean is_discont, GstBuffer * input);
+static GstFlowReturn gst_audio_convert_prepare_output_buffer (GstBaseTransform *
+    base, GstBuffer * inbuf, GstBuffer ** outbuf);
 static void gst_audio_convert_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_audio_convert_get_property (GObject * object, guint prop_id,
@@ -169,7 +170,7 @@ G_DEFINE_TYPE_WITH_CODE (GstAudioConvert, gst_audio_convert,
 
 #define STATIC_CAPS \
 GST_STATIC_CAPS (GST_AUDIO_CAPS_MAKE (GST_AUDIO_FORMATS_ALL) \
-    ", layout = (string) interleaved")
+    ", layout = (string) { interleaved, non-interleaved }")
 
 static GstStaticPadTemplate gst_audio_convert_src_template =
 GST_STATIC_PAD_TEMPLATE ("src",
@@ -183,6 +184,9 @@ GST_STATIC_PAD_TEMPLATE ("sink",
     GST_PAD_ALWAYS,
     STATIC_CAPS);
 
+/* cached quark to avoid contention on the global quark table lock */
+#define META_TAG_AUDIO meta_tag_audio_quark
+static GQuark meta_tag_audio_quark;
 
 /*** TYPE FUNCTIONS ***********************************************************/
 static void
@@ -243,9 +247,12 @@ gst_audio_convert_class_init (GstAudioConvertClass * klass)
       GST_DEBUG_FUNCPTR (gst_audio_convert_transform_meta);
   basetransform_class->submit_input_buffer =
       GST_DEBUG_FUNCPTR (gst_audio_convert_submit_input_buffer);
+  basetransform_class->prepare_output_buffer =
+      GST_DEBUG_FUNCPTR (gst_audio_convert_prepare_output_buffer);
 
-  basetransform_class->passthrough_on_same_caps = TRUE;
   basetransform_class->transform_ip_on_passthrough = FALSE;
+
+  meta_tag_audio_quark = g_quark_from_static_string (GST_META_TAG_AUDIO_STR);
 }
 
 static void
@@ -308,6 +315,14 @@ remove_format_from_structure (GstCapsFeatures * features,
 }
 
 static gboolean
+remove_layout_from_structure (GstCapsFeatures * features,
+    GstStructure * structure, gpointer user_data G_GNUC_UNUSED)
+{
+  gst_structure_remove_field (structure, "layout");
+  return TRUE;
+}
+
+static gboolean
 remove_channels_from_structure (GstCapsFeatures * features, GstStructure * s,
     gpointer user_data)
 {
@@ -317,7 +332,7 @@ remove_channels_from_structure (GstCapsFeatures * features, GstStructure * s,
 
   /* Only remove the channels and channel-mask for non-NONE layouts,
    * or if a mix matrix was manually specified */
-  if (this->mix_matrix_was_set ||
+  if (this->mix_matrix_is_set ||
       !gst_structure_get (s, "channel-mask", GST_TYPE_BITMASK, &mask, NULL) ||
       (mask != 0 || (gst_structure_get_int (s, "channels", &channels)
               && channels == 1))) {
@@ -325,7 +340,7 @@ remove_channels_from_structure (GstCapsFeatures * features, GstStructure * s,
   }
 
   return TRUE;
-    }
+}
 
 static gboolean
 add_other_channels_to_structure (GstCapsFeatures * features, GstStructure * s,
@@ -352,6 +367,7 @@ gst_audio_convert_transform_caps (GstBaseTransform * btrans,
   tmp = gst_caps_copy (caps);
 
   gst_caps_map_in_place (tmp, remove_format_from_structure, NULL);
+  gst_caps_map_in_place (tmp, remove_layout_from_structure, NULL);
   gst_caps_map_in_place (tmp, remove_channels_from_structure, btrans);
 
   /* We can infer the required input / output channels based on the
@@ -689,6 +705,7 @@ gst_audio_convert_fixate_caps (GstBaseTransform * base,
     if (result)
       gst_caps_unref (result);
     gst_caps_map_in_place (removed, remove_format_from_structure, NULL);
+    gst_caps_map_in_place (removed, remove_layout_from_structure, NULL);
     result = gst_caps_intersect (othercaps, removed);
     gst_caps_unref (removed);
     if (gst_caps_is_empty (result)) {
@@ -750,7 +767,7 @@ gst_audio_convert_set_caps (GstBaseTransform * base, GstCaps * incaps,
       GST_AUDIO_CONVERTER_OPT_NOISE_SHAPING_METHOD,
       GST_TYPE_AUDIO_NOISE_SHAPING_METHOD, this->ns, NULL);
 
-  if (this->mix_matrix_was_set)
+  if (this->mix_matrix_is_set)
     gst_structure_set_value (config, GST_AUDIO_CONVERTER_OPT_MIX_MATRIX,
         &this->mix_matrix);
 
@@ -761,6 +778,9 @@ gst_audio_convert_set_caps (GstBaseTransform * base, GstCaps * incaps,
 
   in_place = gst_audio_converter_supports_inplace (this->convert);
   gst_base_transform_set_in_place (base, in_place);
+
+  gst_base_transform_set_passthrough (base,
+      gst_audio_converter_is_passthrough (this->convert));
 
   this->in_info = in_info;
   this->out_info = out_info;
@@ -792,47 +812,28 @@ gst_audio_convert_transform (GstBaseTransform * base, GstBuffer * inbuf,
 {
   GstFlowReturn ret;
   GstAudioConvert *this = GST_AUDIO_CONVERT (base);
-  GstMapInfo srcmap = { NULL, }, dstmap;
-  gint insize, outsize;
+  GstAudioBuffer srcabuf, dstabuf;
   gboolean inbuf_writable;
   GstAudioConverterFlags flags;
-  gsize samples;
 
-  /* get amount of samples to convert. */
-  samples = gst_buffer_get_size (inbuf) / this->in_info.bpf;
-
-  /* get in/output sizes, to see if the buffers we got are of correct
-   * sizes */
-  insize = samples * this->in_info.bpf;
-  outsize = samples * this->out_info.bpf;
-
-  if (insize == 0 || outsize == 0)
+  /* https://bugzilla.gnome.org/show_bug.cgi?id=396835 */
+  if (gst_buffer_get_size (inbuf) == 0)
     return GST_FLOW_OK;
 
-  gst_buffer_resize (outbuf, 0, outsize);
-
-  /* get src and dst data */
   if (inbuf != outbuf) {
-  inbuf_writable = gst_buffer_is_writable (inbuf)
-      && gst_buffer_n_memory (inbuf) == 1
-      && gst_memory_is_writable (gst_buffer_peek_memory (inbuf, 0));
+    inbuf_writable = gst_buffer_is_writable (inbuf)
+        && gst_buffer_n_memory (inbuf) == 1
+        && gst_memory_is_writable (gst_buffer_peek_memory (inbuf, 0));
 
-    if (!gst_buffer_map (inbuf, &srcmap,
+    if (!gst_audio_buffer_map (&srcabuf, &this->in_info, inbuf,
             inbuf_writable ? GST_MAP_READWRITE : GST_MAP_READ))
       goto inmap_error;
   } else {
     inbuf_writable = TRUE;
   }
-  if (!gst_buffer_map (outbuf, &dstmap, GST_MAP_WRITE))
-    goto outmap_error;
 
-  /* check in and outsize */
-  if (inbuf != outbuf) {
-  if (srcmap.size < insize)
-    goto wrong_size;
-  }
-  if (dstmap.size < outsize)
-    goto wrong_size;
+  if (!gst_audio_buffer_map (&dstabuf, &this->out_info, outbuf, GST_MAP_WRITE))
+    goto outmap_error;
 
   /* and convert the samples */
   flags = 0;
@@ -840,36 +841,28 @@ gst_audio_convert_transform (GstBaseTransform * base, GstBuffer * inbuf,
     flags |= GST_AUDIO_CONVERTER_FLAG_IN_WRITABLE;
 
   if (!GST_BUFFER_FLAG_IS_SET (inbuf, GST_BUFFER_FLAG_GAP)) {
-    gpointer in[1] = { srcmap.data };
-    gpointer out[1] = { dstmap.data };
-
     if (!gst_audio_converter_samples (this->convert, flags,
-            inbuf != outbuf ? in : out, samples, out, samples))
+            inbuf != outbuf ? srcabuf.planes : dstabuf.planes,
+            dstabuf.n_samples, dstabuf.planes, dstabuf.n_samples))
       goto convert_error;
   } else {
     /* Create silence buffer */
-    gst_audio_format_fill_silence (this->out_info.finfo, dstmap.data, outsize);
+    gint i;
+    for (i = 0; i < dstabuf.n_planes; i++) {
+      gst_audio_format_fill_silence (this->out_info.finfo, dstabuf.planes[i],
+          GST_AUDIO_BUFFER_PLANE_SIZE (&dstabuf));
+    }
   }
   ret = GST_FLOW_OK;
 
 done:
-  gst_buffer_unmap (outbuf, &dstmap);
+  gst_audio_buffer_unmap (&dstabuf);
   if (inbuf != outbuf)
-  gst_buffer_unmap (inbuf, &srcmap);
+    gst_audio_buffer_unmap (&srcabuf);
 
   return ret;
 
   /* ERRORS */
-wrong_size:
-  {
-    GST_ELEMENT_ERROR (this, STREAM, FORMAT,
-        (NULL),
-        ("input/output buffers are of wrong size in: %" G_GSIZE_FORMAT " < %d"
-            " or out: %" G_GSIZE_FORMAT " < %d",
-            srcmap.size, insize, dstmap.size, outsize));
-    ret = GST_FLOW_ERROR;
-    goto done;
-  }
 convert_error:
   {
     GST_ELEMENT_ERROR (this, STREAM, FORMAT,
@@ -882,13 +875,13 @@ inmap_error:
     GST_ELEMENT_ERROR (this, STREAM, FORMAT,
         (NULL), ("failed to map input buffer"));
     return GST_FLOW_ERROR;
-}
+  }
 outmap_error:
   {
     GST_ELEMENT_ERROR (this, STREAM, FORMAT,
         (NULL), ("failed to map output buffer"));
     if (inbuf != outbuf)
-      gst_buffer_unmap (inbuf, &srcmap);
+      gst_audio_buffer_unmap (&srcabuf);
     return GST_FLOW_ERROR;
   }
 }
@@ -909,8 +902,7 @@ gst_audio_convert_transform_meta (GstBaseTransform * trans, GstBuffer * outbuf,
   tags = gst_meta_api_type_get_tags (info->api);
 
   if (!tags || (g_strv_length ((gchar **) tags) == 1
-          && gst_meta_api_type_has_tag (info->api,
-              g_quark_from_string (GST_META_TAG_AUDIO_STR))))
+          && gst_meta_api_type_has_tag (info->api, META_TAG_AUDIO)))
     return TRUE;
 
   return FALSE;
@@ -935,6 +927,43 @@ gst_audio_convert_submit_input_buffer (GstBaseTransform * base,
       is_discont, input);
 }
 
+static GstFlowReturn
+gst_audio_convert_prepare_output_buffer (GstBaseTransform * base,
+    GstBuffer * inbuf, GstBuffer ** outbuf)
+{
+  GstAudioConvert *this = GST_AUDIO_CONVERT (base);
+  GstAudioMeta *meta;
+  GstFlowReturn ret;
+
+  ret = GST_BASE_TRANSFORM_CLASS (parent_class)->prepare_output_buffer (base,
+      inbuf, outbuf);
+
+  if (ret != GST_FLOW_OK)
+    return ret;
+
+  meta = gst_buffer_get_audio_meta (inbuf);
+
+  if (inbuf != *outbuf) {
+    gsize samples = meta ?
+        meta->samples : (gst_buffer_get_size (inbuf) / this->in_info.bpf);
+
+    /* ensure that the output buffer is not bigger than what we need */
+    gst_buffer_resize (*outbuf, 0, samples * this->out_info.bpf);
+
+    /* add the audio meta on the output buffer if it's planar */
+    if (this->out_info.layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
+      gst_buffer_add_audio_meta (*outbuf, &this->out_info, samples, NULL);
+    }
+  } else {
+    /* if the input buffer came with a GstAudioMeta,
+     * update it to reflect the properties of the output format */
+    if (meta)
+      meta->info = this->out_info;
+  }
+
+  return ret;
+}
+
 static void
 gst_audio_convert_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
@@ -950,17 +979,16 @@ gst_audio_convert_set_property (GObject * object, guint prop_id,
       break;
     case PROP_MIX_MATRIX:
       if (!gst_value_array_get_size (value)) {
-        g_value_copy (value, &this->mix_matrix);
-        this->mix_matrix_was_set = TRUE;
+        this->mix_matrix_is_set = FALSE;
       } else {
         const GValue *first_row = gst_value_array_get_value (value, 0);
 
         if (gst_value_array_get_size (first_row)) {
-          if (gst_value_array_get_size (&this->mix_matrix))
-            g_value_unset (&this->mix_matrix);
-
           g_value_copy (value, &this->mix_matrix);
-          this->mix_matrix_was_set = TRUE;
+          this->mix_matrix_is_set = TRUE;
+
+          /* issue a reconfigure upstream */
+          gst_base_transform_reconfigure_sink (GST_BASE_TRANSFORM (this));
         } else {
           g_warning ("Empty mix matrix's first row");
         }
@@ -986,7 +1014,7 @@ gst_audio_convert_get_property (GObject * object, guint prop_id,
       g_value_set_enum (value, this->ns);
       break;
     case PROP_MIX_MATRIX:
-      if (this->mix_matrix_was_set)
+      if (this->mix_matrix_is_set)
         g_value_copy (&this->mix_matrix, value);
       break;
     default:

@@ -42,6 +42,7 @@
 namespace WebCore {
 
 class FileMonitor {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class FileChangeType { Modification, Removal };
 
@@ -55,6 +56,7 @@ private:
 #if USE(GLIB)
     static void fileChangedCallback(GFileMonitor*, GFile*, GFile*, GFileMonitorEvent, FileMonitor*);
     void didChange(FileChangeType);
+    void cancel();
     Ref<WorkQueue> m_handlerQueue;
     Function<void(FileChangeType)> m_modificationHandler;
     GRefPtr<GFileMonitor> m_platformMonitor;

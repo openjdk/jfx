@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- * Copyright (C) 2008, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -22,75 +22,60 @@
 #include "config.h"
 #include "Operations.h"
 
-#include "Error.h"
 #include "JSBigInt.h"
 #include "JSCInlines.h"
-#include "JSObject.h"
-#include "JSString.h"
-#include <wtf/MathExtras.h>
 
 namespace JSC {
 
-bool JSValue::equalSlowCase(ExecState* exec, JSValue v1, JSValue v2)
+bool JSValue::equalSlowCase(JSGlobalObject* globalObject, JSValue v1, JSValue v2)
 {
-    return equalSlowCaseInline(exec, v1, v2);
+    return equalSlowCaseInline(globalObject, v1, v2);
 }
 
-bool JSValue::strictEqualSlowCase(ExecState* exec, JSValue v1, JSValue v2)
-{
-    return strictEqualSlowCaseInline(exec, v1, v2);
-}
-
-NEVER_INLINE JSValue jsAddSlowCase(CallFrame* callFrame, JSValue v1, JSValue v2)
+NEVER_INLINE JSValue jsAddSlowCase(JSGlobalObject* globalObject, JSValue v1, JSValue v2)
 {
     // exception for the Date exception in defaultValue()
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSValue p1 = v1.toPrimitive(callFrame);
+    JSValue p1 = v1.toPrimitive(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    JSValue p2 = v2.toPrimitive(callFrame);
+    JSValue p2 = v2.toPrimitive(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (p1.isString()) {
         if (p2.isCell()) {
-            JSString* p2String = p2.toString(callFrame);
+            JSString* p2String = p2.toString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
-            RELEASE_AND_RETURN(scope, jsString(callFrame, asString(p1), p2String));
+            RELEASE_AND_RETURN(scope, jsString(globalObject, asString(p1), p2String));
         }
-        String p2String = p2.toWTFString(callFrame);
+        String p2String = p2.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        RELEASE_AND_RETURN(scope, jsString(callFrame, asString(p1), p2String));
+        RELEASE_AND_RETURN(scope, jsString(globalObject, asString(p1), p2String));
     }
 
     if (p2.isString()) {
         if (p1.isCell()) {
-            JSString* p1String = p1.toString(callFrame);
+            JSString* p1String = p1.toString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
-            RELEASE_AND_RETURN(scope, jsString(callFrame, p1String, asString(p2)));
+            RELEASE_AND_RETURN(scope, jsString(globalObject, p1String, asString(p2)));
         }
-        String p1String = p1.toWTFString(callFrame);
+        String p1String = p1.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        RELEASE_AND_RETURN(scope, jsString(callFrame, p1String, asString(p2)));
+        RELEASE_AND_RETURN(scope, jsString(globalObject, p1String, asString(p2)));
     }
 
-    auto leftNumeric = p1.toNumeric(callFrame);
-    RETURN_IF_EXCEPTION(scope, { });
-    auto rightNumeric = p2.toNumeric(callFrame);
-    RETURN_IF_EXCEPTION(scope, { });
+    auto doubleOp = [] (double left, double right) -> double {
+        return left + right;
+    };
 
-    if (WTF::holds_alternative<JSBigInt*>(leftNumeric) || WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
-        if (WTF::holds_alternative<JSBigInt*>(leftNumeric) && WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
-            scope.release();
-            return JSBigInt::add(callFrame, WTF::get<JSBigInt*>(leftNumeric), WTF::get<JSBigInt*>(rightNumeric));
-        }
+    auto bigIntOp = [] (JSGlobalObject* globalObject, auto left, auto right) {
+        return JSBigInt::add(globalObject, left, right);
+    };
 
-        return throwTypeError(callFrame, scope, "Invalid mix of BigInt and other type in addition."_s);
-    }
-
-    return jsNumber(WTF::get<double>(leftNumeric) + WTF::get<double>(rightNumeric));
+    RELEASE_AND_RETURN(scope, arithmeticBinaryOp(globalObject, p1, p2, doubleOp, bigIntOp, "Invalid mix of BigInt and other type in addition."_s));
 }
 
-JSValue jsTypeStringForValue(VM& vm, JSGlobalObject* globalObject, JSValue v)
+JSString* jsTypeStringForValueWithConcurrency(VM& vm, JSGlobalObject* globalObject, JSValue v, Concurrency concurrency)
 {
     if (v.isUndefined())
         return vm.smallStrings.undefinedString();
@@ -110,43 +95,30 @@ JSValue jsTypeStringForValue(VM& vm, JSGlobalObject* globalObject, JSValue v)
         // as null when doing comparisons.
         if (object->structure(vm)->masqueradesAsUndefined(globalObject))
             return vm.smallStrings.undefinedString();
-        if (object->isFunction(vm))
+        if (LIKELY(concurrency == Concurrency::MainThread)) {
+            if (object->isCallable(vm))
+                return vm.smallStrings.functionString();
+            return vm.smallStrings.objectString();
+        }
+
+        switch (object->isCallableWithConcurrency<Concurrency::ConcurrentThread>(vm)) {
+        case TriState::True:
             return vm.smallStrings.functionString();
+        case TriState::False:
+            return vm.smallStrings.objectString();
+        case TriState::Indeterminate:
+            return nullptr;
+        }
     }
     return vm.smallStrings.objectString();
 }
 
-JSValue jsTypeStringForValue(CallFrame* callFrame, JSValue v)
+size_t normalizePrototypeChain(JSGlobalObject* globalObject, JSCell* base, bool& sawPolyProto)
 {
-    return jsTypeStringForValue(callFrame->vm(), callFrame->lexicalGlobalObject(), v);
-}
-
-bool jsIsObjectTypeOrNull(CallFrame* callFrame, JSValue v)
-{
-    VM& vm = callFrame->vm();
-    if (!v.isCell())
-        return v.isNull();
-
-    JSType type = v.asCell()->type();
-    if (type == StringType || type == SymbolType || type == BigIntType)
-        return false;
-    if (type >= ObjectType) {
-        if (asObject(v)->structure(vm)->masqueradesAsUndefined(callFrame->lexicalGlobalObject()))
-            return false;
-        JSObject* object = asObject(v);
-        if (object->isFunction(vm))
-            return false;
-    }
-    return true;
-}
-
-size_t normalizePrototypeChain(CallFrame* callFrame, JSCell* base, bool& sawPolyProto)
-{
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     size_t count = 0;
     sawPolyProto = false;
     JSCell* current = base;
-    JSGlobalObject* globalObject = callFrame->lexicalGlobalObject();
     while (1) {
         Structure* structure = current->structure(vm);
         if (structure->isProxy())

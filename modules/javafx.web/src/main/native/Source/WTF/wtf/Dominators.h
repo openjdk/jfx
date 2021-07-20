@@ -28,6 +28,7 @@
 #include <wtf/CommaPrinter.h>
 #include <wtf/FastBitVector.h>
 #include <wtf/GraphNodeWorklist.h>
+#include <wtf/Vector.h>
 
 namespace WTF {
 
@@ -38,6 +39,7 @@ namespace WTF {
 
 template<typename Graph>
 class Dominators {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     using List = typename Graph::List;
 
@@ -308,6 +310,7 @@ private:
     // list" (see http://dl.acm.org/citation.cfm?id=802184).
 
     class LengauerTarjan {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         LengauerTarjan(Graph& graph)
             : m_graph(graph)
@@ -475,6 +478,8 @@ private:
         }
 
         struct BlockData {
+            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
             BlockData()
                 : parent(nullptr)
                 , preNumber(UINT_MAX)
@@ -500,6 +505,7 @@ private:
     };
 
     class NaiveDominators {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         NaiveDominators(Graph& graph)
             : m_graph(graph)
@@ -605,6 +611,8 @@ private:
     };
 
     struct ValidationContext {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
         ValidationContext(Graph& graph, Dominators& dominators)
             : graph(graph)
             , dominators(dominators)
@@ -669,6 +677,8 @@ private:
         NaiveDominators naiveDominators;
 
         struct Error {
+            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
             typename Graph::Node from;
             typename Graph::Node to;
             const char* message;
@@ -726,6 +736,8 @@ private:
     }
 
     struct BlockData {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
         BlockData()
             : idomParent(nullptr)
             , preNumber(UINT_MAX)

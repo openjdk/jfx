@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "ImageBitmap.h"
 #include "ImageBuffer.h"
 #include "JSCSSPaintCallback.h"
+#include "JSDOMExceptionHandling.h"
 #include "PaintRenderingContext2D.h"
 #include "RenderElement.h"
 #include "StylePropertyMap.h"
@@ -105,6 +106,8 @@ private:
     {
     }
 
+    void clearElement() override { }
+
     RefPtr<TypedOMCSSStyleValue> get(const String& property) const final { return makeRefPtr(m_map.get(property)); }
 
     HashMap<String, RefPtr<TypedOMCSSStyleValue>> m_map;
@@ -145,17 +148,17 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     auto size = CSSPaintSize::create(destSize.width(), destSize.height());
     Ref<StylePropertyMapReadOnly> propertyMap = HashMapStylePropertyMap::create(WTFMove(propertyValues));
 
-    auto& vm = *paintConstructor.getObject()->vm();
+    auto& vm = paintConstructor.getObject()->vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto& globalObject = *paintConstructor.getObject()->globalObject();
 
-    auto& state = *globalObject.globalExec();
+    auto& lexicalGlobalObject = globalObject;
     JSC::ArgList noArgs;
-    JSC::JSValue thisObject = { JSC::construct(&state, paintConstructor, noArgs, "Failed to construct paint class") };
+    JSC::JSValue thisObject = { JSC::construct(&lexicalGlobalObject, paintConstructor, noArgs, "Failed to construct paint class") };
 
     if (UNLIKELY(scope.exception())) {
-        reportException(&state, scope.exception());
+        reportException(&lexicalGlobalObject, scope.exception());
         return ImageDrawResult::DidNothing;
     }
 
@@ -168,10 +171,10 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     return ImageDrawResult::DidDraw;
 }
 
-ImageDrawResult CustomPaintImage::draw(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, DecodingMode, ImageOrientationDescription)
+ImageDrawResult CustomPaintImage::draw(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     GraphicsContextStateSaver stateSaver(destContext);
-    destContext.setCompositeOperation(compositeOp, blendMode);
+    destContext.setCompositeOperation(options.compositeOperator(), options.blendMode());
     destContext.clip(destRect);
     destContext.translate(destRect.location());
     if (destRect.size() != srcRect.size())
@@ -181,7 +184,7 @@ ImageDrawResult CustomPaintImage::draw(GraphicsContext& destContext, const Float
 }
 
 void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, BlendMode blendMode)
+    const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
     // Allow the generator to provide visually-equivalent tiling parameters for better performance.
     FloatSize adjustedSize = size();
@@ -195,7 +198,7 @@ void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect
     adjustedPatternCTM.scale(1.0 / xScale, 1.0 / yScale);
     adjustedSrcRect.scale(xScale, yScale);
 
-    auto buffer = ImageBuffer::createCompatibleBuffer(adjustedSize, ColorSpaceSRGB, destContext);
+    auto buffer = ImageBuffer::createCompatibleBuffer(adjustedSize, DestinationColorSpace::SRGB, destContext);
     if (!buffer)
         return;
     doCustomPaint(buffer->context(), adjustedSize);
@@ -203,7 +206,7 @@ void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect
     if (destContext.drawLuminanceMask())
         buffer->convertToLuminanceMask();
 
-    buffer->drawPattern(destContext, destRect, adjustedSrcRect, adjustedPatternCTM, phase, spacing, compositeOp, blendMode);
+    buffer->drawPattern(destContext, destRect, adjustedSrcRect, adjustedPatternCTM, phase, spacing, options);
     destContext.setDrawLuminanceMask(false);
 }
 

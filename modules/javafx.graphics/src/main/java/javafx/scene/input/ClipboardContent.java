@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,13 @@ import javafx.scene.image.Image;
  * @since JavaFX 2.0
  */
 public class ClipboardContent extends HashMap<DataFormat, Object> {
+
+    /**
+     * Creates a {@code ClipboardContent}.
+     */
+    public ClipboardContent() {
+    }
+
     /**
      * Gets whether a plain text String ({@code DataFormat.PLAIN_TEXT})
      * has been put to this {@code ClipboardContent}.

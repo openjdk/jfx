@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,24 +33,20 @@
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
 #include "PlatformJavaClasses.h"
+#include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
 #include "NotImplemented.h"
 #include "PaintInfo.h"
 #include "PlatformContextJava.h"
 #include "RenderObject.h"
-#if ENABLE(PROGRESS_ELEMENT)
 #include "RenderProgress.h"
-#endif
-#if ENABLE(METER_ELEMENT)
 #include "HTMLMeterElement.h"
-#endif
 #include "RenderSlider.h"
 #include "RenderThemeJava.h"
 #include "ThemeTypes.h"
 #include "TimeRanges.h"
 #include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
-#include "MediaControlElementTypes.h"
 #include "Page.h"
 
 #include "com_sun_webkit_graphics_RenderTheme.h"
@@ -121,11 +117,11 @@ bool RenderThemeJava::paintWidget(
     }
 
     int state = createWidgetState(object);
-    RGBA32 bgColor = object.style().visitedDependentColor(
+    Color bgColor = object.style().visitedDependentColor(
         widgetIndex == JNI_EXPAND(MENU_LIST_BUTTON)
             ? CSSPropertyColor
             : CSSPropertyBackgroundColor
-    ).rgb();
+    );
 
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -152,9 +148,8 @@ bool RenderThemeJava::paintWidget(
         auto valueAsNumber = jfloat(input.valueAsNumber());
         memcpy(data, &valueAsNumber, sizeof(valueAsNumber));
     } else if (JNI_EXPAND(PROGRESS_BAR) == widgetIndex) {
-#if ENABLE(PROGRESS_ELEMENT)
         if (is<RenderProgress>(object)) {
-            RenderProgress& renderProgress = downcast<RenderProgress>(object);
+            const RenderProgress& renderProgress = downcast<RenderProgress>(object);
 
             extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
             jbyte *data = extParams.data();
@@ -169,12 +164,7 @@ bool RenderThemeJava::paintWidget(
             auto animationProgress = jfloat(renderProgress.animationProgress());
             memcpy(data, &animationProgress, sizeof(animationProgress));
             data += sizeof(jfloat);
-
-            auto animationStartTime = jfloat(renderProgress.animationStartTime());
-            memcpy(data, &animationStartTime, sizeof(animationStartTime));
         }
-#endif
-#if ENABLE(METER_ELEMENT)
     } else if (JNI_EXPAND(METER) == widgetIndex) {
         jfloat value = 0;
         jint region = 0;
@@ -182,11 +172,9 @@ bool RenderThemeJava::paintWidget(
             HTMLMeterElement* meter = static_cast<HTMLMeterElement*>(object.node());
             value = meter->valueRatio();
             region = meter->gaugeRegion();
-#if ENABLE(PROGRESS_ELEMENT)
-        } else if (is<RenderProgress>(object>)) {
-            RenderProgress& renderProgress = downcast<RenderProgress>(object);
+        } else if (is<RenderProgress>(object)) {
+            const RenderProgress& renderProgress = downcast<RenderProgress>(object);
             value = jfloat(renderProgress.position());
-#endif
         }
 
         extParams.grow(sizeof(jfloat) + sizeof(jint));
@@ -195,20 +183,20 @@ bool RenderThemeJava::paintWidget(
         data += sizeof(jfloat);
 
         memcpy(data, &region, sizeof(region));
-#endif
     }
 
     static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "createWidget",
             "(JIIIIILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/Ref;");
     ASSERT(mid);
 
+    auto [r, g, b, a] = bgColor.toSRGBALossy<uint8_t>();
     RefPtr<RQRef> widgetRef = RQRef::create(
         env->CallObjectMethod(jobject(*jRenderTheme), mid,
             ptr_to_jlong(&object),
             (jint)widgetIndex,
             (jint)state,
             (jint)rect.width(), (jint)rect.height(),
-            (jint)bgColor,
+            (jint)(a << 24 | r << 16 | g << 8 | b),
             (jobject)JLObject(extParams.isEmpty()
                 ? nullptr
                 : env->NewDirectByteBuffer(
@@ -231,41 +219,36 @@ bool RenderThemeJava::paintWidget(
     return false;
 }
 
-#if ENABLE(PROGRESS_ELEMENT)
-void RenderThemeJava::adjustProgressBarStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustProgressBarStyle(RenderStyle& style, const Element*) const
 {
     style.setBoxShadow(nullptr);
 }
 
 //utatodo: ask Java theme
-// These values have been copied from RenderThemeChromiumSkia.cpp
+// These values have been copied from RenderThemeAdwaita.cpp
 static const int progressActivityBlocks = 5;
-static const int progressAnimationFrames = 10;
-static const double progressAnimationInterval = 0.125;
-double RenderThemeJava::animationRepeatIntervalForProgressBar(RenderProgress&) const
+static const int progressAnimationFrames = 75;
+static const Seconds progressAnimationInterval = 33_ms;
+Seconds RenderThemeJava::animationRepeatIntervalForProgressBar(const RenderProgress&) const
 {
     return progressAnimationInterval;
 }
 
-double RenderThemeJava::animationDurationForProgressBar(RenderProgress&) const
+Seconds RenderThemeJava::animationDurationForProgressBar(const RenderProgress&) const
 {
-    return progressAnimationInterval * progressAnimationFrames * 2; // "2" for back and forth;
+    return progressAnimationInterval * progressAnimationFrames;
 }
 
 bool RenderThemeJava::paintProgressBar(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
 {
     return paintWidget(JNI_EXPAND(PROGRESS_BAR), o, i, rect);
 }
-#endif
 
-#if ENABLE(METER_ELEMENT)
-bool RenderThemeJava::supportsMeter(ControlPart part) const
+bool RenderThemeJava::supportsMeter(ControlPart part, const HTMLMeterElement&) const
 {
-#if ENABLE(PROGRESS_ELEMENT)
     if (part == ProgressBarPart) {
         return true;
     }
-#endif
     return (part == MeterPart);
 }
 
@@ -273,14 +256,13 @@ bool RenderThemeJava::paintMeter(const RenderObject&o, const PaintInfo& i, const
 {
     return paintWidget(JNI_EXPAND(METER), o, i, rect);
 }
-#endif
 
 void RenderThemeJava::setCheckboxSize(RenderStyle& style) const
 {
     setRadioSize(style);
 }
 
-bool RenderThemeJava::paintCheckbox(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
+bool RenderThemeJava::paintCheckbox(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
     return paintWidget(JNI_EXPAND(CHECK_BOX), o, i, rect);
 }
@@ -302,15 +284,15 @@ void RenderThemeJava::setRadioSize(RenderStyle& style) const
     WTF::CheckAndClearException(env);
 
     if (style.width().isIntrinsicOrAuto()) {
-        style.setWidth(Length(radioRadius, Fixed));
+        style.setWidth(Length(radioRadius, LengthType::Fixed));
     }
 
     if (style.height().isAuto()) {
-        style.setHeight(Length(radioRadius, Fixed));
+        style.setHeight(Length(radioRadius, LengthType::Fixed));
     }
 }
 
-bool RenderThemeJava::paintRadio(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
+bool RenderThemeJava::paintRadio(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
     return paintWidget(JNI_EXPAND(RADIO_BUTTON), o, i, rect);
 }
@@ -320,7 +302,7 @@ bool RenderThemeJava::paintButton(const RenderObject&o, const PaintInfo& i, cons
     return paintWidget(JNI_EXPAND(BUTTON), o, i, rect);
 }
 
-void RenderThemeJava::adjustTextFieldStyle(StyleResolver&, RenderStyle&, const Element*) const
+void RenderThemeJava::adjustTextFieldStyle(RenderStyle&, const Element*) const
 {
     notImplemented();
 }
@@ -330,7 +312,7 @@ bool RenderThemeJava::paintTextField(const RenderObject&o, const PaintInfo& i, c
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
 
-void RenderThemeJava::adjustSearchFieldStyle(StyleResolver&, RenderStyle&, const Element*) const
+void RenderThemeJava::adjustSearchFieldStyle(RenderStyle&, const Element*) const
 {
     notImplemented();
 }
@@ -340,12 +322,12 @@ bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i,
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
 
-void RenderThemeJava::adjustTextAreaStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustTextAreaStyle(RenderStyle& style, const Element*) const
 {
     if (style.paddingTop().isIntrinsicOrAuto())
-        style.setPaddingTop(Length(1, Fixed));
+        style.setPaddingTop(Length(1, LengthType::Fixed));
     if (style.paddingBottom().isIntrinsicOrAuto())
-        style.setPaddingBottom(Length(1, Fixed));
+        style.setPaddingBottom(Length(1, LengthType::Fixed));
 }
 
 bool RenderThemeJava::paintTextArea(const RenderObject&o, const PaintInfo& i, const FloatRect& r)
@@ -353,7 +335,7 @@ bool RenderThemeJava::paintTextArea(const RenderObject&o, const PaintInfo& i, co
     return paintTextField(o, i, r);
 }
 
-void RenderThemeJava::adjustButtonStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustButtonStyle(RenderStyle& style, const Element*) const
 {
     if (style.appearance() == PushButtonPart) {
         // Ignore line-height.
@@ -436,10 +418,10 @@ void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID propId, FontC
     fontDescription = *cachedDesc;
 }
 
-void RenderThemeJava::adjustSliderTrackStyle(StyleResolver& selector, RenderStyle& style, const Element* element) const
+void RenderThemeJava::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
     //utatodo: we need to measure the control in Java theme.
-    RenderTheme::adjustSliderTrackStyle(selector, style, element);
+    RenderTheme::adjustSliderTrackStyle(style, element);
 }
 
 bool RenderThemeJava::paintSliderTrack(const RenderObject&object, const PaintInfo& info, const IntRect& rect)
@@ -473,8 +455,8 @@ void RenderThemeJava::adjustSliderThumbSize(RenderStyle& style, const Element*) 
     if (part == SliderThumbVerticalPart || part == SliderThumbHorizontalPart)
 #endif
     {
-        style.setWidth(Length(sliderThumbHeight, Fixed));
-        style.setHeight(Length(sliderThumbWidth, Fixed));
+        style.setWidth(Length(sliderThumbHeight, LengthType::Fixed));
+        style.setHeight(Length(sliderThumbWidth, LengthType::Fixed));
     }
 #if ENABLE(VIDEO)
     else if (part == MediaSliderThumbPart) {
@@ -483,16 +465,16 @@ void RenderThemeJava::adjustSliderThumbSize(RenderStyle& style, const Element*) 
         if (timeWidth == 0) {
             getSliderThumbSize(JNI_EXPAND_MEDIA(SLIDER_TYPE_TIME), &timeWidth, &timeHeight);
         }
-        style.setWidth(Length(timeWidth, Fixed));
-        style.setHeight(Length(timeHeight, Fixed));
+        style.setWidth(Length(timeWidth, LengthType::Fixed));
+        style.setHeight(Length(timeHeight, LengthType::Fixed));
     } else if (part == MediaVolumeSliderThumbPart) {
         static int volumeWidth = 0;
         static int volumeHeight;
         if (volumeWidth == 0) {
             getSliderThumbSize(JNI_EXPAND_MEDIA(SLIDER_TYPE_VOLUME), &volumeWidth, &volumeHeight);
         }
-        style.setWidth(Length(volumeWidth, Fixed));
-        style.setHeight(Length(volumeHeight, Fixed));
+        style.setWidth(Length(volumeWidth, LengthType::Fixed));
+        style.setHeight(Length(volumeHeight, LengthType::Fixed));
     }
 #endif
 }
@@ -503,11 +485,11 @@ bool RenderThemeJava::paintSliderThumb(const RenderObject&, const PaintInfo&, co
     return false;
 }
 
-void RenderThemeJava::adjustMenuListStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustMenuListStyle(RenderStyle& style, const Element*) const
 {
     // Add in the padding that we'd like to use.
-    style.setPaddingRight(Length(20.0f + style.paddingRight().value(), Fixed));
-    style.setPaddingLeft(Length(2.0f + style.paddingLeft().value(), Fixed));
+    style.setPaddingRight(Length(20.0f + style.paddingRight().value(), LengthType::Fixed));
+    style.setPaddingLeft(Length(2.0f + style.paddingLeft().value(), LengthType::Fixed));
 }
 
 bool RenderThemeJava::paintMenuList(const RenderObject& o, const PaintInfo& i, const FloatRect& rect)
@@ -515,17 +497,16 @@ bool RenderThemeJava::paintMenuList(const RenderObject& o, const PaintInfo& i, c
     return paintWidget(JNI_EXPAND(MENU_LIST), o, i, rect);
 }
 
-void RenderThemeJava::adjustMenuListButtonStyle(StyleResolver& selector, RenderStyle& style, const Element* e) const
+void RenderThemeJava::adjustMenuListButtonStyle(RenderStyle& style, const Element* e) const
 {
     style.resetBorderRadius();
-    adjustMenuListStyle(selector, style, e);
+    adjustMenuListStyle(style, e);
 }
 
-bool RenderThemeJava::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)
+void RenderThemeJava::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)
 {
     IntRect rect(r.x() + r.width(), r.y(), r.height(), r.height());
-
-    return paintWidget(JNI_EXPAND(MENU_LIST_BUTTON), o, i, rect);
+    paintWidget(JNI_EXPAND(MENU_LIST_BUTTON), o, i, rect);
 }
 
 bool RenderThemeJava::supportsFocusRing(const RenderStyle& style) const
@@ -555,10 +536,11 @@ Color RenderThemeJava::getSelectionColor(int index) const
     ASSERT(mid);
 
     // Get from default theme object.
-    jint c = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid, index);
+    uint32_t color = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid, index);
     WTF::CheckAndClearException(env);
 
-    return Color(c);
+    return SRGBA<uint8_t> { static_cast<uint8_t>(color >> 16), static_cast<uint8_t>(color >> 8),
+        static_cast<uint8_t>(color), static_cast<uint8_t>(color >> 24) };
 }
 
 Color RenderThemeJava::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
@@ -584,16 +566,12 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 String RenderThemeJava::mediaControlsScript()
 {
-    StringBuilder scriptBuilder;
-    scriptBuilder.append(mediaControlsLocalizedStringsJavaScript, sizeof(mediaControlsLocalizedStringsJavaScript));
-    scriptBuilder.append(mediaControlsBaseJavaScript, sizeof(mediaControlsBaseJavaScript));
-    scriptBuilder.append(mediaControlsGtkJavaScript, sizeof(mediaControlsGtkJavaScript));
-    return scriptBuilder.toString();
+    return String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript));
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
 {
-    return String(mediaControlsGtkUserAgentStyleSheet, sizeof(mediaControlsGtkUserAgentStyleSheet));
+    return String(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
 }
 
 String RenderThemeJava::formatMediaControlsCurrentTime(float, float) const
@@ -610,9 +588,21 @@ String RenderThemeJava::formatMediaControlsRemainingTime(float currentTime, floa
 bool RenderThemeJava::paintMediaFullscreenButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
 */
 
-bool RenderThemeJava::paintMediaPlayButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+static RefPtr<HTMLMediaElement> parentMediaElement(const Node* node)
 {
-    auto mediaElement = parentMediaElement(o);
+    if (!node)
+        return nullptr;
+    RefPtr<Node> mediaNode = node->shadowHost();
+    if (!mediaNode)
+        mediaNode = const_cast<Node*>(node);
+    if (!is<HTMLMediaElement>(*mediaNode))
+        return nullptr;
+    return downcast<HTMLMediaElement>(mediaNode.get());
+}
+
+bool RenderThemeJava::paintMediaPlayButton(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
+{
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -622,12 +612,12 @@ bool RenderThemeJava::paintMediaPlayButton(const RenderObject& o, const PaintInf
                     : mediaElement->paused()
                         ? JNI_EXPAND_MEDIA(PLAY_BUTTON)
                         : JNI_EXPAND_MEDIA(PAUSE_BUTTON);
-    return paintMediaControl(type, o, paintInfo, r);
+    return paintMediaControl(type, renderObject, paintInfo, r);
 }
 
-bool RenderThemeJava::paintMediaMuteButton(const RenderObject&o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaMuteButton(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto mediaElement = parentMediaElement(o);
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -636,7 +626,7 @@ bool RenderThemeJava::paintMediaMuteButton(const RenderObject&o, const PaintInfo
                     : mediaElement->muted()
                         ? JNI_EXPAND_MEDIA(UNMUTE_BUTTON)
                         : JNI_EXPAND_MEDIA(MUTE_BUTTON);
-    return paintMediaControl(type, o, paintInfo, r);
+    return paintMediaControl(type, renderObject, paintInfo, r);
 }
 
 /*
@@ -644,9 +634,9 @@ bool RenderThemeJava::paintMediaSeekBackButton(const RenderObject& o, const Pain
 bool RenderThemeJava::paintMediaSeekForwardButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
 */
 
-bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaSliderTrack(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto mediaElement = parentMediaElement(o);
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -674,19 +664,19 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInf
     return true;
 }
 
-bool RenderThemeJava::paintMediaSliderThumb(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    return paintMediaControl(JNI_EXPAND_MEDIA(TIME_SLIDER_THUMB), o, paintInfo, r);
+    return paintMediaControl(JNI_EXPAND_MEDIA(TIME_SLIDER_THUMB), renderObject, paintInfo, r);
 }
 
-bool RenderThemeJava::paintMediaVolumeSliderContainer(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaVolumeSliderContainer(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_CONTAINER), o, paintInfo, r);
+    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_CONTAINER), renderObject, paintInfo, r);
 }
 
-bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto mediaElement = parentMediaElement(o);
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -699,9 +689,9 @@ bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& o, const P
 
 }
 
-bool RenderThemeJava::paintMediaVolumeSliderThumb(const RenderObject& object, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeJava::paintMediaVolumeSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_THUMB), object, paintInfo, rect);
+    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_THUMB), renderObject, paintInfo, rect);
 }
 
 /*

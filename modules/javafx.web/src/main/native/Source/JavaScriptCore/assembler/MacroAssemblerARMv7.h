@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2010 University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,15 +36,17 @@ namespace JSC {
 using Assembler = TARGET_ASSEMBLER;
 
 class MacroAssemblerARMv7 : public AbstractMacroAssembler<Assembler> {
-    static const RegisterID dataTempRegister = ARMRegisters::ip;
-    static const RegisterID addressTempRegister = ARMRegisters::r6;
+    static constexpr RegisterID dataTempRegister = ARMRegisters::ip;
+    static constexpr RegisterID addressTempRegister = ARMRegisters::r6;
 
-    static const ARMRegisters::FPDoubleRegisterID fpTempRegister = ARMRegisters::d7;
+    static constexpr ARMRegisters::FPDoubleRegisterID fpTempRegister = ARMRegisters::d7;
     inline ARMRegisters::FPSingleRegisterID fpTempRegisterAsSingle() { return ARMRegisters::asSingle(fpTempRegister); }
 
 public:
-    static const unsigned numGPRs = 16;
-    static const unsigned numFPRs = 16;
+    static constexpr unsigned numGPRs = 16;
+    static constexpr unsigned numFPRs = 16;
+
+    RegisterID scratchRegister() { return dataTempRegister; }
 
     MacroAssemblerARMv7()
         : m_makeJumpPatchable(false)
@@ -56,8 +58,8 @@ public:
     typedef ARMv7Assembler::JumpLinkType JumpLinkType;
     typedef ARMv7Assembler::Condition Condition;
 
-    static const ARMv7Assembler::Condition DefaultCondition = ARMv7Assembler::ConditionInvalid;
-    static const ARMv7Assembler::JumpType DefaultJump = ARMv7Assembler::JumpNoConditionFixedSize;
+    static constexpr ARMv7Assembler::Condition DefaultCondition = ARMv7Assembler::ConditionInvalid;
+    static constexpr ARMv7Assembler::JumpType DefaultJump = ARMv7Assembler::JumpNoConditionFixedSize;
 
     static bool isCompactPtrAlignedAddressOffset(ptrdiff_t value)
     {
@@ -69,8 +71,9 @@ public:
     static JumpLinkType computeJumpType(JumpType jumpType, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(jumpType, from, to); }
     static JumpLinkType computeJumpType(LinkRecord& record, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(record, from, to); }
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return ARMv7Assembler::jumpSizeDelta(jumpType, jumpLinkType); }
-    template <typename CopyFunction>
-    static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to, CopyFunction copy) { return ARMv7Assembler::link(record, from, fromInstruction, to, copy); }
+
+    template <Assembler::CopyFunction copy>
+    ALWAYS_INLINE static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return ARMv7Assembler::link<copy>(record, from, fromInstruction, to); }
 
     struct ArmAddress {
         enum AddressType {
@@ -103,8 +106,6 @@ public:
     };
 
 public:
-    static const Scale ScalePtr = TimesFour;
-
     enum RelationalCondition {
         Equal = ARMv7Assembler::ConditionEQ,
         NotEqual = ARMv7Assembler::ConditionNE,
@@ -128,12 +129,12 @@ public:
 
     enum DoubleCondition {
         // These conditions will only evaluate to true if the comparison is ordered - i.e. neither operand is NaN.
-        DoubleEqual = ARMv7Assembler::ConditionEQ,
-        DoubleNotEqual = ARMv7Assembler::ConditionVC, // Not the right flag! check for this & handle differently.
-        DoubleGreaterThan = ARMv7Assembler::ConditionGT,
-        DoubleGreaterThanOrEqual = ARMv7Assembler::ConditionGE,
-        DoubleLessThan = ARMv7Assembler::ConditionLO,
-        DoubleLessThanOrEqual = ARMv7Assembler::ConditionLS,
+        DoubleEqualAndOrdered = ARMv7Assembler::ConditionEQ,
+        DoubleNotEqualAndOrdered = ARMv7Assembler::ConditionVC, // Not the right flag! check for this & handle differently.
+        DoubleGreaterThanAndOrdered = ARMv7Assembler::ConditionGT,
+        DoubleGreaterThanOrEqualAndOrdered = ARMv7Assembler::ConditionGE,
+        DoubleLessThanAndOrdered = ARMv7Assembler::ConditionLO,
+        DoubleLessThanOrEqualAndOrdered = ARMv7Assembler::ConditionLS,
         // If either operand is NaN, these conditions always evaluate to true.
         DoubleEqualOrUnordered = ARMv7Assembler::ConditionVS, // Not the right flag! check for this & handle differently.
         DoubleNotEqualOrUnordered = ARMv7Assembler::ConditionNE,
@@ -143,9 +144,9 @@ public:
         DoubleLessThanOrEqualOrUnordered = ARMv7Assembler::ConditionLE,
     };
 
-    static const RegisterID stackPointerRegister = ARMRegisters::sp;
-    static const RegisterID framePointerRegister = ARMRegisters::fp;
-    static const RegisterID linkRegister = ARMRegisters::lr;
+    static constexpr RegisterID stackPointerRegister = ARMRegisters::sp;
+    static constexpr RegisterID framePointerRegister = ARMRegisters::fp;
+    static constexpr RegisterID linkRegister = ARMRegisters::lr;
 
     // Integer arithmetic operations:
     //
@@ -361,6 +362,42 @@ public:
         m_assembler.neg(dest, src);
     }
 
+    void or8(TrustedImm32 imm, AbsoluteAddress address)
+    {
+        ARMThumbImmediate armImm = ARMThumbImmediate::makeEncodedImm(imm.m_value);
+        if (armImm.isValid()) {
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            load8(addressTempRegister, dataTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, armImm);
+            store8(dataTempRegister, addressTempRegister);
+        } else {
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            load8(addressTempRegister, dataTempRegister);
+            move(imm, addressTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, addressTempRegister);
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            store8(dataTempRegister, addressTempRegister);
+        }
+    }
+
+    void or16(TrustedImm32 imm, AbsoluteAddress dest)
+    {
+        ARMThumbImmediate armImm = ARMThumbImmediate::makeEncodedImm(imm.m_value);
+        if (armImm.isValid()) {
+            move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
+            load16(addressTempRegister, dataTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, armImm);
+            store16(dataTempRegister, addressTempRegister);
+        } else {
+            move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
+            load16(addressTempRegister, dataTempRegister);
+            move(imm, addressTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, addressTempRegister);
+            move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
+            store16(dataTempRegister, addressTempRegister);
+        }
+    }
+
     void or32(RegisterID src, RegisterID dest)
     {
         m_assembler.orr(dest, dest, src);
@@ -419,6 +456,19 @@ public:
             move(imm, dataTempRegister);
             m_assembler.orr(dest, src, dataTempRegister);
         }
+    }
+
+    void rotateRight32(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        if (!imm.m_value)
+            move(src, dest);
+        else
+            m_assembler.ror(dest, src, imm.m_value & 0x1f);
+    }
+
+    void rotateRight32(TrustedImm32 imm, RegisterID srcDst)
+    {
+        rotateRight32(srcDst, imm, srcDst);
     }
 
     void rshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
@@ -782,6 +832,12 @@ public:
         return label;
     }
 
+    void load16(const void* address, RegisterID dest)
+    {
+        move(TrustedImmPtr(address), addressTempRegister);
+        m_assembler.ldrh(dest, addressTempRegister, ARMThumbImmediate::makeUInt16(0));
+    }
+
     void load16(BaseIndex address, RegisterID dest)
     {
         m_assembler.ldrh(dest, makeBaseIndexBase(address), address.index, address.scale);
@@ -859,13 +915,13 @@ public:
         store8(src, setupArmAddress(address));
     }
 
-    void store8(RegisterID src, void* address)
+    void store8(RegisterID src, const void *address)
     {
         move(TrustedImmPtr(address), addressTempRegister);
         store8(src, ArmAddress(addressTempRegister, 0));
     }
 
-    void store8(TrustedImm32 imm, void* address)
+    void store8(TrustedImm32 imm, const void *address)
     {
         TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
         move(imm8, dataTempRegister);
@@ -879,6 +935,11 @@ public:
         store8(dataTempRegister, address);
     }
 
+    void store8(RegisterID src, RegisterID addrreg)
+    {
+        store8(src, ArmAddress(addrreg, 0));
+    }
+
     void store16(RegisterID src, ImplicitAddress address)
     {
         store16(src, setupArmAddress(address));
@@ -887,6 +948,18 @@ public:
     void store16(RegisterID src, BaseIndex address)
     {
         store16(src, setupArmAddress(address));
+    }
+
+    void store16(RegisterID src, const void* address)
+    {
+        move(TrustedImmPtr(address), addressTempRegister);
+        m_assembler.strh(src, addressTempRegister, ARMThumbImmediate::makeUInt12(0));
+    }
+
+    void store16(TrustedImm32 imm, const void* address)
+    {
+        move(imm, dataTempRegister);
+        store16(dataTempRegister, address);
     }
 
     // Possibly clobbers src, but not on this architecture.
@@ -1112,6 +1185,16 @@ public:
         m_assembler.vmul(dest, op1, op2);
     }
 
+    void andDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.vand(dest, op1, op2);
+    }
+
+    void orDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.vorr(dest, op1, op2);
+    }
+
     void sqrtDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.vsqrt(dest, src);
@@ -1182,7 +1265,7 @@ public:
         m_assembler.vcmp(left, right);
         m_assembler.vmrs();
 
-        if (cond == DoubleNotEqual) {
+        if (cond == DoubleNotEqualAndOrdered) {
             // ConditionNE jumps if NotEqual *or* unordered - force the unordered cases not to jump.
             Jump unordered = makeBranch(ARMv7Assembler::ConditionVS);
             Jump result = makeBranch(ARMv7Assembler::ConditionNE);
@@ -1375,7 +1458,7 @@ public:
         move(src, dest);
     }
 
-    void zeroExtend32ToPtr(RegisterID src, RegisterID dest)
+    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
         move(src, dest);
     }
@@ -1631,28 +1714,34 @@ public:
         return branchTest32(cond, addressTempRegister, mask8);
     }
 
-    void jump(RegisterID target, PtrTag)
+    void farJump(RegisterID target, PtrTag)
     {
         m_assembler.bx(target);
     }
 
+    void farJump(TrustedImmPtr target, PtrTag)
+    {
+        move(target, dataTempRegister);
+        m_assembler.bx(dataTempRegister);
+    }
+
     // Address is a memory location containing the address to jump to
-    void jump(Address address, PtrTag)
+    void farJump(Address address, PtrTag)
     {
         load32(address, dataTempRegister);
         m_assembler.bx(dataTempRegister);
     }
 
-    void jump(AbsoluteAddress address, PtrTag)
+    void farJump(AbsoluteAddress address, PtrTag)
     {
         move(TrustedImmPtr(address.m_ptr), dataTempRegister);
         load32(Address(dataTempRegister), dataTempRegister);
         m_assembler.bx(dataTempRegister);
     }
 
-    ALWAYS_INLINE void jump(RegisterID target, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(target, NoPtrTag); }
-    ALWAYS_INLINE void jump(Address address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
-    ALWAYS_INLINE void jump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
+    ALWAYS_INLINE void farJump(RegisterID target, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(target, NoPtrTag); }
+    ALWAYS_INLINE void farJump(Address address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
+    ALWAYS_INLINE void farJump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
 
     // Arithmetic control flow operations:
     //
@@ -1798,7 +1887,7 @@ public:
 
         ShiftTypeAndAmount shift(SRType_LSL, scale);
         m_assembler.add(dataTempRegister, dataTempRegister, index, shift);
-        jump(dataTempRegister, NoPtrTag);
+        farJump(dataTempRegister, NoPtrTag);
     }
 
     // Miscellaneous operations:
@@ -2006,20 +2095,6 @@ public:
         return label;
     }
     ALWAYS_INLINE DataLabelPtr storePtrWithPatch(ImplicitAddress address) { return storePtrWithPatch(TrustedImmPtr(nullptr), address); }
-
-
-    ALWAYS_INLINE Call tailRecursiveCall()
-    {
-        // Like a normal call, but don't link.
-        moveFixedWidthEncoding(TrustedImm32(0), dataTempRegister);
-        return Call(m_assembler.bx(dataTempRegister), Call::Linkable);
-    }
-
-    ALWAYS_INLINE Call makeTailRecursiveCall(Jump oldJump)
-    {
-        oldJump.link(this);
-        return tailRecursiveCall();
-    }
 
     template<PtrTag resultTag, PtrTag locationTag>
     static FunctionPtr<resultTag> readCallTarget(CodeLocationCall<locationTag> call)

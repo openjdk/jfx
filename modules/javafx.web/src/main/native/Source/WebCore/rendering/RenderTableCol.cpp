@@ -49,6 +49,12 @@ RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
     updateFromElement();
 }
 
+RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
+    : RenderBox(document, WTFMove(style), 0)
+{
+    setInline(true);
+}
+
 void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
@@ -56,9 +62,13 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
     if (!table)
         return;
     // If border was changed, notify table.
-    if (oldStyle && oldStyle->border() != style().border())
+    if (!oldStyle)
+        return;
+    if (oldStyle->border() != style().border()) {
         table->invalidateCollapsedBorders();
-    else if (oldStyle->width() != style().width()) {
+        return;
+    }
+    if (oldStyle->width() != style().width()) {
         table->recalcSectionsIfNeeded();
         for (auto& section : childrenOfType<RenderTableSection>(*table)) {
             unsigned nEffCols = table->numEffCols();
@@ -77,9 +87,10 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
 
 void RenderTableCol::updateFromElement()
 {
+    ASSERT(element());
     unsigned oldSpan = m_span;
-    if (element().hasTagName(colTag) || element().hasTagName(colgroupTag)) {
-        HTMLTableColElement& tc = static_cast<HTMLTableColElement&>(element());
+    if (element()->hasTagName(colTag) || element()->hasTagName(colgroupTag)) {
+        HTMLTableColElement& tc = static_cast<HTMLTableColElement&>(*element());
         m_span = tc.span();
     } else
         m_span = !(hasInitializedStyle() && style().display() == DisplayType::TableColumnGroup);

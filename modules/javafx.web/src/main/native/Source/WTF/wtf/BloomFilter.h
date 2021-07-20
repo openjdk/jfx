@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #pragma once
 
 #include <array>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WTF {
 
@@ -38,7 +38,7 @@ template <unsigned keyBits>
 class BloomFilter {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static const size_t tableSize = 1 << keyBits;
+    static constexpr size_t tableSize = 1 << keyBits;
 
     BloomFilter();
 
@@ -55,14 +55,14 @@ public:
 
     void clear();
 
-    void add(const AtomicString& string) { add(string.impl()->existingHash()); }
+    void add(const AtomString& string) { add(string.impl()->existingHash()); }
     void add(const String& string) { add(string.impl()->hash()); }
-    bool mayContain(const AtomicString& string) const { return mayContain(string.impl()->existingHash()); }
+    bool mayContain(const AtomString& string) const { return mayContain(string.impl()->existingHash()); }
     bool mayContain(const String& string) const { return mayContain(string.impl()->hash()); }
 
 private:
-    static const unsigned bitsPerPosition = 8 * sizeof(unsigned);
-    static const unsigned keyMask = (1 << keyBits) - 1;
+    static constexpr unsigned bitsPerPosition = 8 * sizeof(unsigned);
+    static constexpr unsigned keyMask = (1 << keyBits) - 1;
     static unsigned arrayIndex(unsigned key) { return key / bitsPerPosition; }
     static unsigned bitMask(unsigned key) { return 1 << (key % bitsPerPosition); }
     template <size_t hashSize> static std::pair<unsigned, unsigned> keysFromHash(const std::array<uint8_t, hashSize>&);
@@ -158,7 +158,7 @@ template <unsigned keyBits>
 class CountingBloomFilter {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static const size_t tableSize = 1 << keyBits;
+    static constexpr size_t tableSize = 1 << keyBits;
     static unsigned maximumCount() { return std::numeric_limits<uint8_t>::max(); }
 
     CountingBloomFilter();
@@ -174,22 +174,22 @@ public:
     // Otherwise overflowed keys will stick around.
     void clear();
 
-    void add(const AtomicString& string) { add(string.impl()->existingHash()); }
+    void add(const AtomString& string) { add(string.impl()->existingHash()); }
     void add(const String& string) { add(string.impl()->hash()); }
-    void remove(const AtomicString& string) { remove(string.impl()->existingHash()); }
+    void remove(const AtomString& string) { remove(string.impl()->existingHash()); }
     void remove(const String& string) { remove(string.impl()->hash()); }
 
-    bool mayContain(const AtomicString& string) const { return mayContain(string.impl()->existingHash()); }
+    bool mayContain(const AtomString& string) const { return mayContain(string.impl()->existingHash()); }
     bool mayContain(const String& string) const { return mayContain(string.impl()->hash()); }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     // Slow.
     bool likelyEmpty() const;
     bool isClear() const;
 #endif
 
 private:
-    static const unsigned keyMask = (1 << keyBits) - 1;
+    static constexpr unsigned keyMask = (1 << keyBits) - 1;
 
     uint8_t& firstBucket(unsigned hash) { return m_buckets[hash & keyMask]; }
     uint8_t& secondBucket(unsigned hash) { return m_buckets[(hash >> 16) & keyMask]; }
@@ -236,7 +236,7 @@ inline void CountingBloomFilter<keyBits>::clear()
     m_buckets.fill(0);
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 template <unsigned keyBits>
 bool CountingBloomFilter<keyBits>::likelyEmpty() const
 {
@@ -256,9 +256,9 @@ bool CountingBloomFilter<keyBits>::isClear() const
     }
     return true;
 }
-#endif
+#endif // ASSERT_ENABLED
 
-}
+} // namespace WTF
 
 using WTF::BloomFilter;
 using WTF::CountingBloomFilter;

@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLResourceSemantic.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLAddressSpace.h"
 #include "WHLSLArrayType.h"
@@ -49,13 +49,10 @@ bool ResourceSemantic::isAcceptableType(const UnnamedType& unnamedType, const In
             auto& referenceType = downcast<ReferenceType>(unnamedType);
             return referenceType.addressSpace() == AddressSpace::Constant || referenceType.addressSpace() == AddressSpace::Device;
         }
-        if (is<ArrayType>(unnamedType))
-            return true;
         if (is<TypeReference>(unnamedType)) {
             auto& typeReference = downcast<TypeReference>(unnamedType);
-            ASSERT(typeReference.resolvedType());
-            if (is<NativeTypeDeclaration>(*typeReference.resolvedType()))
-                return downcast<NativeTypeDeclaration>(*typeReference.resolvedType()).isTexture();
+            if (is<NativeTypeDeclaration>(typeReference.resolvedType()))
+                return downcast<NativeTypeDeclaration>(typeReference.resolvedType()).isTexture();
         }
         return false;
     case Mode::Texture:
@@ -65,15 +62,14 @@ bool ResourceSemantic::isAcceptableType(const UnnamedType& unnamedType, const In
             return true;
         if (is<TypeReference>(unnamedType)) {
             auto& typeReference = downcast<TypeReference>(unnamedType);
-            ASSERT(typeReference.resolvedType());
-            if (is<NativeTypeDeclaration>(*typeReference.resolvedType()))
-                return downcast<NativeTypeDeclaration>(*typeReference.resolvedType()).isTexture();
+            if (is<NativeTypeDeclaration>(typeReference.resolvedType()))
+                return downcast<NativeTypeDeclaration>(typeReference.resolvedType()).isTexture();
         }
         return false;
     case Mode::Buffer:
         if (is<ReferenceType>(unnamedType))
             return downcast<ReferenceType>(unnamedType).addressSpace() == AddressSpace::Constant;
-        return is<ArrayType>(unnamedType);
+        return false;
     case Mode::Sampler:
         return matches(unnamedType, intrinsics.samplerType());
     }
@@ -90,4 +86,4 @@ bool ResourceSemantic::isAcceptableForShaderItemDirection(ShaderItemDirection di
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

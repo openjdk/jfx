@@ -38,34 +38,39 @@ class InspectorScriptProfilerAgent;
 class JSGlobalObjectConsoleClient final : public JSC::ConsoleClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit JSGlobalObjectConsoleClient(InspectorConsoleAgent*, InspectorDebuggerAgent*, InspectorScriptProfilerAgent*);
-    virtual ~JSGlobalObjectConsoleClient() { }
+    explicit JSGlobalObjectConsoleClient(InspectorConsoleAgent*);
+    ~JSGlobalObjectConsoleClient() final { }
 
     static bool logToSystemConsole();
     static void setLogToSystemConsole(bool);
 
-protected:
-    void messageWithTypeAndLevel(MessageType, MessageLevel, JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void count(JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void profile(JSC::ExecState*, const String& title) override;
-    void profileEnd(JSC::ExecState*, const String& title) override;
-    void takeHeapSnapshot(JSC::ExecState*, const String& title) override;
-    void time(JSC::ExecState*, const String& title) override;
-    void timeEnd(JSC::ExecState*, const String& title) override;
-    void timeStamp(JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void record(JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void recordEnd(JSC::ExecState*, Ref<ScriptArguments>&&) override;
+    void setDebuggerAgent(InspectorDebuggerAgent* agent) { m_debuggerAgent = agent; }
+    void setPersistentScriptProfilerAgent(InspectorScriptProfilerAgent* agent) { m_scriptProfilerAgent = agent; }
 
 private:
+    void messageWithTypeAndLevel(MessageType, MessageLevel, JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void count(JSC::JSGlobalObject*, const String& label) final;
+    void countReset(JSC::JSGlobalObject*, const String& label) final;
+    void profile(JSC::JSGlobalObject*, const String& title) final;
+    void profileEnd(JSC::JSGlobalObject*, const String& title) final;
+    void takeHeapSnapshot(JSC::JSGlobalObject*, const String& title) final;
+    void time(JSC::JSGlobalObject*, const String& label) final;
+    void timeLog(JSC::JSGlobalObject*, const String& label, Ref<ScriptArguments>&&) final;
+    void timeEnd(JSC::JSGlobalObject*, const String& label) final;
+    void timeStamp(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void record(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void recordEnd(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void screenshot(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+
     void warnUnimplemented(const String& method);
-    void internalAddMessage(MessageType, MessageLevel, JSC::ExecState*, Ref<ScriptArguments>&&);
+    void internalAddMessage(MessageType, MessageLevel, JSC::JSGlobalObject*, Ref<ScriptArguments>&&);
 
     void startConsoleProfile();
     void stopConsoleProfile();
 
     InspectorConsoleAgent* m_consoleAgent;
-    InspectorDebuggerAgent* m_debuggerAgent;
-    InspectorScriptProfilerAgent* m_scriptProfilerAgent;
+    InspectorDebuggerAgent* m_debuggerAgent { nullptr };
+    InspectorScriptProfilerAgent* m_scriptProfilerAgent { nullptr };
     Vector<String> m_profiles;
     bool m_profileRestoreBreakpointActiveValue { false };
 };

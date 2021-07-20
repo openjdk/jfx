@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -110,7 +110,7 @@ private:
 struct SlowPathCallKeyHash {
     static unsigned hash(const SlowPathCallKey& key) { return key.hash(); }
     static bool equal(const SlowPathCallKey& a, const SlowPathCallKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 } } // namespace JSC::FTL
@@ -118,9 +118,7 @@ struct SlowPathCallKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::FTL::SlowPathCallKey> {
-    typedef JSC::FTL::SlowPathCallKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::FTL::SlowPathCallKey> : JSC::FTL::SlowPathCallKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::FTL::SlowPathCallKey> : public CustomHashTraits<JSC::FTL::SlowPathCallKey> { };

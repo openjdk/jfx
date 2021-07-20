@@ -26,8 +26,6 @@
 #include "config.h"
 #include "Cursor.h"
 
-#if !PLATFORM(IOS_FAMILY)
-
 #include "Image.h"
 #include "IntRect.h"
 #include "NotImplemented.h"
@@ -155,10 +153,6 @@ Cursor::Cursor(Image* image, const IntPoint& hotSpot)
     : m_type(Custom)
     , m_image(image)
     , m_hotSpot(determineHotSpot(image, hotSpot))
-#if ENABLE(MOUSE_CURSOR_SCALE)
-    , m_imageScaleFactor(1)
-#endif
-    , m_platformCursor(0)
 {
 }
 #endif
@@ -169,21 +163,16 @@ Cursor::Cursor(Image* image, const IntPoint& hotSpot, float scale)
     , m_image(image)
     , m_hotSpot(determineHotSpot(image, hotSpot))
     , m_imageScaleFactor(scale)
-    , m_platformCursor(0)
 {
 }
 #endif
 
 Cursor::Cursor(Type type)
     : m_type(type)
-#if ENABLE(MOUSE_CURSOR_SCALE)
-    , m_imageScaleFactor(1)
-#endif
-    , m_platformCursor(0)
 {
 }
 
-#if !PLATFORM(COCOA)
+#if !HAVE(NSCURSOR)
 
 PlatformCursor Cursor::platformCursor() const
 {
@@ -453,7 +442,7 @@ const Cursor& grabbingCursor()
     return c;
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !HAVE(NSCURSOR) && !PLATFORM(GTK) && !PLATFORM(WIN)
 void Cursor::ensurePlatformCursor() const
 {
     notImplemented();
@@ -462,7 +451,11 @@ void Cursor::ensurePlatformCursor() const
 
 #endif
 
+#if !HAVE(NSCURSOR)
+void Cursor::setAsPlatformCursor() const
+{
+    notImplemented();
+}
+#endif
+
 } // namespace WebCore
-
-#endif // !PLATFORM(IOS_FAMILY)
-

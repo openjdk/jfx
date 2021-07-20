@@ -16,6 +16,9 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gst/video/video-tile.h>
 
@@ -30,7 +33,7 @@
  * Get the tile index of the tile at coordinates @x and @y in the tiled
  * image of @x_tiles by @y_tiles.
  *
- * Use this method when @mode is of type %GST_VIDEO_TILE_MODE_INDEXED.
+ * Use this method when @mode is of type %GST_VIDEO_TILE_TYPE_INDEXED.
  *
  * Returns: the index of the tile at @x and @y in the tiled image of
  *   @x_tiles by @y_tiles.
@@ -95,6 +98,9 @@ gst_video_tile_get_index (GstVideoTileMode mode, gint x, gint y,
         /* For even row except for the last row when odd height */
         offset += GST_ROUND_DOWN_4 (x + 2);
       }
+      break;
+    case GST_VIDEO_TILE_MODE_LINEAR:
+      offset = y * x_tiles + x;
       break;
     default:
       offset = 0;

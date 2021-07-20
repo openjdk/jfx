@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,20 +38,12 @@ namespace JSC {
 
 template<unsigned numberOfBucketsArgument>
 struct ValueProfileBase {
-    static const unsigned numberOfBuckets = numberOfBucketsArgument;
-    static const unsigned numberOfSpecFailBuckets = 1;
-    static const unsigned bucketIndexMask = numberOfBuckets - 1;
-    static const unsigned totalNumberOfBuckets = numberOfBuckets + numberOfSpecFailBuckets;
+    static constexpr unsigned numberOfBuckets = numberOfBucketsArgument;
+    static constexpr unsigned numberOfSpecFailBuckets = 1;
+    static constexpr unsigned bucketIndexMask = numberOfBuckets - 1;
+    static constexpr unsigned totalNumberOfBuckets = numberOfBuckets + numberOfSpecFailBuckets;
 
     ValueProfileBase()
-        : m_bytecodeOffset(-1)
-    {
-        for (unsigned i = 0; i < totalNumberOfBuckets; ++i)
-            m_buckets[i] = JSValue::encode(JSValue());
-    }
-
-    ValueProfileBase(int bytecodeOffset)
-        : m_bytecodeOffset(bytecodeOffset)
     {
         for (unsigned i = 0; i < totalNumberOfBuckets; ++i)
             m_buckets[i] = JSValue::encode(JSValue());
@@ -68,10 +60,10 @@ struct ValueProfileBase {
         JSValue value = JSValue::decode(m_buckets[bucket]);
         if (!!value) {
             if (!value.isCell())
-                return 0;
+                return nullptr;
             return value.asCell()->structure()->classInfo();
         }
-        return 0;
+        return nullptr;
     }
 
     unsigned numberOfSamples() const
@@ -86,8 +78,10 @@ struct ValueProfileBase {
 
     unsigned totalNumberOfSamples() const
     {
-        return numberOfSamples() + m_numberOfSamplesInPrediction;
+        return numberOfSamples() + isSampledBefore();
     }
+
+    bool isSampledBefore() const { return m_prediction != SpecNone; }
 
     bool isLive() const
     {
@@ -109,7 +103,7 @@ struct ValueProfileBase {
 
     void dump(PrintStream& out)
     {
-        out.print("samples = ", totalNumberOfSamples(), " prediction = ", SpeculationDump(m_prediction));
+        out.print("sampled before = ", isSampledBefore(), " live samples = ", numberOfSamples(), " prediction = ", SpeculationDump(m_prediction));
         bool first = true;
         for (unsigned i = 0; i < totalNumberOfBuckets; ++i) {
             JSValue value = JSValue::decode(m_buckets[i]);
@@ -133,7 +127,6 @@ struct ValueProfileBase {
             if (!value)
                 continue;
 
-            m_numberOfSamplesInPrediction++;
             mergeSpeculation(m_prediction, speculationFromValue(value));
 
             m_buckets[i] = JSValue::encode(JSValue());
@@ -142,83 +135,69 @@ struct ValueProfileBase {
         return m_prediction;
     }
 
-    int m_bytecodeOffset; // -1 for prologue
-    unsigned m_numberOfSamplesInPrediction { 0 };
+    EncodedJSValue m_buckets[totalNumberOfBuckets];
 
     SpeculatedType m_prediction { SpecNone };
-
-    EncodedJSValue m_buckets[totalNumberOfBuckets];
 };
 
 struct MinimalValueProfile : public ValueProfileBase<0> {
     MinimalValueProfile(): ValueProfileBase<0>() { }
-    MinimalValueProfile(int bytecodeOffset): ValueProfileBase<0>(bytecodeOffset) { }
 };
 
 template<unsigned logNumberOfBucketsArgument>
 struct ValueProfileWithLogNumberOfBuckets : public ValueProfileBase<1 << logNumberOfBucketsArgument> {
-    static const unsigned logNumberOfBuckets = logNumberOfBucketsArgument;
+    static constexpr unsigned logNumberOfBuckets = logNumberOfBucketsArgument;
 
     ValueProfileWithLogNumberOfBuckets()
         : ValueProfileBase<1 << logNumberOfBucketsArgument>()
-    {
-    }
-    ValueProfileWithLogNumberOfBuckets(int bytecodeOffset)
-        : ValueProfileBase<1 << logNumberOfBucketsArgument>(bytecodeOffset)
     {
     }
 };
 
 struct ValueProfile : public ValueProfileWithLogNumberOfBuckets<0> {
     ValueProfile() : ValueProfileWithLogNumberOfBuckets<0>() { }
-    ValueProfile(int bytecodeOffset) : ValueProfileWithLogNumberOfBuckets<0>(bytecodeOffset) { }
 };
-
-template<typename T>
-inline int getValueProfileBytecodeOffset(T* valueProfile)
-{
-    return valueProfile->m_bytecodeOffset;
-}
 
 // This is a mini value profile to catch pathologies. It is a counter that gets
 // incremented when we take the slow path on any instruction.
 struct RareCaseProfile {
-    RareCaseProfile(int bytecodeOffset)
-        : m_bytecodeOffset(bytecodeOffset)
-        , m_counter(0)
+    RareCaseProfile(BytecodeIndex bytecodeIndex)
+        : m_bytecodeIndex(bytecodeIndex)
     {
     }
+    RareCaseProfile() = default;
 
-    int m_bytecodeOffset;
-    uint32_t m_counter;
+    BytecodeIndex m_bytecodeIndex { };
+    uint32_t m_counter { 0 };
 };
 
-inline int getRareCaseProfileBytecodeOffset(RareCaseProfile* rareCaseProfile)
+inline BytecodeIndex getRareCaseProfileBytecodeIndex(RareCaseProfile* rareCaseProfile)
 {
-    return rareCaseProfile->m_bytecodeOffset;
+    return rareCaseProfile->m_bytecodeIndex;
 }
 
-struct ValueProfileAndOperand {
-    ValueProfile m_profile;
-    int m_operand;
+struct ValueProfileAndVirtualRegister : public ValueProfile {
+    VirtualRegister m_operand;
 };
 
-struct ValueProfileAndOperandBuffer {
-    ValueProfileAndOperandBuffer(unsigned size)
+struct ValueProfileAndVirtualRegisterBuffer {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    ValueProfileAndVirtualRegisterBuffer(unsigned size)
         : m_size(size)
     {
         // FIXME: ValueProfile has more stuff than we need. We could optimize these value profiles
         // to be more space efficient.
         // https://bugs.webkit.org/show_bug.cgi?id=175413
-        m_buffer = MallocPtr<ValueProfileAndOperand>::malloc(m_size * sizeof(ValueProfileAndOperand));
+        m_buffer = MallocPtr<ValueProfileAndVirtualRegister, VMMalloc>::malloc(m_size * sizeof(ValueProfileAndVirtualRegister));
         for (unsigned i = 0; i < m_size; ++i)
-            new (&m_buffer.get()[i]) ValueProfileAndOperand();
+            new (&m_buffer.get()[i]) ValueProfileAndVirtualRegister();
     }
 
-    ~ValueProfileAndOperandBuffer()
+    ~ValueProfileAndVirtualRegisterBuffer()
     {
         for (unsigned i = 0; i < m_size; ++i)
-            m_buffer.get()[i].~ValueProfileAndOperand();
+            m_buffer.get()[i].~ValueProfileAndVirtualRegister();
     }
 
     template <typename Function>
@@ -229,7 +208,7 @@ struct ValueProfileAndOperandBuffer {
     }
 
     unsigned m_size;
-    MallocPtr<ValueProfileAndOperand> m_buffer;
+    MallocPtr<ValueProfileAndVirtualRegister, VMMalloc> m_buffer;
 };
 
 } // namespace JSC

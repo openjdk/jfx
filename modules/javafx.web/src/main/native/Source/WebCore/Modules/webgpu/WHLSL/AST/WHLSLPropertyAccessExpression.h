@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include "WHLSLFunctionDeclaration.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -38,48 +39,26 @@ namespace WHLSL {
 namespace AST {
 
 class PropertyAccessExpression : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
+protected:
+    ~PropertyAccessExpression() = default;
+
 public:
-    PropertyAccessExpression(Lexer::Token&& origin, UniqueRef<Expression>&& base)
-        : Expression(WTFMove(origin))
+    PropertyAccessExpression(CodeLocation location, Kind kind, UniqueRef<Expression>&& base)
+        : Expression(location, kind)
         , m_base(WTFMove(base))
     {
     }
 
-    virtual ~PropertyAccessExpression() = default;
-
     PropertyAccessExpression(const PropertyAccessExpression&) = delete;
     PropertyAccessExpression(PropertyAccessExpression&&) = default;
 
-    bool isPropertyAccessExpression() const override { return true; }
-
-    virtual String getFunctionName() const = 0;
-    virtual String setFunctionName() const = 0;
-    virtual String andFunctionName() const = 0;
-
-    Vector<std::reference_wrapper<FunctionDeclaration>, 1>& possibleGetOverloads() { return m_possibleGetOverloads; }
-    Vector<std::reference_wrapper<FunctionDeclaration>, 1>& possibleSetOverloads() { return m_possibleSetOverloads; }
-    Vector<std::reference_wrapper<FunctionDeclaration>, 1>& possibleAndOverloads() { return m_possibleAndOverloads; }
-
-    void setPossibleGetOverloads(const Vector<std::reference_wrapper<FunctionDeclaration>, 1>& overloads)
-    {
-        m_possibleGetOverloads = overloads;
-    }
-    void setPossibleSetOverloads(const Vector<std::reference_wrapper<FunctionDeclaration>, 1>& overloads)
-    {
-        m_possibleSetOverloads = overloads;
-    }
-    void setPossibleAndOverloads(const Vector<std::reference_wrapper<FunctionDeclaration>, 1>& overloads)
-    {
-        m_possibleAndOverloads = overloads;
-    }
-
     Expression& base() { return m_base; }
+    UniqueRef<Expression>& baseReference() { return m_base; }
+    UniqueRef<Expression> takeBase() { return WTFMove(m_base); }
 
 private:
     UniqueRef<Expression> m_base;
-    Vector<std::reference_wrapper<FunctionDeclaration>, 1> m_possibleGetOverloads;
-    Vector<std::reference_wrapper<FunctionDeclaration>, 1> m_possibleSetOverloads;
-    Vector<std::reference_wrapper<FunctionDeclaration>, 1> m_possibleAndOverloads;
 };
 
 } // namespace AST
@@ -90,4 +69,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(PropertyAccessExpression, isPropertyAccessExpression())
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

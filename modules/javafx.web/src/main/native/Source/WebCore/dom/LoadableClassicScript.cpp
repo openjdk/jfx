@@ -35,9 +35,9 @@
 
 namespace WebCore {
 
-Ref<LoadableClassicScript> LoadableClassicScript::create(const String& nonce, const String& integrityMetadata, const String& crossOriginMode, const String& charset, const AtomicString& initiatorName, bool isInUserAgentShadowTree)
+Ref<LoadableClassicScript> LoadableClassicScript::create(const String& nonce, const String& integrityMetadata, ReferrerPolicy policy, const String& crossOriginMode, const String& charset, const AtomString& initiatorName, bool isInUserAgentShadowTree, bool isAsync)
 {
-    return adoptRef(*new LoadableClassicScript(nonce, integrityMetadata, crossOriginMode, charset, initiatorName, isInUserAgentShadowTree));
+    return adoptRef(*new LoadableClassicScript(nonce, integrityMetadata, policy, crossOriginMode, charset, initiatorName, isInUserAgentShadowTree, isAsync));
 }
 
 LoadableClassicScript::~LoadableClassicScript()
@@ -70,7 +70,7 @@ bool LoadableClassicScript::wasCanceled() const
     return m_cachedScript->wasCanceled();
 }
 
-void LoadableClassicScript::notifyFinished(CachedResource& resource)
+void LoadableClassicScript::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT(m_cachedScript);
     if (resource.resourceError().isAccessControl()) {
@@ -91,7 +91,7 @@ void LoadableClassicScript::notifyFinished(CachedResource& resource)
             ConsoleMessage {
                 MessageSource::Security,
                 MessageLevel::Error,
-                makeString("Refused to execute ", m_cachedScript->url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type: nosniff\" was given and its Content-Type is not a script MIME type.")
+                makeString("Refused to execute ", m_cachedScript->url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type.")
             }
         };
     }
@@ -110,7 +110,7 @@ void LoadableClassicScript::notifyFinished(CachedResource& resource)
     if (!m_error && !resource.errorOccurred() && !matchIntegrityMetadata(resource, m_integrity)) {
         m_error = Error {
             ErrorType::FailedIntegrityCheck,
-            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", m_cachedScript->url().stringCenterEllipsizedToLength(), ". Failed integrity metadata check.") }
+            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", integrityMismatchDescription(resource, m_integrity)) }
         };
     }
 
@@ -126,7 +126,15 @@ void LoadableClassicScript::execute(ScriptElement& scriptElement)
 bool LoadableClassicScript::load(Document& document, const URL& sourceURL)
 {
     ASSERT(!m_cachedScript);
-    m_cachedScript = requestScriptWithCache(document, sourceURL, crossOriginMode(), String { m_integrity });
+
+    auto priority = [&]() -> Optional<ResourceLoadPriority> {
+        if (m_isAsync)
+            return ResourceLoadPriority::Low;
+        // Use default.
+        return { };
+    };
+
+    m_cachedScript = requestScriptWithCache(document, sourceURL, crossOriginMode(), String { m_integrity }, priority());
     if (!m_cachedScript)
         return false;
     m_cachedScript->addClient(*this);

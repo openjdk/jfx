@@ -1,7 +1,7 @@
 /*
  * This file is part of the internal font implementation.
  *
- * Copyright (C) 2006, 2008, 2010, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -34,11 +34,15 @@
 #if ENABLE(OPENTYPE_VERTICAL)
 #include "OpenTypeVerticalData.h"
 #endif
+#include "RenderingResourceIdentifier.h"
 #include <wtf/BitVector.h>
+#include <wtf/Hasher.h>
 #include <wtf/Optional.h>
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
+#include <CoreFoundation/CoreFoundation.h>
+#include <pal/cf/OTSVGTable.h>
 #include <wtf/RetainPtr.h>
 #endif
 
@@ -46,12 +50,8 @@
 #include <usp10.h>
 #endif
 
-#if USE(CG)
-#include <pal/spi/cg/CoreGraphicsSPI.h>
-#endif
-
 #if USE(DIRECT2D)
-interface IDWriteFactory;
+interface IDWriteFactory5;
 interface IDWriteGdiInterop;
 #endif
 
@@ -61,13 +61,19 @@ class GlyphPage;
 class FontDescription;
 class SharedBuffer;
 struct GlyphData;
-struct WidthIterator;
 
 enum FontVariant { AutoVariant, NormalVariant, SmallCapsVariant, EmphasisMarkVariant, BrokenIdeographVariant };
 enum Pitch { UnknownPitch, FixedPitch, VariablePitch };
 enum class IsForPlatformFont : uint8_t { No, Yes };
 
+#if USE(CORE_TEXT)
+bool fontHasTable(CTFontRef, unsigned tableTag);
+bool fontHasEitherTable(CTFontRef, unsigned tableTag1, unsigned tableTag2);
+#endif
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
 class Font : public RefCounted<Font> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Font);
 public:
     // Used to create platform fonts.
     enum class Origin : uint8_t {
@@ -86,10 +92,12 @@ public:
         Yes,
         No
     };
-    static Ref<Font> create(const FontPlatformData& platformData, Origin origin = Origin::Local, Interstitial interstitial = Interstitial::No, Visibility visibility = Visibility::Visible, OrientationFallback orientationFallback = OrientationFallback::No)
+    static Ref<Font> create(const FontPlatformData& platformData, Origin origin = Origin::Local, Interstitial interstitial = Interstitial::No,
+        Visibility visibility = Visibility::Visible, OrientationFallback orientationFallback = OrientationFallback::No, Optional<RenderingResourceIdentifier> identifier = WTF::nullopt)
     {
-        return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback));
+        return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback, identifier));
     }
+    WEBCORE_EXPORT static Ref<Font> create(Ref<SharedBuffer>&& fontFaceData, Font::Origin, float fontSize, bool syntheticBold, bool syntheticItalic);
 
     WEBCORE_EXPORT ~Font();
 
@@ -101,10 +109,14 @@ public:
     const OpenTypeVerticalData* verticalData() const { return m_verticalData.get(); }
 #endif
 
+    WEBCORE_EXPORT RenderingResourceIdentifier renderingResourceIdentifier() const;
+
     const Font* smallCapsFont(const FontDescription&) const;
     const Font& noSynthesizableFeaturesFont() const;
     const Font* emphasisMarkFont(const FontDescription&) const;
     const Font& brokenIdeographFont() const;
+
+    bool isProbablyOnlyUsedToRenderIcons() const;
 
     const Font* variantFont(const FontDescription& description, FontVariant variant) const
     {
@@ -187,6 +199,7 @@ public:
     Origin origin() const { return m_origin; }
     bool isInterstitial() const { return m_isInterstitial; }
     Visibility visibility() const { return m_visibility; }
+    bool allowsAntialiasing() const { return m_allowsAntialiasing; }
 
 #if !LOG_DISABLED
     String description() const;
@@ -197,7 +210,7 @@ public:
 #endif
 #if PLATFORM(COCOA)
     CTFontRef getCTFont() const { return m_platformData.font(); }
-    CFDictionaryRef getCFStringAttributes(bool enableKerning, FontOrientation) const;
+    RetainPtr<CFDictionaryRef> getCFStringAttributes(bool enableKerning, FontOrientation, const AtomString& locale) const;
     const BitVector& glyphsSupportedBySmallCaps() const;
     const BitVector& glyphsSupportedByAllSmallCaps() const;
     const BitVector& glyphsSupportedByPetiteCaps() const;
@@ -205,7 +218,10 @@ public:
 #endif
 
     bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
-    bool applyTransforms(GlyphBufferGlyph*, GlyphBufferAdvance*, size_t glyphCount, bool enableKerning, bool requiresShaping) const;
+    void applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
+
+    // Returns nullopt if none of the glyphs are OT-SVG glyphs.
+    Optional<BitVector> findOTSVGGlyphs(const GlyphBufferGlyph*, unsigned count) const;
 
 #if PLATFORM(WIN)
     SCRIPT_FONTPROPERTIES* scriptFontProperties() const;
@@ -215,13 +231,8 @@ public:
     static float ascentConsideringMacAscentHack(const WCHAR*, float ascent, float descent);
 #endif
 
-#if USE(DIRECT2D)
-    WEBCORE_EXPORT static IDWriteFactory* systemDWriteFactory();
-    WEBCORE_EXPORT static IDWriteGdiInterop* systemDWriteGdiInterop();
-#endif
-
 private:
-    Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback);
+    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, Optional<RenderingResourceIdentifier>);
 
     void platformInit();
     void platformGlyphInit();
@@ -264,10 +275,10 @@ private:
     RefPtr<OpenTypeVerticalData> m_verticalData;
 #endif
 
+    mutable Optional<RenderingResourceIdentifier> m_renderingResourceIdentifier;
+
     struct DerivedFonts {
-#if !COMPILER(MSVC)
-        WTF_MAKE_FAST_ALLOCATED;
-#endif
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
     public:
 
         RefPtr<Font> smallCapsFont;
@@ -282,12 +293,11 @@ private:
     mutable std::unique_ptr<DerivedFonts> m_derivedFontData;
 
 #if PLATFORM(COCOA)
-    mutable RetainPtr<CFMutableDictionaryRef> m_nonKernedCFStringAttributes;
-    mutable RetainPtr<CFMutableDictionaryRef> m_kernedCFStringAttributes;
     mutable Optional<BitVector> m_glyphsSupportedBySmallCaps;
     mutable Optional<BitVector> m_glyphsSupportedByAllSmallCaps;
     mutable Optional<BitVector> m_glyphsSupportedByPetiteCaps;
     mutable Optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
+    mutable Optional<PAL::OTSVGTable> m_otSVGTable;
 #endif
 
 #if PLATFORM(WIN)
@@ -318,9 +328,13 @@ private:
 
     unsigned m_isUsedInSystemFallbackCache : 1;
 
+    unsigned m_allowsAntialiasing : 1;
+
 #if PLATFORM(IOS_FAMILY)
     unsigned m_shouldNotBeUsedForArabic : 1;
 #endif
+
+    // Adding any non-derived information to Font needs a parallel change in WebCoreArgumentCoders.cpp.
 };
 
 #if PLATFORM(IOS_FAMILY)
@@ -341,7 +355,7 @@ ALWAYS_INLINE FloatRect Font::boundsForGlyph(Glyph glyph) const
 
     bounds = platformBoundsForGlyph(glyph);
     if (!m_glyphToBoundsMap)
-        m_glyphToBoundsMap = std::make_unique<GlyphMetricsMap<FloatRect>>();
+        m_glyphToBoundsMap = makeUnique<GlyphMetricsMap<FloatRect>>();
     m_glyphToBoundsMap->setMetricsForGlyph(glyph, bounds);
     return bounds;
 }
@@ -374,6 +388,41 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph) const
     return width;
 }
 
+using FontRenderingResourceMap = HashMap<RenderingResourceIdentifier, Ref<Font>>;
+
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::Font::Origin> {
+    using values = EnumValues<
+        WebCore::Font::Origin,
+        WebCore::Font::Origin::Remote,
+        WebCore::Font::Origin::Local
+    >;
+};
+template<> struct EnumTraits<WebCore::Font::Interstitial> {
+    using values = EnumValues<
+        WebCore::Font::Interstitial,
+        WebCore::Font::Interstitial::Yes,
+        WebCore::Font::Interstitial::No
+    >;
+};
+template<> struct EnumTraits<WebCore::Font::Visibility> {
+    using values = EnumValues<
+        WebCore::Font::Visibility,
+        WebCore::Font::Visibility::Visible,
+        WebCore::Font::Visibility::Invisible
+    >;
+};
+template<> struct EnumTraits<WebCore::Font::OrientationFallback> {
+    using values = EnumValues<
+        WebCore::Font::OrientationFallback,
+        WebCore::Font::OrientationFallback::Yes,
+        WebCore::Font::OrientationFallback::No
+    >;
+};
+
+}
 
 #endif // Font_h

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,30 +26,30 @@
 
 #pragma once
 
-#if ENABLE(INTL)
-
 #include "JSObject.h"
 
 namespace JSC {
 
 class IntlPluralRulesPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(IntlPluralRulesPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static IntlPluralRulesPrototype* create(VM&, JSGlobalObject*, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-protected:
-    void finishCreation(VM&, Structure*);
-
 private:
     IntlPluralRulesPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)
-

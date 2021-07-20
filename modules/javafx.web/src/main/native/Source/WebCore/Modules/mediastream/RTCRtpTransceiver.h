@@ -45,7 +45,11 @@
 
 namespace WebCore {
 
-class RTCRtpTransceiver : public RefCounted<RTCRtpTransceiver>, public ScriptWrappable {
+class RTCPeerConnection;
+struct RTCRtpCodecCapability;
+
+class RTCRtpTransceiver final : public RefCounted<RTCRtpTransceiver>, public ScriptWrappable {
+    WTF_MAKE_ISO_ALLOCATED(RTCRtpTransceiver);
 public:
     static Ref<RTCRtpTransceiver> create(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend) { return adoptRef(*new RTCRtpTransceiver(WTFMove(sender), WTFMove(receiver), WTFMove(backend))); }
     virtual ~RTCRtpTransceiver() = default;
@@ -63,7 +67,8 @@ public:
     RTCRtpReceiver& receiver() { return m_receiver.get(); }
 
     bool stopped() const;
-    void stop();
+    ExceptionOr<void> stop();
+    ExceptionOr<void> setCodecPreferences(const Vector<RTCRtpCodecCapability>&);
 
     // FIXME: Temporary solution to keep track of ICE states for this transceiver. Later, each
     // sender and receiver will have up to two DTLS transports, which in turn will have an ICE
@@ -71,6 +76,7 @@ public:
     RTCIceTransport& iceTransport() { return m_iceTransport.get(); }
 
     RTCRtpTransceiverBackend* backend() { return m_backend.get(); }
+    void setConnection(RTCPeerConnection&);
 
 private:
     RTCRtpTransceiver(Ref<RTCRtpSender>&&, Ref<RTCRtpReceiver>&&, std::unique_ptr<RTCRtpTransceiverBackend>&&);
@@ -84,6 +90,7 @@ private:
 
     Ref<RTCIceTransport> m_iceTransport;
     std::unique_ptr<RTCRtpTransceiverBackend> m_backend;
+    WeakPtr<RTCPeerConnection> m_connection;
 };
 
 class RtpTransceiverSet {

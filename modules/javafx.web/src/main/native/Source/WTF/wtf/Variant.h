@@ -387,6 +387,8 @@ struct __any_backup_storage_required<Variant<_Types...> >{
 template<typename ... _Types>
 union __variant_data;
 
+// std::is_literal_type is deprecated in C++17 and removed in C++20
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 template<typename _Type,bool=std::is_literal_type<_Type>::value>
 struct __variant_storage{
     typedef _Type __type;
@@ -405,6 +407,7 @@ struct __variant_storage{
     }
     static void __destroy(__type&){}
 };
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 template<typename _Type>
 struct __storage_wrapper{
@@ -1309,7 +1312,7 @@ __test(_Other *);
 
 template <typename _Type> struct __is_swappable {
     static constexpr bool value =
-        sizeof(__swap_test_detail::__test<_Type>(0)) != 1;
+        sizeof(__swap_test_detail::__test<_Type>(nullptr)) != 1;
 };
 
 template<typename ... _Types>
@@ -1440,6 +1443,7 @@ class Variant:
         private __variant_base<
     Variant<_Types...>,__all_trivially_destructible<_Types...>::__value>
 {
+    WTF_MAKE_FAST_ALLOCATED;
     typedef __variant_base<Variant<_Types...>,__all_trivially_destructible<_Types...>::__value> __base_type;
     friend __base_type;
     friend struct __copy_construct_op_table<Variant>;
@@ -1725,6 +1729,7 @@ public:
 template<>
 class Variant<>{
 public:
+    WTF_MAKE_FAST_ALLOCATED;
     Variant()=delete;
 
     constexpr bool valueless_by_exception() const __NOEXCEPT{
@@ -2044,9 +2049,9 @@ struct __hash_visitor{
 // -- WebKit Additions --
 
 template<class V, class... F>
-auto switchOn(V&& v, F&&... f) -> decltype(visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v)))
+auto switchOn(V&& v, F&&... f) -> decltype(WTF::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v)))
 {
-    return visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v));
+    return WTF::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v));
 }
 
 } // namespace WTF

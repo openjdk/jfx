@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,17 +26,13 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+
 import javafx.geometry.Orientation;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import javafx.scene.layout.Region;
 
 /**
  * Default skin implementation for the {@link ListCell} control.
@@ -52,11 +48,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private double fixedCellSize;
-    private boolean fixedCellSizeEnabled;
     private final BehaviorBase<ListCell<T>> behavior;
-
-
 
     /***************************************************************************
      *                                                                         *
@@ -77,30 +69,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
         // install default input map for the ListCell control
         behavior = new ListCellBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
-
-        setupListeners();
     }
-
-    private void setupListeners() {
-        ListView listView = getSkinnable().getListView();
-        if (listView == null) {
-            getSkinnable().listViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().listViewProperty().removeListener(this);
-                    setupListeners();
-                }
-            });
-        } else {
-            this.fixedCellSize = listView.getFixedCellSize();
-            this.fixedCellSizeEnabled = fixedCellSize > 0;
-            registerChangeListener(listView.fixedCellSizeProperty(), e -> {
-                this.fixedCellSize = getSkinnable().getListView().getFixedCellSize();
-                this.fixedCellSizeEnabled = fixedCellSize > 0;
-            });
-        }
-    }
-
-
 
     /***************************************************************************
      *                                                                         *
@@ -127,7 +96,8 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -140,7 +110,8 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -149,10 +120,15 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
-
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    private double getFixedCellSize() {
+        ListView<?> listView = getSkinnable().getListView();
+        return listView != null ? listView.getFixedCellSize() : Region.USE_COMPUTED_SIZE;
     }
 }

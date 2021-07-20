@@ -27,14 +27,15 @@
 
 #include "AnimationTimeline.h"
 #include "DocumentTimelineOptions.h"
-#include "GenericTaskQueue.h"
 #include "Timer.h"
-#include <wtf/Markable.h>
 #include <wtf/Ref.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class AnimationPlaybackEvent;
+class AnimationEventBase;
+class DocumentTimelinesController;
+class RenderBoxModelObject;
 class RenderElement;
 
 class DocumentTimeline final : public AnimationTimeline
@@ -46,16 +47,13 @@ public:
 
     bool isDocumentTimeline() const final { return true; }
 
-    Vector<RefPtr<WebAnimation>> getAnimations() const;
-
     Document* document() const { return m_document.get(); }
 
     Optional<Seconds> currentTime() override;
 
     void animationTimingDidChange(WebAnimation&) override;
     void removeAnimation(WebAnimation&) override;
-    void animationWasAddedToElement(WebAnimation&, Element&) final;
-    void animationWasRemovedFromElement(WebAnimation&, Element&) final;
+    void transitionDidComplete(RefPtr<CSSTransition>);
 
     // If possible, compute the visual extent of any transform animation on the given renderer
     // using the given rect, returning the result in the rect. Return false if there is some
@@ -65,22 +63,22 @@ public:
     bool isRunningAnimationOnRenderer(RenderElement&, CSSPropertyID) const;
     bool isRunningAcceleratedAnimationOnRenderer(RenderElement&, CSSPropertyID) const;
     void animationAcceleratedRunningStateDidChange(WebAnimation&);
-    void applyPendingAcceleratedAnimations();
-    bool runningAnimationsForElementAreAllAccelerated(Element&) const;
-    bool resolveAnimationsForElement(Element&, RenderStyle&);
+    bool runningAnimationsForRendererAreAllAccelerated(const RenderBoxModelObject&) const;
     void detachFromDocument();
 
-    void enqueueAnimationPlaybackEvent(AnimationPlaybackEvent&);
+    void enqueueAnimationEvent(AnimationEventBase&);
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    void documentAnimationSchedulerDidFire();
-#endif
+    enum class ShouldUpdateAnimationsAndSendEvents : uint8_t { Yes, No };
+    ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents();
+    void removeReplacedAnimations();
+    AnimationEvents prepareForPendingAnimationEventsDispatch();
+    void documentDidUpdateAnimationsAndSendEvents();
 
     void updateThrottlingState();
     WEBCORE_EXPORT Seconds animationInterval() const;
-    WEBCORE_EXPORT void suspendAnimations();
-    WEBCORE_EXPORT void resumeAnimations();
-    WEBCORE_EXPORT bool animationsAreSuspended();
+    void suspendAnimations();
+    void resumeAnimations();
+    bool animationsAreSuspended() const;
     WEBCORE_EXPORT unsigned numberOfActiveAnimationsForTesting() const;
     WEBCORE_EXPORT Vector<std::pair<String, double>> acceleratedAnimationsForElement(Element&) const;
     WEBCORE_EXPORT unsigned numberOfAnimationTimelineInvalidationsForTesting() const;
@@ -88,38 +86,24 @@ public:
 private:
     DocumentTimeline(Document&, Seconds);
 
-    Seconds liveCurrentTime() const;
-    void cacheCurrentTime(Seconds);
-    void scheduleAnimationResolutionIfNeeded();
+    DocumentTimelinesController* controller() const;
+    void applyPendingAcceleratedAnimations();
     void scheduleInvalidationTaskIfNeeded();
-    void performInvalidationTask();
-    void animationScheduleTimerFired();
     void scheduleAnimationResolution();
-    void unscheduleAnimationResolution();
-    void updateAnimationsAndSendEvents();
-    void performEventDispatchTask();
-    void maybeClearCachedCurrentTime();
-    void updateListOfElementsWithRunningAcceleratedAnimationsForElement(Element&);
-    void transitionDidComplete(RefPtr<CSSTransition>);
+    void clearTickScheduleTimer();
+    void internalUpdateAnimationsAndSendEvents();
     void scheduleNextTick();
-
-#if !USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    void animationResolutionTimerFired();
-    Timer m_animationResolutionTimer;
-#endif
+    bool animationCanBeRemoved(WebAnimation&);
+    bool shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const;
 
     Timer m_tickScheduleTimer;
-    GenericTaskQueue<Timer> m_currentTimeClearingTaskQueue;
     HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
-    HashSet<Element*> m_elementsWithRunningAcceleratedAnimations;
-    Vector<Ref<AnimationPlaybackEvent>> m_pendingAnimationEvents;
-    RefPtr<Document> m_document;
-    Markable<Seconds, Seconds::MarkableTraits> m_cachedCurrentTime;
+    AnimationEvents m_pendingAnimationEvents;
+    WeakPtr<Document> m_document;
     Seconds m_originTime;
     unsigned m_numberOfAnimationTimelineInvalidationsForTesting { 0 };
-    bool m_isSuspended { false };
-    bool m_waitingOnVMIdle { false };
-    bool m_isUpdatingAnimations { false };
+    bool m_animationResolutionScheduled { false };
+    bool m_shouldScheduleAnimationResolutionForNewPendingEvents { true };
 };
 
 } // namespace WebCore

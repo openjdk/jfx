@@ -27,7 +27,6 @@
 
 #if ENABLE(B3_JIT)
 
-#include "AirArg.h"
 #include "B3Bank.h"
 #include "B3HeapRange.h"
 #include "B3Value.h"
@@ -42,7 +41,7 @@ public:
         return isMemoryAccess(kind.opcode());
     }
 
-    ~MemoryValue();
+    ~MemoryValue() override;
 
     OffsetType offset() const { return m_offset; }
     template<typename Int, typename = IsLegalOffset<Int>>
@@ -74,7 +73,7 @@ public:
     bool isLoad() const { return B3::isLoad(opcode()); }
 
     bool hasFence() const { return !!fenceRange(); }
-    bool isExotic() const { return hasFence() || isAtomic(opcode()); }
+    bool isExotic() const { return hasFence() || isAtom(opcode()); }
 
     Type accessType() const;
     Bank accessBank() const;
@@ -84,14 +83,14 @@ public:
 
     bool isCanonicalWidth() const { return B3::isCanonicalWidth(accessWidth()); }
 
+    B3_SPECIALIZE_VALUE_FOR_NON_VARARGS_CHILDREN
+
 protected:
     void dumpMeta(CommaPrinter&, PrintStream&) const override;
 
-    Value* cloneImpl() const override;
-
     template<typename Int, typename = IsLegalOffset<Int>, typename... Arguments>
-    MemoryValue(CheckedOpcodeTag, Kind kind, Type type, Origin origin, Int offset, HeapRange range, HeapRange fenceRange, Arguments... arguments)
-        : Value(CheckedOpcode, kind, type, origin, arguments...)
+    MemoryValue(CheckedOpcodeTag, Kind kind, Type type, NumChildren numChildren, Origin origin, Int offset, HeapRange range, HeapRange fenceRange, Arguments... arguments)
+        : Value(CheckedOpcode, kind, type, numChildren, origin, static_cast<Value*>(arguments)...)
         , m_offset(offset)
         , m_range(range)
         , m_fenceRange(fenceRange)
@@ -100,6 +99,7 @@ protected:
 
 private:
     friend class Procedure;
+    friend class Value;
 
     bool isLegalOffsetImpl(int32_t offset) const;
     bool isLegalOffsetImpl(int64_t offset) const;

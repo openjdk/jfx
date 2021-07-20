@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,8 @@
 
 namespace JSC {
 
+class CallFrame;
 class VM;
-class ExecState;
 struct Instruction;
 
 class AbstractPC {
@@ -40,13 +40,14 @@ public:
     {
     }
 
-    AbstractPC(VM&, ExecState*);
+    AbstractPC(VM&, CallFrame*);
 
 #if ENABLE(JIT)
     AbstractPC(ReturnAddressPtr ptr)
         : m_pointer(ptr.value())
         , m_mode(JIT)
     {
+        assertIsTaggedWith<ReturnAddressPtrTag>(m_pointer);
     }
 
     bool hasJITReturnAddress() const { return m_mode == JIT; }

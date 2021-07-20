@@ -27,15 +27,15 @@
  * @see_also: #GstPluginFeature, #GstElementFactory
  *
  * GStreamer is extensible, so #GstElement instances can be loaded at runtime.
- * A plugin system can provide one or more of the basic
- * <application>GStreamer</application> #GstPluginFeature subclasses.
+ * A plugin system can provide one or more of the basic GStreamer
+ * #GstPluginFeature subclasses.
  *
- * A plugin should export a symbol <symbol>gst_plugin_desc</symbol> that is a
+ * A plugin should export a symbol `gst_plugin_desc` that is a
  * struct of type #GstPluginDesc.
  * the plugin loader will check the version of the core library the plugin was
  * linked against and will create a new #GstPlugin. It will then call the
  * #GstPluginInitFunc function that was provided in the
- * <symbol>gst_plugin_desc</symbol>.
+ * `gst_plugin_desc`.
  *
  * Once you have a handle to a #GstPlugin (e.g. from the #GstRegistry), you
  * can add any object that subclasses #GstPluginFeature.
@@ -69,6 +69,13 @@
 
 #include <gst/gst.h>
 
+#ifdef G_OS_WIN32
+#include <windows.h>
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) && !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#define GST_WINAPI_ONLY_APP
+#endif
+#endif
+
 #ifndef GSTREAMER_LITE
 #define GST_CAT_DEFAULT GST_CAT_PLUGIN_LOADING
 #else // GSTREAMER_LITE
@@ -96,7 +103,8 @@ static char *_gst_plugin_fault_handler_filename = NULL;
  * QPL: http://www.trolltech.com/licenses/qpl.html
  * MPL: http://www.opensource.org/licenses/mozilla1.1.php
  * MIT/X11: http://www.opensource.org/licenses/mit-license.php
- * 3-clause BSD: http://www.opensource.org/licenses/bsd-license.php
+ * 3-clause BSD: https://opensource.org/licenses/BSD-3-Clause
+ * Zero-Clause BSD: https://opensource.org/licenses/0BSD
  */
 static const gchar valid_licenses[] = "LGPL\000"        /* GNU Lesser General Public License */
     "GPL\000"                   /* GNU General Public License */
@@ -105,10 +113,13 @@ static const gchar valid_licenses[] = "LGPL\000"        /* GNU Lesser General Pu
     "MPL\000"                   /* MPL 1.1 license */
     "BSD\000"                   /* 3-clause BSD license */
     "MIT/X11\000"               /* MIT/X11 license */
+    "0BSD\000"                  /* Zero-Clause BSD */
     "Proprietary\000"           /* Proprietary license */
     GST_LICENSE_UNKNOWN;        /* some other license */
 
-static const guint8 valid_licenses_idx[] = { 0, 5, 9, 13, 21, 25, 29, 37, 49 };
+static const guint8 valid_licenses_idx[] = { 0, 5, 9, 13, 21, 25, 29, 37, 42,
+  54
+};
 
 static GstPlugin *gst_plugin_register_func (GstPlugin * plugin,
     const GstPluginDesc * desc, gpointer user_data);
@@ -117,13 +128,12 @@ static void gst_plugin_desc_copy (GstPluginDesc * dest,
 
 static void gst_plugin_ext_dep_free (GstPluginDep * dep);
 
-G_DEFINE_TYPE (GstPlugin, gst_plugin, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstPlugin, gst_plugin, GST_TYPE_OBJECT);
 
 static void
 gst_plugin_init (GstPlugin * plugin)
 {
-  plugin->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (plugin, GST_TYPE_PLUGIN, GstPluginPrivate);
+  plugin->priv = gst_plugin_get_instance_private (plugin);
 }
 
 static void
@@ -164,8 +174,6 @@ static void
 gst_plugin_class_init (GstPluginClass * klass)
 {
   G_OBJECT_CLASS (klass)->finalize = gst_plugin_finalize;
-
-  g_type_class_add_private (klass, sizeof (GstPluginPrivate));
 }
 
 GQuark
@@ -491,7 +499,7 @@ gst_plugin_register_func (GstPlugin * plugin, const GstPluginDesc * desc,
   if (!gst_plugin_check_version (desc->major_version, desc->minor_version)) {
     if (GST_CAT_DEFAULT)
       GST_WARNING ("plugin \"%s\" has incompatible version "
-          "(plugin: %d.%d, gst: %d,%d), not loading",
+          "(plugin: %d.%d, gst: %d.%d), not loading",
           GST_STR_NULL (plugin->filename), desc->major_version,
           desc->minor_version, GST_VERSION_MAJOR, GST_VERSION_MINOR);
     return NULL;
@@ -750,7 +758,7 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
   g_return_val_if_fail (filename != NULL, NULL);
 
   if (registry == NULL)
-  registry = gst_registry_get ();
+    registry = gst_registry_get ();
 
   g_mutex_lock (&gst_plugin_loading_mutex);
 
@@ -776,7 +784,12 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
         GST_PLUGIN_ERROR_MODULE, "Dynamic loading not supported");
     goto return_error;
   }
-
+#if defined(GST_WINAPI_ONLY_APP)
+  /* plugins loaded by filename by Universal Windows Platform apps do not use
+   * an actual file with a path, they use a packaged (asset) library */
+  file_status.st_mtime = 0;
+  file_status.st_size = 0;
+#else
   if (g_stat (filename, &file_status)) {
     GST_CAT_DEBUG (GST_CAT_PLUGIN_LOADING, "problem accessing file");
     g_set_error (error,
@@ -785,6 +798,7 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
         g_strerror (errno));
     goto return_error;
   }
+#endif
 
   flags = G_MODULE_BIND_LOCAL;
   /* libgstpython.so is the gst-python plugin loader. It needs to be loaded with
@@ -819,7 +833,7 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
   } else {
     GST_DEBUG ("Could not find symbol '%s', falling back to gst_plugin_desc",
         symname);
-  ret = g_module_symbol (module, "gst_plugin_desc", &ptr);
+    ret = g_module_symbol (module, "gst_plugin_desc", &ptr);
   }
 
   g_free (symname);
@@ -981,7 +995,7 @@ gst_plugin_get_description (GstPlugin * plugin)
  *
  * get the filename of the plugin
  *
- * Returns: (type filename): the filename of the plugin
+ * Returns: (type filename) (nullable): the filename of the plugin
  */
 const gchar *
 gst_plugin_get_filename (GstPlugin * plugin)
@@ -1757,8 +1771,8 @@ gst_plugin_ext_dep_get_stat_hash (GstPlugin * plugin, GstPluginDep * dep)
       } else {
         GST_LOG_OBJECT (plugin, "path: '%s' (duplicate, ignoring)", full_path);
         g_free (full_path);
+      }
     }
-  }
   }
 
   while ((path = g_queue_pop_head (&scan_paths))) {

@@ -32,9 +32,6 @@ namespace JSC {
 
 template<typename Adaptor>
 class GenericTypedArrayView final : public ArrayBufferView {
-protected:
-    GenericTypedArrayView(RefPtr<ArrayBuffer>&&, unsigned byteOffset, unsigned length);
-
 public:
     static Ref<GenericTypedArrayView> create(unsigned length);
     static Ref<GenericTypedArrayView> create(const typename Adaptor::Type* array, unsigned length);
@@ -58,8 +55,7 @@ public:
         return setRangeImpl(
             reinterpret_cast<const char*>(data),
             count * sizeof(typename Adaptor::Type),
-            offset * sizeof(typename Adaptor::Type),
-            internalByteLength());
+            offset * sizeof(typename Adaptor::Type));
     }
 
     bool zeroRange(unsigned offset, size_t count)
@@ -71,14 +67,9 @@ public:
 
     unsigned length() const
     {
-        if (isNeutered())
+        if (isDetached())
             return 0;
-        return m_length;
-    }
-
-    unsigned byteLength() const override
-    {
-        return internalByteLength();
+        return byteLength() / sizeof(typename Adaptor::Type);
     }
 
     typename Adaptor::Type item(unsigned index) const
@@ -104,8 +95,7 @@ public:
         return getRangeImpl(
             reinterpret_cast<char*>(data),
             count * sizeof(typename Adaptor::Type),
-            offset * sizeof(typename Adaptor::Type),
-            internalByteLength());
+            offset * sizeof(typename Adaptor::Type));
     }
 
     bool checkInboundData(unsigned offset, size_t count) const
@@ -120,20 +110,15 @@ public:
     RefPtr<GenericTypedArrayView> subarray(int start) const;
     RefPtr<GenericTypedArrayView> subarray(int start, int end) const;
 
-    TypedArrayType getType() const override
+    TypedArrayType getType() const final
     {
         return Adaptor::typeValue;
     }
 
-    JSArrayBufferView* wrap(ExecState*, JSGlobalObject*) override;
+    JSArrayBufferView* wrap(JSGlobalObject*, JSGlobalObject*) final;
 
 private:
-    unsigned internalByteLength() const
-    {
-        return length() * sizeof(typename Adaptor::Type);
-    }
-
-    unsigned m_length;
+    GenericTypedArrayView(RefPtr<ArrayBuffer>&&, unsigned byteOffset, unsigned length);
 };
 
 } // namespace JSC

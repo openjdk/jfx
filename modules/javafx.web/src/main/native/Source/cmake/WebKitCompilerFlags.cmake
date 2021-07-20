@@ -104,12 +104,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-exceptions)
         WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-fno-rtti)
 
-        check_cxx_compiler_flag("-std=c++14" CXX_COMPILER_SUPPORTS_CXX14)
-        if (CXX_COMPILER_SUPPORTS_CXX14)
-            WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-std=c++14)
-        else ()
-            message(FATAL_ERROR "Compiler with C++14 support is required")
-        endif ()
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-tautological-compare)
 
         if (WIN32)
             WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-mno-ms-bitfields)
@@ -130,10 +125,11 @@ if (COMPILER_IS_GCC_OR_CLANG)
     # FIXME: We should probably not be disabling -Wno-maybe-uninitialized?
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Qunused-arguments
                                          -Wno-maybe-uninitialized
-                                         -Wno-missing-field-initializers
-                                         -Wno-noexcept-type
                                          -Wno-parentheses-equality
+                                         -Wno-misleading-indentation
                                          -Wno-psabi)
+
+    WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-noexcept-type)
 
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80947
     if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "8.0" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -176,20 +172,62 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND NOT "${LOWERCASE_CMAKE_HOST_SY
     set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "-Wl,--no-keep-memory ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
 endif ()
 
+if (LTO_MODE AND COMPILER_IS_CLANG)
+    set(CMAKE_C_FLAGS "-flto=${LTO_MODE} ${CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-flto=${LTO_MODE} ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "-flto=${LTO_MODE} ${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "-flto=${LTO_MODE} ${CMAKE_SHARED_LINKER_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "-flto=${LTO_MODE} ${CMAKE_MODULE_LINKER_FLAGS}")
+endif ()
+
 if (COMPILER_IS_GCC_OR_CLANG)
     # Careful: this needs to be above where ENABLED_COMPILER_SANITIZERS is set.
     # Also, it's not possible to use the normal prepend/append macros for
-    # -fsanitize=address, because check_cxx_compiler_flag will report it's
+    # -fsanitize=* flags, because check_cxx_compiler_flag will report it's
     # unsupported, because it causes the build to fail if not used when linking.
-    option(ENABLE_ADDRESS_SANITIZER "Enable address sanitizer" OFF)
-    if (ENABLE_ADDRESS_SANITIZER)
-        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fno-omit-frame-pointer
-                                             -fno-optimize-sibling-calls)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-        set(CMAKE_EXE_LINKER_FLAGS "-lpthread ${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
-        set(CMAKE_SHARED_LINKER_FLAGS "-lpthread ${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
-        set(CMAKE_MODULE_LINKER_FLAGS "-lpthread ${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=address")
+    if (ENABLE_SANITIZERS)
+        if (MSVC AND WTF_CPU_X86_64)
+            find_library(CLANG_ASAN_LIBRARY clang_rt.asan_dynamic_runtime_thunk-x86_64 ${CLANG_LIB_PATH})
+            find_library(CLANG_ASAN_RT_LIBRARY clang_rt.asan_dynamic-x86_64 PATHS ${CLANG_LIB_PATH})
+            set(SANITIZER_LINK_FLAGS "\"${CLANG_ASAN_LIBRARY}\" \"${CLANG_ASAN_RT_LIBRARY}\"")
+        else ()
+            set(SANITIZER_LINK_FLAGS "-lpthread")
+        endif ()
+
+        foreach (SANITIZER ${ENABLE_SANITIZERS})
+            if (${SANITIZER} MATCHES "address")
+                WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fno-omit-frame-pointer -fno-optimize-sibling-calls")
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=address ${SANITIZER_COMPILER_FLAGS}")
+                set(SANITIZER_LINK_FLAGS "-fsanitize=address ${SANITIZER_LINK_FLAGS}")
+
+            elseif (${SANITIZER} MATCHES "undefined")
+                WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fno-omit-frame-pointer -fno-optimize-sibling-calls")
+                # -fsanitize=vptr is incompatible with -fno-rtti
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=undefined -frtti ${SANITIZER_COMPILER_FLAGS}")
+                set(SANITIZER_LINK_FLAGS "-fsanitize=undefined ${SANITIZER_LINK_FLAGS}")
+
+            elseif (${SANITIZER} MATCHES "thread" AND NOT MSVC)
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=thread ${SANITIZER_COMPILER_FLAGS}")
+                set(SANITIZER_LINK_FLAGS "-fsanitize=thread ${SANITIZER_LINK_FLAGS}")
+
+            elseif (${SANITIZER} MATCHES "memory" AND COMPILER_IS_CLANG AND NOT MSVC)
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=memory ${SANITIZER_COMPILER_FLAGS}")
+                set(SANITIZER_LINK_FLAGS "-fsanitize=memory ${SANITIZER_LINK_FLAGS}")
+
+            elseif (${SANITIZER} MATCHES "leak" AND NOT MSVC)
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=leak ${SANITIZER_COMPILER_FLAGS}")
+                set(SANITIZER_LINK_FLAGS "-fsanitize=leak ${SANITIZER_LINK_FLAGS}")
+
+            else ()
+                message(FATAL_ERROR "Unsupported sanitizer: ${SANITIZER}")
+            endif ()
+        endforeach ()
+
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SANITIZER_COMPILER_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZER_COMPILER_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${SANITIZER_LINK_FLAGS}")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${SANITIZER_LINK_FLAGS}")
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${SANITIZER_LINK_FLAGS}")
     endif ()
 endif ()
 
@@ -202,20 +240,11 @@ if (UNIX AND NOT APPLE AND NOT ENABLED_COMPILER_SANITIZERS)
 endif ()
 
 
-# CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS only matters with GCC >= 4.7.0.  Since this
-# version, -P does not output empty lines, which currently breaks make_names.pl in
-# WebCore. Investigating whether make_names.pl should be changed instead is left as an exercise to
-# the reader.
 if (MSVC)
-    set(CODE_GENERATOR_PREPROCESSOR_ARGUMENTS "/nologo /EP /TP")
-    set(CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS_ARGUMENTS ${CODE_GENERATOR_PREPROCESSOR_ARGUMENTS})
+    set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" /nologo /EP /TP")
 else ()
-    set(CODE_GENERATOR_PREPROCESSOR_ARGUMENTS "-E -P -x c++")
-    set(CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS_ARGUMENTS "-E -x c++")
+    set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" -E -P -x c++")
 endif ()
-
-set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" ${CODE_GENERATOR_PREPROCESSOR_ARGUMENTS}")
-set(CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS "\"${CMAKE_CXX_COMPILER}\" ${CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS_ARGUMENTS}")
 
 
 # Ensure that the default include system directories are added to the list of CMake implicit includes.
@@ -245,12 +274,40 @@ endif ()
 if (COMPILER_IS_GCC_OR_CLANG)
     set(ATOMIC_TEST_SOURCE "
         #include <atomic>
-        int main() { std::atomic<int64_t> i(0); i++; return 0; }
+        int main() {
+          std::atomic<bool> y (false);
+          std::atomic<uint64_t> x (0);
+          bool expected = true;
+          bool j = y.compare_exchange_weak(expected,false);
+          x++;
+          return 0;
+        }
     ")
-    check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMIC_INT64_IS_BUILTIN)
-    if (NOT ATOMIC_INT64_IS_BUILTIN)
+    check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
+    if (NOT ATOMICS_ARE_BUILTIN)
         set(CMAKE_REQUIRED_LIBRARIES atomic)
-        check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMIC_INT64_REQUIRES_LIBATOMIC)
+        check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
         unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
+
+    # <filesystem> vs <experimental/filesystem>
+    set(FILESYSTEM_TEST_SOURCE "
+        #include <filesystem>
+        int main() { std::filesystem::path p1(\"\"); std::filesystem::status(p1); }
+    ")
+    set(CMAKE_REQUIRED_FLAGS "--std=c++17")
+    check_cxx_source_compiles("${FILESYSTEM_TEST_SOURCE}" STD_FILESYSTEM_IS_AVAILABLE)
+    if (NOT STD_FILESYSTEM_IS_AVAILABLE)
+        set(EXPERIMENTAL_FILESYSTEM_TEST_SOURCE "
+            #include <experimental/filesystem>
+            int main() {
+                std::experimental::filesystem::path p1(\"//home\");
+                std::experimental::filesystem::status(p1);
+            }
+        ")
+        set(CMAKE_REQUIRED_LIBRARIES stdc++fs)
+        check_cxx_source_compiles("${EXPERIMENTAL_FILESYSTEM_TEST_SOURCE}" STD_EXPERIMENTAL_FILESYSTEM_IS_AVAILABLE)
+        unset(CMAKE_REQUIRED_LIBRARIES)
+    endif ()
+    unset(CMAKE_REQUIRED_FLAGS)
 endif ()

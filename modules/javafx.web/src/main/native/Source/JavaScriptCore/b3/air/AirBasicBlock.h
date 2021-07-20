@@ -49,6 +49,7 @@ class BasicBlock {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static const char* const dumpPrefix;
+    static constexpr unsigned uninsertedIndex = UINT_MAX;
 
     typedef Vector<Inst> InstList;
     typedef Vector<BasicBlock*, 2> PredecessorList;
@@ -104,8 +105,8 @@ public:
     const SuccessorList& successors() const { return m_successors; }
     SuccessorList& successors() { return m_successors; }
 
-    void setSuccessors(FrequentedBlock);
-    void setSuccessors(FrequentedBlock, FrequentedBlock);
+    JS_EXPORT_PRIVATE void setSuccessors(FrequentedBlock);
+    JS_EXPORT_PRIVATE void setSuccessors(FrequentedBlock, FrequentedBlock);
 
     BasicBlock* successorBlock(unsigned index) const { return successor(index).block(); }
     BasicBlock*& successorBlock(unsigned index) { return successor(index).block(); }

@@ -26,26 +26,22 @@
 
 #include "FileChooser.h"
 #include "HTMLTextFormControlElement.h"
-#include "StepRange.h"
 #include <memory>
 #include <wtf/WeakPtr.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include "DateComponents.h"
-#endif
-
 namespace WebCore {
 
+class Decimal;
 class DragData;
 class FileList;
 class HTMLDataListElement;
 class HTMLImageLoader;
+class HTMLOptionElement;
 class Icon;
 class InputType;
 class ListAttributeTargetObserver;
 class RadioButtonGroups;
-
-struct DateTimeChooserParameters;
+class StepRange;
 
 struct InputElementClickState {
     bool stateful { false };
@@ -54,7 +50,10 @@ struct InputElementClickState {
     RefPtr<HTMLInputElement> checkedRadioButton;
 };
 
-class HTMLInputElement : public HTMLTextFormControlElement, public CanMakeWeakPtr<HTMLInputElement> {
+enum class AnyStepHandling : bool;
+enum class DateComponentsType : uint8_t;
+
+class HTMLInputElement : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
 public:
     static Ref<HTMLInputElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
@@ -87,6 +86,7 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    Optional<double> listOptionValueAsDouble(const HTMLOptionElement&);
 #endif
 
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -118,22 +118,19 @@ public:
     WEBCORE_EXPORT bool isText() const;
 
     WEBCORE_EXPORT bool isEmailField() const;
-    bool isFileUpload() const;
+    WEBCORE_EXPORT bool isFileUpload() const;
     bool isImageButton() const;
     WEBCORE_EXPORT bool isNumberField() const;
     bool isSubmitButton() const;
     WEBCORE_EXPORT bool isTelephoneField() const;
     WEBCORE_EXPORT bool isURLField() const;
     WEBCORE_EXPORT bool isDateField() const;
-    WEBCORE_EXPORT bool isDateTimeField() const;
     WEBCORE_EXPORT bool isDateTimeLocalField() const;
     WEBCORE_EXPORT bool isMonthField() const;
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
-#if PLATFORM(IOS_FAMILY)
-    DateComponents::Type dateType() const;
-#endif
+    DateComponentsType dateType() const;
 
     HTMLElement* containerElement() const;
 
@@ -168,7 +165,7 @@ public:
     bool sizeShouldIncludeDecoration(int& preferredSize) const;
     float decorationWidth() const;
 
-    WEBCORE_EXPORT void setType(const AtomicString&);
+    WEBCORE_EXPORT void setType(const AtomString&);
 
     WEBCORE_EXPORT String value() const final;
     WEBCORE_EXPORT ExceptionOr<void> setValue(const String&, TextFieldEventBehavior = DispatchNoEvent);
@@ -235,10 +232,13 @@ public:
 
     unsigned effectiveMaxLength() const;
 
-    bool multiple() const;
+    WEBCORE_EXPORT bool multiple() const;
 
     bool isAutoFilled() const { return m_isAutoFilled; }
     WEBCORE_EXPORT void setAutoFilled(bool = true);
+
+    bool isAutoFilledAndViewable() const { return m_isAutoFilledAndViewable; }
+    WEBCORE_EXPORT void setAutoFilledAndViewable(bool = true);
 
     AutoFillButtonType lastAutoFillButtonType() const { return static_cast<AutoFillButtonType>(m_lastAutoFillButtonType); }
     AutoFillButtonType autoFillButtonType() const { return static_cast<AutoFillButtonType>(m_autoFillButtonType); }
@@ -272,12 +272,13 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT RefPtr<HTMLElement> list() const;
+    WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
     RefPtr<HTMLDataListElement> dataList() const;
-    void listAttributeTargetChanged();
+    void dataListMayHaveChanged();
 #endif
 
-    Vector<HTMLInputElement*> radioButtonGroup() const;
-    HTMLInputElement* checkedRadioButtonForGroup() const;
+    Vector<Ref<HTMLInputElement>> radioButtonGroup() const;
+    RefPtr<HTMLInputElement> checkedRadioButtonForGroup() const;
     bool isInRequiredRadioButtonGroup();
     // Returns null if this isn't associated with any radio button group.
     RadioButtonGroups* radioButtonGroups() const;
@@ -291,7 +292,7 @@ public:
 
     void cacheSelectionInResponseToSetValue(int caretOffset) { cacheSelection(caretOffset, caretOffset, SelectionHasNoDirection); }
 
-    Color valueAsColor() const; // Returns transparent color if not type=color.
+    WEBCORE_EXPORT Color valueAsColor() const; // Returns transparent color if not type=color.
     WEBCORE_EXPORT void selectColor(StringView); // Does nothing if not type=color. Simulates user selection of color; intended for testing.
     WEBCORE_EXPORT Vector<Color> suggestedColors() const;
 
@@ -311,7 +312,7 @@ public:
     void blur() final;
     void defaultBlur();
 
-    const AtomicString& name() const final;
+    const AtomString& name() const final;
 
     void endEditing();
 
@@ -326,10 +327,6 @@ public:
 
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     HTMLImageLoader& ensureImageLoader();
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
-#endif
 
     void capsLockStateMayHaveChanged();
 
@@ -363,6 +360,7 @@ private:
     void removedFromAncestor(RemovalType, ContainerNode&) final;
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
+    int defaultTabIndex() const final;
     bool hasCustomFocusLogic() const final;
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
@@ -371,11 +369,13 @@ private:
     void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) final;
     bool shouldUseInputMethod() final;
 
+    bool isInteractiveContent() const final;
+
     bool isInnerTextElementEditable() const final { return !hasAutoFillStrongPasswordButton() && HTMLTextFormControlElement::isInnerTextElementEditable(); }
 
     bool canTriggerImplicitSubmission() const final { return isTextField(); }
 
-    const AtomicString& formControlType() const final;
+    const AtomString& formControlType() const final;
 
     bool shouldSaveAndRestoreFormControlState() const final;
     FormControlState saveFormControlState() const final;
@@ -385,11 +385,11 @@ private:
 
     bool canStartSelection() const final;
 
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     void finishParsingChildren() final;
     void parserDidSetAttributes() final;
 
@@ -445,16 +445,16 @@ private:
 #if ENABLE(DATALIST_ELEMENT)
     void resetListAttributeTargetObserver();
 #endif
-    void maxLengthAttributeChanged(const AtomicString& newValue);
-    void minLengthAttributeChanged(const AtomicString& newValue);
+    void maxLengthAttributeChanged(const AtomString& newValue);
+    void minLengthAttributeChanged(const AtomString& newValue);
     void updateValueIfNeeded();
 
     void addToRadioButtonGroup();
     void removeFromRadioButtonGroup();
 
-    void setDefaultSelectionAfterFocus(SelectionRevealMode);
+    void setDefaultSelectionAfterFocus(SelectionRestorationMode, SelectionRevealMode);
 
-    AtomicString m_name;
+    AtomString m_name;
     String m_valueIfDirty;
     unsigned m_size;
     short m_maxResults { -1 };
@@ -465,6 +465,7 @@ private:
     bool m_isActivatedSubmit : 1;
     unsigned m_autocomplete : 2; // AutoCompleteSetting
     bool m_isAutoFilled : 1;
+    bool m_isAutoFilledAndViewable : 1;
     unsigned m_autoFillButtonType : 3; // AutoFillButtonType
     unsigned m_lastAutoFillButtonType : 3; // AutoFillButtonType
     bool m_isAutoFillAvailable : 1;

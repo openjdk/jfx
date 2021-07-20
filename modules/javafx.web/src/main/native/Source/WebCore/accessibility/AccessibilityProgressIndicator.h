@@ -24,10 +24,8 @@
 
 namespace WebCore {
 
-#if ENABLE(METER_ELEMENT)
 class HTMLMeterElement;
 class RenderMeter;
-#endif
 
 class HTMLProgressElement;
 class RenderProgress;
@@ -35,18 +33,18 @@ class RenderProgress;
 class AccessibilityProgressIndicator final : public AccessibilityRenderObject {
 public:
     static Ref<AccessibilityProgressIndicator> create(RenderProgress*);
-#if ENABLE(METER_ELEMENT)
     static Ref<AccessibilityProgressIndicator> create(RenderMeter*);
-    String gaugeRegionValueDescription() const;
-#endif
     Element* element() const override;
 
 private:
-    AccessibilityRole roleValue() const override { return AccessibilityRole::ProgressIndicator; }
-
+    AccessibilityRole roleValue() const override;
     bool isProgressIndicator() const override { return true; }
 
+    // Used in type checking function is<AccessibilityProgressIndicator>.
+    bool isAccessibilityProgressIndicatorInstance() const final { return true; }
+
     String valueDescription() const override;
+    String gaugeRegionValueDescription() const;
     float valueForRange() const override;
     float maxValueForRange() const override;
     float minValueForRange() const override;
@@ -54,14 +52,12 @@ private:
     explicit AccessibilityProgressIndicator(RenderProgress*);
     HTMLProgressElement* progressElement() const;
 
-#if ENABLE(METER_ELEMENT)
     explicit AccessibilityProgressIndicator(RenderMeter*);
     HTMLMeterElement* meterElement() const;
-#endif
 
     bool computeAccessibilityIsIgnored() const override;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityProgressIndicator, isProgressIndicator())
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityProgressIndicator, isAccessibilityProgressIndicatorInstance())

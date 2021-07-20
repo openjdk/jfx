@@ -27,7 +27,6 @@
 
 #include "ConcurrentJSLock.h"
 #include "Structure.h"
-#include <wtf/SegmentedVector.h>
 
 namespace JSC {
 
@@ -48,17 +47,19 @@ const ArrayModes CopyOnWriteArrayWithInt32ArrayMode = 1 << CopyOnWriteArrayWithI
 const ArrayModes CopyOnWriteArrayWithDoubleArrayMode = 1 << CopyOnWriteArrayWithDouble;
 const ArrayModes CopyOnWriteArrayWithContiguousArrayMode = 1 << CopyOnWriteArrayWithContiguous;
 
-const ArrayModes Int8ArrayMode = 1 << 16;
-const ArrayModes Int16ArrayMode = 1 << 17;
-const ArrayModes Int32ArrayMode = 1 << 18;
-const ArrayModes Uint8ArrayMode = 1 << 19;
-const ArrayModes Uint8ClampedArrayMode = 1 << 20; // 21 - 25 are used for CoW arrays.
-const ArrayModes Uint16ArrayMode = 1 << 26;
-const ArrayModes Uint32ArrayMode = 1 << 27;
-const ArrayModes Float32ArrayMode = 1 << 28;
-const ArrayModes Float64ArrayMode = 1 << 29;
+const ArrayModes Int8ArrayMode = 1U << 16;
+const ArrayModes Int16ArrayMode = 1U << 17;
+const ArrayModes Int32ArrayMode = 1U << 18;
+const ArrayModes Uint8ArrayMode = 1U << 19;
+const ArrayModes Uint8ClampedArrayMode = 1U << 20; // 21 - 25 are used for CoW arrays.
+const ArrayModes Uint16ArrayMode = 1U << 26;
+const ArrayModes Uint32ArrayMode = 1U << 27;
+const ArrayModes Float32ArrayMode = 1U << 28;
+const ArrayModes Float64ArrayMode = 1U << 29;
+const ArrayModes BigInt64ArrayMode = 1U << 30;
+const ArrayModes BigUint64ArrayMode = 1U << 31;
 
-extern const ArrayModes typedArrayModes[NumberOfTypedArrayTypesExcludingDataView];
+JS_EXPORT_PRIVATE extern const ArrayModes typedArrayModes[NumberOfTypedArrayTypesExcludingDataView];
 
 constexpr ArrayModes asArrayModesIgnoringTypedArrays(IndexingType indexingMode)
 {
@@ -75,6 +76,8 @@ constexpr ArrayModes asArrayModesIgnoringTypedArrays(IndexingType indexingMode)
     | Uint32ArrayMode         \
     | Float32ArrayMode        \
     | Float64ArrayMode        \
+    | BigInt64ArrayMode       \
+    | BigUint64ArrayMode      \
     )
 
 #define ALL_NON_ARRAY_ARRAY_MODES                       \
@@ -194,20 +197,12 @@ class ArrayProfile {
     friend class CodeBlock;
 
 public:
-    ArrayProfile()
-        : ArrayProfile(std::numeric_limits<unsigned>::max())
-    {
-    }
-
-    explicit ArrayProfile(unsigned bytecodeOffset)
-        : m_bytecodeOffset(bytecodeOffset)
-        , m_mayInterceptIndexedAccesses(false)
+    explicit ArrayProfile()
+        : m_mayInterceptIndexedAccesses(false)
         , m_usesOriginalArrayStructures(true)
         , m_didPerformFirstRunPruning(false)
     {
     }
-
-    unsigned bytecodeOffset() const { return m_bytecodeOffset; }
 
     StructureID* addressOfLastSeenStructureID() { return &m_lastSeenStructureID; }
     ArrayModes* addressOfArrayModes() { return &m_observedArrayModes; }
@@ -216,10 +211,8 @@ public:
     void setOutOfBounds() { m_outOfBounds = true; }
     bool* addressOfOutOfBounds() { return &m_outOfBounds; }
 
-    void observeStructure(Structure* structure)
-    {
-        m_lastSeenStructureID = structure->id();
-    }
+    void observeStructureID(StructureID structureID) { m_lastSeenStructureID = structureID; }
+    void observeStructure(Structure* structure) { m_lastSeenStructureID = structure->id(); }
 
     void computeUpdatedPrediction(const ConcurrentJSLocker&, CodeBlock*);
     void computeUpdatedPrediction(const ConcurrentJSLocker&, CodeBlock*, Structure* lastSeenStructure);
@@ -238,16 +231,11 @@ public:
     CString briefDescription(const ConcurrentJSLocker&, CodeBlock*);
     CString briefDescriptionWithoutUpdating(const ConcurrentJSLocker&);
 
-#if !ASSERT_DISABLED
-    inline bool isValid() const { return m_typeName == s_typeName; }
-#endif
-
 private:
     friend class LLIntOffsetsExtractor;
 
     static Structure* polymorphicStructure() { return static_cast<Structure*>(reinterpret_cast<void*>(1)); }
 
-    unsigned m_bytecodeOffset;
     StructureID m_lastSeenStructureID { 0 };
     bool m_mayStoreToHole { false }; // This flag may become overloaded to indicate other special cases that were encountered during array access, as it depends on indexing type. Since we currently have basically just one indexing type (two variants of ArrayStorage), this flag for now just means exactly what its name implies.
     bool m_outOfBounds { false };
@@ -255,13 +243,7 @@ private:
     bool m_usesOriginalArrayStructures : 1;
     bool m_didPerformFirstRunPruning : 1;
     ArrayModes m_observedArrayModes { 0 };
-
-#if !ASSERT_DISABLED
-    static const char* const s_typeName;
-    const char* m_typeName { s_typeName };
-#endif
 };
-
-typedef SegmentedVector<ArrayProfile, 4> ArrayProfileVector;
+static_assert(sizeof(ArrayProfile) == 12);
 
 } // namespace JSC

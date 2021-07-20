@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLBaseSemantic.h"
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -37,9 +38,10 @@ namespace WHLSL {
 namespace AST {
 
 class SpecializationConstantSemantic : public BaseSemantic {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    SpecializationConstantSemantic(Lexer::Token&& origin)
-        : BaseSemantic(WTFMove(origin))
+    SpecializationConstantSemantic(CodeLocation location)
+        : BaseSemantic(location)
     {
     }
 
@@ -70,4 +72,4 @@ private:
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

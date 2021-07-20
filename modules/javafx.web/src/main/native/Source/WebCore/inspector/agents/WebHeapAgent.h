@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "InspectorWebAgentBase.h"
 #include <JavaScriptCore/InspectorHeapAgent.h>
 #include <wtf/Forward.h>
 
@@ -32,22 +33,24 @@ namespace WebCore {
 
 class SendGarbageCollectionEventsTask;
 struct GarbageCollectionData;
-typedef String ErrorString;
 
 class WebHeapAgent : public Inspector::InspectorHeapAgent {
     WTF_MAKE_NONCOPYABLE(WebHeapAgent);
     WTF_MAKE_FAST_ALLOCATED;
     friend class SendGarbageCollectionEventsTask;
 public:
-    WebHeapAgent(Inspector::AgentContext&);
-    virtual ~WebHeapAgent();
+    WebHeapAgent(WebAgentContext&);
+    ~WebHeapAgent() override;
+
+    // HeapBackendDispatcherHandler
+    Inspector::Protocol::ErrorStringOr<void> enable() override;
+    Inspector::Protocol::ErrorStringOr<void> disable() override;
 
 protected:
-    void disable(ErrorString&) override;
-
-    void dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::GarbageCollection::Type, Seconds startTime, Seconds endTime) override;
-
+    void dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::GarbageCollection::Type, Seconds startTime, Seconds endTime) final;
     void dispatchGarbageCollectionEventsAfterDelay(Vector<GarbageCollectionData>&& collections);
+
+    InstrumentingAgents& m_instrumentingAgents;
 
     std::unique_ptr<SendGarbageCollectionEventsTask> m_sendGarbageCollectionEventsTask;
 };

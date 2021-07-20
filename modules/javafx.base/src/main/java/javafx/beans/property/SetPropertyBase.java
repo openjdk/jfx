@@ -272,7 +272,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!newObservable.equals(this.observable)) {
+        if (newObservable != this.observable) {
             unbind();
             observable = newObservable;
             if (listener == null) {

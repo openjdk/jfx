@@ -25,10 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
+#include "WHLSLError.h"
 #include "WHLSLSemantic.h"
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -63,10 +63,10 @@ struct EntryPointItems {
     Vector<EntryPointItem> outputs;
 };
 
-Optional<EntryPointItems> gatherEntryPointItems(const Intrinsics&, AST::FunctionDefinition&);
+Expected<EntryPointItems, Error> gatherEntryPointItems(const Intrinsics&, AST::FunctionDefinition&);
 
 } // namespace WHLSL
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGPU)
+#endif // ENABLE(WHLSL_COMPILER)

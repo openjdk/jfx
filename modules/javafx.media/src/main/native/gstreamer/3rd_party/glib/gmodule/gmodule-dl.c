@@ -29,7 +29,7 @@
 
 #include <dlfcn.h>
 
-/* Perl includes <nlist.h> and <link.h> instead of <dlfcn.h> on some systmes? */
+/* Perl includes <nlist.h> and <link.h> instead of <dlfcn.h> on some systems? */
 
 
 /* dlerror() is not implemented on all systems
@@ -90,13 +90,13 @@ fetch_dlerror (gboolean replace_null)
 
 static gpointer
 _g_module_open (const gchar *file_name,
-        gboolean     bind_lazy,
-        gboolean     bind_local)
+    gboolean     bind_lazy,
+    gboolean     bind_local)
 {
   gpointer handle;
 
   handle = dlopen (file_name,
-           (bind_local ? 0 : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
+       (bind_local ? 0 : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
   if (!handle)
     g_module_set_error (fetch_dlerror (TRUE));
 
@@ -131,30 +131,20 @@ _g_module_self (void)
 }
 
 static void
-_g_module_close (gpointer handle,
-         gboolean is_unref)
+_g_module_close (gpointer handle)
 {
-  /* are there any systems out there that have dlopen()/dlclose()
-   * without a reference count implementation?
-   *
-   * See above for the Android special case
-   */
 #if defined(__BIONIC__)
-  is_unref = (handle != RTLD_DEFAULT);
-#else
-  is_unref |= 1;
+  if (handle != RTLD_DEFAULT)
 #endif
-
-  if (is_unref)
     {
       if (dlclose (handle) != 0)
-    g_module_set_error (fetch_dlerror (TRUE));
+        g_module_set_error (fetch_dlerror (TRUE));
     }
 }
 
 static gpointer
 _g_module_symbol (gpointer     handle,
-          const gchar *symbol_name)
+      const gchar *symbol_name)
 {
   gpointer p;
   gchar *msg;
@@ -170,7 +160,7 @@ _g_module_symbol (gpointer     handle,
 
 static gchar*
 _g_module_build_path (const gchar *directory,
-              const gchar *module_name)
+          const gchar *module_name)
 {
   if (directory && *directory) {
     if (strncmp (module_name, "lib", 3) == 0)

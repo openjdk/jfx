@@ -84,14 +84,16 @@ struct _GstAudioVisualizer
   /* audio state */
   GstAudioInfo ainfo;
 
-  /* <private> */
+  /*< private >*/
   GstAudioVisualizerPrivate *priv;
 };
 
 struct _GstAudioVisualizerClass
 {
+  /*< private >*/
   GstElementClass parent_class;
 
+  /*< public >*/
   /* virtual function, called whenever the format changes */
   gboolean (*setup) (GstAudioVisualizer * scope);
 
@@ -103,6 +105,8 @@ struct _GstAudioVisualizerClass
 
 GST_PBUTILS_API
 GType gst_audio_visualizer_get_type (void);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (GstAudioVisualizer, gst_object_unref)
 
 G_END_DECLS
 #endif /* __GST_AUDIO_VISUALIZER_H__ */

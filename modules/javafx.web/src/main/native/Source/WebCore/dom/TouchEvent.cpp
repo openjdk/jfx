@@ -31,12 +31,15 @@
 #include "TouchEvent.h"
 
 #include "EventDispatcher.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(TouchEvent);
+
 TouchEvent::TouchEvent() = default;
 
-TouchEvent::TouchEvent(TouchList* touches, TouchList* targetTouches, TouchList* changedTouches, const AtomicString& type,
+TouchEvent::TouchEvent(TouchList* touches, TouchList* targetTouches, TouchList* changedTouches, const AtomString& type,
     RefPtr<WindowProxy>&& view, const IntPoint& globalLocation, OptionSet<Modifier> modifiers)
     : MouseRelatedEvent(type, IsCancelable::Yes, MonotonicTime::now(), WTFMove(view), globalLocation, modifiers)
     , m_touches(touches)
@@ -45,7 +48,7 @@ TouchEvent::TouchEvent(TouchList* touches, TouchList* targetTouches, TouchList* 
 {
 }
 
-TouchEvent::TouchEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+TouchEvent::TouchEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : MouseRelatedEvent(type, initializer, isTrusted)
     , m_touches(initializer.touches ? initializer.touches : TouchList::create())
     , m_targetTouches(initializer.targetTouches ? initializer.targetTouches : TouchList::create())
@@ -56,7 +59,7 @@ TouchEvent::TouchEvent(const AtomicString& type, const Init& initializer, IsTrus
 TouchEvent::~TouchEvent() = default;
 
 void TouchEvent::initTouchEvent(TouchList* touches, TouchList* targetTouches,
-        TouchList* changedTouches, const AtomicString& type,
+        TouchList* changedTouches, const AtomString& type,
         RefPtr<WindowProxy>&& view, int screenX, int screenY, int clientX, int clientY,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {

@@ -27,11 +27,8 @@
 #include "CallLinkInfo.h"
 
 #include "CallFrameShuffleData.h"
-#include "DFGOperations.h"
-#include "DFGThunks.h"
 #include "FunctionCodeBlock.h"
-#include "JSCInlines.h"
-#include "MacroAssembler.h"
+#include "JSCellInlines.h"
 #include "Opcode.h"
 #include "Repatch.h"
 #include <wtf/ListDump.h>
@@ -41,31 +38,45 @@ namespace JSC {
 
 CallLinkInfo::CallType CallLinkInfo::callTypeFor(OpcodeID opcodeID)
 {
-    if (opcodeID == op_call || opcodeID == op_call_eval)
+    switch (opcodeID) {
+    case op_tail_call_varargs:
+    case op_tail_call_forward_arguments:
+        return TailCallVarargs;
+
+    case op_call:
+    case op_call_eval:
+    case op_iterator_open:
+    case op_iterator_next:
         return Call;
-    if (opcodeID == op_call_varargs)
+
+    case op_call_varargs:
         return CallVarargs;
-    if (opcodeID == op_construct)
+
+    case op_construct:
         return Construct;
-    if (opcodeID == op_construct_varargs)
+
+    case op_construct_varargs:
         return ConstructVarargs;
-    if (opcodeID == op_tail_call)
+
+    case op_tail_call:
         return TailCall;
-    ASSERT(opcodeID == op_tail_call_varargs || opcodeID == op_tail_call_forward_arguments);
-    return TailCallVarargs;
+
+    default:
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return Call;
 }
 
-CallLinkInfo::CallLinkInfo()
-    : m_hasSeenShouldRepatch(false)
+CallLinkInfo::CallLinkInfo(CodeOrigin codeOrigin)
+    : m_codeOrigin(codeOrigin)
+    , m_hasSeenShouldRepatch(false)
     , m_hasSeenClosure(false)
     , m_clearedByGC(false)
     , m_clearedByVirtual(false)
     , m_allowStubs(true)
-    , m_isLinked(false)
+    , m_clearedByJettison(false)
     , m_callType(None)
-    , m_calleeGPR(255)
-    , m_maxNumArguments(0)
-    , m_slowPathCount(0)
 {
 }
 
@@ -101,7 +112,7 @@ void CallLinkInfo::unlink(VM& vm)
 CodeLocationNearCall<JSInternalPtrTag> CallLinkInfo::callReturnLocation()
 {
     RELEASE_ASSERT(!isDirect());
-    return CodeLocationNearCall<JSInternalPtrTag>(m_callReturnLocationOrPatchableJump, Regular);
+    return CodeLocationNearCall<JSInternalPtrTag>(m_callReturnLocationOrPatchableJump, NearCallMode::Regular);
 }
 
 CodeLocationJump<JSInternalPtrTag> CallLinkInfo::patchableJump()
@@ -125,17 +136,13 @@ CodeLocationLabel<JSInternalPtrTag> CallLinkInfo::slowPathStart()
 void CallLinkInfo::setCallee(VM& vm, JSCell* owner, JSObject* callee)
 {
     RELEASE_ASSERT(!isDirect());
-    MacroAssembler::repatchPointer(hotPathBegin(), callee);
     m_calleeOrCodeBlock.set(vm, owner, callee);
-    m_isLinked = true;
 }
 
 void CallLinkInfo::clearCallee()
 {
     RELEASE_ASSERT(!isDirect());
-    MacroAssembler::repatchPointer(hotPathBegin(), nullptr);
     m_calleeOrCodeBlock.clear();
-    m_isLinked = false;
 }
 
 JSObject* CallLinkInfo::callee()
@@ -148,14 +155,12 @@ void CallLinkInfo::setCodeBlock(VM& vm, JSCell* owner, FunctionCodeBlock* codeBl
 {
     RELEASE_ASSERT(isDirect());
     m_calleeOrCodeBlock.setMayBeNull(vm, owner, codeBlock);
-    m_isLinked = true;
 }
 
 void CallLinkInfo::clearCodeBlock()
 {
     RELEASE_ASSERT(isDirect());
     m_calleeOrCodeBlock.clear();
-    m_isLinked = false;
 }
 
 FunctionCodeBlock* CallLinkInfo::codeBlock()
@@ -176,13 +181,13 @@ void CallLinkInfo::clearLastSeenCallee()
     m_lastSeenCalleeOrExecutable.clear();
 }
 
-JSObject* CallLinkInfo::lastSeenCallee()
+JSObject* CallLinkInfo::lastSeenCallee() const
 {
     RELEASE_ASSERT(!isDirect());
     return jsCast<JSObject*>(m_lastSeenCalleeOrExecutable.get());
 }
 
-bool CallLinkInfo::haveLastSeenCallee()
+bool CallLinkInfo::haveLastSeenCallee() const
 {
     RELEASE_ASSERT(!isDirect());
     return !!m_lastSeenCalleeOrExecutable;
@@ -200,17 +205,17 @@ ExecutableBase* CallLinkInfo::executable()
     return jsCast<ExecutableBase*>(m_lastSeenCalleeOrExecutable.get());
 }
 
-void CallLinkInfo::setMaxNumArguments(unsigned value)
+void CallLinkInfo::setMaxArgumentCountIncludingThis(unsigned value)
 {
     RELEASE_ASSERT(isDirect());
     RELEASE_ASSERT(value);
-    m_maxNumArguments = value;
+    m_maxArgumentCountIncludingThis = value;
 }
 
 void CallLinkInfo::visitWeak(VM& vm)
 {
     auto handleSpecificCallee = [&] (JSFunction* callee) {
-        if (Heap::isMarked(callee->executable()))
+        if (vm.heap.isMarked(callee->executable()))
             m_hasSeenClosure = true;
         else
             m_clearedByGC = true;
@@ -219,7 +224,7 @@ void CallLinkInfo::visitWeak(VM& vm)
     if (isLinked()) {
         if (stub()) {
             if (!stub()->visitWeak(vm)) {
-                if (Options::verboseOSR()) {
+                if (UNLIKELY(Options::verboseOSR())) {
                     dataLog(
                         "At ", m_codeOrigin, ", ", RawPointer(this), ": clearing call stub to ",
                         listDump(stub()->variants()), ", stub routine ", RawPointer(stub()),
@@ -228,16 +233,16 @@ void CallLinkInfo::visitWeak(VM& vm)
                 unlink(vm);
                 m_clearedByGC = true;
             }
-        } else if (!Heap::isMarked(m_calleeOrCodeBlock.get())) {
+        } else if (!vm.heap.isMarked(m_calleeOrCodeBlock.get())) {
             if (isDirect()) {
-                if (Options::verboseOSR()) {
+                if (UNLIKELY(Options::verboseOSR())) {
                     dataLog(
                         "Clearing call to ", RawPointer(codeBlock()), " (",
                         pointerDump(codeBlock()), ").\n");
                 }
             } else {
                 if (callee()->type() == JSFunctionType) {
-                    if (Options::verboseOSR()) {
+                    if (UNLIKELY(Options::verboseOSR())) {
                         dataLog(
                             "Clearing call to ",
                             RawPointer(callee()), " (",
@@ -246,14 +251,14 @@ void CallLinkInfo::visitWeak(VM& vm)
                     }
                     handleSpecificCallee(static_cast<JSFunction*>(callee()));
                 } else {
-                    if (Options::verboseOSR())
+                    if (UNLIKELY(Options::verboseOSR()))
                         dataLog("Clearing call to ", RawPointer(callee()), ".\n");
                     m_clearedByGC = true;
                 }
             }
             unlink(vm);
-        } else if (isDirect() && !Heap::isMarked(m_lastSeenCalleeOrExecutable.get())) {
-            if (Options::verboseOSR()) {
+        } else if (isDirect() && !vm.heap.isMarked(m_lastSeenCalleeOrExecutable.get())) {
+            if (UNLIKELY(Options::verboseOSR())) {
                 dataLog(
                     "Clearing call to ", RawPointer(executable()),
                     " because the executable is dead.\n");
@@ -264,7 +269,7 @@ void CallLinkInfo::visitWeak(VM& vm)
             m_lastSeenCalleeOrExecutable.clear();
         }
     }
-    if (!isDirect() && haveLastSeenCallee() && !Heap::isMarked(lastSeenCallee())) {
+    if (!isDirect() && haveLastSeenCallee() && !vm.heap.isMarked(lastSeenCallee())) {
         if (lastSeenCallee()->type() == JSFunctionType)
             handleSpecificCallee(jsCast<JSFunction*>(lastSeenCallee()));
         else
@@ -275,7 +280,7 @@ void CallLinkInfo::visitWeak(VM& vm)
 
 void CallLinkInfo::setFrameShuffleData(const CallFrameShuffleData& shuffleData)
 {
-    m_frameShuffleData = std::make_unique<CallFrameShuffleData>(shuffleData);
+    m_frameShuffleData = makeUnique<CallFrameShuffleData>(shuffleData);
 }
 
 } // namespace JSC

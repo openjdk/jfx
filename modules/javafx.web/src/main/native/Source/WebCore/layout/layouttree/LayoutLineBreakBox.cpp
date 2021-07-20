@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,11 +36,13 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LineBreakBox);
 
-LineBreakBox::LineBreakBox(Optional<ElementAttributes> attributes, RenderStyle&& style)
-    : InlineBox(attributes, WTFMove(style), LineBreakBoxFlag)
+LineBreakBox::LineBreakBox(bool isOptional, RenderStyle&& style)
+    : Box({ }, WTFMove(style), Box::LineBreakBoxFlag)
+    , m_isOptional(isOptional)
 {
 }
 
 }
 }
+
 #endif

@@ -26,7 +26,8 @@
 #include "config.h"
 #include "WorkerAuditAgent.h"
 
-#include "WorkerGlobalScope.h"
+#include "ScriptState.h"
+#include "WorkerOrWorkletGlobalScope.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/JSCInlines.h>
@@ -40,20 +41,21 @@ using namespace Inspector;
 
 WorkerAuditAgent::WorkerAuditAgent(WorkerAgentContext& context)
     : InspectorAuditAgent(context)
-    , m_workerGlobalScope(context.workerGlobalScope)
+    , m_globalScope(context.globalScope)
 {
-    ASSERT(context.workerGlobalScope.isContextThread());
+    ASSERT(context.globalScope.isContextThread());
 }
 
-InjectedScript WorkerAuditAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
+WorkerAuditAgent::~WorkerAuditAgent() = default;
+
+InjectedScript WorkerAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId) {
-        errorString = "Execution context id is not supported for workers as there is only one execution context."_s;
+        errorString = "executionContextId is not supported for workers as there is only one execution context"_s;
         return InjectedScript();
     }
 
-    JSC::ExecState* scriptState = execStateFromWorkerGlobalScope(m_workerGlobalScope);
-    return injectedScriptManager().injectedScriptFor(scriptState);
+    return injectedScriptManager().injectedScriptFor(globalObject(m_globalScope));
 }
 
 } // namespace WebCore

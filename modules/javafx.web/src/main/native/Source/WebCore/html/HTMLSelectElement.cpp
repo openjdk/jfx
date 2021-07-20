@@ -98,10 +98,10 @@ void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
     HTMLFormControlElement::didRecalcStyle(styleChange);
 }
 
-const AtomicString& HTMLSelectElement::formControlType() const
+const AtomString& HTMLSelectElement::formControlType() const
 {
-    static NeverDestroyed<const AtomicString> selectMultiple("select-multiple", AtomicString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomicString> selectOne("select-one", AtomicString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> selectMultiple("select-multiple", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> selectOne("select-one", AtomString::ConstructFromLiteral);
     return m_multiple ? selectMultiple : selectOne;
 }
 
@@ -288,7 +288,7 @@ bool HTMLSelectElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLFormControlElementWithState::isPresentationAttribute(name);
 }
 
-void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == sizeAttr) {
         unsigned oldSize = m_size;
@@ -309,6 +309,11 @@ void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomicSt
         parseMultipleAttribute(value);
     else
         HTMLFormControlElementWithState::parseAttribute(name, value);
+}
+
+int HTMLSelectElement::defaultTabIndex() const
+{
+    return 0;
 }
 
 bool HTMLSelectElement::isKeyboardFocusable(KeyboardEvent* event) const
@@ -385,10 +390,10 @@ void HTMLSelectElement::optionElementChildrenChanged()
         cache->childrenChanged(this);
 }
 
-void HTMLSelectElement::accessKeyAction(bool sendMouseEvents)
+bool HTMLSelectElement::accessKeyAction(bool sendMouseEvents)
 {
     focus();
-    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 void HTMLSelectElement::setMultiple(bool multiple)
@@ -408,7 +413,7 @@ void HTMLSelectElement::setSize(unsigned size)
     setUnsignedIntegralAttribute(sizeAttr, limitToOnlyHTMLNonNegative(size));
 }
 
-HTMLOptionElement* HTMLSelectElement::namedItem(const AtomicString& name)
+HTMLOptionElement* HTMLSelectElement::namedItem(const AtomString& name)
 {
     return options()->namedItem(name);
 }
@@ -731,7 +736,7 @@ const Vector<HTMLElement*>& HTMLSelectElement::listItems() const
     if (m_shouldRecalcListItems)
         recalcListItems();
     else {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         Vector<HTMLElement*> items = m_listItems;
         recalcListItems(false);
         ASSERT(items == m_listItems);
@@ -1026,7 +1031,7 @@ void HTMLSelectElement::restoreFormControlState(const FormControlState& state)
     updateValidity();
 }
 
-void HTMLSelectElement::parseMultipleAttribute(const AtomicString& value)
+void HTMLSelectElement::parseMultipleAttribute(const AtomString& value)
 {
     bool oldUsesMenuList = usesMenuList();
     m_multiple = !value.isNull();
@@ -1037,7 +1042,7 @@ void HTMLSelectElement::parseMultipleAttribute(const AtomicString& value)
 
 bool HTMLSelectElement::appendFormData(DOMFormData& formData, bool)
 {
-    const AtomicString& name = this->name();
+    const AtomString& name = this->name();
     if (name.isEmpty())
         return false;
 
@@ -1095,6 +1100,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
     if (!isSpatialNavigationEnabled(document().frame())) {
         if (event->keyIdentifier() == "Down" || event->keyIdentifier() == "Up") {
             focus();
+            document().updateStyleIfNeeded();
             // Calling focus() may cause us to lose our renderer. Return true so
             // that our caller doesn't process the event further, but don't set
             // the event as handled.
@@ -1193,6 +1199,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         if (RenderTheme::singleton().popsMenuBySpaceOrReturn()) {
             if (keyCode == ' ' || keyCode == '\r') {
                 focus();
+                document().updateStyleIfNeeded();
 
                 // Calling focus() may remove the renderer or change the renderer type.
                 auto* renderer = this->renderer();
@@ -1210,6 +1217,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         } else if (RenderTheme::singleton().popsMenuByArrowKeys()) {
             if (keyCode == ' ') {
                 focus();
+                document().updateStyleIfNeeded();
 
                 // Calling focus() may remove the renderer or change the renderer type.
                 auto* renderer = this->renderer();
@@ -1238,6 +1246,8 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
     if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         focus();
 #if !PLATFORM(IOS_FAMILY)
+        document().updateStyleIfNeeded();
+
         auto* renderer = this->renderer();
         if (is<RenderMenuList>(renderer)) {
             auto& menuList = downcast<RenderMenuList>(*renderer);
@@ -1321,6 +1331,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 
     if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         focus();
+        document().updateStyleIfNeeded();
 
         // Calling focus() may remove or change our renderer, in which case we don't want to handle the event further.
         auto* renderer = this->renderer();

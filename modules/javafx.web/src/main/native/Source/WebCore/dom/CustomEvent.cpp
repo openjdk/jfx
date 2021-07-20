@@ -28,15 +28,18 @@
 #include "CustomEvent.h"
 
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(CustomEvent);
 
 inline CustomEvent::CustomEvent(IsTrusted isTrusted)
     : Event(isTrusted)
 {
 }
 
-inline CustomEvent::CustomEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+inline CustomEvent::CustomEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_detail(initializer.detail)
 {
@@ -49,12 +52,12 @@ Ref<CustomEvent> CustomEvent::create(IsTrusted isTrusted)
     return adoptRef(*new CustomEvent(isTrusted));
 }
 
-Ref<CustomEvent> CustomEvent::create(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+Ref<CustomEvent> CustomEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
 {
     return adoptRef(*new CustomEvent(type, initializer, isTrusted));
 }
 
-void CustomEvent::initCustomEvent(const AtomicString& type, bool canBubble, bool cancelable, JSC::JSValue detail)
+void CustomEvent::initCustomEvent(const AtomString& type, bool canBubble, bool cancelable, JSC::JSValue detail)
 {
     if (isBeingDispatched())
         return;

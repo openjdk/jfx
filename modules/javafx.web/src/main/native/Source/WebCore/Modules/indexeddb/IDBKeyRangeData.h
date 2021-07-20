@@ -68,7 +68,7 @@ struct IDBKeyRangeData {
         upperOpen = keyRange->upperOpen();
     }
 
-    IDBKeyRangeData isolatedCopy() const;
+    WEBCORE_EXPORT IDBKeyRangeData isolatedCopy() const;
 
     WEBCORE_EXPORT RefPtr<IDBKeyRange> maybeCreateIDBKeyRange() const;
 
@@ -77,7 +77,7 @@ struct IDBKeyRangeData {
     bool isValid() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBKeyRangeData&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBKeyRangeData&);
 
     bool isNull;
 

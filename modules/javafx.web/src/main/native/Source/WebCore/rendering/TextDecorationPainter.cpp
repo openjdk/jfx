@@ -23,6 +23,7 @@
 #include "config.h"
 #include "TextDecorationPainter.h"
 
+#include "FilterOperations.h"
 #include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "HTMLAnchorElement.h"
@@ -315,26 +316,10 @@ void TextDecorationPainter::paintTextDecoration(const TextRun& textRun, const Fl
         m_context.clearShadow();
 }
 
-static Color decorationColor(const RenderStyle& style)
-{
-    // Check for text decoration color first.
-    Color result = style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor);
-    if (result.isValid())
-        return result;
-    if (style.hasPositiveStrokeWidth()) {
-        // Prefer stroke color if possible but not if it's fully transparent.
-        result = style.computedStrokeColor();
-        if (result.isVisible())
-            return result;
-    }
-
-    return style.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
-}
-
 static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecoration> remainingDecorations, bool firstLineStyle, PseudoId pseudoId)
 {
     auto extractDecorations = [&] (const RenderStyle& style, OptionSet<TextDecoration> decorations) {
-        auto color = decorationColor(style);
+        auto color = TextDecorationPainter::decorationColor(style);
         auto decorationStyle = style.textDecorationStyle();
 
         if (decorations.contains(TextDecoration::Underline)) {
@@ -385,6 +370,23 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
     if (!remainingDecorations.isEmpty() && current)
         extractDecorations(styleForRenderer(*current), remainingDecorations);
 }
+
+Color TextDecorationPainter::decorationColor(const RenderStyle& style)
+{
+    return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor);
+}
+
+OptionSet<TextDecoration> TextDecorationPainter::textDecorationsInEffectForStyle(const TextDecorationPainter::Styles& style)
+{
+    OptionSet<TextDecoration> decorations;
+    if (style.underlineColor.isValid())
+        decorations.add(TextDecoration::Underline);
+    if (style.overlineColor.isValid())
+        decorations.add(TextDecoration::Overline);
+    if (style.linethroughColor.isValid())
+        decorations.add(TextDecoration::LineThrough);
+    return decorations;
+};
 
 auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecoration> requestedDecorations, bool firstLineStyle, PseudoId pseudoId) -> Styles
 {

@@ -32,11 +32,11 @@
 
 namespace WebCore {
 
-DelayProcessor::DelayProcessor(AudioContext& context, float sampleRate, unsigned numberOfChannels, double maxDelayTime)
+DelayProcessor::DelayProcessor(BaseAudioContext& context, float sampleRate, unsigned numberOfChannels, double maxDelayTime)
     : AudioDSPKernelProcessor(sampleRate, numberOfChannels)
-    , m_maxDelayTime(maxDelayTime)
+    , m_delayTime(AudioParam::create(context, "delayTime", 0.0, 0.0, maxDelayTime, AutomationRate::ARate))
 {
-    m_delayTime = AudioParam::create(context, "delayTime", 0.0, 0.0, maxDelayTime);
+
 }
 
 DelayProcessor::~DelayProcessor()
@@ -47,7 +47,7 @@ DelayProcessor::~DelayProcessor()
 
 std::unique_ptr<AudioDSPKernel> DelayProcessor::createKernel()
 {
-    return std::make_unique<DelayDSPKernel>(this);
+    return makeUnique<DelayDSPKernel>(this);
 }
 
 } // namespace WebCore

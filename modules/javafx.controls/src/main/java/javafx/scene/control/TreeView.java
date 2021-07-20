@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -99,7 +101,7 @@ import java.util.Map;
  * nodes of the root node are shown. By default, the root node is shown in the
  * TreeView.
  *
- * <h3>TreeView Selection / Focus APIs</h3>
+ * <h2>TreeView Selection / Focus APIs</h2>
  * <p>To track selection and focus, it is necessary to become familiar with the
  * {@link SelectionModel} and {@link FocusModel} classes. A TreeView has at most
  * one instance of each of these classes, available from
@@ -119,14 +121,14 @@ import java.util.Map;
  *
  * <pre> {@code treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
- * <h3>Customizing TreeView Visuals</h3>
+ * <h2>Customizing TreeView Visuals</h2>
  * <p>The visuals of the TreeView can be entirely customized by replacing the
  * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
  * generate {@link TreeCell} instances, which are used to represent an item in the
  * TreeView. See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
- * <h3>Editing</h3>
+ * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
  * give an overview of the available APIs and how you should use them.</p>
  *
@@ -1295,9 +1297,10 @@ public class TreeView<T> extends Control {
 
             this.treeView = treeView;
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
-            this.treeView.showRootProperty().addListener(o -> {
+            showRootListener = o -> {
                 shiftSelection(0, treeView.isShowRoot() ? 1 : -1, null);
-            });
+            };
+            this.treeView.showRootProperty().addListener(new WeakInvalidationListener(showRootListener));
 
             updateTreeEventListener(null, treeView.getRoot());
 
@@ -1310,6 +1313,7 @@ public class TreeView<T> extends Control {
             }
 
             if (newRoot != null) {
+                //PENDING why create a new weak eventHandler?
                 weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
@@ -1371,7 +1375,9 @@ public class TreeView<T> extends Control {
                         }
                     }
 
-                    ControlUtils.reducingChange(selectedIndices, removed);
+                    if (!removed.isEmpty()) {
+                        selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
+                    }
 
                     for (int index : removed) {
                         startAtomic();
@@ -1456,6 +1462,7 @@ public class TreeView<T> extends Control {
 
         private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
+        private InvalidationListener showRootListener;
 
 
         /***********************************************************************
@@ -1595,12 +1602,13 @@ public class TreeView<T> extends Control {
                 focus(0);
             }
 
-            treeView.showRootProperty().addListener(o -> {
+            showRootListener = obs -> {
                 if (isFocused(0)) {
                     focus(-1);
                     focus(0);
                 }
-            });
+            };
+            treeView.showRootProperty().addListener(new WeakInvalidationListener(showRootListener));
 
             focusedIndexProperty().addListener(o -> {
                 treeView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
@@ -1613,6 +1621,8 @@ public class TreeView<T> extends Control {
 
         private final WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
                 new WeakChangeListener<>(rootPropertyListener);
+
+        private final InvalidationListener showRootListener;
 
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {

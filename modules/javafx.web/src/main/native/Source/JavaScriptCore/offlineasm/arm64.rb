@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2020 Apple Inc. All rights reserved.
 # Copyright (C) 2014 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,38 +37,45 @@ require "risc"
 #
 # GPR conventions, to match the baseline JIT:
 #
-#  x0  => t0, a0, r0
-#  x1  => t1, a1, r1
-#  x2  => t2, a2
-#  x3  => t3, a3
-#  x4  => t4
-#  x5  => t5
+#  x0  => t0, a0, wa0, r0
+#  x1  => t1, a1, wa1, r1
+#  x2  => t2, a2, wa2
+#  x3  => t3, a3, wa3
+#  x4  => t4, a4, wa4
+#  x5  => t5, a5, wa5
+#  x6  => t6, a6, wa6
+#  x7  => t7, a7, wa7
+#  x8  => ws0
+#  x9  => ws1
 # x13  =>                  (scratch)
 # x16  =>                  (scratch)
 # x17  =>                  (scratch)
-# x26  =>             csr0 (PB)
-# x27  =>             csr1 (tagTypeNumber)
-# x28  =>             csr2 (tagMask)
+# x25  =>             csr6 (metadataTable)
+# x26  =>             csr7 (PB)
+# x27  =>             csr8 (numberTag)
+# x28  =>             csr9 (notCellMask)
 # x29  => cfr
 #  sp  => sp
 #  lr  => lr
 #
 # FPR conventions, to match the baseline JIT:
 #
-#  q0  => ft0, fa0, fr
-#  q1  => ft1, fa1
-#  q2  => ft2, fa2
-#  q3  => ft3, fa3
-#  q4  => ft4          (unused in baseline)
-#  q5  => ft5          (unused in baseline)
-#  q8  => csfr0        (Only the lower 64 bits)
-#  q9  => csfr1        (Only the lower 64 bits)
-# q10  => csfr2        (Only the lower 64 bits)
-# q11  => csfr3        (Only the lower 64 bits)
-# q12  => csfr4        (Only the lower 64 bits)
-# q13  => csfr5        (Only the lower 64 bits)
-# q14  => csfr6        (Only the lower 64 bits)
-# q15  => csfr7        (Only the lower 64 bits)
+#  q0  => ft0, fa0, wfa0, fr
+#  q1  => ft1, fa1, wfa1
+#  q2  => ft2, fa2, wfa2
+#  q3  => ft3, fa3, wfa3
+#  q4  => ft4,      wfa4          (unused in baseline)
+#  q5  => ft5,      wfa5          (unused in baseline)
+#  q6  =>           wfa6          (unused in baseline)
+#  q7  =>           wfa7          (unused in baseline)
+#  q8  => csfr0                   (Only the lower 64 bits)
+#  q9  => csfr1                   (Only the lower 64 bits)
+# q10  => csfr2                   (Only the lower 64 bits)
+# q11  => csfr3                   (Only the lower 64 bits)
+# q12  => csfr4                   (Only the lower 64 bits)
+# q13  => csfr5                   (Only the lower 64 bits)
+# q14  => csfr6                   (Only the lower 64 bits)
+# q15  => csfr7                   (Only the lower 64 bits)
 # q31  => scratch
 
 def arm64GPRName(name, kind)
@@ -88,9 +95,17 @@ def arm64GPRName(name, kind)
 end
 
 def arm64FPRName(name, kind)
-    raise "bad FPR kind #{kind}" unless kind == :double
     raise "bad FPR name #{name}" unless name =~ /^q/
-    "d" + name[1..-1]
+    case kind
+    when :double
+        "d" + name[1..-1]
+    when :float
+        "s" + name[1..-1]
+    when :vector
+        "v" + name[1..-1]
+    else
+        raise "bad FPR kind #{kind}"
+    end
 end
 
 class SpecialRegister
@@ -112,18 +127,26 @@ ARM64_EXTRA_FPRS = [SpecialRegister.new("q31")]
 class RegisterID
     def arm64Operand(kind)
         case @name
-        when 't0', 'a0', 'r0'
+        when 't0', 'a0', 'r0', 'wa0'
             arm64GPRName('x0', kind)
-        when 't1', 'a1', 'r1'
+        when 't1', 'a1', 'r1', 'wa1'
             arm64GPRName('x1', kind)
-        when 't2', 'a2'
+        when 't2', 'a2', 'wa2'
             arm64GPRName('x2', kind)
-        when 't3', 'a3'
+        when 't3', 'a3', 'wa3'
             arm64GPRName('x3', kind)
-        when 't4'
+        when 't4', 'wa4'
             arm64GPRName('x4', kind)
-        when 't5'
-            arm64GPRName('x5', kind)
+        when 't5', 'wa5'
+          arm64GPRName('x5', kind)
+        when 't6', 'wa6'
+          arm64GPRName('x6', kind)
+        when 't7', 'wa7'
+          arm64GPRName('x7', kind)
+        when 'ws0'
+          arm64GPRName('x9', kind)
+        when 'ws1'
+          arm64GPRName('x10', kind)
         when 'cfr'
             arm64GPRName('x29', kind)
         when 'csr0'
@@ -159,18 +182,22 @@ end
 class FPRegisterID
     def arm64Operand(kind)
         case @name
-        when 'ft0', 'fr', 'fa0'
+        when 'ft0', 'fr', 'fa0', 'wfa0'
             arm64FPRName('q0', kind)
-        when 'ft1', 'fa1'
+        when 'ft1', 'fa1', 'wfa1'
             arm64FPRName('q1', kind)
-        when 'ft2', 'fa2'
+        when 'ft2', 'fa2', 'wfa2'
             arm64FPRName('q2', kind)
-        when 'ft3', 'fa3'
+        when 'ft3', 'fa3', 'wfa3'
             arm64FPRName('q3', kind)
-        when 'ft4'
+        when 'ft4', 'wfa4'
             arm64FPRName('q4', kind)
-        when 'ft5'
+        when 'ft5', 'wfa5'
             arm64FPRName('q5', kind)
+        when 'wfa6'
+            arm64FPRName('q6', kind)
+        when 'wfa7'
+            arm64FPRName('q7', kind)
         when 'csfr0'
             arm64FPRName('q8', kind)
         when 'csfr1'
@@ -194,7 +221,6 @@ end
 
 class Immediate
     def arm64Operand(kind)
-        raise "Invalid immediate #{value} at #{codeOriginString}" if value < 0 or value > 4095
         "\##{value}"
     end
 end
@@ -203,6 +229,11 @@ class Address
     def arm64Operand(kind)
         raise "Invalid offset #{offset.value} at #{codeOriginString}" if offset.value < -255 or offset.value > 4095
         "[#{base.arm64Operand(:quad)}, \##{offset.value}]"
+    end
+
+    def arm64SimpleAddressOperand(kind)
+        raise "Invalid offset #{offset.value} at #{codeOriginString}" if offset.value != 0
+        "[#{base.arm64Operand(:quad)}]"
     end
     
     def arm64EmitLea(destination, kind)
@@ -276,12 +307,14 @@ def arm64LowerLabelReferences(list)
         | node |
         if node.is_a? Instruction
             case node.opcode
-            when "loadi", "loadis", "loadp", "loadq", "loadb", "loadbs", "loadh", "loadhs", "leap"
+            when "loadi", "loadis", "loadp", "loadq", "loadb", "loadbsi", "loadbsq", "loadh", "loadhsi", "loadhsq", "leap"
                 labelRef = node.operands[0]
                 if labelRef.is_a? LabelReference
-                    tmp = Tmp.new(node.codeOrigin, :gpr)
-                    newList << Instruction.new(codeOrigin, "globaladdr", [LabelReference.new(node.codeOrigin, labelRef.label), tmp])
-                    newList << Instruction.new(codeOrigin, node.opcode, [Address.new(node.codeOrigin, tmp, Immediate.new(node.codeOrigin, labelRef.offset)), node.operands[1]])
+                    dest = node.operands[1]
+                    newList << Instruction.new(codeOrigin, "globaladdr", [LabelReference.new(node.codeOrigin, labelRef.label), dest])
+                    if node.opcode != "leap" or labelRef.offset != 0
+                        newList << Instruction.new(codeOrigin, node.opcode, [Address.new(node.codeOrigin, dest, Immediate.new(node.codeOrigin, labelRef.offset)), dest])
+                    end
                 else
                     newList << node
                 end
@@ -332,37 +365,8 @@ def arm64FixSpecialRegisterArithmeticMode(list)
     newList
 end
 
-# Workaround for Cortex-A53 erratum (835769)
-def arm64CortexA53Fix835769(list)
-    newList = []
-    lastOpcodeUnsafe = false
-
-    list.each {
-        | node |
-        if node.is_a? Instruction
-            case node.opcode
-            when /^store/, /^load/
-                # List all macro instructions that can be lowered to a load, store or prefetch ARM64 assembly instruction
-                lastOpcodeUnsafe = true
-            when  "muli", "mulp", "mulq", "smulli"
-                # List all macro instructions that can be lowered to a 64-bit multiply-accumulate ARM64 assembly instruction
-                # (defined as one of MADD, MSUB, SMADDL, SMSUBL, UMADDL or UMSUBL).
-                if lastOpcodeUnsafe
-                    newList << Instruction.new(node.codeOrigin, "nopCortexA53Fix835769", [])
-                end
-                lastOpcodeUnsafe = false
-            else
-                lastOpcodeUnsafe = false
-            end
-        end
-        newList << node
-    }
-    newList
-end
-
 class Sequence
-    def getModifiedListARM64
-        result = @list
+    def getModifiedListARM64(result = @list)
         result = riscLowerNot(result)
         result = riscLowerSimpleBranchOps(result)
 
@@ -373,21 +377,22 @@ class Sequence
         result = riscLowerMalformedAddresses(result) {
             | node, address |
             case node.opcode
-            when "loadb", "loadbs", "loadbsp", "storeb", /^bb/, /^btb/, /^cb/, /^tb/
+            when "loadb", "loadbsi", "loadbsq", "storeb", /^bb/, /^btb/, /^cb/, /^tb/, "loadlinkacqb", "storecondrelb", /^atomic[a-z]+b$/
                 size = 1
-            when "loadh", "loadhs"
+            when "loadh", "loadhsi", "loadhsq", "orh", "storeh", "loadlinkacqh", "storecondrelh", /^atomic[a-z]+h$/
                 size = 2
             when "loadi", "loadis", "storei", "addi", "andi", "lshifti", "muli", "negi",
                 "noti", "ori", "rshifti", "urshifti", "subi", "xori", /^bi/, /^bti/,
-                /^ci/, /^ti/, "addis", "subis", "mulis", "smulli", "leai"
+                /^ci/, /^ti/, "addis", "subis", "mulis", "smulli", "leai", "loadf", "storef", "loadlinkacqi", "storecondreli",
+                /^atomic[a-z]+i$/
                 size = 4
             when "loadp", "storep", "loadq", "storeq", "loadd", "stored", "lshiftp", "lshiftq", "negp", "negq", "rshiftp", "rshiftq",
                 "urshiftp", "urshiftq", "addp", "addq", "mulp", "mulq", "andp", "andq", "orp", "orq", "subp", "subq", "xorp", "xorq", "addd",
                 "divd", "subd", "muld", "sqrtd", /^bp/, /^bq/, /^btp/, /^btq/, /^cp/, /^cq/, /^tp/, /^tq/, /^bd/,
-                "jmp", "call", "leap", "leaq"
+                "jmp", "call", "leap", "leaq", "loadlinkacqq", "storecondrelq", /^atomic[a-z]+q$/
                 size = $currentSettings["ADDRESS64"] ? 8 : 4
             else
-                raise "Bad instruction #{node.opcode} for heap access at #{node.codeOriginString}"
+                raise "Bad instruction #{node.opcode} for heap access at #{node.codeOriginString}: #{node.dump}"
             end
             
             if address.is_a? BaseIndex
@@ -399,8 +404,41 @@ class Sequence
                 false
             end
         }
-        result = riscLowerMisplacedImmediates(result, ["storeb", "storei", "storep", "storeq"])
-        result = riscLowerMalformedImmediates(result, 0..4095)
+
+        result = riscLowerMisplacedImmediates(result, ["storeb", "storeh", "storei", "storep", "storeq"])
+
+        # The rules for which immediates are valid for and/or/xor instructions are fairly involved, see https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
+        validLogicalImmediates = []
+        def rotate(value, n, size)
+            mask = (1 << size) - 1
+            shiftedValue = value << n
+            result = (shiftedValue & mask) | ((shiftedValue & ~mask) >> size)
+            return result
+        end
+        def replicate(value, size)
+            until size == 64 do
+                value = value | (value << size)
+                size *= 2
+            end
+            return value
+        end
+        size = 2
+        until size > 64 do
+            for numberOfOnes in 1..(size-1) do
+                for rotation in 0..(size-1) do
+                    immediate = 0;
+                    for i in 0..(numberOfOnes-1) do
+                        immediate = immediate*2 + 1
+                    end
+                    immediate = rotate(immediate, rotation, size)
+                    immediate = replicate(immediate, size)
+                    validLogicalImmediates << immediate
+                end
+            end
+            size *= 2
+        end
+        result = riscLowerMalformedImmediates(result, 0..4095, validLogicalImmediates)
+
         result = riscLowerMisplacedAddresses(result)
         result = riscLowerMalformedAddresses(result) {
             | node, address |
@@ -411,6 +449,8 @@ class Sequence
                 not (address.is_a? Address and address.offset.value < 0)
             when /^lea/
                 true
+            when /^atomic/
+                true
             else
                 raise "Bad instruction #{node.opcode} for heap access at #{node.codeOriginString}"
             end
@@ -419,7 +459,6 @@ class Sequence
         result = arm64FixSpecialRegisterArithmeticMode(result)
         result = assignRegistersToTemporaries(result, :gpr, ARM64_EXTRA_GPRS)
         result = assignRegistersToTemporaries(result, :fpr, ARM64_EXTRA_FPRS)
-        result = arm64CortexA53Fix835769(result)
         return result
     end
 end
@@ -528,6 +567,33 @@ def emitARM64TAC(opcode, operands, kind)
     $asm.puts "#{opcode} #{arm64TACOperands(operands, kind)}"
 end
 
+def emitARM64Div(opcode, operands, kind)
+    if operands.size == 2
+        operands = [operands[1], operands[1], operands[0]]
+    elsif operands.size == 3
+        operands = [operands[2], operands[1], operands[0]]
+    else
+        raise
+    end
+    $asm.puts "#{opcode} #{arm64Operands(operands, kind)}"
+end
+
+def emitARM64TACWithOperandSuffix(opcode, operands, kind)
+    raise unless [:float, :double].include? kind
+    size = kind == :float ? 8 : 16
+    operands = operands.map { |operand|
+        raise unless operand.is_a? FPRegisterID
+        "#{operand.arm64Operand(:vector)}.#{size}b"
+    }
+    if operands.length == 2
+      operands = [operands[1], operands[1], operands[0]]
+    else
+      raise unless operands.length == 3
+      operands = [operands[2], operands[0], operands[1]]
+    end
+    $asm.puts "#{opcode} #{operands.join(", ")}"
+end
+
 def emitARM64(opcode, operands, kind)
     $asm.puts "#{opcode} #{arm64FlippedOperands(operands, kind)}"
 end
@@ -576,6 +642,11 @@ end
 def emitARM64Branch(opcode, operands, kind, branchOpcode)
     emitARM64Unflipped(opcode, operands[0..-2], kind)
     $asm.puts "#{branchOpcode} #{operands[-1].asmLabel}"
+end
+
+def emitARM64CompareFP(operands, kind, compareCode)
+    emitARM64Unflipped("fcmp", operands[0..-2], kind)
+    $asm.puts "cset #{operands[-1].arm64Operand(:word)}, #{compareCode}"
 end
 
 def emitARM64Compare(operands, kind, compareCode)
@@ -628,12 +699,22 @@ class Instruction
             emitARM64TAC("orr", operands, :ptr)
         when "orq"
             emitARM64TAC("orr", operands, :quad)
+        when "orh"
+            emitARM64TAC("orr", operands, :word) # not :half because 16-bit registers don't exist on ARM.
         when "xori"
             emitARM64TAC("eor", operands, :word)
         when "xorp"
             emitARM64TAC("eor", operands, :ptr)
         when "xorq"
             emitARM64TAC("eor", operands, :quad)
+        when 'divi'
+            emitARM64Div("udiv", operands, :word)
+        when 'divis'
+            emitARM64Div("sdiv", operands, :word)
+        when 'divq'
+            emitARM64Div("udiv", operands, :quad)
+        when 'divqs'
+            emitARM64Div("sdiv", operands, :quad)
         when "lshifti"
             emitARM64LShift(operands, :word)
         when "lshiftp"
@@ -692,6 +773,8 @@ class Instruction
             $asm.puts "sub #{operands[0].arm64Operand(:ptr)}, #{arm64GPRName('xzr', :ptr)}, #{operands[0].arm64Operand(:ptr)}"
         when "negq"
             $asm.puts "sub #{operands[0].arm64Operand(:quad)}, xzr, #{operands[0].arm64Operand(:quad)}"
+        when "notq"
+            $asm.puts "mvn #{operands[0].arm64Operand(:quad)}, #{operands[0].arm64Operand(:quad)}"
         when "loadi"
             emitARM64Access("ldr", "ldur", operands[1], operands[0], :word)
         when "loadis"
@@ -708,16 +791,18 @@ class Instruction
             emitARM64Unflipped("str", operands, :quad)
         when "loadb"
             emitARM64Access("ldrb", "ldurb", operands[1], operands[0], :word)
-        when "loadbs"
+        when "loadbsi"
             emitARM64Access("ldrsb", "ldursb", operands[1], operands[0], :word)
-        when "loadbsp"
-            emitARM64Access("ldrsb", "ldursb", operands[1], operands[0], :ptr)
+        when "loadbsq"
+            emitARM64Access("ldrsb", "ldursb", operands[1], operands[0], :quad)
         when "storeb"
             emitARM64Unflipped("strb", operands, :word)
         when "loadh"
             emitARM64Access("ldrh", "ldurh", operands[1], operands[0], :word)
-        when "loadhs"
+        when "loadhsi"
             emitARM64Access("ldrsh", "ldursh", operands[1], operands[0], :word)
+        when "loadhsq"
+            emitARM64Access("ldrsh", "ldursh", operands[1], operands[0], :quad)
         when "storeh"
             emitARM64Unflipped("strh", operands, :word)
         when "loadd"
@@ -734,8 +819,6 @@ class Instruction
             emitARM64TAC("fmul", operands, :double)
         when "sqrtd"
             emitARM64("fsqrt", operands, :double)
-        when "ci2d"
-            emitARM64("scvtf", operands, [:word, :double])
         when "bdeq"
             emitARM64Branch("fcmp", operands, :double, "b.eq")
         when "bdneq"
@@ -743,7 +826,7 @@ class Instruction
             isUnordered = LocalLabel.unique("bdneq")
             $asm.puts "b.vs #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
             $asm.puts "b.ne #{operands[2].asmLabel}"
-            isUnordered.lower("ARM64")
+            isUnordered.lower($activeBackend)
         when "bdgt"
             emitARM64Branch("fcmp", operands, :double, "b.gt")
         when "bdgteq"
@@ -804,6 +887,8 @@ class Instruction
             else
                 emitARM64("mov", operands, :quad)
             end
+        when "moved"
+            emitARM64("fmov", operands, :double)
         when "sxi2p"
             emitARM64("sxtw", operands, [:word, :ptr])
         when "sxi2q"
@@ -812,6 +897,14 @@ class Instruction
             emitARM64("uxtw", operands, [:word, :ptr])
         when "zxi2q"
             emitARM64("uxtw", operands, [:word, :quad])
+        when "sxb2i"
+            emitARM64("sxtb", operands, [:word, :word])
+        when "sxh2i"
+            emitARM64("sxth", operands, [:word, :word])
+        when "sxb2q"
+            emitARM64("sxtb", operands, [:word, :quad])
+        when "sxh2q"
+            emitARM64("sxth", operands, [:word, :quad])
         when "nop"
             $asm.puts "nop"
         when "bieq", "bbeq"
@@ -923,7 +1016,7 @@ class Instruction
                 emitARM64Unflipped("blr", operands, :quad)
             end
         when "break"
-            $asm.puts "brk \#0"
+            $asm.puts "brk \#0xc471"
         when "ret"
             $asm.puts "ret"
         when "cieq", "cbeq"
@@ -1016,12 +1109,12 @@ class Instruction
             $asm.puts "smaddl #{operands[2].arm64Operand(:quad)}, #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, xzr"
         when "memfence"
             $asm.puts "dmb sy"
+        when "fence"
+            $asm.puts "dmb ish"
+        when "bfiq"
+            $asm.puts "bfi #{operands[3].arm64Operand(:quad)}, #{operands[0].arm64Operand(:quad)}, #{operands[1].value}, #{operands[2].value}"
         when "pcrtoaddr"
             $asm.puts "adr #{operands[1].arm64Operand(:quad)}, #{operands[0].value}"
-        when "nopCortexA53Fix835769"
-            $asm.putStr("#if CPU(ARM64_CORTEXA53)")
-            $asm.puts "nop"
-            $asm.putStr("#endif")
         when "globaladdr"
             uid = $asm.newUID
 
@@ -1049,6 +1142,261 @@ class Instruction
                 $asm.puts ".loh AdrpLdrGot L_offlineasm_loh_adrp_#{uid}, L_offlineasm_loh_ldr_#{uid}"
                 $asm.putStr("#endif")
             }
+
+        when "andf", "andd"
+            emitARM64TACWithOperandSuffix("and", operands, :double)
+        when "orf", "ord"
+            emitARM64TACWithOperandSuffix("orr", operands, :double)
+        when "lrotatei"
+            tmp = Tmp.new(codeOrigin, :gpr)
+            Sequence.new(codeOrigin, [
+                Instruction.new(codeOrigin, "move", [operands[0], tmp]),
+                Instruction.new(codeOrigin, "negq", [tmp]),
+                Instruction.new(codeOrigin, "rrotatei", [tmp, operands[1]]),
+            ]).lower($activeBackend)
+        when "lrotateq"
+            tmp = Tmp.new(codeOrigin, :gpr)
+            Sequence.new(codeOrigin, [
+                Instruction.new(codeOrigin, "move", [operands[0], tmp]),
+                Instruction.new(codeOrigin, "negq", [tmp]),
+                Instruction.new(codeOrigin, "rrotateq", [tmp, operands[1]]),
+            ]).lower($activeBackend)
+        when "rrotatei"
+            emitARM64TAC("ror", operands, :word)
+        when "rrotateq"
+            emitARM64TAC("ror", operands, :quad)
+        when "loadf"
+            emitARM64Access("ldr", "ldur", operands[1], operands[0], :float)
+        when "storef"
+            emitARM64Unflipped("str", operands, :float)
+        when "addf"
+            emitARM64TAC("fadd", operands, :float)
+        when "divf"
+            emitARM64TAC("fdiv", operands, :float)
+        when "subf"
+            emitARM64TAC("fsub", operands, :float)
+        when "mulf"
+            emitARM64TAC("fmul", operands, :float)
+        when "sqrtf"
+            emitARM64("fsqrt", operands, :float)
+        when "floorf"
+            emitARM64("frintm", operands, :float)
+        when "floord"
+            emitARM64("frintm", operands, :double)
+        when "roundf"
+            emitARM64("frintn", operands, :float)
+        when "roundd"
+            emitARM64("frintn", operands, :double)
+        when "truncatef"
+            emitARM64("frintz", operands, :float)
+        when "truncated"
+            emitARM64("frintz", operands, :double)
+        when "truncatef2i"
+            emitARM64("fcvtzu", operands, [:float, :word])
+        when "truncatef2q"
+            emitARM64("fcvtzu", operands, [:float, :quad])
+        when "truncated2q"
+            emitARM64("fcvtzu", operands, [:double, :quad])
+        when "truncated2i"
+            emitARM64("fcvtzu", operands, [:double, :word])
+        when "truncatef2is"
+            emitARM64("fcvtzs", operands, [:float, :word])
+        when "truncated2is"
+            emitARM64("fcvtzs", operands, [:double, :word])
+        when "truncatef2qs"
+            emitARM64("fcvtzs", operands, [:float, :quad])
+        when "truncated2qs"
+            emitARM64("fcvtzs", operands, [:double, :quad])
+        when "ci2d"
+            emitARM64("ucvtf", operands, [:word, :double])
+        when "ci2ds"
+            emitARM64("scvtf", operands, [:word, :double])
+        when "ci2f"
+            emitARM64("ucvtf", operands, [:word, :float])
+        when "ci2fs"
+            emitARM64("scvtf", operands, [:word, :float])
+        when "cq2f"
+            emitARM64("ucvtf", operands, [:quad, :float])
+        when "cq2fs"
+            emitARM64("scvtf", operands, [:quad, :float])
+        when "cq2d"
+            emitARM64("ucvtf", operands, [:quad, :double])
+        when "cq2ds"
+            emitARM64("scvtf", operands, [:quad, :double])
+        when "cd2f"
+            emitARM64("fcvt", operands, [:double, :float])
+        when "cf2d"
+            emitARM64("fcvt", operands, [:float, :double])
+        when "bfeq"
+            emitARM64Branch("fcmp", operands, :float, "b.eq")
+        when "bfgt"
+            emitARM64Branch("fcmp", operands, :float, "b.gt")
+        when "bflt"
+            emitARM64Branch("fcmp", operands, :float, "b.mi")
+        when "bfgtun"
+            emitARM64Branch("fcmp", operands, :float, "b.hi")
+        when "bfgtequn"
+            emitARM64Branch("fcmp", operands, :float, "b.pl")
+        when "bfltun"
+            emitARM64Branch("fcmp", operands, :float, "b.lt")
+        when "bfltequn"
+            emitARM64Branch("fcmp", operands, :float, "b.le")
+        when "tzcnti"
+            emitARM64("rbit", operands, :word)
+            emitARM64("clz", [operands[1], operands[1]], :word)
+        when "tzcntq"
+            emitARM64("rbit", operands, :quad)
+            emitARM64("clz", [operands[1], operands[1]], :quad)
+        when "lzcnti"
+            emitARM64("clz", operands, :word)
+        when "lzcntq"
+            emitARM64("clz", operands, :quad)
+        when "absf"
+            emitARM64("fabs", operands, :float)
+        when "absd"
+            emitARM64("fabs", operands, :double)
+        when "negf"
+            emitARM64("fneg", operands, :float)
+        when "negd"
+            emitARM64("fneg", operands, :double)
+        when "ceilf"
+            emitARM64("frintp", operands, :float)
+        when "ceild"
+            emitARM64("frintp", operands, :double)
+        when "cfeq"
+            emitARM64CompareFP(operands, :float, "eq")
+        when "cdeq"
+            emitARM64CompareFP(operands, :double, "eq")
+        when "cfneq"
+            $asm.puts "move $0, #{operands[2].arm64Operand(:word)}"
+            emitARM64Unflipped("fcmp", operands[0..1], :float)
+            isUnordered = LocalLabel.unique("cdneq")
+            $asm.puts "b.vs #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
+            $asm.puts "cset #{operands[2].arm64Operand(:word)}, ne"
+            isUnordered.lower($activeBackend)
+        when "cdneq"
+            $asm.puts "move $0, #{operands[2].arm64Operand(:word)}"
+            emitARM64Unflipped("fcmp", operands[0..1], :double)
+            isUnordered = LocalLabel.unique("cdneq")
+            $asm.puts "b.vs #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
+            $asm.puts "cset #{operands[2].arm64Operand(:word)}, ne"
+            isUnordered.lower($activeBackend)
+        when "cfnequn"
+            emitARM64CompareFP(operands, :float, "ne")
+        when "cdnequn"
+            emitARM64CompareFP(operands, :double, "ne")
+        when "cflt"
+            emitARM64CompareFP(operands, :float, "mi")
+        when "cdlt"
+            emitARM64CompareFP(operands, :double, "mi")
+        when "cflteq"
+            emitARM64CompareFP(operands, :float, "ls")
+        when "cdlteq"
+            emitARM64CompareFP(operands, :double, "ls")
+        when "cfgt"
+            emitARM64CompareFP(operands, :float, "gt")
+        when "cdgt"
+            emitARM64CompareFP(operands, :double, "gt")
+        when "cfgteq"
+            emitARM64CompareFP(operands, :float, "ge")
+        when "cdgteq"
+            emitARM64CompareFP(operands, :double, "ge")
+        when "fi2f"
+            emitARM64("fmov", operands, [:word, :float])
+        when "ff2i"
+            emitARM64("fmov", operands, [:float, :word])
+        when "tls_loadp"
+            tmp = ARM64_EXTRA_GPRS[0].arm64Operand(:ptr)
+            if operands[0].immediate?
+              offset = "\##{operands[0].value * 8}"
+            else
+              offset = operands[0].arm64Operand(:word)
+            end
+            $asm.puts "mrs #{tmp}, tpidrro_el0"
+            $asm.puts "bic #{tmp}, #{tmp}, #7"
+            $asm.puts "ldr #{operands[1].arm64Operand(:ptr)}, [#{tmp}, #{offset}]"
+        when "tls_storep"
+            tmp = ARM64_EXTRA_GPRS[0].arm64Operand(:ptr)
+            if operands[1].immediate?
+              offset = "\##{operands[1].value * 8}"
+            else
+              offset = operands[1].arm64Operand(:word)
+            end
+            $asm.puts "mrs #{tmp}, tpidrro_el0"
+            $asm.puts "bic #{tmp}, #{tmp}, #7"
+            $asm.puts "str #{operands[0].arm64Operand(:ptr)}, [#{tmp}, #{offset}]"
+        when "loadlinkacqb"
+            $asm.puts "ldaxrb #{operands[1].arm64Operand(:word)}, #{operands[0].arm64Operand(:word)}"
+        when "loadlinkacqh"
+            $asm.puts "ldaxrh #{operands[1].arm64Operand(:word)}, #{operands[0].arm64Operand(:word)}"
+        when "loadlinkacqi"
+            $asm.puts "ldaxr #{operands[1].arm64Operand(:word)}, #{operands[0].arm64Operand(:word)}"
+        when "loadlinkacqq"
+            $asm.puts "ldaxr #{operands[1].arm64Operand(:quad)}, #{operands[0].arm64Operand(:quad)}"
+        when "storecondrelb"
+            $asm.puts "stlxrb #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}"
+        when "storecondrelh"
+            $asm.puts "stlxrh #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}"
+        when "storecondreli"
+            $asm.puts "stlxr #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}"
+        when "storecondrelq"
+            $asm.puts "stlxr #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:quad)}, #{operands[2].arm64Operand(:quad)}"
+        when "atomicxchgaddb"
+            $asm.puts "ldaddalb #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgaddh"
+            $asm.puts "ldaddalh #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgaddi"
+            $asm.puts "ldaddal #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgaddq"
+            $asm.puts "ldaddal #{operands[0].arm64Operand(:quad)}, #{operands[2].arm64Operand(:quad)}, #{operands[1].arm64SimpleAddressOperand(:quad)}"
+        when "atomicxchgclearb"
+            $asm.puts "ldclralb #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgclearh"
+            $asm.puts "ldclralh #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgcleari"
+            $asm.puts "ldclral #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgclearq"
+            $asm.puts "ldclral #{operands[0].arm64Operand(:quad)}, #{operands[2].arm64Operand(:quad)}, #{operands[1].arm64SimpleAddressOperand(:quad)}"
+        when "atomicxchgorb"
+            $asm.puts "ldsetalb #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgorh"
+            $asm.puts "ldsetalh #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgori"
+            $asm.puts "ldsetal #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgorq"
+            $asm.puts "ldsetal #{operands[0].arm64Operand(:quad)}, #{operands[2].arm64Operand(:quad)}, #{operands[1].arm64SimpleAddressOperand(:quad)}"
+        when "atomicxchgxorb"
+            $asm.puts "ldeoralb #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgxorh"
+            $asm.puts "ldeoralh #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgxori"
+            $asm.puts "ldeoral #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgxorq"
+            $asm.puts "ldeoral #{operands[0].arm64Operand(:quad)}, #{operands[2].arm64Operand(:quad)}, #{operands[1].arm64SimpleAddressOperand(:quad)}"
+        when "atomicxchgb"
+            $asm.puts "swpalb #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgh"
+            $asm.puts "swpalh #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgi"
+            $asm.puts "swpal #{operands[0].arm64Operand(:word)}, #{operands[2].arm64Operand(:word)}, #{operands[1].arm64SimpleAddressOperand(:word)}"
+        when "atomicxchgq"
+            $asm.puts "swpal #{operands[0].arm64Operand(:quad)}, #{operands[2].arm64Operand(:quad)}, #{operands[1].arm64SimpleAddressOperand(:quad)}"
+        when "atomicweakcasb"
+            $asm.puts "casalb #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, #{operands[2].arm64SimpleAddressOperand(:word)}"
+        when "atomicweakcash"
+            $asm.puts "casalh #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, #{operands[2].arm64SimpleAddressOperand(:word)}"
+        when "atomicweakcasi"
+            $asm.puts "casal #{operands[0].arm64Operand(:word)}, #{operands[1].arm64Operand(:word)}, #{operands[2].arm64SimpleAddressOperand(:word)}"
+        when "atomicweakcasq"
+            $asm.puts "casal #{operands[0].arm64Operand(:quad)}, #{operands[1].arm64Operand(:quad)}, #{operands[2].arm64SimpleAddressOperand(:quad)}"
+        when "atomicloadb"
+            $asm.puts "ldarb #{operands[1].arm64Operand(:word)}, #{operands[0].arm64SimpleAddressOperand(:word)}"
+        when "atomicloadh"
+            $asm.puts "ldarh #{operands[1].arm64Operand(:word)}, #{operands[0].arm64SimpleAddressOperand(:word)}"
+        when "atomicloadi"
+            $asm.puts "ldar #{operands[1].arm64Operand(:word)}, #{operands[0].arm64SimpleAddressOperand(:word)}"
+        when "atomicloadq"
+            $asm.puts "ldar #{operands[1].arm64Operand(:quad)}, #{operands[0].arm64SimpleAddressOperand(:quad)}"
         else
             lowerDefault
         end

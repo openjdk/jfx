@@ -45,8 +45,18 @@ private:
         HashFunctions, ValueTraits, ValueTraits> HashTableType;
 
 public:
+    /*
+     * Since figuring out the entries of an iterator is confusing, here is a cheat sheet:
+     * const KeyType& key = iterator->key;
+     */
     typedef HashTableConstIteratorAdapter<HashTableType, ValueType> iterator;
     typedef HashTableConstIteratorAdapter<HashTableType, ValueType> const_iterator;
+
+    /*
+     * Since figuring out the entries of an AddResult is confusing, here is a cheat sheet:
+     * iterator iter = addResult.iterator;
+     * bool isNewEntry = addResult.isNewEntry;
+     */
     typedef typename HashTableType::AddResult AddResult;
 
     HashSet()
@@ -64,6 +74,8 @@ public:
     unsigned size() const;
     unsigned capacity() const;
     bool isEmpty() const;
+
+    void reserveInitialCapacity(unsigned keyCount) { m_impl.reserveInitialCapacity(keyCount); }
 
     iterator begin() const;
     iterator end() const;
@@ -102,6 +114,8 @@ public:
     // them are new to the set. Returns false if the set is unchanged.
     template<typename IteratorType>
     bool add(IteratorType begin, IteratorType end);
+    template<typename IteratorType>
+    bool remove(IteratorType begin, IteratorType end);
 
     bool remove(const ValueType&);
     bool remove(iterator);
@@ -126,6 +140,8 @@ public:
 
     template<typename OtherCollection>
     bool operator!=(const OtherCollection&) const;
+
+    void checkConsistency() const;
 
 private:
     HashTableType m_impl;
@@ -259,6 +275,16 @@ inline bool HashSet<T, U, V>::add(IteratorType begin, IteratorType end)
 }
 
 template<typename T, typename U, typename V>
+template<typename IteratorType>
+inline bool HashSet<T, U, V>::remove(IteratorType begin, IteratorType end)
+{
+    bool changed = false;
+    for (IteratorType iter = begin; iter != end; ++iter)
+        changed |= remove(*iter);
+    return changed;
+}
+
+template<typename T, typename U, typename V>
 inline bool HashSet<T, U, V>::remove(iterator it)
 {
     if (it.m_impl == m_impl.end())
@@ -380,6 +406,12 @@ void HashSet<T, U, V>::add(std::initializer_list<std::reference_wrapper<const Va
 {
     for (auto& value : list)
         add(value);
+}
+
+template<typename T, typename U, typename V>
+inline void HashSet<T, U, V>::checkConsistency() const
+{
+    m_impl.checkTableConsistency();
 }
 
 } // namespace WTF

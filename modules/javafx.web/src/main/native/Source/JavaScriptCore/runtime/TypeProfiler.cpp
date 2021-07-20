@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,13 @@
 #include "config.h"
 #include "TypeProfiler.h"
 
-#include "InspectorProtocolObjects.h"
 #include "TypeLocation.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
 
 namespace TypeProfilerInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 TypeProfiler::TypeProfiler()
@@ -93,9 +92,7 @@ String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDesc
         json.appendLiteral("null");
     json.append(',');
 
-    json.appendLiteral("\"instructionTypeSet\":");
-    json.append(location->m_instructionTypeSet->toJSONString());
-    json.append(',');
+    json.append("\"instructionTypeSet\":", location->m_instructionTypeSet->toJSONString(), ',');
 
     json.appendLiteral("\"isOverflown\":");
     if (location->m_instructionTypeSet->isOverflown() || (location->m_globalTypeSet && location->m_globalTypeSet->isOverflown()))
@@ -148,13 +145,13 @@ TypeLocation* TypeProfiler::nextTypeLocation()
     return m_typeLocationInfo.add();
 }
 
-void TypeProfiler::invalidateTypeSetCache()
+void TypeProfiler::invalidateTypeSetCache(VM& vm)
 {
     for (Bag<TypeLocation>::iterator iter = m_typeLocationInfo.begin(); !!iter; ++iter) {
         TypeLocation* location = *iter;
-        location->m_instructionTypeSet->invalidateCache();
+        location->m_instructionTypeSet->invalidateCache(vm);
         if (location->m_globalTypeSet)
-            location->m_globalTypeSet->invalidateCache();
+            location->m_globalTypeSet->invalidateCache(vm);
     }
 }
 

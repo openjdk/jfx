@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2007, 2008, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -24,23 +24,31 @@
 #include "config.h"
 #include "LabelsNodeList.h"
 
-#include "Element.h"
 #include "HTMLLabelElement.h"
 #include "HTMLNames.h"
+#include "LabelableElement.h"
 #include "NodeRareData.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-LabelsNodeList::LabelsNodeList(LabelableElement& forNode)
-    : CachedLiveNodeList(forNode, InvalidateOnForTypeAttrChange)
+WTF_MAKE_ISO_ALLOCATED_IMPL(LabelsNodeList);
+
+LabelsNodeList::LabelsNodeList(LabelableElement& element)
+    : CachedLiveNodeList(element, InvalidateOnForTypeAttrChange)
 {
+}
+
+Ref<LabelsNodeList> LabelsNodeList::create(LabelableElement& element, const AtomString&)
+{
+    return adoptRef(*new LabelsNodeList(element));
 }
 
 LabelsNodeList::~LabelsNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithAtomicName(this, starAtom());
+    ownerNode().nodeLists()->removeCacheWithAtomName(*this, starAtom());
 }
 
 bool LabelsNodeList::elementMatches(Element& testNode) const

@@ -25,12 +25,15 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLRenderingContextBase.h"
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-class WebGLExtension {
-    WTF_MAKE_FAST_ALLOCATED;
+class WebGLExtension : public RefCounted<WebGLExtension> {
+    WTF_MAKE_ISO_ALLOCATED(WebGLExtension);
 public:
     // Extension names are needed to properly wrap instances in JavaScript objects.
     enum ExtensionName {
@@ -38,8 +41,10 @@ public:
         EXTBlendMinMaxName,
         EXTFragDepthName,
         EXTShaderTextureLODName,
+        EXTTextureCompressionRGTCName,
         EXTTextureFilterAnisotropicName,
         EXTsRGBName,
+        KHRParallelShaderCompileName,
         OESTextureFloatName,
         OESTextureFloatLinearName,
         OESTextureHalfFloatName,
@@ -49,25 +54,42 @@ public:
         WebGLDebugRendererInfoName,
         WebGLDebugShadersName,
         WebGLCompressedTextureS3TCName,
+        WebGLCompressedTextureS3TCsRGBName,
         WebGLDepthTextureName,
         WebGLDrawBuffersName,
         OESElementIndexUintName,
+        OESFBORenderMipmapName,
         WebGLCompressedTextureATCName,
+        WebGLCompressedTextureETCName,
+        WebGLCompressedTextureETC1Name,
         WebGLCompressedTexturePVRTCName,
         WebGLCompressedTextureASTCName,
         ANGLEInstancedArraysName,
+        EXTColorBufferHalfFloatName,
+        EXTFloatBlendName,
+        WebGLColorBufferFloatName,
+        EXTColorBufferFloatName,
+        WebGLMultiDrawName,
     };
 
-    void ref() { m_context.ref(); }
-    void deref() { m_context.deref(); }
-    WebGLRenderingContextBase& context() { return m_context; }
+    WebGLRenderingContextBase* context() { return m_context; }
 
     virtual ~WebGLExtension();
     virtual ExtensionName getName() const = 0;
 
+    // Lose the parent WebGL context. The context loss mode changes
+    // the behavior specifically of WEBGL_lose_context, which does not
+    // lose its connection to its parent context when it forces a
+    // context loss. However, all extensions must be lost when
+    // destroying their WebGLRenderingContextBase.
+    virtual void loseParentContext(WebGLRenderingContextBase::LostContextMode);
+    bool isLost() { return !m_context; }
+
 protected:
     WebGLExtension(WebGLRenderingContextBase&);
-    WebGLRenderingContextBase& m_context;
+    WebGLRenderingContextBase* m_context;
 };
 
 } // namespace WebCore
+
+#endif

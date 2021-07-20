@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 
 #include "CCallHelpers.h"
 #include "DFGGraph.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 
 namespace JSC { namespace DFG {
@@ -49,11 +49,11 @@ JSValue LazyJSValue::getValue(VM& vm) const
     case KnownValue:
         return value()->value();
     case SingleCharacterString:
-        return jsSingleCharacterString(&vm, u.character);
+        return jsSingleCharacterString(vm, u.character);
     case KnownStringImpl:
-        return jsString(&vm, u.stringImpl);
+        return jsString(vm, u.stringImpl);
     case NewStringImpl:
-        return jsString(&vm, AtomicStringImpl::add(u.stringImpl));
+        return jsString(vm, AtomStringImpl::add(u.stringImpl));
     }
     RELEASE_ASSERT_NOT_REACHED();
     return JSValue();
@@ -62,15 +62,15 @@ JSValue LazyJSValue::getValue(VM& vm) const
 static TriState equalToSingleCharacter(JSValue value, UChar character)
 {
     if (!value.isString())
-        return FalseTriState;
+        return TriState::False;
 
     JSString* jsString = asString(value);
     if (jsString->length() != 1)
-        return FalseTriState;
+        return TriState::False;
 
     const StringImpl* string = jsString->tryGetValueImpl();
     if (!string)
-        return MixedTriState;
+        return TriState::Indeterminate;
 
     return triState(string->at(0) == character);
 }
@@ -78,12 +78,12 @@ static TriState equalToSingleCharacter(JSValue value, UChar character)
 static TriState equalToStringImpl(JSValue value, StringImpl* stringImpl)
 {
     if (!value.isString())
-        return FalseTriState;
+        return TriState::False;
 
     JSString* jsString = asString(value);
     const StringImpl* string = jsString->tryGetValueImpl();
     if (!string)
-        return MixedTriState;
+        return TriState::Indeterminate;
 
     return triState(WTF::equal(stringImpl, string));
 }
@@ -100,9 +100,11 @@ const StringImpl* LazyJSValue::tryGetStringImpl(VM& vm) const
             return string->tryGetValueImpl();
         return nullptr;
 
-    default:
+    case SingleCharacterString:
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 String LazyJSValue::tryGetString(Graph& graph) const
@@ -114,7 +116,8 @@ String LazyJSValue::tryGetString(Graph& graph) const
     case SingleCharacterString:
         return String(&u.character, 1);
 
-    default:
+    case KnownValue:
+    case KnownStringImpl:
         if (const StringImpl* string = tryGetStringImpl(graph.m_vm)) {
             unsigned ginormousStringLength = 10000;
             if (string->length() > ginormousStringLength)
@@ -128,6 +131,8 @@ String LazyJSValue::tryGetString(Graph& graph) const
 
         return String();
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return String();
 }
 
 TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
@@ -135,13 +140,22 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
     switch (m_kind) {
     case KnownValue:
         switch (other.m_kind) {
-        case KnownValue:
+        case KnownValue: {
+            if (!value()->value() || !other.value()->value())
+                return value()->value() == other.value()->value() ? TriState::True : TriState::False;
             return JSValue::pureStrictEqual(value()->value(), other.value()->value());
-        case SingleCharacterString:
+        }
+        case SingleCharacterString: {
+            if (!value()->value())
+                return TriState::False;
             return equalToSingleCharacter(value()->value(), other.character());
+        }
         case KnownStringImpl:
-        case NewStringImpl:
+        case NewStringImpl: {
+            if (!value()->value())
+                return TriState::False;
             return equalToStringImpl(value()->value(), other.stringImpl());
+        }
         }
         break;
     case SingleCharacterString:
@@ -151,9 +165,9 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
         case KnownStringImpl:
         case NewStringImpl:
             if (other.stringImpl()->length() != 1)
-                return FalseTriState;
+                return TriState::False;
             return triState(other.stringImpl()->at(0) == character());
-        default:
+        case KnownValue:
             return other.strictEqual(*this);
         }
         break;
@@ -163,13 +177,14 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
         case KnownStringImpl:
         case NewStringImpl:
             return triState(WTF::equal(stringImpl(), other.stringImpl()));
-        default:
+        case SingleCharacterString:
+        case KnownValue:
             return other.strictEqual(*this);
         }
         break;
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return FalseTriState;
+    return TriState::False;
 }
 
 uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
@@ -181,9 +196,13 @@ uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
     case KnownValue:
         switch (kind) {
         case SwitchImm:
-            return value()->value().asInt32();
+            if (value()->value())
+                return value()->value().asInt32();
+            return 0;
         case SwitchCell:
-            return bitwise_cast<uintptr_t>(value()->value().asCell());
+            if (value()->value())
+                return bitwise_cast<uintptr_t>(value()->value().asCell());
+            return 0;
         default:
             RELEASE_ASSERT_NOT_REACHED();
             return 0;
@@ -196,10 +215,13 @@ uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
             RELEASE_ASSERT_NOT_REACHED();
             return 0;
         }
-    default:
+    case KnownStringImpl:
+    case NewStringImpl:
         RELEASE_ASSERT_NOT_REACHED();
         return 0;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
 }
 
 void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
@@ -229,10 +251,10 @@ void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
 
     jit.addLinkTask(
         [codeBlock, label, thisValue] (LinkBuffer& linkBuffer) {
-            JSValue realValue = thisValue.getValue(*codeBlock->vm());
+            JSValue realValue = thisValue.getValue(codeBlock->vm());
             RELEASE_ASSERT(realValue.isCell());
 
-            codeBlock->addConstant(realValue);
+            codeBlock->addConstant(ConcurrentJSLocker(codeBlock->m_lock), realValue);
 
             if (thisValue.m_kind == NewStringImpl)
                 thisValue.u.stringImpl->deref();
@@ -264,7 +286,7 @@ void LazyJSValue::dumpInContext(PrintStream& out, DumpContext* context) const
 
 void LazyJSValue::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 } } // namespace JSC::DFG

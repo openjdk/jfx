@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -28,18 +28,23 @@
 #define JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
     macro(Array) \
     macro(ArrayBuffer) \
+    macro(Atomics) \
     macro(BYTES_PER_ELEMENT) \
     macro(BigInt) \
     macro(Boolean) \
     macro(Collator) \
     macro(Date) \
     macro(DateTimeFormat) \
+    macro(DisplayNames) \
     macro(Error) \
     macro(EvalError) \
+    macro(FinalizationRegistry) \
     macro(Function) \
     macro(Infinity) \
     macro(Intl) \
+    macro(ListFormat) \
     macro(Loader) \
+    macro(Locale) \
     macro(Map) \
     macro(NaN) \
     macro(Number) \
@@ -49,10 +54,14 @@
     macro(Promise) \
     macro(Reflect) \
     macro(RegExp) \
+    macro(RelativeTimeFormat) \
+    macro(RemotePlayback) \
+    macro(Segmenter) \
     macro(Set) \
     macro(SharedArrayBuffer) \
     macro(String) \
     macro(Symbol) \
+    macro(WeakRef) \
     macro(__defineGetter__) \
     macro(__defineSetter__) \
     macro(__lookupGetter__) \
@@ -86,8 +95,11 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(dateStyle) \
     macro(day) \
+    macro(dayPeriod) \
     macro(defineProperty) \
+    macro(deref) \
     macro(description) \
     macro(descriptions) \
     macro(detail) \
@@ -96,6 +108,7 @@
     macro(dotAll) \
     macro(enumerable) \
     macro(era) \
+    macro(errors) \
     macro(eval) \
     macro(events) \
     macro(exec) \
@@ -106,13 +119,16 @@
     macro(formatMatcher) \
     macro(formatToParts) \
     macro(forward) \
+    macro(fractionalSecondDigits) \
     macro(from) \
     macro(fromCharCode) \
     macro(get) \
     macro(global) \
     macro(go) \
+    macro(granularity) \
     macro(groups) \
     macro(has) \
+    macro(hasIndices) \
     macro(hasOwnProperty) \
     macro(hash) \
     macro(header) \
@@ -123,6 +139,7 @@
     macro(ignoreCase) \
     macro(ignorePunctuation) \
     macro(index) \
+    macro(indices) \
     macro(inferredName) \
     macro(input) \
     macro(instructionCount) \
@@ -131,14 +148,21 @@
     macro(isPrototypeOf) \
     macro(isView) \
     macro(isWatchpoint) \
+    macro(isWordLike) \
     macro(jettisonReason) \
     macro(join) \
+    macro(language) \
     macro(lastIndex) \
     macro(length) \
     macro(line) \
     macro(locale) \
     macro(localeMatcher) \
+    macro(maximumFractionDigits) \
+    macro(maximumSignificantDigits) \
     macro(message) \
+    macro(minimumFractionDigits) \
+    macro(minimumIntegerDigits) \
+    macro(minimumSignificantDigits) \
     macro(minute) \
     macro(month) \
     macro(multiline) \
@@ -162,9 +186,12 @@
     macro(propertyIsEnumerable) \
     macro(prototype) \
     macro(raw) \
+    macro(region) \
     macro(replace) \
     macro(resolve) \
+    macro(script) \
     macro(second) \
+    macro(segment) \
     macro(sensitivity) \
     macro(set) \
     macro(size) \
@@ -175,12 +202,14 @@
     macro(stack) \
     macro(stackTraceLimit) \
     macro(sticky) \
+    macro(style) \
     macro(subarray) \
     macro(summary) \
     macro(target) \
     macro(test) \
     macro(then) \
     macro(time) \
+    macro(timeStyle) \
     macro(timeZone) \
     macro(timeZoneName) \
     macro(toExponential) \
@@ -190,6 +219,7 @@
     macro(toLocaleString) \
     macro(toPrecision) \
     macro(toString) \
+    macro(type) \
     macro(uid) \
     macro(unicode) \
     macro(usage) \
@@ -198,6 +228,9 @@
     macro(weekday) \
     macro(writable) \
     macro(year)
+
+#define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
+    macro(constructor)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(macro) \
     macro(await) \
@@ -254,6 +287,7 @@
     macro(asyncIterator) \
     macro(iterator) \
     macro(match) \
+    macro(matchAll) \
     macro(replace) \
     macro(search) \
     macro(species) \
@@ -270,6 +304,7 @@
     macro(generatorFrame) \
     macro(meta) \
     macro(starDefault) \
+    macro(starNamespace) \
     macro(undefined) \
 
 namespace JSC {
@@ -279,7 +314,7 @@ namespace JSC {
     class CommonIdentifiers {
         WTF_MAKE_NONCOPYABLE(CommonIdentifiers); WTF_MAKE_FAST_ALLOCATED;
     private:
-        CommonIdentifiers(VM*);
+        CommonIdentifiers(VM&);
         ~CommonIdentifiers();
         friend class VM;
 
@@ -288,7 +323,6 @@ namespace JSC {
         const Identifier nullIdentifier;
         const Identifier emptyIdentifier;
         const Identifier underscoreProto;
-        const Identifier thisIdentifier;
         const Identifier useStrictIdentifier;
         const Identifier timesIdentifier;
     private:
@@ -311,9 +345,11 @@ namespace JSC {
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
+        const Identifier intlLegacyConstructedSymbol;
 
-        SymbolImpl* lookUpPrivateName(const Identifier&) const;
-        Identifier getPublicName(VM&, SymbolImpl*) const;
+#define JSC_IDENTIFIER_DECLARE_PRIVATE_FIELD_GLOBAL(name) const Identifier name##PrivateField;
+        JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(JSC_IDENTIFIER_DECLARE_PRIVATE_FIELD_GLOBAL)
+#undef JSC_IDENTIFIER_DECLARE_PRIVATE_FIELD_GLOBAL
 
         // Callers of this method should make sure that identifiers given to this method
         // survive the lifetime of CommonIdentifiers and related VM.

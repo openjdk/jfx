@@ -54,7 +54,6 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include "RuntimeApplicationChecks.h"
-#include <wtf/spi/darwin/dyldSPI.h>
 #endif
 
 namespace WebCore {
@@ -72,18 +71,17 @@ inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Docume
 
 Ref<HTMLObjectElement> HTMLObjectElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
-    auto result = adoptRef(*new HTMLObjectElement(tagName, document, form));
-    result->finishCreating();
-    return result;
+    return adoptRef(*new HTMLObjectElement(tagName, document, form));
 }
 
-RenderWidget* HTMLObjectElement::renderWidgetLoadingPlugin() const
+HTMLObjectElement::~HTMLObjectElement()
 {
-    // Needs to load the plugin immediatedly because this function is called
-    // when JavaScript code accesses the plugin.
-    // FIXME: <rdar://16893708> Check if dispatching events here is safe.
-    document().updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
-    return renderWidget(); // This will return 0 if the renderer is not a RenderWidget.
+    clearForm();
+}
+
+int HTMLObjectElement::defaultTabIndex() const
+{
+    return 0;
 }
 
 bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
@@ -93,7 +91,7 @@ bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLPlugInImageElement::isPresentationAttribute(name);
 }
 
-void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == borderAttr)
         applyBorderAttributeToStyle(value, style);
@@ -101,7 +99,7 @@ void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName
         HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     bool invalidateRenderer = false;
 
@@ -190,7 +188,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
     // Turn the attributes of the <object> element into arrays, but don't override <param> values.
     if (hasAttributes()) {
         for (const Attribute& attribute : attributesIterator()) {
-            const AtomicString& name = attribute.name().localName();
+            const AtomString& name = attribute.name().localName();
             if (!uniqueParamNames.contains(name.impl())) {
                 paramNames.append(name.string());
                 paramValues.append(attribute.value().string());
@@ -206,7 +204,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
     // if we know that resource points to a plug-in.
 
     if (url.isEmpty() && !urlParameter.isEmpty()) {
-        SubframeLoader& loader = document().frame()->loader().subframeLoader();
+        auto& loader = document().frame()->loader().subframeLoader();
         if (loader.resourceWillUsePlugin(urlParameter, serviceType))
             url = urlParameter;
     }
@@ -225,35 +223,9 @@ bool HTMLObjectElement::hasFallbackContent() const
     return false;
 }
 
-bool HTMLObjectElement::shouldAllowQuickTimeClassIdQuirk()
-{
-    // This site-specific hack maintains compatibility with Mac OS X Wiki Server,
-    // which embeds QuickTime movies using an object tag containing QuickTime's
-    // ActiveX classid. Treat this classid as valid only if OS X Server's unique
-    // 'generator' meta tag is present. Only apply this quirk if there is no
-    // fallback content, which ensures the quirk will disable itself if Wiki
-    // Server is updated to generate an alternate embed tag as fallback content.
-
-    if (!document().page()
-        || !document().page()->settings().needsSiteSpecificQuirks()
-        || hasFallbackContent()
-        || !equalLettersIgnoringASCIICase(attributeWithoutSynchronization(classidAttr), "clsid:02bf25d5-8c17-4b23-bc80-d3488abddc6b"))
-        return false;
-
-    for (auto& metaElement : descendantsOfType<HTMLMetaElement>(document())) {
-        if (equalLettersIgnoringASCIICase(metaElement.name(), "generator") && startsWithLettersIgnoringASCIICase(metaElement.content(), "mac os x server web services server"))
-            return true;
-    }
-
-    return false;
-}
-
 bool HTMLObjectElement::hasValidClassId()
 {
     if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && protocolIs(attributeWithoutSynchronization(classidAttr), "java"))
-        return true;
-
-    if (shouldAllowQuickTimeClassIdQuirk())
         return true;
 
     // HTML5 says that fallback content should be rendered if a non-empty
@@ -291,14 +263,13 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
     parametersForPlugin(paramNames, paramValues, url, serviceType);
 
     // Note: url is modified above by parametersForPlugin.
-    if (!allowedToLoadFrameURL(url)) {
+    if (!canLoadURL(url)) {
         setNeedsWidgetUpdate(false);
         return;
     }
 
-    // FIXME: It's sadness that we have this special case here.
-    //        See http://trac.webkit.org/changeset/25128 and
-    //        plugins/netscape-plugin-setwindow-size.html
+    // FIXME: It's unfortunate that we have this special case here.
+    // See http://trac.webkit.org/changeset/25128 and the plugins/netscape-plugin-setwindow-size.html test.
     if (createPlugins == CreatePlugins::No && wouldLoadAsPlugIn(url, serviceType))
         return;
 
@@ -309,7 +280,9 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
     if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
         return;
 
-    bool success = beforeLoadAllowedLoad && hasValidClassId() && allowedToLoadFrameURL(url);
+    // Dispatching a beforeLoad event could have executed code that changed the document.
+    // Make sure the URL is still safe to load.
+    bool success = beforeLoadAllowedLoad && hasValidClassId() && canLoadURL(url);
     if (success)
         success = requestObject(url, serviceType, paramNames, paramValues);
     if (!success && hasFallbackContent())
@@ -350,7 +323,12 @@ bool HTMLObjectElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == dataAttr || attribute.name() == codebaseAttr || (attribute.name() == usemapAttr && attribute.value().string()[0] != '#') || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
-const AtomicString& HTMLObjectElement::imageSourceURL() const
+bool HTMLObjectElement::isInteractiveContent() const
+{
+    return hasAttributeWithoutSynchronization(usemapAttr);
+}
+
+const AtomString& HTMLObjectElement::imageSourceURL() const
 {
     return attributeWithoutSynchronization(dataAttr);
 }
@@ -483,7 +461,7 @@ void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) cons
 
     // FIXME: Passing a string that starts with "#" to the completeURL function does
     // not seem like it would work. The image element has similar but not identical code.
-    const AtomicString& useMap = attributeWithoutSynchronization(usemapAttr);
+    const AtomString& useMap = attributeWithoutSynchronization(usemapAttr);
     if (useMap.startsWith('#'))
         addSubresourceURL(urls, document().completeURL(useMap));
 }

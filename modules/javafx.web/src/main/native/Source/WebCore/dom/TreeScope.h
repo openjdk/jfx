@@ -30,19 +30,21 @@
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class ContainerNode;
 class Document;
 class Element;
+class FloatPoint;
 class HTMLImageElement;
 class HTMLLabelElement;
 class HTMLMapElement;
 class LayoutPoint;
 class IdTargetObserverRegistry;
 class Node;
+class RadioButtonGroups;
 class ShadowRoot;
 
 class TreeScope {
@@ -55,46 +57,47 @@ public:
     Element* focusedElementInScope();
     Element* pointerLockElement() const;
 
-    WEBCORE_EXPORT Element* getElementById(const AtomicString&) const;
+    WEBCORE_EXPORT Element* getElementById(const AtomString&) const;
     WEBCORE_EXPORT Element* getElementById(const String&) const;
     Element* getElementById(StringView) const;
-    const Vector<Element*>* getAllElementsById(const AtomicString&) const;
-    bool hasElementWithId(const AtomicStringImpl&) const;
-    bool containsMultipleElementsWithId(const AtomicString& id) const;
-    void addElementById(const AtomicStringImpl& elementId, Element&, bool notifyObservers = true);
-    void removeElementById(const AtomicStringImpl& elementId, Element&, bool notifyObservers = true);
+    const Vector<Element*>* getAllElementsById(const AtomString&) const;
+    bool hasElementWithId(const AtomStringImpl&) const;
+    bool containsMultipleElementsWithId(const AtomString& id) const;
+    void addElementById(const AtomStringImpl& elementId, Element&, bool notifyObservers = true);
+    void removeElementById(const AtomStringImpl& elementId, Element&, bool notifyObservers = true);
 
-    WEBCORE_EXPORT Element* getElementByName(const AtomicString&) const;
-    bool hasElementWithName(const AtomicStringImpl&) const;
-    bool containsMultipleElementsWithName(const AtomicString&) const;
-    void addElementByName(const AtomicStringImpl&, Element&);
-    void removeElementByName(const AtomicStringImpl&, Element&);
+    WEBCORE_EXPORT Element* getElementByName(const AtomString&) const;
+    bool hasElementWithName(const AtomStringImpl&) const;
+    bool containsMultipleElementsWithName(const AtomString&) const;
+    void addElementByName(const AtomStringImpl&, Element&);
+    void removeElementByName(const AtomStringImpl&, Element&);
 
     Document& documentScope() const { return m_documentScope.get(); }
     static ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
 
     // https://dom.spec.whatwg.org/#retarget
-    Node& retargetToScope(Node&) const;
+    Ref<Node> retargetToScope(Node&) const;
 
     WEBCORE_EXPORT Node* ancestorNodeInThisScope(Node*) const;
     WEBCORE_EXPORT Element* ancestorElementInThisScope(Element*) const;
 
     void addImageMap(HTMLMapElement&);
     void removeImageMap(HTMLMapElement&);
-    HTMLMapElement* getImageMap(const AtomicString&) const;
+    HTMLMapElement* getImageMap(const AtomString&) const;
 
-    void addImageElementByUsemap(const AtomicStringImpl&, HTMLImageElement&);
-    void removeImageElementByUsemap(const AtomicStringImpl&, HTMLImageElement&);
-    HTMLImageElement* imageElementByUsemap(const AtomicStringImpl&) const;
+    void addImageElementByUsemap(const AtomStringImpl&, HTMLImageElement&);
+    void removeImageElementByUsemap(const AtomStringImpl&, HTMLImageElement&);
+    HTMLImageElement* imageElementByUsemap(const AtomStringImpl&) const;
 
     // For accessibility.
     bool shouldCacheLabelsByForAttribute() const { return !!m_labelsByForAttribute; }
-    void addLabel(const AtomicStringImpl& forAttributeValue, HTMLLabelElement&);
-    void removeLabel(const AtomicStringImpl& forAttributeValue, HTMLLabelElement&);
-    HTMLLabelElement* labelElementForId(const AtomicString& forAttributeValue);
+    void addLabel(const AtomStringImpl& forAttributeValue, HTMLLabelElement&);
+    void removeLabel(const AtomStringImpl& forAttributeValue, HTMLLabelElement&);
+    HTMLLabelElement* labelElementForId(const AtomString& forAttributeValue);
 
     WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY);
     WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY);
+    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(const FloatPoint&);
 
     // Find first anchor with the given name.
     // First searches for an element with the given ID, but if that fails, then looks
@@ -107,6 +110,8 @@ public:
 
     IdTargetObserverRegistry& idTargetObserverRegistry() const { return *m_idTargetObserverRegistry.get(); }
 
+    RadioButtonGroups& radioButtonGroups();
+
 protected:
     TreeScope(ShadowRoot&, Document&);
     explicit TreeScope(Document&);
@@ -118,7 +123,7 @@ protected:
         m_documentScope = document;
     }
 
-    Node* nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
+    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
 
 private:
 
@@ -133,24 +138,26 @@ private:
     std::unique_ptr<TreeScopeOrderedMap> m_labelsByForAttribute;
 
     std::unique_ptr<IdTargetObserverRegistry> m_idTargetObserverRegistry;
+
+    std::unique_ptr<RadioButtonGroups> m_radioButtonGroups;
 };
 
-inline bool TreeScope::hasElementWithId(const AtomicStringImpl& id) const
+inline bool TreeScope::hasElementWithId(const AtomStringImpl& id) const
 {
     return m_elementsById && m_elementsById->contains(id);
 }
 
-inline bool TreeScope::containsMultipleElementsWithId(const AtomicString& id) const
+inline bool TreeScope::containsMultipleElementsWithId(const AtomString& id) const
 {
     return m_elementsById && id.impl() && m_elementsById->containsMultiple(*id.impl());
 }
 
-inline bool TreeScope::hasElementWithName(const AtomicStringImpl& id) const
+inline bool TreeScope::hasElementWithName(const AtomStringImpl& id) const
 {
     return m_elementsByName && m_elementsByName->contains(id);
 }
 
-inline bool TreeScope::containsMultipleElementsWithName(const AtomicString& name) const
+inline bool TreeScope::containsMultipleElementsWithName(const AtomString& name) const
 {
     return m_elementsByName && name.impl() && m_elementsByName->containsMultiple(*name.impl());
 }

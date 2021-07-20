@@ -331,6 +331,7 @@ IncludeFile.processIncludeOptions()
 asmFile = ARGV.shift
 offsetsFile = ARGV.shift
 outputFlnm = ARGV.shift
+variants = ARGV.shift.split(/[,\s]+/)
 
 $options = {}
 OptionParser.new do |opts|
@@ -342,7 +343,7 @@ OptionParser.new do |opts|
 end.parse!
 
 begin
-    configurationList = offsetsAndConfigurationIndex(offsetsFile)
+    configurationList = offsetsAndConfigurationIndexForVariants(offsetsFile, variants)
 rescue MissingMagicValuesException
     $stderr.puts "offlineasm: No magic values found. Skipping assembly file generation."
     exit 1
@@ -363,20 +364,26 @@ inputHash =
     " " + Digest::SHA1.hexdigest($options.has_key?(:assembler) ? $options[:assembler] : "")
 
 if FileTest.exist? outputFlnm
+    lastLine = nil
     File.open(outputFlnm, "r") {
-        | inp |
-        firstLine = inp.gets
-        if firstLine and firstLine.chomp == inputHash
-            $stderr.puts "offlineasm: Nothing changed."
-            exit 0
-        end
+        | file |
+        file.each_line {
+            | line |
+            line = line.chomp
+            unless line.empty?
+                lastLine = line
+            end
+        }
     }
+    if lastLine and lastLine == inputHash
+        # Nothing changed.
+        exit 0
+    end
 end
 
 File.open(outputFlnm, "w") {
     | outp |
     $output = outp
-    $output.puts inputHash
 
     $asm = Assembler.new($output)
     
@@ -393,7 +400,7 @@ File.open(outputFlnm, "w") {
             # There could be multiple backends we are generating for, but the C_LOOP is
             # always by itself so this check to turn off $enableDebugAnnotations won't
             # affect the generation for any other backend.
-            if backend == "C_LOOP"
+            if backend == "C_LOOP" || backend == "C_LOOP_WIN"
                 $enableDebugAnnotations = false
             end
 
@@ -401,11 +408,14 @@ File.open(outputFlnm, "w") {
             lowLevelAST = lowLevelAST.resolve(buildOffsetsMap(lowLevelAST, offsetsList))
             lowLevelAST.validate
             emitCodeInConfiguration(concreteSettings, lowLevelAST, backend) {
-                 $currentSettings = concreteSettings
+                $currentSettings = concreteSettings
                 $asm.inAsm {
                     lowLevelAST.lower(backend)
                 }
             }
         }
     }
+
+    $output.fsync
+    $output.puts inputHash
 }

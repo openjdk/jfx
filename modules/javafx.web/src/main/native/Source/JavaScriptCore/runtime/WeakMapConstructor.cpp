@@ -26,11 +26,8 @@
 #include "config.h"
 #include "WeakMapConstructor.h"
 
-#include "Error.h"
 #include "IteratorOperations.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include "JSObjectInlines.h"
 #include "JSWeakMap.h"
 #include "WeakMapPrototype.h"
 
@@ -40,59 +37,60 @@ const ClassInfo WeakMapConstructor::s_info = { "Function", &Base::s_info, nullpt
 
 void WeakMapConstructor::finishCreation(VM& vm, WeakMapPrototype* prototype)
 {
-    Base::finishCreation(vm, prototype->classInfo(vm)->className);
+    Base::finishCreation(vm, 0, "WeakMap"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakMap(ExecState*);
-static EncodedJSValue JSC_HOST_CALL constructWeakMap(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(callWeakMap);
+static JSC_DECLARE_HOST_FUNCTION(constructWeakMap);
 
 WeakMapConstructor::WeakMapConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callWeakMap, constructWeakMap)
 {
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakMap(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(callWeakMap, (JSGlobalObject* globalObject, CallFrame*))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(exec, scope, "WeakMap"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakMap"));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructWeakMap(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSGlobalObject* globalObject = jsCast<InternalFunction*>(exec->jsCallee())->globalObject(vm);
-    Structure* weakMapStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), globalObject->weakMapStructure());
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* weakMapStructure = newTarget == callFrame->jsCallee()
+        ? globalObject->weakMapStructure()
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->weakMapStructure());
+    RETURN_IF_EXCEPTION(scope, { });
+
     JSWeakMap* weakMap = JSWeakMap::create(vm, weakMapStructure);
-    JSValue iterable = exec->argument(0);
+    JSValue iterable = callFrame->argument(0);
     if (iterable.isUndefinedOrNull())
         return JSValue::encode(weakMap);
 
-    JSValue adderFunction = weakMap->JSObject::get(exec, vm.propertyNames->set);
+    JSValue adderFunction = weakMap->JSObject::get(globalObject, vm.propertyNames->set);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    CallData adderFunctionCallData;
-    CallType adderFunctionCallType = getCallData(vm, adderFunction, adderFunctionCallData);
-    if (adderFunctionCallType == CallType::None)
-        return JSValue::encode(throwTypeError(exec, scope));
+    auto adderFunctionCallData = getCallData(vm, adderFunction);
+    if (adderFunctionCallData.type == CallData::Type::None)
+        return JSValue::encode(throwTypeError(globalObject, scope));
 
     scope.release();
-    forEachInIterable(exec, iterable, [&](VM& vm, ExecState* exec, JSValue nextItem) {
+    forEachInIterable(globalObject, iterable, [&](VM& vm, JSGlobalObject* globalObject, JSValue nextItem) {
         auto scope = DECLARE_THROW_SCOPE(vm);
         if (!nextItem.isObject()) {
-            throwTypeError(exec, scope);
+            throwTypeError(globalObject, scope);
             return;
         }
 
-        JSValue key = nextItem.get(exec, static_cast<unsigned>(0));
+        JSValue key = nextItem.get(globalObject, static_cast<unsigned>(0));
         RETURN_IF_EXCEPTION(scope, void());
 
-        JSValue value = nextItem.get(exec, static_cast<unsigned>(1));
+        JSValue value = nextItem.get(globalObject, static_cast<unsigned>(1));
         RETURN_IF_EXCEPTION(scope, void());
 
         MarkedArgumentBuffer arguments;
@@ -100,7 +98,7 @@ static EncodedJSValue JSC_HOST_CALL constructWeakMap(ExecState* exec)
         arguments.append(value);
         ASSERT(!arguments.hasOverflowed());
         scope.release();
-        call(exec, adderFunction, adderFunctionCallType, adderFunctionCallData, weakMap, arguments);
+        call(globalObject, adderFunction, adderFunctionCallData, weakMap, arguments);
     });
 
     return JSValue::encode(weakMap);

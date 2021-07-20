@@ -25,41 +25,35 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingStateNode.h"
 
+#if PLATFORM(COCOA)
+OBJC_CLASS NSScrollerImp;
+#endif
+
 namespace WebCore {
+
+struct RequestedScrollData {
+    FloatPoint scrollPosition;
+    ScrollType scrollType { ScrollType::User };
+    ScrollClamping clamping { ScrollClamping::Clamped };
+
+    bool operator==(const RequestedScrollData& other) const
+    {
+        return scrollPosition == other.scrollPosition
+            && scrollType == other.scrollType
+            && clamping == other.clamping;
+    }
+};
 
 class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
-
-    enum ChangedProperty {
-        ScrollableAreaSize = NumStateNodeBits,
-        TotalContentsSize,
-        ReachableContentsSize,
-        ParentRelativeScrollableRect,
-        ScrollPosition,
-        ScrollOrigin,
-        ScrollableAreaParams,
-        RequestedScrollPosition,
-#if ENABLE(CSS_SCROLL_SNAP)
-        HorizontalSnapOffsets,
-        VerticalSnapOffsets,
-        HorizontalSnapOffsetRanges,
-        VerticalSnapOffsetRanges,
-        CurrentHorizontalSnapOffsetIndex,
-        CurrentVerticalSnapOffsetIndex,
-#endif
-        ExpectsWheelEventTestTrigger,
-        ScrollContainerLayer,
-        ScrolledContentsLayer,
-        NumScrollingStateNodeBits // This must remain at the last position.
-    };
 
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
     WEBCORE_EXPORT void setScrollableAreaSize(const FloatSize&);
@@ -70,9 +64,6 @@ public:
     const FloatSize& reachableContentsSize() const { return m_reachableContentsSize; }
     WEBCORE_EXPORT void setReachableContentsSize(const FloatSize&);
 
-    const LayoutRect& parentRelativeScrollableRect() const { return m_parentRelativeScrollableRect; }
-    WEBCORE_EXPORT void setParentRelativeScrollableRect(const LayoutRect&);
-
     const FloatPoint& scrollPosition() const { return m_scrollPosition; }
     WEBCORE_EXPORT void setScrollPosition(const FloatPoint&);
 
@@ -80,17 +71,8 @@ public:
     WEBCORE_EXPORT void setScrollOrigin(const IntPoint&);
 
 #if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsets(const Vector<float>&);
-
-    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
-    WEBCORE_EXPORT void setVerticalSnapOffsets(const Vector<float>&);
-
-    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
-
-    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setVerticalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
+    const ScrollSnapOffsetsInfo<float>& snapOffsetsInfo() const { return m_snapOffsetsInfo; }
+    WEBCORE_EXPORT void setSnapOffsetsInfo(const ScrollSnapOffsetsInfo<float>& newOffsetsInfo);
 
     unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
     WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(unsigned);
@@ -102,12 +84,17 @@ public:
     const ScrollableAreaParameters& scrollableAreaParameters() const { return m_scrollableAreaParameters; }
     WEBCORE_EXPORT void setScrollableAreaParameters(const ScrollableAreaParameters& params);
 
-    const FloatPoint& requestedScrollPosition() const { return m_requestedScrollPosition; }
-    bool requestedScrollPositionRepresentsProgrammaticScroll() const { return m_requestedScrollPositionRepresentsProgrammaticScroll; }
-    WEBCORE_EXPORT void setRequestedScrollPosition(const FloatPoint&, bool representsProgrammaticScroll);
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
+    WEBCORE_EXPORT void setSynchronousScrollingReasons(OptionSet<SynchronousScrollingReason>);
+    bool hasSynchronousScrollingReasons() const { return !m_synchronousScrollingReasons.isEmpty(); }
+#endif
 
-    bool expectsWheelEventTestTrigger() const { return m_expectsWheelEventTestTrigger; }
-    WEBCORE_EXPORT void setExpectsWheelEventTestTrigger(bool);
+    const RequestedScrollData& requestedScrollData() const { return m_requestedScrollData; }
+    WEBCORE_EXPORT void setRequestedScrollData(const RequestedScrollData&);
+
+    bool isMonitoringWheelEvents() const { return m_isMonitoringWheelEvents; }
+    WEBCORE_EXPORT void setIsMonitoringWheelEvents(bool);
 
     const LayerRepresentation& scrollContainerLayer() const { return m_scrollContainerLayer; }
     WEBCORE_EXPORT void setScrollContainerLayer(const LayerRepresentation&);
@@ -116,36 +103,58 @@ public:
     const LayerRepresentation& scrolledContentsLayer() const { return m_scrolledContentsLayer; }
     WEBCORE_EXPORT void setScrolledContentsLayer(const LayerRepresentation&);
 
+    const LayerRepresentation& horizontalScrollbarLayer() const { return m_horizontalScrollbarLayer; }
+    WEBCORE_EXPORT void setHorizontalScrollbarLayer(const LayerRepresentation&);
+
+    const LayerRepresentation& verticalScrollbarLayer() const { return m_verticalScrollbarLayer; }
+    WEBCORE_EXPORT void setVerticalScrollbarLayer(const LayerRepresentation&);
+
+#if PLATFORM(MAC)
+    NSScrollerImp *verticalScrollerImp() const { return m_verticalScrollerImp.get(); }
+    NSScrollerImp *horizontalScrollerImp() const { return m_horizontalScrollerImp.get(); }
+#endif
+    void setScrollerImpsFromScrollbars(Scrollbar* verticalScrollbar, Scrollbar* horizontalScrollbar);
+
 protected:
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
-    void setAllPropertiesChanged() override;
-
+    OptionSet<Property> applicableProperties() const override;
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
     FloatSize m_scrollableAreaSize;
     FloatSize m_totalContentsSize;
     FloatSize m_reachableContentsSize;
-    LayoutRect m_parentRelativeScrollableRect;
     FloatPoint m_scrollPosition;
-    FloatPoint m_requestedScrollPosition;
     IntPoint m_scrollOrigin;
+
 #if ENABLE(CSS_SCROLL_SNAP)
     ScrollSnapOffsetsInfo<float> m_snapOffsetsInfo;
     unsigned m_currentHorizontalSnapPointIndex { 0 };
     unsigned m_currentVerticalSnapPointIndex { 0 };
 #endif
-    ScrollableAreaParameters m_scrollableAreaParameters;
+
     LayerRepresentation m_scrollContainerLayer;
     LayerRepresentation m_scrolledContentsLayer;
-    bool m_requestedScrollPositionRepresentsProgrammaticScroll { false };
-    bool m_expectsWheelEventTestTrigger { false };
+    LayerRepresentation m_horizontalScrollbarLayer;
+    LayerRepresentation m_verticalScrollbarLayer;
+
+#if PLATFORM(MAC)
+    RetainPtr<NSScrollerImp> m_verticalScrollerImp;
+    RetainPtr<NSScrollerImp> m_horizontalScrollerImp;
+#endif
+
+    ScrollableAreaParameters m_scrollableAreaParameters;
+    RequestedScrollData m_requestedScrollData;
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> m_synchronousScrollingReasons;
+#endif
+    bool m_isMonitoringWheelEvents { false };
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateScrollingNode, isScrollingNode())
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

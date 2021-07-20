@@ -26,29 +26,33 @@ DIRLIST = gst-plugins-bad/gst/aiff/ \
 DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 
 C_SOURCES = gst-plugins-bad/gst/aiff/aiff.c \
-			gst-plugins-bad/gst/aiff/aiffparse.c \
-			gst-plugins-base/gst/app/gstapp.c \
-			gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
-			gst-plugins-base/gst/audioconvert/plugin.c \
-			gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
-			gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
-			gst-plugins-good/gst/audioparsers/parsersplugin.c \
-			gst-plugins-good/sys/directsound/gstdirectsoundsink.c \
-			gst-plugins-good/sys/directsound/gstdirectsoundplugin.c \
-			gst-plugins-good/gst/equalizer/gstiirequalizer.c \
-			gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
-			gst-plugins-good/gst/isomp4/isomp4-plugin.c \
-			gst-plugins-good/gst/isomp4/qtdemux.c \
-			gst-plugins-good/gst/isomp4/gstisoff.c \
-			gst-plugins-good/gst/isomp4/qtdemux_dump.c \
-			gst-plugins-good/gst/isomp4/qtdemux_lang.c \
-			gst-plugins-good/gst/isomp4/qtdemux_types.c \
-			gst-plugins-good/gst/spectrum/gstspectrum.c \
-			gst-plugins-good/gst/wavparse/gstwavparse.c \
-			gstreamer/plugins/elements/gstelements.c \
-			gstreamer/plugins/elements/gstqueue.c \
-			gstreamer/plugins/elements/gsttypefindelement.c \
-			projects/plugins/gstplugins-lite.c
+            gst-plugins-bad/gst/aiff/aiffparse.c \
+            gst-plugins-base/gst/app/gstapp.c \
+            gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
+            gst-plugins-base/gst/audioconvert/plugin.c \
+            gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
+            gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
+            gst-plugins-good/gst/audioparsers/parsersplugin.c \
+            gst-plugins-good/sys/directsound/gstdirectsoundsink.c \
+            gst-plugins-good/sys/directsound/gstdirectsoundplugin.c \
+            gst-plugins-good/gst/equalizer/gstiirequalizer.c \
+            gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
+            gst-plugins-good/gst/isomp4/isomp4-plugin.c \
+            gst-plugins-good/gst/isomp4/qtdemux.c \
+            gst-plugins-good/gst/isomp4/gstisoff.c \
+            gst-plugins-good/gst/isomp4/qtdemux_dump.c \
+            gst-plugins-good/gst/isomp4/qtdemux_lang.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tags.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tree.c \
+            gst-plugins-good/gst/isomp4/qtdemux_types.c \
+            gst-plugins-good/gst/spectrum/gstspectrum.c \
+            gst-plugins-good/gst/wavparse/gstwavparse.c \
+            gstreamer/plugins/elements/gstelements.c \
+            gstreamer/plugins/elements/gstqueue.c \
+            gstreamer/plugins/elements/gsttypefindelement.c \
+            projects/plugins/gstplugins-lite.c
+
+CPP_SOURCES = gst-plugins-good/sys/directsound/gstdirectsoundnotify.cpp
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -analyze- -errorReport:queue \
@@ -100,7 +104,7 @@ else
     LIBFLAGS += -MACHINE:x64
 endif
 
-OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
+OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
 
 .PHONY: default
 
@@ -113,6 +117,9 @@ $(OBJECTS): | $(DEP_DIRS)
 
 $(DEP_DIRS):
 	@mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.cpp
+	$(CC) $(CFLAGS) -TP -c -Fo$(shell cygpath -ma $@) $<
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
 	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<

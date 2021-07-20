@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatRect.h"
+#include "AlphaPremultiplication.h"
+#include "DisplayList.h"
 #include "FloatRoundedRect.h"
 #include "Font.h"
 #include "GlyphBuffer.h"
-#include "GraphicsContext.h"
+#include "Gradient.h"
 #include "Image.h"
-#include <wtf/RefCounted.h>
+#include "ImageData.h"
+#include "MediaPlayerIdentifier.h"
+#include "Pattern.h"
+#include "RenderingResourceIdentifier.h"
+#include "SharedBuffer.h"
 #include <wtf/TypeCasts.h>
-
-#if USE(CG)
-#include "GraphicsContextPlatformPrivateCG.h"
-#endif
 
 namespace WTF {
 class TextStream;
@@ -45,756 +45,1136 @@ class TextStream;
 
 namespace WebCore {
 
+class ImageData;
+class MediaPlayer;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
 
-enum class ItemType {
-    Save,
-    Restore,
-    Translate,
-    Rotate,
-    Scale,
-    ConcatenateCTM,
-    SetState,
-    SetLineCap,
-    SetLineDash,
-    SetLineJoin,
-    SetMiterLimit,
-    ClearShadow,
-    Clip,
-    ClipOut,
-    ClipOutToPath,
-    ClipPath,
-    DrawGlyphs,
-    DrawImage,
-    DrawTiledImage,
-    DrawTiledScaledImage,
-#if USE(CG) || USE(CAIRO)
-    DrawNativeImage,
-#endif
-    DrawPattern,
-    DrawRect,
-    DrawLine,
-    DrawLinesForText,
-    DrawDotsForDocumentMarker,
-    DrawEllipse,
-    DrawPath,
-    DrawFocusRingPath,
-    DrawFocusRingRects,
-    FillRect,
-    FillRectWithColor,
-    FillRectWithGradient,
-    FillCompositedRect,
-    FillRoundedRect,
-    FillRectWithRoundedHole,
-    FillPath,
-    FillEllipse,
-    StrokeRect,
-    StrokePath,
-    StrokeEllipse,
-    ClearRect,
-    BeginTransparencyLayer,
-    EndTransparencyLayer,
-#if USE(CG)
-    ApplyStrokePattern, // FIXME: should not be a recorded item.
-    ApplyFillPattern, // FIXME: should not be a recorded item.
-#endif
-    ApplyDeviceScaleFactor,
+class Save {
+public:
+    static constexpr ItemType itemType = ItemType::Save;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    void apply(GraphicsContext&) const;
 };
 
-class Item : public RefCounted<Item> {
+class Restore {
 public:
-    Item() = delete;
+    static constexpr ItemType itemType = ItemType::Restore;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
 
-    Item(ItemType type)
-        : m_type(type)
-    {
-    }
-
-    virtual ~Item() = default;
-
-    ItemType type() const
-    {
-        return m_type;
-    }
-
-    virtual void apply(GraphicsContext&) const = 0;
-
-    static constexpr bool isDisplayListItem = true;
-
-    virtual bool isDrawingItem() const { return false; }
-
-    // A state item is one preserved by Save/Restore.
-    bool isStateItem() const
-    {
-        return isStateItemType(m_type);
-    }
-
-    static bool isStateItemType(ItemType itemType)
-    {
-        switch (itemType) {
-        case ItemType:: Translate:
-        case ItemType:: Rotate:
-        case ItemType:: Scale:
-        case ItemType:: ConcatenateCTM:
-        case ItemType:: SetState:
-        case ItemType:: SetLineCap:
-        case ItemType:: SetLineDash:
-        case ItemType:: SetLineJoin:
-        case ItemType:: SetMiterLimit:
-        case ItemType:: ClearShadow:
-            return true;
-        default:
-            return false;
-        }
-        return false;
-    }
-
-#if !defined(NDEBUG) || !LOG_DISABLED
-    WTF::CString description() const;
-#endif
-    static size_t sizeInBytes(const Item&);
-
-private:
-    ItemType m_type;
+    void apply(GraphicsContext&) const;
 };
 
-class DrawingItem : public Item {
+class Translate {
 public:
-    DrawingItem(ItemType type)
-        : Item(type)
+    static constexpr ItemType itemType = ItemType::Translate;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    Translate(float x, float y)
+        : m_x(x)
+        , m_y(y)
     {
-    }
-
-    void setExtent(const FloatRect& r) { m_extent = r; }
-    const FloatRect& extent() const { return m_extent.value(); }
-
-    bool extentKnown() const { return static_cast<bool>(m_extent); }
-
-    // Return bounds of this drawing operation in local coordinates.
-    // Does not include effets of transform, shadow etc in the state.
-    virtual Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
-
-private:
-    bool isDrawingItem() const override { return true; }
-
-    Optional<FloatRect> m_extent; // In base coordinates, taking shadows and transforms into account.
-};
-
-class Save : public Item {
-public:
-    static Ref<Save> create()
-    {
-        return adoptRef(*new Save);
-    }
-
-    // Index in the display list of the corresponding Restore item. 0 if unmatched.
-    size_t restoreIndex() const { return m_restoreIndex; }
-    void setRestoreIndex(size_t index) { m_restoreIndex = index; }
-
-private:
-    Save()
-        : Item(ItemType::Save)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    size_t m_restoreIndex { 0 };
-};
-
-class Restore : public Item {
-public:
-    static Ref<Restore> create()
-    {
-        return adoptRef(*new Restore);
-    }
-
-private:
-    Restore()
-        : Item(ItemType::Restore)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-};
-
-class Translate : public Item {
-public:
-    static Ref<Translate> create(float x, float y)
-    {
-        return adoptRef(*new Translate(x, y));
     }
 
     float x() const { return m_x; }
     float y() const { return m_y; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    Translate(float x, float y)
-        : Item(ItemType::Translate)
-        , m_x(x)
-        , m_y(y)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    float m_x;
-    float m_y;
+    float m_x { 0 };
+    float m_y { 0 };
 };
 
-class Rotate : public Item {
+class Rotate {
 public:
-    static Ref<Rotate> create(float angleInRadians)
+    static constexpr ItemType itemType = ItemType::Rotate;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    Rotate(float angle)
+        : m_angle(angle)
     {
-        return adoptRef(*new Rotate(angleInRadians));
     }
 
     float angle() const { return m_angle; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    Rotate(float angle)
-        : Item(ItemType::Rotate)
-        , m_angle(angle)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    float m_angle; // In radians.
+    float m_angle { 0 }; // In radians.
 };
 
-class Scale : public Item {
+class Scale {
 public:
-    static Ref<Scale> create(const FloatSize& size)
+    static constexpr ItemType itemType = ItemType::Scale;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    Scale(const FloatSize& size)
+        : m_size(size)
     {
-        return adoptRef(*new Scale(size));
     }
 
     const FloatSize& amount() const { return m_size; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    Scale(const FloatSize& size)
-        : Item(ItemType::Scale)
-        , m_size(size)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     FloatSize m_size;
 };
 
-class ConcatenateCTM : public Item {
+class SetCTM {
 public:
-    static Ref<ConcatenateCTM> create(const AffineTransform& matrix)
+    static constexpr ItemType itemType = ItemType::SetCTM;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetCTM(const AffineTransform& transform)
+        : m_transform(transform)
     {
-        return adoptRef(*new ConcatenateCTM(matrix));
     }
 
     const AffineTransform& transform() const { return m_transform; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    ConcatenateCTM(const AffineTransform&);
-
-    void apply(GraphicsContext&) const override;
-
     AffineTransform m_transform;
 };
 
-class SetState : public Item {
+class ConcatenateCTM {
 public:
-    static Ref<SetState> create(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
+    static constexpr ItemType itemType = ItemType::ConcatenateCTM;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ConcatenateCTM(const AffineTransform& transform)
+        : m_transform(transform)
     {
-        return adoptRef(*new SetState(state, flags));
     }
 
-    const GraphicsContextStateChange& state() const { return m_state; }
+    const AffineTransform& transform() const { return m_transform; }
 
-    void accumulate(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+    void apply(GraphicsContext&) const;
 
-    void accumulate(GraphicsContextState&) const;
-
-    static void applyState(GraphicsContext&, const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
-
-    static void dumpStateChanges(WTF::TextStream&, const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
 private:
-    SetState(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
-        : Item(ItemType::SetState)
-        , m_state(state, flags)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    GraphicsContextStateChange m_state;
+    AffineTransform m_transform;
 };
 
-class SetLineCap : public Item {
+class SetInlineFillGradient {
 public:
-    static Ref<SetLineCap> create(LineCap lineCap)
+    static constexpr ItemType itemType = ItemType::SetInlineFillGradient;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+    static constexpr uint8_t maxColorStopCount = 4;
+
+    SetInlineFillGradient(const Gradient&, const AffineTransform& gradientSpaceTransform);
+    WEBCORE_EXPORT SetInlineFillGradient(float offsets[maxColorStopCount], SRGBA<uint8_t> colors[maxColorStopCount], const Gradient::Data&, const AffineTransform& gradientSpaceTransform, GradientSpreadMethod, uint8_t colorStopCount);
+
+    static bool isInline(const Gradient&);
+    Ref<Gradient> gradient() const;
+
+    void apply(GraphicsContext&) const;
+
+private:
+    float m_offsets[maxColorStopCount];
+    SRGBA<uint8_t> m_colors[maxColorStopCount];
+    Gradient::Data m_data;
+    AffineTransform m_gradientSpaceTransform;
+    GradientSpreadMethod m_spreadMethod { GradientSpreadMethod::Pad };
+    uint8_t m_colorStopCount { 0 };
+};
+
+class SetInlineFillColor {
+public:
+    static constexpr ItemType itemType = ItemType::SetInlineFillColor;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetInlineFillColor(SRGBA<uint8_t> colorData)
+        : m_colorData(colorData)
     {
-        return adoptRef(*new SetLineCap(lineCap));
+    }
+
+    Color color() const { return { m_colorData }; }
+    void apply(GraphicsContext&) const;
+
+private:
+    SRGBA<uint8_t> m_colorData;
+};
+
+class SetInlineStrokeColor {
+public:
+    static constexpr ItemType itemType = ItemType::SetInlineStrokeColor;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetInlineStrokeColor(SRGBA<uint8_t> colorData)
+        : m_colorData(colorData)
+    {
+    }
+
+    Color color() const { return { m_colorData }; }
+
+    void apply(GraphicsContext&) const;
+
+private:
+    SRGBA<uint8_t> m_colorData;
+};
+
+class SetStrokeThickness {
+public:
+    static constexpr ItemType itemType = ItemType::SetStrokeThickness;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetStrokeThickness(float thickness)
+        : m_thickness(thickness)
+    {
+    }
+
+    float thickness() const { return m_thickness; }
+
+    void apply(GraphicsContext&) const;
+
+private:
+    float m_thickness { 0 };
+};
+
+class SetState {
+public:
+    static constexpr ItemType itemType = ItemType::SetState;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = false;
+
+    WEBCORE_EXPORT SetState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+
+    const GraphicsContextStateChange& stateChange() const { return m_stateChange; }
+    const Pattern::Parameters& strokePatternParameters() const { return m_strokePattern.parameters; }
+    const Pattern::Parameters& fillPatternParameters() const { return m_fillPattern.parameters; }
+    RenderingResourceIdentifier strokePatternImageIdentifier() const { return m_strokePattern.tileImageIdentifier; }
+    RenderingResourceIdentifier fillPatternImageIdentifier() const { return m_fillPattern.tileImageIdentifier; }
+
+    static void builderState(GraphicsContext&, const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+
+    static void dumpStateChanges(WTF::TextStream&, const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<SetState> decode(Decoder&);
+
+    void apply(GraphicsContext&, NativeImage* strokePatternImage, NativeImage* fillPatternImage);
+
+private:
+    struct PatternData {
+        RenderingResourceIdentifier tileImageIdentifier;
+        Pattern::Parameters parameters;
+    };
+
+    WEBCORE_EXPORT SetState(const GraphicsContextStateChange&, const PatternData& strokePattern, const PatternData& fillPattern);
+
+    GraphicsContextStateChange m_stateChange;
+    PatternData m_strokePattern;
+    PatternData m_fillPattern;
+};
+
+template<class Encoder>
+void SetState::encode(Encoder& encoder) const
+{
+    auto changeFlags = m_stateChange.m_changeFlags;
+    encoder << changeFlags;
+
+    auto& state = m_stateChange.m_state;
+
+    if (changeFlags.contains(GraphicsContextState::StrokeGradientChange)) {
+        ASSERT(state.strokeGradient);
+        encoder << *state.strokeGradient;
+    }
+
+    if (changeFlags.contains(GraphicsContextState::StrokePatternChange)) {
+        ASSERT(state.strokePattern);
+        encoder << state.strokePattern->tileImage().renderingResourceIdentifier();
+        encoder << state.strokePattern->parameters();
+    }
+
+    if (changeFlags.contains(GraphicsContextState::FillGradientChange)) {
+        ASSERT(state.fillGradient);
+        encoder << *state.fillGradient;
+    }
+
+    if (changeFlags.contains(GraphicsContextState::FillPatternChange)) {
+        ASSERT(state.fillPattern);
+        encoder << state.fillPattern->tileImage().renderingResourceIdentifier();
+        encoder << state.fillPattern->parameters();
+    }
+
+    if (changeFlags.contains(GraphicsContextState::ShadowChange)) {
+        encoder << state.shadowOffset;
+        encoder << state.shadowBlur;
+        encoder << state.shadowColor;
+#if USE(CG)
+        encoder << state.shadowsUseLegacyRadius;
+#endif // USE(CG)
+    }
+
+    if (changeFlags.contains(GraphicsContextState::StrokeThicknessChange))
+        encoder << state.strokeThickness;
+
+    if (changeFlags.contains(GraphicsContextState::TextDrawingModeChange))
+        encoder << state.textDrawingMode;
+
+    if (changeFlags.contains(GraphicsContextState::StrokeColorChange))
+        encoder << state.strokeColor;
+
+    if (changeFlags.contains(GraphicsContextState::FillColorChange))
+        encoder << state.fillColor;
+
+    if (changeFlags.contains(GraphicsContextState::StrokeStyleChange))
+        encoder << state.strokeStyle;
+
+    if (changeFlags.contains(GraphicsContextState::FillRuleChange))
+        encoder << state.fillRule;
+
+    if (changeFlags.contains(GraphicsContextState::CompositeOperationChange))
+        encoder << state.compositeOperator;
+
+    if (changeFlags.contains(GraphicsContextState::BlendModeChange))
+        encoder << state.blendMode;
+
+    if (changeFlags.contains(GraphicsContextState::ImageInterpolationQualityChange))
+        encoder << state.imageInterpolationQuality;
+
+    if (changeFlags.contains(GraphicsContextState::AlphaChange))
+        encoder << state.alpha;
+
+    if (changeFlags.contains(GraphicsContextState::ShouldAntialiasChange))
+        encoder << state.shouldAntialias;
+
+    if (changeFlags.contains(GraphicsContextState::ShouldSmoothFontsChange))
+        encoder << state.shouldSmoothFonts;
+
+    if (changeFlags.contains(GraphicsContextState::ShouldSubpixelQuantizeFontsChange))
+        encoder << state.shouldSubpixelQuantizeFonts;
+
+    if (changeFlags.contains(GraphicsContextState::ShadowsIgnoreTransformsChange))
+        encoder << state.shadowsIgnoreTransforms;
+}
+
+template<class Decoder>
+Optional<SetState> SetState::decode(Decoder& decoder)
+{
+    Optional<GraphicsContextState::StateChangeFlags> changeFlags;
+    decoder >> changeFlags;
+    if (!changeFlags)
+        return WTF::nullopt;
+
+    GraphicsContextStateChange stateChange;
+    stateChange.m_changeFlags = *changeFlags;
+
+    PatternData strokePattern;
+    PatternData fillPattern;
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeGradientChange)) {
+        auto strokeGradient = Gradient::decode(decoder);
+        if (!strokeGradient)
+            return WTF::nullopt;
+
+        stateChange.m_state.strokeGradient = WTFMove(*strokeGradient);
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokePatternChange)) {
+        Optional<RenderingResourceIdentifier> renderingResourceIdentifier;
+        decoder >> renderingResourceIdentifier;
+        if (!renderingResourceIdentifier)
+            return WTF::nullopt;
+
+        Optional<Pattern::Parameters> parameters;
+        decoder >> parameters;
+        if (!parameters)
+            return WTF::nullopt;
+
+        strokePattern = { *renderingResourceIdentifier, *parameters };
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillGradientChange)) {
+        auto fillGradient = Gradient::decode(decoder);
+        if (!fillGradient)
+            return WTF::nullopt;
+
+        stateChange.m_state.fillGradient = WTFMove(*fillGradient);
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillPatternChange)) {
+        Optional<RenderingResourceIdentifier> renderingResourceIdentifier;
+        decoder >> renderingResourceIdentifier;
+        if (!renderingResourceIdentifier)
+            return WTF::nullopt;
+
+        Optional<Pattern::Parameters> parameters;
+        decoder >> parameters;
+        if (!parameters)
+            return WTF::nullopt;
+
+        fillPattern = { *renderingResourceIdentifier, *parameters };
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShadowChange)) {
+        Optional<FloatSize> shadowOffset;
+        decoder >> shadowOffset;
+        if (!shadowOffset)
+            return WTF::nullopt;
+
+        stateChange.m_state.shadowOffset = *shadowOffset;
+
+        Optional<float> shadowBlur;
+        decoder >> shadowBlur;
+        if (!shadowBlur)
+            return WTF::nullopt;
+
+        stateChange.m_state.shadowBlur = *shadowBlur;
+
+        Optional<Color> shadowColor;
+        decoder >> shadowColor;
+        if (!shadowColor)
+            return WTF::nullopt;
+
+        stateChange.m_state.shadowColor = *shadowColor;
+
+#if USE(CG)
+        Optional<bool> shadowsUseLegacyRadius;
+        decoder >> shadowsUseLegacyRadius;
+        if (!shadowsUseLegacyRadius)
+            return WTF::nullopt;
+
+        stateChange.m_state.shadowsUseLegacyRadius = *shadowsUseLegacyRadius;
+#endif // USE(CG)
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeThicknessChange)) {
+        Optional<float> strokeThickness;
+        decoder >> strokeThickness;
+        if (!strokeThickness)
+            return WTF::nullopt;
+
+        stateChange.m_state.strokeThickness = *strokeThickness;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::TextDrawingModeChange)) {
+        Optional<TextDrawingModeFlags> textDrawingMode;
+        decoder >> textDrawingMode;
+        if (!textDrawingMode)
+            return WTF::nullopt;
+
+        stateChange.m_state.textDrawingMode = WTFMove(*textDrawingMode);
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeColorChange)) {
+        Optional<Color> strokeColor;
+        decoder >> strokeColor;
+        if (!strokeColor)
+            return WTF::nullopt;
+
+        stateChange.m_state.strokeColor = *strokeColor;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillColorChange)) {
+        Optional<Color> fillColor;
+        decoder >> fillColor;
+        if (!fillColor)
+            return WTF::nullopt;
+
+        stateChange.m_state.fillColor = *fillColor;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeStyleChange)) {
+        StrokeStyle strokeStyle;
+        if (!decoder.decode(strokeStyle))
+            return WTF::nullopt;
+
+        stateChange.m_state.strokeStyle = strokeStyle;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillRuleChange)) {
+        Optional<WindRule> fillRule;
+        decoder >> fillRule;
+        if (!fillRule)
+            return WTF::nullopt;
+
+        stateChange.m_state.fillRule = *fillRule;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::CompositeOperationChange)) {
+        Optional<CompositeOperator> compositeOperator;
+        decoder >> compositeOperator;
+        if (!compositeOperator)
+            return WTF::nullopt;
+
+        stateChange.m_state.compositeOperator = *compositeOperator;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::BlendModeChange)) {
+        Optional<BlendMode> blendMode;
+        decoder >> blendMode;
+        if (!blendMode)
+            return WTF::nullopt;
+
+        stateChange.m_state.blendMode = *blendMode;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::ImageInterpolationQualityChange)) {
+        Optional<InterpolationQuality> imageInterpolationQuality;
+        decoder >> imageInterpolationQuality;
+        if (!imageInterpolationQuality)
+            return WTF::nullopt;
+
+        stateChange.m_state.imageInterpolationQuality = *imageInterpolationQuality;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::AlphaChange)) {
+        Optional<float> alpha;
+        decoder >> alpha;
+        if (!alpha)
+            return WTF::nullopt;
+
+        stateChange.m_state.alpha = *alpha;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShouldAntialiasChange)) {
+        Optional<bool> shouldAntialias;
+        decoder >> shouldAntialias;
+        if (!shouldAntialias)
+            return WTF::nullopt;
+
+        stateChange.m_state.shouldAntialias = *shouldAntialias;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShouldSmoothFontsChange)) {
+        Optional<bool> shouldSmoothFonts;
+        decoder >> shouldSmoothFonts;
+        if (!shouldSmoothFonts)
+            return WTF::nullopt;
+
+        stateChange.m_state.shouldSmoothFonts = *shouldSmoothFonts;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShouldSubpixelQuantizeFontsChange)) {
+        Optional<bool> shouldSubpixelQuantizeFonts;
+        decoder >> shouldSubpixelQuantizeFonts;
+        if (!shouldSubpixelQuantizeFonts)
+            return WTF::nullopt;
+
+        stateChange.m_state.shouldSubpixelQuantizeFonts = *shouldSubpixelQuantizeFonts;
+    }
+
+    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShadowsIgnoreTransformsChange)) {
+        Optional<bool> shadowsIgnoreTransforms;
+        decoder >> shadowsIgnoreTransforms;
+        if (!shadowsIgnoreTransforms)
+            return WTF::nullopt;
+
+        stateChange.m_state.shadowsIgnoreTransforms = *shadowsIgnoreTransforms;
+    }
+
+    return {{ stateChange, strokePattern, fillPattern }};
+}
+
+class SetLineCap {
+public:
+    static constexpr ItemType itemType = ItemType::SetLineCap;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetLineCap(LineCap lineCap)
+        : m_lineCap(lineCap)
+    {
     }
 
     LineCap lineCap() const { return m_lineCap; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    SetLineCap(LineCap lineCap)
-        : Item(ItemType::SetLineCap)
-        , m_lineCap(lineCap)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     LineCap m_lineCap;
 };
 
-class SetLineDash : public Item {
+class SetLineDash {
 public:
-    static Ref<SetLineDash> create(const DashArray& dashArray, float dashOffset)
+    static constexpr ItemType itemType = ItemType::SetLineDash;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = false;
+
+    SetLineDash(const DashArray& dashArray, float dashOffset)
+        : m_dashArray(dashArray)
+        , m_dashOffset(dashOffset)
     {
-        return adoptRef(*new SetLineDash(dashArray, dashOffset));
     }
 
     const DashArray& dashArray() const { return m_dashArray; }
     float dashOffset() const { return m_dashOffset; }
 
+    void apply(GraphicsContext&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<SetLineDash> decode(Decoder&);
+
 private:
-    SetLineDash(const DashArray& dashArray, float dashOffset)
-        : Item(ItemType::SetLineDash)
-        , m_dashArray(dashArray)
-        , m_dashOffset(dashOffset)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     DashArray m_dashArray;
     float m_dashOffset;
 };
 
-class SetLineJoin : public Item {
+template<class Encoder>
+void SetLineDash::encode(Encoder& encoder) const
+{
+    encoder << m_dashArray;
+    encoder << m_dashOffset;
+}
+
+template<class Decoder>
+Optional<SetLineDash> SetLineDash::decode(Decoder& decoder)
+{
+    Optional<DashArray> dashArray;
+    decoder >> dashArray;
+    if (!dashArray)
+        return WTF::nullopt;
+
+    Optional<float> dashOffset;
+    decoder >> dashOffset;
+    if (!dashOffset)
+        return WTF::nullopt;
+
+    return {{ *dashArray, *dashOffset }};
+}
+
+class SetLineJoin {
 public:
-    static Ref<SetLineJoin> create(LineJoin lineJoin)
+    static constexpr ItemType itemType = ItemType::SetLineJoin;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetLineJoin(LineJoin lineJoin)
+        : m_lineJoin(lineJoin)
     {
-        return adoptRef(*new SetLineJoin(lineJoin));
     }
 
     LineJoin lineJoin() const { return m_lineJoin; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    SetLineJoin(LineJoin lineJoin)
-        : Item(ItemType::SetLineJoin)
-        , m_lineJoin(lineJoin)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     LineJoin m_lineJoin;
 };
 
-class SetMiterLimit : public Item {
+class SetMiterLimit {
 public:
-    static Ref<SetMiterLimit> create(float limit)
+    static constexpr ItemType itemType = ItemType::SetMiterLimit;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    SetMiterLimit(float miterLimit)
+        : m_miterLimit(miterLimit)
     {
-        return adoptRef(*new SetMiterLimit(limit));
     }
 
     float miterLimit() const { return m_miterLimit; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    SetMiterLimit(float miterLimit)
-        : Item(ItemType::SetMiterLimit)
-        , m_miterLimit(miterLimit)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     float m_miterLimit;
 };
 
-class ClearShadow : public Item {
+class ClearShadow {
 public:
-    static Ref<ClearShadow> create()
-    {
-        return adoptRef(*new ClearShadow);
-    }
+    static constexpr ItemType itemType = ItemType::ClearShadow;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
 
-private:
-    ClearShadow()
-        : Item(ItemType::ClearShadow)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
+    void apply(GraphicsContext&) const;
 };
 
-// FIXME: treat as DrawingItem?
-class Clip : public Item {
+// FIXME: treat as drawing item?
+class Clip {
 public:
-    static Ref<Clip> create(const FloatRect& rect)
-    {
-        return adoptRef(*new Clip(rect));
-    }
+    static constexpr ItemType itemType = ItemType::Clip;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
 
-    FloatRect rect() const { return m_rect; }
-
-private:
     Clip(const FloatRect& rect)
-        : Item(ItemType::Clip)
-        , m_rect(rect)
+        : m_rect(rect)
     {
     }
 
-    void apply(GraphicsContext&) const override;
+    const FloatRect& rect() const { return m_rect; }
 
-    FloatRect m_rect;
-};
-
-class ClipOut : public Item {
-public:
-    static Ref<ClipOut> create(const FloatRect& rect)
-    {
-        return adoptRef(*new ClipOut(rect));
-    }
-
-    FloatRect rect() const { return m_rect; }
+    void apply(GraphicsContext&) const;
 
 private:
-    ClipOut(const FloatRect& rect)
-        : Item(ItemType::ClipOut)
-        , m_rect(rect)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     FloatRect m_rect;
 };
 
-class ClipOutToPath : public Item {
+class ClipOut {
 public:
-    static Ref<ClipOutToPath> create(const Path& path)
+    static constexpr ItemType itemType = ItemType::ClipOut;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ClipOut(const FloatRect& rect)
+        : m_rect(rect)
     {
-        return adoptRef(*new ClipOutToPath(path));
+    }
+
+    const FloatRect& rect() const { return m_rect; }
+
+    void apply(GraphicsContext&) const;
+
+private:
+    FloatRect m_rect;
+};
+
+class ClipToImageBuffer {
+public:
+    static constexpr ItemType itemType = ItemType::ClipToImageBuffer;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ClipToImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destinationRect)
+        : m_imageBufferIdentifier(imageBufferIdentifier)
+        , m_destinationRect(destinationRect)
+    {
+    }
+
+    RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
+    FloatRect destinationRect() const { return m_destinationRect; }
+    bool isValid() const { return !!m_imageBufferIdentifier; }
+
+    void apply(GraphicsContext&, WebCore::ImageBuffer&) const;
+
+    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
+
+private:
+    RenderingResourceIdentifier m_imageBufferIdentifier;
+    FloatRect m_destinationRect;
+};
+
+class ClipOutToPath {
+public:
+    static constexpr ItemType itemType = ItemType::ClipOutToPath;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = false;
+
+    ClipOutToPath(Path&& path)
+        : m_path(WTFMove(path))
+    {
+    }
+
+    ClipOutToPath(const Path& path)
+        : m_path(path)
+    {
     }
 
     const Path& path() const { return m_path; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<ClipOutToPath> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
 private:
-    ClipOutToPath(const Path& path)
-        : Item(ItemType::ClipOutToPath)
-        , m_path(path)
+    Path m_path;
+};
+
+template<class Encoder>
+void ClipOutToPath::encode(Encoder& encoder) const
+{
+    encoder << m_path;
+}
+
+template<class Decoder>
+Optional<ClipOutToPath> ClipOutToPath::decode(Decoder& decoder)
+{
+    Optional<Path> path;
+    decoder >> path;
+    if (!path)
+        return WTF::nullopt;
+
+    return {{ WTFMove(*path) }};
+}
+
+class ClipPath {
+public:
+    static constexpr ItemType itemType = ItemType::ClipPath;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = false;
+
+    ClipPath(Path&& path, WindRule windRule)
+        : m_path(WTFMove(path))
+        , m_windRule(windRule)
     {
     }
 
-    void apply(GraphicsContext&) const override;
-
-    const Path m_path;
-};
-
-class ClipPath : public Item {
-public:
-    static Ref<ClipPath> create(const Path& path, WindRule windRule)
+    ClipPath(const Path& path, WindRule windRule)
+        : m_path(path)
+        , m_windRule(windRule)
     {
-        return adoptRef(*new ClipPath(path, windRule));
     }
 
     const Path& path() const { return m_path; }
     WindRule windRule() const { return m_windRule; }
 
+    void apply(GraphicsContext&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<ClipPath> decode(Decoder&);
+
 private:
-    ClipPath(const Path& path, WindRule windRule)
-        : Item(ItemType::ClipPath)
-        , m_path(path)
-        , m_windRule(windRule)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    const Path m_path;
+    Path m_path;
     WindRule m_windRule;
 };
 
-class DrawGlyphs : public DrawingItem {
+template<class Encoder>
+void ClipPath::encode(Encoder& encoder) const
+{
+    encoder << m_path;
+    encoder << m_windRule;
+}
+
+template<class Decoder>
+Optional<ClipPath> ClipPath::decode(Decoder& decoder)
+{
+    Optional<Path> path;
+    decoder >> path;
+    if (!path)
+        return WTF::nullopt;
+
+    Optional<WindRule> windRule;
+    decoder >> windRule;
+    if (!windRule)
+        return WTF::nullopt;
+
+    return {{ WTFMove(*path), *windRule }};
+}
+
+class BeginClipToDrawingCommands {
 public:
-    static Ref<DrawGlyphs> create(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned count, const FloatPoint& blockLocation, const FloatSize& localAnchor, FontSmoothingMode smoothingMode)
+    static constexpr ItemType itemType = ItemType::BeginClipToDrawingCommands;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    BeginClipToDrawingCommands(const FloatRect& destination, DestinationColorSpace colorSpace)
+        : m_destination(destination)
+        , m_colorSpace(colorSpace)
     {
-        return adoptRef(*new DrawGlyphs(font, glyphs, advances, count, blockLocation, localAnchor, smoothingMode));
     }
 
-    const FloatPoint& blockLocation() const { return m_blockLocation; }
-    void setBlockLocation(const FloatPoint& blockLocation) { m_blockLocation = blockLocation; }
-
-    const FloatSize& localAnchor() const { return m_localAnchor; }
-
-    FloatPoint anchorPoint() const { return m_blockLocation + m_localAnchor; }
-
-    const Vector<GlyphBufferGlyph, 128>& glyphs() const { return m_glyphs; }
+    const FloatRect& destination() const { return m_destination; }
+    DestinationColorSpace colorSpace() const { return m_colorSpace; }
 
 private:
-    DrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& blockLocation, const FloatSize& localAnchor, FontSmoothingMode);
+    FloatRect m_destination;
+    DestinationColorSpace m_colorSpace;
+};
 
-    void computeBounds();
+class EndClipToDrawingCommands {
+public:
+    static constexpr ItemType itemType = ItemType::EndClipToDrawingCommands;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
 
-    void apply(GraphicsContext&) const override;
+    EndClipToDrawingCommands(const FloatRect& destination)
+        : m_destination(destination)
+    {
+    }
 
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
+    const FloatRect& destination() const { return m_destination; }
 
-    GlyphBuffer generateGlyphBuffer() const;
+private:
+    FloatRect m_destination;
+};
 
-    Ref<Font> m_font;
+class DrawGlyphs {
+public:
+    static constexpr ItemType itemType = ItemType::DrawGlyphs;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    RenderingResourceIdentifier fontIdentifier() { return m_fontIdentifier; }
+    const FloatPoint& localAnchor() const { return m_localAnchor; }
+    FloatPoint anchorPoint() const { return m_localAnchor; }
+    const Vector<GlyphBufferGlyph, 128>& glyphs() const { return m_glyphs; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<DrawGlyphs> decode(Decoder&);
+
+    DrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode);
+    WEBCORE_EXPORT DrawGlyphs(RenderingResourceIdentifier, Vector<GlyphBufferGlyph, 128>&&, Vector<GlyphBufferAdvance, 128>&&, const FloatRect&, const FloatPoint& localAnchor, FontSmoothingMode);
+
+    void apply(GraphicsContext&, const Font&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_bounds; }
+
+private:
+    void computeBounds(const Font&);
+
+    RenderingResourceIdentifier m_fontIdentifier;
     Vector<GlyphBufferGlyph, 128> m_glyphs;
     Vector<GlyphBufferAdvance, 128> m_advances;
     FloatRect m_bounds;
-    FloatPoint m_blockLocation;
-    FloatSize m_localAnchor;
+    FloatPoint m_localAnchor;
     FontSmoothingMode m_smoothingMode;
 };
 
-class DrawImage : public DrawingItem {
+template<class Encoder>
+void DrawGlyphs::encode(Encoder& encoder) const
+{
+    encoder << m_fontIdentifier;
+    encoder << m_glyphs;
+    encoder << m_advances;
+    encoder << m_bounds;
+    encoder << m_localAnchor;
+    encoder << m_smoothingMode;
+}
+
+template<class Decoder>
+Optional<DrawGlyphs> DrawGlyphs::decode(Decoder& decoder)
+{
+    Optional<RenderingResourceIdentifier> fontIdentifier;
+    decoder >> fontIdentifier;
+    if (!fontIdentifier)
+        return WTF::nullopt;
+
+    Optional<Vector<GlyphBufferGlyph, 128>> glyphs;
+    decoder >> glyphs;
+    if (!glyphs)
+        return WTF::nullopt;
+
+    Optional<Vector<GlyphBufferAdvance, 128>> advances;
+    decoder >> advances;
+    if (!advances)
+        return WTF::nullopt;
+
+    if (glyphs->size() != advances->size())
+        return WTF::nullopt;
+
+    Optional<FloatRect> bounds;
+    decoder >> bounds;
+    if (!bounds)
+        return WTF::nullopt;
+
+    Optional<FloatPoint> localAnchor;
+    decoder >> localAnchor;
+    if (!localAnchor)
+        return WTF::nullopt;
+
+    Optional<FontSmoothingMode> smoothingMode;
+    decoder >> smoothingMode;
+    if (!smoothingMode)
+        return WTF::nullopt;
+
+    return {{ *fontIdentifier, WTFMove(*glyphs), WTFMove(*advances), *bounds, *localAnchor, *smoothingMode }};
+}
+
+class DrawImageBuffer {
 public:
-    static Ref<DrawImage> create(Image& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& imagePaintingOptions)
+    static constexpr ItemType itemType = ItemType::DrawImageBuffer;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    DrawImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+        : m_imageBufferIdentifier(imageBufferIdentifier)
+        , m_destinationRect(destRect)
+        , m_srcRect(srcRect)
+        , m_options(options)
     {
-        return adoptRef(*new DrawImage(image, destination, source, imagePaintingOptions));
     }
 
-    const Image& image() const { return m_image.get(); }
-    FloatRect source() const { return m_source; }
-    FloatRect destination() const { return m_destination; }
-
-private:
-    DrawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&);
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_destination; }
-
-    mutable Ref<Image> m_image; // FIXME: Drawing images can cause their animations to progress. This shouldn't have to be mutable.
-    FloatRect m_destination;
-    FloatRect m_source;
-    ImagePaintingOptions m_imagePaintingOptions;
-};
-
-class DrawTiledImage : public DrawingItem {
-public:
-    static Ref<DrawTiledImage> create(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& imagePaintingOptions)
-    {
-        return adoptRef(*new DrawTiledImage(image, destination, source, tileSize, spacing, imagePaintingOptions));
-    }
-
-    const Image& image() const { return m_image.get(); }
-    FloatPoint source() const { return m_source; }
-    FloatRect destination() const { return m_destination; }
-
-    FloatSize tileSize() const { return m_tileSize; }
-    FloatSize spacing() const { return m_spacing; }
-
-private:
-    DrawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions&);
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_destination; }
-
-    mutable Ref<Image> m_image; // FIXME: Drawing images can cause their animations to progress. This shouldn't have to be mutable.
-    FloatRect m_destination;
-    FloatPoint m_source;
-    FloatSize m_tileSize;
-    FloatSize m_spacing;
-    ImagePaintingOptions m_imagePaintingOptions;
-};
-
-class DrawTiledScaledImage : public DrawingItem {
-public:
-    static Ref<DrawTiledScaledImage> create(Image& image, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions& imagePaintingOptions)
-    {
-        return adoptRef(*new DrawTiledScaledImage(image, destination, source, tileScaleFactor, hRule, vRule, imagePaintingOptions));
-    }
-
-    const Image& image() const { return m_image.get(); }
-    FloatRect source() const { return m_source; }
-    FloatRect destination() const { return m_destination; }
-
-private:
-    DrawTiledScaledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions&);
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_destination; }
-
-    mutable Ref<Image> m_image; // FIXME: Drawing images can cause their animations to progress. This shouldn't have to be mutable.
-    FloatRect m_destination;
-    FloatRect m_source;
-    FloatSize m_tileScaleFactor;
-    Image::TileRule m_hRule;
-    Image::TileRule m_vRule;
-    ImagePaintingOptions m_imagePaintingOptions;
-};
-
-#if USE(CG) || USE(CAIRO)
-class DrawNativeImage : public DrawingItem {
-public:
-    static Ref<DrawNativeImage> create(const NativeImagePtr& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator op, BlendMode blendMode, ImageOrientation orientation)
-    {
-        return adoptRef(*new DrawNativeImage(image, imageSize, destRect, srcRect, op, blendMode, orientation));
-    }
-
+    RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
     FloatRect source() const { return m_srcRect; }
-    FloatRect destination() const { return m_destination; }
+    FloatRect destinationRect() const { return m_destinationRect; }
+    ImagePaintingOptions options() const { return m_options; }
+    // FIXME: We might want to validate ImagePaintingOptions.
+    bool isValid() const { return !!m_imageBufferIdentifier; }
+
+    void apply(GraphicsContext&, WebCore::ImageBuffer&) const;
+
+    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_destinationRect; }
 
 private:
-    DrawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientation);
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_destination; }
-
-#if USE(CG)
-    RetainPtr<CGImageRef> m_image;
-#endif
-    FloatSize m_imageSize;
-    FloatRect m_destination;
+    RenderingResourceIdentifier m_imageBufferIdentifier;
+    FloatRect m_destinationRect;
     FloatRect m_srcRect;
-#if USE(CG)
-    CompositeOperator m_op;
-    BlendMode m_blendMode;
-#endif
-    ImageOrientation m_orientation;
+    ImagePaintingOptions m_options;
 };
-#endif
 
-class DrawPattern : public DrawingItem {
+class DrawNativeImage {
 public:
-    static Ref<DrawPattern> create(Image& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, BlendMode blendMode)
+    static constexpr ItemType itemType = ItemType::DrawNativeImage;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    DrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+        : m_imageIdentifier(imageIdentifier)
+        , m_imageSize(imageSize)
+        , m_destinationRect(destRect)
+        , m_srcRect(srcRect)
+        , m_options(options)
     {
-        return adoptRef(*new DrawPattern(image, destRect, tileRect, patternTransform, phase, spacing, op, blendMode));
     }
 
-    const Image& image() const { return m_image.get(); }
-    const AffineTransform& patternTransform() const { return m_patternTransform; }
-    FloatRect tileRect() const { return m_tileRect; }
+    RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
+    const FloatRect& source() const { return m_srcRect; }
+    const FloatRect& destinationRect() const { return m_destinationRect; }
+    // FIXME: We might want to validate ImagePaintingOptions.
+    bool isValid() const { return !!m_imageIdentifier; }
+
+    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
+    void apply(GraphicsContext&, NativeImage&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_destinationRect; }
+
+private:
+    RenderingResourceIdentifier m_imageIdentifier;
+    FloatSize m_imageSize;
+    FloatRect m_destinationRect;
+    FloatRect m_srcRect;
+    ImagePaintingOptions m_options;
+};
+
+class DrawPattern {
+public:
+    static constexpr ItemType itemType = ItemType::DrawPattern;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    WEBCORE_EXPORT DrawPattern(RenderingResourceIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
+
+    RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
+    FloatSize imageSize() const { return m_imageSize; }
     FloatRect destRect() const { return m_destination; }
+    FloatRect tileRect() const { return m_tileRect; }
+    const AffineTransform& patternTransform() const { return m_patternTransform; }
     FloatPoint phase() const { return m_phase; }
     FloatSize spacing() const { return m_spacing; }
+    // FIXME: We might want to validate ImagePaintingOptions.
+    bool isValid() const { return !!m_imageIdentifier; }
+
+    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
+    void apply(GraphicsContext&, NativeImage&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_destination; }
 
 private:
-    DrawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal);
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_destination; }
-
-    mutable Ref<Image> m_image; // FIXME: Drawing images can cause their animations to progress. This shouldn't have to be mutable.
-    AffineTransform m_patternTransform;
-    FloatRect m_tileRect;
+    RenderingResourceIdentifier m_imageIdentifier;
+    FloatSize m_imageSize;
     FloatRect m_destination;
+    FloatRect m_tileRect;
+    AffineTransform m_patternTransform;
     FloatPoint m_phase;
     FloatSize m_spacing;
-    CompositeOperator m_op;
-    BlendMode m_blendMode;
+    ImagePaintingOptions m_options;
 };
 
-// Is DrawingItem because the size of the transparency layer is implicitly the clip bounds.
-class BeginTransparencyLayer : public DrawingItem {
+class BeginTransparencyLayer {
 public:
-    static Ref<BeginTransparencyLayer> create(float opacity)
+    static constexpr ItemType itemType = ItemType::BeginTransparencyLayer;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true; // Is drawing item because the size of the transparency layer is implicitly the clip bounds.
+
+    BeginTransparencyLayer(float opacity)
+        : m_opacity(opacity)
     {
-        return adoptRef(*new BeginTransparencyLayer(opacity));
     }
 
     float opacity() const { return m_opacity; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+
 private:
-    BeginTransparencyLayer(float opacity)
-        : DrawingItem(ItemType::BeginTransparencyLayer)
-        , m_opacity(opacity)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
     float m_opacity;
 };
 
-class EndTransparencyLayer : public DrawingItem {
+class EndTransparencyLayer {
 public:
-    static Ref<EndTransparencyLayer> create()
-    {
-        return adoptRef(*new EndTransparencyLayer);
-    }
+    static constexpr ItemType itemType = ItemType::EndTransparencyLayer;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
 
-private:
-    EndTransparencyLayer()
-        : DrawingItem(ItemType::EndTransparencyLayer)
-    {
-    }
+    void apply(GraphicsContext&) const;
 
-    void apply(GraphicsContext&) const override;
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
 };
 
-class DrawRect : public DrawingItem {
+class DrawRect {
 public:
-    static Ref<DrawRect> create(const FloatRect& rect, float borderThickness)
+    static constexpr ItemType itemType = ItemType::DrawRect;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    DrawRect(FloatRect rect, float borderThickness)
+        : m_rect(rect)
+        , m_borderThickness(borderThickness)
     {
-        return adoptRef(*new DrawRect(rect, borderThickness));
     }
 
     FloatRect rect() const { return m_rect; }
     float borderThickness() const { return m_borderThickness; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
 private:
-    DrawRect(const FloatRect& rect, float borderThickness)
-        : DrawingItem(ItemType::DrawRect)
-        , m_rect(rect)
-        , m_borderThickness(borderThickness)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
     float m_borderThickness;
 };
 
-class DrawLine : public DrawingItem {
+class DrawLine {
 public:
-    static Ref<DrawLine> create(const FloatPoint& point1, const FloatPoint& point2)
+    static constexpr ItemType itemType = ItemType::DrawLine;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    DrawLine(FloatPoint point1, FloatPoint point2)
+        : m_point1(point1)
+        , m_point2(point2)
     {
-        return adoptRef(*new DrawLine(point1, point2));
     }
 
     FloatPoint point1() const { return m_point1; }
     FloatPoint point2() const { return m_point2; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
 private:
-    DrawLine(const FloatPoint& point1, const FloatPoint& point2)
-        : DrawingItem(ItemType::DrawLine)
-        , m_point1(point1)
-        , m_point2(point2)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
     FloatPoint m_point1;
     FloatPoint m_point2;
 };
 
-class DrawLinesForText : public DrawingItem {
+class DrawLinesForText {
 public:
-    static Ref<DrawLinesForText> create(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines)
-    {
-        return adoptRef(*new DrawLinesForText(blockLocation, localAnchor, thickness, widths, printing, doubleLines));
-    }
+    static constexpr ItemType itemType = ItemType::DrawLinesForText;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    WEBCORE_EXPORT DrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines);
 
     void setBlockLocation(const FloatPoint& blockLocation) { m_blockLocation = blockLocation; }
     const FloatPoint& blockLocation() const { return m_blockLocation; }
@@ -805,22 +1185,15 @@ public:
     bool isPrinting() const { return m_printing; }
     bool doubleLines() const { return m_doubleLines; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<DrawLinesForText> decode(Decoder&);
+
 private:
-    DrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines)
-        : DrawingItem(ItemType::DrawLinesForText)
-        , m_blockLocation(blockLocation)
-        , m_localAnchor(localAnchor)
-        , m_widths(widths)
-        , m_thickness(thickness)
-        , m_printing(printing)
-        , m_doubleLines(doubleLines)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
     FloatPoint m_blockLocation;
     FloatSize m_localAnchor;
     DashArray m_widths;
@@ -829,81 +1202,166 @@ private:
     bool m_doubleLines;
 };
 
-class DrawDotsForDocumentMarker : public DrawingItem {
+template<class Encoder>
+void DrawLinesForText::encode(Encoder& encoder) const
+{
+    encoder << m_blockLocation;
+    encoder << m_localAnchor;
+    encoder << m_widths;
+    encoder << m_thickness;
+    encoder << m_printing;
+    encoder << m_doubleLines;
+}
+
+template<class Decoder>
+Optional<DrawLinesForText> DrawLinesForText::decode(Decoder& decoder)
+{
+    Optional<FloatPoint> blockLocation;
+    decoder >> blockLocation;
+    if (!blockLocation)
+        return WTF::nullopt;
+
+    Optional<FloatSize> localAnchor;
+    decoder >> localAnchor;
+    if (!localAnchor)
+        return WTF::nullopt;
+
+    Optional<DashArray> widths;
+    decoder >> widths;
+    if (!widths)
+        return WTF::nullopt;
+
+    Optional<float> thickness;
+    decoder >> thickness;
+    if (!thickness)
+        return WTF::nullopt;
+
+    Optional<bool> printing;
+    decoder >> printing;
+    if (!printing)
+        return WTF::nullopt;
+
+    Optional<bool> doubleLines;
+    decoder >> doubleLines;
+    if (!doubleLines)
+        return WTF::nullopt;
+
+    return {{ *blockLocation, *localAnchor, *thickness, *widths, *printing, *doubleLines }};
+}
+
+class DrawDotsForDocumentMarker {
 public:
-    static Ref<DrawDotsForDocumentMarker> create(const FloatRect& rect, DocumentMarkerLineStyle style)
-    {
-        return adoptRef(*new DrawDotsForDocumentMarker(rect, style));
-    }
+    static constexpr ItemType itemType = ItemType::DrawDotsForDocumentMarker;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
 
-    FloatRect rect() const { return m_rect; }
-
-private:
     DrawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
-        : DrawingItem(ItemType::DrawDotsForDocumentMarker)
-        , m_rect(rect)
+        : m_rect(rect)
         , m_style(style)
     {
     }
 
-    void apply(GraphicsContext&) const override;
+    FloatRect rect() const { return m_rect; }
 
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
+    void apply(GraphicsContext&) const;
 
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
+private:
     FloatRect m_rect;
     DocumentMarkerLineStyle m_style;
 };
 
-class DrawEllipse : public DrawingItem {
+class DrawEllipse {
 public:
-    static Ref<DrawEllipse> create(const FloatRect& rect)
+    static constexpr ItemType itemType = ItemType::DrawEllipse;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    DrawEllipse(const FloatRect& rect)
+        : m_rect(rect)
     {
-        return adoptRef(*new DrawEllipse(rect));
     }
 
     FloatRect rect() const { return m_rect; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
 private:
-    DrawEllipse(const FloatRect& rect)
-        : DrawingItem(ItemType::DrawEllipse)
-        , m_rect(rect)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
 };
 
-class DrawPath : public DrawingItem {
+class DrawPath {
 public:
-    static Ref<DrawPath> create(const Path& path)
+    static constexpr ItemType itemType = ItemType::DrawPath;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    DrawPath(const Path& path)
+        : m_path(path)
     {
-        return adoptRef(*new DrawPath(path));
+    }
+
+    DrawPath(Path&& path)
+        : m_path(WTFMove(path))
+    {
     }
 
     const Path& path() const { return m_path; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<DrawPath> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_path.fastBoundingRect(); }
+
 private:
-    DrawPath(const Path& path)
-        : DrawingItem(ItemType::DrawPath)
-        , m_path(path)
+    Path m_path;
+};
+
+template<class Encoder>
+void DrawPath::encode(Encoder& encoder) const
+{
+    encoder << m_path;
+}
+
+template<class Decoder>
+Optional<DrawPath> DrawPath::decode(Decoder& decoder)
+{
+    Optional<Path> path;
+    decoder >> path;
+    if (!path)
+        return WTF::nullopt;
+
+    return {{ WTFMove(*path) }};
+}
+
+class DrawFocusRingPath {
+public:
+    static constexpr ItemType itemType = ItemType::DrawFocusRingPath;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    DrawFocusRingPath(Path&& path, float width, float offset, Color color)
+        : m_path(WTFMove(path))
+        , m_width(width)
+        , m_offset(offset)
+        , m_color(color)
     {
     }
 
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_path.fastBoundingRect(); }
-
-    const Path m_path;
-};
-
-class DrawFocusRingPath : public DrawingItem {
-public:
-    static Ref<DrawFocusRingPath> create(const Path& path, float width, float offset, const Color& color)
+    DrawFocusRingPath(const Path& path, float width, float offset, Color color)
+        : m_path(path)
+        , m_width(width)
+        , m_offset(offset)
+        , m_color(color)
     {
-        return adoptRef(*new DrawFocusRingPath(path, width, offset, color));
     }
 
     const Path& path() const { return m_path; }
@@ -911,135 +1369,250 @@ public:
     float offset() const { return m_offset; }
     const Color& color() const { return m_color; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<DrawFocusRingPath> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
 private:
-    DrawFocusRingPath(const Path& path, float width, float offset, const Color& color)
-        : DrawingItem(ItemType::DrawFocusRingPath)
-        , m_path(path)
-        , m_width(width)
-        , m_offset(offset)
-        , m_color(color)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
-    const Path m_path;
+    Path m_path;
     float m_width;
     float m_offset;
     Color m_color;
 };
 
-class DrawFocusRingRects : public DrawingItem {
+template<class Encoder>
+void DrawFocusRingPath::encode(Encoder& encoder) const
+{
+    encoder << m_path;
+    encoder << m_width;
+    encoder << m_offset;
+    encoder << m_color;
+}
+
+template<class Decoder>
+Optional<DrawFocusRingPath> DrawFocusRingPath::decode(Decoder& decoder)
+{
+    Optional<Path> path;
+    decoder >> path;
+    if (!path)
+        return WTF::nullopt;
+
+    Optional<float> width;
+    decoder >> width;
+    if (!width)
+        return WTF::nullopt;
+
+    Optional<float> offset;
+    decoder >> offset;
+    if (!offset)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    return {{ WTFMove(*path), *width, *offset, *color }};
+}
+
+class DrawFocusRingRects {
 public:
-    static Ref<DrawFocusRingRects> create(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
-    {
-        return adoptRef(*new DrawFocusRingRects(rects, width, offset, color));
-    }
+    static constexpr ItemType itemType = ItemType::DrawFocusRingRects;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    WEBCORE_EXPORT DrawFocusRingRects(const Vector<FloatRect>&, float width, float offset, const Color&);
 
     const Vector<FloatRect> rects() const { return m_rects; }
     float width() const { return m_width; }
     float offset() const { return m_offset; }
     const Color& color() const { return m_color; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<DrawFocusRingRects> decode(Decoder&);
+
 private:
-    DrawFocusRingRects(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
-        : DrawingItem(ItemType::DrawFocusRingRects)
-        , m_rects(rects)
-        , m_width(width)
-        , m_offset(offset)
-        , m_color(color)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
     Vector<FloatRect> m_rects;
     float m_width;
     float m_offset;
     Color m_color;
 };
 
-class FillRect : public DrawingItem {
+template<class Encoder>
+void DrawFocusRingRects::encode(Encoder& encoder) const
+{
+    encoder << m_rects;
+    encoder << m_width;
+    encoder << m_offset;
+    encoder << m_color;
+}
+
+template<class Decoder>
+Optional<DrawFocusRingRects> DrawFocusRingRects::decode(Decoder& decoder)
+{
+    Optional<Vector<FloatRect>> rects;
+    decoder >> rects;
+    if (!rects)
+        return WTF::nullopt;
+
+    Optional<float> width;
+    decoder >> width;
+    if (!width)
+        return WTF::nullopt;
+
+    Optional<float> offset;
+    decoder >> offset;
+    if (!offset)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    return {{ *rects, *width, *offset, *color }};
+}
+
+class FillRect {
 public:
-    static Ref<FillRect> create(const FloatRect& rect)
+    static constexpr ItemType itemType = ItemType::FillRect;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    FillRect(const FloatRect& rect)
+        : m_rect(rect)
     {
-        return adoptRef(*new FillRect(rect));
     }
 
-    FloatRect rect() const { return m_rect; }
+    const FloatRect& rect() const { return m_rect; }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
 private:
-    FillRect(const FloatRect& rect)
-        : DrawingItem(ItemType::FillRect)
-        , m_rect(rect)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
 };
 
-// FIXME: Make these inherit from FillRect proper.
-class FillRectWithColor : public DrawingItem {
+class FillRectWithColor {
 public:
-    static Ref<FillRectWithColor> create(const FloatRect& rect, const Color& color)
+    static constexpr ItemType itemType = ItemType::FillRectWithColor;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    FillRectWithColor(const FloatRect& rect, const Color& color)
+        : m_rect(rect)
+        , m_color(color)
     {
-        return adoptRef(*new FillRectWithColor(rect, color));
     }
 
     FloatRect rect() const { return m_rect; }
     const Color& color() const { return m_color; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<FillRectWithColor> decode(Decoder&);
+
 private:
-    FillRectWithColor(const FloatRect& rect, const Color& color)
-        : DrawingItem(ItemType::FillRectWithColor)
-        , m_rect(rect)
-        , m_color(color)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
     Color m_color;
 };
 
-class FillRectWithGradient : public DrawingItem {
-public:
-    static Ref<FillRectWithGradient> create(const FloatRect& rect, Gradient& gradient)
-    {
-        return adoptRef(*new FillRectWithGradient(rect, gradient));
-    }
+template<class Encoder>
+void FillRectWithColor::encode(Encoder& encoder) const
+{
+    encoder << m_rect;
+    encoder << m_color;
+}
 
-    FloatRect rect() const { return m_rect; }
+template<class Decoder>
+Optional<FillRectWithColor> FillRectWithColor::decode(Decoder& decoder)
+{
+    Optional<FloatRect> rect;
+    decoder >> rect;
+    if (!rect)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    return {{ *rect, *color }};
+}
+
+class FillRectWithGradient {
+public:
+    static constexpr ItemType itemType = ItemType::FillRectWithGradient;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    WEBCORE_EXPORT FillRectWithGradient(const FloatRect&, Gradient&);
+
+    const FloatRect& rect() const { return m_rect; }
+    const Gradient& gradient() const { return m_gradient.get(); }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<FillRectWithGradient> decode(Decoder&);
 
 private:
-    FillRectWithGradient(const FloatRect& rect, Gradient& gradient)
-        : DrawingItem(ItemType::FillRectWithGradient)
-        , m_rect(rect)
-        , m_gradient(gradient)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
     mutable Ref<Gradient> m_gradient; // FIXME: Make this not mutable
 };
 
-class FillCompositedRect : public DrawingItem {
+template<class Encoder>
+void FillRectWithGradient::encode(Encoder& encoder) const
+{
+    encoder << m_rect;
+    encoder << m_gradient.get();
+}
+
+template<class Decoder>
+Optional<FillRectWithGradient> FillRectWithGradient::decode(Decoder& decoder)
+{
+    Optional<FloatRect> rect;
+    decoder >> rect;
+    if (!rect)
+        return WTF::nullopt;
+
+    auto gradient = Gradient::decode(decoder);
+    if (!gradient)
+        return WTF::nullopt;
+
+    return {{ *rect, gradient->get() }};
+}
+
+class FillCompositedRect {
 public:
-    static Ref<FillCompositedRect> create(const FloatRect& rect, const Color& color, CompositeOperator op, BlendMode blendMode)
+    static constexpr ItemType itemType = ItemType::FillCompositedRect;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    FillCompositedRect(const FloatRect& rect, const Color& color, CompositeOperator op, BlendMode blendMode)
+        : m_rect(rect)
+        , m_color(color)
+        , m_op(op)
+        , m_blendMode(blendMode)
     {
-        return adoptRef(*new FillCompositedRect(rect, color, op, blendMode));
     }
 
     FloatRect rect() const { return m_rect; }
@@ -1047,340 +1620,715 @@ public:
     CompositeOperator compositeOperator() const { return m_op; }
     BlendMode blendMode() const { return m_blendMode; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<FillCompositedRect> decode(Decoder&);
+
 private:
-    FillCompositedRect(const FloatRect& rect, const Color& color, CompositeOperator op, BlendMode blendMode)
-        : DrawingItem(ItemType::FillCompositedRect)
-        , m_rect(rect)
-        , m_color(color)
-        , m_op(op)
-        , m_blendMode(blendMode)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
     Color m_color;
     CompositeOperator m_op;
     BlendMode m_blendMode;
 };
 
-class FillRoundedRect : public DrawingItem {
+template<class Encoder>
+void FillCompositedRect::encode(Encoder& encoder) const
+{
+    encoder << m_rect;
+    encoder << m_color;
+    encoder << m_op;
+    encoder << m_blendMode;
+}
+
+template<class Decoder>
+Optional<FillCompositedRect> FillCompositedRect::decode(Decoder& decoder)
+{
+    Optional<FloatRect> rect;
+    decoder >> rect;
+    if (!rect)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    Optional<CompositeOperator> op;
+    decoder >> op;
+    if (!op)
+        return WTF::nullopt;
+
+    Optional<BlendMode> blendMode;
+    decoder >> blendMode;
+    if (!blendMode)
+        return WTF::nullopt;
+
+    return {{ *rect, *color, *op, *blendMode }};
+}
+
+class FillRoundedRect {
 public:
-    static Ref<FillRoundedRect> create(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode)
+    static constexpr ItemType itemType = ItemType::FillRoundedRect;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    FillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode)
+        : m_rect(rect)
+        , m_color(color)
+        , m_blendMode(blendMode)
     {
-        return adoptRef(*new FillRoundedRect(rect, color, blendMode));
     }
 
     const FloatRoundedRect& roundedRect() const { return m_rect; }
     const Color& color() const { return m_color; }
     BlendMode blendMode() const { return m_blendMode; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<FillRoundedRect> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect.rect(); }
+
 private:
-    FillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode)
-        : DrawingItem(ItemType::FillRoundedRect)
-        , m_rect(rect)
-        , m_color(color)
-        , m_blendMode(blendMode)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect.rect(); }
-
     FloatRoundedRect m_rect;
     Color m_color;
     BlendMode m_blendMode;
 };
 
-class FillRectWithRoundedHole : public DrawingItem {
+template<class Encoder>
+void FillRoundedRect::encode(Encoder& encoder) const
+{
+    encoder << m_rect;
+    encoder << m_color;
+    encoder << m_blendMode;
+}
+
+template<class Decoder>
+Optional<FillRoundedRect> FillRoundedRect::decode(Decoder& decoder)
+{
+    Optional<FloatRoundedRect> rect;
+    decoder >> rect;
+    if (!rect)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    Optional<BlendMode> blendMode;
+    decoder >> blendMode;
+    if (!blendMode)
+        return WTF::nullopt;
+
+    return {{ *rect, *color, *blendMode }};
+}
+
+class FillRectWithRoundedHole {
 public:
-    static Ref<FillRectWithRoundedHole> create(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
+    static constexpr ItemType itemType = ItemType::FillRectWithRoundedHole;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    FillRectWithRoundedHole(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
+        : m_rect(rect)
+        , m_roundedHoleRect(roundedHoleRect)
+        , m_color(color)
     {
-        return adoptRef(*new FillRectWithRoundedHole(rect, roundedHoleRect, color));
     }
 
     const FloatRect& rect() const { return m_rect; }
     const FloatRoundedRect& roundedHoleRect() const { return m_roundedHoleRect; }
     const Color& color() const { return m_color; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<FillRectWithRoundedHole> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
 private:
-    FillRectWithRoundedHole(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
-        : DrawingItem(ItemType::FillRectWithRoundedHole)
-        , m_rect(rect)
-        , m_roundedHoleRect(roundedHoleRect)
-        , m_color(color)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
     FloatRoundedRect m_roundedHoleRect;
     Color m_color;
 };
 
-class FillPath : public DrawingItem {
+template<class Encoder>
+void FillRectWithRoundedHole::encode(Encoder& encoder) const
+{
+    encoder << m_rect;
+    encoder << m_roundedHoleRect;
+    encoder << m_color;
+}
+
+template<class Decoder>
+Optional<FillRectWithRoundedHole> FillRectWithRoundedHole::decode(Decoder& decoder)
+{
+    Optional<FloatRect> rect;
+    decoder >> rect;
+    if (!rect)
+        return WTF::nullopt;
+
+    Optional<FloatRoundedRect> roundedHoleRect;
+    decoder >> roundedHoleRect;
+    if (!roundedHoleRect)
+        return WTF::nullopt;
+
+    Optional<Color> color;
+    decoder >> color;
+    if (!color)
+        return WTF::nullopt;
+
+    return {{ *rect, *roundedHoleRect, *color }};
+}
+
+#if ENABLE(INLINE_PATH_DATA)
+
+class FillInlinePath {
 public:
-    static Ref<FillPath> create(const Path& path)
+    static constexpr ItemType itemType = ItemType::FillInlinePath;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    FillInlinePath(const InlinePathData& pathData)
+        : m_pathData(pathData)
     {
-        return adoptRef(*new FillPath(path));
+    }
+
+    Path path() const { return Path::from(m_pathData); }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return path().fastBoundingRect(); }
+
+private:
+    InlinePathData m_pathData;
+};
+
+#endif // ENABLE(INLINE_PATH_DATA)
+
+class FillPath {
+public:
+    static constexpr ItemType itemType = ItemType::FillPath;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    FillPath(Path&& path)
+        : m_path(WTFMove(path))
+    {
+    }
+
+    FillPath(const Path& path)
+        : m_path(path)
+    {
     }
 
     const Path& path() const { return m_path; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<FillPath> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_path.fastBoundingRect(); }
+
 private:
-    FillPath(const Path& path)
-        : DrawingItem(ItemType::FillPath)
-        , m_path(path)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_path.fastBoundingRect(); }
-
-    const Path m_path;
+    Path m_path;
 };
 
-class FillEllipse : public DrawingItem {
+template<class Encoder>
+void FillPath::encode(Encoder& encoder) const
+{
+    encoder << m_path;
+}
+
+template<class Decoder>
+Optional<FillPath> FillPath::decode(Decoder& decoder)
+{
+    Optional<Path> path;
+    decoder >> path;
+    if (!path)
+        return WTF::nullopt;
+
+    return {{ WTFMove(*path) }};
+}
+
+class FillEllipse {
 public:
-    static Ref<FillEllipse> create(const FloatRect& rect)
+    static constexpr ItemType itemType = ItemType::FillEllipse;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    FillEllipse(const FloatRect& rect)
+        : m_rect(rect)
     {
-        return adoptRef(*new FillEllipse(rect));
     }
 
     FloatRect rect() const { return m_rect; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
+
 private:
-    FillEllipse(const FloatRect& rect)
-        : DrawingItem(ItemType::FillEllipse)
-        , m_rect(rect)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
 };
 
-class StrokeRect : public DrawingItem {
+class PutImageData {
 public:
-    static Ref<StrokeRect> create(const FloatRect& rect, float lineWidth)
+    static constexpr ItemType itemType = ItemType::PutImageData;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    WEBCORE_EXPORT PutImageData(AlphaPremultiplication inputFormat, const ImageData&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat);
+    WEBCORE_EXPORT PutImageData(AlphaPremultiplication inputFormat, Ref<ImageData>&&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat);
+
+    AlphaPremultiplication inputFormat() const { return m_inputFormat; }
+    ImageData& imageData() const { return *m_imageData; }
+    IntRect srcRect() const { return m_srcRect; }
+    IntPoint destPoint() const { return m_destPoint; }
+    AlphaPremultiplication destFormat() const { return m_destFormat; }
+
+    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
+    Optional<FloatRect> globalBounds() const { return {{ m_destPoint, m_srcRect.size() }}; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<PutImageData> decode(Decoder&);
+
+private:
+    IntRect m_srcRect;
+    IntPoint m_destPoint;
+    RefPtr<ImageData> m_imageData;
+    AlphaPremultiplication m_inputFormat;
+    AlphaPremultiplication m_destFormat;
+};
+
+template<class Encoder>
+void PutImageData::encode(Encoder& encoder) const
+{
+    encoder << m_inputFormat;
+    encoder << makeRef(*m_imageData);
+    encoder << m_srcRect;
+    encoder << m_destPoint;
+    encoder << m_destFormat;
+}
+
+template<class Decoder>
+Optional<PutImageData> PutImageData::decode(Decoder& decoder)
+{
+    Optional<AlphaPremultiplication> inputFormat;
+    Optional<Ref<ImageData>> imageData;
+    Optional<IntRect> srcRect;
+    Optional<IntPoint> destPoint;
+    Optional<AlphaPremultiplication> destFormat;
+
+    decoder >> inputFormat;
+    if (!inputFormat)
+        return WTF::nullopt;
+
+    decoder >> imageData;
+    if (!imageData)
+        return WTF::nullopt;
+
+    decoder >> srcRect;
+    if (!srcRect)
+        return WTF::nullopt;
+
+    decoder >> destPoint;
+    if (!destPoint)
+        return WTF::nullopt;
+
+    decoder >> destFormat;
+    if (!destFormat)
+        return WTF::nullopt;
+
+    return {{ *inputFormat, WTFMove(*imageData), *srcRect, *destPoint, *destFormat }};
+}
+
+#if ENABLE(VIDEO)
+class PaintFrameForMedia {
+public:
+    static constexpr ItemType itemType = ItemType::PaintFrameForMedia;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    PaintFrameForMedia(MediaPlayer&, const FloatRect& destination);
+
+    const FloatRect& destination() const { return m_destination; }
+    MediaPlayerIdentifier identifier() const { return m_identifier; }
+
+    bool isValid() const { return !!m_identifier; }
+
+    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
+    Optional<FloatRect> globalBounds() const { return { m_destination }; }
+
+private:
+    MediaPlayerIdentifier m_identifier;
+    FloatRect m_destination;
+};
+#endif
+
+class StrokeRect {
+public:
+    static constexpr ItemType itemType = ItemType::StrokeRect;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    StrokeRect(const FloatRect& rect, float lineWidth)
+        : m_rect(rect)
+        , m_lineWidth(lineWidth)
     {
-        return adoptRef(*new StrokeRect(rect, lineWidth));
     }
 
     FloatRect rect() const { return m_rect; }
     float lineWidth() const { return m_lineWidth; }
 
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
 private:
-    StrokeRect(const FloatRect& rect, float lineWidth)
-        : DrawingItem(ItemType::StrokeRect)
-        , m_rect(rect)
-        , m_lineWidth(lineWidth)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
     FloatRect m_rect;
     float m_lineWidth;
 };
 
-class StrokePath : public DrawingItem {
+class StrokeLine {
 public:
-    static Ref<StrokePath> create(const Path& path)
+    static constexpr ItemType itemType = ItemType::StrokeLine;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    StrokeLine(const FloatPoint& start, const FloatPoint& end)
+        : m_start(start)
+        , m_end(end)
     {
-        return adoptRef(*new StrokePath(path));
+    }
+
+    FloatPoint start() const { return m_start; }
+    FloatPoint end() const { return m_end; }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
+private:
+    FloatPoint m_start;
+    FloatPoint m_end;
+};
+
+#if ENABLE(INLINE_PATH_DATA)
+
+class StrokeInlinePath {
+public:
+    static constexpr ItemType itemType = ItemType::StrokeInlinePath;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    StrokeInlinePath(const InlinePathData& pathData)
+        : m_pathData(pathData)
+    {
+    }
+
+    Path path() const { return Path::from(m_pathData); }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
+private:
+    InlinePathData m_pathData;
+};
+
+#endif // ENABLE(INLINE_PATH_DATA)
+
+class StrokePath {
+public:
+    static constexpr ItemType itemType = ItemType::StrokePath;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    StrokePath(Path&& path)
+        : m_path(WTFMove(path))
+    {
+    }
+
+    StrokePath(const Path& path)
+        : m_path(path)
+    {
     }
 
     const Path& path() const { return m_path; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<StrokePath> decode(Decoder&);
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
+
 private:
-    StrokePath(const Path& path)
-        : DrawingItem(ItemType::StrokePath)
-        , m_path(path)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
-    const Path m_path;
-    FloatPoint m_blockLocation;
+    Path m_path;
 };
 
-class StrokeEllipse : public DrawingItem {
+template<class Encoder>
+void StrokePath::encode(Encoder& encoder) const
+{
+    encoder << m_path;
+}
+
+template<class Decoder>
+Optional<StrokePath> StrokePath::decode(Decoder& decoder)
+{
+    Optional<Path> path;
+    decoder >> path;
+    if (!path)
+        return WTF::nullopt;
+
+    return {{ WTFMove(*path) }};
+}
+
+class StrokeEllipse {
 public:
-    static Ref<StrokeEllipse> create(const FloatRect& rect)
+    static constexpr ItemType itemType = ItemType::StrokeEllipse;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    StrokeEllipse(const FloatRect& rect)
+        : m_rect(rect)
     {
-        return adoptRef(*new StrokeEllipse(rect));
     }
 
-    FloatRect rect() const { return m_rect; }
+    const FloatRect& rect() const { return m_rect; }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const;
 
 private:
-    StrokeEllipse(const FloatRect& rect)
-        : DrawingItem(ItemType::StrokeEllipse)
-        , m_rect(rect)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override;
-
     FloatRect m_rect;
 };
 
-class ClearRect : public DrawingItem {
+class ClearRect {
 public:
-    static Ref<ClearRect> create(const FloatRect& rect)
+    static constexpr ItemType itemType = ItemType::ClearRect;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    ClearRect(const FloatRect& rect)
+        : m_rect(rect)
     {
-        return adoptRef(*new ClearRect(rect));
     }
 
-    FloatRect rect() const { return m_rect; }
+    const FloatRect& rect() const { return m_rect; }
+
+    void apply(GraphicsContext&) const;
+
+    Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+    Optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
 private:
-    ClearRect(const FloatRect& rect)
-        : DrawingItem(ItemType::ClearRect)
-        , m_rect(rect)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
-    Optional<FloatRect> localBounds(const GraphicsContext&) const override { return m_rect; }
-
     FloatRect m_rect;
 };
 
 #if USE(CG)
-class ApplyStrokePattern : public Item {
+
+class ApplyStrokePattern {
 public:
-    static Ref<ApplyStrokePattern> create()
-    {
-        return adoptRef(*new ApplyStrokePattern);
-    }
+    static constexpr ItemType itemType = ItemType::ApplyStrokePattern;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
 
-private:
-    ApplyStrokePattern()
-        : Item(ItemType::ApplyStrokePattern)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
+    void apply(GraphicsContext&) const;
 };
 
-class ApplyFillPattern : public Item {
+class ApplyFillPattern {
 public:
-    static Ref<ApplyFillPattern> create()
-    {
-        return adoptRef(*new ApplyFillPattern);
-    }
+    static constexpr ItemType itemType = ItemType::ApplyFillPattern;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
 
-private:
-    ApplyFillPattern()
-        : Item(ItemType::ApplyFillPattern)
-    {
-    }
-
-    void apply(GraphicsContext&) const override;
+    void apply(GraphicsContext&) const;
 };
+
 #endif
 
-class ApplyDeviceScaleFactor : public Item {
+class ApplyDeviceScaleFactor {
 public:
-    static Ref<ApplyDeviceScaleFactor> create(float scaleFactor)
+    static constexpr ItemType itemType = ItemType::ApplyDeviceScaleFactor;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ApplyDeviceScaleFactor(float scaleFactor)
+        : m_scaleFactor(scaleFactor)
     {
-        return adoptRef(*new ApplyDeviceScaleFactor(scaleFactor));
     }
 
     float scaleFactor() const { return m_scaleFactor; }
 
+    void apply(GraphicsContext&) const;
+
 private:
-    ApplyDeviceScaleFactor(float scaleFactor)
-        : Item(ItemType::ApplyDeviceScaleFactor)
-        , m_scaleFactor(scaleFactor)
+    float m_scaleFactor { 1 };
+};
+
+class FlushContext {
+public:
+    static constexpr ItemType itemType = ItemType::FlushContext;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    explicit FlushContext(FlushIdentifier identifier)
+        : m_identifier(identifier)
     {
     }
 
-    void apply(GraphicsContext&) const override;
+    FlushIdentifier identifier() const { return m_identifier; }
+    bool isValid() const { return !!m_identifier; }
 
-    float m_scaleFactor;
+    void apply(GraphicsContext&) const;
+
+private:
+    FlushIdentifier m_identifier;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const Item&);
+// FIXME: This should be refactored so that the command to "switch to the next item buffer"
+// is not itself a display list item.
+class MetaCommandChangeItemBuffer {
+public:
+    static constexpr ItemType itemType = ItemType::MetaCommandChangeItemBuffer;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    explicit MetaCommandChangeItemBuffer(ItemBufferIdentifier identifier)
+        : m_identifier(identifier)
+    {
+    }
+
+    ItemBufferIdentifier identifier() const { return m_identifier; }
+    bool isValid() const { return !!m_identifier; }
+
+private:
+    ItemBufferIdentifier m_identifier;
+};
+
+class MetaCommandChangeDestinationImageBuffer {
+public:
+    static constexpr ItemType itemType = ItemType::MetaCommandChangeDestinationImageBuffer;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    explicit MetaCommandChangeDestinationImageBuffer(RenderingResourceIdentifier identifier)
+        : m_identifier(identifier)
+    {
+    }
+
+    RenderingResourceIdentifier identifier() const { return m_identifier; }
+    bool isValid() const { return !!m_identifier; }
+
+private:
+    RenderingResourceIdentifier m_identifier;
+};
+
+TextStream& operator<<(TextStream&, ItemHandle);
 
 } // namespace DisplayList
 } // namespace WebCore
 
+namespace WTF {
 
-#define SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_DRAWINGITEM(ToValueTypeName, predicate) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DisplayList::ToValueTypeName) \
-    static bool isType(const WebCore::DisplayList::Item& object) { return object.predicate; } \
-SPECIALIZE_TYPE_TRAITS_END()
-
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_DRAWINGITEM(DrawingItem, isDrawingItem())
-
-#define SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ToValueTypeName) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DisplayList::ToValueTypeName) \
-    static bool isType(const WebCore::DisplayList::Item& item) { return item.type() == WebCore::DisplayList::ItemType::ToValueTypeName; } \
-SPECIALIZE_TYPE_TRAITS_END()
-
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(Save)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(Restore)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(Translate)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(Rotate)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(Scale)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ConcatenateCTM)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(SetState)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(SetLineCap)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(SetLineDash)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(SetLineJoin)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(SetMiterLimit)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(Clip)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ClipOut)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ClipOutToPath)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ClipPath)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawGlyphs)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawImage)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawTiledImage)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawTiledScaledImage)
-#if USE(CG) || USE(CAIRO)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawNativeImage)
+template<> struct EnumTraits<WebCore::DisplayList::ItemType> {
+    using values = EnumValues<
+    WebCore::DisplayList::ItemType,
+    WebCore::DisplayList::ItemType::Save,
+    WebCore::DisplayList::ItemType::Restore,
+    WebCore::DisplayList::ItemType::Translate,
+    WebCore::DisplayList::ItemType::Rotate,
+    WebCore::DisplayList::ItemType::Scale,
+    WebCore::DisplayList::ItemType::SetCTM,
+    WebCore::DisplayList::ItemType::ConcatenateCTM,
+    WebCore::DisplayList::ItemType::SetInlineFillGradient,
+    WebCore::DisplayList::ItemType::SetInlineFillColor,
+    WebCore::DisplayList::ItemType::SetInlineStrokeColor,
+    WebCore::DisplayList::ItemType::SetStrokeThickness,
+    WebCore::DisplayList::ItemType::SetState,
+    WebCore::DisplayList::ItemType::SetLineCap,
+    WebCore::DisplayList::ItemType::SetLineDash,
+    WebCore::DisplayList::ItemType::SetLineJoin,
+    WebCore::DisplayList::ItemType::SetMiterLimit,
+    WebCore::DisplayList::ItemType::ClearShadow,
+    WebCore::DisplayList::ItemType::Clip,
+    WebCore::DisplayList::ItemType::ClipOut,
+    WebCore::DisplayList::ItemType::ClipToImageBuffer,
+    WebCore::DisplayList::ItemType::ClipOutToPath,
+    WebCore::DisplayList::ItemType::ClipPath,
+    WebCore::DisplayList::ItemType::BeginClipToDrawingCommands,
+    WebCore::DisplayList::ItemType::EndClipToDrawingCommands,
+    WebCore::DisplayList::ItemType::DrawGlyphs,
+    WebCore::DisplayList::ItemType::DrawImageBuffer,
+    WebCore::DisplayList::ItemType::DrawNativeImage,
+    WebCore::DisplayList::ItemType::DrawPattern,
+    WebCore::DisplayList::ItemType::DrawRect,
+    WebCore::DisplayList::ItemType::DrawLine,
+    WebCore::DisplayList::ItemType::DrawLinesForText,
+    WebCore::DisplayList::ItemType::DrawDotsForDocumentMarker,
+    WebCore::DisplayList::ItemType::DrawEllipse,
+    WebCore::DisplayList::ItemType::DrawPath,
+    WebCore::DisplayList::ItemType::DrawFocusRingPath,
+    WebCore::DisplayList::ItemType::DrawFocusRingRects,
+    WebCore::DisplayList::ItemType::FillRect,
+    WebCore::DisplayList::ItemType::FillRectWithColor,
+    WebCore::DisplayList::ItemType::FillRectWithGradient,
+    WebCore::DisplayList::ItemType::FillCompositedRect,
+    WebCore::DisplayList::ItemType::FillRoundedRect,
+    WebCore::DisplayList::ItemType::FillRectWithRoundedHole,
+#if ENABLE(INLINE_PATH_DATA)
+    WebCore::DisplayList::ItemType::FillInlinePath,
 #endif
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawPattern)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawRect)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawLine)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawLinesForText)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawDotsForDocumentMarker)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawEllipse)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawPath)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawFocusRingPath)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(DrawFocusRingRects)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRect)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRectWithColor)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRectWithGradient)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillCompositedRect)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRoundedRect)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRectWithRoundedHole)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillPath)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillEllipse)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokeRect)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokePath)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokeEllipse)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ClearRect)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(BeginTransparencyLayer)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(EndTransparencyLayer)
+    WebCore::DisplayList::ItemType::FillPath,
+    WebCore::DisplayList::ItemType::FillEllipse,
+    WebCore::DisplayList::ItemType::FlushContext,
+    WebCore::DisplayList::ItemType::MetaCommandChangeDestinationImageBuffer,
+    WebCore::DisplayList::ItemType::MetaCommandChangeItemBuffer,
+    WebCore::DisplayList::ItemType::PutImageData,
+#if ENABLE(VIDEO)
+    WebCore::DisplayList::ItemType::PaintFrameForMedia,
+#endif
+    WebCore::DisplayList::ItemType::StrokeRect,
+    WebCore::DisplayList::ItemType::StrokeLine,
+#if ENABLE(INLINE_PATH_DATA)
+    WebCore::DisplayList::ItemType::StrokeInlinePath,
+#endif
+    WebCore::DisplayList::ItemType::StrokePath,
+    WebCore::DisplayList::ItemType::StrokeEllipse,
+    WebCore::DisplayList::ItemType::ClearRect,
+    WebCore::DisplayList::ItemType::BeginTransparencyLayer,
+    WebCore::DisplayList::ItemType::EndTransparencyLayer,
 #if USE(CG)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ApplyStrokePattern)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ApplyFillPattern)
+    WebCore::DisplayList::ItemType::ApplyStrokePattern,
+    WebCore::DisplayList::ItemType::ApplyFillPattern,
 #endif
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ApplyDeviceScaleFactor)
-SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(ClearShadow)
+    WebCore::DisplayList::ItemType::ApplyDeviceScaleFactor
+    >;
+};
 
+} // namespace WTF

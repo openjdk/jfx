@@ -55,10 +55,11 @@ private:
 
     void finishCreation(VM&, MapPrototype*, GetterSetter* speciesSymbol);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(MapConstructor, InternalFunction);
 
-EncodedJSValue JSC_HOST_CALL mapPrivateFuncMapBucketHead(ExecState*);
-EncodedJSValue JSC_HOST_CALL mapPrivateFuncMapBucketNext(ExecState*);
-EncodedJSValue JSC_HOST_CALL mapPrivateFuncMapBucketKey(ExecState*);
-EncodedJSValue JSC_HOST_CALL mapPrivateFuncMapBucketValue(ExecState*);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketHead);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketNext);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketKey);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketValue);
 
 } // namespace JSC

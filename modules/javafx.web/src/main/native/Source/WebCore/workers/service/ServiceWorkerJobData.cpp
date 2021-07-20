@@ -30,19 +30,25 @@
 
 namespace WebCore {
 
-ServiceWorkerJobData::ServiceWorkerJobData(const Identifier& identifier)
-    : m_identifier(identifier)
+static inline ServiceWorkerOrClientIdentifier serviceWorkerOrClientIdentifier(SWServerConnectionIdentifier connectionIdentifier, const DocumentOrWorkerIdentifier& localSourceContext)
 {
+    return WTF::switchOn(localSourceContext, [&](DocumentIdentifier documentIdentifier) -> ServiceWorkerOrClientIdentifier {
+        return ServiceWorkerClientIdentifier { connectionIdentifier, documentIdentifier };
+    }, [&](ServiceWorkerIdentifier serviceWorkerIdentifier) -> ServiceWorkerOrClientIdentifier {
+        return serviceWorkerIdentifier;
+    });
 }
 
 ServiceWorkerJobData::ServiceWorkerJobData(SWServerConnectionIdentifier connectionIdentifier, const DocumentOrWorkerIdentifier& localSourceContext)
-    : m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generateThreadSafe() }
+    : sourceContext(serviceWorkerOrClientIdentifier(connectionIdentifier, localSourceContext))
+    , m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generateThreadSafe() }
 {
-    WTF::switchOn(localSourceContext, [&](DocumentIdentifier documentIdentifier) {
-        sourceContext = ServiceWorkerClientIdentifier { connectionIdentifier, documentIdentifier };
-    }, [&](ServiceWorkerIdentifier serviceWorkerIdentifier) {
-        sourceContext = serviceWorkerIdentifier;
-    });
+}
+
+ServiceWorkerJobData::ServiceWorkerJobData(Identifier identifier, const DocumentOrWorkerIdentifier& localSourceContext)
+    : sourceContext(serviceWorkerOrClientIdentifier(identifier.connectionIdentifier, localSourceContext))
+    , m_identifier { identifier }
+{
 }
 
 ServiceWorkerRegistrationKey ServiceWorkerJobData::registrationKey() const
@@ -54,8 +60,10 @@ ServiceWorkerRegistrationKey ServiceWorkerJobData::registrationKey() const
 
 ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
 {
-    ServiceWorkerJobData result { identifier() };
+    ServiceWorkerJobData result;
+    result.m_identifier = identifier();
     result.sourceContext = sourceContext;
+    result.workerType = workerType;
     result.type = type;
 
     result.scriptURL = scriptURL.isolatedCopy();
@@ -65,6 +73,25 @@ ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
     result.registrationOptions = registrationOptions.isolatedCopy();
 
     return result;
+}
+
+// https://w3c.github.io/ServiceWorker/#dfn-job-equivalent
+bool ServiceWorkerJobData::isEquivalent(const ServiceWorkerJobData& job) const
+{
+    if (type != job.type)
+        return false;
+
+    switch (type) {
+    case ServiceWorkerJobType::Register:
+    case ServiceWorkerJobType::Update:
+        return scopeURL == job.scopeURL
+            && scriptURL == job.scriptURL
+            && workerType == job.workerType
+            && registrationOptions.updateViaCache == job.registrationOptions.updateViaCache;
+    case ServiceWorkerJobType::Unregister:
+        return scopeURL == job.scopeURL;
+    }
+    return false;
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "CollectionTraversal.h"
 #include "HTMLCollection.h"
 #include "HTMLElement.h"
+#include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 class CachedHTMLCollection : public HTMLCollection {
+    WTF_MAKE_ISO_NONALLOCATABLE(CachedHTMLCollection);
 public:
     CachedHTMLCollection(ContainerNode& base, CollectionType);
 
@@ -40,7 +41,7 @@ public:
 
     unsigned length() const final { return m_indexCache.nodeCount(collection()); }
     Element* item(unsigned offset) const override { return m_indexCache.nodeAt(collection(), offset); }
-    Element* namedItem(const AtomicString& name) const override;
+    Element* namedItem(const AtomString& name) const override;
     size_t memoryCost() const final
     {
         // memoryCost() may be invoked concurrently from a GC thread, and we need to be careful about what data we access here and how.
@@ -50,14 +51,14 @@ public:
     }
 
     // For CollectionIndexCache; do not use elsewhere.
-    using CollectionTraversalIterator = typename CollectionTraversal<traversalType>::Iterator;
-    CollectionTraversalIterator collectionBegin() const { return CollectionTraversal<traversalType>::begin(collection(), rootNode()); }
-    CollectionTraversalIterator collectionLast() const { return CollectionTraversal<traversalType>::last(collection(), rootNode()); }
-    CollectionTraversalIterator collectionEnd() const { return CollectionTraversal<traversalType>::end(rootNode()); }
-    void collectionTraverseForward(CollectionTraversalIterator& current, unsigned count, unsigned& traversedCount) const { CollectionTraversal<traversalType>::traverseForward(collection(), current, count, traversedCount); }
-    void collectionTraverseBackward(CollectionTraversalIterator& current, unsigned count) const { CollectionTraversal<traversalType>::traverseBackward(collection(), current, count); }
+    using Traversal = CollectionTraversal<traversalType>;
+    using Iterator = typename Traversal::Iterator;
+    auto collectionBegin() const { return Traversal::begin(collection(), rootNode()); }
+    auto collectionLast() const { return Traversal::last(collection(), rootNode()); }
+    void collectionTraverseForward(Iterator& current, unsigned count, unsigned& traversedCount) const { Traversal::traverseForward(collection(), current, count, traversedCount); }
+    void collectionTraverseBackward(Iterator& current, unsigned count) const { Traversal::traverseBackward(collection(), current, count); }
     bool collectionCanTraverseBackward() const { return traversalType != CollectionTraversalType::CustomForwardOnly; }
-    void willValidateIndexCache() const { document().registerCollection(const_cast<CachedHTMLCollection<HTMLCollectionClass, traversalType>&>(*this)); }
+    void willValidateIndexCache() const { document().registerCollection(const_cast<CachedHTMLCollection&>(*this)); }
 
     void invalidateCacheForDocument(Document&) override;
 
@@ -67,19 +68,19 @@ private:
     HTMLCollectionClass& collection() { return static_cast<HTMLCollectionClass&>(*this); }
     const HTMLCollectionClass& collection() const { return static_cast<const HTMLCollectionClass&>(*this); }
 
-    mutable CollectionIndexCache<HTMLCollectionClass, CollectionTraversalIterator> m_indexCache;
+    mutable CollectionIndexCache<HTMLCollectionClass, Iterator> m_indexCache;
 };
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 CachedHTMLCollection<HTMLCollectionClass, traversalType>::CachedHTMLCollection(ContainerNode& base, CollectionType collectionType)
     : HTMLCollection(base, collectionType)
-    , m_indexCache(collection())
-{ }
+{
+}
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 CachedHTMLCollection<HTMLCollectionClass, traversalType>::~CachedHTMLCollection()
 {
-    if (m_indexCache.hasValidCache(collection()))
+    if (m_indexCache.hasValidCache())
         document().unregisterCollection(*this);
 }
 
@@ -87,9 +88,9 @@ template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 void CachedHTMLCollection<HTMLCollectionClass, traversalType>::invalidateCacheForDocument(Document& document)
 {
     HTMLCollection::invalidateCacheForDocument(document);
-    if (m_indexCache.hasValidCache(collection())) {
+    if (m_indexCache.hasValidCache()) {
         document.unregisterCollection(*this);
-        m_indexCache.invalidate(collection());
+        m_indexCache.invalidate();
     }
 }
 
@@ -105,7 +106,6 @@ static inline bool nameShouldBeVisibleInDocumentAll(HTMLElement& element)
 {
     // https://html.spec.whatwg.org/multipage/infrastructure.html#all-named-elements
     return element.hasTagName(HTMLNames::aTag)
-        || element.hasTagName(HTMLNames::appletTag)
         || element.hasTagName(HTMLNames::buttonTag)
         || element.hasTagName(HTMLNames::embedTag)
         || element.hasTagName(HTMLNames::formTag)
@@ -127,7 +127,7 @@ static inline bool nameShouldBeVisibleInDocumentAll(Element& element)
 }
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
-Element* CachedHTMLCollection<HTMLCollectionClass, traversalType>::namedItem(const AtomicString& name) const
+Element* CachedHTMLCollection<HTMLCollectionClass, traversalType>::namedItem(const AtomString& name) const
 {
     // http://msdn.microsoft.com/workshop/author/dhtml/reference/methods/nameditem.asp
     // This method first searches for an object with a matching id

@@ -73,7 +73,7 @@ typedef enum
  *     just return the element.
  * @GST_PARSE_FLAG_PLACE_IN_BIN: If more than one toplevel element is described
  *     by the pipeline description string, put them in a #GstBin instead of a
- *     #GstPipeline. (Since 1.10)
+ *     #GstPipeline. (Since: 1.10)
  *
  * Parsing options.
  */
@@ -131,9 +131,7 @@ GstElement      * gst_parse_launchv_full (const gchar     ** argv,
                                           GstParseFlags      flags,
                                           GError          ** error) G_GNUC_MALLOC;
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstParseContext, gst_parse_context_free)
-#endif
 
 G_END_DECLS
 

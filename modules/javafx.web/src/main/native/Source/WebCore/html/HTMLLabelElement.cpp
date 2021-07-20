@@ -40,7 +40,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLabelElement);
 
 using namespace HTMLNames;
 
-static LabelableElement* firstElementWithIdIfLabelable(TreeScope& treeScope, const AtomicString& id)
+static LabelableElement* firstElementWithIdIfLabelable(TreeScope& treeScope, const AtomString& id)
 {
     auto element = makeRefPtr(treeScope.getElementById(id));
     if (!is<LabelableElement>(element))
@@ -85,32 +85,48 @@ HTMLFormElement* HTMLLabelElement::form() const
     return downcast<HTMLFormControlElement>(control.get())->form();
 }
 
-void HTMLLabelElement::setActive(bool down, bool pause)
+void HTMLLabelElement::setActive(bool down, bool pause, Style::InvalidationScope invalidationScope)
 {
     if (down == active())
         return;
 
     // Update our status first.
-    HTMLElement::setActive(down, pause);
+    HTMLElement::setActive(down, pause, invalidationScope);
 
     // Also update our corresponding control.
     if (auto element = control())
         element->setActive(down, pause);
 }
 
-void HTMLLabelElement::setHovered(bool over)
+void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidationScope)
 {
     if (over == hovered())
         return;
 
     // Update our status first.
-    HTMLElement::setHovered(over);
+    HTMLElement::setHovered(over, invalidationScope);
 
     // Also update our corresponding control.
     if (auto element = control())
         element->setHovered(over);
 }
 
+bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) const
+{
+    if (!is<Node>(event.target()))
+        return false;
+
+    auto& node = downcast<Node>(*event.target());
+    if (!containsIncludingShadowDOM(&node))
+        return false;
+
+    for (const auto* it = &node; it && it != this; it = it->parentElementInComposedTree()) {
+        if (is<HTMLElement>(it) && downcast<HTMLElement>(*it).isInteractiveContent())
+            return true;
+    }
+
+    return false;
+}
 void HTMLLabelElement::defaultEventHandler(Event& event)
 {
     static bool processingClick = false;
@@ -121,6 +137,15 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
         if (!control || (is<Node>(event.target()) && control->containsIncludingShadowDOM(&downcast<Node>(*event.target())))) {
+            HTMLElement::defaultEventHandler(event);
+            return;
+        }
+
+        // The activation behavior of a label element for events targeted at interactive
+        // content descendants of a label element, and any descendants of those interactive
+        // content descendants, must be to do nothing.
+        // https://html.spec.whatwg.org/#the-label-element
+        if (isEventTargetedAtInteractiveDescendants(event)) {
             HTMLElement::defaultEventHandler(event);
             return;
         }
@@ -147,29 +172,29 @@ bool HTMLLabelElement::willRespondToMouseClickEvents()
     return (element && element->willRespondToMouseClickEvents()) || HTMLElement::willRespondToMouseClickEvents();
 }
 
-void HTMLLabelElement::focus(bool restorePreviousSelection, FocusDirection direction)
+void HTMLLabelElement::focus(SelectionRestorationMode restorationMode, FocusDirection direction)
 {
     Ref<HTMLLabelElement> protectedThis(*this);
     if (document().haveStylesheetsLoaded()) {
         document().updateLayout();
         if (isFocusable()) {
-            // The value of restorePreviousSelection is not used for label elements as it doesn't override updateFocusAppearance.
-            Element::focus(restorePreviousSelection, direction);
+            // The value of restorationMode is not used for label elements as it doesn't override updateFocusAppearance.
+            Element::focus(restorationMode, direction);
             return;
         }
     }
 
     // To match other browsers, always restore previous selection.
     if (auto element = control())
-        element->focus(true, direction);
+        element->focus(SelectionRestorationMode::RestoreOrSelectAll, direction);
 }
 
-void HTMLLabelElement::accessKeyAction(bool sendMouseEvents)
+bool HTMLLabelElement::accessKeyAction(bool sendMouseEvents)
 {
     if (auto element = control())
-        element->accessKeyAction(sendMouseEvents);
-    else
-        HTMLElement::accessKeyAction(sendMouseEvents);
+        return element->accessKeyAction(sendMouseEvents);
+
+    return HTMLElement::accessKeyAction(sendMouseEvents);
 }
 
 } // namespace

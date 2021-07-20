@@ -116,7 +116,7 @@ void HTMLAttachmentElement::setFile(RefPtr<File>&& file, UpdateDisplayAttributes
     if (updateAttributes == UpdateDisplayAttributes::Yes) {
         if (m_file) {
             setAttributeWithoutSynchronization(HTMLNames::titleAttr, m_file->name());
-            setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, fileSizeDescription(m_file->size()));
+            setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, PAL::fileSizeDescription(m_file->size()));
             setAttributeWithoutSynchronization(HTMLNames::typeAttr, m_file->type());
         } else {
             removeAttribute(HTMLNames::titleAttr);
@@ -156,7 +156,7 @@ bool HTMLAttachmentElement::hasEnclosingImage() const
     return is<HTMLImageElement>(shadowHost());
 }
 
-void HTMLAttachmentElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLAttachmentElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == progressAttr || name == subtitleAttr || name == titleAttr || name == typeAttr) {
         if (auto* renderer = this->renderer())
@@ -177,22 +177,17 @@ String HTMLAttachmentElement::attachmentTitle() const
 String HTMLAttachmentElement::attachmentTitleForDisplay() const
 {
     auto title = attachmentTitle();
-
     auto indexOfLastDot = title.reverseFind('.');
     if (indexOfLastDot == notFound)
         return title;
 
-    String name = title.left(indexOfLastDot);
-    String extension = title.substring(indexOfLastDot);
-
-    StringBuilder builder;
-    builder.append(leftToRightMark);
-    builder.append(firstStrongIsolate);
-    builder.append(name);
-    builder.append(popDirectionalIsolate);
-    builder.append(extension);
-
-    return builder.toString();
+    return makeString(
+        leftToRightMark,
+        firstStrongIsolate,
+        StringView(title).left(indexOfLastDot),
+        popDirectionalIsolate,
+        StringView(title).substring(indexOfLastDot)
+    );
 }
 
 String HTMLAttachmentElement::attachmentType() const
@@ -218,7 +213,7 @@ void HTMLAttachmentElement::updateAttributes(Optional<uint64_t>&& newFileSize, c
         removeAttribute(HTMLNames::typeAttr);
 
     if (newFileSize)
-        setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, fileSizeDescription(*newFileSize));
+        setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, PAL::fileSizeDescription(*newFileSize));
     else
         removeAttribute(HTMLNames::subtitleAttr);
 
@@ -246,7 +241,15 @@ void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentTy
     if (!mimeTypeIsSuitableForInlineImageAttachment(mimeType))
         return;
 
-    hostElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(WTFMove(data), mimeType)));
+    hostElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(&document(), WTFMove(data), mimeType)));
+}
+
+void HTMLAttachmentElement::updateThumbnail(const RefPtr<Image>& thumbnail)
+{
+    m_thumbnail = thumbnail;
+
+    if (auto* renderer = this->renderer())
+        renderer->invalidate();
 }
 
 } // namespace WebCore

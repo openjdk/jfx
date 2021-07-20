@@ -40,7 +40,13 @@ namespace WebCore {
 // An AudioBus represents a collection of one or more AudioChannels.
 // The data layout is "planar" as opposed to "interleaved".
 // An AudioBus with one channel is mono, an AudioBus with two channels is stereo, etc.
-class AudioBus : public ThreadSafeRefCounted<AudioBus> {
+
+enum class ChannelInterpretation {
+    Speakers,
+    Discrete,
+};
+
+class AudioBus final : public ThreadSafeRefCounted<AudioBus> {
     WTF_MAKE_NONCOPYABLE(AudioBus);
 public:
     enum {
@@ -58,18 +64,13 @@ public:
         // Can define non-standard layouts here
     };
 
-    enum ChannelInterpretation {
-        Speakers,
-        Discrete,
-    };
-
     // allocate indicates whether or not to initially have the AudioChannels created with managed storage.
     // Normal usage is to pass true here, in which case the AudioChannels will memory-manage their own storage.
     // If allocate is false then setChannelMemory() has to be called later on for each channel before the AudioBus is useable...
-    static RefPtr<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
+    WEBCORE_EXPORT static RefPtr<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
 
     // Tells the given channel to use an externally allocated buffer.
-    void setChannelMemory(unsigned channelIndex, float* storage, size_t length);
+    WEBCORE_EXPORT void setChannelMemory(unsigned channelIndex, float* storage, size_t length);
 
     // Channels
     unsigned numberOfChannels() const { return m_channels.size(); }
@@ -126,17 +127,15 @@ public:
 
     // Copies the samples from the source bus to this one.
     // This is just a simple per-channel copy if the number of channels match, otherwise an up-mix or down-mix is done.
-    void copyFrom(const AudioBus& sourceBus, ChannelInterpretation = Speakers);
+    WEBCORE_EXPORT void copyFrom(const AudioBus& sourceBus, ChannelInterpretation = ChannelInterpretation::Speakers);
 
     // Sums the samples from the source bus to this one.
     // This is just a simple per-channel summing if the number of channels match, otherwise an up-mix or down-mix is done.
-    void sumFrom(const AudioBus& sourceBus, ChannelInterpretation = Speakers);
+    void sumFrom(const AudioBus& sourceBus, ChannelInterpretation = ChannelInterpretation::Speakers);
 
     // Copy each channel from sourceBus into our corresponding channel.
-    // We scale by targetGain (and our own internal gain m_busGain), performing "de-zippering" to smoothly change from *lastMixGain to (targetGain*m_busGain).
-    // The caller is responsible for setting up lastMixGain to point to storage which is unique for every "stream" which will be applied to this bus.
-    // This represents the dezippering memory.
-    void copyWithGainFrom(const AudioBus &sourceBus, float* lastMixGain, float targetGain);
+    // We scale by targetGain (and our own internal gain m_busGain).
+    void copyWithGainFrom(const AudioBus& sourceBus, float targetGain);
 
     // Copies the sourceBus by scaling with sample-accurate gain values.
     void copyWithSampleAccurateGainValuesFrom(const AudioBus &sourceBus, float* gainValues, unsigned numberOfGainValues);
@@ -149,24 +148,22 @@ public:
 
     static RefPtr<AudioBus> loadPlatformResource(const char* name, float sampleRate);
 
-protected:
+private:
     AudioBus() { }
 
     AudioBus(unsigned numberOfChannels, size_t length, bool allocate);
 
-    void speakersCopyFrom(const AudioBus&);
-    void discreteCopyFrom(const AudioBus&);
-    void speakersSumFrom(const AudioBus&);
+    void speakersSumFromByUpMixing(const AudioBus&);
+    void speakersSumFromByDownMixing(const AudioBus&);
     void discreteSumFrom(const AudioBus&);
-    void speakersSumFrom5_1_ToMono(const AudioBus&);
 
     size_t m_length;
     Vector<std::unique_ptr<AudioChannel>> m_channels;
     int m_layout;
-    float m_busGain;
+    float m_busGain { 1 };
     std::unique_ptr<AudioFloatArray> m_dezipperGainValues;
-    bool m_isFirstTime;
-    float m_sampleRate; // 0.0 if unknown or N/A
+    bool m_isFirstTime { 0 };
+    float m_sampleRate { 0 }; // 0.0 if unknown or N/A
 };
 
 } // WebCore

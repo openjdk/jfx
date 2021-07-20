@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,16 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.stage.WindowHelper;
+
+import static com.sun.javafx.PlatformUtil.*;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
@@ -35,23 +44,14 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TextField;
 import javafx.scene.control.skin.TextFieldSkin;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.HitInfo;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.geom.transform.Affine3D;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.stage.WindowHelper;
 
 /**
  * Text field behavior.
@@ -120,41 +120,10 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         TextField textField = getNode();
 
         if (textField.isFocused()) {
-            if (PlatformUtil.isIOS()) {
-                // special handling of focus on iOS is required to allow to
-                // control native keyboard, because nat. keyboard is poped-up only when native
-                // text component gets focus. When we have JFX keyboard we can remove this code
-                TextInputTypes type = TextInputTypes.TEXT_FIELD;
-                if (textField.getClass().equals(javafx.scene.control.PasswordField.class)) {
-                    type = TextInputTypes.PASSWORD_FIELD;
-                } else if (textField.getParent().getClass().equals(javafx.scene.control.ComboBox.class)) {
-                    type = TextInputTypes.EDITABLE_COMBO;
-                }
-                final Bounds bounds = textField.getBoundsInParent();
-                double w = bounds.getWidth();
-                double h = bounds.getHeight();
-                Affine3D trans = calculateNodeToSceneTransform(textField);
-//                Insets insets = skin.getInsets();
-//                w -= insets.getLeft() + insets.getRight();
-//                h -= insets.getTop() + insets.getBottom();
-                String text = textField.getText();
-
-                // we need to display native text input component on the place where JFX component is drawn
-                // all parameters needed to do that are passed to native impl. here
-                WindowHelper.getPeer(textField.getScene().getWindow()).requestInput(
-                        text, type.ordinal(), w, h,
-                        trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),// + insets.getLeft(),
-                        trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),// + insets.getTop(),
-                        trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
-            }
             if (!focusGainedByMouseClick) {
                 setCaretAnimating(true);
             }
         } else {
-            if (PlatformUtil.isIOS() && textField.getScene() != null) {
-                // releasing the focus => we need to hide the native component and also native keyboard
-                WindowHelper.getPeer(textField.getScene().getWindow()).releaseInput();
-            }
             focusGainedByMouseClick = false;
             setCaretAnimating(false);
         }
@@ -183,9 +152,10 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
         textField.commitValue();
         textField.fireEvent(actionEvent);
-
-        if (onAction == null && !actionEvent.isConsumed()) {
-            forwardToParent(event);
+        // fix of JDK-8207759: reverted logic
+        // mapping not auto-consume and consume if handled by action
+        if (onAction != null || actionEvent.isConsumed()) {
+            event.consume();
         }
     }
 

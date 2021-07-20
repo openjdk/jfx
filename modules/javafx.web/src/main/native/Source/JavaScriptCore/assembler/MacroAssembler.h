@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,10 +35,10 @@
 #include "MacroAssemblerARMv7.h"
 namespace JSC { typedef MacroAssemblerARMv7 MacroAssemblerBase; };
 
-#elif CPU(ARM64E) && __has_include(<WebKitAdditions/MacroAssemblerARM64E.h>)
+#elif CPU(ARM64E)
 #define TARGET_ASSEMBLER ARM64EAssembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARM64E
-#include <WebKitAdditions/MacroAssemblerARM64E.h>
+#include "MacroAssemblerARM64E.h"
 
 #elif CPU(ARM64)
 #define TARGET_ASSEMBLER ARM64Assembler
@@ -95,6 +95,7 @@ using MacroAssemblerBase = TARGET_MACROASSEMBLER;
 
 class MacroAssembler : public MacroAssemblerBase {
 public:
+    using Base = MacroAssemblerBase;
 
     static constexpr RegisterID nextRegister(RegisterID reg)
     {
@@ -128,6 +129,7 @@ public:
 
     using MacroAssemblerBase::pop;
     using MacroAssemblerBase::jump;
+    using MacroAssemblerBase::farJump;
     using MacroAssemblerBase::branch32;
     using MacroAssemblerBase::compare32;
     using MacroAssemblerBase::move;
@@ -149,6 +151,12 @@ public:
     using MacroAssemblerBase::urshift32;
     using MacroAssemblerBase::xor32;
 
+#if CPU(ARM64) || CPU(X86_64)
+    using MacroAssemblerBase::and64;
+    using MacroAssemblerBase::convertInt32ToDouble;
+    using MacroAssemblerBase::store64;
+#endif
+
     static bool isPtrAlignedAddressOffset(ptrdiff_t value)
     {
         return value == static_cast<int32_t>(value);
@@ -163,33 +171,33 @@ public:
     static DoubleCondition invert(DoubleCondition cond)
     {
         switch (cond) {
-        case DoubleEqual:
+        case DoubleEqualAndOrdered:
             return DoubleNotEqualOrUnordered;
-        case DoubleNotEqual:
+        case DoubleNotEqualAndOrdered:
             return DoubleEqualOrUnordered;
-        case DoubleGreaterThan:
+        case DoubleGreaterThanAndOrdered:
             return DoubleLessThanOrEqualOrUnordered;
-        case DoubleGreaterThanOrEqual:
+        case DoubleGreaterThanOrEqualAndOrdered:
             return DoubleLessThanOrUnordered;
-        case DoubleLessThan:
+        case DoubleLessThanAndOrdered:
             return DoubleGreaterThanOrEqualOrUnordered;
-        case DoubleLessThanOrEqual:
+        case DoubleLessThanOrEqualAndOrdered:
             return DoubleGreaterThanOrUnordered;
         case DoubleEqualOrUnordered:
-            return DoubleNotEqual;
+            return DoubleNotEqualAndOrdered;
         case DoubleNotEqualOrUnordered:
-            return DoubleEqual;
+            return DoubleEqualAndOrdered;
         case DoubleGreaterThanOrUnordered:
-            return DoubleLessThanOrEqual;
+            return DoubleLessThanOrEqualAndOrdered;
         case DoubleGreaterThanOrEqualOrUnordered:
-            return DoubleLessThan;
+            return DoubleLessThanAndOrdered;
         case DoubleLessThanOrUnordered:
-            return DoubleGreaterThanOrEqual;
+            return DoubleGreaterThanOrEqualAndOrdered;
         case DoubleLessThanOrEqualOrUnordered:
-            return DoubleGreaterThan;
+            return DoubleGreaterThanAndOrdered;
         }
         RELEASE_ASSERT_NOT_REACHED();
-        return DoubleEqual; // make compiler happy
+        return DoubleEqualAndOrdered; // make compiler happy
     }
 
     static bool isInvertible(ResultCondition cond)
@@ -502,7 +510,7 @@ public:
     void retFloat(FPRegisterID) { ret(); }
     void retDouble(FPRegisterID) { ret(); }
 
-    static const unsigned BlindingModulus = 64;
+    static constexpr unsigned BlindingModulus = 64;
     bool shouldConsiderBlinding()
     {
         return !(random() & (BlindingModulus - 1));
@@ -540,8 +548,7 @@ public:
 
     // Ptr methods
     // On 32-bit platforms (i.e. x86), these methods directly map onto their 32-bit equivalents.
-    // FIXME: should this use a test for 32-bitness instead of this specific exception?
-#if !CPU(X86_64) && !CPU(ARM64)
+#if !CPU(ADDRESS64)
     void addPtr(Address src, RegisterID dest)
     {
         add32(src, dest);
@@ -657,6 +664,11 @@ public:
         or32(imm, dest);
     }
 
+    void rotateRightPtr(TrustedImm32 imm, RegisterID srcDst)
+    {
+        rotateRight32(imm, srcDst);
+    }
+
     void subPtr(RegisterID src, RegisterID dest)
     {
         sub32(src, dest);
@@ -699,6 +711,9 @@ public:
 
     void loadPtr(BaseIndex address, RegisterID dest)
     {
+#if CPU(NEEDS_ALIGNED_ACCESS)
+        ASSERT(address.scale == ScalePtr || address.scale == TimesOne);
+#endif
         load32(address, dest);
     }
 
@@ -727,11 +742,6 @@ public:
     DataLabelCompact loadPtrWithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
         return load32WithCompactAddressOffsetPatch(address, dest);
-    }
-
-    void move(ImmPtr imm, RegisterID dest)
-    {
-        move(Imm32(imm.asTrustedImmPtr()), dest);
     }
 
     void comparePtr(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID dest)
@@ -869,7 +879,7 @@ public:
         return MacroAssemblerBase::branchTest8(cond, Address(address.base, address.offset), mask);
     }
 
-#else // !CPU(X86_64) && !CPU(ARM64)
+#else // !CPU(ADDRESS64)
 
     void addPtr(RegisterID src, RegisterID dest)
     {
@@ -1049,6 +1059,9 @@ public:
 
     void loadPtr(BaseIndex address, RegisterID dest)
     {
+#if CPU(NEEDS_ALIGNED_ACCESS)
+        ASSERT(address.scale == ScalePtr || address.scale == TimesOne);
+#endif
         load64(address, dest);
     }
 
@@ -1218,9 +1231,29 @@ public:
         return branchSub64(cond, src1, src2, dest);
     }
 
-    using MacroAssemblerBase::and64;
-    using MacroAssemblerBase::convertInt32ToDouble;
-    using MacroAssemblerBase::store64;
+    Jump branchPtr(RelationalCondition cond, RegisterID left, ImmPtr right)
+    {
+        if (shouldBlind(right) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(right), scratchRegister);
+            return branchPtr(cond, left, scratchRegister);
+        }
+        return branchPtr(cond, left, right.asTrustedImmPtr());
+    }
+
+    void storePtr(ImmPtr imm, Address dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            storePtr(scratchRegister, dest);
+        } else
+            storePtr(imm.asTrustedImmPtr(), dest);
+    }
+
+#endif // !CPU(ADDRESS64)
+
+#if USE(JSVALUE64)
     bool shouldBlindDouble(double value)
     {
         // Don't trust NaN or +/-Infinity
@@ -1414,13 +1447,11 @@ public:
             move(imm.asTrustedImm64(), dest);
     }
 
-#if CPU(X86_64) || CPU(ARM64)
     void moveDouble(Imm64 imm, FPRegisterID dest)
     {
         move(imm, scratchRegister());
         move64ToDouble(scratchRegister(), dest);
     }
-#endif
 
     void and64(Imm32 imm, RegisterID dest)
     {
@@ -1431,38 +1462,7 @@ public:
         } else
             and64(imm.asTrustedImm32(), dest);
     }
-
-    Jump branchPtr(RelationalCondition cond, RegisterID left, ImmPtr right)
-    {
-        if (shouldBlind(right) && haveScratchRegisterForBlinding()) {
-            RegisterID scratchRegister = scratchRegisterForBlinding();
-            loadRotationBlindedConstant(rotationBlindConstant(right), scratchRegister);
-            return branchPtr(cond, left, scratchRegister);
-        }
-        return branchPtr(cond, left, right.asTrustedImmPtr());
-    }
-
-    void storePtr(ImmPtr imm, Address dest)
-    {
-        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
-            RegisterID scratchRegister = scratchRegisterForBlinding();
-            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
-            storePtr(scratchRegister, dest);
-        } else
-            storePtr(imm.asTrustedImmPtr(), dest);
-    }
-
-    void store64(Imm64 imm, Address dest)
-    {
-        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
-            RegisterID scratchRegister = scratchRegisterForBlinding();
-            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
-            store64(scratchRegister, dest);
-        } else
-            store64(imm.asTrustedImm64(), dest);
-    }
-
-#endif // !CPU(X86_64)
+#endif // USE(JSVALUE64)
 
 #if !CPU(X86) && !CPU(X86_64) && !CPU(ARM64)
     // We should implement this the right way eventually, but for now, it's fine because it arises so
@@ -1718,7 +1718,18 @@ public:
     {
         store64(value, addressForPoke(index));
     }
-#endif // CPU(X86_64)
+
+    void store64(Imm64 imm, Address dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            store64(scratchRegister, dest);
+        } else
+            store64(imm.asTrustedImm64(), dest);
+    }
+
+#endif // CPU(X86_64) || CPU(ARM64)
 
     void store32(Imm32 imm, Address dest)
     {

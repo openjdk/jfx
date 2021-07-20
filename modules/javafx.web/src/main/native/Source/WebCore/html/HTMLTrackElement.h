@@ -26,8 +26,9 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
+#include "ActiveDOMObject.h"
 #include "HTMLElement.h"
 #include "LoadableTextTrack.h"
 
@@ -35,20 +36,20 @@ namespace WebCore {
 
 class HTMLMediaElement;
 
-class HTMLTrackElement final : public HTMLElement, public TextTrackClient {
+class HTMLTrackElement final : public HTMLElement, public ActiveDOMObject, public TextTrackClient {
     WTF_MAKE_ISO_ALLOCATED(HTMLTrackElement);
 public:
     static Ref<HTMLTrackElement> create(const QualifiedName&, Document&);
 
-    const AtomicString& kind();
-    void setKind(const AtomicString&);
+    const AtomString& kind();
+    void setKind(const AtomString&);
 
-    const AtomicString& srclang() const;
-    const AtomicString& label() const;
+    const AtomString& srclang() const;
+    const AtomString& label() const;
     bool isDefault() const;
 
     enum ReadyState { NONE = 0, LOADING = 1, LOADED = 2, TRACK_ERROR = 3 };
-    ReadyState readyState();
+    ReadyState readyState() const;
     void setReadyState(ReadyState);
 
     LoadableTextTrack& track();
@@ -59,18 +60,25 @@ public:
     void didCompleteLoad(LoadStatus);
 
     RefPtr<HTMLMediaElement> mediaElement() const;
-    const AtomicString& mediaElementCrossOriginAttribute() const;
+    const AtomString& mediaElementCrossOriginAttribute() const;
 
 private:
     HTMLTrackElement(const QualifiedName&, Document&);
     virtual ~HTMLTrackElement();
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
+
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
 
     bool isURLAttribute(const Attribute&) const final;
+
+    // EventTarget.
+    void eventListenersDidChange() final;
 
     void loadTimerFired();
 
@@ -86,6 +94,7 @@ private:
 
     RefPtr<LoadableTextTrack> m_track;
     Timer m_loadTimer;
+    bool m_hasRelevantLoadEventsListener { false };
 };
 
 }

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2006, 2008-2009, 2013, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2009 Google, Inc. All rights reserved.
  *  Copyright (C) 2012 Ericsson AB. All rights reserved.
@@ -32,34 +32,32 @@ template<typename JSClass>
 class IDLOperation {
 public:
     using ClassParameter = JSClass*;
-    using Operation = JSC::EncodedJSValue(JSC::ExecState*, ClassParameter, JSC::ThrowScope&);
-    using StaticOperation = JSC::EncodedJSValue(JSC::ExecState*, JSC::ThrowScope&);
+    using Operation = JSC::EncodedJSValue(JSC::JSGlobalObject*, JSC::CallFrame*, ClassParameter);
+    using StaticOperation = JSC::EncodedJSValue(JSC::JSGlobalObject*, JSC::CallFrame*);
 
-    static JSClass* cast(JSC::ExecState&);
+    static JSClass* cast(JSC::JSGlobalObject&, JSC::CallFrame&);
 
     template<Operation operation, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
-    static JSC::EncodedJSValue call(JSC::ExecState& state, const char* operationName)
+    static JSC::EncodedJSValue call(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, const char* operationName)
     {
-        auto throwScope = DECLARE_THROW_SCOPE(state.vm());
+        auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
-        auto* thisObject = cast(state);
+        auto* thisObject = cast(lexicalGlobalObject, callFrame);
         if (shouldThrow != CastedThisErrorBehavior::Assert && UNLIKELY(!thisObject))
-            return throwThisTypeError(state, throwScope, JSClass::info()->className, operationName);
+            return throwThisTypeError(lexicalGlobalObject, throwScope, JSClass::info()->className, operationName);
 
         ASSERT(thisObject);
         ASSERT_GC_OBJECT_INHERITS(thisObject, JSClass::info());
 
-        // FIXME: We should refactor the binding generated code to use references for state and thisObject.
-        return operation(&state, thisObject, throwScope);
+        // FIXME: We should refactor the binding generated code to use references for lexicalGlobalObject and thisObject.
+        RELEASE_AND_RETURN(throwScope, (operation(&lexicalGlobalObject, &callFrame, thisObject)));
     }
 
     template<StaticOperation operation, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
-    static JSC::EncodedJSValue callStatic(JSC::ExecState& state, const char*)
+    static JSC::EncodedJSValue callStatic(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, const char*)
     {
-        auto throwScope = DECLARE_THROW_SCOPE(state.vm());
-
-        // FIXME: We should refactor the binding generated code to use references for state.
-        return operation(&state, throwScope);
+        // FIXME: We should refactor the binding generated code to use references for lexicalGlobalObject.
+        return operation(&lexicalGlobalObject, &callFrame);
     }
 };
 

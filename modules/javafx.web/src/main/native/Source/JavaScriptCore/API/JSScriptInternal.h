@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#if JSC_OBJC_API_ENABLED
 
 #import "JSScript.h"
 #import "SourceCode.h"
-
-#if JSC_OBJC_API_ENABLED
+#import <wtf/RefPtr.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -44,10 +43,13 @@ class String;
 
 @interface JSScript(Internal)
 
+- (instancetype)init;
 - (unsigned)hash;
 - (const WTF::String&)source;
-- (const JSC::CachedBytecode*)cachedBytecode;
-- (JSC::JSSourceCode*)jsSourceCode:(const JSC::Identifier&)moduleKey;
+- (RefPtr<JSC::CachedBytecode>)cachedBytecode;
+- (JSC::JSSourceCode*)jsSourceCode;
+- (JSC::SourceCode)sourceCode;
+- (BOOL)writeCache:(String&)error;
 
 @end
 

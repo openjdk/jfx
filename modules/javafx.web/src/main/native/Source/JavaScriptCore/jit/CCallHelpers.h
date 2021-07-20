@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ namespace JSC {
 #define POKE_ARGUMENT_OFFSET 0
 #endif
 
-class ExecState;
+class CallFrame;
 class Structure;
 namespace DFG {
 class RegisteredStructure;
@@ -49,7 +49,7 @@ class RegisteredStructure;
 
 class CCallHelpers : public AssemblyHelpers {
 public:
-    CCallHelpers(CodeBlock* codeBlock = 0)
+    CCallHelpers(CodeBlock* codeBlock = nullptr)
         : AssemblyHelpers(codeBlock)
     {
     }
@@ -89,7 +89,7 @@ private:
     template<unsigned NumberOfRegisters, typename RegType>
     ALWAYS_INLINE void setupStubArgs(std::array<RegType, NumberOfRegisters> destinations, std::array<RegType, NumberOfRegisters> sources)
     {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             RegisterSet set;
             for (RegType dest : destinations)
                 set.set(dest);
@@ -99,12 +99,19 @@ private:
         typedef std::pair<RegType, RegType> RegPair;
         Vector<RegPair, NumberOfRegisters> pairs;
 
-        for (unsigned i = 0; i < NumberOfRegisters; ++i) {
-            if (sources[i] != destinations[i])
-                pairs.append(std::make_pair(sources[i], destinations[i]));
+        // if constexpr avoids warnings when NumberOfRegisters is 0.
+        if constexpr (NumberOfRegisters > 0) {
+            for (unsigned i = 0; i < NumberOfRegisters; ++i) {
+                if (sources[i] != destinations[i])
+                    pairs.append(std::make_pair(sources[i], destinations[i]));
+            }
+        } else {
+            // Silence some older compilers (GCC up to 9.X) about unused but set parameters.
+            UNUSED_PARAM(sources);
+            UNUSED_PARAM(destinations);
         }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         auto numUniqueSources = [&] () -> unsigned {
             RegisterSet set;
             for (auto& pair : pairs) {
@@ -313,9 +320,12 @@ private:
 
         std::array<RegType, TargetSize> result { };
 
-        for (unsigned i = 0; i < TargetSize; i++) {
-            ASSERT(sourceArray[i] != static_cast<int32_t>(InfoTypeForReg<RegType>::InvalidIndex));
-            result[i] = sourceArray[i];
+        // if constexpr avoids warnings when TargetSize is 0.
+        if constexpr (TargetSize > 0) {
+            for (unsigned i = 0; i < TargetSize; i++) {
+                ASSERT(sourceArray[i] != static_cast<int32_t>(InfoTypeForReg<RegType>::InvalidIndex));
+                result[i] = sourceArray[i];
+            }
         }
 
         return result;
@@ -412,43 +422,7 @@ private:
     }
 
 #else // USE(JSVALUE64)
-#if CPU(X86)
-
-    template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned extraPoke, typename... Args>
-    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, extraPoke> argSourceRegs, FPRReg arg, Args... args)
-    {
-        static_assert(std::is_same<CURRENT_ARGUMENT_TYPE, double>::value, "We should only be passing FPRRegs to a double");
-        pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, extraPoke);
-        setupArgumentsImpl<OperationType>(argSourceRegs.addStackArg(arg).addPoke(), args...);
-    }
-
-    template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned extraPoke, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<sizeof(CURRENT_ARGUMENT_TYPE) <= 4>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, extraPoke> argSourceRegs, GPRReg arg, Args... args)
-    {
-        pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, extraPoke);
-        setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg(), args...);
-    }
-
-    template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned extraPoke, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<std::is_same<CURRENT_ARGUMENT_TYPE, EncodedJSValue>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, extraPoke> argSourceRegs, CellValue payload, Args... args)
-    {
-        pokeForArgument(payload.gpr(), numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, extraPoke);
-        pokeForArgument(TrustedImm32(JSValue::CellTag), numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, extraPoke + 1);
-        setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg().addPoke(), args...);
-    }
-
-    template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned extraPoke, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<std::is_same<CURRENT_ARGUMENT_TYPE, EncodedJSValue>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, extraPoke> argSourceRegs, JSValueRegs arg, Args... args)
-    {
-        pokeForArgument(arg.payloadGPR(), numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, extraPoke);
-        pokeForArgument(arg.tagGPR(), numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, extraPoke + 1);
-        setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg().addPoke(), args...);
-    }
-
-#elif CPU(ARM_THUMB2) || CPU(MIPS)
+#if CPU(ARM_THUMB2) || CPU(MIPS)
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned extraPoke, typename... Args>
     void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, extraPoke> argSourceRegs, FPRReg arg, Args... args)
@@ -669,7 +643,7 @@ private:
     ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, extraPoke> argSourceRegs)
     {
         static_assert(FunctionTraits<OperationType>::arity == numGPRArgs + numFPRArgs, "One last sanity check");
-#if USE(JSVALUE64) || CPU(X86)
+#if USE(JSVALUE64)
         static_assert(FunctionTraits<OperationType>::cCallArity() == numGPRArgs + numFPRArgs + extraPoke, "Check the CCall arity");
 #endif
         setupStubArgs<numGPRSources, GPRReg>(clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprDestinations), clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprSources));
@@ -686,7 +660,7 @@ public:
 #define FIRST_ARGUMENT_TYPE typename FunctionTraits<OperationType>::template ArgumentType<0>
 
     template<typename OperationType, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<std::is_same<FIRST_ARGUMENT_TYPE, ExecState*>::value> setupArguments(Args... args)
+    ALWAYS_INLINE std::enable_if_t<std::is_same<FIRST_ARGUMENT_TYPE, CallFrame*>::value> setupArguments(Args... args)
     {
 #if USE(JSVALUE64)
         // This only really works for 64-bit since jsvalue regs mess things up for 32-bit...
@@ -696,7 +670,7 @@ public:
     }
 
     template<typename OperationType, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<!std::is_same<FIRST_ARGUMENT_TYPE, ExecState*>::value> setupArguments(Args... args)
+    ALWAYS_INLINE std::enable_if_t<!std::is_same<FIRST_ARGUMENT_TYPE, CallFrame*>::value> setupArguments(Args... args)
     {
 #if USE(JSVALUE64)
         // This only really works for 64-bit since jsvalue regs mess things up for 32-bit...
@@ -742,7 +716,7 @@ public:
         // genericUnwind() leaves the handler CallFrame* in vm->callFrameForCatch,
         // and the address of the handler in vm->targetMachinePCForThrow.
         loadPtr(&vm.targetMachinePCForThrow, GPRInfo::regT1);
-        jump(GPRInfo::regT1, ExceptionHandlerPtrTag);
+        farJump(GPRInfo::regT1, ExceptionHandlerPtrTag);
     }
 
     void prepareForTailCallSlow(GPRReg calleeGPR = InvalidGPRReg)
@@ -760,7 +734,7 @@ public:
             GPRReg oldFrameSizeGPR = temp2;
             {
                 GPRReg argCountGPR = oldFrameSizeGPR;
-                load32(Address(framePointerRegister, CallFrameSlot::argumentCount * static_cast<int>(sizeof(Register)) + PayloadOffset), argCountGPR);
+                load32(Address(framePointerRegister, CallFrameSlot::argumentCountIncludingThis * static_cast<int>(sizeof(Register)) + PayloadOffset), argCountGPR);
 
                 {
                     GPRReg numParametersGPR = temp1;
@@ -789,7 +763,7 @@ public:
             // The new frame size is just the number of arguments plus the
             // frame header size, aligned
             ASSERT(newFrameSizeGPR != newFramePointer);
-            load32(Address(stackPointerRegister, CallFrameSlot::argumentCount * static_cast<int>(sizeof(Register)) + PayloadOffset - sizeof(CallerFrameAndPC)),
+            load32(Address(stackPointerRegister, CallFrameSlot::argumentCountIncludingThis * static_cast<int>(sizeof(Register)) + PayloadOffset - sizeof(CallerFrameAndPC)),
                 newFrameSizeGPR);
             add32(TrustedImm32(stackAlignmentRegisters() + CallFrame::headerSizeInRegisters - 1), newFrameSizeGPR);
             and32(TrustedImm32(-stackAlignmentRegisters()), newFrameSizeGPR);
@@ -805,14 +779,15 @@ public:
 #if CPU(ARM_THUMB2) || CPU(ARM64)
         loadPtr(Address(framePointerRegister, CallFrame::returnPCOffset()), linkRegister);
         subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
-#if USE(POINTER_PROFILING)
+#if CPU(ARM64E)
         addPtr(TrustedImm32(sizeof(CallerFrameAndPC)), MacroAssembler::framePointerRegister, tempGPR);
-        untagPtr(linkRegister, tempGPR);
+        untagPtr(tempGPR, linkRegister);
+        validateUntaggedPtr(linkRegister, tempGPR);
 #endif
 #elif CPU(MIPS)
         loadPtr(Address(framePointerRegister, sizeof(void*)), returnAddressRegister);
         subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
-#elif CPU(X86) || CPU(X86_64)
+#elif CPU(X86_64)
         loadPtr(Address(framePointerRegister, sizeof(void*)), tempGPR);
         push(tempGPR);
         subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);

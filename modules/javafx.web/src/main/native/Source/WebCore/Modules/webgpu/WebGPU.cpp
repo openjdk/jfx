@@ -29,7 +29,9 @@
 #if ENABLE(WEBGPU)
 
 #include "GPURequestAdapterOptions.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSWebGPUAdapter.h"
+#include <wtf/Optional.h>
 
 namespace WebCore {
 

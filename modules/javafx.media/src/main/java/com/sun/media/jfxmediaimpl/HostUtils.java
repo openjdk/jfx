@@ -38,7 +38,8 @@ public class HostUtils {
     private static boolean is64bit = false;
 
     static {
-        embedded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             osName = System.getProperty("os.name").toLowerCase();
             osArch = System.getProperty("os.arch").toLowerCase();
 
@@ -48,6 +49,7 @@ public class HostUtils {
 
             return Boolean.getBoolean("com.sun.javafx.isEmbedded");
         });
+        embedded = tmp;
     }
 
     public static boolean is64Bit() {

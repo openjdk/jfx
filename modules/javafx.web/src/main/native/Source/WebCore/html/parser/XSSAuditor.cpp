@@ -38,6 +38,7 @@
 #include "HTMLNames.h"
 #include "HTMLParamElement.h"
 #include "HTMLParserIdioms.h"
+#include "MixedContentChecker.h"
 #include "SVGNames.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
@@ -375,7 +376,7 @@ std::unique_ptr<XSSInfo> XSSAuditor::filterToken(const FilterTokenRequest& reque
         return nullptr;
 
     bool didBlockEntirePage = m_xssProtection == XSSProtectionDisposition::BlockEnabled;
-    return std::make_unique<XSSInfo>(m_documentURL, didBlockEntirePage, m_didSendValidXSSProtectionHeader);
+    return makeUnique<XSSInfo>(m_documentURL.string(), didBlockEntirePage, m_didSendValidXSSProtectionHeader);
 }
 
 bool XSSAuditor::filterStartToken(const FilterTokenRequest& request)
@@ -440,9 +441,9 @@ bool XSSAuditor::filterScriptToken(const FilterTokenRequest& request)
 
     bool didBlockScript = false;
     if (m_wasScriptTagFoundInRequest) {
-        didBlockScript |= eraseAttributeIfInjected(request, srcAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
-        didBlockScript |= eraseAttributeIfInjected(request, SVGNames::hrefAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
-        didBlockScript |= eraseAttributeIfInjected(request, XLinkNames::hrefAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
+        didBlockScript |= eraseAttributeIfInjected(request, srcAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
+        didBlockScript |= eraseAttributeIfInjected(request, SVGNames::hrefAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
+        didBlockScript |= eraseAttributeIfInjected(request, XLinkNames::hrefAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
     }
 
     return didBlockScript;
@@ -455,7 +456,7 @@ bool XSSAuditor::filterObjectToken(const FilterTokenRequest& request)
 
     bool didBlockScript = false;
     if (isContainedInRequest(canonicalizedSnippetForTagName(request))) {
-        didBlockScript |= eraseAttributeIfInjected(request, dataAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
+        didBlockScript |= eraseAttributeIfInjected(request, dataAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
         didBlockScript |= eraseAttributeIfInjected(request, typeAttr);
         didBlockScript |= eraseAttributeIfInjected(request, classidAttr);
     }
@@ -475,7 +476,7 @@ bool XSSAuditor::filterParamToken(const FilterTokenRequest& request)
     if (!HTMLParamElement::isURLParameter(String(nameAttribute.value)))
         return false;
 
-    return eraseAttributeIfInjected(request, valueAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
+    return eraseAttributeIfInjected(request, valueAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
 }
 
 bool XSSAuditor::filterEmbedToken(const FilterTokenRequest& request)
@@ -486,7 +487,7 @@ bool XSSAuditor::filterEmbedToken(const FilterTokenRequest& request)
     bool didBlockScript = false;
     if (isContainedInRequest(canonicalizedSnippetForTagName(request))) {
         didBlockScript |= eraseAttributeIfInjected(request, codeAttr, String(), TruncationStyle::SrcLikeAttribute);
-        didBlockScript |= eraseAttributeIfInjected(request, srcAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
+        didBlockScript |= eraseAttributeIfInjected(request, srcAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
         didBlockScript |= eraseAttributeIfInjected(request, typeAttr);
     }
     return didBlockScript;
@@ -538,7 +539,7 @@ bool XSSAuditor::filterFormToken(const FilterTokenRequest& request)
     ASSERT(request.token.type() == HTMLToken::StartTag);
     ASSERT(hasName(request.token, formTag));
 
-    return eraseAttributeIfInjected(request, actionAttr, WTF::blankURL().string());
+    return eraseAttributeIfInjected(request, actionAttr, aboutBlankURL().string());
 }
 
 bool XSSAuditor::filterInputToken(const FilterTokenRequest& request)
@@ -546,7 +547,7 @@ bool XSSAuditor::filterInputToken(const FilterTokenRequest& request)
     ASSERT(request.token.type() == HTMLToken::StartTag);
     ASSERT(hasName(request.token, inputTag));
 
-    return eraseAttributeIfInjected(request, formactionAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
+    return eraseAttributeIfInjected(request, formactionAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
 }
 
 bool XSSAuditor::filterButtonToken(const FilterTokenRequest& request)
@@ -554,7 +555,7 @@ bool XSSAuditor::filterButtonToken(const FilterTokenRequest& request)
     ASSERT(request.token.type() == HTMLToken::StartTag);
     ASSERT(hasName(request.token, buttonTag));
 
-    return eraseAttributeIfInjected(request, formactionAttr, WTF::blankURL().string(), TruncationStyle::SrcLikeAttribute);
+    return eraseAttributeIfInjected(request, formactionAttr, aboutBlankURL().string(), TruncationStyle::SrcLikeAttribute);
 }
 
 bool XSSAuditor::eraseDangerousAttributesIfInjected(const FilterTokenRequest& request)
@@ -711,7 +712,7 @@ SuffixTree<ASCIICodebook>* XSSAuditor::decodedHTTPBodySuffixTree()
     const unsigned suffixTreeDepth = 5;
 
     if (!m_decodedHTTPBodySuffixTree && m_decodedHTTPBody.length() >= minimumLengthForSuffixTree)
-        m_decodedHTTPBodySuffixTree = std::make_unique<SuffixTree<ASCIICodebook>>(m_decodedHTTPBody, suffixTreeDepth);
+        m_decodedHTTPBodySuffixTree = makeUnique<SuffixTree<ASCIICodebook>>(m_decodedHTTPBody, suffixTreeDepth);
     return m_decodedHTTPBodySuffixTree.get();
 }
 
@@ -732,7 +733,7 @@ bool XSSAuditor::isLikelySafeResource(const String& url)
     // Give empty URLs and about:blank a pass. Making a resourceURL from an
     // empty string below will likely later fail the "no query args test" as
     // it inherits the document's query args.
-    if (url.isEmpty() || url == WTF::blankURL().string())
+    if (url.isEmpty() || url == aboutBlankURL().string())
         return true;
 
     // If the resource is loaded from the same host as the enclosing page, it's

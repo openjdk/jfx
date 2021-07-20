@@ -31,7 +31,8 @@ namespace WebCore {
 class GraphicsContext;
 
 struct MaskerData {
-    std::unique_ptr<ImageBuffer> maskImage;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    RefPtr<ImageBuffer> maskImage;
 };
 
 class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
@@ -57,7 +58,7 @@ private:
 
     const char* renderName() const override { return "RenderSVGResourceMasker"; }
 
-    bool drawContentIntoMaskImage(MaskerData*, ColorSpace, RenderObject*);
+    bool drawContentIntoMaskImage(MaskerData*, DestinationColorSpace, RenderObject*);
     void calculateMaskContentRepaintRect();
 
     FloatRect m_maskContentBoundaries;

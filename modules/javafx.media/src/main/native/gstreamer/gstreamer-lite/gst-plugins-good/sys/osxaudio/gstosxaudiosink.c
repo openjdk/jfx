@@ -49,15 +49,15 @@
 
 /**
  * SECTION:element-osxaudiosink
+ * @title: osxaudiosink
  *
  * This element renders raw audio samples using the CoreAudio api.
  *
- * <refsect2>
- * <title>Example pipelines</title>
+ * ## Example pipelines
  * |[
  * gst-launch-1.0 filesrc location=sine.ogg ! oggdemux ! vorbisdec ! audioconvert ! audioresample ! osxaudiosink
  * ]| Play an Ogg/Vorbis file.
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -210,7 +210,7 @@ gst_osx_audio_sink_init (GstOsxAudioSink * sink)
 
   sink->device_id = kAudioDeviceUnknown;
   sink->volume = DEFAULT_VOLUME;
-  }
+}
 
 static void
 gst_osx_audio_sink_set_property (GObject * object, guint prop_id,

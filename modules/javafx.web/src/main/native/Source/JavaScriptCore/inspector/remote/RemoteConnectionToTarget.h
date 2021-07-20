@@ -28,11 +28,12 @@
 #if ENABLE(REMOTE_INSPECTOR)
 
 #include "InspectorFrontendChannel.h"
+#include "RemoteControllableTarget.h"
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 #if PLATFORM(COCOA)
-#include <wtf/BlockPtr.h>
+#include <wtf/Function.h>
 #include <wtf/RetainPtr.h>
 
 OBJC_CLASS NSString;
@@ -43,7 +44,7 @@ namespace Inspector {
 class RemoteControllableTarget;
 
 #if PLATFORM(COCOA)
-typedef Vector<BlockPtr<void ()>> RemoteTargetQueue;
+typedef Vector<Function<void ()>> RemoteTargetQueue;
 #endif
 
 class RemoteConnectionToTarget final : public ThreadSafeRefCounted<RemoteConnectionToTarget>, public FrontendChannel {
@@ -53,7 +54,7 @@ public:
 #else
     RemoteConnectionToTarget(RemoteControllableTarget&);
 #endif
-    virtual ~RemoteConnectionToTarget();
+    ~RemoteConnectionToTarget() final;
 
     // Main API.
     bool setup(bool isAutomaticInspection = false, bool automaticallyPause = false);
@@ -65,27 +66,27 @@ public:
     void close();
     void targetClosed();
 
-    Optional<unsigned> targetIdentifier() const;
+    Optional<TargetID> targetIdentifier() const;
 #if PLATFORM(COCOA)
     NSString *connectionIdentifier() const;
     NSString *destination() const;
 
     Lock& queueMutex() { return m_queueMutex; }
     const RemoteTargetQueue& queue() const { return m_queue; }
-    void clearQueue() { m_queue.clear(); }
+    RemoteTargetQueue takeQueue();
 #endif
 
     // FrontendChannel overrides.
-    ConnectionType connectionType() const override { return ConnectionType::Remote; }
-    void sendMessageToFrontend(const String&) override;
+    ConnectionType connectionType() const final { return ConnectionType::Remote; }
+    void sendMessageToFrontend(const String&) final;
 
 private:
 #if PLATFORM(COCOA)
-    void dispatchAsyncOnTarget(void (^block)());
+    void dispatchAsyncOnTarget(Function<void ()>&&);
 
     void setupRunLoop();
     void teardownRunLoop();
-    void queueTaskOnPrivateRunLoop(void (^block)());
+    void queueTaskOnPrivateRunLoop(Function<void ()>&&);
 #endif
 
     // This connection from the RemoteInspector singleton to the InspectionTarget

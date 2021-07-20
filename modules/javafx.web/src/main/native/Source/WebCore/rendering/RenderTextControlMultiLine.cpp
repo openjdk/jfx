@@ -84,7 +84,7 @@ float RenderTextControlMultiLine::getAverageCharWidth()
 
 LayoutUnit RenderTextControlMultiLine::preferredContentLogicalWidth(float charWidth) const
 {
-    return ceilf(charWidth * textAreaElement().cols()) + scrollbarThickness();
+    return LayoutUnit(ceilf(charWidth * textAreaElement().cols()) + scrollbarThickness());
 }
 
 LayoutUnit RenderTextControlMultiLine::computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const
@@ -106,7 +106,7 @@ void RenderTextControlMultiLine::layoutExcludedChildren(bool relayoutChildren)
         return;
     if (is<RenderBox>(placeholderRenderer)) {
         auto& placeholderBox = downcast<RenderBox>(*placeholderRenderer);
-        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), Fixed));
+        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), LengthType::Fixed));
         placeholderBox.layoutIfNeeded();
         placeholderBox.setX(borderLeft() + paddingLeft());
         placeholderBox.setY(borderTop() + paddingTop());

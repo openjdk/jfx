@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Oleksandr Skachkov <gskachkov@gmail.com>.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,18 +27,11 @@
 #include "config.h"
 #include "AsyncGeneratorFunctionPrototype.h"
 
-#include "BuiltinExecutables.h"
-#include "BuiltinNames.h"
-#include "Error.h"
-#include "JSArray.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
-#include "JSString.h"
-#include "Lexer.h"
 
 namespace JSC {
 
-const ClassInfo AsyncGeneratorFunctionPrototype::s_info = { "AsyncGenerator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AsyncGeneratorFunctionPrototype) };
+const ClassInfo AsyncGeneratorFunctionPrototype::s_info = { "AsyncGeneratorFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AsyncGeneratorFunctionPrototype) };
 
 AsyncGeneratorFunctionPrototype::AsyncGeneratorFunctionPrototype(VM& vm, Structure* structure)
     : JSC::JSNonFinalObject(vm, structure)
@@ -48,9 +42,7 @@ void AsyncGeneratorFunctionPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "AsyncGeneratorFunction"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    didBecomePrototype();
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 } // namespace JSC

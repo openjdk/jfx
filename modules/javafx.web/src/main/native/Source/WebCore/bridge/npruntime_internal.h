@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Collabora Ltd.  All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +26,8 @@
  * include this file instead of the actual npapi.h or npruntime.h
  */
 
+#pragma once
+
 #include "npapi.h"
 #include "npfunctions.h"
 #include "npruntime.h"
@@ -32,6 +35,7 @@
 #if defined(MOZ_X11)
     #include <X11/Xresource.h>
 
+    #undef Always
     #undef None
     #undef Above
     #undef Below

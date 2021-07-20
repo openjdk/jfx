@@ -30,13 +30,13 @@ class SourceGraphic : public FilterEffect {
 public:
     static Ref<SourceGraphic> create(Filter&);
 
-    static const AtomicString& effectName();
+    static const AtomString& effectName();
 
 private:
     SourceGraphic(Filter& filter)
-        : FilterEffect(filter)
+        : FilterEffect(filter, Type::SourceGraphic)
     {
-        setOperatingColorSpace(ColorSpaceSRGB);
+        setOperatingColorSpace(DestinationColorSpace::SRGB);
     }
 
     const char* filterName() const final { return "SourceGraphic"; }
@@ -49,5 +49,10 @@ private:
 };
 
 } //namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SourceGraphic)
+    static bool isType(const WebCore::FilterEffect& effect) { return effect.filterEffectClassType() == WebCore::FilterEffect::Type::SourceGraphic; }
+SPECIALIZE_TYPE_TRAITS_END()
+
 
 #endif // SourceGraphic_h

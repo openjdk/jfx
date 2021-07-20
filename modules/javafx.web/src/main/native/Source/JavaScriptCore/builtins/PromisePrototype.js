@@ -35,100 +35,61 @@ function then(onFulfilled, onRejected)
     "use strict";
 
     if (!@isPromise(this))
-        @throwTypeError("|this| is not a object");
+        @throwTypeError("|this| is not a Promise");
 
     var constructor = @speciesConstructor(this, @Promise);
 
-    var resultCapability = @newPromiseCapability(constructor);
-
-    if (typeof onFulfilled !== "function")
-        onFulfilled = function (argument) { return argument; };
-
-    if (typeof onRejected !== "function")
-        onRejected = function (argument) { throw argument; };
-
-    var reaction = @newPromiseReaction(resultCapability, onFulfilled, onRejected);
-
-    var state = @getByIdDirectPrivate(this, "promiseState");
-    if (state === @promiseStatePending) {
-        var reactions = @getByIdDirectPrivate(this, "promiseReactions");
-        @putByValDirect(reactions, reactions.length, reaction);
+    var promise;
+    var promiseOrCapability;
+    if (constructor === @Promise) {
+        promiseOrCapability = @newPromise();
+        promise = promiseOrCapability;
     } else {
-        if (state === @promiseStateRejected && !@getByIdDirectPrivate(this, "promiseIsHandled"))
-            @hostPromiseRejectionTracker(this, @promiseRejectionHandle);
-        @enqueueJob(@promiseReactionJob, [state, reaction, @getByIdDirectPrivate(this, "promiseResult")]);
+        promiseOrCapability = @newPromiseCapabilitySlow(constructor);
+        promise = promiseOrCapability.@promise;
     }
 
-    @putByIdDirectPrivate(this, "promiseIsHandled", true);
-
-    return resultCapability.@promise;
+    @performPromiseThen(this, onFulfilled, onRejected, promiseOrCapability);
+    return promise;
 }
 
 function finally(onFinally)
 {
     "use strict";
 
-    if (!@isPromise(this))
-        @throwTypeError("|this| is not a Promise");
+    if (!@isObject(this))
+        @throwTypeError("|this| is not an object");
 
-    const constructor = @speciesConstructor(this, @Promise);
+    var constructor = @speciesConstructor(this, @Promise);
 
     @assert(@isConstructor(constructor));
 
-    let thenFinally;
-    let catchFinally;
+    var thenFinally;
+    var catchFinally;
 
-    if (typeof onFinally !== "function") {
+    if (!@isCallable(onFinally)) {
         thenFinally = onFinally;
         catchFinally = onFinally;
     } else {
-        thenFinally = @getThenFinally(onFinally, constructor);
-        catchFinally = @getCatchFinally(onFinally, constructor);
+        thenFinally = (0, /* prevent function name inference */ (value) => {
+            @assert(@isCallable(onFinally));
+            var result = onFinally();
+
+            @assert(@isConstructor(constructor));
+            var promise = @promiseResolve(constructor, result);
+
+            return promise.then(() => value);
+        });
+        catchFinally = (0, /* prevent function name inference */ (reason) => {
+            @assert(@isCallable(onFinally));
+            var result = onFinally();
+
+            @assert(@isConstructor(constructor));
+            var promise = @promiseResolve(constructor, result);
+
+            return promise.then(() => { throw reason; });
+        });
     }
 
     return this.then(thenFinally, catchFinally);
-}
-
-@globalPrivate
-function getThenFinally(onFinally, constructor)
-{
-    "use strict";
-
-    return function(value)
-    {
-        @assert(typeof onFinally === "function");
-        const result = onFinally();
-
-        @assert(@isConstructor(constructor));
-        const resultCapability = @newPromiseCapability(constructor);
-
-        resultCapability.@resolve.@call(@undefined, result);
-
-        const promise = resultCapability.@promise;
-        const valueThunk = function () { return value; };
-
-        return promise.then(valueThunk);
-    }
-}
-
-@globalPrivate
-function getCatchFinally(onFinally, constructor)
-{
-    "use strict";
-
-    return function(reason)
-    {
-        @assert(typeof onFinally === "function");
-        const result = onFinally();
-
-        @assert(@isConstructor(constructor));
-        const resultCapability = @newPromiseCapability(constructor);
-
-        resultCapability.@resolve.@call(@undefined, result);
-
-        const promise = resultCapability.@promise;
-        const thrower = function () { throw reason; };
-
-        return promise.then(thrower);
-    }
 }

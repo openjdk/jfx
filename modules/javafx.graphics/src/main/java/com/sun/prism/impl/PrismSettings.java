@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package com.sun.prism.impl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -89,9 +87,6 @@ public final class PrismSettings {
     public static final boolean forceNonAntialiasedShape;
 
     public static enum RasterizerType {
-        JavaPisces("Java-based Pisces Rasterizer"),
-        NativePisces("Native-based Pisces Rasterizer"),
-        FloatMarlin("Float Precision Marlin Rasterizer"),
         DoubleMarlin("Double Precision Marlin Rasterizer");
 
         private String publicName;
@@ -117,6 +112,7 @@ public final class PrismSettings {
     }
 
     static {
+        @SuppressWarnings("removal")
         final Properties systemProperties =
                 (Properties) AccessController.doPrivileged(
                         (PrivilegedAction) () -> System.getProperties());
@@ -226,30 +222,16 @@ public final class PrismSettings {
             }
         }
 
-        tryOrder = Collections.unmodifiableList(Arrays.asList(tryOrderArr));
+        tryOrder = List.of(tryOrderArr);
 
         RasterizerType rSpec = null;
         String rOrder = systemProperties.getProperty("prism.rasterizerorder");
         if (rOrder != null) {
             for (String s : split(rOrder.toLowerCase(), ",")) {
                 switch (s) {
-                    case "pisces":
-                        rSpec = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux()
-                                ? RasterizerType.NativePisces
-                                : RasterizerType.JavaPisces;
-                        break;
-                    case "nativepisces":
-                        rSpec = RasterizerType.NativePisces;
-                        break;
-                    case "javapisces":
-                        rSpec = RasterizerType.JavaPisces;
-                        break;
                     case "marlin":
                     case "doublemarlin":
                         rSpec = RasterizerType.DoubleMarlin;
-                        break;
-                    case "floatmarlin":
-                        rSpec = RasterizerType.FloatMarlin;
                         break;
                     default:
                         continue;
@@ -258,25 +240,7 @@ public final class PrismSettings {
             }
         }
         if (rSpec == null) {
-            boolean useMarlinRasterizer, useMarlinRasterizerDP;
-            useMarlinRasterizer   = getBoolean(systemProperties, "prism.marlinrasterizer", true);
-            useMarlinRasterizerDP = getBoolean(systemProperties, "prism.marlin.double", true);
-            if (useMarlinRasterizer) {
-                rSpec = useMarlinRasterizerDP
-                        ? RasterizerType.DoubleMarlin
-                        : RasterizerType.FloatMarlin;
-            } else {
-                boolean doNativePisces;
-                String npprop = systemProperties.getProperty("prism.nativepisces");
-                if (npprop == null) {
-                    doNativePisces = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux();
-                } else {
-                    doNativePisces = Boolean.parseBoolean(npprop);
-                }
-                rSpec = doNativePisces
-                        ? RasterizerType.NativePisces
-                        : RasterizerType.JavaPisces;
-            }
+            rSpec = RasterizerType.DoubleMarlin;
         }
         rasterizerSpec = rSpec;
 

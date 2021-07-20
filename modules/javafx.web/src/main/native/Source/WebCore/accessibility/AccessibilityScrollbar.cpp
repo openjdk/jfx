@@ -92,15 +92,14 @@ float AccessibilityScrollbar::valueForRange() const
     return m_scrollbar->currentPos() / m_scrollbar->maximum();
 }
 
-void AccessibilityScrollbar::setValue(float value)
+bool AccessibilityScrollbar::setValue(float value)
 {
     if (!m_scrollbar)
-        return;
+        return false;
 
     float newValue = value * m_scrollbar->maximum();
-    if (dispatchAccessibleSetValueEvent(String::number(newValue)))
-        return;
     m_scrollbar->scrollableArea().scrollToOffsetWithoutAnimation(m_scrollbar->orientation(), newValue);
+    return true;
 }
 
 } // namespace WebCore

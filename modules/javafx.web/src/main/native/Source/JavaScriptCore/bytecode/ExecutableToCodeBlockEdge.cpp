@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,10 @@
 #include "config.h"
 #include "ExecutableToCodeBlockEdge.h"
 
+#include "CodeBlock.h"
 #include "IsoCellSetInlines.h"
+#include "JSObjectInlines.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -50,10 +53,12 @@ void ExecutableToCodeBlockEdge::finishCreation(VM& vm)
     ASSERT(!isActive());
 }
 
-void ExecutableToCodeBlockEdge::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ExecutableToCodeBlockEdge::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     VM& vm = visitor.vm();
     ExecutableToCodeBlockEdge* edge = jsCast<ExecutableToCodeBlockEdge*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(cell, info());
     Base::visitChildren(cell, visitor);
 
     CodeBlock* codeBlock = edge->m_codeBlock.get();
@@ -72,10 +77,10 @@ void ExecutableToCodeBlockEdge::visitChildren(JSCell* cell, SlotVisitor& visitor
 
     ConcurrentJSLocker locker(codeBlock->m_lock);
 
-    if (codeBlock->shouldVisitStrongly(locker))
+    if (codeBlock->shouldVisitStrongly(locker, visitor))
         visitor.appendUnbarriered(codeBlock);
 
-    if (!Heap::isMarked(codeBlock))
+    if (!visitor.isMarked(codeBlock))
         vm.executableToCodeBlockEdgesWithFinalizers.add(edge);
 
     if (JITCode::isOptimizingJIT(codeBlock->jitType())) {
@@ -113,7 +118,10 @@ void ExecutableToCodeBlockEdge::visitChildren(JSCell* cell, SlotVisitor& visitor
     edge->runConstraint(locker, vm, visitor);
 }
 
-void ExecutableToCodeBlockEdge::visitOutputConstraints(JSCell* cell, SlotVisitor& visitor)
+DEFINE_VISIT_CHILDREN(ExecutableToCodeBlockEdge);
+
+template<typename Visitor>
+void ExecutableToCodeBlockEdge::visitOutputConstraintsImpl(JSCell* cell, Visitor& visitor)
 {
     VM& vm = visitor.vm();
     ExecutableToCodeBlockEdge* edge = jsCast<ExecutableToCodeBlockEdge*>(cell);
@@ -121,12 +129,14 @@ void ExecutableToCodeBlockEdge::visitOutputConstraints(JSCell* cell, SlotVisitor
     edge->runConstraint(NoLockingNecessary, vm, visitor);
 }
 
+DEFINE_VISIT_OUTPUT_CONSTRAINTS(ExecutableToCodeBlockEdge);
+
 void ExecutableToCodeBlockEdge::finalizeUnconditionally(VM& vm)
 {
     CodeBlock* codeBlock = m_codeBlock.get();
 
-    if (!Heap::isMarked(codeBlock)) {
-        if (codeBlock->shouldJettisonDueToWeakReference())
+    if (!vm.heap.isMarked(codeBlock)) {
+        if (codeBlock->shouldJettisonDueToWeakReference(vm))
             codeBlock->jettison(Profiler::JettisonDueToWeakReference);
         else
             codeBlock->jettison(Profiler::JettisonDueToOldAge);
@@ -182,16 +192,21 @@ ExecutableToCodeBlockEdge::ExecutableToCodeBlockEdge(VM& vm, CodeBlock* codeBloc
 {
 }
 
-void ExecutableToCodeBlockEdge::runConstraint(const ConcurrentJSLocker& locker, VM& vm, SlotVisitor& visitor)
+template<typename Visitor>
+void ExecutableToCodeBlockEdge::runConstraint(const ConcurrentJSLocker& locker, VM& vm, Visitor& visitor)
 {
     CodeBlock* codeBlock = m_codeBlock.get();
 
     codeBlock->propagateTransitions(locker, visitor);
     codeBlock->determineLiveness(locker, visitor);
 
-    if (Heap::isMarked(codeBlock))
+    if (visitor.isMarked(codeBlock))
         vm.executableToCodeBlockEdgesWithConstraints.remove(this);
 }
+
+template void ExecutableToCodeBlockEdge::runConstraint(const ConcurrentJSLocker&, VM&, AbstractSlotVisitor&);
+template void ExecutableToCodeBlockEdge::runConstraint(const ConcurrentJSLocker&, VM&, SlotVisitor&);
+
 
 } // namespace JSC
 

@@ -31,10 +31,12 @@
 #include "RTCRtpTransceiverBackend.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
-#include <webrtc/api/rtptransceiverinterface.h>
-#include <webrtc/rtc_base/scoped_ref_ptr.h>
+#include <webrtc/api/rtp_transceiver_interface.h>
+#include <webrtc/api/scoped_refptr.h>
 
+ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
@@ -61,6 +63,7 @@ private:
     String mid() final;
     void stop() final;
     bool stopped() const final;
+    ExceptionOr<void> setCodecPreferences(const Vector<RTCRtpCodecCapability>&) final;
 
     rtc::scoped_refptr<webrtc::RtpTransceiverInterface> m_rtcTransceiver;
 };

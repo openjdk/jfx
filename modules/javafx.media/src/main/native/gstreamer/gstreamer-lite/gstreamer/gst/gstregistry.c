@@ -172,6 +172,19 @@ static int dl_callback (struct dl_phdr_info *info, size_t size, void *data)
 }
 #endif // GSTREAMER_LITE && LINUX
 
+/* Use a toolchain-dependent suffix on Windows */
+#ifdef G_OS_WIN32
+# ifdef _MSC_VER
+#  define GST_REGISTRY_FILE_SUFFIX TARGET_CPU "-msvc"
+# else
+#  define GST_REGISTRY_FILE_SUFFIX TARGET_CPU "-mingw"
+# endif
+#else
+# define GST_REGISTRY_FILE_SUFFIX TARGET_CPU
+#endif
+#define GST_REGISTRY_FILE_NAME "registry." GST_REGISTRY_FILE_SUFFIX ".bin"
+
+
 #define GST_CAT_DEFAULT GST_CAT_REGISTRY
 
 struct _GstRegistryPrivate
@@ -269,7 +282,7 @@ static GstPlugin *gst_registry_lookup_bn_locked (GstRegistry * registry,
     const char *basename);
 
 #define gst_registry_parent_class parent_class
-G_DEFINE_TYPE (GstRegistry, gst_registry, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstRegistry, gst_registry, GST_TYPE_OBJECT);
 
 static void
 gst_registry_class_init (GstRegistryClass * klass)
@@ -277,8 +290,6 @@ gst_registry_class_init (GstRegistryClass * klass)
   GObjectClass *gobject_class;
 
   gobject_class = (GObjectClass *) klass;
-
-  g_type_class_add_private (klass, sizeof (GstRegistryPrivate));
 
   /**
    * GstRegistry::plugin-added:
@@ -290,8 +301,7 @@ gst_registry_class_init (GstRegistryClass * klass)
    */
   gst_registry_signals[PLUGIN_ADDED] =
       g_signal_new ("plugin-added", G_TYPE_FROM_CLASS (klass),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_generic,
-      G_TYPE_NONE, 1, GST_TYPE_PLUGIN);
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_PLUGIN);
 
   /**
    * GstRegistry::feature-added:
@@ -303,7 +313,7 @@ gst_registry_class_init (GstRegistryClass * klass)
    */
   gst_registry_signals[FEATURE_ADDED] =
       g_signal_new ("feature-added", G_TYPE_FROM_CLASS (klass),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_generic,
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
       G_TYPE_NONE, 1, GST_TYPE_PLUGIN_FEATURE);
 
   gobject_class->finalize = gst_registry_finalize;
@@ -312,9 +322,7 @@ gst_registry_class_init (GstRegistryClass * klass)
 static void
 gst_registry_init (GstRegistry * registry)
 {
-  registry->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (registry, GST_TYPE_REGISTRY,
-      GstRegistryPrivate);
+  registry->priv = gst_registry_get_instance_private (registry);
   registry->priv->feature_hash = g_hash_table_new (g_str_hash, g_str_equal);
   registry->priv->basename_hash = g_hash_table_new (g_str_hash, g_str_equal);
 }
@@ -742,10 +750,10 @@ gst_registry_plugin_filter (GstRegistry * registry,
     if (filter == NULL || filter (plugins[i], user_data)) {
       list = g_list_prepend (list, gst_object_ref (plugins[i]));
 
-        if (first)
-          break;
-  }
+      if (first)
+        break;
     }
+  }
 
   for (i = 0; i < n_plugins; ++i)
     gst_object_unref (plugins[i]);
@@ -920,10 +928,10 @@ gst_registry_feature_filter (GstRegistry * registry,
     if (filter == NULL || filter (features[i], user_data)) {
       list = g_list_prepend (list, gst_object_ref (features[i]));
 
-        if (first)
-          break;
-  }
+      if (first)
+        break;
     }
+  }
 
   for (i = 0; i < n_features; ++i)
     gst_object_unref (features[i]);
@@ -1086,7 +1094,7 @@ gst_registry_lookup_feature_locked (GstRegistry * registry, const char *name)
  *
  * Find a #GstPluginFeature with @name in @registry.
  *
- * Returns: (transfer full): a #GstPluginFeature with its refcount incremented,
+ * Returns: (transfer full) (nullable): a #GstPluginFeature with its refcount incremented,
  *     use gst_object_unref() after usage.
  *
  * MT safe.
@@ -1279,8 +1287,13 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
 
 #ifndef GSTREAMER_LITE
 static gboolean
-is_blacklisted_hidden_directory (const gchar * dirent)
+is_blacklisted_directory (const gchar * dirent)
 {
+  /* hotdoc private folder can contain many files and it slows down
+   * the discovery for nothing */
+  if (g_str_has_prefix (dirent, "hotdoc-private-"))
+    return TRUE;
+
   if (G_LIKELY (dirent[0] != '.'))
     return FALSE;
 
@@ -1367,7 +1380,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
     }
 
     if (file_status.st_mode & S_IFDIR) {
-      if (G_UNLIKELY (is_blacklisted_hidden_directory (dirent))) {
+      if (G_UNLIKELY (is_blacklisted_directory (dirent))) {
         GST_TRACE_OBJECT (context->registry, "ignoring %s directory", dirent);
         g_free (filename);
         continue;
@@ -1665,6 +1678,24 @@ gst_registry_get_feature_list_by_plugin (GstRegistry * registry,
       _gst_plugin_feature_filter_plugin_name, FALSE, (gpointer) name);
 }
 
+/* Private function for getting plugin features directly */
+GList *
+_priv_plugin_get_features (GstRegistry * registry, GstPlugin * plugin)
+{
+  GList *res = NULL;
+  GList *walk;
+
+  GST_OBJECT_LOCK (registry);
+  for (walk = registry->priv->features; walk; walk = walk->next) {
+    GstPluginFeature *feat = (GstPluginFeature *) walk->data;
+    if (feat->plugin == plugin)
+      res = g_list_prepend (res, gst_object_ref (feat));
+  }
+  GST_OBJECT_UNLOCK (registry);
+
+  return res;
+}
+
 /* Unref and delete the default registry */
 void
 _priv_gst_registry_cleanup (void)
@@ -1919,7 +1950,7 @@ scan_and_update_registry (GstRegistry * default_registry,
    * additional plugins.  These take precedence over the system plugins */
   plugin_path = g_getenv ("GST_PLUGIN_PATH_1_0");
   if (plugin_path == NULL)
-  plugin_path = g_getenv ("GST_PLUGIN_PATH");
+    plugin_path = g_getenv ("GST_PLUGIN_PATH");
   if (plugin_path) {
     char **list;
     int i;
@@ -1939,7 +1970,7 @@ scan_and_update_registry (GstRegistry * default_registry,
    * path, and the plugins installed in the user's home directory */
   plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH_1_0");
   if (plugin_path == NULL)
-  plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH");
+    plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH");
   if (plugin_path == NULL) {
     char *home_plugins;
 
@@ -1965,11 +1996,8 @@ scan_and_update_registry (GstRegistry * default_registry,
           g_win32_get_package_installation_directory_of_module
           (_priv_gst_dll_handle);
 
-      dir = g_build_filename (base_dir,
-#ifdef _DEBUG
-          "debug"
-#endif
-          "lib", "gstreamer-" GST_API_VERSION, NULL);
+      dir = g_build_filename (base_dir, GST_PLUGIN_SUBDIR,
+          "gstreamer-" GST_API_VERSION, NULL);
       GST_DEBUG ("scanning DLL dir %s", dir);
 
       changed |= gst_registry_scan_path_internal (&context, dir);
@@ -2040,10 +2068,10 @@ ensure_current_registry (GError ** error)
 
   registry_file = g_strdup (g_getenv ("GST_REGISTRY_1_0"));
   if (registry_file == NULL)
-  registry_file = g_strdup (g_getenv ("GST_REGISTRY"));
+    registry_file = g_strdup (g_getenv ("GST_REGISTRY"));
   if (registry_file == NULL) {
     registry_file = g_build_filename (g_get_user_cache_dir (),
-        "gstreamer-" GST_API_VERSION, "registry." TARGET_CPU ".bin", NULL);
+        "gstreamer-" GST_API_VERSION, GST_REGISTRY_FILE_NAME, NULL);
   }
 
   if (!_gst_disable_registry_cache) {
@@ -2155,15 +2183,15 @@ gst_update_registry (void)
 
 #ifndef GST_DISABLE_REGISTRY
   if (!_priv_gst_disable_registry) {
-  GError *err = NULL;
+    GError *err = NULL;
 
-  res = ensure_current_registry (&err);
-  if (err) {
-    GST_WARNING ("registry update failed: %s", err->message);
-    g_error_free (err);
-  } else {
-    GST_LOG ("registry update succeeded");
-  }
+    res = ensure_current_registry (&err);
+    if (err) {
+      GST_WARNING ("registry update failed: %s", err->message);
+      g_error_free (err);
+    } else {
+      GST_LOG ("registry update succeeded");
+    }
   } else {
     GST_INFO ("registry update disabled by environment");
     res = TRUE;
@@ -2174,10 +2202,12 @@ gst_update_registry (void)
   res = TRUE;
 #endif /* GST_DISABLE_REGISTRY */
 
+#ifndef GST_DISABLE_OPTION_PARSING
   if (_priv_gst_preload_plugins) {
     GST_DEBUG ("Preloading indicated plugins...");
     g_slist_foreach (_priv_gst_preload_plugins, load_plugin_func, NULL);
   }
+#endif
 
   return res;
 }

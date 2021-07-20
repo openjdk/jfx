@@ -32,7 +32,7 @@
 #include "config.h"
 #include "WebKitAccessible.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include "AXObjectCache.h"
 #include "AccessibilityList.h"
@@ -97,16 +97,13 @@ struct _WebKitAccessiblePrivate {
 
 WEBKIT_DEFINE_TYPE(WebKitAccessible, webkit_accessible, ATK_TYPE_OBJECT)
 
-static AccessibilityObject* fallbackObject()
-{
-    static AccessibilityObject* object = &AccessibilityListBoxOption::create().leakRef();
-    return object;
-}
-
 static const gchar* webkitAccessibleGetName(AtkObject* object)
 {
     auto* accessible = WEBKIT_ACCESSIBLE(object);
     returnValIfWebKitAccessibleIsInvalid(accessible, nullptr);
+
+    if (!accessible->priv->object)
+        return "";
 
     Vector<AccessibilityText> textOrder;
     accessible->priv->object->accessibilityText(textOrder);
@@ -132,6 +129,9 @@ static const gchar* webkitAccessibleGetDescription(AtkObject* object)
 {
     auto* accessible = WEBKIT_ACCESSIBLE(object);
     returnValIfWebKitAccessibleIsInvalid(accessible, nullptr);
+
+    if (!accessible->priv->object)
+        return "";
 
     Vector<AccessibilityText> textOrder;
     accessible->priv->object->accessibilityText(textOrder);
@@ -312,6 +312,8 @@ static AtkObject* webkitAccessibleGetParent(AtkObject* object)
 
     // Parent not set yet, so try to find it in the hierarchy.
     auto* coreObject = accessible->priv->object;
+    if (!coreObject)
+        return nullptr;
     auto* coreParent = coreObject->parentObjectUnignored();
     if (!coreParent && isRootObject(coreObject)) {
         // The top level object claims to not have a parent. This makes it
@@ -329,6 +331,8 @@ static gint webkitAccessibleGetNChildren(AtkObject* object)
     auto* accessible = WEBKIT_ACCESSIBLE(object);
     returnValIfWebKitAccessibleIsInvalid(accessible, 0);
 
+    if (!accessible->priv->object)
+        return 0;
     return accessible->priv->object->children().size();
 }
 
@@ -337,7 +341,7 @@ static AtkObject* webkitAccessibleRefChild(AtkObject* object, gint index)
     auto* accessible = WEBKIT_ACCESSIBLE(object);
     returnValIfWebKitAccessibleIsInvalid(accessible, nullptr);
 
-    if (index < 0)
+    if (!accessible->priv->object || index < 0)
         return nullptr;
 
     const auto& children = accessible->priv->object->children();
@@ -362,6 +366,8 @@ static gint webkitAccessibleGetIndexInParent(AtkObject* object)
     returnValIfWebKitAccessibleIsInvalid(accessible, -1);
 
     auto* coreObject = accessible->priv->object;
+    if (!coreObject)
+        return -1;
     auto* parent = coreObject->parentObjectUnignored();
     if (!parent && isRootObject(coreObject)) {
         if (!coreObject->document())
@@ -394,9 +400,13 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
     AtkAttributeSet* attributeSet = nullptr;
 #if PLATFORM(GTK)
     attributeSet = addToAtkAttributeSet(attributeSet, "toolkit", "WebKitGtk");
+#elif PLATFORM(WPE)
+    attributeSet = addToAtkAttributeSet(attributeSet, "toolkit", "WPEWebKit");
 #endif
 
     auto* coreObject = accessible->priv->object;
+    if (!coreObject)
+        return attributeSet;
 
     // Hack needed for WebKit2 tests because obtaining an element by its ID
     // cannot be done from the UIProcess. Assistive technologies have no need
@@ -424,7 +434,7 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
             attributeSet = addToAtkAttributeSet(attributeSet, "multiscript-type", "post");
     }
 
-    if (is<AccessibilityTable>(*coreObject) && downcast<AccessibilityTable>(*coreObject).isExposableThroughAccessibility()) {
+    if (is<AccessibilityTable>(*coreObject) && downcast<AccessibilityTable>(*coreObject).isExposable()) {
         auto& table = downcast<AccessibilityTable>(*coreObject);
         int rowCount = table.axRowCount();
         if (rowCount)
@@ -465,7 +475,7 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
         attributeSet = addToAtkAttributeSet(attributeSet, "autocomplete", coreObject->autoCompleteValue().utf8().data());
 
     if (coreObject->supportsHasPopup())
-        attributeSet = addToAtkAttributeSet(attributeSet, "haspopup", coreObject->hasPopupValue().utf8().data());
+        attributeSet = addToAtkAttributeSet(attributeSet, "haspopup", coreObject->popupValue().utf8().data());
 
     if (coreObject->supportsCurrent())
         attributeSet = addToAtkAttributeSet(attributeSet, "current", coreObject->currentValue().utf8().data());
@@ -518,7 +528,10 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
 
         // The HTML AAM maps several elements to ARIA landmark roles. In order for the type of landmark
         // to be obtainable in the same fashion as an ARIA landmark, fall back on the computedRoleString.
-        if (coreObject->ariaRoleAttribute() == AccessibilityRole::Unknown && coreObject->isLandmark())
+        // We also want to do this for the style-format-group element types so that the type of format
+        // group it is doesn't get lost to a generic platform role.
+        if (coreObject->ariaRoleAttribute() == AccessibilityRole::Unknown
+            && (coreObject->isLandmark() || coreObject->isStyleFormatGroup()))
             attributeSet = addToAtkAttributeSet(attributeSet, "xml-roles", computedRoleString.utf8().data());
     }
 
@@ -530,14 +543,14 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
     if (auto liveContainer = coreObject->liveRegionAncestor(false)) {
         String liveStatus = liveContainer->liveRegionStatus();
         String relevant = liveContainer->liveRegionRelevant();
-        bool isAtomic = liveContainer->liveRegionAtomic();
+        bool isAtom = liveContainer->liveRegionAtomic();
         String liveRole = roleString.isEmpty() ? computedRoleString : roleString;
 
         // According to the Core AAM, we need to expose the above properties with "container-" prefixed
         // object attributes regardless of whether the container is this object, or an ancestor of it.
         attributeSet = addToAtkAttributeSet(attributeSet, "container-live", liveStatus.utf8().data());
         attributeSet = addToAtkAttributeSet(attributeSet, "container-relevant", relevant.utf8().data());
-        if (isAtomic)
+        if (isAtom)
             attributeSet = addToAtkAttributeSet(attributeSet, "container-atomic", "true");
         if (!liveRole.isEmpty())
             attributeSet = addToAtkAttributeSet(attributeSet, "container-live-role", liveRole.utf8().data());
@@ -547,9 +560,9 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
         if (liveContainer == coreObject) {
             attributeSet = addToAtkAttributeSet(attributeSet, "live", liveStatus.utf8().data());
             attributeSet = addToAtkAttributeSet(attributeSet, "relevant", relevant.utf8().data());
-            if (isAtomic)
+            if (isAtom)
                 attributeSet = addToAtkAttributeSet(attributeSet, "atomic", "true");
-        } else if (!isAtomic && coreObject->liveRegionAtomic())
+        } else if (!isAtom && coreObject->liveRegionAtomic())
             attributeSet = addToAtkAttributeSet(attributeSet, "atomic", "true");
     }
 
@@ -558,13 +571,13 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
     if (!dropEffect.isEmpty())
         attributeSet = addToAtkAttributeSet(attributeSet, "dropeffect", dropEffect.utf8().data());
 
-    if (coreObject->isARIAGrabbed())
+    if (coreObject->isGrabbed())
         attributeSet = addToAtkAttributeSet(attributeSet, "grabbed", "true");
-    else if (coreObject->supportsARIADragging())
+    else if (coreObject->supportsDragging())
         attributeSet = addToAtkAttributeSet(attributeSet, "grabbed", "false");
 
     // The Core AAM states the author-provided value should be exposed as-is.
-    const AtomicString& keyShortcuts = coreObject->keyShortcutsValue();
+    const AtomString& keyShortcuts = coreObject->keyShortcutsValue();
     if (!keyShortcuts.isEmpty())
         attributeSet = addToAtkAttributeSet(attributeSet, "keyshortcuts", keyShortcuts.string().utf8().data());
 
@@ -575,8 +588,9 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
 {
     switch (coreObject->roleValue()) {
     case AccessibilityRole::ApplicationAlert:
-        return ATK_ROLE_ALERT;
+        return ATK_ROLE_NOTIFICATION;
     case AccessibilityRole::ApplicationAlertDialog:
+        return ATK_ROLE_ALERT;
     case AccessibilityRole::ApplicationDialog:
         return ATK_ROLE_DIALOG;
     case AccessibilityRole::ApplicationStatus:
@@ -584,14 +598,9 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
     case AccessibilityRole::Unknown:
         return ATK_ROLE_UNKNOWN;
     case AccessibilityRole::Audio:
-#if ATK_CHECK_VERSION(2, 11, 3)
         return ATK_ROLE_AUDIO;
-#endif
     case AccessibilityRole::Video:
-#if ATK_CHECK_VERSION(2, 11, 3)
         return ATK_ROLE_VIDEO;
-#endif
-        return ATK_ROLE_EMBEDDED;
     case AccessibilityRole::Button:
         return ATK_ROLE_PUSH_BUTTON;
     case AccessibilityRole::Switch:
@@ -611,11 +620,7 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
     case AccessibilityRole::SearchField:
         return ATK_ROLE_ENTRY;
     case AccessibilityRole::StaticText:
-#if ATK_CHECK_VERSION(2, 15, 2)
         return ATK_ROLE_STATIC;
-#else
-        return ATK_ROLE_TEXT;
-#endif
     case AccessibilityRole::Outline:
     case AccessibilityRole::Tree:
         return ATK_ROLE_TREE;
@@ -641,10 +646,11 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
         return ATK_ROLE_TABLE_ROW;
     case AccessibilityRole::Toolbar:
         return ATK_ROLE_TOOL_BAR;
+    case AccessibilityRole::Meter:
+        return ATK_ROLE_LEVEL_BAR;
     case AccessibilityRole::BusyIndicator:
-        return ATK_ROLE_PROGRESS_BAR; // Is this right?
     case AccessibilityRole::ProgressIndicator:
-        return coreObject->isMeter() ? ATK_ROLE_LEVEL_BAR : ATK_ROLE_PROGRESS_BAR;
+        return ATK_ROLE_PROGRESS_BAR;
     case AccessibilityRole::Window:
         return ATK_ROLE_WINDOW;
     case AccessibilityRole::PopUpButton:
@@ -655,8 +661,8 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
         return ATK_ROLE_SPLIT_PANE;
     case AccessibilityRole::Splitter:
         return ATK_ROLE_SEPARATOR;
-    case AccessibilityRole::ColorWell:
 #if PLATFORM(GTK)
+    case AccessibilityRole::ColorWell:
         // ATK_ROLE_COLOR_CHOOSER is defined as a dialog (i.e. it's what appears when you push the button).
         return ATK_ROLE_PUSH_BUTTON;
 #endif
@@ -703,9 +709,7 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
     case AccessibilityRole::ListMarker:
         return ATK_ROLE_TEXT;
     case AccessibilityRole::DocumentArticle:
-#if ATK_CHECK_VERSION(2, 11, 3)
         return ATK_ROLE_ARTICLE;
-#endif
     case AccessibilityRole::Document:
     case AccessibilityRole::GraphicsDocument:
         return ATK_ROLE_DOCUMENT_FRAME;
@@ -726,11 +730,9 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
     case AccessibilityRole::Legend:
         return ATK_ROLE_LABEL;
     case AccessibilityRole::Blockquote:
-#if ATK_CHECK_VERSION(2, 11, 3)
         return ATK_ROLE_BLOCK_QUOTE;
-#endif
-    case AccessibilityRole::Footnote:
 #if ATK_CHECK_VERSION(2, 25, 2)
+    case AccessibilityRole::Footnote:
         return ATK_ROLE_FOOTNOTE;
 #endif
     case AccessibilityRole::ApplicationTextGroup:
@@ -742,10 +744,8 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
     case AccessibilityRole::Footer:
         return ATK_ROLE_FOOTER;
     case AccessibilityRole::Form:
-#if ATK_CHECK_VERSION(2, 11, 3)
         if (coreObject->ariaRoleAttribute() != AccessibilityRole::Unknown)
             return ATK_ROLE_LANDMARK;
-#endif
         return ATK_ROLE_FORM;
     case AccessibilityRole::Canvas:
         return ATK_ROLE_CANVAS;
@@ -761,7 +761,6 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
         return ATK_ROLE_DOCUMENT_WEB;
     case AccessibilityRole::WebApplication:
         return ATK_ROLE_EMBEDDED;
-#if ATK_CHECK_VERSION(2, 11, 3)
     case AccessibilityRole::ApplicationLog:
         return ATK_ROLE_LOG;
     case AccessibilityRole::ApplicationMarquee:
@@ -783,7 +782,6 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
             return ATK_ROLE_TABLE_CELL;
         if (coreObject->isMathSubscriptSuperscript() || coreObject->isMathMultiscript())
             return ATK_ROLE_SECTION;
-#if ATK_CHECK_VERSION(2, 15, 4)
         if (coreObject->isMathFraction())
             return ATK_ROLE_MATH_FRACTION;
         if (coreObject->isMathSquareRoot() || coreObject->isMathRoot())
@@ -794,11 +792,8 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
         if (coreObject->isMathScriptObject(AccessibilityMathScriptObjectType::Superscript)
             || coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSuperscript) || coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSuperscript))
             return ATK_ROLE_SUPERSCRIPT;
-#endif
-#if ATK_CHECK_VERSION(2, 15, 2)
         if (coreObject->isMathToken())
             return ATK_ROLE_STATIC;
-#endif
         return ATK_ROLE_UNKNOWN;
     case AccessibilityRole::LandmarkBanner:
     case AccessibilityRole::LandmarkComplementary:
@@ -809,8 +804,6 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
     case AccessibilityRole::LandmarkRegion:
     case AccessibilityRole::LandmarkSearch:
         return ATK_ROLE_LANDMARK;
-#endif
-#if ATK_CHECK_VERSION(2, 11, 4)
     case AccessibilityRole::DescriptionList:
         return ATK_ROLE_DESCRIPTION_LIST;
     case AccessibilityRole::Term:
@@ -818,21 +811,27 @@ static AtkRole atkRole(AccessibilityObject* coreObject)
         return ATK_ROLE_DESCRIPTION_TERM;
     case AccessibilityRole::DescriptionListDetail:
         return ATK_ROLE_DESCRIPTION_VALUE;
-#endif
-    case AccessibilityRole::Inline:
-#if ATK_CHECK_VERSION(2, 15, 4)
-        if (coreObject->isSubscriptStyleGroup())
-            return ATK_ROLE_SUBSCRIPT;
-        if (coreObject->isSuperscriptStyleGroup())
-            return ATK_ROLE_SUPERSCRIPT;
-#endif
-#if ATK_CHECK_VERSION(2, 15, 2)
+    case AccessibilityRole::Deletion:
+#if ATK_CHECK_VERSION(2, 33, 3)
+        return ATK_ROLE_CONTENT_DELETION;
+#else
         return ATK_ROLE_STATIC;
+#endif
+    case AccessibilityRole::Insertion:
+#if ATK_CHECK_VERSION(2, 33, 3)
+        return ATK_ROLE_CONTENT_INSERTION;
+#else
+        return ATK_ROLE_STATIC;
+#endif
+    case AccessibilityRole::Subscript:
+        return ATK_ROLE_SUBSCRIPT;
+    case AccessibilityRole::Superscript:
+        return ATK_ROLE_SUPERSCRIPT;
+    case AccessibilityRole::Inline:
     case AccessibilityRole::SVGTextPath:
     case AccessibilityRole::SVGTSpan:
     case AccessibilityRole::Time:
         return ATK_ROLE_STATIC;
-#endif
     default:
         return ATK_ROLE_UNKNOWN;
     }
@@ -844,6 +843,9 @@ static AtkRole webkitAccessibleGetRole(AtkObject* object)
     // WebCore accessible object for which the platform role mapping is unknown.
     auto* accessible = WEBKIT_ACCESSIBLE(object);
     returnValIfWebKitAccessibleIsInvalid(accessible, ATK_ROLE_INVALID);
+
+    if (!accessible->priv->object)
+        return ATK_ROLE_INVALID;
 
     // Note: Why doesn't WebCore have a password field for this
     if (accessible->priv->object->isPasswordField())
@@ -895,10 +897,8 @@ static void setAtkStateSetFromCoreObject(AccessibilityObject* coreObject, AtkSta
     if (coreObject->isBusy())
         atk_state_set_add_state(stateSet, ATK_STATE_BUSY);
 
-#if ATK_CHECK_VERSION(2,11,2)
     if (coreObject->supportsChecked() && coreObject->canSetValueAttribute())
         atk_state_set_add_state(stateSet, ATK_STATE_CHECKABLE);
-#endif
 
     if (coreObject->isChecked())
         atk_state_set_add_state(stateSet, ATK_STATE_CHECKED);
@@ -960,10 +960,8 @@ static void setAtkStateSetFromCoreObject(AccessibilityObject* coreObject, AtkSta
     if (coreObject->isPressed())
         atk_state_set_add_state(stateSet, ATK_STATE_PRESSED);
 
-#if ATK_CHECK_VERSION(2,15,3)
     if (!coreObject->canSetValueAttribute() && (coreObject->supportsReadOnly()))
         atk_state_set_add_state(stateSet, ATK_STATE_READ_ONLY);
-#endif
 
     if (coreObject->isRequired())
         atk_state_set_add_state(stateSet, ATK_STATE_REQUIRED);
@@ -1019,9 +1017,9 @@ static AtkStateSet* webkitAccessibleRefStateSet(AtkObject* object)
 
     // Make sure the layout is updated to really know whether the object
     // is defunct or not, so we can return the proper state.
-    accessible->priv->object->updateBackingStore();
-
-    if (accessible->priv->object == fallbackObject()) {
+    if (accessible->priv->object)
+        accessible->priv->object->updateBackingStore();
+    if (!accessible->priv->object) {
         atk_state_set_add_state(stateSet, ATK_STATE_DEFUNCT);
         return stateSet;
     }
@@ -1041,7 +1039,8 @@ static AtkRelationSet* webkitAccessibleRefRelationSet(AtkObject* object)
     returnValIfWebKitAccessibleIsInvalid(accessible, nullptr);
 
     AtkRelationSet* relationSet = ATK_OBJECT_CLASS(webkit_accessible_parent_class)->ref_relation_set(object);
-    setAtkRelationSetFromCoreObject(accessible->priv->object, relationSet);
+    if (accessible->priv->object)
+        setAtkRelationSetFromCoreObject(accessible->priv->object, relationSet);
     return relationSet;
 }
 
@@ -1058,6 +1057,9 @@ static const gchar* webkitAccessibleGetObjectLocale(AtkObject* object)
 {
     auto* accessible = WEBKIT_ACCESSIBLE(object);
     returnValIfWebKitAccessibleIsInvalid(accessible, nullptr);
+
+    if (!accessible->priv->object)
+        return nullptr;
 
     if (ATK_IS_DOCUMENT(object)) {
         // TODO: Should we fall back on lang xml:lang when the following comes up empty?
@@ -1109,9 +1111,7 @@ static const GInterfaceInfo atkInterfacesInitFunctions[] = {
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleComponentInterfaceInit)), nullptr, nullptr},
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleImageInterfaceInit)), nullptr, nullptr},
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleTableInterfaceInit)), nullptr, nullptr},
-#if ATK_CHECK_VERSION(2,11,90)
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleTableCellInterfaceInit)), nullptr, nullptr},
-#endif
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleHypertextInterfaceInit)), nullptr, nullptr},
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleHyperlinkImplInterfaceInit)), nullptr, nullptr},
     {reinterpret_cast<GInterfaceInitFunc>(reinterpret_cast<GCallback>(webkitAccessibleDocumentInterfaceInit)), nullptr, nullptr},
@@ -1126,9 +1126,7 @@ enum WAIType {
     WAIComponent,
     WAIImage,
     WAITable,
-#if ATK_CHECK_VERSION(2,11,90)
     WAITableCell,
-#endif
     WAIHypertext,
     WAIHyperlink,
     WAIDocument,
@@ -1152,10 +1150,8 @@ static GType atkInterfaceTypeFromWAIType(WAIType type)
         return ATK_TYPE_IMAGE;
     case WAITable:
         return ATK_TYPE_TABLE;
-#if ATK_CHECK_VERSION(2,11,90)
     case WAITableCell:
         return ATK_TYPE_TABLE_CELL;
-#endif
     case WAIHypertext:
         return ATK_TYPE_HYPERTEXT;
     case WAIHyperlink:
@@ -1185,7 +1181,7 @@ static bool roleIsTextType(AccessibilityRole role)
         || role == AccessibilityRole::ApplicationGroup;
 }
 
-static guint16 interfaceMaskFromObject(AccessibilityObject* coreObject)
+static guint16 interfaceMaskFromObject(AXCoreObject* coreObject)
 {
     guint16 interfaceMask = 0;
 
@@ -1246,10 +1242,8 @@ static guint16 interfaceMaskFromObject(AccessibilityObject* coreObject)
     if (coreObject->isTable())
         interfaceMask |= 1 << WAITable;
 
-#if ATK_CHECK_VERSION(2,11,90)
     if (role == AccessibilityRole::Cell || role == AccessibilityRole::GridCell || role == AccessibilityRole::ColumnHeader || role == AccessibilityRole::RowHeader)
         interfaceMask |= 1 << WAITableCell;
-#endif
 
     // Document
     if (role == AccessibilityRole::WebArea)
@@ -1321,27 +1315,24 @@ WebKitAccessible* webkitAccessibleNew(AccessibilityObject* coreObject)
 AccessibilityObject& webkitAccessibleGetAccessibilityObject(WebKitAccessible* accessible)
 {
     ASSERT(WEBKIT_IS_ACCESSIBLE(accessible));
+    ASSERT(accessible->priv->object);
     return *accessible->priv->object;
 }
 
 void webkitAccessibleDetach(WebKitAccessible* accessible)
 {
     ASSERT(WEBKIT_IS_ACCESSIBLE(accessible));
-    ASSERT(accessible->priv->object != fallbackObject());
 
-    if (accessible->priv->object->roleValue() == AccessibilityRole::WebArea)
+    if (accessible->priv->object && accessible->priv->object->roleValue() == AccessibilityRole::WebArea)
         atk_object_notify_state_change(ATK_OBJECT(accessible), ATK_STATE_DEFUNCT, TRUE);
 
-    // We replace the WebCore AccessibilityObject with a fallback object that
-    // provides default implementations to avoid repetitive null-checking after
-    // detachment.
-    accessible->priv->object = fallbackObject();
+    accessible->priv->object = nullptr;
 }
 
 bool webkitAccessibleIsDetached(WebKitAccessible* accessible)
 {
     ASSERT(WEBKIT_IS_ACCESSIBLE(accessible));
-    return accessible->priv->object == fallbackObject();
+    return !accessible->priv->object;
 }
 
 const char* webkitAccessibleCacheAndReturnAtkProperty(WebKitAccessible* accessible, AtkCachedProperty property, CString&& value)
@@ -1391,4 +1382,4 @@ const char* webkitAccessibleCacheAndReturnAtkProperty(WebKitAccessible* accessib
     return (*propertyPtr).data();
 }
 
-#endif // HAVE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY)

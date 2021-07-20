@@ -29,7 +29,9 @@
 #include "QualifiedName.h"
 #include <limits>
 #include <wtf/MathExtras.h>
+#include <wtf/Optional.h>
 #include <wtf/URL.h>
+#include <wtf/Vector.h>
 #include <wtf/dtoa.h>
 
 namespace WebCore {
@@ -87,7 +89,7 @@ String serializeForNumberType(double number)
 {
     // According to HTML5, "the best representation of the number n as a floating
     // point number" is a string produced by applying ToString() to n.
-    return String::numberToStringECMAScript(number);
+    return String::number(number);
 }
 
 Decimal parseToDecimalForNumberType(const String& string, const Decimal& fallbackValue)
@@ -344,7 +346,7 @@ bool threadSafeMatch(const QualifiedName& a, const QualifiedName& b)
     return threadSafeEqual(*a.localName().impl(), *b.localName().impl());
 }
 
-String parseCORSSettingsAttribute(const AtomicString& value)
+String parseCORSSettingsAttribute(const AtomString& value)
 {
     if (value.isNull())
         return String();
@@ -466,12 +468,12 @@ bool parseMetaHTTPEquivRefresh(const StringView& input, double& delay, String& u
 }
 
 // https://html.spec.whatwg.org/#rules-for-parsing-a-hash-name-reference
-AtomicString parseHTMLHashNameReference(StringView usemap)
+AtomString parseHTMLHashNameReference(StringView usemap)
 {
     size_t numberSignIndex = usemap.find('#');
     if (numberSignIndex == notFound)
         return nullAtom();
-    return usemap.substring(numberSignIndex + 1).toAtomicString();
+    return usemap.substring(numberSignIndex + 1).toAtomString();
 }
 
 }

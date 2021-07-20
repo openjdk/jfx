@@ -39,7 +39,7 @@ NumberParserImpl::createSimpleParser(const Locale& locale, const UnicodeString& 
     LocalPointer<NumberParserImpl> parser(new NumberParserImpl(parseFlags));
     DecimalFormatSymbols symbols(locale, status);
 
-    parser->fLocalMatchers.ignorables = {unisets::DEFAULT_IGNORABLES};
+    parser->fLocalMatchers.ignorables = {parseFlags};
     IgnorablesMatcher& ignorables = parser->fLocalMatchers.ignorables;
 
     DecimalFormatSymbols dfs(locale, status);
@@ -72,7 +72,7 @@ NumberParserImpl::createSimpleParser(const Locale& locale, const UnicodeString& 
     parser->addMatcher(parser->fLocalMatchers.padding = {u"@"});
     parser->addMatcher(parser->fLocalMatchers.scientific = {symbols, grouper});
     parser->addMatcher(parser->fLocalMatchers.currency = {currencySymbols, symbols, parseFlags, status});
-//    parser.addMatcher(new RequireNumberMatcher());
+    parser->addMatcher(parser->fLocalValidators.number = {});
 
     parser->freeze();
     return parser.orphan();
@@ -83,23 +83,14 @@ NumberParserImpl::createParserFromProperties(const number::impl::DecimalFormatPr
                                              const DecimalFormatSymbols& symbols, bool parseCurrency,
                                              UErrorCode& status) {
     Locale locale = symbols.getLocale();
-    PropertiesAffixPatternProvider localPAPP;
-    CurrencyPluralInfoAffixProvider localCPIAP;
-    AffixPatternProvider* affixProvider;
-    if (properties.currencyPluralInfo.fPtr.isNull()) {
-        localPAPP.setTo(properties, status);
-        affixProvider = &localPAPP;
-    } else {
-        localCPIAP.setTo(*properties.currencyPluralInfo.fPtr, properties, status);
-        affixProvider = &localCPIAP;
-    }
-    if (affixProvider == nullptr || U_FAILURE(status)) { return nullptr; }
+    AutoAffixPatternProvider affixProvider(properties, status);
+    if (U_FAILURE(status)) { return nullptr; }
     CurrencyUnit currency = resolveCurrency(properties, locale, status);
     CurrencySymbols currencySymbols(currency, locale, symbols, status);
     bool isStrict = properties.parseMode.getOrDefault(PARSE_MODE_STRICT) == PARSE_MODE_STRICT;
     Grouper grouper = Grouper::forProperties(properties);
     int parseFlags = 0;
-    if (affixProvider == nullptr || U_FAILURE(status)) { return nullptr; }
+    if (U_FAILURE(status)) { return nullptr; }
     if (!properties.parseCaseSensitive) {
         parseFlags |= PARSE_FLAG_IGNORE_CASE;
     }
@@ -114,13 +105,14 @@ NumberParserImpl::createParserFromProperties(const number::impl::DecimalFormatPr
         parseFlags |= PARSE_FLAG_STRICT_SEPARATORS;
         parseFlags |= PARSE_FLAG_USE_FULL_AFFIXES;
         parseFlags |= PARSE_FLAG_EXACT_AFFIX;
+        parseFlags |= PARSE_FLAG_STRICT_IGNORABLES;
     } else {
         parseFlags |= PARSE_FLAG_INCLUDE_UNPAIRED_AFFIXES;
     }
     if (grouper.getPrimary() <= 0) {
         parseFlags |= PARSE_FLAG_GROUPING_DISABLED;
     }
-    if (parseCurrency || affixProvider->hasCurrencySign()) {
+    if (parseCurrency || affixProvider.get().hasCurrencySign()) {
         parseFlags |= PARSE_FLAG_MONETARY_SEPARATORS;
     }
     if (!parseCurrency) {
@@ -129,8 +121,7 @@ NumberParserImpl::createParserFromProperties(const number::impl::DecimalFormatPr
 
     LocalPointer<NumberParserImpl> parser(new NumberParserImpl(parseFlags));
 
-    parser->fLocalMatchers.ignorables = {
-            isStrict ? unisets::STRICT_IGNORABLES : unisets::DEFAULT_IGNORABLES};
+    parser->fLocalMatchers.ignorables = {parseFlags};
     IgnorablesMatcher& ignorables = parser->fLocalMatchers.ignorables;
 
     //////////////////////
@@ -143,13 +134,13 @@ NumberParserImpl::createParserFromProperties(const number::impl::DecimalFormatPr
     parser->fLocalMatchers.affixTokenMatcherWarehouse = {&affixSetupData};
     parser->fLocalMatchers.affixMatcherWarehouse = {&parser->fLocalMatchers.affixTokenMatcherWarehouse};
     parser->fLocalMatchers.affixMatcherWarehouse.createAffixMatchers(
-            *affixProvider, *parser, ignorables, parseFlags, status);
+            affixProvider.get(), *parser, ignorables, parseFlags, status);
 
     ////////////////////////
     /// CURRENCY MATCHER ///
     ////////////////////////
 
-    if (parseCurrency || affixProvider->hasCurrencySign()) {
+    if (parseCurrency || affixProvider.get().hasCurrencySign()) {
         parser->addMatcher(parser->fLocalMatchers.currency = {currencySymbols, symbols, parseFlags, status});
     }
 
@@ -159,10 +150,10 @@ NumberParserImpl::createParserFromProperties(const number::impl::DecimalFormatPr
 
     // ICU-TC meeting, April 11, 2018: accept percent/permille only if it is in the pattern,
     // and to maintain regressive behavior, divide by 100 even if no percent sign is present.
-    if (affixProvider->containsSymbolType(AffixPatternType::TYPE_PERCENT, status)) {
+    if (!isStrict && affixProvider.get().containsSymbolType(AffixPatternType::TYPE_PERCENT, status)) {
         parser->addMatcher(parser->fLocalMatchers.percent = {symbols});
     }
-    if (affixProvider->containsSymbolType(AffixPatternType::TYPE_PERMILLE, status)) {
+    if (!isStrict && affixProvider.get().containsSymbolType(AffixPatternType::TYPE_PERMILLE, status)) {
         parser->addMatcher(parser->fLocalMatchers.permille = {symbols});
     }
 
@@ -252,9 +243,13 @@ void NumberParserImpl::parse(const UnicodeString& input, int32_t start, bool gre
     StringSegment segment(input, 0 != (fParseFlags & PARSE_FLAG_IGNORE_CASE));
     segment.adjustOffset(start);
     if (greedy) {
-        parseGreedyRecursive(segment, result, status);
+        parseGreedy(segment, result, status);
+    } else if (0 != (fParseFlags & PARSE_FLAG_ALLOW_INFINITE_RECURSION)) {
+        // Start at 1 so that recursionLevels never gets to 0
+        parseLongestRecursive(segment, result, 1, status);
     } else {
-        parseLongestRecursive(segment, result, status);
+        // Arbitrary recursion safety limit: 100 levels.
+        parseLongestRecursive(segment, result, -100, status);
     }
     for (int32_t i = 0; i < fNumMatchers; i++) {
         fMatchers[i]->postProcess(result);
@@ -262,41 +257,50 @@ void NumberParserImpl::parse(const UnicodeString& input, int32_t start, bool gre
     result.postProcess();
 }
 
-void NumberParserImpl::parseGreedyRecursive(StringSegment& segment, ParsedNumber& result,
+void NumberParserImpl::parseGreedy(StringSegment& segment, ParsedNumber& result,
                                             UErrorCode& status) const {
-    // Base Case
-    if (segment.length() == 0) {
-        return;
-    }
-
-    int initialOffset = segment.getOffset();
-    for (int32_t i = 0; i < fNumMatchers; i++) {
+    // Note: this method is not recursive in order to avoid stack overflow.
+    for (int i = 0; i <fNumMatchers;) {
+        // Base Case
+        if (segment.length() == 0) {
+            return;
+        }
         const NumberParseMatcher* matcher = fMatchers[i];
         if (!matcher->smokeTest(segment)) {
+            // Matcher failed smoke test: try the next one
+            i++;
             continue;
         }
+        int32_t initialOffset = segment.getOffset();
         matcher->match(segment, result, status);
         if (U_FAILURE(status)) {
             return;
         }
         if (segment.getOffset() != initialOffset) {
-            // In a greedy parse, recurse on only the first match.
-            parseGreedyRecursive(segment, result, status);
-            // The following line resets the offset so that the StringSegment says the same across
-            // the function
-            // call boundary. Since we recurse only once, this line is not strictly necessary.
-            segment.setOffset(initialOffset);
-            return;
+            // Greedy heuristic: accept the match and loop back
+            i = 0;
+            continue;
+        } else {
+            // Matcher did not match: try the next one
+            i++;
+            continue;
         }
+        UPRV_UNREACHABLE;
     }
 
     // NOTE: If we get here, the greedy parse completed without consuming the entire string.
 }
 
 void NumberParserImpl::parseLongestRecursive(StringSegment& segment, ParsedNumber& result,
+                                             int32_t recursionLevels,
                                              UErrorCode& status) const {
     // Base Case
     if (segment.length() == 0) {
+        return;
+    }
+
+    // Safety against stack overflow
+    if (recursionLevels == 0) {
         return;
     }
 
@@ -326,7 +330,7 @@ void NumberParserImpl::parseLongestRecursive(StringSegment& segment, ParsedNumbe
 
             // If the entire segment was consumed, recurse.
             if (segment.getOffset() - initialOffset == charsToConsume) {
-                parseLongestRecursive(segment, candidate, status);
+                parseLongestRecursive(segment, candidate, recursionLevels + 1, status);
                 if (U_FAILURE(status)) {
                     return;
                 }

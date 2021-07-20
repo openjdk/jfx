@@ -28,13 +28,18 @@
 
 #pragma once
 
+#include "CachedBytecode.h"
+#include "CodeSpecializationKind.h"
 #include "SourceOrigin.h"
 #include <wtf/RefCounted.h>
-#include <wtf/URL.h>
 #include <wtf/text/TextPosition.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
+
+class SourceCode;
+class UnlinkedFunctionExecutable;
+class UnlinkedFunctionCodeBlock;
 
     enum class SourceProviderSourceType : uint8_t {
         Program,
@@ -42,82 +47,22 @@ namespace JSC {
         WebAssembly,
     };
 
-    class CachedBytecode {
-        WTF_MAKE_NONCOPYABLE(CachedBytecode);
-
-    public:
-        CachedBytecode()
-            : CachedBytecode(nullptr, 0)
-        {
-        }
-
-        CachedBytecode(const void* data, size_t size)
-            : m_owned(false)
-            , m_size(size)
-            , m_data(data)
-        {
-        }
-
-        CachedBytecode(MallocPtr<uint8_t>&& data, size_t size)
-            : m_owned(true)
-            , m_size(size)
-            , m_data(data.leakPtr())
-        {
-        }
-
-        CachedBytecode(CachedBytecode&& other)
-        {
-            m_owned = other.m_owned;
-            m_size = other.m_size;
-            m_data = other.m_data;
-            other.m_owned = false;
-        }
-
-        CachedBytecode& operator=(CachedBytecode&& other)
-        {
-            freeDataIfOwned();
-            m_owned = other.m_owned;
-            m_size = other.m_size;
-            m_data = other.m_data;
-            other.m_owned = false;
-            return *this;
-        }
-
-        const void* data() const { return m_data; }
-        size_t size() const { return m_size; }
-        bool owned() const { return m_owned; }
-
-        ~CachedBytecode()
-        {
-            freeDataIfOwned();
-        }
-
-    private:
-        void freeDataIfOwned()
-        {
-            if (m_data && m_owned)
-                fastFree(const_cast<void*>(m_data));
-        }
-
-        bool m_owned;
-        size_t m_size;
-        const void* m_data;
-    };
-
-    using BytecodeCacheGenerator = Function<CachedBytecode()>;
+    using BytecodeCacheGenerator = Function<RefPtr<CachedBytecode>()>;
 
     class SourceProvider : public RefCounted<SourceProvider> {
     public:
         static const intptr_t nullID = 1;
 
-        JS_EXPORT_PRIVATE SourceProvider(const SourceOrigin&, URL&&, const TextPosition& startPosition, SourceProviderSourceType);
+        JS_EXPORT_PRIVATE SourceProvider(const SourceOrigin&, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType);
 
         JS_EXPORT_PRIVATE virtual ~SourceProvider();
 
         virtual unsigned hash() const = 0;
         virtual StringView source() const = 0;
-        virtual const CachedBytecode* cachedBytecode() const { return nullptr; }
+        virtual RefPtr<CachedBytecode> cachedBytecode() const { return nullptr; }
         virtual void cacheBytecode(const BytecodeCacheGenerator&) const { }
+        virtual void updateCache(const UnlinkedFunctionExecutable*, const SourceCode&, CodeSpecializationKind, const UnlinkedFunctionCodeBlock*) const { }
+        virtual void commitCachedBytecode() const { }
 
         StringView getRange(int start, int end) const
         {
@@ -125,7 +70,9 @@ namespace JSC {
         }
 
         const SourceOrigin& sourceOrigin() const { return m_sourceOrigin; }
-        const URL& url() const { return m_url; }
+
+        // This is NOT the path that should be used for computing relative paths from a script. Use SourceOrigin's URL for that, the values may or may not be the same...
+        const String& sourceURL() const { return m_sourceURL; }
         const String& sourceURLDirective() const { return m_sourceURLDirective; }
         const String& sourceMappingURLDirective() const { return m_sourceMappingURLDirective; }
 
@@ -146,19 +93,21 @@ namespace JSC {
         JS_EXPORT_PRIVATE void getID();
 
         SourceProviderSourceType m_sourceType;
-        URL m_url;
         SourceOrigin m_sourceOrigin;
+        String m_sourceURL;
         String m_sourceURLDirective;
         String m_sourceMappingURLDirective;
         TextPosition m_startPosition;
         uintptr_t m_id { 0 };
     };
 
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
     class StringSourceProvider : public SourceProvider {
+        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StringSourceProvider);
     public:
-        static Ref<StringSourceProvider> create(const String& source, const SourceOrigin& sourceOrigin, URL&& url, const TextPosition& startPosition = TextPosition(), SourceProviderSourceType sourceType = SourceProviderSourceType::Program)
+        static Ref<StringSourceProvider> create(const String& source, const SourceOrigin& sourceOrigin, String sourceURL, const TextPosition& startPosition = TextPosition(), SourceProviderSourceType sourceType = SourceProviderSourceType::Program)
         {
-            return adoptRef(*new StringSourceProvider(source, sourceOrigin, WTFMove(url), startPosition, sourceType));
+            return adoptRef(*new StringSourceProvider(source, sourceOrigin, WTFMove(sourceURL), startPosition, sourceType));
         }
 
         unsigned hash() const override
@@ -172,8 +121,8 @@ namespace JSC {
         }
 
     protected:
-        StringSourceProvider(const String& source, const SourceOrigin& sourceOrigin, URL&& url, const TextPosition& startPosition, SourceProviderSourceType sourceType)
-            : SourceProvider(sourceOrigin, WTFMove(url), startPosition, sourceType)
+        StringSourceProvider(const String& source, const SourceOrigin& sourceOrigin, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
+            : SourceProvider(sourceOrigin, WTFMove(sourceURL), startPosition, sourceType)
             , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
         {
         }
@@ -183,19 +132,19 @@ namespace JSC {
     };
 
 #if ENABLE(WEBASSEMBLY)
-    class WebAssemblySourceProvider : public SourceProvider {
+    class WebAssemblySourceProvider final : public SourceProvider {
     public:
-        static Ref<WebAssemblySourceProvider> create(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, URL&& url)
+        static Ref<WebAssemblySourceProvider> create(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, String sourceURL)
         {
-            return adoptRef(*new WebAssemblySourceProvider(WTFMove(data), sourceOrigin, WTFMove(url)));
+            return adoptRef(*new WebAssemblySourceProvider(WTFMove(data), sourceOrigin, WTFMove(sourceURL)));
         }
 
-        unsigned hash() const override
+        unsigned hash() const final
         {
             return m_source.impl()->hash();
         }
 
-        StringView source() const override
+        StringView source() const final
         {
             return m_source;
         }
@@ -206,8 +155,8 @@ namespace JSC {
         }
 
     private:
-        WebAssemblySourceProvider(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, URL&& url)
-            : SourceProvider(sourceOrigin, WTFMove(url), TextPosition(), SourceProviderSourceType::WebAssembly)
+        WebAssemblySourceProvider(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, String&& sourceURL)
+            : SourceProvider(sourceOrigin, WTFMove(sourceURL), TextPosition(), SourceProviderSourceType::WebAssembly)
             , m_source("[WebAssembly source]")
             , m_data(WTFMove(data))
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,6 +100,7 @@ public final class WebPage {
     private final Set<Long> frames = new HashSet<Long>();
 
     // The access control context associated with this object
+    @SuppressWarnings("removal")
     private final AccessControlContext accessControlContext;
 
     // Maps load request identifiers to URLs
@@ -129,7 +130,8 @@ public final class WebPage {
     private int updateContentCycleID;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("jfxwebkit");
             log.finer("jfxwebkit loaded");
 
@@ -191,7 +193,9 @@ public final class WebPage {
             this.scrollbarTheme = null;
         }
 
-        accessControlContext = AccessController.getContext();
+        @SuppressWarnings("removal")
+        AccessControlContext tmpAcc = AccessController.getContext();
+        accessControlContext = tmpAcc;
 
         hostWindow = new WCFrameView(this);
         pPage = twkCreatePage(editable);
@@ -225,6 +229,7 @@ public final class WebPage {
      * May be called on any thread.
      * @return the access control context associated with this object
      */
+    @SuppressWarnings("removal")
     public AccessControlContext getAccessControlContext() {
         return accessControlContext;
     }
@@ -633,10 +638,14 @@ public final class WebPage {
                 return;
             }
             updateDirty(toPaint);
-
+            updateRendering();
         } finally {
             unlockPage();
         }
+    }
+
+    public void updateRendering() {
+        twkUpdateRendering(getPage());
     }
 
     public int getUpdateContentCycleID() {
@@ -1153,6 +1162,12 @@ public final class WebPage {
         } finally {
             unlockPage();
         }
+    }
+
+    // DRT support
+    public void forceRepaint() {
+        repaintAll();
+        updateContent(new WCRectangle(0, 0, width, height));
     }
 
     public String getContentType(long frameID) {
@@ -2597,6 +2612,7 @@ public final class WebPage {
     private native void twkSetBounds(long pPage, int x, int y, int w, int h);
     private native void twkPrePaint(long pPage);
     private native void twkUpdateContent(long pPage, WCRenderQueue rq, int x, int y, int w, int h);
+    private native void twkUpdateRendering(long pPage);
     private native void twkPostPaint(long pPage, WCRenderQueue rq,
                                      int x, int y, int w, int h);
 

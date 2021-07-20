@@ -75,6 +75,7 @@ gst_video_frame_map_id (GstVideoFrame * frame, GstVideoInfo * info,
 
   g_return_val_if_fail (frame != NULL, FALSE);
   g_return_val_if_fail (info != NULL, FALSE);
+  g_return_val_if_fail (info->finfo != NULL, FALSE);
   g_return_val_if_fail (GST_IS_BUFFER (buffer), FALSE);
 
   if (id == -1)
@@ -137,15 +138,21 @@ gst_video_frame_map_id (GstVideoFrame * frame, GstVideoInfo * info,
       if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_INTERLACED)) {
         frame->flags |= GST_VIDEO_FRAME_FLAG_INTERLACED;
       }
-    } else
+    } else {
       frame->flags |= GST_VIDEO_FRAME_FLAG_INTERLACED;
+    }
 
-    if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_TFF))
+    if (GST_VIDEO_INFO_FIELD_ORDER (info) ==
+        GST_VIDEO_FIELD_ORDER_TOP_FIELD_FIRST) {
       frame->flags |= GST_VIDEO_FRAME_FLAG_TFF;
-    if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_RFF))
-      frame->flags |= GST_VIDEO_FRAME_FLAG_RFF;
-    if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_ONEFIELD))
-      frame->flags |= GST_VIDEO_FRAME_FLAG_ONEFIELD;
+    } else {
+      if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_TFF))
+        frame->flags |= GST_VIDEO_FRAME_FLAG_TFF;
+      if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_RFF))
+        frame->flags |= GST_VIDEO_FRAME_FLAG_RFF;
+      if (GST_BUFFER_FLAG_IS_SET (buffer, GST_VIDEO_BUFFER_FLAG_ONEFIELD))
+        frame->flags |= GST_VIDEO_FRAME_FLAG_ONEFIELD;
+    }
   }
   return TRUE;
 
@@ -279,6 +286,9 @@ gst_video_frame_unmap (GstVideoFrame * frame)
  *
  * Copy the plane with index @plane from @src to @dest.
  *
+ * Note: Since: 1.18, @dest dimensions are allowed to be
+ * smaller than @src dimensions.
+ *
  * Returns: TRUE if the contents could be copied.
  */
 gboolean
@@ -302,8 +312,8 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
 
   finfo = dinfo->finfo;
 
-  g_return_val_if_fail (dinfo->width == sinfo->width
-      && dinfo->height == sinfo->height, FALSE);
+  g_return_val_if_fail (dinfo->width <= sinfo->width
+      && dinfo->height <= sinfo->height, FALSE);
   g_return_val_if_fail (finfo->n_planes > plane, FALSE);
 
   sp = src->data[plane];
@@ -388,6 +398,9 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
  *
  * Copy the contents from @src to @dest.
  *
+ * Note: Since: 1.18, @dest dimensions are allowed to be
+ * smaller than @src dimensions.
+ *
  * Returns: TRUE if the contents could be copied.
  */
 gboolean
@@ -404,8 +417,8 @@ gst_video_frame_copy (GstVideoFrame * dest, const GstVideoFrame * src)
   dinfo = &dest->info;
 
   g_return_val_if_fail (dinfo->finfo->format == sinfo->finfo->format, FALSE);
-  g_return_val_if_fail (dinfo->width == sinfo->width
-      && dinfo->height == sinfo->height, FALSE);
+  g_return_val_if_fail (dinfo->width <= sinfo->width
+      && dinfo->height <= sinfo->height, FALSE);
 
   n_planes = dinfo->finfo->n_planes;
 

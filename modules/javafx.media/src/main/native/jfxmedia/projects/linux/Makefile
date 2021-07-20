@@ -41,10 +41,12 @@ ifdef HOST_COMPILE
                   -Wextra \
                   -Wformat-security \
                   -fstack-protector \
-                  -Werror=implicit-function-declaration \
                   -Werror=trampolines \
-		  -msse2 \
 	          -DGSTREAMER_LITE
+        ifneq ($(ARCH), aarch64)
+            CFLAGS += -msse2
+        endif
+
 
 	PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
 	PACKAGES_LIBS := $(shell pkg-config --libs glib-2.0 gobject-2.0 gmodule-2.0 gthread-2.0)

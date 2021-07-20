@@ -23,6 +23,7 @@
 #pragma once
 
 #include <wtf/Assertions.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
@@ -39,45 +40,45 @@ public:
         DisallowUserAgentShadowContent = 1 << 8,
         AllowFrameScrollbars = 1 << 9,
         AllowChildFrameContent = 1 << 10,
-        ChildFrameHitTest = 1 << 11,
-        AccessibilityHitTest = 1 << 12,
+        AllowVisibleChildFrameContentOnly = 1 << 11,
+        ChildFrameHitTest = 1 << 12,
+        AccessibilityHitTest = 1 << 13,
         // Collect a list of nodes instead of just one. Used for elementsFromPoint and rect-based tests.
-        CollectMultipleElements = 1 << 13,
+        CollectMultipleElements = 1 << 14,
         // When using list-based testing, continue hit testing even after a hit has been found.
-        IncludeAllElementsUnderPoint = 1 << 14
+        IncludeAllElementsUnderPoint = 1 << 15
     };
 
-    typedef unsigned HitTestRequestType;
-
-    HitTestRequest(HitTestRequestType requestType = ReadOnly | Active | DisallowUserAgentShadowContent)
-        : m_requestType(requestType)
+    HitTestRequest(OptionSet<RequestType> requestType = { ReadOnly, Active, DisallowUserAgentShadowContent })
+        : m_requestType { requestType }
     {
-        ASSERT(!(requestType & IncludeAllElementsUnderPoint) || (requestType & CollectMultipleElements));
+        ASSERT_IMPLIES(requestType.contains(IncludeAllElementsUnderPoint), requestType.contains(CollectMultipleElements));
     }
 
-    bool readOnly() const { return m_requestType & ReadOnly; }
-    bool active() const { return m_requestType & Active; }
-    bool move() const { return m_requestType & Move; }
-    bool release() const { return m_requestType & Release; }
-    bool ignoreClipping() const { return m_requestType & IgnoreClipping; }
-    bool svgClipContent() const { return m_requestType & SVGClipContent; }
-    bool touchEvent() const { return m_requestType & TouchEvent; }
+    bool readOnly() const { return m_requestType.contains(ReadOnly); }
+    bool active() const { return m_requestType.contains(Active); }
+    bool move() const { return m_requestType.contains(Move); }
+    bool release() const { return m_requestType.contains(Release); }
+    bool ignoreClipping() const { return m_requestType.contains(IgnoreClipping); }
+    bool svgClipContent() const { return m_requestType.contains(SVGClipContent); }
+    bool touchEvent() const { return m_requestType.contains(TouchEvent); }
     bool mouseEvent() const { return !touchEvent(); }
-    bool disallowsUserAgentShadowContent() const { return m_requestType & DisallowUserAgentShadowContent; }
-    bool allowsFrameScrollbars() const { return m_requestType & AllowFrameScrollbars; }
-    bool allowsChildFrameContent() const { return m_requestType & AllowChildFrameContent; }
-    bool isChildFrameHitTest() const { return m_requestType & ChildFrameHitTest; }
-    bool resultIsElementList() const { return m_requestType & CollectMultipleElements; }
-    bool includesAllElementsUnderPoint() const { return m_requestType & IncludeAllElementsUnderPoint; }
+    bool disallowsUserAgentShadowContent() const { return m_requestType.contains(DisallowUserAgentShadowContent); }
+    bool allowsFrameScrollbars() const { return m_requestType.contains(AllowFrameScrollbars); }
+    bool allowsChildFrameContent() const { return m_requestType.contains(AllowChildFrameContent); }
+    bool allowsVisibleChildFrameContent() const { return m_requestType.contains(AllowVisibleChildFrameContentOnly); }
+    bool isChildFrameHitTest() const { return m_requestType.contains(ChildFrameHitTest); }
+    bool resultIsElementList() const { return m_requestType.contains(CollectMultipleElements); }
+    bool includesAllElementsUnderPoint() const { return m_requestType.contains(IncludeAllElementsUnderPoint); }
 
     // Convenience functions
     bool touchMove() const { return move() && touchEvent(); }
     bool touchRelease() const { return release() && touchEvent(); }
 
-    HitTestRequestType type() const { return m_requestType; }
+    OptionSet<RequestType> type() const { return m_requestType; }
 
 private:
-    HitTestRequestType m_requestType;
+    OptionSet<RequestType> m_requestType;
 };
 
 } // namespace WebCore

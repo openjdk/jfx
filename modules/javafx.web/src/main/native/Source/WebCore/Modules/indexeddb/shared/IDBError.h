@@ -47,8 +47,6 @@ public:
         return IDBError { UnknownError, "Connection to Indexed Database server lost. Refresh the page to try again"_s };
     }
 
-    WEBCORE_EXPORT IDBError& operator=(const IDBError&);
-
     RefPtr<DOMException> toDOMException() const;
 
     Optional<ExceptionCode> code() const { return m_code; }
@@ -57,10 +55,10 @@ public:
 
     bool isNull() const { return !m_code; }
 
-    IDBError isolatedCopy() const;
+    WEBCORE_EXPORT IDBError isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBError&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBError&);
 
 private:
     Optional<ExceptionCode> m_code;
@@ -72,7 +70,7 @@ void IDBError::encode(Encoder& encoder) const
 {
     if (m_code) {
         encoder << true;
-        encoder.encodeEnum(m_code.value());
+        encoder << m_code.value();
     } else
         encoder << false;
     encoder << m_message;
@@ -87,7 +85,7 @@ bool IDBError::decode(Decoder& decoder, IDBError& error)
 
     if (hasCode) {
         ExceptionCode ec;
-        if (!decoder.decodeEnum(ec))
+        if (!decoder.decode(ec))
             return false;
         error.m_code = ec;
     } else

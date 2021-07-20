@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -960,7 +960,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-clip")
+    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
     @Test public void backgroundClip_defaultValue() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');");
@@ -981,7 +981,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-clip")
+    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
     @Test public void backgroundClip_BorderBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
@@ -1002,7 +1002,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-clip")
+    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
     @Test public void backgroundClip_PaddingBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
@@ -1023,7 +1023,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-clip")
+    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
     @Test public void backgroundClip_ContentBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
@@ -1044,7 +1044,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-origin")
+    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
     @Test public void backgroundOrigin_defaultValue() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');");
@@ -1065,7 +1065,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-origin")
+    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
     @Test public void backgroundOrigin_BorderBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
@@ -1087,7 +1087,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-origin")
+    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
     @Test public void backgroundOrigin_PaddingBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
@@ -1108,7 +1108,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("We do not presently implement -fx-background-origin")
+    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
     @Test public void backgroundOrigin_ContentBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
@@ -1416,7 +1416,7 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Ignore("-fx-border-style-top is not supported")
+    @Ignore("JDK-8091576") // -fx-border-style-top is not implemented.
     @Test public void borderStyle_top() {
         region.setStyle("-fx-border-style-top: solid;");
         processCSS();
@@ -1434,7 +1434,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-style-right is not supported")
+    @Ignore("JDK-8091576") // -fx-border-style-right is not implemented.
     @Test public void borderStyle_right() {
         region.setStyle("-fx-border-style-right: solid;");
         processCSS();
@@ -1452,7 +1452,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-style-bottom is not supported")
+    @Ignore("JDK-8091576") // -fx-border-style-bottom is not implemented.
     @Test public void borderStyle_bottom() {
         region.setStyle("-fx-border-style-bottom: solid;");
         processCSS();
@@ -1470,7 +1470,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-style-left is not supported")
+    @Ignore("JDK-8091576") // -fx-border-style-left is not implemented.
     @Test public void borderStyle_left() {
         region.setStyle("-fx-border-style-left: solid;");
         processCSS();
@@ -1488,7 +1488,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-style-top and -fx-border-style-right are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStyle_top_right() {
         region.setStyle(
                 "-fx-border-style-top: solid;" +
@@ -1508,7 +1508,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-style-top and -fx-border-style-bottom are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStyle_bottom_top() {
         region.setStyle(
                 "-fx-border-style-top: solid;" +
@@ -1528,7 +1528,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-style-bottom and -fx-border-style-left are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStyle_left_bottom() {
         region.setStyle(
                 "-fx-border-style-bottom: solid;" +
@@ -1612,7 +1612,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("double not supported yet")
+    @Ignore("JDK-8091576") // double value not implemented.
     @Test public void borderStyle_double() {
         region.setStyle("-fx-border-color: black; -fx-border-style: double;");
         processCSS();
@@ -1629,7 +1629,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore ("groove not supported yet")
+    @Ignore("JDK-8091576") // groove value not implemented.
     @Test public void borderStyle_groove() {
         region.setStyle("-fx-border-color: black; -fx-border-style: groove;");
         processCSS();
@@ -1646,7 +1646,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore ("ridge not supported yet")
+    @Ignore("JDK-8091576") // ridge value not implemented.
     @Test public void borderStyle_ridge() {
         region.setStyle("-fx-border-color: black; -fx-border-style: ridge;");
         processCSS();
@@ -1663,7 +1663,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore ("inset not supported yet")
+    @Ignore("JDK-8091576") // inset value not implemented.
     @Test public void borderStyle_inset() {
         region.setStyle("-fx-border-color: black; -fx-border-style: inset;");
         processCSS();
@@ -1680,7 +1680,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore ("outset not supported yet")
+    @Ignore("JDK-8091576") // outset value not implemented.
     @Test public void borderStyle_outset() {
         region.setStyle("-fx-border-color: black; -fx-border-style: outset;");
         processCSS();
@@ -1729,7 +1729,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("ridge not supported yet")
+    @Ignore("JDK-8091576") // ridge value not implemented.
     @Test public void borderStyle_solid_dotted_dashed_ridge() {
         region.setStyle("-fx-border-color: black; -fx-border-style: solid dotted dashed ridge;");
         processCSS();
@@ -1747,7 +1747,7 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-top is not supported")
+    @Ignore("JDK-8091576") // -fx-border-width-top is not implemented.
     @Test public void borderStrokeWidth_top() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1764,7 +1764,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-right is not supported")
+    @Ignore("JDK-8091576") // -fx-border-width-right is not implemented.
     @Test public void borderStrokeWidth_right() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1781,7 +1781,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-bottom is not supported")
+    @Ignore("JDK-8091576") // -fx-border-width-bottom is not implemented.
     @Test public void borderStrokeWidth_bottom() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1798,7 +1798,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-left is not supported")
+    @Ignore("JDK-8091576") // -fx-border-width-left is not implemented.
     @Test public void borderStrokeWidth_left() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1815,7 +1815,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-top and -fx-border-width-right are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStrokeWidth_top_right() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1833,7 +1833,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-top and -fx-border-width-bottom are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStrokeWidth_top_bottom() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1851,7 +1851,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-width-left and -fx-border-width-bottom are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStrokeWidth_left_bottom() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1914,7 +1914,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("thin keyword is not supported")
+    @Ignore("JDK-8091576") // thin value is not implemented.
     @Test public void borderStrokeWidth_thin() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1931,7 +1931,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("thick keyword is not supported")
+    @Ignore("JDK-8091576") // thick value is not implemented.
     @Test public void borderStrokeWidth_thick() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1948,7 +1948,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("medium keyword is not supported")
+    @Ignore("JDK-8091576") // medium value is not implemented.
     @Test public void borderStrokeWidth_medium() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1965,7 +1965,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("thin, medium, and thick keywords are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStrokeWidth_thin_medium_thick() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -1987,7 +1987,7 @@ public class RegionCSSTest {
 
     // TODO!! The initial width of a border is MEDIUM, NOT 0!
 
-    @Ignore("-fx-border-top-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
     @Test public void borderStrokeRadius_topLeft1() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2005,7 +2005,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
     @Test public void borderStrokeRadius_topLeft2() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2032,7 +2032,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
     @Test public void borderStrokeRadius_topLeft3() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2059,7 +2059,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
     @Test public void borderStrokeRadius_topLeft4() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2086,7 +2086,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
     @Test public void borderStrokeRadius_topLeft5() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2113,7 +2113,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
     @Test public void borderStrokeRadius_topLeft6() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2140,7 +2140,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
     @Test public void borderStrokeRadius_topRight1() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2158,7 +2158,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
     @Test public void borderStrokeRadius_topRight2() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2185,7 +2185,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
     @Test public void borderStrokeRadius_topRight3() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2212,7 +2212,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
     @Test public void borderStrokeRadius_topRight4() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2239,7 +2239,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
     @Test public void borderStrokeRadius_topRight5() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2266,7 +2266,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
     @Test public void borderStrokeRadius_topRight6() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2293,7 +2293,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
     @Test public void borderStrokeRadius_bottomRight1() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2311,7 +2311,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
     @Test public void borderStrokeRadius_bottomRight2() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2338,7 +2338,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
     @Test public void borderStrokeRadius_bottomRight3() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2365,7 +2365,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
     @Test public void borderStrokeRadius_bottomRight4() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2392,7 +2392,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
     @Test public void borderStrokeRadius_bottomRight5() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2419,7 +2419,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-right-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
     @Test public void borderStrokeRadius_bottomRight6() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2446,7 +2446,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
     @Test public void borderStrokeRadius_bottomLeft1() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2464,7 +2464,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
     @Test public void borderStrokeRadius_bottomLeft2() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2491,7 +2491,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
     @Test public void borderStrokeRadius_bottomLeft3() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2518,7 +2518,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
     @Test public void borderStrokeRadius_bottomLeft4() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2545,7 +2545,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
     @Test public void borderStrokeRadius_bottomLeft5() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2572,7 +2572,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-bottom-left-radius not supported")
+    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
     @Test public void borderStrokeRadius_bottomLeft6() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2599,7 +2599,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("-fx-border-top-left-radius and -fx-border-top-right-radius are not supported")
+    @Ignore("JDK-8091576")
     @Test public void borderStrokeRadius_topLeft_topRight() {
         region.setStyle(
                 "-fx-border-color: black;" +
@@ -2871,7 +2871,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-top-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576")
     @Test public void borderStroke_top_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -2891,7 +2891,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-right-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576")
     @Test public void borderStroke_right_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -2911,7 +2911,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-bottom-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576") // -fx-border-bottom-color is not implemented.
     @Test public void borderStroke_bottom_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -2931,7 +2931,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-left-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576") // -fx-border-left-color is not implemented.
     @Test public void borderStroke_left_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -2951,7 +2951,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-top-color and -fx-border-right-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576")
     @Test public void borderStroke_top_right_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -2972,7 +2972,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-left-color and -fx-border-right-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576")
     @Test public void borderStroke_right_left_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -2993,7 +2993,7 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore ("-fx-border-top-color and -fx-border-bottom-color is not supported by the CSS parser")
+    @Ignore("JDK-8091576")
     @Test public void borderStroke_bottom_top_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
@@ -3375,7 +3375,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("I am not certain that supporting auto makes sense for us, and if it does, is it anything other than 1?")
     @Test public void borderImageWidth_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
@@ -3397,7 +3396,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("I am not certain that supporting auto makes sense for us, and if it does, is it anything other than 1?")
     @Test public void borderImageWidth_1_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
@@ -3418,7 +3416,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("I am not certain that supporting auto makes sense for us, and if it does, is it anything other than 1?")
     @Test public void borderImageWidth_1_2Percent_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,9 @@
 #include "SetPrototype.h"
 
 #include "BuiltinNames.h"
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "IteratorOperations.h"
 #include "JSCInlines.h"
 #include "JSSet.h"
-#include "Lookup.h"
+#include "JSSetIterator.h"
 
 #include "SetPrototype.lut.h"
 
@@ -43,97 +40,119 @@ const ClassInfo SetPrototype::s_info = { "Set", &Base::s_info, &setPrototypeTabl
 /* Source for SetIteratorPrototype.lut.h
 @begin setPrototypeTable
   forEach   JSBuiltin  DontEnum|Function 0
-  entries   JSBuiltin  DontEnum|Function 0
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL setProtoFuncAdd(ExecState*);
-static EncodedJSValue JSC_HOST_CALL setProtoFuncClear(ExecState*);
-static EncodedJSValue JSC_HOST_CALL setProtoFuncDelete(ExecState*);
-static EncodedJSValue JSC_HOST_CALL setProtoFuncHas(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncAdd);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncClear);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncDelete);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncHas);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncValues);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncEntries);
 
-
-static EncodedJSValue JSC_HOST_CALL setProtoFuncSize(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncSize);
 
 void SetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    didBecomePrototype();
 
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->add, setProtoFuncAdd, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSSetAddIntrinsic);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->clear, setProtoFuncClear, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deleteKeyword, setProtoFuncDelete, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, setProtoFuncHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSSetHasIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().entriesPublicName(), setProtoFuncEntries, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, JSSetEntriesIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().hasPrivateName(), setProtoFuncHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSSetHasIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().addPrivateName(), setProtoFuncAdd, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSSetAddIntrinsic);
 
-    JSFunction* values = JSFunction::create(vm, setPrototypeValuesCodeGenerator(vm), globalObject);
+    JSFunction* values = JSFunction::create(vm, globalObject, 0, vm.propertyNames->builtinNames().valuesPublicName().string(), setProtoFuncValues, JSSetValuesIntrinsic);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().valuesPublicName(), values, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().keysPublicName(), values, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, values, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "Set"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
-    JSC_NATIVE_GETTER(vm.propertyNames->size, setProtoFuncSize, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->size, setProtoFuncSize, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+
+    globalObject->installSetPrototypeWatchpoint(this);
 }
 
-ALWAYS_INLINE static JSSet* getSet(CallFrame* callFrame, JSValue thisValue)
+ALWAYS_INLINE static JSSet* getSet(JSGlobalObject* globalObject, JSValue thisValue)
 {
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (UNLIKELY(!thisValue.isCell())) {
-        throwVMError(callFrame, scope, createNotAnObjectError(callFrame, thisValue));
+        throwVMError(globalObject, scope, createNotAnObjectError(globalObject, thisValue));
         return nullptr;
     }
     auto* set = jsDynamicCast<JSSet*>(vm, thisValue.asCell());
     if (LIKELY(set))
         return set;
-    throwTypeError(callFrame, scope, "Set operation called on non-Set object"_s);
+    throwTypeError(globalObject, scope, "Set operation called on non-Set object"_s);
     return nullptr;
 }
 
-EncodedJSValue JSC_HOST_CALL setProtoFuncAdd(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncAdd, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue thisValue = callFrame->thisValue();
-    JSSet* set = getSet(callFrame, thisValue);
+    JSSet* set = getSet(globalObject, thisValue);
     if (!set)
         return JSValue::encode(jsUndefined());
-    set->add(callFrame, callFrame->argument(0));
+    set->add(globalObject, callFrame->argument(0));
     return JSValue::encode(thisValue);
 }
 
-EncodedJSValue JSC_HOST_CALL setProtoFuncClear(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncClear, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    JSSet* set = getSet(callFrame, callFrame->thisValue());
+    JSSet* set = getSet(globalObject, callFrame->thisValue());
     if (!set)
         return JSValue::encode(jsUndefined());
-    set->clear(callFrame);
+    set->clear(globalObject);
     return JSValue::encode(jsUndefined());
 }
 
-EncodedJSValue JSC_HOST_CALL setProtoFuncDelete(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncDelete, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    JSSet* set = getSet(callFrame, callFrame->thisValue());
+    JSSet* set = getSet(globalObject, callFrame->thisValue());
     if (!set)
         return JSValue::encode(jsUndefined());
-    return JSValue::encode(jsBoolean(set->remove(callFrame, callFrame->argument(0))));
+    return JSValue::encode(jsBoolean(set->remove(globalObject, callFrame->argument(0))));
 }
 
-EncodedJSValue JSC_HOST_CALL setProtoFuncHas(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncHas, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    JSSet* set = getSet(callFrame, callFrame->thisValue());
+    JSSet* set = getSet(globalObject, callFrame->thisValue());
     if (!set)
         return JSValue::encode(jsUndefined());
-    return JSValue::encode(jsBoolean(set->has(callFrame, callFrame->argument(0))));
+    return JSValue::encode(jsBoolean(set->has(globalObject, callFrame->argument(0))));
 }
 
-EncodedJSValue JSC_HOST_CALL setProtoFuncSize(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncSize, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    JSSet* set = getSet(callFrame, callFrame->thisValue());
+    JSSet* set = getSet(globalObject, callFrame->thisValue());
     if (!set)
         return JSValue::encode(jsUndefined());
     return JSValue::encode(jsNumber(set->size()));
+}
+
+inline JSValue createSetIteratorObject(JSGlobalObject* globalObject, CallFrame* callFrame, IterationKind kind)
+{
+    VM& vm = globalObject->vm();
+    JSValue thisValue = callFrame->thisValue();
+    JSSet* set = getSet(globalObject, thisValue);
+    if (!set)
+        return jsUndefined();
+    return JSSetIterator::create(vm, globalObject->setIteratorStructure(), set, kind);
+}
+
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncValues, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(createSetIteratorObject(globalObject, callFrame, IterationKind::Values));
+}
+
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncEntries, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(createSetIteratorObject(globalObject, callFrame, IterationKind::Entries));
 }
 
 }

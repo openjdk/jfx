@@ -27,12 +27,10 @@
  */
 
 [
-    EnabledAtRuntime=FetchAPI,
     Exposed=(Window,Worker),
     InterfaceName=Body,
-    NoInterfaceObject
-] interface FetchBody {
-    [ImplementedAs=readableStream, CallWith=ExecState] readonly attribute ReadableStream? body;
+] interface mixin FetchBody {
+    [ImplementedAs=readableStream, CallWith=GlobalObject] readonly attribute ReadableStream? body;
     readonly attribute boolean bodyUsed;
     [NewObject] Promise<ArrayBuffer> arrayBuffer();
     [NewObject] Promise<Blob> blob();

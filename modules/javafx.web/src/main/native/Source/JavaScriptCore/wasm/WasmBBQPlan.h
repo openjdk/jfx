@@ -25,12 +25,12 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
 #include "CompilationResult.h"
 #include "WasmB3IRGenerator.h"
+#include "WasmEntryPlan.h"
 #include "WasmModuleInformation.h"
-#include "WasmPlan.h"
 #include "WasmTierUpCount.h"
 #include <wtf/Bag.h>
 #include <wtf/Function.h>
@@ -44,119 +44,54 @@ class CallLinkInfo;
 
 namespace Wasm {
 
-class BBQPlan final : public Plan {
+class BBQCallee;
+class CodeBlock;
+class EmbedderEntrypointCallee;
+
+class BBQPlan final : public EntryPlan {
 public:
-    using Base = Plan;
-    enum AsyncWork : uint8_t { FullCompile, Validation };
+    using Base = EntryPlan;
 
-    // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    BBQPlan(Context*, Ref<ModuleInformation>, AsyncWork, CompletionTask&&, CreateEmbedderWrapper&&, ThrowWasmException);
-    JS_EXPORT_PRIVATE BBQPlan(Context*, Vector<uint8_t>&&, AsyncWork, CompletionTask&&, CreateEmbedderWrapper&&, ThrowWasmException);
-    BBQPlan(Context*, AsyncWork, CompletionTask&&);
+    using Base::Base;
 
+    BBQPlan(Context*, Ref<ModuleInformation>, uint32_t functionIndex, CodeBlock*, CompletionTask&&);
 
-    bool parseAndValidateModule()
+    bool hasWork() const final
     {
-        return parseAndValidateModule(m_source.data(), m_source.size());
-    }
-    bool parseAndValidateModule(const uint8_t*, size_t);
-
-    JS_EXPORT_PRIVATE void prepare();
-    void compileFunctions(CompilationEffort);
-
-    template<typename Functor>
-    void initializeCallees(const Functor&);
-
-    Vector<Export>& exports() const
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return m_moduleInformation->exports;
-    }
-
-    size_t internalFunctionCount() const
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return m_moduleInformation->internalFunctionCount();
-    }
-
-    Ref<ModuleInformation>&& takeModuleInformation()
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_moduleInformation);
-    }
-
-    Bag<CallLinkInfo>&& takeCallLinkInfos()
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_callLinkInfos);
-    }
-
-    Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>>&& takeWasmToWasmExitStubs()
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_wasmToWasmExitStubs);
-    }
-
-    Vector<Vector<UnlinkedWasmToWasmCall>> takeWasmToWasmCallsites()
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_unlinkedWasmToWasmCalls);
-    }
-
-    Vector<TierUpCount> takeTierUpCounts()
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_tierUpCounts);
-    }
-
-    enum class State : uint8_t {
-        Initial,
-        Validated,
-        Prepared,
-        Compiled,
-        Completed // We should only move to Completed if we are holding the lock.
-    };
-
-    bool hasWork() const override
-    {
-        if (m_asyncWork == AsyncWork::Validation)
+        if (m_compilerMode == CompilerMode::Validation)
             return m_state < State::Validated;
         return m_state < State::Compiled;
     }
-    void work(CompilationEffort) override;
-    bool hasBeenPrepared() const { return m_state >= State::Prepared; }
-    bool multiThreaded() const override { return hasBeenPrepared(); }
+
+    void work(CompilationEffort) final;
+
+    using CalleeInitializer = Function<void(uint32_t, RefPtr<EmbedderEntrypointCallee>&&, Ref<BBQCallee>&&)>;
+    void initializeCallees(const CalleeInitializer&);
+
+    bool didReceiveFunctionData(unsigned, const FunctionData&) final;
+
+    bool parseAndValidateModule()
+    {
+        return Base::parseAndValidateModule(m_source.data(), m_source.size());
+    }
 
 private:
-    class ThreadCountHolder;
-    friend class ThreadCountHolder;
-    // For some reason friendship doesn't extend to parent classes...
-    using Base::m_lock;
+    bool prepareImpl() final;
+    void compileFunction(uint32_t functionIndex) final;
+    void didCompleteCompilation(const AbstractLocker&) final;
 
-    void moveToState(State);
-    bool isComplete() const override { return m_state == State::Completed; }
-    void complete(const AbstractLocker&) override;
+    std::unique_ptr<InternalFunction> compileFunction(uint32_t functionIndex, CompilationContext&, Vector<UnlinkedWasmToWasmCall>&, TierUpCount*);
 
-    const char* stateString(State);
-
-    Vector<uint8_t> m_source;
-    Bag<CallLinkInfo> m_callLinkInfos;
-    Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToWasmExitStubs;
     Vector<std::unique_ptr<InternalFunction>> m_wasmInternalFunctions;
-    HashSet<uint32_t, typename DefaultHash<uint32_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_exportedFunctionIndices;
-    HashMap<uint32_t, std::unique_ptr<InternalFunction>, typename DefaultHash<uint32_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_embedderToWasmInternalFunctions;
+    HashMap<uint32_t, std::unique_ptr<InternalFunction>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_embedderToWasmInternalFunctions;
     Vector<CompilationContext> m_compilationContexts;
-    Vector<TierUpCount> m_tierUpCounts;
+    Vector<std::unique_ptr<TierUpCount>> m_tierUpCounts;
 
-    Vector<Vector<UnlinkedWasmToWasmCall>> m_unlinkedWasmToWasmCalls;
-    State m_state;
-
-    const AsyncWork m_asyncWork;
-    uint8_t m_numberOfActiveThreads { 0 };
-    uint32_t m_currentIndex { 0 };
+    RefPtr<CodeBlock> m_codeBlock { nullptr };
+    uint32_t m_functionIndex;
 };
 
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

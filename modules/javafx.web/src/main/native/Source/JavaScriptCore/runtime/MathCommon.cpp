@@ -30,7 +30,7 @@
 
 namespace JSC {
 
-#if PLATFORM(IOS_FAMILY) && CPU(ARM_THUMB2)
+#if OS(DARWIN) && CPU(ARM_THUMB2)
 
 // The following code is taken from netlib.org:
 //   http://www.netlib.org/fdlibm/fdlibm.h
@@ -410,7 +410,7 @@ ALWAYS_INLINE double mathPowInternal(double x, double y)
 
 #endif
 
-double JIT_OPERATION operationMathPow(double x, double y)
+JSC_DEFINE_JIT_OPERATION(operationMathPow, double, (double x, double y))
 {
     if (std::isnan(y))
         return PNaN;
@@ -437,20 +437,8 @@ double JIT_OPERATION operationMathPow(double x, double y)
     int32_t yAsInt = y;
     if (static_cast<double>(yAsInt) == y && yAsInt >= 0 && yAsInt <= maxExponentForIntegerMathPow) {
         // If the exponent is a small positive int32 integer, we do a fast exponentiation
-
-        // Do not use x87 values for accumulation. x87 values has 80bit precision.
-        // The result produced by x87's 80bit double precision differs from the one calculated with SSE2 in DFG.
-        // Using volatile double is workaround for this problem. By specifying volatile, we expect that `result` and `xd`
-        // are stored in the stack. And at that time, we expect that they are rounded by fst/fstp[1, 2].
-        // [1]: https://gcc.gnu.org/wiki/x87note
-        // [2]: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=323
-#if !CPU(X86) || (defined(__SSE2_MATH__) && defined(__SSE2__))
-        typedef double DoubleValue;
-#else
-        typedef volatile double DoubleValue;
-#endif
-        DoubleValue result = 1;
-        DoubleValue xd = x;
+        double result = 1;
+        double xd = x;
         while (yAsInt) {
             if (yAsInt & 1)
                 result *= xd;
@@ -462,14 +450,14 @@ double JIT_OPERATION operationMathPow(double x, double y)
     return mathPowInternal(x, y);
 }
 
-int32_t JIT_OPERATION operationToInt32(double value)
+JSC_DEFINE_JIT_OPERATION(operationToInt32, UCPUStrictInt32, (double value))
 {
-    return JSC::toInt32(value);
+    return toUCPUStrictInt32(JSC::toInt32(value));
 }
 
-int32_t JIT_OPERATION operationToInt32SensibleSlow(double number)
+JSC_DEFINE_JIT_OPERATION(operationToInt32SensibleSlow, UCPUStrictInt32, (double number))
 {
-    return toInt32Internal<ToInt32Mode::AfterSensibleConversionAttempt>(number);
+    return toUCPUStrictInt32(toInt32Internal<ToInt32Mode::AfterSensibleConversionAttempt>(number));
 }
 
 #if HAVE(ARM_IDIV_INSTRUCTIONS)
@@ -488,14 +476,103 @@ static inline bool isStrictInt32(double value)
 #endif
 
 extern "C" {
-double jsRound(double value)
+
+JSC_DEFINE_JIT_OPERATION(jsRound, double, (double value))
 {
     double integer = ceil(value);
-    return integer - (integer - value > 0.5);
+    return integer - (integer - 0.5 > value);
 }
 
-#if CALLING_CONVENTION_IS_STDCALL || CPU(ARM_THUMB2)
-double jsMod(double x, double y)
+} // extern "C"
+
+namespace Math {
+
+static ALWAYS_INLINE double log1pDoubleImpl(double value)
+{
+    if (value == 0.0)
+        return value;
+    return std::log1p(value);
+}
+
+static ALWAYS_INLINE float log1pFloatImpl(float value)
+{
+    if (value == 0.0)
+        return value;
+    return std::log1p(value);
+}
+
+double log1p(double value)
+{
+    return log1pDoubleImpl(value);
+}
+
+#define JSC_DEFINE_VIA_STD(capitalizedName, lowerName) \
+    JSC_DEFINE_JIT_OPERATION(lowerName##Double, double, (double value)) \
+    { \
+        return std::lowerName(value); \
+    } \
+    JSC_DEFINE_JIT_OPERATION(lowerName##Float, float, (float value)) \
+    { \
+        return std::lowerName(value); \
+    }
+FOR_EACH_ARITH_UNARY_OP_STD(JSC_DEFINE_VIA_STD)
+#undef JSC_DEFINE_VIA_STD
+
+#define JSC_DEFINE_VIA_CUSTOM(capitalizedName, lowerName) \
+    JSC_DEFINE_JIT_OPERATION(lowerName##Double, double, (double value)) \
+    { \
+        return lowerName##DoubleImpl(value); \
+    } \
+    JSC_DEFINE_JIT_OPERATION(lowerName##Float, float, (float value)) \
+    { \
+        return lowerName##FloatImpl(value); \
+    }
+FOR_EACH_ARITH_UNARY_OP_CUSTOM(JSC_DEFINE_VIA_CUSTOM)
+#undef JSC_DEFINE_VIA_CUSTOM
+
+JSC_DEFINE_JIT_OPERATION(truncDouble, double, (double value))
+{
+    return std::trunc(value);
+}
+JSC_DEFINE_JIT_OPERATION(truncFloat, float, (float value))
+{
+    return std::trunc(value);
+}
+JSC_DEFINE_JIT_OPERATION(ceilDouble, double, (double value))
+{
+    return std::ceil(value);
+}
+JSC_DEFINE_JIT_OPERATION(ceilFloat, float, (float value))
+{
+    return std::ceil(value);
+}
+JSC_DEFINE_JIT_OPERATION(floorDouble, double, (double value))
+{
+    return std::floor(value);
+}
+JSC_DEFINE_JIT_OPERATION(floorFloat, float, (float value))
+{
+    return std::floor(value);
+}
+JSC_DEFINE_JIT_OPERATION(sqrtDouble, double, (double value))
+{
+    return std::sqrt(value);
+}
+JSC_DEFINE_JIT_OPERATION(sqrtFloat, float, (float value))
+{
+    return std::sqrt(value);
+}
+
+JSC_DEFINE_JIT_OPERATION(stdPowDouble, double, (double x, double y))
+{
+    return std::pow(x, y);
+}
+JSC_DEFINE_JIT_OPERATION(stdPowFloat, float, (float x, float y))
+{
+    return std::pow(x, y);
+}
+
+JSC_DEFINE_JIT_OPERATION(fmodDouble, double, (double x, double y))
 {
 #if HAVE(ARM_IDIV_INSTRUCTIONS)
     // fmod() does not have exact results for integer on ARMv7.
@@ -518,16 +595,21 @@ double jsMod(double x, double y)
 #endif
     return fmod(x, y);
 }
-#endif
-} // extern "C"
 
-namespace Math {
-
-double JIT_OPERATION log1p(double value)
+static ALWAYS_INLINE double roundDoubleImpl(double value)
 {
-    if (value == 0.0)
-        return value;
-    return std::log1p(value);
+    double integer = ceil(value);
+    return integer - (integer - 0.5 > value);
+}
+
+JSC_DEFINE_JIT_OPERATION(roundDouble, double, (double value))
+{
+    return roundDoubleImpl(value);
+}
+
+JSC_DEFINE_JIT_OPERATION(jsRoundDouble, double, (double value))
+{
+    return roundDoubleImpl(value);
 }
 
 } // namespace Math

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,12 @@
 #include "config.h"
 #include "StopIfNecessaryTimer.h"
 
-#include "JSCInlines.h"
+#include "HeapInlines.h"
+#include "VM.h"
 
 namespace JSC {
 
-StopIfNecessaryTimer::StopIfNecessaryTimer(VM* vm)
+StopIfNecessaryTimer::StopIfNecessaryTimer(VM& vm)
     : Base(vm)
 {
 }

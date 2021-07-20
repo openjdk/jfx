@@ -26,12 +26,17 @@
 #include "config.h"
 #include "StructureIDTable.h"
 
-#include <limits.h>
 #include <wtf/Atomics.h>
+#include <wtf/DataLog.h>
+#include <wtf/RawPointer.h>
 
 namespace JSC {
 
 #if USE(JSVALUE64)
+
+namespace StructureIDTableInternal {
+static constexpr bool verbose = false;
+}
 
 StructureIDTable::StructureIDTable()
     : m_table(makeUniqueArray<StructureOrOffset>(s_initialSize))
@@ -102,6 +107,10 @@ void StructureIDTable::resize(size_t newCapacity)
     if (newCapacity > s_maximumNumberOfStructures)
         newCapacity = s_maximumNumberOfStructures;
 
+    // If m_size is already s_maximumNumberOfStructures, newCapacity becomes s_maximumNumberOfStructures in the above code.
+    // In that case, we should crash because of exhaust of StructureIDs.
+    RELEASE_ASSERT_WITH_MESSAGE(m_size < newCapacity, "Crash intentionally because of exhaust of StructureIDs.");
+
     // Create the new table.
     auto newTable = makeUniqueArray<StructureOrOffset>(newCapacity);
 
@@ -158,11 +167,14 @@ StructureID StructureIDTable::allocateID(Structure* structure)
     table()[structureIndex].encodedStructureBits = encode(structure, result);
     m_size++;
     ASSERT(!isNuked(result));
+
+    dataLogLnIf(StructureIDTableInternal::verbose, "Allocated StructureID ", result, " for Structure ", RawPointer(structure));
     return result;
 }
 
 void StructureIDTable::deallocateID(Structure* structure, StructureID structureID)
 {
+    dataLogLnIf(StructureIDTableInternal::verbose, "Deallocated StructureID ", structureID);
     ASSERT(structureID != s_unusedID);
     uint32_t structureIndex = structureID >> s_numberOfEntropyBits;
     ASSERT(structureIndex && structureIndex < s_maximumNumberOfStructures);

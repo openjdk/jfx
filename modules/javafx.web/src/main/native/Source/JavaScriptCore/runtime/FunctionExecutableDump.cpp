@@ -26,7 +26,6 @@
 #include "config.h"
 #include "FunctionExecutableDump.h"
 
-#include "CodeBlock.h"
 #include "FunctionCodeBlock.h"
 #include "JSCellInlines.h"
 
@@ -34,7 +33,7 @@ namespace JSC {
 
 void FunctionExecutableDump::dump(PrintStream& out) const
 {
-    out.print(m_executable->inferredName().string(), "#");
+    out.print(m_executable->ecmaName().string(), "#");
     if (m_executable->isGeneratedForCall())
         out.print(m_executable->codeBlockForCall()->hashAsStringIfPossible());
     else

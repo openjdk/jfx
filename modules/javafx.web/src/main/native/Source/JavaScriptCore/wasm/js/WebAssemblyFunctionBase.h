@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ class WebAssemblyFunctionBase : public JSFunction {
 public:
     using Base = JSFunction;
 
-    const static unsigned StructureFlags = Base::StructureFlags;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     DECLARE_INFO;
 
@@ -46,9 +46,9 @@ public:
     static ptrdiff_t offsetOfInstance() { return OBJECT_OFFSETOF(WebAssemblyFunctionBase, m_instance); }
 
 protected:
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
     void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name, JSWebAssemblyInstance*);
-    WebAssemblyFunctionBase(VM&, JSGlobalObject*, Structure*);
+    WebAssemblyFunctionBase(VM&, NativeExecutable*, JSGlobalObject*, Structure*);
 
     WriteBarrier<JSWebAssemblyInstance> m_instance;
 };

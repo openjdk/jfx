@@ -26,9 +26,7 @@
 #include "config.h"
 #include "TypedArrayType.h"
 
-#include "JSDataView.h"
 #include "JSTypedArrayConstructors.h"
-#include "JSTypedArrays.h"
 
 namespace JSC {
 
@@ -36,7 +34,7 @@ const ClassInfo* constructorClassInfoForType(TypedArrayType type)
 {
     switch (type) {
     case NotTypedArray:
-        return 0;
+        return nullptr;
     case TypeInt8:
         return JSInt8ArrayConstructor::info();
     case TypeUint8:
@@ -55,11 +53,15 @@ const ClassInfo* constructorClassInfoForType(TypedArrayType type)
         return JSFloat32ArrayConstructor::info();
     case TypeFloat64:
         return JSFloat64ArrayConstructor::info();
+    case TypeBigInt64:
+        return JSBigInt64ArrayConstructor::info();
+    case TypeBigUint64:
+        return JSBigUint64ArrayConstructor::info();
     case TypeDataView:
         return JSDataViewConstructor::info();
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 } // namespace JSC
@@ -100,6 +102,12 @@ void printInternal(PrintStream& out, TypedArrayType type)
         return;
     case TypeFloat64:
         out.print("TypeFloat64");
+        return;
+    case TypeBigInt64:
+        out.print("TypeBigInt64");
+        return;
+    case TypeBigUint64:
+        out.print("TypeBigUint64");
         return;
     case TypeDataView:
         out.print("TypeDataView");

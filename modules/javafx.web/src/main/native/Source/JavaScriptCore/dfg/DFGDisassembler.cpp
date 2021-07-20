@@ -30,12 +30,9 @@
 
 #include "CodeBlockWithJITType.h"
 #include "DFGGraph.h"
-#include "DFGJITCode.h"
 #include "Disassembler.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
-#include "ProfilerDatabase.h"
-#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace DFG {
 
@@ -74,7 +71,7 @@ void Disassembler::reportToProfiler(Profiler::Compilation* compilation, LinkBuff
 
 void Disassembler::dumpHeader(PrintStream& out, LinkBuffer& linkBuffer)
 {
-    out.print("Generated DFG JIT code for ", CodeBlockWithJITType(m_graph.m_codeBlock, JITCode::DFGJIT), ", instruction count = ", m_graph.m_codeBlock->instructionCount(), ":\n");
+    out.print("Generated DFG JIT code for ", CodeBlockWithJITType(m_graph.m_codeBlock, JITType::DFGJIT), ", instructions size = ", m_graph.m_codeBlock->instructionsSize(), ":\n");
     out.print("    Optimized with execution counter = ", m_graph.m_profiledBlock->jitExecuteCounter(), "\n");
     out.print("    Code at [", RawPointer(linkBuffer.debugAddress()), ", ", RawPointer(static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.size()), "):\n");
 }
@@ -101,7 +98,7 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
     const char* prefix = "    ";
     const char* disassemblyPrefix = "        ";
 
-    Node* lastNode = 0;
+    Node* lastNode = nullptr;
     MacroAssembler::Label previousLabel = m_startOfCode;
     for (size_t blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
         BasicBlock* block = m_graph.block(blockIndex);
@@ -143,7 +140,7 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
     append(result, out, previousOrigin);
     out.print(prefix, "(End Of Main Path)\n");
     append(result, out, previousOrigin);
-    dumpDisassembly(out, disassemblyPrefix, linkBuffer, previousLabel, m_endOfCode, 0);
+    dumpDisassembly(out, disassemblyPrefix, linkBuffer, previousLabel, m_endOfCode, nullptr);
     append(result, out, previousOrigin);
     m_dumpContext.dump(out, prefix);
     append(result, out, previousOrigin);

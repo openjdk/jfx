@@ -39,6 +39,8 @@ class IDBError;
 class IDBResourceIdentifier;
 class IDBResultData;
 
+struct IDBDatabaseNameAndVersion;
+
 namespace IDBServer {
 
 class UniqueIDBDatabaseConnection;
@@ -47,7 +49,7 @@ class IDBConnectionToClient : public RefCounted<IDBConnectionToClient> {
 public:
     WEBCORE_EXPORT static Ref<IDBConnectionToClient> create(IDBConnectionToClientDelegate&);
 
-    uint64_t identifier() const;
+    IDBConnectionIdentifier identifier() const;
 
     void didDeleteDatabase(const IDBResultData&);
     void didOpenDatabase(const IDBResultData&);
@@ -74,16 +76,18 @@ public:
 
     void notifyOpenDBRequestBlocked(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion);
 
-    void didGetAllDatabaseNames(uint64_t callbackID, const Vector<String>& databaseNames);
+    void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&);
 
     void registerDatabaseConnection(UniqueIDBDatabaseConnection&);
     void unregisterDatabaseConnection(UniqueIDBDatabaseConnection&);
     void connectionToClientClosed();
     bool isClosed() { return m_isClosed; }
+    void clearDelegate() { m_delegate = nullptr; }
+
 private:
     IDBConnectionToClient(IDBConnectionToClientDelegate&);
 
-    WeakPtr<IDBConnectionToClientDelegate> m_delegate;
+    IDBConnectionToClientDelegate* m_delegate;
     HashSet<UniqueIDBDatabaseConnection*> m_databaseConnections;
     bool m_isClosed { false };
 };

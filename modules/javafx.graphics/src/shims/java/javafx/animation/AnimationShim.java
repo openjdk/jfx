@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.animation;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
 import javafx.util.Duration;
@@ -36,16 +36,20 @@ public abstract class AnimationShim extends Animation {
         super();
     }
 
-    public AnimationShim(AbstractMasterTimer timer) {
+    public AnimationShim(AbstractPrimaryTimer timer) {
         super(timer);
     }
 
-    public AnimationShim(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
+    public AnimationShim(AbstractPrimaryTimer timer, ClipEnvelope clipEnvelope, int resolution) {
         super(timer, clipEnvelope, resolution);
     }
 
     public ClipEnvelope get_clipEnvelope() {
         return clipEnvelope;
+    }
+
+    public void setClipEnvelope(ClipEnvelope clipEnvelope) {
+        this.clipEnvelope= clipEnvelope;
     }
 
     @Override

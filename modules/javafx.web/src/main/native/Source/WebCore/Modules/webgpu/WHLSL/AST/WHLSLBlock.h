@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLStatement.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -37,22 +38,21 @@ namespace WHLSL {
 
 namespace AST {
 
-class Block : public Statement {
+class Block final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    Block(Lexer::Token&& origin, Statements&& statements)
-        : Statement(WTFMove(origin))
+    Block(CodeLocation location, Statements&& statements)
+        : Statement(location, Kind::Block)
         , m_statements(WTFMove(statements))
     {
     }
 
-    virtual ~Block() = default;
+    ~Block() = default;
 
     Block(const Block&) = delete;
     Block(Block&&) = default;
 
     Statements& statements() { return m_statements; }
-
-    bool isBlock() const override { return true; }
 
 private:
     Statements m_statements;
@@ -64,6 +64,8 @@ private:
 
 }
 
+DEFINE_DEFAULT_DELETE(Block)
+
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(Block, isBlock())
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

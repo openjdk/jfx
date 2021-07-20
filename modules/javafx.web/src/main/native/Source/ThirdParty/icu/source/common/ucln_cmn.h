@@ -22,8 +22,6 @@
 
 /* These are the cleanup functions for various APIs. */
 /* @return true if cleanup complete successfully.*/
-U_CFUNC UBool umtx_cleanup(void);
-
 U_CFUNC UBool utrace_cleanup(void);
 
 U_CFUNC UBool ucln_lib_cleanup(void);
@@ -40,11 +38,16 @@ typedef enum ECleanupCommonType {
     UCLN_COMMON_SERVICE,
     UCLN_COMMON_LOCALE_KEY_TYPE,
     UCLN_COMMON_LOCALE,
+    UCLN_COMMON_LOCALE_ALIAS,
+    UCLN_COMMON_LOCALE_KNOWN_CANONICALIZED,
     UCLN_COMMON_LOCALE_AVAILABLE,
+    UCLN_COMMON_LIKELY_SUBTAGS,
+    UCLN_COMMON_LOCALE_DISTANCE,
     UCLN_COMMON_ULOC,
     UCLN_COMMON_CURRENCY,
     UCLN_COMMON_LOADED_NORMALIZER2,
     UCLN_COMMON_NORMALIZER2,
+    UCLN_COMMON_CHARACTERPROPERTIES,
     UCLN_COMMON_USET,
     UCLN_COMMON_UNAMES,
     UCLN_COMMON_UPROPS,
@@ -52,7 +55,6 @@ typedef enum ECleanupCommonType {
     UCLN_COMMON_UCNV_IO,
     UCLN_COMMON_UDATA,
     UCLN_COMMON_PUTIL,
-    UCLN_COMMON_LIST_FORMATTER,
     UCLN_COMMON_UINIT,
 
     /*
@@ -62,6 +64,7 @@ typedef enum ECleanupCommonType {
     */
     UCLN_COMMON_UNIFIED_CACHE,
     UCLN_COMMON_URES,
+    UCLN_COMMON_MUTEX,    // Mutexes should be the last to be cleaned up.
     UCLN_COMMON_COUNT /* This must be last */
 } ECleanupCommonType;
 

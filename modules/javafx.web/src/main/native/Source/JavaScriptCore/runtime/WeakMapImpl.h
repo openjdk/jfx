@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -144,8 +144,8 @@ public:
         clearValue();
     }
 
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value>::type visitAggregate(SlotVisitor& visitor)
+    template <typename T = Data, typename Visitor>
+    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value>::type visitAggregate(Visitor& visitor)
     {
         visitor.append(m_data.value);
     }
@@ -192,16 +192,17 @@ public:
 };
 
 template <typename WeakMapBucketType>
-class WeakMapImpl : public JSDestructibleObject {
-    using Base = JSDestructibleObject;
+class WeakMapImpl : public JSNonFinalObject {
+    using Base = JSNonFinalObject;
     using WeakMapBufferType = WeakMapBuffer<WeakMapBucketType>;
 
 public:
     using BucketType = WeakMapBucketType;
 
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     static size_t estimatedSize(JSCell*, VM&);
 
@@ -305,15 +306,18 @@ public:
     template<typename CellType, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
     {
-        if (isWeakMap())
+        if constexpr (isWeakMap())
             return vm.weakMapSpace<mode>();
         return vm.weakSetSpace<mode>();
     }
 
-    static void visitOutputConstraints(JSCell*, SlotVisitor&);
+    template<typename Visitor> static void visitOutputConstraints(JSCell*, Visitor&);
     void finalizeUnconditionally(VM&);
 
 private:
+    template<typename Visitor>
+    ALWAYS_INLINE static void visitOutputConstraintsForDataKeyValue(JSCell*, Visitor&);
+
     ALWAYS_INLINE WeakMapBucketType* findBucket(JSObject* key)
     {
         return findBucket(key, jsWeakMapHash(key));
@@ -443,7 +447,7 @@ private:
 
     ALWAYS_INLINE void checkConsistency() const
     {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             uint32_t size = 0;
             auto* buffer = this->buffer();
             for (uint32_t index = 0; index < m_capacity; ++index) {
@@ -468,7 +472,7 @@ private:
 
     ALWAYS_INLINE void assertBufferIsEmpty() const
     {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             for (unsigned i = 0; i < m_capacity; i++)
                 ASSERT((buffer() + i)->isEmpty());
         }

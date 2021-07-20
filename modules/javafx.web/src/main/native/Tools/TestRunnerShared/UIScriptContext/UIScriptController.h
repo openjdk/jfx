@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UIScriptController_h
-#define UIScriptController_h
+#pragma once
 
 #include "JSWrappable.h"
 #include <JavaScriptCore/JSRetainPtr.h>
@@ -32,6 +31,8 @@
 #include <wtf/Ref.h>
 
 OBJC_CLASS NSUndoManager;
+OBJC_CLASS NSView;
+OBJC_CLASS UIView;
 
 namespace WebCore {
 class FloatRect;
@@ -50,192 +51,308 @@ enum class DeviceOrientation {
 
 DeviceOrientation* toDeviceOrientation(JSContextRef, JSValueRef);
 
+struct ScrollToOptions {
+    bool unconstrained { false };
+};
+
+ScrollToOptions* toScrollToOptions(JSContextRef, JSValueRef);
+
 class UIScriptController : public JSWrappable {
 public:
-    static Ref<UIScriptController> create(UIScriptContext& context)
-    {
-        return adoptRef(*new UIScriptController(context));
-    }
-
-    void contextDestroyed();
-    void checkForOutstandingCallbacks();
-
-    void makeWindowObject(JSContextRef, JSObjectRef windowObject, JSValueRef* exception);
-
-    void doAsyncTask(JSValueRef callback);
-    void doAfterPresentationUpdate(JSValueRef callback);
-    void doAfterNextStablePresentationUpdate(JSValueRef callback);
-    void doAfterVisibleContentRectUpdate(JSValueRef callback);
-
-    void zoomToScale(double scale, JSValueRef callback);
-    void setViewScale(double);
-    void setMinimumEffectiveWidth(double);
-
-    void resignFirstResponder();
-
-    void simulateAccessibilitySettingsChangeNotification(JSValueRef callback);
-
-    void touchDownAtPoint(long x, long y, long touchCount, JSValueRef callback);
-    void liftUpAtPoint(long x, long y, long touchCount, JSValueRef callback);
-    void singleTapAtPoint(long x, long y, JSValueRef callback);
-    void singleTapAtPointWithModifiers(long x, long y, JSValueRef modifierArray, JSValueRef callback);
-    void doubleTapAtPoint(long x, long y, JSValueRef callback);
-    void dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, JSValueRef callback);
-
-    void stylusDownAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef callback);
-    void stylusMoveToPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef callback);
-    void stylusUpAtPoint(long x, long y, JSValueRef callback);
-    void stylusTapAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef callback);
-    void stylusTapAtPointWithModifiers(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef modifierArray, JSValueRef callback);
-
-    void longPressAtPoint(long x, long y, JSValueRef callback);
-
-    void sendEventStream(JSStringRef eventsJSON, JSValueRef callback);
-
-    void enterText(JSStringRef);
-    void typeCharacterUsingHardwareKeyboard(JSStringRef character, JSValueRef callback);
-
-    void keyDown(JSStringRef character, JSValueRef modifierArray);
-    void toggleCapsLock(JSValueRef callback);
-
-    void keyboardAccessoryBarNext();
-    void keyboardAccessoryBarPrevious();
-
-    void applyAutocorrection(JSStringRef newString, JSStringRef oldString, JSValueRef callback);
-
-    void dismissFormAccessoryView();
-    void selectFormAccessoryPickerRow(long);
-    JSRetainPtr<JSStringRef> textContentType() const;
-    JSRetainPtr<JSStringRef> selectFormPopoverTitle() const;
-    JSRetainPtr<JSStringRef> formInputLabel() const;
-    void setTimePickerValue(long hour, long minute);
-
-    void setShareSheetCompletesImmediatelyWithResolution(bool resolved);
-
-    bool isShowingDataListSuggestions() const;
-
-    JSObjectRef contentsOfUserInterfaceItem(JSStringRef) const;
-    void overridePreference(JSStringRef preference, JSStringRef value);
-
-    bool isPresentingModally() const;
-
-    double contentOffsetX() const;
-    double contentOffsetY() const;
-
-    void scrollToOffset(long x, long y);
-
-    void immediateScrollToOffset(long x, long y);
-    void immediateZoomToScale(double scale);
-
-    void beginBackSwipe(JSValueRef callback);
-    void completeBackSwipe(JSValueRef callback);
-
-    void setDidStartFormControlInteractionCallback(JSValueRef);
-    JSValueRef didStartFormControlInteractionCallback() const;
-
-    void setDidEndFormControlInteractionCallback(JSValueRef);
-    JSValueRef didEndFormControlInteractionCallback() const;
-
-    void setDidShowForcePressPreviewCallback(JSValueRef);
-    JSValueRef didShowForcePressPreviewCallback() const;
-
-    void setDidDismissForcePressPreviewCallback(JSValueRef);
-    JSValueRef didDismissForcePressPreviewCallback() const;
-
-    void setWillBeginZoomingCallback(JSValueRef);
-    JSValueRef willBeginZoomingCallback() const;
-
-    void setDidEndZoomingCallback(JSValueRef);
-    JSValueRef didEndZoomingCallback() const;
-
-    void setDidShowKeyboardCallback(JSValueRef);
-    JSValueRef didShowKeyboardCallback() const;
-
-    void setDidHideKeyboardCallback(JSValueRef);
-    JSValueRef didHideKeyboardCallback() const;
-
-    bool isShowingKeyboard() const;
-
-    void setDidEndScrollingCallback(JSValueRef);
-    JSValueRef didEndScrollingCallback() const;
-
-    void playBackEventStream(JSStringRef stream, JSValueRef callback);
-
-    double zoomScale() const;
-    double minimumZoomScale() const;
-    double maximumZoomScale() const;
-
-    Optional<bool> stableStateOverride() const;
-    void setStableStateOverride(Optional<bool>);
-
-    JSObjectRef contentVisibleRect() const;
-
-    JSObjectRef textSelectionRangeRects() const;
-    JSObjectRef textSelectionCaretRect() const;
-    JSObjectRef selectionStartGrabberViewRect() const;
-    JSObjectRef selectionEndGrabberViewRect() const;
-    JSObjectRef selectionCaretViewRect() const;
-    JSObjectRef selectionRangeViewRects() const;
-    JSObjectRef calendarType() const;
-    void setDefaultCalendarType(JSStringRef calendarIdentifier);
-    JSObjectRef inputViewBounds() const;
-
-    void setKeyboardInputModeIdentifier(JSStringRef);
-
-    void replaceTextAtRange(JSStringRef, int location, int length);
-    void removeAllDynamicDictionaries();
-
-    JSRetainPtr<JSStringRef> scrollingTreeAsText() const;
-
-    JSObjectRef propertiesOfLayerWithID(uint64_t layerID) const;
+    static Ref<UIScriptController> create(UIScriptContext&);
 
     void uiScriptComplete(JSStringRef result);
 
-    void retrieveSpeakSelectionContent(JSValueRef);
-    JSRetainPtr<JSStringRef> accessibilitySpeakSelectionContent() const;
+    void notImplemented() const { RELEASE_ASSERT_NOT_REACHED(); }
 
-    void simulateRotation(DeviceOrientation*, JSValueRef);
-    void simulateRotationLikeSafari(DeviceOrientation*, JSValueRef);
+    void contextDestroyed();
+    virtual void waitForOutstandingCallbacks() { /* notImplemented(); */ }
 
-    void findString(JSStringRef, unsigned long options, unsigned long maxCount);
+    void makeWindowObject(JSContextRef);
 
-    // These use a callback to allow the client to know when view visibility state updates get to the web process.
-    void removeViewFromWindow(JSValueRef);
-    void addViewToWindow(JSValueRef);
+    // Transaction helpers
 
-    void setSafeAreaInsets(double top, double right, double bottom, double left);
+    virtual void doAsyncTask(JSValueRef) { notImplemented(); }
+    virtual void doAfterPresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
+    virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
+    virtual void ensurePositionInformationIsUpToDateAt(long, long, JSValueRef callback) { doAsyncTask(callback); }
+    virtual void doAfterVisibleContentRectUpdate(JSValueRef callback) { doAsyncTask(callback); }
 
-    void firstResponderSuppressionForWebView(bool);
-    void makeWindowContentViewFirstResponder();
-    bool isWindowContentViewFirstResponder() const;
+    virtual void doAfterDoubleTapDelay(JSValueRef callback) { doAsyncTask(callback); }
 
-    void drawSquareInEditableImage();
-    long numberOfStrokesInEditableImage();
+    // Preferences
 
-    JSRetainPtr<JSStringRef> lastUndoLabel() const;
-    JSRetainPtr<JSStringRef> firstRedoLabel() const;
+    virtual void overridePreference(JSStringRef, JSStringRef) { notImplemented(); }
 
-    JSObjectRef attachmentInfo(JSStringRef attachmentIdentifier);
+    // Zooming
 
-private:
-    UIScriptController(UIScriptContext&);
+    virtual void zoomToScale(double, JSValueRef) { notImplemented(); }
+    virtual void immediateZoomToScale(double) { notImplemented(); }
+    virtual void setViewScale(double) { notImplemented(); }
+    virtual double zoomScale() const { notImplemented(); return 1; }
+    virtual double minimumZoomScale() const { notImplemented(); return 1; }
+    virtual double maximumZoomScale() const { notImplemented(); return 1; }
+
+    // Viewports
+
+    virtual void setMinimumEffectiveWidth(double) { notImplemented(); }
+    virtual void setAllowsViewportShrinkToFit(bool) { notImplemented(); }
+
+    virtual Optional<bool> stableStateOverride() const { notImplemented(); return WTF::nullopt; }
+    virtual void setStableStateOverride(Optional<bool>) { notImplemented(); }
+
+    virtual JSObjectRef contentVisibleRect() const { notImplemented(); return nullptr; }
+
+    virtual void setSafeAreaInsets(double, double, double, double) { notImplemented(); }
+
+    // View Parenting and Visibility
+
+    virtual void becomeFirstResponder() { notImplemented(); }
+    virtual void resignFirstResponder() { notImplemented(); }
+
+    virtual void copyText(JSStringRef) { notImplemented(); }
+    virtual void paste() { notImplemented(); }
+
+    virtual void chooseMenuAction(JSStringRef, JSValueRef);
+    virtual void dismissMenu();
+
+    virtual void firstResponderSuppressionForWebView(bool) { notImplemented(); }
+    virtual void makeWindowContentViewFirstResponder() { notImplemented(); }
+    virtual bool isWindowContentViewFirstResponder() const { notImplemented(); return false; }
+
+    virtual void removeViewFromWindow(JSValueRef) { notImplemented(); }
+    virtual void addViewToWindow(JSValueRef) { notImplemented(); }
+
+    virtual void installTapGestureOnWindow(JSValueRef) { notImplemented(); }
+
+    // Editable region
+
+    virtual bool mayContainEditableElementsInRect(unsigned, unsigned, unsigned, unsigned) { notImplemented(); return false; }
+
+    // Compositing
+
+    virtual JSObjectRef propertiesOfLayerWithID(uint64_t) const { notImplemented(); return nullptr; }
+
+    // Scrolling
+
+    virtual bool scrollUpdatesDisabled() const { notImplemented(); return false; }
+    virtual void setScrollUpdatesDisabled(bool) { notImplemented(); }
+
+    virtual void scrollToOffset(long, long, ScrollToOptions*) { notImplemented(); }
+
+    virtual void immediateScrollToOffset(long, long, ScrollToOptions*) { notImplemented(); }
+    virtual void immediateScrollElementAtContentPointToOffset(long, long, long, long) { notImplemented(); }
+
+    virtual double contentOffsetX() const { notImplemented(); return 0; }
+    virtual double contentOffsetY() const { notImplemented(); return 0; }
+
+    virtual JSRetainPtr<JSStringRef> scrollingTreeAsText() const { notImplemented(); return nullptr; }
+
+    // Touches
+
+    virtual void touchDownAtPoint(long, long, long, JSValueRef) { notImplemented(); }
+    virtual void liftUpAtPoint(long, long, long, JSValueRef) { notImplemented(); }
+    virtual void singleTapAtPoint(long, long, JSValueRef) { notImplemented(); }
+    virtual void singleTapAtPointWithModifiers(long, long, JSValueRef, JSValueRef) { notImplemented(); }
+    virtual void twoFingerSingleTapAtPoint(long, long, JSValueRef) { notImplemented(); }
+    virtual void doubleTapAtPoint(long, long, float, JSValueRef) { notImplemented(); }
+    virtual void dragFromPointToPoint(long, long, long, long, double, JSValueRef) { notImplemented(); }
+    virtual void longPressAtPoint(long, long, JSValueRef) { notImplemented(); }
+
+    virtual void activateAtPoint(long, long, JSValueRef) { notImplemented(); }
+
+    // Keyboard
+
+    virtual void enterText(JSStringRef) { notImplemented(); }
+    virtual void typeCharacterUsingHardwareKeyboard(JSStringRef, JSValueRef) { notImplemented(); }
+
+    virtual void keyDown(JSStringRef, JSValueRef) { notImplemented(); }
+    virtual void toggleCapsLock(JSValueRef) { notImplemented(); }
+    virtual void setContinuousSpellCheckingEnabled(bool) { notImplemented(); }
+    virtual void setSpellCheckerResults(JSValueRef) { notImplemented(); }
+    virtual bool keyboardIsAutomaticallyShifted() const
+    {
+        notImplemented();
+        return false;
+    }
+
+    virtual void rawKeyDown(JSStringRef) { notImplemented(); }
+    virtual void rawKeyUp(JSStringRef) { notImplemented(); }
+
+    virtual void keyboardAccessoryBarNext() { notImplemented(); }
+    virtual void keyboardAccessoryBarPrevious() { notImplemented(); }
+
+    virtual void applyAutocorrection(JSStringRef, JSStringRef, JSValueRef) { notImplemented(); }
+
+    virtual bool isShowingKeyboard() const { notImplemented(); return false; }
+    virtual bool hasInputSession() const { notImplemented(); return false; }
+
+    virtual void setHardwareKeyboardAttached(bool) { }
+
+    virtual void setKeyboardInputModeIdentifier(JSStringRef) { notImplemented(); }
+
+    virtual void replaceTextAtRange(JSStringRef, int, int) { notImplemented(); }
+
+    virtual bool windowIsKey() const { notImplemented(); return false; }
+    virtual void setWindowIsKey(bool) { notImplemented(); }
+
+    // Stylus
+
+    virtual void stylusDownAtPoint(long, long, float, float, float, JSValueRef) { notImplemented(); }
+    virtual void stylusMoveToPoint(long, long, float, float, float, JSValueRef) { notImplemented(); }
+    virtual void stylusUpAtPoint(long, long, JSValueRef) { notImplemented(); }
+    virtual void stylusTapAtPoint(long, long, float, float, float, JSValueRef) { notImplemented(); }
+    virtual void stylusTapAtPointWithModifiers(long, long, float, float, float, JSValueRef, JSValueRef) { notImplemented(); }
+
+    // Event Stream
+
+    virtual void sendEventStream(JSStringRef, JSValueRef) { notImplemented(); }
+    virtual void playBackEventStream(JSStringRef, JSValueRef) { notImplemented(); }
+
+    // Form Controls
+
+    virtual void dismissFilePicker(JSValueRef) { notImplemented(); }
+    virtual void dismissFormAccessoryView() { notImplemented(); }
+    virtual void selectFormAccessoryPickerRow(long) { notImplemented(); }
+    virtual bool selectFormAccessoryHasCheckedItemAtRow(long) const { return false; }
+    virtual JSRetainPtr<JSStringRef> textContentType() const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> selectFormPopoverTitle() const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> formInputLabel() const { notImplemented(); return nullptr; }
+    virtual void setTimePickerValue(long, long) { notImplemented(); }
+    virtual double timePickerValueHour() const { notImplemented(); return -1; }
+    virtual double timePickerValueMinute() const { notImplemented(); return -1; }
+    virtual bool isShowingDateTimePicker() const { notImplemented(); return false; }
+    virtual double dateTimePickerValue() const { notImplemented(); return 0; }
+    virtual void chooseDateTimePickerValue() { notImplemented(); }
+    virtual bool isShowingDataListSuggestions() const { notImplemented(); return false; }
+    virtual JSObjectRef calendarType() const { notImplemented(); return nullptr; }
+    virtual void setDefaultCalendarType(JSStringRef, JSStringRef) { notImplemented(); }
+    virtual JSObjectRef inputViewBounds() const { notImplemented(); return nullptr; }
+    virtual void activateDataListSuggestion(unsigned, JSValueRef) { notImplemented(); }
+    virtual void setSelectedColorForColorPicker(double, double, double) { notImplemented(); }
+
+    // Find in Page
+
+    virtual void findString(JSStringRef, unsigned long, unsigned long) { notImplemented(); }
+
+    // Accessibility
+
+    virtual void simulateAccessibilitySettingsChangeNotification(JSValueRef) { notImplemented(); }
+    virtual void retrieveSpeakSelectionContent(JSValueRef) { notImplemented(); }
+    virtual JSRetainPtr<JSStringRef> accessibilitySpeakSelectionContent() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef contentsOfUserInterfaceItem(JSStringRef) const { notImplemented(); return nullptr; }
+
+    // Swipe
+
+    virtual void beginBackSwipe(JSValueRef) { notImplemented(); }
+    virtual void completeBackSwipe(JSValueRef) { notImplemented(); }
+
+    // Child View Controllers
+
+    virtual bool isShowingPopover() const { notImplemented(); return false; }
+    virtual bool isPresentingModally() const { notImplemented(); return false; }
+
+    // Context Menus
+
+    virtual bool isDismissingMenu() const { notImplemented(); return false; }
+    virtual bool isShowingMenu() const { notImplemented(); return false; }
+    virtual JSObjectRef rectForMenuAction(JSStringRef) const { notImplemented(); return nullptr; }
+    virtual JSObjectRef menuRect() const { notImplemented(); return nullptr; }
+    virtual bool isShowingContextMenu() const { notImplemented(); return false; }
+
+    // Selection
+
+    virtual JSObjectRef textSelectionRangeRects() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef textSelectionCaretRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef selectionStartGrabberViewRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef selectionEndGrabberViewRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef selectionCaretViewRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef selectionRangeViewRects() const { notImplemented(); return nullptr; }
+
+    // Rotation
+
+    virtual void simulateRotation(DeviceOrientation*, JSValueRef) { notImplemented(); }
+    virtual void simulateRotationLikeSafari(DeviceOrientation*, JSValueRef) { notImplemented(); }
+
+    // Undo/Redo
+
+    virtual JSRetainPtr<JSStringRef> lastUndoLabel() const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> firstRedoLabel() const { notImplemented(); return nullptr; }
+
+    // Attachment Elements
+
+    virtual JSObjectRef attachmentInfo(JSStringRef) { notImplemented(); return nullptr; }
+    virtual void insertAttachmentForFilePath(JSStringRef, JSStringRef, JSValueRef) { notImplemented(); }
+
+    // Contact Picker
+
+    virtual void setDidShowContactPickerCallback(JSValueRef);
+    JSValueRef didShowContactPickerCallback() const;
+    virtual bool isShowingContactPicker() const { notImplemented(); return false; }
+
+    virtual void setDidHideContactPickerCallback(JSValueRef);
+    JSValueRef didHideContactPickerCallback() const;
+
+    virtual void dismissContactPickerWithContacts(JSValueRef) { notImplemented(); }
+
+    // Callbacks
+
+    virtual void setDidStartFormControlInteractionCallback(JSValueRef);
+    JSValueRef didStartFormControlInteractionCallback() const;
+
+    virtual void setDidEndFormControlInteractionCallback(JSValueRef);
+    JSValueRef didEndFormControlInteractionCallback() const;
+
+    virtual void setDidShowContextMenuCallback(JSValueRef);
+    JSValueRef didShowContextMenuCallback() const;
+
+    virtual void setDidDismissContextMenuCallback(JSValueRef);
+    JSValueRef didDismissContextMenuCallback() const;
+
+    virtual void setWillBeginZoomingCallback(JSValueRef);
+    JSValueRef willBeginZoomingCallback() const;
+
+    virtual void setDidEndZoomingCallback(JSValueRef);
+    JSValueRef didEndZoomingCallback() const;
+
+    virtual void setWillCreateNewPageCallback(JSValueRef);
+    JSValueRef willCreateNewPageCallback() const;
+
+    virtual void setDidShowKeyboardCallback(JSValueRef);
+    JSValueRef didShowKeyboardCallback() const;
+
+    virtual void setDidHideKeyboardCallback(JSValueRef);
+    JSValueRef didHideKeyboardCallback() const;
+
+    virtual void setDidHideMenuCallback(JSValueRef);
+    JSValueRef didHideMenuCallback() const;
+    virtual void setDidShowMenuCallback(JSValueRef);
+    JSValueRef didShowMenuCallback() const;
+
+    virtual void setDidDismissPopoverCallback(JSValueRef);
+    JSValueRef didDismissPopoverCallback() const;
+    virtual void setWillPresentPopoverCallback(JSValueRef);
+    JSValueRef willPresentPopoverCallback() const;
+
+    virtual void setDidEndScrollingCallback(JSValueRef);
+    JSValueRef didEndScrollingCallback() const;
+
+protected:
+    explicit UIScriptController(UIScriptContext&);
 
     UIScriptContext* context() { return m_context; }
 
-    void platformSetDidStartFormControlInteractionCallback();
-    void platformSetDidEndFormControlInteractionCallback();
-    void platformSetDidShowForcePressPreviewCallback();
-    void platformSetDidDismissForcePressPreviewCallback();
-    void platformSetWillBeginZoomingCallback();
-    void platformSetDidEndZoomingCallback();
-    void platformSetDidShowKeyboardCallback();
-    void platformSetDidHideKeyboardCallback();
-    void platformSetDidEndScrollingCallback();
-    void platformClearAllCallbacks();
-    void platformPlayBackEventStream(JSStringRef, JSValueRef);
+    virtual void clearAllCallbacks() { /* notImplemented(); */ }
 
 #if PLATFORM(COCOA)
-    NSUndoManager *platformUndoManager() const;
+    virtual NSUndoManager *platformUndoManager() const { notImplemented(); return nullptr; }
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    virtual UIView *platformContentView() const { notImplemented(); return nullptr; }
+#endif
+#if PLATFORM(MAC)
+    virtual NSView *platformContentView() const { notImplemented(); return nullptr; }
 #endif
 
     JSClassRef wrapperClass() final;
@@ -250,5 +367,3 @@ private:
 };
 
 }
-
-#endif // UIScriptController_h

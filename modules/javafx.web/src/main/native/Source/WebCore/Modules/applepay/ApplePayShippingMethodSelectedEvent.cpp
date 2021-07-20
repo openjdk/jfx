@@ -28,24 +28,16 @@
 
 #if ENABLE(APPLE_PAY)
 
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-static inline ApplePayShippingMethod convert(const ApplePaySessionPaymentRequest::ShippingMethod& shippingMethod)
-{
-    ApplePayShippingMethod convertedMethod;
-    convertedMethod.label = shippingMethod.label;
-    convertedMethod.detail = shippingMethod.detail;
-    convertedMethod.identifier = shippingMethod.identifier;
-    convertedMethod.amount = shippingMethod.amount;
+WTF_MAKE_ISO_ALLOCATED_IMPL(ApplePayShippingMethodSelectedEvent);
 
-    return convertedMethod;
-}
-
-ApplePayShippingMethodSelectedEvent::ApplePayShippingMethodSelectedEvent(const AtomicString& type, const ApplePaySessionPaymentRequest::ShippingMethod& shippingMethod)
+ApplePayShippingMethodSelectedEvent::ApplePayShippingMethodSelectedEvent(const AtomString& type, const ApplePayShippingMethod& shippingMethod)
     : Event(type, CanBubble::No, IsCancelable::No)
-    , m_shippingMethod(convert(shippingMethod))
+    , m_shippingMethod(shippingMethod)
 {
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,10 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
+static BOOL isNormalTaskbarApp = NO;
 static BOOL disableSyncRendering = NO;
+static BOOL firstActivation = YES;
+static BOOL shouldReactivate = NO;
 
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -271,6 +274,13 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+    if (isNormalTaskbarApp && firstActivation) {
+        LOG("-> deactivate (hide)  app");
+        firstActivation = NO;
+        shouldReactivate = YES;
+        [NSApp hide:NSApp];
+    }
 }
 
 - (void)applicationWillResignActive:(NSNotification *)aNotification
@@ -297,6 +307,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+    if (isNormalTaskbarApp && shouldReactivate) {
+        LOG("-> reactivate  app");
+        shouldReactivate = NO;
+        [NSApp activateIgnoringOtherApps:YES];
+    }
 }
 
 - (void)applicationWillHide:(NSNotification *)aNotification
@@ -515,8 +531,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
         if (!isEmbedded)
         {
+            // Not embedded in another toolkit, so disable automatic tabbing for all windows
+            // We use a guarded call to preserve the ability to run on 10.10 or 10.11.
+            // Using a guard, instead of reflection, assumes the Xcode used to
+            // build includes MacOSX SDK 10.12 or later
+            if (@available(macOS 10.12, *)) {
+                [NSWindow setAllowsAutomaticWindowTabbing:NO];
+            }
             if (self->jTaskBarApp == JNI_TRUE)
             {
+                isNormalTaskbarApp = YES;
                 // move process from background only to full on app with visible Dock icon
                 ProcessSerialNumber psn;
                 if (GetCurrentProcess(&psn) == noErr)
@@ -755,44 +779,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return disableSyncRendering;
 }
 
-+ (BOOL)isSandboxed
-{
-    static int isSandboxed = -1;
-
-    if (isSandboxed == -1) {
-        isSandboxed = 0;
-
-        NSBundle *mainBundle = [NSBundle mainBundle];
-        NSURL *url = [mainBundle bundleURL];
-        SecStaticCodeRef staticCodeRef = NULL;
-        SecStaticCodeCreateWithPath((CFURLRef)url, kSecCSDefaultFlags, &staticCodeRef);
-
-        if (staticCodeRef) {
-            // Check if the app is signed
-            OSStatus res_signed = SecStaticCodeCheckValidityWithErrors(staticCodeRef, kSecCSBasicValidateOnly, NULL, NULL);
-            if (res_signed == errSecSuccess) {
-                // It is signed, now check if it's sandboxed
-                SecRequirementRef sandboxRequirementRef = NULL;
-                SecRequirementCreateWithString(CFSTR("entitlement[\"com.apple.security.app-sandbox\"] exists"), kSecCSDefaultFlags, &sandboxRequirementRef);
-
-                if (sandboxRequirementRef) {
-                    OSStatus res_sandboxed = SecStaticCodeCheckValidityWithErrors(staticCodeRef, kSecCSBasicValidateOnly, sandboxRequirementRef, NULL);
-                    if (res_sandboxed == errSecSuccess) {
-                        // Yep, sandboxed
-                        isSandboxed = 1;
-                    }
-
-                    CFRelease(sandboxRequirementRef);
-                }
-            }
-
-            CFRelease(staticCodeRef);
-        }
-    }
-
-    return isSandboxed == 1 ? YES : NO;
-}
-
 @end
 
 #pragma mark --- JNI
@@ -806,6 +792,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 (JNIEnv *env, jclass jClass, jboolean jDisableSyncRendering)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initIDs");
+
+    // Check minimum OS version
+    NSOperatingSystemVersion osVer;
+    osVer = [[NSProcessInfo processInfo] operatingSystemVersion];
+    NSInteger osVerMajor = osVer.majorVersion;
+    NSInteger osVerMinor = osVer.minorVersion;
+
+    // Map 10.16 to 11.0, since macOS will return 10.16 by default (for compatibility)
+    if (osVerMajor == 10 && osVerMinor >= 16) {
+        // FIXME: if we ever need to know which minor version of macOS 11.x we
+        // are running on, we will need to look it up using a similar technique
+        // to what the JDK does.
+        osVerMajor = 11;
+        osVerMinor = 0;
+    }
+
+    if (osVerMajor < MACOS_MIN_VERSION_MAJOR ||
+            (osVerMajor == MACOS_MIN_VERSION_MAJOR &&
+             osVerMinor < MACOS_MIN_VERSION_MINOR))
+    {
+        NSLog(@"ERROR: macOS version is %d.%d, which is below the minimum of %d.%d",
+              (int)osVerMajor, (int)osVerMinor, MACOS_MIN_VERSION_MAJOR, MACOS_MIN_VERSION_MINOR);
+        jclass exceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
+        if (exceptionClass != 0) {
+            (*env)->ThrowNew(env, exceptionClass, "Unsupported macOS version");
+        }
+        return;
+    }
 
     disableSyncRendering = jDisableSyncRendering ? YES : NO;
 
@@ -1086,6 +1100,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
 (JNIEnv *env, jobject japplication)
 {
     return !isEmbedded;
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _isNormalTaskbarApp
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp
+(JNIEnv *env, jobject japplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp");
+    return isNormalTaskbarApp;
 }
 
 /*

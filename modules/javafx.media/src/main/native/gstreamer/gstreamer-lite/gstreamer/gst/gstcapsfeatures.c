@@ -118,6 +118,13 @@ _priv_gst_caps_features_cleanup (void)
   _gst_caps_features_memory_system_memory = NULL;
 }
 
+/**
+ * gst_is_caps_features:
+ *
+ * Checks if @obj is a #GstCapsFeatures
+ *
+ * Returns: %TRUE if @obj is a #GstCapsFeatures %FALSE otherwise
+ */
 gboolean
 gst_is_caps_features (gconstpointer obj)
 {
@@ -801,7 +808,7 @@ gst_caps_features_add_id (GstCapsFeatures * features, GQuark feature)
   }
 
   /* If features is empty it will contain sysmem, however
-   * we want to add it explicitely if it is tried to be
+   * we want to add it explicitly if it is attempted to be
    * added as first features
    */
   if (features->array->len > 0

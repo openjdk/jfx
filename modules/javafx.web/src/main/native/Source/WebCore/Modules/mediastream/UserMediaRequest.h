@@ -36,25 +36,34 @@
 
 #include "ActiveDOMObject.h"
 #include "CaptureDevice.h"
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
 #include "MediaConstraints.h"
 #include "MediaStreamPrivate.h"
 #include "MediaStreamRequest.h"
+#include <wtf/CompletionHandler.h>
+#include <wtf/ObjectIdentifier.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class MediaStream;
 class SecurityOrigin;
 
+template<typename IDLType> class DOMPromiseDeferred;
+
+enum UserMediaRequestIdentifierType { };
+using UserMediaRequestIdentifier = ObjectIdentifier<UserMediaRequestIdentifierType>;
+
 class UserMediaRequest : public RefCounted<UserMediaRequest>, public ActiveDOMObject {
 public:
     static Ref<UserMediaRequest> create(Document&, MediaStreamRequest&&, DOMPromiseDeferred<IDLInterface<MediaStream>>&&);
     virtual ~UserMediaRequest();
 
+    UserMediaRequestIdentifier identifier() const { return m_identifier; }
     void start();
 
     WEBCORE_EXPORT void setAllowedMediaDeviceUIDs(const String& audioDeviceUID, const String& videoDeviceUID);
-    WEBCORE_EXPORT void allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt);
+    WEBCORE_EXPORT void allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt, CompletionHandler<void()>&&);
 
     enum MediaAccessDenialReason { NoConstraints, UserMediaDisabled, NoCaptureDevices, InvalidConstraint, HardwareError, PermissionDenied, InvalidAccess, IllegalConstraint, OtherFailure };
     WEBCORE_EXPORT void deny(MediaAccessDenialReason, const String& errorMessage = emptyString());
@@ -76,34 +85,16 @@ private:
 
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
-    void mediaStreamIsReady(Ref<MediaStream>&&);
     void mediaStreamDidFail(RealtimeMediaSource::Type);
 
-    class PendingActivationMediaStream : public RefCounted<PendingActivationMediaStream>, private MediaStreamPrivate::Observer {
-    public:
-        static Ref<PendingActivationMediaStream> create(Ref<PendingActivity<UserMediaRequest>>&& protectingUserMediaRequest, UserMediaRequest& userMediaRequest, Ref<MediaStream>&& stream)
-        {
-            return adoptRef(*new PendingActivationMediaStream { WTFMove(protectingUserMediaRequest), userMediaRequest, WTFMove(stream) });
-        }
-        ~PendingActivationMediaStream();
-
-    private:
-        PendingActivationMediaStream(Ref<PendingActivity<UserMediaRequest>>&&, UserMediaRequest&, Ref<MediaStream>&&);
-
-        void characteristicsChanged() final;
-
-        Ref<PendingActivity<UserMediaRequest>> m_protectingUserMediaRequest;
-        UserMediaRequest& m_userMediaRequest;
-        Ref<MediaStream> m_mediaStream;
-    };
+    UserMediaRequestIdentifier m_identifier;
 
     Vector<String> m_videoDeviceUIDs;
     Vector<String> m_audioDeviceUIDs;
 
-    DOMPromiseDeferred<IDLInterface<MediaStream>> m_promise;
-    RefPtr<PendingActivationMediaStream> m_pendingActivationMediaStream;
+    UniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>> m_promise;
+    CompletionHandler<void()> m_allowCompletionHandler;
     MediaStreamRequest m_request;
 };
 

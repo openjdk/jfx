@@ -33,15 +33,14 @@
 #include "CSSPropertyParserHelpers.h"
 #include "MediaFeatureNames.h"
 #include "MediaQueryParserContext.h"
-#include "RuntimeEnabledFeatures.h"
 #include <wtf/text/TextStream.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-static inline bool featureWithValidIdent(const AtomicString& mediaFeature, const CSSPrimitiveValue& value, const MediaQueryParserContext& context)
+static inline bool featureWithValidIdent(const AtomString& mediaFeature, const CSSPrimitiveValue& value, const MediaQueryParserContext& context)
 {
-    if (value.primitiveType() != CSSPrimitiveValue::UnitType::CSS_IDENT)
+    if (value.primitiveType() != CSSUnitType::CSS_IDENT)
         return false;
 
     return mediaFeature == MediaFeatureNames::orientation
@@ -55,10 +54,12 @@ static inline bool featureWithValidIdent(const AtomicString& mediaFeature, const
     || mediaFeature == MediaFeatureNames::displayMode
 #endif
 #if ENABLE(DARK_MODE_CSS)
-    || (mediaFeature == MediaFeatureNames::prefersColorScheme && RuntimeEnabledFeatures::sharedFeatures().darkModeCSSEnabled())
+    || (mediaFeature == MediaFeatureNames::prefersColorScheme)
 #endif
+    || mediaFeature == MediaFeatureNames::prefersContrast
     || mediaFeature == MediaFeatureNames::prefersReducedMotion
-    || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)));
+    || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)))
+    || mediaFeature == MediaFeatureNames::dynamicRange;
 }
 
 static inline bool featureWithValidDensity(const String& mediaFeature, const CSSPrimitiveValue& value)
@@ -132,7 +133,7 @@ static inline bool featureWithZeroOrOne(const String& mediaFeature, const CSSPri
     return mediaFeature == MediaFeatureNames::grid;
 }
 
-static inline bool isAspectRatioFeature(const AtomicString& mediaFeature)
+static inline bool isAspectRatioFeature(const AtomString& mediaFeature)
 {
     return mediaFeature == MediaFeatureNames::aspectRatio
         || mediaFeature == MediaFeatureNames::deviceAspectRatio
@@ -142,7 +143,7 @@ static inline bool isAspectRatioFeature(const AtomicString& mediaFeature)
         || mediaFeature == MediaFeatureNames::maxDeviceAspectRatio;
 }
 
-static inline bool isFeatureValidWithoutValue(const AtomicString& mediaFeature, const MediaQueryParserContext& context)
+static inline bool isFeatureValidWithoutValue(const AtomString& mediaFeature, const MediaQueryParserContext& context)
 {
     // Media features that are prefixed by min/max cannot be used without a value.
     return mediaFeature == MediaFeatureNames::anyHover
@@ -165,10 +166,11 @@ static inline bool isFeatureValidWithoutValue(const AtomicString& mediaFeature, 
         || mediaFeature == MediaFeatureNames::animation
         || mediaFeature == MediaFeatureNames::invertedColors
         || mediaFeature == MediaFeatureNames::pointer
+        || mediaFeature == MediaFeatureNames::prefersContrast
         || mediaFeature == MediaFeatureNames::prefersReducedMotion
         || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)))
 #if ENABLE(DARK_MODE_CSS)
-        || (mediaFeature == MediaFeatureNames::prefersColorScheme && RuntimeEnabledFeatures::sharedFeatures().darkModeCSSEnabled())
+        || (mediaFeature == MediaFeatureNames::prefersColorScheme)
 #endif
         || mediaFeature == MediaFeatureNames::devicePixelRatio
         || mediaFeature == MediaFeatureNames::resolution
@@ -218,13 +220,12 @@ MediaQueryExpression::MediaQueryExpression(const String& feature, CSSParserToken
             return;
         if (!CSSPropertyParserHelpers::consumeSlashIncludingWhitespace(range))
             return;
-        RefPtr<CSSPrimitiveValue> denominatorValue = CSSPropertyParserHelpers::consumePositiveInteger(range);
+        auto denominatorValue = CSSPropertyParserHelpers::consumePositiveIntegerRaw(range);
         if (!denominatorValue)
             return;
 
         unsigned numerator = clampTo<unsigned>(firstValue->doubleValue());
-        unsigned denominator = clampTo<unsigned>(denominatorValue->doubleValue());
-        m_value = CSSAspectRatioValue::create(numerator, denominator);
+        m_value = CSSAspectRatioValue::create(numerator, *denominatorValue);
         m_isValid = true;
         return;
     }

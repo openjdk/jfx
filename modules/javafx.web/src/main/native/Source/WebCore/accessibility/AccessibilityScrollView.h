@@ -37,29 +37,30 @@ class AccessibilityScrollView final : public AccessibilityObject {
 public:
     static Ref<AccessibilityScrollView> create(ScrollView*);
     AccessibilityRole roleValue() const override { return AccessibilityRole::ScrollArea; }
-    ScrollView* scrollView() const { return m_scrollView; }
+    ScrollView* scrollView() const override { return m_scrollView.get(); }
 
     virtual ~AccessibilityScrollView();
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
 
-    AccessibilityObject* webAreaObject() const;
+    AccessibilityObject* webAreaObject() const override;
 
 private:
     explicit AccessibilityScrollView(ScrollView*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
 
     ScrollableArea* getScrollableAreaIfScrollable() const override;
     void scrollTo(const IntPoint&) const override;
     bool computeAccessibilityIsIgnored() const override;
-    bool isAccessibilityScrollView() const override { return true; }
+    bool isAccessibilityScrollViewInstance() const override { return true; }
     bool isEnabled() const override { return true; }
 
     bool isAttachment() const override;
+    PlatformWidget platformWidget() const override;
     Widget* widgetForAttachmentView() const override;
 
     AccessibilityObject* scrollBar(AccessibilityOrientation) override;
     void addChildren() override;
     void clearChildren() override;
-    AccessibilityObject* accessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
     void updateChildrenIfNecessary() override;
     void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();
@@ -76,7 +77,7 @@ private:
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
 
-    ScrollView* m_scrollView;
+    WeakPtr<ScrollView> m_scrollView;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
     bool m_childrenDirty;
@@ -84,4 +85,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityScrollView, isAccessibilityScrollView())
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityScrollView, isAccessibilityScrollViewInstance())

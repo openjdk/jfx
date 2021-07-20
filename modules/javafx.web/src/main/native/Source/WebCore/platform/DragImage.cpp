@@ -31,10 +31,11 @@
 #include "FrameView.h"
 #include "ImageBuffer.h"
 #include "NotImplemented.h"
-#include "Range.h"
+#include "Position.h"
 #include "RenderElement.h"
-#include "RenderObject.h"
 #include "RenderView.h"
+#include "SelectionRangeData.h"
+#include "SimpleRange.h"
 #include "TextIndicator.h"
 
 namespace WebCore {
@@ -79,43 +80,36 @@ DragImageRef fitDragImageToMaxSize(DragImageRef image, const IntSize& layoutSize
 
 struct ScopedNodeDragEnabler {
     ScopedNodeDragEnabler(Frame& frame, Node& node)
-        : frame(frame)
-        , node(node)
+        : element(is<Element>(node) ? &downcast<Element>(node) : nullptr)
     {
-        if (node.renderer())
-            node.renderer()->updateDragState(true);
+        if (element)
+            element->setBeingDragged(true);
         frame.document()->updateLayout();
     }
 
     ~ScopedNodeDragEnabler()
     {
-        if (node.renderer())
-            node.renderer()->updateDragState(false);
+        if (element)
+            element->setBeingDragged(false);
     }
 
-    const Frame& frame;
-    const Node& node;
+    RefPtr<Element> element;
 };
 
-static DragImageRef createDragImageFromSnapshot(std::unique_ptr<ImageBuffer> snapshot, Node* node)
+static DragImageRef createDragImageFromSnapshot(RefPtr<ImageBuffer> snapshot, Node* node)
 {
     if (!snapshot)
         return nullptr;
 
-    ImageOrientationDescription orientation;
-#if ENABLE(CSS_IMAGE_ORIENTATION)
+    ImageOrientation orientation;
     if (node) {
         RenderObject* renderer = node->renderer();
         if (!renderer || !is<RenderElement>(renderer))
             return nullptr;
 
-        auto& renderElement = downcast<RenderElement>(*renderer);
-        orientation.setRespectImageOrientation(renderElement.shouldRespectImageOrientation());
-        orientation.setImageOrientationEnum(renderElement.style().imageOrientation());
+        orientation = downcast<RenderElement>(*renderer).imageOrientation();
     }
-#else
-    UNUSED_PARAM(node);
-#endif
+
     RefPtr<Image> image = ImageBuffer::sinkIntoImage(WTFMove(snapshot), PreserveResolution::Yes);
     if (!image)
         return nullptr;
@@ -128,7 +122,7 @@ DragImageRef createDragImageForNode(Frame& frame, Node& node)
     return createDragImageFromSnapshot(snapshotNode(frame, node), &node);
 }
 
-#if !ENABLE(DATA_INTERACTION)
+#if !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)
 
 DragImageRef createDragImageForSelection(Frame& frame, TextIndicatorData&, bool forceBlackText)
 {
@@ -155,12 +149,12 @@ struct ScopedFrameSelectionState {
     }
 
     const Frame& frame;
-    Optional<SelectionRangeData::Context> selection;
+    Optional<RenderRange> selection;
 };
 
 #if !PLATFORM(IOS_FAMILY)
 
-DragImageRef createDragImageForRange(Frame& frame, Range& range, bool forceBlackText)
+DragImageRef createDragImageForRange(Frame& frame, const SimpleRange& range, bool forceBlackText)
 {
     frame.document()->updateLayout();
     RenderView* view = frame.contentRenderer();
@@ -168,12 +162,12 @@ DragImageRef createDragImageForRange(Frame& frame, Range& range, bool forceBlack
         return nullptr;
 
     // To snapshot the range, temporarily select it and take selection snapshot.
-    Position start = range.startPosition();
+    Position start = makeDeprecatedLegacyPosition(range.start);
     Position candidate = start.downstream();
     if (candidate.deprecatedNode() && candidate.deprecatedNode()->renderer())
         start = candidate;
 
-    Position end = range.endPosition();
+    Position end = makeDeprecatedLegacyPosition(range.end);
     candidate = end.upstream();
     if (candidate.deprecatedNode() && candidate.deprecatedNode()->renderer())
         end = candidate;
@@ -221,7 +215,7 @@ DragImageRef createDragImageForImage(Frame& frame, Node& node, IntRect& imageRec
     return createDragImageFromSnapshot(snapshotNode(frame, node), &node);
 }
 
-#if !ENABLE(DATA_INTERACTION)
+#if !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)
 DragImageRef platformAdjustDragImageForDeviceScaleFactor(DragImageRef image, float deviceScaleFactor)
 {
     // Later code expects the drag image to be scaled by device's scale factor.
@@ -305,7 +299,7 @@ DragImageRef dissolveDragImageToFraction(DragImageRef, float)
     return nullptr;
 }
 
-DragImageRef createDragImageFromImage(Image*, ImageOrientationDescription)
+DragImageRef createDragImageFromImage(Image*, ImageOrientation)
 {
     notImplemented();
     return nullptr;

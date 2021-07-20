@@ -100,15 +100,6 @@ public:
 
     Edge child1Unchecked() const { return m_words[0]; }
 
-    Edge justOneChild() const
-    {
-        if (!!child1() && !child2()) {
-            ASSERT(!child3());
-            return child1();
-        }
-        return Edge();
-    }
-
     void initialize(Edge child1, Edge child2, Edge child3)
     {
         child(0) = child1;
@@ -116,7 +107,7 @@ public:
         child(2) = child3;
     }
 
-    void initialize(Node* child1 = 0, Node* child2 = 0, Node* child3 = 0)
+    void initialize(Node* child1 = nullptr, Node* child2 = nullptr, Node* child3 = nullptr)
     {
         initialize(Edge(child1), Edge(child2), Edge(child3));
     }

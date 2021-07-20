@@ -33,6 +33,7 @@
 #include "RuntimeEnabledFeatures.h"
 
 #include "MediaPlayer.h"
+#include "PlatformScreen.h"
 #include <JavaScriptCore/Options.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -40,14 +41,8 @@ namespace WebCore {
 
 RuntimeEnabledFeatures::RuntimeEnabledFeatures()
 {
-#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
-    m_isMediaDevicesEnabled = false;
-#endif
 #if PLATFORM(WATCHOS)
     m_isWebSocketEnabled = false;
-#endif
-#if PLATFORM(GTK) && ENABLE(INPUT_TYPE_COLOR)
-    m_isInputTypeColorEnabled = true;
 #endif
 }
 
@@ -58,9 +53,11 @@ RuntimeEnabledFeatures& RuntimeEnabledFeatures::sharedFeatures()
     return runtimeEnabledFeatures;
 }
 
-bool RuntimeEnabledFeatures::spectreGadgetsEnabled() const
+#if ENABLE(TOUCH_EVENTS)
+bool RuntimeEnabledFeatures::touchEventsEnabled() const
 {
-    return JSC::Options::enableSpectreGadgets();
+    return m_touchEventsEnabled.valueOr(screenHasTouchDevice());
 }
+#endif
 
 } // namespace WebCore

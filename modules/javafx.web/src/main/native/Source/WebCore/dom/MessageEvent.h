@@ -46,9 +46,10 @@ using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>>;
 #endif
 
 class MessageEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(MessageEvent);
 public:
     static Ref<MessageEvent> create(Vector<RefPtr<MessagePort>>&&, Ref<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, Optional<MessageEventSource>&& source = WTF::nullopt);
-    static Ref<MessageEvent> create(const AtomicString& type, Ref<SerializedScriptValue>&&, const String& origin, const String& lastEventId);
+    static Ref<MessageEvent> create(const AtomString& type, Ref<SerializedScriptValue>&&, const String& origin, const String& lastEventId);
     static Ref<MessageEvent> create(const String& data, const String& origin = { });
     static Ref<MessageEvent> create(Ref<Blob>&& data, const String& origin);
     static Ref<MessageEvent> create(Ref<ArrayBuffer>&& data, const String& origin = { });
@@ -61,11 +62,11 @@ public:
         Optional<MessageEventSource> source;
         Vector<RefPtr<MessagePort>> ports;
     };
-    static Ref<MessageEvent> create(const AtomicString& type, Init&&, IsTrusted = IsTrusted::No);
+    static Ref<MessageEvent> create(const AtomString& type, Init&&, IsTrusted = IsTrusted::No);
 
     virtual ~MessageEvent();
 
-    void initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, JSC::JSValue data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
+    void initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSC::JSValue data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
 
     const String& origin() const { return m_origin; }
     const String& lastEventId() const { return m_lastEventId; }
@@ -78,10 +79,12 @@ public:
     JSValueInWrappedObject& cachedData() { return m_cachedData; }
     JSValueInWrappedObject& cachedPorts() { return m_cachedPorts; }
 
+    size_t memoryCost() const;
+
 private:
     MessageEvent();
-    MessageEvent(const AtomicString& type, Init&&, IsTrusted);
-    MessageEvent(const AtomicString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId);
+    MessageEvent(const AtomString& type, Init&&, IsTrusted);
+    MessageEvent(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId);
     MessageEvent(DataType&&, const String& origin, const String& lastEventId = { }, Optional<MessageEventSource>&& = WTF::nullopt, Vector<RefPtr<MessagePort>>&& = { });
 
     EventInterface eventInterface() const final;

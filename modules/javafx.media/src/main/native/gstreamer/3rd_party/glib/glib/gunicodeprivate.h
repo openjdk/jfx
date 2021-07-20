@@ -20,17 +20,12 @@
 #define __G_UNICODE_PRIVATE_H__
 
 #include "gtypes.h"
-#include "gunicode.h"
 
 G_BEGIN_DECLS
 
 gunichar *_g_utf8_normalize_wc (const gchar    *str,
                                 gssize          max_len,
-                GNormalizeMode  mode);
-
-gboolean _g_utf8_validate_len (const gchar  *str,
-                               gsize         max_len,
-                               const gchar **end);
+        GNormalizeMode  mode);
 
 G_END_DECLS
 

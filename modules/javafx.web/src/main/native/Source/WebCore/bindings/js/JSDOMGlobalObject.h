@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "WebCoreJSBuiltinInternals.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSObjectInlines.h>
 #include <JavaScriptCore/LockDuringMarking.h>
 
 namespace WebCore {
@@ -43,14 +44,17 @@ using JSDOMConstructorMap = HashMap<const JSC::ClassInfo*, JSC::WriteBarrier<JSC
 using DOMGuardedObjectSet = HashSet<DOMGuardedObject*>;
 
 class WEBCORE_EXPORT JSDOMGlobalObject : public JSC::JSGlobalObject {
-    using Base = JSC::JSGlobalObject;
-protected:
+public:
     struct JSDOMGlobalObjectData;
 
-    JSDOMGlobalObject(JSC::VM&, JSC::Structure*, Ref<DOMWrapperWorld>&&, const JSC::GlobalObjectMethodTable* = nullptr);
+    using Base = JSC::JSGlobalObject;
+
+    static const JSC::ClassInfo s_info;
+
+    template<typename, JSC::SubspaceAccess>
+    static void subspaceFor(JSC::VM&) { RELEASE_ASSERT_NOT_REACHED(); }
+
     static void destroy(JSC::JSCell*);
-    void finishCreation(JSC::VM&);
-    void finishCreation(JSC::VM&, JSC::JSObject*);
 
 public:
     Lock& gcLock() { return m_gcLock; }
@@ -65,10 +69,7 @@ public:
     // Make binding code generation easier.
     JSDOMGlobalObject* globalObject() { return this; }
 
-    void setCurrentEvent(Event*);
-    Event* currentEvent() const;
-
-    static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DOMWrapperWorld& world() { return m_world.get(); }
     bool worldIsNormal() const { return m_worldIsNormal; }
@@ -76,8 +77,11 @@ public:
 
     JSBuiltinInternalFunctions& builtinInternalFunctions() { return m_builtinInternalFunctions; }
 
-protected:
-    static const JSC::ClassInfo s_info;
+    static void reportUncaughtExceptionAtEventLoop(JSGlobalObject*, JSC::Exception*);
+
+    void clearDOMGuardedObjects();
+
+    JSC::JSProxy& proxy() const { ASSERT(m_proxy); return *m_proxy.get(); }
 
 public:
     ~JSDOMGlobalObject();
@@ -90,7 +94,22 @@ public:
     }
 
 protected:
-    static void promiseRejectionTracker(JSC::JSGlobalObject*, JSC::ExecState*, JSC::JSPromise*, JSC::JSPromiseRejectionOperation);
+    JSDOMGlobalObject(JSC::VM&, JSC::Structure*, Ref<DOMWrapperWorld>&&, const JSC::GlobalObjectMethodTable* = nullptr);
+    void finishCreation(JSC::VM&);
+    void finishCreation(JSC::VM&, JSC::JSObject*);
+
+    static void promiseRejectionTracker(JSC::JSGlobalObject*, JSC::JSPromise*, JSC::JSPromiseRejectionOperation);
+
+#if ENABLE(WEBASSEMBLY)
+    static JSC::JSPromise* compileStreaming(JSC::JSGlobalObject*, JSC::JSValue);
+    static JSC::JSPromise* instantiateStreaming(JSC::JSGlobalObject*, JSC::JSValue, JSC::JSObject*);
+#endif
+
+    static JSC::Identifier moduleLoaderResolve(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSValue, JSC::JSValue);
+    static JSC::JSInternalPromise* moduleLoaderFetch(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSValue, JSC::JSValue);
+    static JSC::JSValue moduleLoaderEvaluate(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSValue, JSC::JSValue, JSC::JSValue, JSC::JSValue);
+    static JSC::JSInternalPromise* moduleLoaderImportModule(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSString*, JSC::JSValue, const JSC::SourceOrigin&);
+    static JSC::JSObject* moduleLoaderCreateImportMetaProperties(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSModuleRecord*, JSC::JSValue);
 
     JSDOMStructureMap m_structures;
     JSDOMConstructorMap m_constructors;
@@ -99,12 +118,11 @@ protected:
     Ref<DOMWrapperWorld> m_world;
     uint8_t m_worldIsNormal;
     Lock m_gcLock;
+    JSC::WriteBarrier<JSC::JSProxy> m_proxy;
 
 private:
     void addBuiltinGlobals(JSC::VM&);
     friend void JSBuiltinInternalFunctions::initialize(JSDOMGlobalObject&);
-
-    Event* m_currentEvent { nullptr };
 
     JSBuiltinInternalFunctions m_builtinInternalFunctions;
 };
@@ -123,7 +141,7 @@ inline JSC::JSObject* getDOMConstructor(JSC::VM& vm, const JSDOMGlobalObject& gl
     return constructor;
 }
 
-WEBCORE_EXPORT JSDOMGlobalObject& callerGlobalObject(JSC::ExecState&);
+WEBCORE_EXPORT JSDOMGlobalObject& callerGlobalObject(JSC::JSGlobalObject&, JSC::CallFrame&);
 
 JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext&, DOMWrapperWorld&);
 

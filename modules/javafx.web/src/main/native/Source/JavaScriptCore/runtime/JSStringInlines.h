@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,47 +36,47 @@ inline JSString::~JSString()
     valueInternal().~String();
 }
 
-bool JSString::equal(ExecState* exec, JSString* other) const
+bool JSString::equal(JSGlobalObject* globalObject, JSString* other) const
 {
     if (isRope() || other->isRope())
-        return equalSlowCase(exec, other);
+        return equalSlowCase(globalObject, other);
     return WTF::equal(*valueInternal().impl(), *other->valueInternal().impl());
 }
 
 template<typename StringType>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType&& string)
+inline JSValue jsMakeNontrivialString(VM& vm, StringType&& string)
 {
-    return jsNontrivialString(exec, std::forward<StringType>(string));
+    return jsNontrivialString(vm, std::forward<StringType>(string));
 }
 
 template<typename StringType, typename... StringTypes>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType&& string, StringTypes&&... strings)
+inline JSValue jsMakeNontrivialString(JSGlobalObject* globalObject, StringType&& string, StringTypes&&... strings)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
     String result = tryMakeString(std::forward<StringType>(string), std::forward<StringTypes>(strings)...);
     if (UNLIKELY(!result))
-        return throwOutOfMemoryError(exec, scope);
+        return throwOutOfMemoryError(globalObject, scope);
     ASSERT(result.length() <= JSString::MaxLength);
-    return jsNontrivialString(exec, WTFMove(result));
+    return jsNontrivialString(vm, WTFMove(result));
 }
 
 template <typename CharacterType>
-inline JSString* repeatCharacter(ExecState& exec, CharacterType character, unsigned repeatCount)
+inline JSString* repeatCharacter(JSGlobalObject* globalObject, CharacterType character, unsigned repeatCount)
 {
-    VM& vm = exec.vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     CharacterType* buffer = nullptr;
     auto impl = StringImpl::tryCreateUninitialized(repeatCount, buffer);
     if (!impl) {
-        throwOutOfMemoryError(&exec, scope);
+        throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
 
     std::fill_n(buffer, repeatCount, character);
 
-    RELEASE_AND_RETURN(scope, jsString(&exec, WTFMove(impl)));
+    RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(impl)));
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -213,6 +213,8 @@ public class Region extends Parent {
 
     static Vec2d TEMP_VEC2D = new Vec2d();
 
+    private static final double EPSILON = 1e-14;
+
     /***************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
@@ -294,12 +296,32 @@ public class Region extends Parent {
         return Math.round(value * scale) / scale;
     }
 
+    /**
+     * The value is floored for a given scale using Math.floor.
+     * This method guarantees that:
+     *
+     * scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)
+     *
+     * @param value The value that needs to be floored
+     * @param scale The scale that will be used
+     * @return value floored with scale
+     */
     private static double scaledFloor(double value, double scale) {
-        return Math.floor(value * scale) / scale;
+        return Math.floor(value * scale + EPSILON) / scale;
     }
 
+    /**
+     * The value is ceiled with a given scale using Math.ceil.
+     * This method guarantees that:
+     *
+     * scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)
+     *
+     * @param value The value that needs to be ceiled
+     * @param scale The scale that will be used
+     * @return value ceiled with scale
+     */
     private static double scaledCeil(double value, double scale) {
-        return Math.ceil(value * scale) / scale;
+        return Math.ceil(value * scale - EPSILON) / scale;
     }
 
     /**
@@ -363,25 +385,46 @@ public class Region extends Parent {
         return snapToPixel ? scaledRound(value, snapScale) : value;
     }
 
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionX(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleX();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
+
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionY(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleY();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
@@ -943,20 +986,23 @@ public class Region extends Parent {
     private double snappedBottomInset = 0;
     private double snappedLeftInset = 0;
 
+    /**
+     * Cached snapScale values, used to determine if snapped cached insets values
+     * should be invalidated because screen scale has changed.
+     */
+    private double lastUsedSnapScaleY = 0;
+    private double lastUsedSnapScaleX = 0;
+
     /** Called to update the cached snapped insets */
     private void updateSnappedInsets() {
+        lastUsedSnapScaleX = getSnapScaleX();
+        lastUsedSnapScaleY = getSnapScaleY();
         final Insets insets = getInsets();
-        if (_snapToPixel) {
-            snappedTopInset = Math.ceil(insets.getTop());
-            snappedRightInset = Math.ceil(insets.getRight());
-            snappedBottomInset = Math.ceil(insets.getBottom());
-            snappedLeftInset = Math.ceil(insets.getLeft());
-        } else {
-            snappedTopInset = insets.getTop();
-            snappedRightInset = insets.getRight();
-            snappedBottomInset = insets.getBottom();
-            snappedLeftInset = insets.getLeft();
-        }
+        final boolean snap = isSnapToPixel();
+        snappedTopInset = snapSpaceY(insets.getTop(), snap);
+        snappedRightInset = snapSpaceX(insets.getRight(), snap);
+        snappedBottomInset = snapSpaceY(insets.getBottom(), snap);
+        snappedLeftInset = snapSpaceX(insets.getLeft(), snap);
     }
 
     /**
@@ -1818,6 +1864,11 @@ public class Region extends Parent {
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedTopInset;
     }
 
@@ -1829,6 +1880,11 @@ public class Region extends Parent {
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedBottomInset;
     }
 
@@ -1840,6 +1896,11 @@ public class Region extends Parent {
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedLeftInset;
     }
 
@@ -1851,6 +1912,11 @@ public class Region extends Parent {
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedRightInset;
     }
 

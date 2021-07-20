@@ -93,7 +93,7 @@ typedef gboolean (*GSignalEmissionHook) (GSignalInvocationHint *ihint,
 typedef gboolean (*GSignalAccumulator)  (GSignalInvocationHint *ihint,
                      GValue            *return_accu,
                      const GValue          *handler_return,
-                     gpointer               data);
+                                         gpointer               data);
 
 
 /* --- run, match and connect types --- */
@@ -160,11 +160,11 @@ typedef enum
 /**
  * GSignalMatchType:
  * @G_SIGNAL_MATCH_ID: The signal id must be equal.
- * @G_SIGNAL_MATCH_DETAIL: The signal detail be equal.
+ * @G_SIGNAL_MATCH_DETAIL: The signal detail must be equal.
  * @G_SIGNAL_MATCH_CLOSURE: The closure must be the same.
  * @G_SIGNAL_MATCH_FUNC: The C closure callback must be the same.
  * @G_SIGNAL_MATCH_DATA: The closure data must be the same.
- * @G_SIGNAL_MATCH_UNBLOCKED: Only unblocked signals may matched.
+ * @G_SIGNAL_MATCH_UNBLOCKED: Only unblocked signals may be matched.
  *
  * The match types specify what g_signal_handlers_block_matched(),
  * g_signal_handlers_unblock_matched() and g_signal_handlers_disconnect_matched()
@@ -261,37 +261,37 @@ struct _GSignalQuery
 /* --- signals --- */
 GLIB_AVAILABLE_IN_ALL
 guint                 g_signal_newv         (const gchar        *signal_name,
-                         GType               itype,
-                         GSignalFlags        signal_flags,
-                         GClosure           *class_closure,
+                                             GType               itype,
+                                             GSignalFlags        signal_flags,
+                                             GClosure           *class_closure,
                          GSignalAccumulator  accumulator,
                          gpointer        accu_data,
-                         GSignalCMarshaller  c_marshaller,
-                         GType               return_type,
-                         guint               n_params,
-                         GType              *param_types);
+                                             GSignalCMarshaller  c_marshaller,
+                                             GType               return_type,
+                                             guint               n_params,
+                                             GType              *param_types);
 GLIB_AVAILABLE_IN_ALL
 guint                 g_signal_new_valist   (const gchar        *signal_name,
-                         GType               itype,
-                         GSignalFlags        signal_flags,
-                         GClosure           *class_closure,
+                                             GType               itype,
+                                             GSignalFlags        signal_flags,
+                                             GClosure           *class_closure,
                          GSignalAccumulator  accumulator,
                          gpointer        accu_data,
-                         GSignalCMarshaller  c_marshaller,
-                         GType               return_type,
-                         guint               n_params,
-                         va_list             args);
+                                             GSignalCMarshaller  c_marshaller,
+                                             GType               return_type,
+                                             guint               n_params,
+                                             va_list             args);
 GLIB_AVAILABLE_IN_ALL
 guint                 g_signal_new          (const gchar        *signal_name,
-                         GType               itype,
-                         GSignalFlags        signal_flags,
-                         guint               class_offset,
+                                             GType               itype,
+                                             GSignalFlags        signal_flags,
+                                             guint               class_offset,
                          GSignalAccumulator  accumulator,
                          gpointer        accu_data,
-                         GSignalCMarshaller  c_marshaller,
-                         GType               return_type,
-                         guint               n_params,
-                         ...);
+                                             GSignalCMarshaller  c_marshaller,
+                                             GType               return_type,
+                                             guint               n_params,
+                                             ...);
 GLIB_AVAILABLE_IN_ALL
 guint            g_signal_new_class_handler (const gchar        *signal_name,
                                              GType               itype,
@@ -305,39 +305,41 @@ guint            g_signal_new_class_handler (const gchar        *signal_name,
                                              ...);
 GLIB_AVAILABLE_IN_ALL
 void             g_signal_set_va_marshaller (guint              signal_id,
-                         GType              instance_type,
-                         GSignalCVaMarshaller va_marshaller);
+                                             GType              instance_type,
+                                             GSignalCVaMarshaller va_marshaller);
 
 GLIB_AVAILABLE_IN_ALL
 void                  g_signal_emitv        (const GValue       *instance_and_params,
-                         guint               signal_id,
-                         GQuark              detail,
-                         GValue             *return_value);
+                                             guint               signal_id,
+                                             GQuark              detail,
+                                             GValue             *return_value);
 GLIB_AVAILABLE_IN_ALL
 void                  g_signal_emit_valist  (gpointer            instance,
-                         guint               signal_id,
-                         GQuark              detail,
-                         va_list             var_args);
+                                             guint               signal_id,
+                                             GQuark              detail,
+                                             va_list             var_args);
 GLIB_AVAILABLE_IN_ALL
 void                  g_signal_emit         (gpointer            instance,
-                         guint               signal_id,
-                         GQuark              detail,
-                         ...);
+                                             guint               signal_id,
+                                             GQuark              detail,
+                                             ...);
 GLIB_AVAILABLE_IN_ALL
 void                  g_signal_emit_by_name (gpointer            instance,
-                         const gchar        *detailed_signal,
-                         ...);
+                                             const gchar        *detailed_signal,
+                                             ...);
 GLIB_AVAILABLE_IN_ALL
 guint                 g_signal_lookup       (const gchar        *name,
-                         GType               itype);
+                                             GType               itype);
 GLIB_AVAILABLE_IN_ALL
 const gchar *         g_signal_name         (guint               signal_id);
 GLIB_AVAILABLE_IN_ALL
 void                  g_signal_query        (guint               signal_id,
-                         GSignalQuery       *query);
+                                             GSignalQuery       *query);
 GLIB_AVAILABLE_IN_ALL
 guint*                g_signal_list_ids     (GType               itype,
-                         guint              *n_ids);
+                                             guint              *n_ids);
+GLIB_AVAILABLE_IN_2_66
+gboolean              g_signal_is_valid_name (const gchar      *name);
 GLIB_AVAILABLE_IN_ALL
 gboolean          g_signal_parse_name   (const gchar    *detailed_signal,
                          GType       itype,
@@ -359,7 +361,7 @@ void    g_signal_stop_emission_by_name      (gpointer         instance,
 GLIB_AVAILABLE_IN_ALL
 gulong  g_signal_add_emission_hook      (guint        signal_id,
                          GQuark       detail,
-                         GSignalEmissionHook  hook_func,
+                                             GSignalEmissionHook  hook_func,
                          gpointer             hook_data,
                          GDestroyNotify   data_destroy);
 GLIB_AVAILABLE_IN_ALL
@@ -381,7 +383,7 @@ gulong   g_signal_connect_closure_by_id       (gpointer       instance,
                            gboolean       after);
 GLIB_AVAILABLE_IN_ALL
 gulong   g_signal_connect_closure         (gpointer       instance,
-                           const gchar       *detailed_signal,
+                                               const gchar       *detailed_signal,
                            GClosure      *closure,
                            gboolean       after);
 GLIB_AVAILABLE_IN_ALL
@@ -436,6 +438,22 @@ guint    g_signal_handlers_disconnect_matched (gpointer       instance,
                            gpointer       func,
                            gpointer       data);
 
+GLIB_AVAILABLE_IN_2_62
+void     g_clear_signal_handler           (gulong            *handler_id_ptr,
+                                               gpointer           instance);
+
+#define  g_clear_signal_handler(handler_id_ptr, instance)           \
+  G_STMT_START {                                                    \
+    G_STATIC_ASSERT (sizeof *(handler_id_ptr) == sizeof (gulong));  \
+    gulong _handler_id = *(handler_id_ptr);                         \
+                                                                    \
+    if (_handler_id > 0)                                            \
+      {                                                             \
+        g_signal_handler_disconnect ((instance), _handler_id);      \
+        *(handler_id_ptr) = 0;                                      \
+      }                                                             \
+  } G_STMT_END                                                      \
+  GLIB_AVAILABLE_MACRO_IN_2_62
 
 /* --- overriding and chaining --- */
 GLIB_AVAILABLE_IN_ALL
@@ -539,7 +557,7 @@ void   g_signal_chain_from_overridden_handler (gpointer           instance,
 #define g_signal_handlers_disconnect_by_func(instance, func, data)                      \
     g_signal_handlers_disconnect_matched ((instance),                               \
                       (GSignalMatchType) (G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA),   \
-                      0, 0, NULL, (func), (data))
+                                          0, 0, NULL, (func), (data))
 
 /**
  * g_signal_handlers_disconnect_by_data:
@@ -568,7 +586,7 @@ void   g_signal_chain_from_overridden_handler (gpointer           instance,
 #define g_signal_handlers_block_by_func(instance, func, data)                           \
     g_signal_handlers_block_matched      ((instance),                               \
                           (GSignalMatchType) (G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA),   \
-                          0, 0, NULL, (func), (data))
+                                          0, 0, NULL, (func), (data))
 /**
  * g_signal_handlers_unblock_by_func:
  * @instance: The instance to unblock handlers from.
@@ -582,14 +600,14 @@ void   g_signal_chain_from_overridden_handler (gpointer           instance,
 #define g_signal_handlers_unblock_by_func(instance, func, data)                         \
     g_signal_handlers_unblock_matched    ((instance),                               \
                           (GSignalMatchType) (G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA),   \
-                          0, 0, NULL, (func), (data))
+                                          0, 0, NULL, (func), (data))
 
 
 GLIB_AVAILABLE_IN_ALL
 gboolean g_signal_accumulator_true_handled (GSignalInvocationHint *ihint,
-                        GValue                *return_accu,
-                        const GValue          *handler_return,
-                        gpointer               dummy);
+                                            GValue                *return_accu,
+                                            const GValue          *handler_return,
+                                            gpointer               dummy);
 
 GLIB_AVAILABLE_IN_ALL
 gboolean g_signal_accumulator_first_wins   (GSignalInvocationHint *ihint,

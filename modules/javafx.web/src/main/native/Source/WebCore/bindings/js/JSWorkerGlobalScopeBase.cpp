@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,10 @@
 #include "config.h"
 #include "JSWorkerGlobalScopeBase.h"
 
-#include "ActiveDOMCallbackMicrotask.h"
 #include "DOMWrapperWorld.h"
+#include "EventLoop.h"
 #include "JSDOMGlobalObjectTask.h"
+#include "JSDOMGuardedObject.h"
 #include "JSDedicatedWorkerGlobalScope.h"
 #include "JSMicrotaskCallback.h"
 #include "JSWorkerGlobalScope.h"
@@ -56,17 +57,25 @@ const GlobalObjectMethodTable JSWorkerGlobalScopeBase::s_globalObjectMethodTable
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
-    &queueTaskToEventLoop,
+    &queueMicrotaskToEventLoop,
     &shouldInterruptScriptBeforeTimeout,
-    nullptr, // moduleLoaderImportModule
-    nullptr, // moduleLoaderResolve
-    nullptr, // moduleLoaderFetch
-    nullptr, // moduleLoaderCreateImportMetaProperties
-    nullptr, // moduleLoaderEvaluate
+    &moduleLoaderImportModule,
+    &moduleLoaderResolve,
+    &moduleLoaderFetch,
+    &moduleLoaderCreateImportMetaProperties,
+    &moduleLoaderEvaluate,
     &promiseRejectionTracker,
+    &reportUncaughtExceptionAtEventLoop,
+    &currentScriptExecutionOwner,
+    &scriptExecutionStatus,
     &defaultLanguage,
-    nullptr, // compileStreaming
-    nullptr, // instantiateStreaming
+#if ENABLE(WEBASSEMBLY)
+    &compileStreaming,
+    &instantiateStreaming,
+#else
+    nullptr,
+    nullptr,
+#endif
 };
 
 JSWorkerGlobalScopeBase::JSWorkerGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<WorkerGlobalScope>&& impl)
@@ -83,20 +92,16 @@ void JSWorkerGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
     ASSERT(inherits(vm, info()));
 }
 
-void JSWorkerGlobalScopeBase::clearDOMGuardedObjects()
-{
-    auto guardedObjects = m_guardedObjects;
-    for (auto& guarded : guardedObjects)
-        guarded->clear();
-}
-
-void JSWorkerGlobalScopeBase::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWorkerGlobalScopeBase::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSWorkerGlobalScopeBase* thisObject = jsCast<JSWorkerGlobalScopeBase*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_proxy);
 }
+
+DEFINE_VISIT_CHILDREN(JSWorkerGlobalScopeBase);
 
 void JSWorkerGlobalScopeBase::destroy(JSCell* cell)
 {
@@ -129,32 +134,36 @@ RuntimeFlags JSWorkerGlobalScopeBase::javaScriptRuntimeFlags(const JSGlobalObjec
     return thisObject->m_wrapped->thread().runtimeFlags();
 }
 
-void JSWorkerGlobalScopeBase::queueTaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+JSC::ScriptExecutionStatus JSWorkerGlobalScopeBase::scriptExecutionStatus(JSC::JSGlobalObject* globalObject, JSC::JSObject* owner)
+{
+    ASSERT_UNUSED(owner, globalObject == owner);
+    return jsCast<JSWorkerGlobalScopeBase*>(globalObject)->scriptExecutionContext()->jscScriptExecutionStatus();
+}
+
+void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
 {
     JSWorkerGlobalScopeBase& thisObject = static_cast<JSWorkerGlobalScopeBase&>(object);
 
     auto callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
     auto& context = thisObject.wrapped();
-    auto microtask = std::make_unique<ActiveDOMCallbackMicrotask>(context.microtaskQueue(), context, [callback = WTFMove(callback)]() mutable {
+    context.eventLoop().queueMicrotask([callback = WTFMove(callback)]() mutable {
         callback->call();
     });
-
-    context.microtaskQueue().append(WTFMove(microtask));
 }
 
-JSValue toJS(ExecState* exec, JSDOMGlobalObject*, WorkerGlobalScope& workerGlobalScope)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkerGlobalScope& workerGlobalScope)
 {
-    return toJS(exec, workerGlobalScope);
+    return toJS(lexicalGlobalObject, workerGlobalScope);
 }
 
-JSValue toJS(ExecState*, WorkerGlobalScope& workerGlobalScope)
+JSValue toJS(JSGlobalObject*, WorkerGlobalScope& workerGlobalScope)
 {
-    WorkerScriptController* script = workerGlobalScope.script();
+    auto* script = workerGlobalScope.script();
     if (!script)
         return jsNull();
-    JSWorkerGlobalScope* contextWrapper = script->workerGlobalScopeWrapper();
+    auto* contextWrapper = script->globalScopeWrapper();
     ASSERT(contextWrapper);
-    return contextWrapper->proxy();
+    return &contextWrapper->proxy();
 }
 
 JSDedicatedWorkerGlobalScope* toJSDedicatedWorkerGlobalScope(VM& vm, JSValue value)

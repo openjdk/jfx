@@ -36,6 +36,9 @@
 #include "CSSShadowValue.h"
 #include "CSSValuePool.h"
 #include "Length.h" // For ValueRange
+#include <wtf/OptionSet.h>
+#include <wtf/Variant.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -51,27 +54,47 @@ bool consumeSlashIncludingWhitespace(CSSParserTokenRange&);
 // consumeFunction expects the range starts with a FunctionToken.
 CSSParserTokenRange consumeFunction(CSSParserTokenRange&);
 
-enum class UnitlessQuirk {
-    Allow,
-    Forbid
+enum class UnitlessQuirk { Allow, Forbid };
+enum class UnitlessZeroQuirk { Allow, Forbid };
+enum class AllowXResolutionUnit { Allow, Forbid };
+
+struct AngleRaw {
+    CSSUnitType type;
+    double value;
 };
 
-RefPtr<CSSPrimitiveValue> consumeInteger(CSSParserTokenRange&, double minimumValue = -std::numeric_limits<double>::max());
-bool consumePositiveIntegerRaw(CSSParserTokenRange&, int& result);
-RefPtr<CSSPrimitiveValue> consumePositiveInteger(CSSParserTokenRange&);
-bool consumeNumberRaw(CSSParserTokenRange&, double& result);
-RefPtr<CSSPrimitiveValue> consumeNumber(CSSParserTokenRange&, ValueRange);
-RefPtr<CSSPrimitiveValue> consumeFontWeightNumber(CSSParserTokenRange&);
-RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
-RefPtr<CSSPrimitiveValue> consumePercent(CSSParserTokenRange&, ValueRange);
-RefPtr<CSSPrimitiveValue> consumeLengthOrPercent(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
-RefPtr<CSSPrimitiveValue> consumeAngle(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk = UnitlessQuirk::Forbid);
-RefPtr<CSSPrimitiveValue> consumeTime(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
-RefPtr<CSSPrimitiveValue> consumeResolution(CSSParserTokenRange&);
+struct LengthRaw {
+    CSSUnitType type;
+    double value;
+};
 
+using LengthOrPercentRaw = Variant<LengthRaw, double>;
+
+Optional<int> consumeIntegerRaw(CSSParserTokenRange&, double minimumValue = -std::numeric_limits<double>::max());
+RefPtr<CSSPrimitiveValue> consumeInteger(CSSParserTokenRange&, double minimumValue = -std::numeric_limits<double>::max());
+Optional<unsigned> consumePositiveIntegerRaw(CSSParserTokenRange&);
+RefPtr<CSSPrimitiveValue> consumePositiveInteger(CSSParserTokenRange&);
+Optional<double> consumeNumberRaw(CSSParserTokenRange&, ValueRange = ValueRangeAll);
+RefPtr<CSSPrimitiveValue> consumeNumber(CSSParserTokenRange&, ValueRange);
+Optional<double> consumeFontWeightNumberRaw(CSSParserTokenRange&);
+RefPtr<CSSPrimitiveValue> consumeFontWeightNumber(CSSParserTokenRange&);
+Optional<LengthRaw> consumeLengthRaw(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
+RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
+Optional<double> consumePercentRaw(CSSParserTokenRange&, ValueRange = ValueRangeAll);
+RefPtr<CSSPrimitiveValue> consumePercent(CSSParserTokenRange&, ValueRange);
+Optional<LengthOrPercentRaw> consumeLengthOrPercentRaw(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
+RefPtr<CSSPrimitiveValue> consumeLengthOrPercent(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
+Optional<AngleRaw> consumeAngleRaw(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk = UnitlessQuirk::Forbid, UnitlessZeroQuirk = UnitlessZeroQuirk::Forbid);
+RefPtr<CSSPrimitiveValue> consumeAngle(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk = UnitlessQuirk::Forbid, UnitlessZeroQuirk = UnitlessZeroQuirk::Forbid);
+RefPtr<CSSPrimitiveValue> consumeTime(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
+RefPtr<CSSPrimitiveValue> consumeResolution(CSSParserTokenRange&, AllowXResolutionUnit = AllowXResolutionUnit::Forbid);
+
+Optional<CSSValueID> consumeIdentRaw(CSSParserTokenRange&);
 RefPtr<CSSPrimitiveValue> consumeIdent(CSSParserTokenRange&);
+Optional<CSSValueID> consumeIdentRangeRaw(CSSParserTokenRange&, CSSValueID lower, CSSValueID upper);
 RefPtr<CSSPrimitiveValue> consumeIdentRange(CSSParserTokenRange&, CSSValueID lower, CSSValueID upper);
 template<CSSValueID, CSSValueID...> inline bool identMatches(CSSValueID id);
+template<CSSValueID... allowedIdents> Optional<CSSValueID> consumeIdentRaw(CSSParserTokenRange&);
 template<CSSValueID... allowedIdents> RefPtr<CSSPrimitiveValue> consumeIdent(CSSParserTokenRange&);
 
 RefPtr<CSSPrimitiveValue> consumeCustomIdent(CSSParserTokenRange&);
@@ -79,19 +102,32 @@ RefPtr<CSSPrimitiveValue> consumeString(CSSParserTokenRange&);
 StringView consumeUrlAsStringView(CSSParserTokenRange&);
 RefPtr<CSSPrimitiveValue> consumeUrl(CSSParserTokenRange&);
 
-RefPtr<CSSPrimitiveValue> consumeColor(CSSParserTokenRange&, CSSParserMode, bool acceptQuirkyColors = false);
+Color consumeColorWorkerSafe(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSPrimitiveValue> consumeColor(CSSParserTokenRange&, const CSSParserContext&, bool acceptQuirkyColors = false);
 
-RefPtr<CSSPrimitiveValue> consumePosition(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk);
-bool consumePosition(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY);
-bool consumeOneOrTwoValuedPosition(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY);
-
-enum class ConsumeGeneratedImage {
-    Allow,
-    Forbid
+enum class PositionSyntax {
+    Position, // <position>
+    BackgroundPosition // <bg-position>
 };
 
-RefPtr<CSSValue> consumeImage(CSSParserTokenRange&, CSSParserContext, ConsumeGeneratedImage = ConsumeGeneratedImage::Allow);
-RefPtr<CSSValue> consumeImageOrNone(CSSParserTokenRange&, CSSParserContext);
+struct PositionCoordinates {
+    Ref<CSSPrimitiveValue> x;
+    Ref<CSSPrimitiveValue> y;
+};
+
+RefPtr<CSSPrimitiveValue> consumePosition(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, PositionSyntax);
+Optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, PositionSyntax);
+Optional<PositionCoordinates> consumeOneOrTwoValuedPositionCoordinates(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk);
+
+enum class AllowedImageType : uint8_t {
+    URLFunction = 1 << 0,
+    RawStringAsURL = 1 << 1,
+    ImageSet = 1 << 2,
+    GeneratedImage = 1 << 3
+};
+
+RefPtr<CSSValue> consumeImage(CSSParserTokenRange&, const CSSParserContext&, OptionSet<AllowedImageType> = { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
+RefPtr<CSSValue> consumeImageOrNone(CSSParserTokenRange&, const CSSParserContext&);
 
 enum class AllowedFilterFunctions {
     PixelFilters,
@@ -99,9 +135,45 @@ enum class AllowedFilterFunctions {
 };
 
 RefPtr<CSSValue> consumeFilter(CSSParserTokenRange&, const CSSParserContext&, AllowedFilterFunctions);
-RefPtr<CSSShadowValue> consumeSingleShadow(CSSParserTokenRange&, CSSParserMode, bool allowInset, bool allowSpread);
+RefPtr<CSSShadowValue> consumeSingleShadow(CSSParserTokenRange&, const CSSParserContext&, bool allowInset, bool allowSpread);
 
-// Template implementations are at the bottom of the file for readability.
+struct FontStyleRaw {
+    CSSValueID style;
+    Optional<AngleRaw> angle;
+};
+using FontWeightRaw = Variant<CSSValueID, double>;
+using FontSizeRaw = Variant<CSSValueID, CSSPropertyParserHelpers::LengthOrPercentRaw>;
+using LineHeightRaw = Variant<CSSValueID, double, CSSPropertyParserHelpers::LengthOrPercentRaw>;
+using FontFamilyRaw = Variant<CSSValueID, String>;
+
+struct FontRaw {
+    Optional<FontStyleRaw> style;
+    Optional<CSSValueID> variantCaps;
+    Optional<FontWeightRaw> weight;
+    Optional<CSSValueID> stretch;
+    FontSizeRaw size;
+    Optional<LineHeightRaw> lineHeight;
+    Vector<FontFamilyRaw> family;
+};
+
+Optional<CSSValueID> consumeFontVariantCSS21Raw(CSSParserTokenRange&);
+Optional<CSSValueID> consumeFontWeightKeywordValueRaw(CSSParserTokenRange&);
+Optional<FontWeightRaw> consumeFontWeightRaw(CSSParserTokenRange&);
+Optional<CSSValueID> consumeFontStretchKeywordValueRaw(CSSParserTokenRange&);
+Optional<CSSValueID> consumeFontStyleKeywordValueRaw(CSSParserTokenRange&);
+Optional<FontStyleRaw> consumeFontStyleRaw(CSSParserTokenRange&, CSSParserMode);
+String concatenateFamilyName(CSSParserTokenRange&);
+String consumeFamilyNameRaw(CSSParserTokenRange&);
+Optional<CSSValueID> consumeGenericFamilyRaw(CSSParserTokenRange&);
+Optional<Vector<FontFamilyRaw>> consumeFontFamilyRaw(CSSParserTokenRange&);
+Optional<FontSizeRaw> consumeFontSizeRaw(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk = UnitlessQuirk::Forbid);
+Optional<LineHeightRaw> consumeLineHeightRaw(CSSParserTokenRange&, CSSParserMode);
+Optional<FontRaw> consumeFontWorkerSafe(CSSParserTokenRange&, CSSParserMode);
+const AtomString& genericFontFamilyFromValueID(CSSValueID);
+
+bool isFontStyleAngleInRange(double angleInDegrees);
+
+// Template and inline implementations are at the bottom of the file for readability.
 
 template<typename... emptyBaseCase> inline bool identMatches(CSSValueID) { return false; }
 template<CSSValueID head, CSSValueID... tail> inline bool identMatches(CSSValueID id)
@@ -109,7 +181,13 @@ template<CSSValueID head, CSSValueID... tail> inline bool identMatches(CSSValueI
     return id == head || identMatches<tail...>(id);
 }
 
-// FIXME-NEWPARSER - converted to a RefPtr return type from a raw ptr.
+template<CSSValueID... names> Optional<CSSValueID> consumeIdentRaw(CSSParserTokenRange& range)
+{
+    if (range.peek().type() != IdentToken || !identMatches<names...>(range.peek().id()))
+        return WTF::nullopt;
+    return range.consumeIncludingWhitespace().id();
+}
+
 template<CSSValueID... names> RefPtr<CSSPrimitiveValue> consumeIdent(CSSParserTokenRange& range)
 {
     if (range.peek().type() != IdentToken || !identMatches<names...>(range.peek().id()))
@@ -117,9 +195,9 @@ template<CSSValueID... names> RefPtr<CSSPrimitiveValue> consumeIdent(CSSParserTo
     return CSSValuePool::singleton().createIdentifierValue(range.consumeIncludingWhitespace().id());
 }
 
-static inline bool isCSSWideKeyword(const CSSValueID& id)
+inline bool isFontStyleAngleInRange(double angleInDegrees)
 {
-    return id == CSSValueInitial || id == CSSValueInherit || id == CSSValueUnset || id == CSSValueRevert || id == CSSValueDefault;
+    return angleInDegrees > -90 && angleInDegrees < 90;
 }
 
 } // namespace CSSPropertyParserHelpers

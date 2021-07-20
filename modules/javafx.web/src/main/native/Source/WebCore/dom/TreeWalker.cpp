@@ -27,8 +27,11 @@
 
 #include "ContainerNode.h"
 #include "NodeTraversal.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(TreeWalker);
 
 TreeWalker::TreeWalker(Node& rootNode, unsigned long whatToShow, RefPtr<NodeFilter>&& filter)
     : NodeIteratorBase(rootNode, whatToShow, WTFMove(filter))
@@ -236,7 +239,7 @@ Children:
         if (filterResult.hasException())
             return filterResult.releaseException();
 
-        if (filterResult.releaseReturnValue() == NodeFilter::FILTER_ACCEPT)
+        if (filterResult.returnValue() == NodeFilter::FILTER_ACCEPT)
             return setCurrent(node.releaseNonNull());
         if (filterResult.returnValue() == NodeFilter::FILTER_REJECT)
             break;

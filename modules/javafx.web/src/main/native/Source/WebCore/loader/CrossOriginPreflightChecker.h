@@ -53,13 +53,11 @@ public:
     void setDefersLoading(bool);
 
 private:
-    void notifyFinished(CachedResource&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
     void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) final;
 
     static void handleLoadingFailure(DocumentThreadableLoader&, unsigned long, const ResourceError&);
     static void validatePreflightResponse(DocumentThreadableLoader&, ResourceRequest&&, unsigned long, const ResourceResponse&);
-
-    bool isXMLHttpRequest() const final;
 
     DocumentThreadableLoader& m_loader;
     CachedResourceHandle<CachedRawResource> m_resource;

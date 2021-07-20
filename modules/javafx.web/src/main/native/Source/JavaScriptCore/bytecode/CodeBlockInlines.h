@@ -35,15 +35,27 @@ template<typename Functor>
 void CodeBlock::forEachValueProfile(const Functor& func)
 {
     for (unsigned i = 0; i < numberOfArgumentValueProfiles(); ++i)
-        func(valueProfileForArgument(i));
+        func(valueProfileForArgument(i), true);
 
     if (m_metadata) {
 #define VISIT(__op) \
-    m_metadata->forEach<__op>([&] (auto& metadata) { func(metadata.m_profile); });
+        m_metadata->forEach<__op>([&] (auto& metadata) { func(metadata.m_profile, false); });
 
         FOR_EACH_OPCODE_WITH_VALUE_PROFILE(VISIT)
 
 #undef VISIT
+
+        m_metadata->forEach<OpIteratorOpen>([&] (auto& metadata) {
+            func(metadata.m_iterableProfile, false);
+            func(metadata.m_iteratorProfile, false);
+            func(metadata.m_nextProfile, false);
+        });
+
+        m_metadata->forEach<OpIteratorNext>([&] (auto& metadata) {
+            func(metadata.m_nextResultProfile, false);
+            func(metadata.m_doneProfile, false);
+            func(metadata.m_valueProfile, false);
+        });
     }
 
 }
@@ -53,16 +65,25 @@ void CodeBlock::forEachArrayProfile(const Functor& func)
 {
     if (m_metadata) {
         m_metadata->forEach<OpGetById>([&] (auto& metadata) {
-            if (metadata.m_mode == GetByIdMode::ArrayLength)
+            if (metadata.m_modeMetadata.mode == GetByIdMode::ArrayLength)
                 func(metadata.m_modeMetadata.arrayLengthMode.arrayProfile);
         });
 
-#define VISIT(__op) \
+#define VISIT1(__op) \
     m_metadata->forEach<__op>([&] (auto& metadata) { func(metadata.m_arrayProfile); });
 
-        FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(VISIT)
+#define VISIT2(__op) \
+    m_metadata->forEach<__op>([&] (auto& metadata) { func(metadata.m_callLinkInfo.m_arrayProfile); });
 
-#undef VISIT
+        FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(VISIT1)
+        FOR_EACH_OPCODE_WITH_LLINT_CALL_LINK_INFO(VISIT2)
+
+#undef VISIT1
+#undef VISIT2
+
+        m_metadata->forEach<OpIteratorNext>([&] (auto& metadata) {
+            func(metadata.m_iterableProfile);
+        });
     }
 }
 

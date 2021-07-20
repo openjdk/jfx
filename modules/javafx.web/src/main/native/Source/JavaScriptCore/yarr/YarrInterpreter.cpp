@@ -34,7 +34,7 @@
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/DataLog.h>
-#include <wtf/text/CString.h>
+#include <wtf/StackCheck.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Yarr {
@@ -429,6 +429,12 @@ public:
         return invert ? !match : match;
     }
 
+    bool checkCharacterClassDontAdvanceInputForNonBMP(CharacterClass* characterClass, unsigned negativeInputOffset)
+    {
+        int readCharacter = characterClass->hasOnlyNonBMPCharacters() ? input.readSurrogatePairChecked(negativeInputOffset) :  input.readChecked(negativeInputOffset);
+        return testCharacterClass(characterClass, readCharacter);
+    }
+
     bool tryConsumeBackReference(int matchBegin, int matchEnd, unsigned negativeInputOffset)
     {
         unsigned matchSize = (unsigned)(matchEnd - matchBegin);
@@ -558,12 +564,21 @@ public:
         switch (term.atom.quantityType) {
         case QuantifierFixedCount: {
             if (unicode) {
+                CharacterClass* charClass = term.atom.characterClass;
                 backTrack->begin = input.getPos();
                 unsigned matchAmount = 0;
                 for (matchAmount = 0; matchAmount < term.atom.quantityMaxCount; ++matchAmount) {
-                    if (!checkCharacterClass(term.atom.characterClass, term.invert(), term.inputPosition - matchAmount)) {
-                        input.setPos(backTrack->begin);
-                        return false;
+                    if (term.invert()) {
+                        if (!checkCharacterClass(charClass, term.invert(), term.inputPosition - matchAmount)) {
+                            input.setPos(backTrack->begin);
+                            return false;
+                        }
+                    } else {
+                        unsigned matchOffset = matchAmount * (charClass->hasOnlyNonBMPCharacters() ? 2 : 1);
+                        if (!checkCharacterClassDontAdvanceInputForNonBMP(charClass, term.inputPosition - matchOffset)) {
+                            input.setPos(backTrack->begin);
+                            return false;
+                        }
                     }
                 }
 
@@ -1001,7 +1016,7 @@ public:
         ByteDisjunction* disjunctionBody = term.atom.parenthesesDisjunction;
 
         backTrack->matchAmount = 0;
-        backTrack->lastContext = 0;
+        backTrack->lastContext = nullptr;
 
         ASSERT(term.atom.quantityType != QuantifierFixedCount || term.atom.quantityMinCount == term.atom.quantityMaxCount);
 
@@ -1093,7 +1108,7 @@ public:
         case QuantifierFixedCount: {
             ASSERT(backTrack->matchAmount == term.atom.quantityMaxCount);
 
-            ParenthesesDisjunctionContext* context = 0;
+            ParenthesesDisjunctionContext* context = nullptr;
             JSRegExpResult result = parenthesesDoBacktrack(term, backTrack);
 
             if (result != JSRegExpMatch)
@@ -1256,6 +1271,9 @@ public:
 #define currentTerm() (disjunction->terms[context->term])
     JSRegExpResult matchDisjunction(ByteDisjunction* disjunction, DisjunctionContext* context, bool btrack = false)
     {
+        if (UNLIKELY(!isSafeToRecurse()))
+            return JSRegExpErrorNoMemory;
+
         if (!--remainingMatchCount)
             return JSRegExpErrorHitLimit;
 
@@ -1606,6 +1624,8 @@ public:
 
     unsigned interpret()
     {
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=195970
+        // [Yarr Interpreter] The interpreter doesn't have checks for stack overflow due to deep recursion
         if (!input.isAvailableInput(0))
             return offsetNoMatch;
 
@@ -1649,10 +1669,13 @@ public:
     }
 
 private:
+    inline bool isSafeToRecurse() { return m_stackCheck.isSafeToRecurse(); }
+
     BytecodePattern* pattern;
     bool unicode;
     unsigned* output;
     InputStream input;
+    StackCheck m_stackCheck;
     WTF::BumpPointerPool* allocatorPool { nullptr };
     unsigned startOffset;
     unsigned remainingMatchCount;
@@ -1677,6 +1700,11 @@ public:
 
     std::unique_ptr<BytecodePattern> compile(BumpPointerAllocator* allocator, ConcurrentJSLock* lock, ErrorCode& errorCode)
     {
+        if (UNLIKELY(!isSafeToRecurse())) {
+            errorCode = ErrorCode::TooManyDisjunctions;
+            return nullptr;
+        }
+
         regexBegin(m_pattern.m_numSubpatterns, m_pattern.m_body->m_callFrameSize, m_pattern.m_body->m_alternatives[0]->onceThrough());
         if (auto error = emitDisjunction(m_pattern.m_body, 0, 0)) {
             errorCode = error.value();
@@ -1689,7 +1717,7 @@ public:
             dumpDisjunction(m_bodyDisjunction.get());
 #endif
 
-        return std::make_unique<BytecodePattern>(WTFMove(m_bodyDisjunction), m_allParenthesesInfo, m_pattern, allocator, lock);
+        return makeUnique<BytecodePattern>(WTFMove(m_bodyDisjunction), m_allParenthesesInfo, m_pattern, allocator, lock);
     }
 
     void checkInput(unsigned count)
@@ -1909,7 +1937,7 @@ public:
         unsigned subpatternId = parenthesesBegin.atom.subpatternId;
 
         unsigned numSubpatterns = lastSubpatternId - subpatternId + 1;
-        auto parenthesesDisjunction = std::make_unique<ByteDisjunction>(numSubpatterns, callFrameSize);
+        auto parenthesesDisjunction = makeUnique<ByteDisjunction>(numSubpatterns, callFrameSize);
 
         unsigned firstTermInParentheses = beginTerm + 1;
         parenthesesDisjunction->terms.reserveInitialCapacity(endTerm - firstTermInParentheses + 2);
@@ -1980,7 +2008,7 @@ public:
 
     void regexBegin(unsigned numSubpatterns, unsigned callFrameSize, bool onceThrough)
     {
-        m_bodyDisjunction = std::make_unique<ByteDisjunction>(numSubpatterns, callFrameSize);
+        m_bodyDisjunction = makeUnique<ByteDisjunction>(numSubpatterns, callFrameSize);
         m_bodyDisjunction->terms.append(ByteTerm::BodyAlternativeBegin(onceThrough));
         m_bodyDisjunction->terms[0].frameLocation = 0;
         m_currentAlternativeIndex = 0;
@@ -2011,6 +2039,9 @@ public:
 
     Optional<ErrorCode> WARN_UNUSED_RETURN emitDisjunction(PatternDisjunction* disjunction, Checked<unsigned, RecordOverflow> inputCountAlreadyChecked, unsigned parenthesesInputCountAlreadyChecked)
     {
+        if (UNLIKELY(!isSafeToRecurse()))
+            return ErrorCode::TooManyDisjunctions;
+
         for (unsigned alt = 0; alt < disjunction->m_alternatives.size(); ++alt) {
             auto currentCountAlreadyChecked = inputCountAlreadyChecked;
 
@@ -2058,7 +2089,7 @@ public:
 
                 case PatternTerm::TypeBackReference:
                     atomBackReference(term.backReferenceSubpatternId, (currentCountAlreadyChecked - term.inputPosition).unsafeGet(), term.frameLocation, term.quantityMaxCount, term.quantityType);
-                        break;
+                    break;
 
                 case PatternTerm::TypeForwardReference:
                     break;
@@ -2388,8 +2419,11 @@ public:
 #endif
 
 private:
+    inline bool isSafeToRecurse() { return m_stackCheck.isSafeToRecurse(); }
+
     YarrPattern& m_pattern;
     std::unique_ptr<ByteDisjunction> m_bodyDisjunction;
+    StackCheck m_stackCheck;
     unsigned m_currentAlternativeIndex { 0 };
     Vector<ParenthesesStackEntry> m_parenthesesStack;
     Vector<std::unique_ptr<ByteDisjunction>> m_allParenthesesInfo;

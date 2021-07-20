@@ -28,7 +28,7 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "SecurityOrigin.h"
-#include <pal/SessionID.h>
+#include "ServiceWorkerRegistrationKey.h"
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
@@ -52,22 +52,25 @@ public:
 
     ~RegistrationDatabase();
 
-    bool isClosed() const { return !m_database; }
-
-    void pushChanges(Vector<ServiceWorkerContextData>&&, CompletionHandler<void()>&&);
+    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, Optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
     void clearAll(CompletionHandler<void()>&&);
+    void close(CompletionHandler<void()>&&);
 
 private:
     RegistrationDatabase(RegistrationStore&, String&& databaseDirectory);
 
+    String databaseDirectoryIsolatedCopy() const { return m_databaseDirectory.isolatedCopy(); }
+
+    enum class ShouldRetry { No, Yes };
+    void schedulePushChanges(Vector<ServiceWorkerContextData>&&, Vector<ServiceWorkerRegistrationKey>&&, ShouldRetry, CompletionHandler<void()>&&);
     void postTaskToWorkQueue(Function<void()>&&);
 
     // Methods to be run on the work queue.
-    void openSQLiteDatabase(const String& fullFilename);
+    bool openSQLiteDatabase(const String& fullFilename);
     String ensureValidRecordsTable();
     String importRecords();
     void importRecordsIfNecessary();
-    void doPushChanges(Vector<ServiceWorkerContextData>&&);
+    bool doPushChanges(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
     void doClearOrigin(const SecurityOrigin&);
 
     // Replies to the main thread.
@@ -77,10 +80,10 @@ private:
 
     Ref<WorkQueue> m_workQueue;
     WeakPtr<RegistrationStore> m_store;
-    PAL::SessionID m_sessionID;
     String m_databaseDirectory;
     String m_databaseFilePath;
     std::unique_ptr<SQLiteDatabase> m_database;
+    uint64_t m_pushCounter { 0 };
 };
 
 } // namespace WebCore

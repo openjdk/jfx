@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -103,7 +103,8 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             NativeLibLoader.loadLibrary("javafx_iio");
             return null;
         });
@@ -199,10 +200,6 @@ public class JPEGImageLoader extends ImageLoaderImpl {
             disposeNative(structPointer);
             structPointer = 0L;
         }
-    }
-
-    protected void finalize() {
-        dispose();
     }
 
     public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth) throws IOException {

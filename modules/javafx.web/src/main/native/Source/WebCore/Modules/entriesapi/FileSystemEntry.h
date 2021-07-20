@@ -37,6 +37,7 @@ class ErrorCallback;
 class FileSystemEntryCallback;
 
 class FileSystemEntry : public ScriptWrappable, public ActiveDOMObject, public RefCounted<FileSystemEntry> {
+    WTF_MAKE_ISO_ALLOCATED(FileSystemEntry);
 public:
     virtual ~FileSystemEntry();
 
@@ -51,10 +52,10 @@ public:
 
 protected:
     FileSystemEntry(ScriptExecutionContext&, DOMFileSystem&, const String& virtualPath);
+    Document* document() const;
 
 private:
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     Ref<DOMFileSystem> m_filesystem;
     String m_name;

@@ -33,24 +33,25 @@ namespace JSC { namespace B3 {
 
 class StackSlot;
 
-class JS_EXPORT_PRIVATE SlotBaseValue : public Value {
+class JS_EXPORT_PRIVATE SlotBaseValue final : public Value {
 public:
     static bool accepts(Kind kind) { return kind == SlotBase; }
 
-    ~SlotBaseValue();
+    ~SlotBaseValue() final;
 
     StackSlot* slot() const { return m_slot; }
 
-protected:
-    void dumpMeta(CommaPrinter&, PrintStream&) const override;
-
-    Value* cloneImpl() const override;
+    B3_SPECIALIZE_VALUE_FOR_NO_CHILDREN
 
 private:
     friend class Procedure;
+    friend class Value;
 
+    void dumpMeta(CommaPrinter&, PrintStream&) const final;
+
+    static Opcode opcodeFromConstructor(Origin, StackSlot*) { return SlotBase; }
     SlotBaseValue(Origin origin, StackSlot* slot)
-        : Value(CheckedOpcode, SlotBase, pointerType(), origin)
+        : Value(CheckedOpcode, SlotBase, pointerType(), Zero, origin)
         , m_slot(slot)
     {
     }

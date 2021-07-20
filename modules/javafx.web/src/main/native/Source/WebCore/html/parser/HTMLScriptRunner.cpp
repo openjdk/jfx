@@ -29,6 +29,7 @@
 
 #include "Element.h"
 #include "Event.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "HTMLInputStream.h"
@@ -36,7 +37,6 @@
 #include "HTMLScriptRunnerHost.h"
 #include "IgnoreDestructiveWriteCountIncrementer.h"
 #include "InlineClassicScript.h"
-#include "Microtasks.h"
 #include "MutationObserver.h"
 #include "NestingLevelIncrementer.h"
 #include "ScriptElement.h"
@@ -47,7 +47,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 HTMLScriptRunner::HTMLScriptRunner(Document& document, HTMLScriptRunnerHost& host)
-    : m_document(&document)
+    : m_document(makeWeakPtr(document))
     , m_host(host)
     , m_scriptNestingLevel(0)
     , m_hasScriptsWaitingForStylesheets(false)
@@ -106,8 +106,8 @@ void HTMLScriptRunner::executePendingScriptAndDispatchEvent(PendingScript& pendi
     if (pendingScript.watchingForLoad())
         stopWatchingForLoad(pendingScript);
 
-    if (!isExecutingScript())
-        MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+    if (!isExecutingScript() && m_document)
+        m_document->eventLoop().performMicrotaskCheckpoint();
 
     {
         NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
@@ -241,8 +241,8 @@ void HTMLScriptRunner::runScript(ScriptElement& scriptElement, const TextPositio
     // every script element, even if it's not ready to execute yet. There's
     // unfortunately no obvious way to tell if prepareScript is going to
     // execute the script before calling it.
-    if (!isExecutingScript())
-        MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+    if (!isExecutingScript() && m_document)
+        m_document->eventLoop().performMicrotaskCheckpoint();
 
     InsertionPointRecord insertionPointRecord(m_host.inputStream());
     NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
@@ -258,7 +258,7 @@ void HTMLScriptRunner::runScript(ScriptElement& scriptElement, const TextPositio
         if (m_scriptNestingLevel == 1)
             m_parserBlockingScript = PendingScript::create(scriptElement, scriptStartPosition);
         else
-            scriptElement.executeClassicScript(ScriptSourceCode(scriptElement.element().textContent(), documentURLForScriptExecution(m_document), scriptStartPosition, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(scriptElement)));
+            scriptElement.executeClassicScript(ScriptSourceCode(scriptElement.element().textContent(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(scriptElement)));
     } else
         requestParsingBlockingScript(scriptElement);
 }

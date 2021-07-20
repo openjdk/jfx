@@ -46,4 +46,3 @@
 #include "JSDOMConvertStrings.h"
 #include "JSDOMConvertUnion.h"
 #include "JSDOMConvertWebGL.h"
-#include "JSDOMConvertXPathNSResolver.h"

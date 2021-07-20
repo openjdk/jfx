@@ -94,6 +94,18 @@ struct _GstPluginPrivate {
   GstStructure *cache_data;
 };
 
+/* Private function for getting plugin features directly */
+GList *
+_priv_plugin_get_features(GstRegistry *registry, GstPlugin *plugin);
+
+/* Needed by GstMeta (to access meta seq) and GstBuffer (create/free/iterate) */
+typedef struct _GstMetaItem GstMetaItem;
+struct _GstMetaItem {
+  GstMetaItem *next;
+  guint64 seq_num;
+  GstMeta meta;
+};
+
 /* FIXME: could rename all priv_gst_* functions to __gst_* now */
 G_GNUC_INTERNAL  gboolean priv_gst_plugin_loading_have_whitelist (void);
 
@@ -131,11 +143,13 @@ G_GNUC_INTERNAL  void  _priv_gst_debug_init (void);
 G_GNUC_INTERNAL  void  _priv_gst_context_initialize (void);
 G_GNUC_INTERNAL  void  _priv_gst_toc_initialize (void);
 G_GNUC_INTERNAL  void  _priv_gst_date_time_initialize (void);
+G_GNUC_INTERNAL  void  _priv_gst_plugin_feature_rank_initialize (void);
 
 /* cleanup functions called from gst_deinit(). */
 G_GNUC_INTERNAL  void  _priv_gst_allocator_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_caps_features_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_caps_cleanup (void);
+G_GNUC_INTERNAL  void  _priv_gst_debug_cleanup (void);
 
 /* called from gst_task_cleanup_all(). */
 G_GNUC_INTERNAL  void  _priv_gst_element_cleanup (void);
@@ -195,10 +209,10 @@ gchar *priv_gst_string_take_and_wrap (gchar * s);
 
 /* registry cache backends */
 G_GNUC_INTERNAL
-gboolean        priv_gst_registry_binary_read_cache (GstRegistry * registry, const char *location);
+gboolean    priv_gst_registry_binary_read_cache (GstRegistry * registry, const char *location);
 
 G_GNUC_INTERNAL
-gboolean        priv_gst_registry_binary_write_cache    (GstRegistry * registry, GList * plugins, const char *location);
+gboolean    priv_gst_registry_binary_write_cache  (GstRegistry * registry, GList * plugins, const char *location);
 
 
 G_GNUC_INTERNAL
@@ -361,10 +375,10 @@ struct _GstPlugin {
   /*< private >*/
   GstPluginDesc desc;
 
-  gchar *   filename;
-  gchar *   basename;       /* base name (non-dir part) of plugin path */
+  gchar * filename;
+  gchar * basename;       /* base name (non-dir part) of plugin path */
 
-  GModule * module;     /* contains the module if plugin is loaded */
+  GModule * module;   /* contains the module if plugin is loaded */
 
   off_t         file_size;
   time_t        file_mtime;
@@ -481,7 +495,7 @@ struct _GstDeviceProviderFactory {
 
   GType                      type;              /* unique GType the device factory or 0 if not loaded */
 
-  volatile GstDeviceProvider *provider;
+  GstDeviceProvider         *provider;
   gpointer                   metadata;
 
   gpointer _gst_reserved[GST_PADDING];
@@ -507,6 +521,17 @@ struct _GstDynamicTypeFactoryClass {
 
 /* privat flag used by GstBus / GstMessage */
 #define GST_MESSAGE_FLAG_ASYNC_DELIVERY (GST_MINI_OBJECT_FLAG_LAST << 0)
+
+/* private struct used by GstClock and GstSystemClock */
+struct _GstClockEntryImpl
+{
+  GstClockEntry entry;
+  GWeakRef clock;
+  GDestroyNotify destroy_entry;
+  gpointer padding[21];                 /* padding for allowing e.g. systemclock
+                                         * to add data in lieu of overridable
+                                         * virtual functions on the clock */
+};
 
 G_END_DECLS
 #endif /* __GST_PRIVATE_H__ */

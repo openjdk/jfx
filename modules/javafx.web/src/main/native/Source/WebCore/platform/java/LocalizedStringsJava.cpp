@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -372,7 +372,6 @@ String contextMenuItemTagEnterVideoFullscreen()
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagEnterVideoFullscreen");
 }
 
-#if ENABLE(VIDEO_TRACK)
 String textTrackSubtitlesText()
 {
     return String::fromUTF8("Subtitles");
@@ -397,7 +396,6 @@ String audioTrackNoLabelText()
 {
     return String::fromUTF8("No label");
 }
-#endif
 
 String contextMenuItemTagMediaPlay()
 {
@@ -502,6 +500,12 @@ String AXListMarkerText()
     return getLocalizedProperty("AXListMarkerText");
 }
 
+String AXAttachmentRoleText()
+{
+    notImplemented();
+    return String();
+}
+
 String AXImageMapText()
 {
     return getLocalizedProperty("AXImageMapText");
@@ -520,6 +524,16 @@ String AXDefinitionListTermText()
 String AXDefinitionListDefinitionText()
 {
     return getLocalizedProperty("AXDefinitionListDefinitionText");
+}
+
+String AXFigureText()
+{
+    return getLocalizedProperty("AXFigureText");
+}
+
+String AXARIAContentGroupText(const String& ariaType)
+{
+    return getLocalizedProperty(String("AXARIAContentGroupText") + ariaType);
 }
 
 String AXButtonActionVerb()
@@ -710,6 +724,11 @@ String unsupportedPluginText()
 {
     notImplemented();
     return String::fromUTF8("Unsupported Plug-in");
+}
+
+String pluginTooSmallText()
+{
+    return String::fromUTF8("Plug-In too small");
 }
 
 String localizedString(const char* key)

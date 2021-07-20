@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,7 +78,7 @@ struct QueryKey {
 
     unsigned hash() const
     {
-        unsigned hash = m_sourceID + m_divot * m_searchDescriptor;
+        unsigned hash = static_cast<unsigned>(m_sourceID) + m_divot * m_searchDescriptor;
         return hash;
     }
 
@@ -90,7 +90,7 @@ struct QueryKey {
 struct QueryKeyHash {
     static unsigned hash(const QueryKey& key) { return key.hash(); }
     static bool equal(const QueryKey& a, const QueryKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -98,13 +98,11 @@ struct QueryKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::QueryKey> {
-    typedef JSC::QueryKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::QueryKey> : JSC::QueryKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::QueryKey> : SimpleClassHashTraits<JSC::QueryKey> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF
@@ -124,7 +122,7 @@ public:
     TypeLocation* findLocation(unsigned divot, intptr_t sourceID, TypeProfilerSearchDescriptor, VM&);
     GlobalVariableID getNextUniqueVariableID() { return m_nextUniqueVariableID++; }
     TypeLocation* nextTypeLocation();
-    void invalidateTypeSetCache();
+    void invalidateTypeSetCache(VM&);
     void dumpTypeProfilerData(VM&);
 
 private:

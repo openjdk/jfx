@@ -27,7 +27,7 @@
 #include "Grid.h"
 #include "GridBaselineAlignment.h"
 #include "GridTrackSize.h"
-#include "LayoutUnit.h"
+#include "LayoutSize.h"
 
 namespace WebCore {
 
@@ -73,6 +73,13 @@ public:
     void setGrowthLimitCap(Optional<LayoutUnit>);
     Optional<LayoutUnit> growthLimitCap() const { return m_growthLimitCap; }
 
+    const GridTrackSize& cachedTrackSize() const
+    {
+        ASSERT(m_cachedTrackSize.hasValue());
+        return m_cachedTrackSize.value();
+    }
+    void setCachedTrackSize(const GridTrackSize&);
+
 private:
     bool isGrowthLimitBiggerThanBaseSize() const { return growthLimitIsInfinite() || m_growthLimit >= m_baseSize; }
 
@@ -84,6 +91,7 @@ private:
     LayoutUnit m_tempSize { 0 };
     Optional<LayoutUnit> m_growthLimitCap;
     bool m_infinitelyGrowable { false };
+    Optional<GridTrackSize> m_cachedTrackSize;
 };
 
 class GridTrackSizingAlgorithm final {
@@ -130,14 +138,14 @@ public:
 
     bool hasAnyPercentSizedRowsIndefiniteHeight() const { return m_hasPercentSizedRowsIndefiniteHeight; }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool tracksAreWiderThanMinTrackBreadth() const;
 #endif
 
 private:
     Optional<LayoutUnit> availableSpace() const;
     bool isRelativeGridLengthAsAuto(const GridLength&, GridTrackSizingDirection) const;
-    GridTrackSize gridTrackSize(GridTrackSizingDirection, unsigned translatedIndex) const;
+    GridTrackSize calculateGridTrackSize(GridTrackSizingDirection, unsigned translatedIndex) const;
     const GridTrackSize& rawGridTrackSize(GridTrackSizingDirection, unsigned translatedIndex) const;
 
     // Helper methods for step 1. initializeTrackSizes().
@@ -163,7 +171,7 @@ private:
     void computeGridContainerIntrinsicSizes();
 
     // Helper methods for step 4. Strech flexible tracks.
-    typedef HashSet<unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> TrackIndexSet;
+    typedef HashSet<unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> TrackIndexSet;
     double computeFlexFactorUnitSize(const Vector<GridTrack>& tracks, double flexFactorSum, LayoutUnit& leftOverSpace, const Vector<unsigned, 8>& flexibleTracksIndexes, std::unique_ptr<TrackIndexSet> tracksToTreatAsInflexible = nullptr) const;
     void computeFlexSizedTracksGrowth(double flexFraction, Vector<LayoutUnit>& increments, LayoutUnit& totalGrowth) const;
     double findFrUnitSize(const GridSpan& tracksSpan, LayoutUnit leftOverSpace) const;
@@ -244,7 +252,7 @@ private:
 class GridTrackSizingAlgorithmStrategy {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    LayoutUnit minContentForChild(RenderBox&) const;
+    virtual LayoutUnit minContentForChild(RenderBox&) const;
     LayoutUnit maxContentForChild(RenderBox&) const;
     LayoutUnit minSizeForChild(RenderBox&) const;
 
@@ -259,13 +267,11 @@ protected:
     GridTrackSizingAlgorithmStrategy(GridTrackSizingAlgorithm& algorithm)
         : m_algorithm(algorithm) { }
 
-    virtual LayoutUnit minLogicalWidthForChild(RenderBox&, Length childMinSize, LayoutUnit availableSize) const = 0;
+    virtual LayoutUnit minLogicalSizeForChild(RenderBox&, const Length& childMinSize, LayoutUnit availableSize) const;
     virtual void layoutGridItemForMinSizeComputation(RenderBox&, bool overrideSizeHasChanged) const = 0;
 
     LayoutUnit logicalHeightForChild(RenderBox&) const;
-    bool updateOverrideContainingBlockContentSizeForChild(RenderBox&, GridTrackSizingDirection, Optional<LayoutUnit> = WTF::nullopt) const;
-
-    GridTrackSize gridTrackSize(GridTrackSizingDirection direction, size_t translatedIndex) const { return m_algorithm.gridTrackSize(direction, translatedIndex); }
+    bool updateOverridingContainingBlockContentSizeForChild(RenderBox&, GridTrackSizingDirection, Optional<LayoutUnit> = WTF::nullopt) const;
 
     // GridTrackSizingAlgorithm accessors for subclasses.
     LayoutUnit computeTrackBasedSize() const { return m_algorithm.computeTrackBasedSize(); }

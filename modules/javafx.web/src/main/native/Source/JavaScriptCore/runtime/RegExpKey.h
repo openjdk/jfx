@@ -2,6 +2,7 @@
  * Copyright (C) 2010 University of Szeged
  * Copyright (C) 2010 Renata Hodovan (hodovan@inf.u-szeged.hu)
  * All rights reserved.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,50 +28,38 @@
 
 #pragma once
 
+#include "YarrFlags.h"
+#include <wtf/OptionSet.h>
 #include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
-enum RegExpFlags : int8_t {
-    NoFlags = 0,
-    FlagGlobal = 1,
-    FlagIgnoreCase = 2,
-    FlagMultiline = 4,
-    FlagSticky = 8,
-    FlagUnicode = 16,
-    FlagDotAll = 32,
-    InvalidFlags = 64,
-    DeletedValueFlags = -1
-};
-
 struct RegExpKey {
-    RegExpFlags flagsValue;
-    RefPtr<StringImpl> pattern;
+    OptionSet<Yarr::Flags> flagsValue;
+    PackedRefPtr<StringImpl> pattern;
 
     RegExpKey()
-        : flagsValue(NoFlags)
     {
     }
 
-    RegExpKey(RegExpFlags flags)
+    RegExpKey(OptionSet<Yarr::Flags> flags)
         : flagsValue(flags)
     {
     }
 
-    RegExpKey(RegExpFlags flags, const String& pattern)
+    RegExpKey(OptionSet<Yarr::Flags> flags, const String& pattern)
         : flagsValue(flags)
         , pattern(pattern.impl())
     {
     }
 
-    RegExpKey(RegExpFlags flags, RefPtr<StringImpl>&& pattern)
+    RegExpKey(OptionSet<Yarr::Flags> flags, RefPtr<StringImpl>&& pattern)
         : flagsValue(flags)
         , pattern(WTFMove(pattern))
     {
     }
 
-    RegExpKey(RegExpFlags flags, const RefPtr<StringImpl>& pattern)
+    RegExpKey(OptionSet<Yarr::Flags> flags, const RefPtr<StringImpl>& pattern)
         : flagsValue(flags)
         , pattern(pattern)
     {
@@ -81,7 +70,7 @@ struct RegExpKey {
     struct Hash {
         static unsigned hash(const RegExpKey& key) { return key.pattern->hash(); }
         static bool equal(const RegExpKey& a, const RegExpKey& b) { return a == b; }
-        static const bool safeToCompareToEmptyOrDeleted = false;
+        static constexpr bool safeToCompareToEmptyOrDeleted = false;
     };
 };
 
@@ -99,15 +88,13 @@ inline bool operator==(const RegExpKey& a, const RegExpKey& b)
 } // namespace JSC
 
 namespace WTF {
-template<typename T> struct DefaultHash;
+template<typename> struct DefaultHash;
 
-template<> struct DefaultHash<JSC::RegExpKey> {
-    typedef JSC::RegExpKey::Hash Hash;
-};
+template<> struct DefaultHash<JSC::RegExpKey> : JSC::RegExpKey::Hash { };
 
 template<> struct HashTraits<JSC::RegExpKey> : GenericHashTraits<JSC::RegExpKey> {
-    static const bool emptyValueIsZero = true;
-    static void constructDeletedValue(JSC::RegExpKey& slot) { slot.flagsValue = JSC::DeletedValueFlags; }
-    static bool isDeletedValue(const JSC::RegExpKey& value) { return value.flagsValue == JSC::DeletedValueFlags; }
+    static constexpr bool emptyValueIsZero = true;
+    static void constructDeletedValue(JSC::RegExpKey& slot) { slot.flagsValue = JSC::Yarr::Flags::DeletedValue; }
+    static bool isDeletedValue(const JSC::RegExpKey& value) { return value.flagsValue == JSC::Yarr::Flags::DeletedValue; }
 };
 } // namespace WTF

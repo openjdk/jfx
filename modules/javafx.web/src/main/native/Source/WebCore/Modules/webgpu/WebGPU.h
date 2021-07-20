@@ -27,14 +27,15 @@
 
 #if ENABLE(WEBGPU)
 
-#include "JSDOMPromiseDeferred.h"
-#include <wtf/Optional.h>
+#include "IDLTypes.h"
 
 namespace WebCore {
 
 class WebGPUAdapter;
 
 struct GPURequestAdapterOptions;
+
+template<typename IDLType> class DOMPromiseDeferred;
 
 class WebGPU : public RefCounted<WebGPU> {
 public:

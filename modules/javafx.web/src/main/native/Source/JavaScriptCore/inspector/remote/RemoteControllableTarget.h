@@ -27,6 +27,7 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "JSExportMacros.h"
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,6 +39,8 @@ namespace Inspector {
 
 class FrontendChannel;
 
+using TargetID = unsigned;
+
 class JS_EXPORT_PRIVATE RemoteControllableTarget {
 public:
     virtual ~RemoteControllableTarget();
@@ -48,10 +51,17 @@ public:
     virtual void connect(FrontendChannel&, bool isAutomaticConnection = false, bool immediatelyPause = false) = 0;
     virtual void disconnect(FrontendChannel&) = 0;
 
-    unsigned targetIdentifier() const { return m_identifier; }
-    void setTargetIdentifier(unsigned identifier) { m_identifier = identifier; }
+    TargetID targetIdentifier() const { return m_identifier; }
+    void setTargetIdentifier(TargetID identifier) { m_identifier = identifier; }
 
-    enum class Type { JavaScript, ServiceWorker, Web, Automation };
+    enum class Type {
+        Automation,
+        ITML,
+        JavaScript,
+        Page,
+        ServiceWorker,
+        WebPage,
+    };
     virtual Type type() const = 0;
     virtual bool remoteControlAllowed() const = 0;
     virtual void dispatchMessageFromRemote(const String& message) = 0;
@@ -62,7 +72,7 @@ public:
 #endif
 
 private:
-    unsigned m_identifier { 0 };
+    TargetID m_identifier { 0 };
 };
 
 } // namespace Inspector

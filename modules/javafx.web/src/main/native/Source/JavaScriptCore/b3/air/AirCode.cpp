@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,10 +35,13 @@
 #include "B3BasicBlockUtils.h"
 #include "B3Procedure.h"
 #include "B3StackSlot.h"
+#include "CCallHelpers.h"
 #include <wtf/ListDump.h>
 #include <wtf/MathExtras.h>
 
 namespace JSC { namespace B3 { namespace Air {
+
+const char* const tierName = "Air ";
 
 static void defaultPrologueGenerator(CCallHelpers& jit, Code& code)
 {
@@ -46,8 +49,6 @@ static void defaultPrologueGenerator(CCallHelpers& jit, Code& code)
     if (code.frameSize()) {
         AllowMacroScratchRegisterUsageIf allowScratch(jit, isARM64());
         jit.addPtr(MacroAssembler::TrustedImm32(-code.frameSize()), MacroAssembler::framePointerRegister,  MacroAssembler::stackPointerRegister);
-        if (Options::zeroStackFrame())
-            jit.clearStackFrame(MacroAssembler::framePointerRegister, MacroAssembler::stackPointerRegister, GPRInfo::nonArgGPR0, code.frameSize());
     }
 
     jit.emitSave(code.calleeSaveRegisterAtOffsetList());
@@ -79,8 +80,9 @@ Code::Code(Procedure& proc)
                         calleeSaveRegs.append(reg);
                 });
             if (Options::airRandomizeRegs()) {
-                shuffleVector(volatileRegs, [&] (unsigned limit) { return m_weakRandom.getUint32(limit); });
-                shuffleVector(calleeSaveRegs, [&] (unsigned limit) { return m_weakRandom.getUint32(limit); });
+                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : m_weakRandom.getUint32());
+                shuffleVector(volatileRegs, [&] (unsigned limit) { return random.getUint32(limit); });
+                shuffleVector(calleeSaveRegs, [&] (unsigned limit) { return random.getUint32(limit); });
             }
             Vector<Reg> result;
             result.appendVector(volatileRegs);
@@ -101,6 +103,16 @@ Code::~Code()
 void Code::emitDefaultPrologue(CCallHelpers& jit)
 {
     defaultPrologueGenerator(jit, *this);
+}
+
+void Code::emitEpilogue(CCallHelpers& jit)
+{
+    if (frameSize()) {
+        jit.emitRestore(calleeSaveRegisterAtOffsetList());
+        jit.emitFunctionEpilogue();
+    } else
+        jit.emitFunctionEpilogueWithEmptyFrame();
+    jit.ret();
 }
 
 void Code::setRegsInPriorityOrder(Bank bank, const Vector<Reg>& regs)
@@ -178,7 +190,7 @@ CCallSpecial* Code::cCallSpecial()
 {
     if (!m_cCallSpecial) {
         m_cCallSpecial = static_cast<CCallSpecial*>(
-            addSpecial(std::make_unique<CCallSpecial>()));
+            addSpecial(makeUnique<CCallSpecial>()));
     }
 
     return m_cCallSpecial;
@@ -249,26 +261,26 @@ void Code::resetReachability()
 void Code::dump(PrintStream& out) const
 {
     if (!m_entrypoints.isEmpty())
-        out.print("Entrypoints: ", listDump(m_entrypoints), "\n");
+        out.print(tierName, "Entrypoints: ", listDump(m_entrypoints), "\n");
     for (BasicBlock* block : *this)
         out.print(deepDump(block));
     if (stackSlots().size()) {
-        out.print("Stack slots:\n");
+        out.print(tierName, "Stack slots:\n");
         for (StackSlot* slot : stackSlots())
-            out.print("    ", pointerDump(slot), ": ", deepDump(slot), "\n");
+            out.print(tierName, "    ", pointerDump(slot), ": ", deepDump(slot), "\n");
     }
     if (specials().size()) {
-        out.print("Specials:\n");
+        out.print(tierName, "Specials:\n");
         for (Special* special : specials())
-            out.print("    ", deepDump(special), "\n");
+            out.print(tierName, "    ", deepDump(special), "\n");
     }
     if (m_frameSize || m_stackIsAllocated)
-        out.print("Frame size: ", m_frameSize, m_stackIsAllocated ? " (Allocated)" : "", "\n");
+        out.print(tierName, "Frame size: ", m_frameSize, m_stackIsAllocated ? " (Allocated)" : "", "\n");
     if (m_callArgAreaSize)
-        out.print("Call arg area size: ", m_callArgAreaSize, "\n");
+        out.print(tierName, "Call arg area size: ", m_callArgAreaSize, "\n");
     RegisterAtOffsetList calleeSaveRegisters = this->calleeSaveRegisterAtOffsetList();
     if (calleeSaveRegisters.size())
-        out.print("Callee saves: ", calleeSaveRegisters, "\n");
+        out.print(tierName, "Callee saves: ", calleeSaveRegisters, "\n");
 }
 
 unsigned Code::findFirstBlockIndex(unsigned index) const

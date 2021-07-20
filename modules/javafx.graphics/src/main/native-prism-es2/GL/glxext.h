@@ -34,7 +34,7 @@ extern "C" {
 **   https://github.com/KhronosGroup/OpenGL-Registry
 */
 
-#define GLX_GLXEXT_VERSION 20190204
+#define GLX_GLXEXT_VERSION 20190911
 
 /* Generated C header for:
  * API: glx
@@ -279,6 +279,14 @@ void glXBlitContextFramebufferAMD (GLXContext dstCtx, GLint srcX0, GLint srcY0, 
 #define GLX_EXT_buffer_age 1
 #define GLX_BACK_BUFFER_AGE_EXT           0x20F4
 #endif /* GLX_EXT_buffer_age */
+
+#ifndef GLX_EXT_context_priority
+#define GLX_EXT_context_priority 1
+#define GLX_CONTEXT_PRIORITY_LEVEL_EXT    0x3100
+#define GLX_CONTEXT_PRIORITY_HIGH_EXT     0x3101
+#define GLX_CONTEXT_PRIORITY_MEDIUM_EXT   0x3102
+#define GLX_CONTEXT_PRIORITY_LOW_EXT      0x3103
+#endif /* GLX_EXT_context_priority */
 
 #ifndef GLX_EXT_create_context_es2_profile
 #define GLX_EXT_create_context_es2_profile 1
@@ -546,6 +554,15 @@ Bool glXDelayBeforeSwapNV (Display *dpy, GLXDrawable drawable, GLfloat seconds);
 #define GLX_NV_float_buffer 1
 #define GLX_FLOAT_COMPONENTS_NV           0x20B0
 #endif /* GLX_NV_float_buffer */
+
+#ifndef GLX_NV_multigpu_context
+#define GLX_NV_multigpu_context 1
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_NV    0x20AA
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_SINGLE_NV 0x20AB
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_AFR_NV 0x20AC
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_MULTICAST_NV 0x20AD
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_MULTI_DISPLAY_MULTICAST_NV 0x20AE
+#endif /* GLX_NV_multigpu_context */
 
 #ifndef GLX_NV_multisample_coverage
 #define GLX_NV_multisample_coverage 1

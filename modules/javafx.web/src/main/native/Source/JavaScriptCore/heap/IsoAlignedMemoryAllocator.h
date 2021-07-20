@@ -26,25 +26,39 @@
 #pragma once
 
 #include "AlignedMemoryAllocator.h"
+#include <wtf/DebugHeap.h>
+#include <wtf/FastBitVector.h>
+#include <wtf/HashMap.h>
+#include <wtf/Vector.h>
+
 
 namespace JSC {
 
-class IsoAlignedMemoryAllocator : public AlignedMemoryAllocator {
+class IsoAlignedMemoryAllocator final : public AlignedMemoryAllocator {
 public:
-    IsoAlignedMemoryAllocator();
-    ~IsoAlignedMemoryAllocator();
+    IsoAlignedMemoryAllocator(CString);
+    ~IsoAlignedMemoryAllocator() final;
 
-    void* tryAllocateAlignedMemory(size_t alignment, size_t size) override;
-    void freeAlignedMemory(void*) override;
+    void* tryAllocateAlignedMemory(size_t alignment, size_t size) final;
+    void freeAlignedMemory(void*) final;
 
-    void dump(PrintStream&) const override;
+    void dump(PrintStream&) const final;
+
+    void* tryAllocateMemory(size_t) final;
+    void freeMemory(void*) final;
+    void* tryReallocateMemory(void*, size_t) final;
 
 private:
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    // If breakdown is enabled, we do not ensure Iso-feature. This is totally OK since breakdown is memory bloat debugging feature.
+    WTF::DebugHeap m_debugHeap;
+#else
     Vector<void*> m_blocks;
     HashMap<void*, unsigned> m_blockIndices;
     FastBitVector m_committed;
     unsigned m_firstUncommitted { 0 };
     Lock m_lock;
+#endif
 };
 
 } // namespace JSC

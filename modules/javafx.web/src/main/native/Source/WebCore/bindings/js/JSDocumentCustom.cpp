@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009, 2011, 2016, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,14 +25,12 @@
 #include "JSHTMLDocument.h"
 #include "JSXMLDocument.h"
 #include "NodeTraversal.h"
-#include "SVGDocument.h"
-#include <JavaScriptCore/HeapSnapshotBuilder.h>
-
+#include <JavaScriptCore/HeapAnalyzer.h>
 
 namespace WebCore {
 using namespace JSC;
 
-static inline JSValue createNewDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObject, Ref<Document>&& passedDocument)
+static inline JSValue createNewDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, Ref<Document>&& passedDocument)
 {
     auto& document = passedDocument.get();
     JSObject* wrapper;
@@ -43,12 +41,12 @@ static inline JSValue createNewDocumentWrapper(ExecState& state, JSDOMGlobalObje
     else
         wrapper = createWrapper<Document>(&globalObject, WTFMove(passedDocument));
 
-    reportMemoryForDocumentIfFrameless(state, document);
+    reportMemoryForDocumentIfFrameless(lexicalGlobalObject, document);
 
     return wrapper;
 }
 
-JSObject* cachedDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObject, Document& document)
+JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, Document& document)
 {
     if (auto* wrapper = getCachedWrapper(globalObject.world(), document))
         return wrapper;
@@ -57,7 +55,7 @@ JSObject* cachedDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObjec
     if (!window)
         return nullptr;
 
-    auto* documentGlobalObject = toJSDOMWindow(state.vm(), toJS(&state, *window));
+    auto* documentGlobalObject = toJSDOMWindow(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
     if (!documentGlobalObject)
         return nullptr;
 
@@ -65,13 +63,13 @@ JSObject* cachedDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObjec
     return getCachedWrapper(documentGlobalObject->world(), document);
 }
 
-void reportMemoryForDocumentIfFrameless(ExecState& state, Document& document)
+void reportMemoryForDocumentIfFrameless(JSGlobalObject& lexicalGlobalObject, Document& document)
 {
     // Make sure the document is kept around by the window object, and works right with the back/forward cache.
     if (document.frame())
         return;
 
-    VM& vm = state.vm();
+    VM& vm = lexicalGlobalObject.vm();
     size_t memoryCost = 0;
     for (Node* node = &document; node; node = NodeTraversal::next(*node))
         memoryCost += node->approximateMemoryCost();
@@ -81,28 +79,31 @@ void reportMemoryForDocumentIfFrameless(ExecState& state, Document& document)
     vm.heap.deprecatedReportExtraMemory(memoryCost);
 }
 
-JSValue toJSNewlyCreated(ExecState* state, JSDOMGlobalObject* globalObject, Ref<Document>&& document)
+JSValue toJSNewlyCreated(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Document>&& document)
 {
-    return createNewDocumentWrapper(*state, *globalObject, WTFMove(document));
+    return createNewDocumentWrapper(*lexicalGlobalObject, *globalObject, WTFMove(document));
 }
 
-JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, Document& document)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Document& document)
 {
-    if (auto* wrapper = cachedDocumentWrapper(*state, *globalObject, document))
+    if (auto* wrapper = cachedDocumentWrapper(*lexicalGlobalObject, *globalObject, document))
         return wrapper;
-    return toJSNewlyCreated(state, globalObject, Ref<Document>(document));
+    return toJSNewlyCreated(lexicalGlobalObject, globalObject, Ref<Document>(document));
 }
 
-void JSDocument::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSDocument::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(static_cast<ScriptExecutionContext*>(&wrapped()));
 }
 
-void JSDocument::heapSnapshot(JSCell* cell, HeapSnapshotBuilder& builder)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSDocument);
+
+void JSDocument::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer)
 {
-    Base::heapSnapshot(cell, builder);
+    Base::analyzeHeap(cell, analyzer);
     auto* thisObject = jsCast<JSDocument*>(cell);
-    builder.setLabelForCell(cell, thisObject->wrapped().url().string());
+    analyzer.setLabelForCell(cell, thisObject->wrapped().url().string());
 }
 
 } // namespace WebCore

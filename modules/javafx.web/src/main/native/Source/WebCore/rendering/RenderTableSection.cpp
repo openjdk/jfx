@@ -71,16 +71,16 @@ static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row
     if (logicalHeight.isPositive() || (logicalHeight.isRelative() && logicalHeight.value() >= 0)) {
         Length cRowLogicalHeight = row.logicalHeight;
         switch (logicalHeight.type()) {
-        case Percent:
+        case LengthType::Percent:
             if (!cRowLogicalHeight.isPercent() || cRowLogicalHeight.percent() < logicalHeight.percent())
                 row.logicalHeight = logicalHeight;
             break;
-        case Fixed:
+        case LengthType::Fixed:
             if (cRowLogicalHeight.isAuto() || cRowLogicalHeight.isRelative()
                 || (cRowLogicalHeight.isFixed() && cRowLogicalHeight.value() < logicalHeight.value()))
                 row.logicalHeight = logicalHeight;
             break;
-        case Relative:
+        case LengthType::Relative:
         default:
             break;
         }
@@ -214,17 +214,15 @@ void RenderTableSection::addCell(RenderTableCell* cell, RenderTableRow* row)
 static LayoutUnit resolveLogicalHeightForRow(const Length& rowLogicalHeight)
 {
     if (rowLogicalHeight.isFixed())
-        return rowLogicalHeight.value();
+        return LayoutUnit(rowLogicalHeight.value());
     if (rowLogicalHeight.isCalculated())
-        return rowLogicalHeight.nonNanCalculatedValue(0);
+        return LayoutUnit(rowLogicalHeight.nonNanCalculatedValue(0));
     return 0;
 }
 
 LayoutUnit RenderTableSection::calcRowLogicalHeight()
 {
-#ifndef NDEBUG
-    SetLayoutNeededForbiddenScope layoutForbiddenScope(this);
-#endif
+    SetLayoutNeededForbiddenScope layoutForbiddenScope(*this);
 
     ASSERT(!needsLayout());
 
@@ -285,9 +283,9 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
                 // For row spanning cells, |r| is the last row in the span.
                 unsigned cellStartRow = cell->rowIndex();
 
-                if (cell->hasOverrideContentLogicalHeight()) {
+                if (cell->hasOverridingLogicalHeight()) {
                     cell->clearIntrinsicPadding();
-                    cell->clearOverrideContentSize();
+                    cell->clearOverridingContentSize();
                     cell->setChildNeedsLayout(MarkOnlyThis);
                     cell->layoutIfNeeded();
                 }
@@ -388,7 +386,7 @@ void RenderTableSection::distributeExtraLogicalHeightToPercentRows(LayoutUnit& e
     LayoutUnit rowHeight = m_rowPos[1] - m_rowPos[0];
     for (unsigned r = 0; r < totalRows; ++r) {
         if (totalPercent > 0 && m_grid[r].logicalHeight.isPercent()) {
-            LayoutUnit toAdd = std::min<LayoutUnit>(extraLogicalHeight, (totalHeight * m_grid[r].logicalHeight.percent() / 100) - rowHeight);
+            LayoutUnit toAdd = std::min(extraLogicalHeight, LayoutUnit((totalHeight * m_grid[r].logicalHeight.percent() / 100) - rowHeight));
             // If toAdd is negative, then we don't want to shrink the row (this bug
             // affected Outlook Web Access).
             toAdd = std::max(0_lu, toAdd);
@@ -524,7 +522,7 @@ void RenderTableSection::relayoutCellIfFlexed(RenderTableCell& cell, int rowInde
         // Alignment within a cell is based off the calculated
     // height, which becomes irrelevant once the cell has
     // been resized based off its percentage.
-    cell.setOverrideContentLogicalHeightFromRowHeight(rowHeight);
+    cell.setOverridingLogicalHeightFromRowHeight(rowHeight);
     cell.layoutIfNeeded();
 
     if (!cell.isBaselineAligned())
@@ -538,9 +536,7 @@ void RenderTableSection::relayoutCellIfFlexed(RenderTableCell& cell, int rowInde
 
 void RenderTableSection::layoutRows()
 {
-#ifndef NDEBUG
-    SetLayoutNeededForbiddenScope layoutForbiddenScope(this);
-#endif
+    SetLayoutNeededForbiddenScope layoutForbiddenScope(*this);
 
     ASSERT(!needsLayout());
 
@@ -647,7 +643,7 @@ void RenderTableSection::computeOverflowFromCells(unsigned totalRows, unsigned n
     unsigned totalCellsCount = nEffCols * totalRows;
     unsigned maxAllowedOverflowingCellsCount = totalCellsCount < gMinTableSizeToUseFastPaintPathWithOverflowingCell ? 0 : gMaxAllowedOverflowingCellRatioForFastPaintPath * totalCellsCount;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool hasOverflowingCell = false;
 #endif
     // Now that our height has been determined, add in overflow from cells.
@@ -660,7 +656,7 @@ void RenderTableSection::computeOverflowFromCells(unsigned totalRows, unsigned n
             if (r < totalRows - 1 && cell == primaryCellAt(r + 1, c))
                 continue;
             addOverflowFromChild(cell);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
             hasOverflowingCell |= cell->hasVisualOverflow();
 #endif
             if (cell->hasVisualOverflow() && !m_forceSlowPaintPathWithOverflowingCell) {
@@ -1100,10 +1096,10 @@ LayoutUnit RenderTableSection::offsetTopForRowGroupBorder(RenderTableCell* cell,
 {
     bool isLastRow = row + 1 == m_grid.size();
     if (style().isHorizontalWritingMode())
-        return m_rowPos[row] + (!row && borderSide == BSRight ? -outerBorderTop(&style()) : isLastRow && borderSide == BSLeft ? outerBorderTop(&style()) : 0_lu);
+        return m_rowPos[row] + (!row && borderSide == BoxSide::Right ? -outerBorderTop(&style()) : isLastRow && borderSide == BoxSide::Left ? outerBorderTop(&style()) : 0_lu);
     if (style().isLeftToRightDirection())
-        return (cell ? cell->y() + cell->height() : 0_lu) + (borderSide == BSLeft ? outerBorderTop(&style()) : 0_lu);
-    return borderSide == BSRight ? -outerBorderTop(&style()) : 0_lu;
+        return (cell ? cell->y() + cell->height() : 0_lu) + (borderSide == BoxSide::Left ? outerBorderTop(&style()) : 0_lu);
+    return borderSide == BoxSide::Right ? -outerBorderTop(&style()) : 0_lu;
 }
 
 LayoutUnit RenderTableSection::verticalRowGroupBorderHeight(RenderTableCell* cell, const LayoutRect& rowGroupRect, unsigned row)
@@ -1137,24 +1133,24 @@ void RenderTableSection::paintRowGroupBorderIfRequired(const PaintInfo& paintInf
     const RenderStyle& style = this->style();
     bool antialias = shouldAntialiasLines(paintInfo.context());
     LayoutRect rowGroupRect = LayoutRect(paintOffset, size());
-    rowGroupRect.moveBy(-LayoutPoint(outerBorderLeft(&style), (borderSide == BSRight) ? 0_lu : outerBorderTop(&style)));
+    rowGroupRect.moveBy(-LayoutPoint(outerBorderLeft(&style), (borderSide == BoxSide::Right) ? 0_lu : outerBorderTop(&style)));
 
     switch (borderSide) {
-    case BSTop:
+    case BoxSide::Top:
         paintRowGroupBorder(paintInfo, antialias, LayoutRect(paintOffset.x() + offsetLeftForRowGroupBorder(cell, rowGroupRect, row), rowGroupRect.y(),
-            horizontalRowGroupBorderWidth(cell, rowGroupRect, row, column), style.borderTop().width()), BSTop, CSSPropertyBorderTopColor, style.borderTopStyle(), table()->style().borderTopStyle());
+            horizontalRowGroupBorderWidth(cell, rowGroupRect, row, column), LayoutUnit(style.borderTop().width())), BoxSide::Top, CSSPropertyBorderTopColor, style.borderTopStyle(), table()->style().borderTopStyle());
         break;
-    case BSBottom:
+    case BoxSide::Bottom:
         paintRowGroupBorder(paintInfo, antialias, LayoutRect(paintOffset.x() + offsetLeftForRowGroupBorder(cell, rowGroupRect, row), rowGroupRect.y() + rowGroupRect.height(),
-            horizontalRowGroupBorderWidth(cell, rowGroupRect, row, column), style.borderBottom().width()), BSBottom, CSSPropertyBorderBottomColor, style.borderBottomStyle(), table()->style().borderBottomStyle());
+            horizontalRowGroupBorderWidth(cell, rowGroupRect, row, column), LayoutUnit(style.borderBottom().width())), BoxSide::Bottom, CSSPropertyBorderBottomColor, style.borderBottomStyle(), table()->style().borderBottomStyle());
         break;
-    case BSLeft:
-        paintRowGroupBorder(paintInfo, antialias, LayoutRect(rowGroupRect.x(), rowGroupRect.y() + offsetTopForRowGroupBorder(cell, borderSide, row), style.borderLeft().width(),
-            verticalRowGroupBorderHeight(cell, rowGroupRect, row)), BSLeft, CSSPropertyBorderLeftColor, style.borderLeftStyle(), table()->style().borderLeftStyle());
+    case BoxSide::Left:
+        paintRowGroupBorder(paintInfo, antialias, LayoutRect(rowGroupRect.x(), rowGroupRect.y() + offsetTopForRowGroupBorder(cell, borderSide, row), LayoutUnit(style.borderLeft().width()),
+            verticalRowGroupBorderHeight(cell, rowGroupRect, row)), BoxSide::Left, CSSPropertyBorderLeftColor, style.borderLeftStyle(), table()->style().borderLeftStyle());
         break;
-    case BSRight:
-        paintRowGroupBorder(paintInfo, antialias, LayoutRect(rowGroupRect.x() + rowGroupRect.width(), rowGroupRect.y() + offsetTopForRowGroupBorder(cell, borderSide, row), style.borderRight().width(),
-            verticalRowGroupBorderHeight(cell, rowGroupRect, row)), BSRight, CSSPropertyBorderRightColor, style.borderRightStyle(), table()->style().borderRightStyle());
+    case BoxSide::Right:
+        paintRowGroupBorder(paintInfo, antialias, LayoutRect(rowGroupRect.x() + rowGroupRect.width(), rowGroupRect.y() + offsetTopForRowGroupBorder(cell, borderSide, row), LayoutUnit(style.borderRight().width()),
+            verticalRowGroupBorderHeight(cell, rowGroupRect, row)), BoxSide::Right, CSSPropertyBorderRightColor, style.borderRightStyle(), table()->style().borderRightStyle());
         break;
     default:
         break;
@@ -1168,23 +1164,23 @@ static BoxSide physicalBorderForDirection(const RenderStyle* styleForCellFlow, C
     switch (side) {
     case CBSStart:
         if (styleForCellFlow->isHorizontalWritingMode())
-            return styleForCellFlow->isLeftToRightDirection() ? BSLeft : BSRight;
-        return styleForCellFlow->isLeftToRightDirection() ? BSTop : BSBottom;
+            return styleForCellFlow->isLeftToRightDirection() ? BoxSide::Left : BoxSide::Right;
+        return styleForCellFlow->isLeftToRightDirection() ? BoxSide::Top : BoxSide::Bottom;
     case CBSEnd:
         if (styleForCellFlow->isHorizontalWritingMode())
-            return styleForCellFlow->isLeftToRightDirection() ? BSRight : BSLeft;
-        return styleForCellFlow->isLeftToRightDirection() ? BSBottom : BSTop;
+            return styleForCellFlow->isLeftToRightDirection() ? BoxSide::Right : BoxSide::Left;
+        return styleForCellFlow->isLeftToRightDirection() ? BoxSide::Bottom : BoxSide::Top;
     case CBSBefore:
         if (styleForCellFlow->isHorizontalWritingMode())
-            return BSTop;
-        return styleForCellFlow->isLeftToRightDirection() ? BSRight : BSLeft;
+            return BoxSide::Top;
+        return styleForCellFlow->isLeftToRightDirection() ? BoxSide::Right : BoxSide::Left;
     case CBSAfter:
         if (styleForCellFlow->isHorizontalWritingMode())
-            return BSBottom;
-        return styleForCellFlow->isLeftToRightDirection() ? BSLeft : BSRight;
+            return BoxSide::Bottom;
+        return styleForCellFlow->isLeftToRightDirection() ? BoxSide::Left : BoxSide::Right;
     default:
         ASSERT_NOT_REACHED();
-        return BSLeft;
+        return BoxSide::Left;
     }
 }
 

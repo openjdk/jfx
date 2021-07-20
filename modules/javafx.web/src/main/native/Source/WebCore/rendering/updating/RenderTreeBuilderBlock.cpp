@@ -166,7 +166,14 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
         ASSERT(beforeChildContainer);
 
         if (beforeChildContainer->isAnonymous()) {
-            RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!beforeChildContainer->isInline());
+            if (beforeChildContainer->isInline() && child->isInline()) {
+                // The before child happens to be a block level box wrapped in an anonymous inline-block in an inline context (e.g. ruby).
+                // Let's attach this new child before the anonymous inline-block wrapper.
+                ASSERT(beforeChildContainer->isInlineBlockOrInlineTable());
+                m_builder.attach(parent, WTFMove(child), beforeChildContainer);
+                return;
+            }
+            RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!beforeChildContainer->isInline() || beforeChildContainer->isTable());
 
             // If the requested beforeChild is not one of our children, then this is because
             // there is an anonymous container within this object that contains the beforeChild.
@@ -179,8 +186,8 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
 #endif
                 ) {
                 // Insert the child into the anonymous block box instead of here.
-                if (child->isInline() || beforeChild->parent()->firstChild() != beforeChild)
-                    m_builder.attach(*beforeChild->parent(), WTFMove(child), beforeChild);
+                if (child->isInline() || beforeChildAnonymousContainer->firstChild() != beforeChild)
+                    m_builder.attach(*beforeChildAnonymousContainer, WTFMove(child), beforeChild);
                 else
                     m_builder.attach(parent, WTFMove(child), beforeChild->parent());
                 return;
@@ -215,7 +222,7 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
             ASSERT(beforeChild->isAnonymousBlock());
             ASSERT(beforeChild->parent() == &parent);
         }
-    } else if (!parent.childrenInline() && (child->isFloatingOrOutOfFlowPositioned() || child->isInline())) {
+    } else if (!parent.childrenInline() && ((child->isFloatingOrOutOfFlowPositioned() && !parent.isFlexibleBox() && !parent.isRenderGrid()) || child->isInline())) {
         // If we're inserting an inline child but all of our children are blocks, then we have to make sure
         // it is put into an anomyous block box. We try to use an existing anonymous box if possible, otherwise
         // a new one is created and inserted into our list of children in the appropriate position.
@@ -235,8 +242,6 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
             return;
         }
     }
-
-    parent.invalidateLineLayoutPath();
 
     m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
 
@@ -284,8 +289,6 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, Re
     auto prev = makeWeakPtr(oldChild.previousSibling());
     auto next = makeWeakPtr(oldChild.nextSibling());
     bool canMergeAnonymousBlocks = canMergeContiguousAnonymousBlocks(oldChild, prev.get(), next.get());
-
-    parent.invalidateLineLayoutPath();
 
     auto takenChild = m_builder.detachFromRenderElement(parent, oldChild);
 

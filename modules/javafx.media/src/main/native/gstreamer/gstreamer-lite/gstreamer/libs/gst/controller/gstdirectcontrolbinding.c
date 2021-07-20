@@ -31,6 +31,9 @@
  * will be clipped. An absolute control binding will not do any value
  * transformations.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <glib-object.h>
 #include <gst/gst.h>
@@ -212,6 +215,7 @@ gst_direct_control_binding_class_init (GstDirectControlBindingClass * klass)
 static void
 gst_direct_control_binding_init (GstDirectControlBinding * self)
 {
+  self->last_value = G_MAXDOUBLE;
 }
 
 static GObject *
@@ -424,7 +428,7 @@ gst_direct_control_binding_get_value_array (GstControlBinding * _self,
     gpointer values_)
 {
   GstDirectControlBinding *self = GST_DIRECT_CONTROL_BINDING (_self);
-  gint i;
+  guint i;
   gdouble *src_val;
   gboolean res = FALSE;
   GstDirectControlBindingConvertValue convert;
@@ -467,7 +471,7 @@ gst_direct_control_binding_get_g_value_array (GstControlBinding * _self,
     GValue * values)
 {
   GstDirectControlBinding *self = GST_DIRECT_CONTROL_BINDING (_self);
-  gint i;
+  guint i;
   gdouble *src_val;
   gboolean res = FALSE;
   GType type;

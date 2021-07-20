@@ -26,48 +26,50 @@
 #include "config.h"
 #include "Autocapitalize.h"
 
+#if ENABLE(AUTOCAPITALIZE)
+
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-AutocapitalizeType autocapitalizeTypeForAttributeValue(const AtomicString& attributeValue)
+AutocapitalizeType autocapitalizeTypeForAttributeValue(const AtomString& attributeValue)
 {
     // Omitted / missing values are the Default state.
     if (attributeValue.isEmpty())
-        return AutocapitalizeTypeDefault;
+        return AutocapitalizeType::Default;
 
     if (equalLettersIgnoringASCIICase(attributeValue, "on") || equalLettersIgnoringASCIICase(attributeValue, "sentences"))
-        return AutocapitalizeTypeSentences;
+        return AutocapitalizeType::Sentences;
     if (equalLettersIgnoringASCIICase(attributeValue, "off") || equalLettersIgnoringASCIICase(attributeValue, "none"))
-        return AutocapitalizeTypeNone;
+        return AutocapitalizeType::None;
     if (equalLettersIgnoringASCIICase(attributeValue, "words"))
-        return AutocapitalizeTypeWords;
+        return AutocapitalizeType::Words;
     if (equalLettersIgnoringASCIICase(attributeValue, "characters"))
-        return AutocapitalizeTypeAllCharacters;
+        return AutocapitalizeType::AllCharacters;
 
     // Unrecognized values fall back to "on".
-    return AutocapitalizeTypeSentences;
+    return AutocapitalizeType::Sentences;
 }
 
-const AtomicString& stringForAutocapitalizeType(AutocapitalizeType type)
+const AtomString& stringForAutocapitalizeType(AutocapitalizeType type)
 {
     switch (type) {
-    case AutocapitalizeTypeDefault:
+    case AutocapitalizeType::Default:
         return nullAtom();
-    case AutocapitalizeTypeNone: {
-        static NeverDestroyed<const AtomicString> valueNone("none", AtomicString::ConstructFromLiteral);
+    case AutocapitalizeType::None: {
+        static MainThreadNeverDestroyed<const AtomString> valueNone("none", AtomString::ConstructFromLiteral);
         return valueNone;
     }
-    case AutocapitalizeTypeSentences: {
-        static NeverDestroyed<const AtomicString> valueSentences("sentences", AtomicString::ConstructFromLiteral);
+    case AutocapitalizeType::Sentences: {
+        static MainThreadNeverDestroyed<const AtomString> valueSentences("sentences", AtomString::ConstructFromLiteral);
         return valueSentences;
     }
-    case AutocapitalizeTypeWords: {
-        static NeverDestroyed<const AtomicString> valueWords("words", AtomicString::ConstructFromLiteral);
+    case AutocapitalizeType::Words: {
+        static MainThreadNeverDestroyed<const AtomString> valueWords("words", AtomString::ConstructFromLiteral);
         return valueWords;
     }
-    case AutocapitalizeTypeAllCharacters: {
-        static NeverDestroyed<const AtomicString> valueAllCharacters("characters", AtomicString::ConstructFromLiteral);
+    case AutocapitalizeType::AllCharacters: {
+        static MainThreadNeverDestroyed<const AtomString> valueAllCharacters("characters", AtomString::ConstructFromLiteral);
         return valueAllCharacters;
     }
     }
@@ -77,3 +79,5 @@ const AtomicString& stringForAutocapitalizeType(AutocapitalizeType type)
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(AUTOCAPITALIZE)

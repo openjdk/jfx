@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ import test.com.sun.javafx.test.objects.TestNode;
 import test.com.sun.javafx.test.objects.TestScene;
 import test.com.sun.javafx.test.objects.TestStage;
 
-@Ignore ("This test is basically invalidated with the new design and needs to be rewritten")
+@Ignore("JDK-8234153") // test needs to be rewritten.
 @RunWith(Parameterized.class)
 public final class Popup_parentWindow_Test extends PropertiesTestBase {
 

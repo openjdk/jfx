@@ -68,7 +68,7 @@ AccessibilityRole AccessibilityTableRow::determineAccessibilityRole()
 bool AccessibilityTableRow::isTableRow() const
 {
     AccessibilityObject* table = parentTable();
-    return is<AccessibilityTable>(table)  && downcast<AccessibilityTable>(*table).isExposableThroughAccessibility();
+    return is<AccessibilityTable>(table) && downcast<AccessibilityTable>(*table).isExposable();
 }
 
 AccessibilityObject* AccessibilityTableRow::observableObject() const
@@ -100,7 +100,7 @@ AccessibilityTable* AccessibilityTableRow::parentTable() const
         // choose another ancestor table as this row's table.
         if (is<AccessibilityTable>(*parent)) {
             auto& parentTable = downcast<AccessibilityTable>(*parent);
-            if (parentTable.isExposableThroughAccessibility())
+            if (parentTable.isExposable())
                 return &parentTable;
             if (parentTable.node())
                 break;
@@ -110,7 +110,7 @@ AccessibilityTable* AccessibilityTableRow::parentTable() const
     return nullptr;
 }
 
-AccessibilityObject* AccessibilityTableRow::headerObject()
+AXCoreObject* AccessibilityTableRow::headerObject()
 {
     if (!m_renderer || !m_renderer->isTableRow())
         return nullptr;
@@ -120,7 +120,7 @@ AccessibilityObject* AccessibilityTableRow::headerObject()
         return nullptr;
 
     // check the first element in the row to see if it is a TH element
-    AccessibilityObject* cell = rowChildren[0].get();
+    AXCoreObject* cell = rowChildren[0].get();
     if (!is<AccessibilityTableCell>(*cell))
         return nullptr;
 
@@ -169,7 +169,7 @@ void AccessibilityTableRow::addChildren()
 
 int AccessibilityTableRow::axColumnIndex() const
 {
-    const AtomicString& colIndexValue = getAttribute(aria_colindexAttr);
+    const AtomString& colIndexValue = getAttribute(aria_colindexAttr);
     if (colIndexValue.toInt() >= 1)
         return colIndexValue.toInt();
 
@@ -178,7 +178,7 @@ int AccessibilityTableRow::axColumnIndex() const
 
 int AccessibilityTableRow::axRowIndex() const
 {
-    const AtomicString& rowIndexValue = getAttribute(aria_rowindexAttr);
+    const AtomString& rowIndexValue = getAttribute(aria_rowindexAttr);
     if (rowIndexValue.toInt() >= 1)
         return rowIndexValue.toInt();
 

@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-struct SameSizeAsFillLayer {
+struct SameSizeAsFillLayer : RefCounted<SameSizeAsFillLayer> {
     FillLayer* next;
 
     RefPtr<StyleImage> image;
@@ -43,6 +43,16 @@ struct SameSizeAsFillLayer {
 
 COMPILE_ASSERT(sizeof(FillLayer) == sizeof(SameSizeAsFillLayer), FillLayer_should_stay_small);
 
+Ref<FillLayer> FillLayer::create(FillLayerType type)
+{
+    return adoptRef(*new FillLayer(type));
+}
+
+Ref<FillLayer> FillLayer::create(const FillLayer& layer)
+{
+    return adoptRef(*new FillLayer(layer));
+}
+
 FillLayer::FillLayer(FillLayerType type)
     : m_image(FillLayer::initialFillImage(type))
     , m_xPosition(FillLayer::initialFillXPosition(type))
@@ -52,7 +62,7 @@ FillLayer::FillLayer(FillLayerType type)
     , m_origin(static_cast<unsigned>(FillLayer::initialFillOrigin(type)))
     , m_repeatX(static_cast<unsigned>(FillLayer::initialFillRepeatX(type)))
     , m_repeatY(static_cast<unsigned>(FillLayer::initialFillRepeatY(type)))
-    , m_composite(FillLayer::initialFillComposite(type))
+    , m_composite(static_cast<unsigned>(FillLayer::initialFillComposite(type)))
     , m_sizeType(static_cast<unsigned>(FillSizeType::None))
     , m_blendMode(static_cast<unsigned>(FillLayer::initialFillBlendMode(type)))
     , m_maskSourceType(static_cast<unsigned>(FillLayer::initialFillMaskSourceType(type)))
@@ -76,8 +86,7 @@ FillLayer::FillLayer(FillLayerType type)
 }
 
 FillLayer::FillLayer(const FillLayer& o)
-    : m_next(o.m_next ? std::make_unique<FillLayer>(*o.m_next) : nullptr)
-    , m_image(o.m_image)
+    : m_image(o.m_image)
     , m_xPosition(o.m_xPosition)
     , m_yPosition(o.m_yPosition)
     , m_sizeLength(o.m_sizeLength)
@@ -107,18 +116,22 @@ FillLayer::FillLayer(const FillLayer& o)
     , m_maskSourceTypeSet(o.m_maskSourceTypeSet)
     , m_type(o.m_type)
 {
+    if (o.m_next)
+        m_next = create(*o.m_next);
 }
 
 FillLayer::~FillLayer()
 {
     // Delete the layers in a loop rather than allowing recursive calls to the destructors.
-    for (std::unique_ptr<FillLayer> next = WTFMove(m_next); next; next = WTFMove(next->m_next)) { }
+    for (auto next = WTFMove(m_next); next; next = WTFMove(next->m_next)) { }
 }
 
 FillLayer& FillLayer::operator=(const FillLayer& o)
 {
-    m_next = o.m_next ? std::make_unique<FillLayer>(*o.m_next) : nullptr;
-
+    if (o.m_next)
+        m_next = create(*o.m_next);
+    else
+        m_next = nullptr;
     m_image = o.m_image;
     m_xPosition = o.m_xPosition;
     m_yPosition = o.m_yPosition;
@@ -354,10 +367,10 @@ bool FillLayer::hasOpaqueImage(const RenderElement& renderer) const
     if (!m_image)
         return false;
 
-    if (m_composite == CompositeClear || m_composite == CompositeCopy)
+    if (static_cast<CompositeOperator>(m_composite) == CompositeOperator::Clear || static_cast<CompositeOperator>(m_composite) == CompositeOperator::Copy)
         return true;
 
-    return static_cast<BlendMode>(m_blendMode) == BlendMode::Normal && m_composite == CompositeSourceOver && m_image->knownToBeOpaque(&renderer);
+    return static_cast<BlendMode>(m_blendMode) == BlendMode::Normal && static_cast<CompositeOperator>(m_composite) == CompositeOperator::SourceOver && m_image->knownToBeOpaque(renderer);
 }
 
 bool FillLayer::hasRepeatXY() const
@@ -365,7 +378,7 @@ bool FillLayer::hasRepeatXY() const
     return repeatX() == FillRepeat::Repeat && repeatY() == FillRepeat::Repeat;
 }
 
-bool FillLayer::hasImage() const
+bool FillLayer::hasImageInAnyLayer() const
 {
     for (auto* layer = this; layer; layer = layer->m_next.get()) {
         if (layer->image())

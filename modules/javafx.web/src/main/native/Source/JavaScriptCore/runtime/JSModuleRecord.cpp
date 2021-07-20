@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 #include "JSModuleRecord.h"
 
 #include "BuiltinNames.h"
-#include "Error.h"
 #include "Interpreter.h"
 #include "JSCInlines.h"
 #include "JSModuleEnvironment.h"
@@ -45,10 +44,10 @@ Structure* JSModuleRecord::createStructure(VM& vm, JSGlobalObject* globalObject,
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-JSModuleRecord* JSModuleRecord::create(ExecState* exec, VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+JSModuleRecord* JSModuleRecord::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
 {
     JSModuleRecord* instance = new (NotNull, allocateCell<JSModuleRecord>(vm.heap)) JSModuleRecord(vm, structure, moduleKey, sourceCode, declaredVariables, lexicalVariables);
-    instance->finishCreation(exec, vm);
+    instance->finishCreation(globalObject, vm);
     return instance;
 }
 JSModuleRecord::JSModuleRecord(VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
@@ -65,44 +64,50 @@ void JSModuleRecord::destroy(JSCell* cell)
     thisObject->JSModuleRecord::~JSModuleRecord();
 }
 
-void JSModuleRecord::finishCreation(ExecState* exec, VM& vm)
+void JSModuleRecord::finishCreation(JSGlobalObject* globalObject, VM& vm)
 {
-    Base::finishCreation(exec, vm);
+    Base::finishCreation(globalObject, vm);
     ASSERT(inherits(vm, info()));
 }
 
-void JSModuleRecord::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSModuleRecord::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSModuleRecord* thisObject = jsCast<JSModuleRecord*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_moduleProgramExecutable);
 }
 
-void JSModuleRecord::link(ExecState* exec, JSValue scriptFetcher)
+DEFINE_VISIT_CHILDREN(JSModuleRecord);
+
+Synchronousness JSModuleRecord::link(JSGlobalObject* globalObject, JSValue scriptFetcher)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    ModuleProgramExecutable* executable = ModuleProgramExecutable::create(exec, sourceCode());
+    ModuleProgramExecutable* executable = ModuleProgramExecutable::create(globalObject, sourceCode());
     EXCEPTION_ASSERT(!!scope.exception() == !executable);
     if (!executable) {
-        throwSyntaxError(exec, scope);
-        return;
+        throwSyntaxError(globalObject, scope);
+        return Synchronousness::Sync;
     }
-    instantiateDeclarations(exec, executable, scriptFetcher);
-    RETURN_IF_EXCEPTION(scope, void());
+    instantiateDeclarations(globalObject, executable, scriptFetcher);
+    RETURN_IF_EXCEPTION(scope, Synchronousness::Sync);
     m_moduleProgramExecutable.set(vm, this, executable);
+
+    return executable->unlinkedModuleProgramCodeBlock()->isAsync() ? Synchronousness::Async : Synchronousness::Sync;
 }
 
-void JSModuleRecord::instantiateDeclarations(ExecState* exec, ModuleProgramExecutable* moduleProgramExecutable, JSValue scriptFetcher)
+void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, ModuleProgramExecutable* moduleProgramExecutable, JSValue scriptFetcher)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // http://www.ecma-international.org/ecma-262/6.0/#sec-moduledeclarationinstantiation
 
     SymbolTable* symbolTable = moduleProgramExecutable->moduleEnvironmentSymbolTable();
-    JSModuleEnvironment* moduleEnvironment = JSModuleEnvironment::create(vm, exec->lexicalGlobalObject(), exec->lexicalGlobalObject(), symbolTable, jsTDZValue(), this);
+    JSModuleEnvironment* moduleEnvironment = JSModuleEnvironment::create(vm, globalObject, globalObject->globalLexicalEnvironment(), symbolTable, jsTDZValue(), this);
 
     // http://www.ecma-international.org/ecma-262/6.0/#sec-moduledeclarationinstantiation
     // section 15.2.1.16.4 step 9.
@@ -111,61 +116,77 @@ void JSModuleRecord::instantiateDeclarations(ExecState* exec, ModuleProgramExecu
     // When we see this type of ambiguity for the indirect exports here, throw a syntax error.
     for (const auto& pair : exportEntries()) {
         const ExportEntry& exportEntry = pair.value;
-        if (exportEntry.type == JSModuleRecord::ExportEntry::Type::Indirect) {
-            Resolution resolution = resolveExport(exec, exportEntry.exportName);
+        switch (exportEntry.type) {
+        case ExportEntry::Type::Local:
+        case ExportEntry::Type::Namespace:
+            break;
+        case ExportEntry::Type::Indirect: {
+            Resolution resolution = resolveExport(globalObject, exportEntry.exportName);
             RETURN_IF_EXCEPTION(scope, void());
             switch (resolution.type) {
             case Resolution::Type::NotFound:
-                throwSyntaxError(exec, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' is not found."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' is not found."));
                 return;
 
             case Resolution::Type::Ambiguous:
-                throwSyntaxError(exec, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
                 return;
 
             case Resolution::Type::Error:
-                throwSyntaxError(exec, scope, makeString("Indirectly exported binding name 'default' cannot be resolved by star export entries."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name 'default' cannot be resolved by star export entries."));
                 return;
 
             case Resolution::Type::Resolved:
                 break;
             }
+            break;
+        }
         }
     }
 
-    // http://www.ecma-international.org/ecma-262/6.0/#sec-moduledeclarationinstantiation
-    // section 15.2.1.16.4 step 12.
+    // https://tc39.es/ecma262/#sec-source-text-module-record-initialize-environment step 8
     // Instantiate namespace objects and initialize the bindings with them if required.
     // And ensure that all the imports correctly resolved to unique bindings.
     for (const auto& pair : importEntries()) {
         const ImportEntry& importEntry = pair.value;
-        AbstractModuleRecord* importedModule = hostResolveImportedModule(exec, importEntry.moduleRequest);
+        AbstractModuleRecord* importedModule = hostResolveImportedModule(globalObject, importEntry.moduleRequest);
         RETURN_IF_EXCEPTION(scope, void());
-        if (importEntry.type == AbstractModuleRecord::ImportEntryType::Namespace) {
-            JSModuleNamespaceObject* namespaceObject = importedModule->getModuleNamespace(exec);
+        switch (importEntry.type) {
+        case AbstractModuleRecord::ImportEntryType::Namespace: {
+            JSModuleNamespaceObject* namespaceObject = importedModule->getModuleNamespace(globalObject);
             RETURN_IF_EXCEPTION(scope, void());
             bool putResult = false;
-            symbolTablePutTouchWatchpointSet(moduleEnvironment, exec, importEntry.localName, namespaceObject, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
+            symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, importEntry.localName, namespaceObject, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
             RETURN_IF_EXCEPTION(scope, void());
-        } else {
-            Resolution resolution = importedModule->resolveExport(exec, importEntry.importName);
+            break;
+        }
+
+        case AbstractModuleRecord::ImportEntryType::Single: {
+            Resolution resolution = importedModule->resolveExport(globalObject, importEntry.importName);
             RETURN_IF_EXCEPTION(scope, void());
             switch (resolution.type) {
             case Resolution::Type::NotFound:
-                throwSyntaxError(exec, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' is not found."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' is not found."));
                 return;
 
             case Resolution::Type::Ambiguous:
-                throwSyntaxError(exec, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
                 return;
 
             case Resolution::Type::Error:
-                throwSyntaxError(exec, scope, makeString("Importing binding name 'default' cannot be resolved by star export entries."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name 'default' cannot be resolved by star export entries."));
                 return;
 
-            case Resolution::Type::Resolved:
+            case Resolution::Type::Resolved: {
+                if (vm.propertyNames->starNamespacePrivateName == resolution.localName) {
+                    resolution.moduleRecord->getModuleNamespace(globalObject); // Force module namespace object materialization.
+                    RETURN_IF_EXCEPTION(scope, void());
+                }
                 break;
             }
+            }
+            break;
+        }
         }
     }
 
@@ -179,7 +200,7 @@ void JSModuleRecord::instantiateDeclarations(ExecState* exec, ModuleProgramExecu
         VarOffset offset = entry.varOffset();
         if (!offset.isStack()) {
             bool putResult = false;
-            symbolTablePutTouchWatchpointSet(moduleEnvironment, exec, Identifier::fromUid(exec, variable.key.get()), jsUndefined(), /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
+            symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, Identifier::fromUid(vm, variable.key.get()), jsUndefined(), /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
             RETURN_IF_EXCEPTION(scope, void());
         }
     }
@@ -200,32 +221,35 @@ void JSModuleRecord::instantiateDeclarations(ExecState* exec, ModuleProgramExecu
                     unlinkedFunctionExecutable->typeProfilingStartOffset(),
                     unlinkedFunctionExecutable->typeProfilingEndOffset());
             }
-            JSFunction* function = JSFunction::create(vm, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable->source()), moduleEnvironment);
+            JSFunction* function = JSFunction::create(vm, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
             bool putResult = false;
-            symbolTablePutTouchWatchpointSet(moduleEnvironment, exec, unlinkedFunctionExecutable->name(), function, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
+            symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, unlinkedFunctionExecutable->name(), function, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
             RETURN_IF_EXCEPTION(scope, void());
         }
     }
 
     {
-        JSObject* metaProperties = exec->lexicalGlobalObject()->moduleLoader()->createImportMetaProperties(exec, identifierToJSValue(vm, moduleKey()), this, scriptFetcher);
+        JSObject* metaProperties = globalObject->moduleLoader()->createImportMetaProperties(globalObject, identifierToJSValue(vm, moduleKey()), this, scriptFetcher);
         RETURN_IF_EXCEPTION(scope, void());
         bool putResult = false;
-        symbolTablePutTouchWatchpointSet(moduleEnvironment, exec, vm.propertyNames->builtinNames().metaPrivateName(), metaProperties, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
+        symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, vm.propertyNames->builtinNames().metaPrivateName(), metaProperties, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
         RETURN_IF_EXCEPTION(scope, void());
     }
 
-    m_moduleEnvironment.set(vm, this, moduleEnvironment);
+    scope.release();
+    setModuleEnvironment(globalObject, moduleEnvironment);
 }
 
-JSValue JSModuleRecord::evaluate(ExecState* exec)
+JSValue JSModuleRecord::evaluate(JSGlobalObject* globalObject, JSValue sentValue, JSValue resumeMode)
 {
     if (!m_moduleProgramExecutable)
         return jsUndefined();
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     ModuleProgramExecutable* executable = m_moduleProgramExecutable.get();
-    m_moduleProgramExecutable.clear();
-    return vm.interpreter->executeModuleProgram(executable, exec, m_moduleEnvironment.get());
+    JSValue resultOrAwaitedValue = vm.interpreter->executeModuleProgram(this, executable, globalObject, moduleEnvironment(), sentValue, resumeMode);
+    if (JSValue state = internalField(Field::State).get(); !state.isNumber() || state.asNumber() == static_cast<unsigned>(State::Executing))
+        m_moduleProgramExecutable.clear();
+    return resultOrAwaitedValue;
 }
 
 } // namespace JSC

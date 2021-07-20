@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,16 +81,58 @@ ALWAYS_INLINE static void assertStackPointerIsAligned()
 #endif
 }
 
+class SlowPathFrameTracer {
+public:
+    ALWAYS_INLINE SlowPathFrameTracer(VM& vm, CallFrame* callFrame)
+    {
+        ASSERT(callFrame);
+        ASSERT(reinterpret_cast<void*>(callFrame) < reinterpret_cast<void*>(vm.topEntryFrame));
+        assertStackPointerIsAligned();
+        vm.topCallFrame = callFrame;
+    }
+};
+
 class NativeCallFrameTracer {
 public:
-    ALWAYS_INLINE NativeCallFrameTracer(VM* vm, CallFrame* callFrame)
+    ALWAYS_INLINE NativeCallFrameTracer(VM& vm, CallFrame* callFrame)
     {
-        ASSERT(vm);
         ASSERT(callFrame);
-        ASSERT(reinterpret_cast<void*>(callFrame) < reinterpret_cast<void*>(vm->topEntryFrame));
+        ASSERT(reinterpret_cast<void*>(callFrame) < reinterpret_cast<void*>(vm.topEntryFrame));
         assertStackPointerIsAligned();
-        vm->topCallFrame = callFrame;
+        vm.topCallFrame = callFrame;
     }
+};
+
+class JITOperationPrologueCallFrameTracer {
+public:
+    ALWAYS_INLINE JITOperationPrologueCallFrameTracer(VM& vm, CallFrame* callFrame)
+#if ASSERT_ENABLED
+        : m_vm(vm)
+#endif
+    {
+        UNUSED_PARAM(vm);
+        UNUSED_PARAM(callFrame);
+        ASSERT(callFrame);
+        ASSERT(reinterpret_cast<void*>(callFrame) < reinterpret_cast<void*>(vm.topEntryFrame));
+        assertStackPointerIsAligned();
+#if USE(BUILTIN_FRAME_ADDRESS)
+        // If ASSERT_ENABLED and USE(BUILTIN_FRAME_ADDRESS), prepareCallOperation() will put the frame pointer into vm.topCallFrame.
+        // We can ensure here that a call to prepareCallOperation() (or its equivalent) is not missing by comparing vm.topCallFrame to
+        // the result of __builtin_frame_address which is passed in as callFrame.
+        ASSERT(vm.topCallFrame == callFrame);
+        vm.topCallFrame = callFrame;
+#endif
+    }
+
+#if ASSERT_ENABLED
+    ~JITOperationPrologueCallFrameTracer()
+    {
+        // Fill vm.topCallFrame with invalid value when leaving from JIT operation functions.
+        m_vm.topCallFrame = bitwise_cast<CallFrame*>(static_cast<uintptr_t>(0x0badbeef0badbeefULL));
+    }
+
+    VM& m_vm;
+#endif
 };
 
 } // namespace JSC

@@ -28,6 +28,7 @@
 
 #if ENABLE(GAMEPAD)
 
+#include "DOMWindow.h"
 #include "Gamepad.h"
 #include "GamepadManager.h"
 #include "GamepadProvider.h"
@@ -55,7 +56,7 @@ NavigatorGamepad* NavigatorGamepad::from(Navigator* navigator)
 {
     NavigatorGamepad* supplement = static_cast<NavigatorGamepad*>(Supplement<Navigator>::from(navigator, supplementName()));
     if (!supplement) {
-        auto newSupplement = std::make_unique<NavigatorGamepad>();
+        auto newSupplement = makeUnique<NavigatorGamepad>();
         supplement = newSupplement.get();
         provideTo(navigator, supplementName(), WTFMove(newSupplement));
     }
@@ -73,6 +74,21 @@ Ref<Gamepad> NavigatorGamepad::gamepadFromPlatformGamepad(PlatformGamepad& platf
 
 const Vector<RefPtr<Gamepad>>& NavigatorGamepad::getGamepads(Navigator& navigator)
 {
+    auto* domWindow = navigator.window();
+    Document* document = domWindow ? domWindow->document() : nullptr;
+    if (!document) {
+        static NeverDestroyed<Vector<RefPtr<Gamepad>>> emptyGamepads;
+        return emptyGamepads;
+    }
+
+    if (!document->isSecureContext()) {
+        static std::once_flag onceFlag;
+        std::call_once(onceFlag, [document] {
+            document->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Navigator.getGamepads() will be removed from insecure contexts in a future release"_s);
+        });
+
+    }
+
     return NavigatorGamepad::from(&navigator)->gamepads();
 }
 

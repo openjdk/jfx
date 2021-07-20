@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,30 @@ ExceptionOr<void> PaymentHandler::canCreateSession(Document& document)
 #endif
 
     return { };
+}
+
+ExceptionOr<void> PaymentHandler::validateData(Document& document, JSC::JSValue data, const PaymentRequest::MethodIdentifier& identifier)
+{
+#if ENABLE(APPLE_PAY)
+    if (ApplePayPaymentHandler::handlesIdentifier(identifier))
+        return ApplePayPaymentHandler::validateData(document, data);
+#else
+    UNUSED_PARAM(document);
+    UNUSED_PARAM(data);
+    UNUSED_PARAM(identifier);
+#endif
+
+    return { };
+}
+
+bool PaymentHandler::enabledForContext(ScriptExecutionContext& context)
+{
+#if ENABLE(APPLE_PAY)
+    return PaymentSession::enabledForContext(context);
+#else
+    UNUSED_PARAM(context);
+    return false;
+#endif
 }
 
 bool PaymentHandler::hasActiveSession(Document& document)

@@ -131,16 +131,23 @@ list(APPEND WebKitLegacy_SOURCES
     java/WebCoreSupport/ChromeClientJava.cpp
     java/WebCoreSupport/BackForwardList.cpp
     java/WebCoreSupport/PageCacheJava.cpp
-    java/WebCoreSupport/WebKitLogging.cpp
 )
 
 # for DRT
-list(APPEND WebKitLegacy_LIBRARIES
-    PRIVATE WebCoreTestSupport${DEBUG_SUFFIX}
+list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
+    WebKit::WebCoreTestSupport
+    ${ICU_I18N_LIBRARIES}
+    ${ICU_DATA_LIBRARIES}
+    ${ICU_LIBRARIES}
 )
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+
+list(APPEND WebKitLegacy_PRIVATE_DEFINITIONS
+    STATICALLY_LINKED_WITH_PAL
+    STATICALLY_LINKED_WITH_WebCore
+)
 
 set(WebKitLegacy_OUTPUT_NAME "jfxwebkit")
 

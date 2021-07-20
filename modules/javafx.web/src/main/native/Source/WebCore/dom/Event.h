@@ -30,7 +30,7 @@
 #include "ScriptWrappable.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/TypeCasts.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
@@ -39,6 +39,7 @@ class EventTarget;
 class ScriptExecutionContext;
 
 class Event : public ScriptWrappable, public RefCounted<Event> {
+    WTF_MAKE_ISO_ALLOCATED(Event);
 public:
     enum class IsTrusted : uint8_t { No, Yes };
     enum class CanBubble : uint8_t { No, Yes };
@@ -52,24 +53,25 @@ public:
         BUBBLING_PHASE = 3
     };
 
-    WEBCORE_EXPORT static Ref<Event> create(const AtomicString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
+    WEBCORE_EXPORT static Ref<Event> create(const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
     static Ref<Event> createForBindings();
-    static Ref<Event> create(const AtomicString& type, const EventInit&, IsTrusted = IsTrusted::No);
+    static Ref<Event> create(const AtomString& type, const EventInit&, IsTrusted = IsTrusted::No);
 
     virtual ~Event();
 
-    WEBCORE_EXPORT void initEvent(const AtomicString& type, bool canBubble, bool cancelable);
+    WEBCORE_EXPORT void initEvent(const AtomString& type, bool canBubble, bool cancelable);
 
     bool isInitialized() const { return m_isInitialized; }
 
-    const AtomicString& type() const { return m_type; }
-    void setType(const AtomicString& type) { m_type = type; }
+    const AtomString& type() const { return m_type; }
+    void setType(const AtomString& type) { m_type = type; }
 
     EventTarget* target() const { return m_target.get(); }
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*);
+    void setCurrentTarget(EventTarget*, Optional<bool> isInShadowTree = WTF::nullopt);
+    bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
     void setEventPhase(PhaseType phase) { m_eventPhase = phase; }
@@ -143,18 +145,18 @@ public:
     bool isBeingDispatched() const { return eventPhase(); }
 
     virtual EventTarget* relatedTarget() const { return nullptr; }
-    virtual void setRelatedTarget(EventTarget&) { }
+    virtual void setRelatedTarget(EventTarget*) { }
 
 protected:
     explicit Event(IsTrusted = IsTrusted::No);
-    Event(const AtomicString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
-    Event(const AtomicString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, IsTrusted isTrusted = IsTrusted::Yes);
-    Event(const AtomicString& type, const EventInit&, IsTrusted);
+    Event(const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
+    Event(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, IsTrusted isTrusted = IsTrusted::Yes);
+    Event(const AtomString& type, const EventInit&, IsTrusted);
 
     virtual void receivedTarget() { }
 
 private:
-    explicit Event(MonotonicTime createTime, const AtomicString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
+    explicit Event(MonotonicTime createTime, const AtomString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
 
     void setCanceledFlagIfPossible();
 
@@ -170,10 +172,11 @@ private:
     unsigned m_isDefaultEventHandlerIgnored : 1;
     unsigned m_isTrusted : 1;
     unsigned m_isExecutingPassiveEventListener : 1;
+    unsigned m_currentTargetIsInShadowTree : 1;
 
     unsigned m_eventPhase : 2;
 
-    AtomicString m_type;
+    AtomString m_type;
 
     RefPtr<EventTarget> m_currentTarget;
     const EventPath* m_eventPath { nullptr };

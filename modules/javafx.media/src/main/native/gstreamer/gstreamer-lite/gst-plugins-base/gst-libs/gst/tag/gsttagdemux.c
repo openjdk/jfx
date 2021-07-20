@@ -167,6 +167,7 @@ static void gst_tag_demux_class_init (gpointer g_class, gpointer d);
 static void gst_tag_demux_init (GstTagDemux * obj, GstTagDemuxClass * klass);
 
 static gpointer parent_class;   /* NULL */
+static gint private_offset = 0;
 
 /* Cannot use boilerplate macros here because we want the abstract flag */
 GType
@@ -189,9 +190,18 @@ gst_tag_demux_get_type (void)
 
     object_type = g_type_register_static (GST_TYPE_ELEMENT,
         "GstTagDemux", &object_info, G_TYPE_FLAG_ABSTRACT);
+
+    private_offset =
+        g_type_add_instance_private (object_type, sizeof (GstTagDemuxPrivate));
   }
 
   return object_type;
+}
+
+static inline GstTagDemuxPrivate *
+gst_tag_demux_get_instance_private (GstTagDemux * self)
+{
+  return (G_STRUCT_MEMBER_P (self, private_offset));
 }
 
 static void
@@ -218,7 +228,8 @@ gst_tag_demux_class_init (gpointer klass, gpointer d)
 
   element_class->change_state = GST_DEBUG_FUNCPTR (gst_tag_demux_change_state);
 
-  g_type_class_add_private (klass, sizeof (GstTagDemuxPrivate));
+  if (private_offset != 0)
+    g_type_class_adjust_private_offset (klass, &private_offset);
 
   /* subclasses must set at least one of these */
   tagdemux_class->min_start_size = 0;
@@ -267,8 +278,7 @@ gst_tag_demux_init (GstTagDemux * demux, GstTagDemuxClass * gclass)
   GstElementClass *element_klass = GST_ELEMENT_CLASS (gclass);
   GstPadTemplate *tmpl;
 
-  demux->priv = g_type_instance_get_private ((GTypeInstance *) demux,
-      GST_TYPE_TAG_DEMUX);
+  demux->priv = gst_tag_demux_get_instance_private (demux);
 
   /* sink pad */
   tmpl = gst_element_class_get_pad_template (element_klass, "sink");
@@ -332,8 +342,8 @@ gst_tag_demux_set_src_caps (GstTagDemux * tagdemux, GstCaps * new_caps)
 
     gst_caps_replace (&tagdemux->priv->src_caps, new_caps);
 
-      GST_DEBUG_OBJECT (tagdemux, "Changing src pad caps to %" GST_PTR_FORMAT,
-          tagdemux->priv->src_caps);
+    GST_DEBUG_OBJECT (tagdemux, "Changing src pad caps to %" GST_PTR_FORMAT,
+        tagdemux->priv->src_caps);
 
     event =
         gst_pad_get_sticky_event (tagdemux->priv->sinkpad,
@@ -367,7 +377,8 @@ gst_tag_demux_trim_buffer (GstTagDemux * tagdemux, GstBuffer ** buf_ref,
   guint trim_start = 0;
   guint out_size, bsize;
   guint64 out_offset, boffset;
-  gboolean need_sub = FALSE;
+  gboolean need_fixup = FALSE;
+  gboolean is_writable;
 
   bsize = out_size = gst_buffer_get_size (buf);
   boffset = out_offset = GST_BUFFER_OFFSET (buf);
@@ -392,7 +403,7 @@ gst_tag_demux_trim_buffer (GstTagDemux * tagdemux, GstBuffer ** buf_ref,
 
       if (out_offset + out_size > v1tag_offset) {
         out_size = v1tag_offset - out_offset;
-        need_sub = TRUE;
+        need_fixup = TRUE;
       }
     }
   }
@@ -411,11 +422,16 @@ gst_tag_demux_trim_buffer (GstTagDemux * tagdemux, GstBuffer ** buf_ref,
     } else {
       out_offset -= tagdemux->priv->strip_start;
     }
-    need_sub = TRUE;
+    need_fixup = TRUE;
   }
 
-  if (need_sub) {
-    if (out_size != bsize || !gst_buffer_is_writable (buf)) {
+  if (!need_fixup)
+    goto done;
+
+  is_writable = gst_buffer_is_writable (buf);
+
+  if (out_size != bsize || !is_writable) {
+    if (!is_writable) {
       GstBuffer *sub;
 
       GST_DEBUG_OBJECT (tagdemux, "Sub-buffering to trim size %d offset %"
@@ -434,14 +450,22 @@ gst_tag_demux_trim_buffer (GstTagDemux * tagdemux, GstBuffer ** buf_ref,
       *buf_ref = buf = sub;
       *buf_size = out_size;
     } else {
-      GST_DEBUG_OBJECT (tagdemux, "Adjusting buffer from size %d offset %"
+      GST_DEBUG_OBJECT (tagdemux, "Resizing buffer to trim size %d offset %"
           G_GINT64_FORMAT " to %d offset %" G_GINT64_FORMAT,
           bsize, boffset, out_size, out_offset);
-    }
 
-    GST_BUFFER_OFFSET (buf) = out_offset;
-    GST_BUFFER_OFFSET_END (buf) = out_offset + out_size;
+      gst_buffer_resize (buf, trim_start, out_size);
+    }
+  } else {
+    GST_DEBUG_OBJECT (tagdemux, "Adjusting buffer from size %d offset %"
+        G_GINT64_FORMAT " to %d offset %" G_GINT64_FORMAT,
+        bsize, boffset, out_size, out_offset);
   }
+
+  GST_BUFFER_OFFSET (buf) = out_offset;
+  GST_BUFFER_OFFSET_END (buf) = out_offset + out_size;
+
+done:
 
   return TRUE;
 
@@ -663,7 +687,7 @@ gst_tag_demux_chain_buffer (GstTagDemux * demux, GstBuffer * buf,
           "probability of %u", caps, probability);
 
       gst_tag_demux_set_src_caps (demux, caps);
-        gst_caps_unref (caps);
+      gst_caps_unref (caps);
 
       /* Move onto streaming and fall-through to push out existing
        * data */
@@ -735,8 +759,8 @@ gst_tag_demux_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
         gst_tag_demux_chain_buffer (demux, gst_buffer_new (), TRUE);
 
         if (!gst_pad_has_current_caps (demux->priv->srcpad)) {
-        GST_ELEMENT_ERROR (demux, STREAM, TYPE_NOT_FOUND, (NULL), (NULL));
-      }
+          GST_ELEMENT_ERROR (demux, STREAM, TYPE_NOT_FOUND, (NULL), (NULL));
+        }
       }
       ret = gst_pad_event_default (pad, parent, event);
       break;
@@ -921,63 +945,63 @@ static gboolean
 gst_tag_demux_seek_push (GstTagDemux * tagdemux, GstEvent * event)
 {
   gboolean res = FALSE;
-      gdouble rate;
-      GstFormat format;
+  gdouble rate;
+  GstFormat format;
   GstSeekType start_type, stop_type;
-      GstSeekFlags flags;
+  GstSeekFlags flags;
   gint64 start, stop;
 
-      gst_event_parse_seek (event, &rate, &format, &flags,
+  gst_event_parse_seek (event, &rate, &format, &flags,
       &start_type, &start, &stop_type, &stop);
 
-      if (format == GST_FORMAT_BYTES &&
-          tagdemux->priv->state == GST_TAG_DEMUX_STREAMING &&
-          gst_pad_is_linked (tagdemux->priv->sinkpad)) {
-        GstEvent *upstream;
+  if (format == GST_FORMAT_BYTES &&
+      tagdemux->priv->state == GST_TAG_DEMUX_STREAMING &&
+      gst_pad_is_linked (tagdemux->priv->sinkpad)) {
+    GstEvent *upstream;
 
     switch (start_type) {
-          case GST_SEEK_TYPE_SET:
+      case GST_SEEK_TYPE_SET:
         if (start == -1)
           start = 0;
         start += tagdemux->priv->strip_start;
-            break;
-          case GST_SEEK_TYPE_END:
-            /* Adjust the seek to be relative to the start of any end tag
-             * (note: 10 bytes before end is represented by stop=-10) */
+        break;
+      case GST_SEEK_TYPE_END:
+        /* Adjust the seek to be relative to the start of any end tag
+         * (note: 10 bytes before end is represented by stop=-10) */
         if (start > 0)
           start = 0;
         start -= tagdemux->priv->strip_end;
-            break;
-          case GST_SEEK_TYPE_NONE:
-          default:
-            break;
+        break;
+      case GST_SEEK_TYPE_NONE:
+      default:
+        break;
+    }
+    switch (stop_type) {
+      case GST_SEEK_TYPE_SET:
+        if (stop != -1) {
+          /* -1 means the end of the file, pass it upstream intact */
+          stop += tagdemux->priv->strip_start;
         }
-        switch (stop_type) {
-          case GST_SEEK_TYPE_SET:
-            if (stop != -1) {
-              /* -1 means the end of the file, pass it upstream intact */
-              stop += tagdemux->priv->strip_start;
-            }
-            break;
-          case GST_SEEK_TYPE_END:
-            /* Adjust the seek to be relative to the start of any end tag
-             * (note: 10 bytes before end is represented by stop=-10) */
-            if (stop > 0)
-              stop = 0;
-            stop -= tagdemux->priv->strip_end;
-            break;
-          case GST_SEEK_TYPE_NONE:
-          default:
-            break;
-        }
-        upstream = gst_event_new_seek (rate, format, flags,
+        break;
+      case GST_SEEK_TYPE_END:
+        /* Adjust the seek to be relative to the start of any end tag
+         * (note: 10 bytes before end is represented by stop=-10) */
+        if (stop > 0)
+          stop = 0;
+        stop -= tagdemux->priv->strip_end;
+        break;
+      case GST_SEEK_TYPE_NONE:
+      default:
+        break;
+    }
+    upstream = gst_event_new_seek (rate, format, flags,
         start_type, start, stop_type, stop);
-        res = gst_pad_push_event (tagdemux->priv->sinkpad, upstream);
+    res = gst_pad_push_event (tagdemux->priv->sinkpad, upstream);
   } else if (format == GST_FORMAT_TIME &&
       tagdemux->priv->state == GST_TAG_DEMUX_STREAMING &&
       gst_pad_is_linked (tagdemux->priv->sinkpad)) {
     res = gst_pad_push_event (tagdemux->priv->sinkpad, gst_event_ref (event));
-      }
+  }
 
   return res;
 }
@@ -1385,7 +1409,7 @@ gst_tag_demux_element_find (GstTagDemux * demux)
 
   /* 6 Set the srcpad caps now that we know them */
   gst_tag_demux_set_src_caps (demux, caps);
-      gst_caps_unref (caps);
+  gst_caps_unref (caps);
 
 skip_typefinding:
 
@@ -1455,7 +1479,7 @@ gst_tag_demux_element_loop (GstTagDemux * demux)
         demux->priv->need_newseg = FALSE;
         /* FIXME: check segment, should be 0-N for downstream */
         gst_tag_demux_send_new_segment (demux);
-  }
+      }
 
       /* Send our own pending tag event */
       if (demux->priv->send_tag_event) {
@@ -1478,7 +1502,7 @@ gst_tag_demux_element_loop (GstTagDemux * demux)
 
       ret = gst_pad_push (demux->priv->srcpad, outbuf);
       break;
-  }
+    }
     default:
       ret = GST_FLOW_ERROR;
       break;
@@ -1516,7 +1540,7 @@ pause:
             gst_event_new_segment_done (GST_FORMAT_BYTES, stop));
       } else {
         push_eos = TRUE;
-  }
+      }
     } else if (ret == GST_FLOW_NOT_LINKED || ret < GST_FLOW_EOS) {
       /* for fatal errors we post an error message */
       GST_ELEMENT_FLOW_ERROR (demux, ret);
@@ -1828,7 +1852,6 @@ gst_tag_demux_send_tag_event (GstTagDemux * demux)
     return;
 #endif // GSTREAMER_LITE
 
-    GST_EVENT_TIMESTAMP (event) = 0;
     GST_DEBUG_OBJECT (demux, "Sending tag event on src pad");
     gst_pad_push_event (demux->priv->srcpad, event);
   }

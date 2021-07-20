@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,66 +27,70 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "FontCascade.h"
-#include "ImageBuffer.h"
-#include "MediaSample.h"
-#include "RealtimeMediaSource.h"
-#include "VideoPreset.h"
-#include <wtf/Lock.h>
-#include <wtf/RunLoop.h>
+#include "RealtimeVideoCaptureSource.h"
 
 namespace WebCore {
 
 class ImageTransferSessionVT;
 
-class RealtimeVideoSource : public RealtimeMediaSource {
+class RealtimeVideoSource final
+    : public RealtimeMediaSource
+    , public RealtimeMediaSource::Observer
+    , public RealtimeMediaSource::VideoSampleObserver {
 public:
-    virtual ~RealtimeVideoSource();
+    static Ref<RealtimeVideoSource> create(Ref<RealtimeVideoCaptureSource>&& source) { return adoptRef(*new RealtimeVideoSource(WTFMove(source))); }
 
-protected:
-    RealtimeVideoSource(String&& name, String&& id, String&& hashSalt);
-
-    void prepareToProduceData();
-    bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) override;
-    void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) override;
-
-    virtual void generatePresets() = 0;
-    virtual bool prefersPreset(VideoPreset&) { return true; }
-    virtual void setSizeAndFrameRateWithPreset(IntSize, double, RefPtr<VideoPreset>) { };
-    virtual bool canResizeVideoFrames() const { return false; }
-    bool shouldUsePreset(VideoPreset& current, VideoPreset& candidate);
-
-    void setSupportedPresets(const Vector<Ref<VideoPreset>>&);
-    void setSupportedPresets(Vector<VideoPresetData>&&);
-    const Vector<Ref<VideoPreset>>& presets();
-
-    bool frameRateRangeIncludesRate(const FrameRateRange&, double);
-
-    void updateCapabilities(RealtimeMediaSourceCapabilities&);
-
-    void setDefaultSize(const IntSize& size) { m_defaultSize = size; }
-
-    double observedFrameRate() const { return m_observedFrameRate; }
-
-    void dispatchMediaSampleToObservers(MediaSample&);
-    const Vector<IntSize>& standardVideoSizes();
+    Vector<VideoPresetData> presetsData() { return m_source->presetsData(); }
 
 private:
-    struct CaptureSizeAndFrameRate {
-        RefPtr<VideoPreset> encodingPreset;
-        IntSize requestedSize;
-        double requestedFrameRate { 0 };
-    };
-    bool supportsCaptureSize(Optional<int>, Optional<int>, const Function<bool(const IntSize&)>&&);
-    Optional<CaptureSizeAndFrameRate> bestSupportedSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>);
-    bool presetSupportsFrameRate(RefPtr<VideoPreset>, double);
+    WEBCORE_EXPORT explicit RealtimeVideoSource(Ref<RealtimeVideoCaptureSource>&&);
+    ~RealtimeVideoSource();
 
-    Vector<Ref<VideoPreset>> m_presets;
-    Deque<double> m_observedFrameTimeStamps;
-    double m_observedFrameRate { 0 };
-    IntSize m_defaultSize;
+    // RealtimeMediaSource
+    void startProducingData() final;
+    void stopProducingData() final;
+    bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate) final;
+    void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate) final;
+    Ref<RealtimeMediaSource> clone() final;
+    void requestToEnd(RealtimeMediaSource::Observer& callingObserver) final;
+    void stopBeingObserved() final;
+
+    const RealtimeMediaSourceCapabilities& capabilities() final { return m_source->capabilities(); }
+    const RealtimeMediaSourceSettings& settings() final { return m_currentSettings; }
+    bool isCaptureSource() const final { return m_source->isCaptureSource(); }
+    CaptureDevice::DeviceType deviceType() const final { return m_source->deviceType(); }
+    void monitorOrientation(OrientationNotifier& notifier) final { m_source->monitorOrientation(notifier); }
+    bool interrupted() const final { return m_source->interrupted(); }
+    bool isSameAs(RealtimeMediaSource& source) const final { return this == &source || m_source.ptr() == &source; }
+    void whenReady(CompletionHandler<void(String)>&&) final;
+    bool isVideoSource() const final { return true; }
+
+    // RealtimeMediaSource::Observer
+    void sourceMutedChanged() final;
+    void sourceSettingsChanged() final;
+    void sourceStopped() final;
+    bool preventSourceFromStopping() final;
+
+    // RealtimeMediaSource::VideoSampleObserver
+    void videoSampleAvailable(MediaSample&) final;
+
+#if PLATFORM(COCOA)
+    RefPtr<MediaSample> adaptVideoSample(MediaSample&);
+#endif
+
+#if !RELEASE_LOG_DISABLED
+    void setLogger(const Logger&, const void*) final;
+#endif
+
+    Ref<RealtimeVideoCaptureSource> m_source;
+    RealtimeMediaSourceSettings m_currentSettings;
 #if PLATFORM(COCOA)
     std::unique_ptr<ImageTransferSessionVT> m_imageTransferSession;
+#endif
+    size_t m_frameDecimation { 1 };
+    size_t m_frameDecimationCounter { 0 };
+#if !RELEASE_LOG_DISABLED
+    uint64_t m_cloneCounter { 0 };
 #endif
 };
 

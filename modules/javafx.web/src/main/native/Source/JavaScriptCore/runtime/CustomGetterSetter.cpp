@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CustomGetterSetter.h"
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include <wtf/Assertions.h>
 
 namespace JSC {
@@ -35,27 +35,19 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(CustomGetterSetter);
 
 const ClassInfo CustomGetterSetter::s_info = { "CustomGetterSetter", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(CustomGetterSetter) };
 
-bool callCustomSetter(ExecState* exec, CustomGetterSetter::CustomSetter setter, bool isAccessor, JSValue thisValue, JSValue value)
+TriState callCustomSetter(JSGlobalObject* globalObject, CustomGetterSetter::CustomSetter setter, bool isAccessor, JSObject* slotBase, JSValue thisValue, JSValue value)
 {
-    ASSERT(setter);
-    bool result = setter(exec, JSValue::encode(thisValue), JSValue::encode(value));
-    // Always return true if there is a setter and it is observed as an accessor to users.
-    if (isAccessor)
-        return true;
-    return result;
-}
+    if (isAccessor) {
+        if (!setter)
+            return TriState::False;
+        setter(globalObject, JSValue::encode(thisValue), JSValue::encode(value));
+        // Always return true if there is a setter and it is observed as an accessor to users.
+        return TriState::True;
+    }
 
-bool callCustomSetter(ExecState* exec, JSValue customGetterSetter, bool isAccessor, JSObject* base, JSValue thisValue, JSValue value)
-{
-    CustomGetterSetter::CustomSetter setter = jsCast<CustomGetterSetter*>(customGetterSetter)->setter();
-    // Return false since there is no setter.
     if (!setter)
-        return false;
-    // FIXME: Remove this differences in custom values and custom accessors.
-    // https://bugs.webkit.org/show_bug.cgi?id=158014
-    if (!isAccessor)
-        thisValue = base;
-    return callCustomSetter(exec, setter, isAccessor, thisValue, value);
+        return TriState::Indeterminate;
+    return triState(setter(globalObject, JSValue::encode(slotBase), JSValue::encode(value)));
 }
 
 } // namespace JSC

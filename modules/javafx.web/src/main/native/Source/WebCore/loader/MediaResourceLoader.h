@@ -30,6 +30,7 @@
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
 #include "ContextDestructionObserver.h"
+#include "FetchOptions.h"
 #include "PlatformMediaResourceLoader.h"
 #include "ResourceResponse.h"
 #include <wtf/HashSet.h>
@@ -41,31 +42,34 @@ namespace WebCore {
 
 class CachedRawResource;
 class Document;
-class HTMLMediaElement;
+class Element;
 class MediaResource;
 
 class MediaResourceLoader final : public PlatformMediaResourceLoader, public CanMakeWeakPtr<MediaResourceLoader>, public ContextDestructionObserver {
 public:
-    WEBCORE_EXPORT MediaResourceLoader(Document&, HTMLMediaElement&, const String& crossOriginMode);
+    WEBCORE_EXPORT MediaResourceLoader(Document&, Element&, const String& crossOriginMode, FetchOptions::Destination);
     WEBCORE_EXPORT virtual ~MediaResourceLoader();
 
     RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) final;
+    void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) final;
     void removeResource(MediaResource&);
 
-    Document* document() { return m_document; }
+    Document* document() { return m_document.get(); }
     const String& crossOriginMode() const { return m_crossOriginMode; }
 
+    WEBCORE_EXPORT static void recordResponsesForTesting();
     Vector<ResourceResponse> responsesForTesting() const { return m_responsesForTesting; }
     void addResponseForTesting(const ResourceResponse&);
 
 private:
     void contextDestroyed() override;
 
-    Document* m_document;
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakPtr<Document> m_document;
+    WeakPtr<Element> m_element;
     String m_crossOriginMode;
     HashSet<MediaResource*> m_resources;
     Vector<ResourceResponse> m_responsesForTesting;
+    FetchOptions::Destination m_destination;
 };
 
 class MediaResource : public PlatformMediaResource, CachedRawResourceClient {
@@ -83,7 +87,7 @@ public:
     bool shouldCacheResponse(CachedResource&, const ResourceResponse&) override;
     void dataSent(CachedResource&, unsigned long long, unsigned long long) override;
     void dataReceived(CachedResource&, const char*, int) override;
-    void notifyFinished(CachedResource&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
 private:
     MediaResource(MediaResourceLoader&, CachedResourceHandle<CachedRawResource>);

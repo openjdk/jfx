@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,27 +25,56 @@
 
 #pragma once
 
-#include "SVGAnimatedListPropertyTearOff.h"
-#include "SVGLengthListValues.h"
-#include "SVGListPropertyTearOff.h"
+#include "SVGLength.h"
+#include "SVGValuePropertyList.h"
 
 namespace WebCore {
 
-class SVGLengthList : public SVGListPropertyTearOff<SVGLengthListValues> {
-public:
-    using AnimatedListPropertyTearOff = SVGAnimatedListPropertyTearOff<SVGLengthListValues>;
-    using ListWrapperCache = AnimatedListPropertyTearOff::ListWrapperCache;
+class SVGLengthList final : public SVGValuePropertyList<SVGLength> {
+    using Base = SVGValuePropertyList<SVGLength>;
+    using Base::Base;
 
-    static Ref<SVGLengthList> create(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGLengthListValues& values, ListWrapperCache& wrappers)
+public:
+    static Ref<SVGLengthList> create(SVGLengthMode lengthMode = SVGLengthMode::Other)
     {
-        return adoptRef(*new SVGLengthList(animatedProperty, role, values, wrappers));
+        return adoptRef(*new SVGLengthList(lengthMode));
     }
+
+    static Ref<SVGLengthList> create(SVGPropertyOwner* owner, SVGPropertyAccess access, SVGLengthMode lengthMode)
+    {
+        return adoptRef(*new SVGLengthList(owner, access, lengthMode));
+    }
+
+    static Ref<SVGLengthList> create(const SVGLengthList& other, SVGPropertyAccess access)
+    {
+        return adoptRef(*new SVGLengthList(other, access));
+    }
+
+    SVGLengthMode lengthMode() const { return m_lengthMode; }
+
+    bool parse(StringView);
+
+    String valueAsString() const override;
 
 private:
-    SVGLengthList(AnimatedListPropertyTearOff& animatedProperty, SVGPropertyRole role, SVGLengthListValues& values, ListWrapperCache& wrappers)
-        : SVGListPropertyTearOff<SVGLengthListValues>(animatedProperty, role, values, wrappers)
+    SVGLengthList(SVGLengthMode lengthMode)
+        : m_lengthMode(lengthMode)
     {
     }
+
+    SVGLengthList(SVGPropertyOwner* owner, SVGPropertyAccess access, SVGLengthMode lengthMode)
+        : Base(owner, access)
+        , m_lengthMode(lengthMode)
+    {
+    }
+
+    SVGLengthList(const SVGLengthList& other, SVGPropertyAccess access)
+        : Base(other, access)
+        , m_lengthMode(other.lengthMode())
+    {
+    }
+
+    SVGLengthMode m_lengthMode { SVGLengthMode::Other };
 };
 
 } // namespace WebCore

@@ -56,10 +56,13 @@
  * * %GST_FLOW_OK: otherwise
  *
  * %GST_FLOW_ERROR or below, GST_FLOW_NOT_NEGOTIATED and GST_FLOW_FLUSHING are
- * returned immediatelly from the gst_flow_combiner_update_flow() function.
+ * returned immediately from the gst_flow_combiner_update_flow() function.
  *
  * Since: 1.4
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gst/gst.h>
 #include "gstflowcombiner.h"
@@ -177,6 +180,8 @@ gst_flow_combiner_clear (GstFlowCombiner * combiner)
 
   g_return_if_fail (combiner != NULL);
 
+  GST_DEBUG ("%p clearing", combiner);
+
   while ((pad = g_queue_pop_head (&combiner->pads)))
     gst_object_unref (pad);
   combiner->last_ret = GST_FLOW_OK;
@@ -197,7 +202,7 @@ gst_flow_combiner_reset (GstFlowCombiner * combiner)
 
   g_return_if_fail (combiner != NULL);
 
-  GST_DEBUG ("Reset flow returns");
+  GST_DEBUG ("%p reset flow returns", combiner);
 
   for (iter = combiner->pads.head; iter; iter = iter->next) {
     GST_PAD_LAST_FLOW_RETURN (iter->data) = GST_FLOW_OK;
@@ -214,13 +219,16 @@ gst_flow_combiner_get_flow (GstFlowCombiner * combiner)
   gboolean all_notlinked = TRUE;
   GList *iter;
 
-  GST_DEBUG ("Combining flow returns");
+  GST_DEBUG ("%p Combining flow returns", combiner);
 
   for (iter = combiner->pads.head; iter; iter = iter->next) {
     GstFlowReturn fret = GST_PAD_LAST_FLOW_RETURN (iter->data);
 
+    GST_TRACE ("%p pad %" GST_PTR_FORMAT " has flow return of %s (%d)",
+        combiner, iter->data, gst_flow_get_name (fret), fret);
+
     if (fret <= GST_FLOW_NOT_NEGOTIATED || fret == GST_FLOW_FLUSHING) {
-      GST_DEBUG ("Error flow return found, returning");
+      GST_DEBUG ("%p Error flow return found, returning", combiner);
       cret = fret;
       goto done;
     }
@@ -237,7 +245,8 @@ gst_flow_combiner_get_flow (GstFlowCombiner * combiner)
     cret = GST_FLOW_EOS;
 
 done:
-  GST_DEBUG ("Combined flow return: %s (%d)", gst_flow_get_name (cret), cret);
+  GST_DEBUG ("%p Combined flow return: %s (%d)", combiner,
+      gst_flow_get_name (cret), cret);
   return cret;
 }
 
@@ -263,11 +272,15 @@ gst_flow_combiner_update_flow (GstFlowCombiner * combiner, GstFlowReturn fret)
 
   g_return_val_if_fail (combiner != NULL, GST_FLOW_ERROR);
 
+  GST_DEBUG ("%p updating combiner with flow %s (%d)", combiner,
+      gst_flow_get_name (fret), fret);
+
   if (combiner->last_ret == fret) {
     return fret;
   }
 
-  if (fret <= GST_FLOW_NOT_NEGOTIATED || fret == GST_FLOW_FLUSHING) {
+  if (fret <= GST_FLOW_NOT_NEGOTIATED || fret == GST_FLOW_FLUSHING
+      || !combiner->pads.head) {
     ret = fret;
   } else {
     ret = gst_flow_combiner_get_flow (combiner);

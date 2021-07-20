@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@
 #include "Frame.h"
 #include "JSNode.h"
 #include "QualifiedName.h"
+#include "SVGElement.h"
 #include "ScriptController.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/FunctionConstructor.h>
@@ -33,6 +34,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -41,9 +43,9 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, eventListenerCounter, ("JSL
 
 struct JSLazyEventListener::CreationArguments {
     const QualifiedName& attributeName;
-    const AtomicString& attributeValue;
+    const AtomString& attributeValue;
     Document& document;
-    ContainerNode* node;
+    WeakPtr<ContainerNode> node;
     JSObject* wrapper;
     bool shouldUseSVGEventName;
 };
@@ -64,25 +66,48 @@ static TextPosition convertZeroToOne(const TextPosition& position)
     return position;
 }
 
-JSLazyEventListener::JSLazyEventListener(const CreationArguments& arguments, const String& sourceURL, const TextPosition& sourcePosition)
+JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const URL& sourceURL, const TextPosition& sourcePosition)
     : JSEventListener(nullptr, arguments.wrapper, true, mainThreadNormalWorld())
     , m_functionName(arguments.attributeName.localName().string())
     , m_eventParameterName(eventParameterName(arguments.shouldUseSVGEventName))
     , m_code(arguments.attributeValue)
     , m_sourceURL(sourceURL)
     , m_sourcePosition(convertZeroToOne(sourcePosition))
-    , m_originalNode(arguments.node)
+    , m_originalNode(WTFMove(arguments.node))
 {
-    // We don't ref m_originalNode because we assume it will stay alive as long as this
-    // handler object is around and we need to avoid a reference cycle. If JS transfers
-    // this handler to another node, initializeJSFunction will be called and after that
-    // m_originalNode will never be looked at again.
-    // FIXME: Doesn't seem clear that is guaranteed to be true in the general case.
-
 #ifndef NDEBUG
     eventListenerCounter.increment();
 #endif
 }
+
+#if ASSERT_ENABLED
+static inline bool isCloneInShadowTreeOfSVGUseElement(Node& originalNode, EventTarget& eventTarget)
+{
+    if (!eventTarget.isNode())
+        return false;
+
+    auto& node = downcast<Node>(eventTarget);
+    if (!is<SVGElement>(node))
+        return false;
+
+    auto& element = downcast<SVGElement>(node);
+    if (!element.correspondingElement())
+        return false;
+
+    ASSERT(element.isInShadowTree());
+    return &originalNode == element.correspondingElement();
+}
+
+// This is to help find the underlying cause of <rdar://problem/24314027>.
+void JSLazyEventListener::checkValidityForEventTarget(EventTarget& eventTarget)
+{
+    if (eventTarget.isNode()) {
+        ASSERT(m_originalNode);
+        ASSERT(static_cast<EventTarget*>(m_originalNode.get()) == &eventTarget || isCloneInShadowTreeOfSVGUseElement(*m_originalNode, eventTarget));
+    } else
+        ASSERT(!m_originalNode);
+}
+#endif
 
 JSLazyEventListener::~JSLazyEventListener()
 {
@@ -105,7 +130,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     if (!document.frame())
         return nullptr;
 
-    if (!document.contentSecurityPolicy()->allowInlineEventHandlers(m_sourceURL, m_sourcePosition.m_line))
+    if (!document.contentSecurityPolicy()->allowInlineEventHandlers(m_sourceURL.string(), m_sourcePosition.m_line))
         return nullptr;
 
     auto& script = document.frame()->script();
@@ -121,23 +146,23 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    ExecState* exec = globalObject->globalExec();
+    JSGlobalObject* lexicalGlobalObject = globalObject;
 
     MarkedArgumentBuffer args;
-    args.append(jsNontrivialString(exec, m_eventParameterName));
-    args.append(jsStringWithCache(exec, m_code));
+    args.append(jsNontrivialString(vm, m_eventParameterName));
+    args.append(jsStringWithCache(vm, m_code));
     ASSERT(!args.hasOverflowed());
 
     // We want all errors to refer back to the line on which our attribute was
     // declared, regardless of any newlines in our JavaScript source text.
     int overrideLineNumber = m_sourcePosition.m_line.oneBasedInt();
 
-    JSObject* jsFunction = constructFunctionSkippingEvalEnabledCheck(exec,
-        exec->lexicalGlobalObject(), args, Identifier::fromString(exec, m_functionName),
+    JSObject* jsFunction = constructFunctionSkippingEvalEnabledCheck(
+        lexicalGlobalObject, args, Identifier::fromString(vm, m_functionName),
         SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document.charset()) },
-        m_sourceURL, m_sourcePosition, overrideLineNumber);
+        m_sourceURL.string(), m_sourcePosition, overrideLineNumber);
     if (UNLIKELY(scope.exception())) {
-        reportCurrentException(exec);
+        reportCurrentException(lexicalGlobalObject);
         scope.clearException();
         return nullptr;
     }
@@ -148,48 +173,48 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         if (!wrapper()) {
             // Ensure that 'node' has a JavaScript wrapper to mark the event listener we're creating.
             // FIXME: Should pass the global object associated with the node
-            setWrapper(vm, asObject(toJS(exec, globalObject, *m_originalNode)));
+            setWrapperWhenInitializingJSFunction(vm, asObject(toJS(lexicalGlobalObject, globalObject, *m_originalNode)));
         }
 
         // Add the event's home element to the scope
         // (and the document, and the form - see JSHTMLElement::eventHandlerScope)
-        listenerAsFunction->setScope(vm, jsCast<JSNode*>(wrapper())->pushEventHandlerScope(exec, listenerAsFunction->scope()));
+        listenerAsFunction->setScope(vm, jsCast<JSNode*>(wrapper())->pushEventHandlerScope(lexicalGlobalObject, listenerAsFunction->scope()));
     }
 
     return jsFunction;
 }
 
-RefPtr<JSLazyEventListener> JSLazyEventListener::create(const CreationArguments& arguments)
+RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& arguments)
 {
     if (arguments.attributeValue.isNull())
         return nullptr;
 
     // FIXME: We should be able to provide source information for frameless documents too (e.g. for importing nodes from XMLHttpRequest.responseXML).
     TextPosition position;
-    String sourceURL;
+    URL sourceURL;
     if (Frame* frame = arguments.document.frame()) {
         if (!frame->script().canExecuteScripts(AboutToCreateEventListener))
             return nullptr;
         position = frame->script().eventHandlerPosition();
-        sourceURL = arguments.document.url().string();
+        sourceURL = arguments.document.url();
     }
 
-    return adoptRef(*new JSLazyEventListener(arguments, sourceURL, position));
+    return adoptRef(*new JSLazyEventListener(WTFMove(arguments), sourceURL, position));
 }
 
-RefPtr<JSLazyEventListener> JSLazyEventListener::create(Element& element, const QualifiedName& attributeName, const AtomicString& attributeValue)
+RefPtr<JSLazyEventListener> JSLazyEventListener::create(Element& element, const QualifiedName& attributeName, const AtomString& attributeValue)
 {
-    return create({ attributeName, attributeValue, element.document(), &element, nullptr, element.isSVGElement() });
+    return create({ attributeName, attributeValue, element.document(), makeWeakPtr(element), nullptr, element.isSVGElement() });
 }
 
-RefPtr<JSLazyEventListener> JSLazyEventListener::create(Document& document, const QualifiedName& attributeName, const AtomicString& attributeValue)
+RefPtr<JSLazyEventListener> JSLazyEventListener::create(Document& document, const QualifiedName& attributeName, const AtomString& attributeValue)
 {
     // FIXME: This always passes false for "shouldUseSVGEventName". Is that correct for events dispatched to SVG documents?
     // This has been this way for a long time, but became more obvious when refactoring to separate the Element and Document code paths.
-    return create({ attributeName, attributeValue, document, &document, nullptr, false });
+    return create({ attributeName, attributeValue, document, makeWeakPtr(document), nullptr, false });
 }
 
-RefPtr<JSLazyEventListener> JSLazyEventListener::create(DOMWindow& window, const QualifiedName& attributeName, const AtomicString& attributeValue)
+RefPtr<JSLazyEventListener> JSLazyEventListener::create(DOMWindow& window, const QualifiedName& attributeName, const AtomString& attributeValue)
 {
     ASSERT(window.document());
     auto& document = *window.document();

@@ -36,8 +36,9 @@
 #include "FontCascade.h"
 #include "ImageBuffer.h"
 #include "MockMediaDevice.h"
+#include "OrientationNotifier.h"
 #include "RealtimeMediaSourceFactory.h"
-#include "RealtimeVideoSource.h"
+#include "RealtimeVideoCaptureSource.h"
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
@@ -45,21 +46,21 @@ namespace WebCore {
 class FloatRect;
 class GraphicsContext;
 
-class MockRealtimeVideoSource : public RealtimeVideoSource {
+class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-
     static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
+
+    ImageBuffer* imageBuffer() const;
 
 protected:
     MockRealtimeVideoSource(String&& deviceID, String&& name, String&& hashSalt);
 
     virtual void updateSampleBuffer() = 0;
 
-    void setCurrentFrame(MediaSample&);
-    ImageBuffer* imageBuffer() const;
-
     Seconds elapsedTime();
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
+    MediaSample::VideoRotation sampleRotation() const final { return m_deviceOrientation; }
+    void generatePresets() override;
 
 private:
     const RealtimeMediaSourceCapabilities& capabilities() final;
@@ -71,10 +72,15 @@ private:
     CaptureDevice::DeviceType deviceType() const final { return CaptureDevice::DeviceType::Camera; }
     bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) final;
     void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) final;
-    void setSizeAndFrameRateWithPreset(IntSize, double, RefPtr<VideoPreset>) final;
+    void setFrameRateWithPreset(double, RefPtr<VideoPreset>) final;
     IntSize captureSize() const;
 
-    void generatePresets() final;
+
+    bool isMockSource() const final { return true; }
+
+    // OrientationNotifier::Observer
+    void orientationChanged(int orientation) final;
+    void monitorOrientation(OrientationNotifier&) final;
 
     void drawAnimation(GraphicsContext&);
     void drawText(GraphicsContext&);
@@ -83,7 +89,7 @@ private:
     void generateFrame();
     void startCaptureTimer();
 
-    void delaySamples(Seconds) override;
+    void delaySamples(Seconds) final;
 
     bool mockCamera() const { return WTF::holds_alternative<MockCameraProperties>(m_device.properties); }
     bool mockDisplay() const { return WTF::holds_alternative<MockDisplayProperties>(m_device.properties); }
@@ -95,7 +101,7 @@ private:
     float m_bipBopFontSize { 0 };
     float m_statsFontSize { 0 };
 
-    mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
+    mutable RefPtr<ImageBuffer> m_imageBuffer;
 
     Path m_path;
     DashArray m_dashWidths;
@@ -112,9 +118,14 @@ private:
     Color m_fillColor { Color::black };
     MockMediaDevice m_device;
     RefPtr<VideoPreset> m_preset;
+    MediaSample::VideoRotation m_deviceOrientation { MediaSample::VideoRotation::None };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MockRealtimeVideoSource)
+    static bool isType(const WebCore::RealtimeMediaSource& source) { return source.isCaptureSource() && source.isMockSource() && (source.deviceType() == WebCore::CaptureDevice::DeviceType::Camera || source.deviceType() == WebCore::CaptureDevice::DeviceType::Screen || source.deviceType() == WebCore::CaptureDevice::DeviceType::Window); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_STREAM)
 

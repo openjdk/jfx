@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLConstantExpression.h"
-#include "WHLSLLexer.h"
 #include <wtf/UniqueRef.h>
 #include <wtf/Variant.h>
 #include <wtf/Vector.h>
@@ -41,7 +40,7 @@ namespace AST {
 
 class TypeReference;
 
-using TypeArgument = Variant<ConstantExpression, UniqueRef<TypeReference>>;
+using TypeArgument = Variant<ConstantExpression, Ref<TypeReference>>;
 using TypeArguments = Vector<TypeArgument>;
 
 TypeArgument clone(const TypeArgument&);
@@ -53,4 +52,4 @@ TypeArguments clone(const TypeArguments&);
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

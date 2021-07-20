@@ -1,11 +1,11 @@
-## GStreamer v1.14.4
+## GStreamer v1.18.4
 
 ### GStreamer Notice
 ```
 
-You are receiving a copy of GStreamer, Version: 1.14.4 in either source or
+You are receiving a copy of GStreamer, Version: 1.18.4 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.14.4; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.18.4; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -86,7 +86,7 @@ modified by someone else and passed on, the recipients should know
 that what they have is not the original version, so that the original
 author's reputation will not be affected by problems that might be
 introduced by others.
-
+
   Finally, software patents pose a constant threat to the existence of
 any free program.  We wish to make sure that a company cannot
 effectively restrict the users of a free program by obtaining a

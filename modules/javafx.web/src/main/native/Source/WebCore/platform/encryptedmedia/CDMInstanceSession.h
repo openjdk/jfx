@@ -35,11 +35,17 @@
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
+#if !RELEASE_LOG_DISABLED
+namespace WTF {
+class Logger;
+}
+#endif
+
 namespace WebCore {
 
 class SharedBuffer;
 
-class CDMInstanceSessionClient {
+class CDMInstanceSessionClient : public CanMakeWeakPtr<CDMInstanceSessionClient> {
 public:
     virtual ~CDMInstanceSessionClient() = default;
 
@@ -48,6 +54,8 @@ public:
     virtual void updateKeyStatuses(KeyStatusVector&&) = 0;
     virtual void sendMessage(CDMMessageType, Ref<SharedBuffer>&& message) = 0;
     virtual void sessionIdChanged(const String&) = 0;
+    using PlatformDisplayID = uint32_t;
+    virtual PlatformDisplayID displayID() = 0;
 };
 
 class CDMInstanceSession : public RefCounted<CDMInstanceSession> {
@@ -58,6 +66,10 @@ public:
     using LicenseType = CDMSessionType;
     using MessageType = CDMMessageType;
 
+#if !RELEASE_LOG_DISABLED
+    virtual void setLogger(WTF::Logger&, const void*) { }
+#endif
+
     virtual void setClient(WeakPtr<CDMInstanceSessionClient>&&) { }
     virtual void clearClient() { }
 
@@ -67,14 +79,14 @@ public:
     };
 
     using LicenseCallback = CompletionHandler<void(Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, SuccessValue succeeded)>;
-    virtual void requestLicense(LicenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
+    virtual void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
 
     using KeyStatusVector = CDMInstanceSessionClient::KeyStatusVector;
     using Message = std::pair<MessageType, Ref<SharedBuffer>>;
     using LicenseUpdateCallback = CompletionHandler<void(bool sessionWasClosed, Optional<KeyStatusVector>&& changedKeys, Optional<double>&& changedExpiration, Optional<Message>&& message, SuccessValue succeeded)>;
-    virtual void updateLicense(const String& sessionId, LicenseType, const SharedBuffer& response, LicenseUpdateCallback&&) = 0;
+    virtual void updateLicense(const String& sessionId, LicenseType, Ref<SharedBuffer>&& response, LicenseUpdateCallback&&) = 0;
 
-    enum class SessionLoadFailure {
+    enum class SessionLoadFailure : uint8_t {
         None,
         NoSessionData,
         MismatchedSessionType,
@@ -92,6 +104,9 @@ public:
     virtual void removeSessionData(const String& sessionId, LicenseType, RemoveSessionDataCallback&&) = 0;
 
     virtual void storeRecordOfKeyUsage(const String& sessionId) = 0;
+
+    using PlatformDisplayID = uint32_t;
+    virtual void displayChanged(PlatformDisplayID) { }
 };
 
 } // namespace WebCore

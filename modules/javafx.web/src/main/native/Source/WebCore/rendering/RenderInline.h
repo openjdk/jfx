@@ -77,8 +77,6 @@ public:
     void absoluteQuadsForSelection(Vector<FloatQuad>& quads) const override;
 #endif
 
-    void updateDragState(bool dragOn) final;
-
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) final;
@@ -86,11 +84,12 @@ public:
 
     bool alwaysCreateLineBoxes() const { return renderInlineAlwaysCreatesLineBoxes(); }
     void setAlwaysCreateLineBoxes() { setRenderInlineAlwaysCreatesLineBoxes(true); }
+    bool shouldCreateLineBoxes() const;
     void updateAlwaysCreateLineBoxes(bool fullLayout);
 
-    LayoutRect localCaretRect(InlineBox*, unsigned, LayoutUnit* extraWidthToEndOfLine) final;
-
     bool hitTestCulledInline(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset);
+
+    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
 
 protected:
     void willBeDestroyed() override;
@@ -109,6 +108,8 @@ private:
     InlineBox* culledInlineFirstLineBox() const;
     InlineBox* culledInlineLastLineBox() const;
 
+    void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
+
     template<typename GeneratorContext>
     void generateLineBoxRects(GeneratorContext& yield) const;
     template<typename GeneratorContext>
@@ -119,8 +120,6 @@ private:
     void paint(PaintInfo&, const LayoutPoint&) final;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
-
-    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
 
     LayoutUnit offsetLeft() const final;
     LayoutUnit offsetTop() const final;
@@ -150,10 +149,6 @@ private:
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) final;
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) final;
-
-#if ENABLE(DASHBOARD_SUPPORT)
-    void addAnnotatedRegions(Vector<AnnotatedRegionValue>&) final;
-#endif
 
     void paintOutlineForLine(GraphicsContext&, const LayoutPoint&, const LayoutRect& prevLine, const LayoutRect& thisLine, const LayoutRect& nextLine, const Color&);
 

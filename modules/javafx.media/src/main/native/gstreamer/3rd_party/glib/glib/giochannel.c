@@ -37,9 +37,9 @@
 #include "giochannel.h"
 
 #include "gstrfuncs.h"
+#include "gstrfuncsprivate.h"
 #include "gtestutils.h"
 #include "glibintl.h"
-#include "gunicodeprivate.h"
 
 
 /**
@@ -136,7 +136,7 @@
  * @G_IO_STATUS_EOF: End of file.
  * @G_IO_STATUS_AGAIN: Resource temporarily unavailable.
  *
- * Stati returned by most of the #GIOFuncs functions.
+ * Statuses returned by most of the #GIOFuncs functions.
  **/
 
 /**
@@ -160,18 +160,18 @@
  * which is used in g_io_channel_read_to_end ().
  */
 #define USE_BUF(channel)    ((channel)->encoding ? (channel)->encoded_read_buf \
-                 : (channel)->read_buf)
+         : (channel)->read_buf)
 #define BUF_LEN(string)     ((string) ? (string)->len : 0)
 
 static GIOError     g_io_error_get_from_g_error (GIOStatus    status,
-                             GError      *err);
+               GError      *err);
 static void     g_io_channel_purge      (GIOChannel  *channel);
 static GIOStatus    g_io_channel_fill_buffer    (GIOChannel  *channel,
-                             GError     **err);
+               GError     **err);
 static GIOStatus    g_io_channel_read_line_backend  (GIOChannel  *channel,
-                             gsize       *length,
-                             gsize       *terminator_pos,
-                             GError     **error);
+               gsize       *length,
+               gsize       *terminator_pos,
+               GError     **error);
 
 /**
  * g_io_channel_init:
@@ -259,7 +259,7 @@ g_io_channel_unref (GIOChannel *channel)
 
 static GIOError
 g_io_error_get_from_g_error (GIOStatus  status,
-                 GError    *err)
+           GError    *err)
 {
   switch (status)
     {
@@ -269,7 +269,7 @@ g_io_error_get_from_g_error (GIOStatus  status,
       case G_IO_STATUS_AGAIN:
         return G_IO_ERROR_AGAIN;
       case G_IO_STATUS_ERROR:
-    g_return_val_if_fail (err != NULL, G_IO_ERROR_UNKNOWN);
+  g_return_val_if_fail (err != NULL, G_IO_ERROR_UNKNOWN);
 
         if (err->domain != G_IO_CHANNEL_ERROR)
           return G_IO_ERROR_UNKNOWN;
@@ -301,9 +301,9 @@ g_io_error_get_from_g_error (GIOStatus  status,
  **/
 GIOError
 g_io_channel_read (GIOChannel *channel,
-           gchar      *buf,
-           gsize       count,
-           gsize      *bytes_read)
+       gchar      *buf,
+       gsize       count,
+       gsize      *bytes_read)
 {
   GError *err = NULL;
   GIOError error;
@@ -346,9 +346,9 @@ g_io_channel_read (GIOChannel *channel,
  **/
 GIOError
 g_io_channel_write (GIOChannel  *channel,
-            const gchar *buf,
-            gsize        count,
-            gsize       *bytes_written)
+        const gchar *buf,
+        gsize        count,
+        gsize       *bytes_written)
 {
   GError *err = NULL;
   GIOError error;
@@ -385,8 +385,8 @@ g_io_channel_write (GIOChannel  *channel,
  **/
 GIOError
 g_io_channel_seek (GIOChannel *channel,
-           gint64      offset,
-           GSeekType   type)
+       gint64      offset,
+       GSeekType   type)
 {
   GError *err = NULL;
   GIOError error;
@@ -483,8 +483,8 @@ g_io_channel_close (GIOChannel *channel)
  **/
 GIOStatus
 g_io_channel_shutdown (GIOChannel  *channel,
-               gboolean     flush,
-               GError     **err)
+           gboolean     flush,
+           GError     **err)
 {
   GIOStatus status, result;
   GError *tmperr = NULL;
@@ -597,6 +597,9 @@ g_io_channel_purge (GIOChannel *channel)
  * given @channel. For example, if condition is #G_IO_IN, the source will
  * be dispatched when there's data available for reading.
  *
+ * The callback function invoked by the #GSource should be added with
+ * g_source_set_callback(), but it has type #GIOFunc (not #GSourceFunc).
+ *
  * g_io_add_watch() is a simpler interface to this same functionality, for
  * the case where you want to add the source to the default main loop context
  * at the default priority.
@@ -609,7 +612,7 @@ g_io_channel_purge (GIOChannel *channel)
  */
 GSource *
 g_io_create_watch (GIOChannel   *channel,
-           GIOCondition  condition)
+       GIOCondition  condition)
 {
   g_return_val_if_fail (channel != NULL, NULL);
 
@@ -636,11 +639,11 @@ g_io_create_watch (GIOChannel   *channel,
  */
 guint
 g_io_add_watch_full (GIOChannel    *channel,
-             gint           priority,
-             GIOCondition   condition,
-             GIOFunc        func,
-             gpointer       user_data,
-             GDestroyNotify notify)
+         gint           priority,
+         GIOCondition   condition,
+         GIOFunc        func,
+         gpointer       user_data,
+         GDestroyNotify notify)
 {
   GSource *source;
   guint id;
@@ -699,9 +702,9 @@ g_io_add_watch_full (GIOChannel    *channel,
  **/
 guint
 g_io_add_watch (GIOChannel   *channel,
-        GIOCondition  condition,
-        GIOFunc       func,
-        gpointer      user_data)
+    GIOCondition  condition,
+    GIOFunc       func,
+    gpointer      user_data)
 {
   return g_io_add_watch_full (channel, G_PRIORITY_DEFAULT, condition, func, user_data, NULL);
 }
@@ -882,19 +885,28 @@ g_io_channel_get_buffer_size (GIOChannel *channel)
 void
 g_io_channel_set_line_term (GIOChannel  *channel,
                             const gchar *line_term,
-                gint         length)
+          gint         length)
 {
+  guint length_unsigned;
+
   g_return_if_fail (channel != NULL);
   g_return_if_fail (line_term == NULL || length != 0); /* Disallow "" */
 
   if (line_term == NULL)
-    length = 0;
-  else if (length < 0)
-    length = strlen (line_term);
+    length_unsigned = 0;
+  else if (length >= 0)
+    length_unsigned = (guint) length;
+  else
+    {
+      /* FIXME: We’re constrained by line_term_len being a guint here */
+      gsize length_size = strlen (line_term);
+      g_return_if_fail (length_size <= G_MAXUINT);
+      length_unsigned = (guint) length_size;
+    }
 
   g_free (channel->line_term);
-  channel->line_term = line_term ? g_memdup (line_term, length) : NULL;
-  channel->line_term_len = length;
+  channel->line_term = line_term ? g_memdup2 (line_term, length_unsigned) : NULL;
+  channel->line_term_len = length_unsigned;
 }
 
 /**
@@ -911,7 +923,7 @@ g_io_channel_set_line_term (GIOChannel  *channel,
  **/
 const gchar *
 g_io_channel_get_line_term (GIOChannel *channel,
-                gint       *length)
+          gint       *length)
 {
   g_return_val_if_fail (channel != NULL, NULL);
 
@@ -965,11 +977,11 @@ g_io_channel_set_flags (GIOChannel  *channel,
 {
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
 
   return (*channel->funcs->io_set_flags) (channel,
-                      flags & G_IO_FLAG_SET_MASK,
-                      error);
+            flags & G_IO_FLAG_SET_MASK,
+            error);
 }
 
 /**
@@ -1024,7 +1036,7 @@ g_io_channel_get_flags (GIOChannel *channel)
  **/
 void
 g_io_channel_set_close_on_unref (GIOChannel *channel,
-                                 gboolean    do_close)
+         gboolean    do_close)
 {
   g_return_if_fail (channel != NULL);
 
@@ -1087,7 +1099,7 @@ g_io_channel_seek_position (GIOChannel  *channel,
 
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->is_seekable, G_IO_STATUS_ERROR);
 
   switch (type)
@@ -1174,7 +1186,7 @@ g_io_channel_seek_position (GIOChannel  *channel,
  **/
 GIOStatus
 g_io_channel_flush (GIOChannel  *channel,
-                    GError     **error)
+        GError     **error)
 {
   GIOStatus status;
   gsize this_time = 1, bytes_written = 0;
@@ -1190,9 +1202,9 @@ g_io_channel_flush (GIOChannel  *channel,
       g_assert (this_time > 0);
 
       status = channel->funcs->io_write (channel,
-                     channel->write_buf->str + bytes_written,
-                     channel->write_buf->len - bytes_written,
-                     &this_time, error);
+           channel->write_buf->str + bytes_written,
+           channel->write_buf->len - bytes_written,
+           &this_time, error);
       bytes_written += this_time;
     }
   while ((bytes_written < channel->write_buf->len)
@@ -1309,10 +1321,12 @@ g_io_channel_get_buffered (GIOChannel *channel)
 GIOStatus
 g_io_channel_set_encoding (GIOChannel   *channel,
                            const gchar  *encoding,
-                           GError      **error)
+         GError      **error)
 {
   GIConv read_cd, write_cd;
+#ifndef G_DISABLE_ASSERT
   gboolean did_encode;
+#endif
 
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL), G_IO_STATUS_ERROR);
@@ -1320,7 +1334,7 @@ g_io_channel_set_encoding (GIOChannel   *channel,
   /* Make sure the encoded buffers are empty */
 
   g_return_val_if_fail (!channel->do_encode || !channel->encoded_read_buf ||
-            channel->encoded_read_buf->len == 0, G_IO_STATUS_ERROR);
+      channel->encoded_read_buf->len == 0, G_IO_STATUS_ERROR);
 
   if (!channel->use_buffer)
     {
@@ -1336,7 +1350,9 @@ g_io_channel_set_encoding (GIOChannel   *channel,
       channel->partial_write_buf[0] = '\0';
     }
 
+#ifndef G_DISABLE_ASSERT
   did_encode = channel->do_encode;
+#endif
 
   if (!encoding || strcmp (encoding, "UTF8") == 0 || strcmp (encoding, "UTF-8") == 0)
     {
@@ -1520,7 +1536,7 @@ reencode:
                - outbytes_left;
 
       errnum = g_iconv (channel->read_cd, &inbuf, &inbytes_left,
-            &outbuf, &outbytes_left);
+      &outbuf, &outbytes_left);
       errval = errno;
 
       g_assert (inbuf + inbytes_left == channel->read_buf->str
@@ -1529,9 +1545,9 @@ reencode:
                 + channel->encoded_read_buf->len);
 
       g_string_erase (channel->read_buf, 0,
-              channel->read_buf->len - inbytes_left);
+          channel->read_buf->len - inbytes_left);
       g_string_truncate (channel->encoded_read_buf,
-             channel->encoded_read_buf->len - outbytes_left);
+       channel->encoded_read_buf->len - outbytes_left);
 
       if (errnum == (gsize) -1)
         {
@@ -1644,8 +1660,8 @@ GIOStatus
 g_io_channel_read_line (GIOChannel  *channel,
                         gchar      **str_return,
                         gsize       *length,
-            gsize       *terminator_pos,
-                GError     **error)
+      gsize       *terminator_pos,
+            GError     **error)
 {
   GIOStatus status;
   gsize got_length;
@@ -1653,7 +1669,7 @@ g_io_channel_read_line (GIOChannel  *channel,
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail (str_return != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->is_readable, G_IO_STATUS_ERROR);
 
   status = g_io_channel_read_line_backend (channel, &got_length, terminator_pos, error);
@@ -1663,8 +1679,16 @@ g_io_channel_read_line (GIOChannel  *channel,
 
   if (status == G_IO_STATUS_NORMAL)
     {
+      gchar *line;
+
+      /* Copy the read bytes (including any embedded nuls) and nul-terminate.
+       * `USE_BUF (channel)->str` is guaranteed to be nul-terminated as it’s a
+       * #GString, so it’s safe to call g_memdup2() with +1 length to allocate
+       * a nul-terminator. */
       g_assert (USE_BUF (channel));
-      *str_return = g_strndup (USE_BUF (channel)->str, got_length);
+      line = g_memdup2 (USE_BUF (channel)->str, got_length + 1);
+      line[got_length] = '\0';
+      *str_return = g_steal_pointer (&line);
       g_string_erase (USE_BUF (channel), 0, got_length);
     }
   else
@@ -1699,7 +1723,7 @@ g_io_channel_read_line_string (GIOChannel  *channel,
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail (buffer != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->is_readable, G_IO_STATUS_ERROR);
 
   if (buffer->len > 0)
@@ -1840,7 +1864,7 @@ read_again:
                         goto done;
                       }
                     break;
-                  case '\0': /* Embeded null in input */
+                  case '\0': /* Embedded null in input */
                     line_length = nextchar - use_buf->str;
                     got_term_len = 1;
                     goto done;
@@ -1869,9 +1893,9 @@ read_again:
         }
 
       if (use_buf->len > line_term_len - 1)
-    checked_to = use_buf->len - (line_term_len - 1);
+  checked_to = use_buf->len - (line_term_len - 1);
       else
-    checked_to = 0;
+  checked_to = 0;
     }
 
 done:
@@ -1958,9 +1982,9 @@ g_io_channel_read_to_end (GIOChannel  *channel,
         g_string_free (USE_BUF (channel), TRUE);
 
       if (channel->encoding)
-    channel->encoded_read_buf = NULL;
+  channel->encoded_read_buf = NULL;
       else
-    channel->read_buf = NULL;
+  channel->read_buf = NULL;
     }
 
   return G_IO_STATUS_NORMAL;
@@ -1972,7 +1996,7 @@ g_io_channel_read_to_end (GIOChannel  *channel,
  * @buf: (out caller-allocates) (array length=count) (element-type guint8):
  *     a buffer to read data into
  * @count: (in): the size of the buffer. Note that the buffer may not be
- *     complelely filled even if there is data in the buffer if the
+ *     completely filled even if there is data in the buffer if the
  *     remaining data is not a complete character.
  * @bytes_read: (out) (optional): The number of bytes read. This may be
  *     zero even on success if count < 6 and the channel's encoding
@@ -2100,15 +2124,15 @@ g_io_channel_read_chars (GIOChannel  *channel,
  **/
 GIOStatus
 g_io_channel_read_unichar (GIOChannel  *channel,
-               gunichar    *thechar,
-               GError     **error)
+         gunichar    *thechar,
+         GError     **error)
 {
   GIOStatus status = G_IO_STATUS_NORMAL;
 
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->encoding != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->is_readable, G_IO_STATUS_ERROR);
 
   while (BUF_LEN (channel->encoded_read_buf) == 0 && status == G_IO_STATUS_NORMAL)
@@ -2174,21 +2198,23 @@ GIOStatus
 g_io_channel_write_chars (GIOChannel   *channel,
                           const gchar  *buf,
                           gssize        count,
-              gsize        *bytes_written,
+        gsize        *bytes_written,
                           GError      **error)
 {
+  gsize count_unsigned;
   GIOStatus status;
   gssize wrote_bytes = 0;
 
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->is_writeable, G_IO_STATUS_ERROR);
 
   if ((count < 0) && buf)
     count = strlen (buf);
+  count_unsigned = count;
 
-  if (count == 0)
+  if (count_unsigned == 0)
     {
       if (bytes_written)
         *bytes_written = 0;
@@ -2196,7 +2222,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
     }
 
   g_return_val_if_fail (buf != NULL, G_IO_STATUS_ERROR);
-  g_return_val_if_fail (count > 0, G_IO_STATUS_ERROR);
+  g_return_val_if_fail (count_unsigned > 0, G_IO_STATUS_ERROR);
 
   /* Raw write case */
 
@@ -2207,10 +2233,11 @@ g_io_channel_write_chars (GIOChannel   *channel,
       g_assert (!channel->write_buf || channel->write_buf->len == 0);
       g_assert (channel->partial_write_buf[0] == '\0');
 
-      status = channel->funcs->io_write (channel, buf, count, &tmp_bytes, error);
+      status = channel->funcs->io_write (channel, buf, count_unsigned,
+                                         &tmp_bytes, error);
 
       if (bytes_written)
-    *bytes_written = tmp_bytes;
+  *bytes_written = tmp_bytes;
 
       return status;
     }
@@ -2283,7 +2310,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
 
       if (!channel->encoding)
         {
-          gssize write_this = MIN (space_in_buf, count - wrote_bytes);
+          gssize write_this = MIN (space_in_buf, count_unsigned - wrote_bytes);
 
           g_string_append_len (channel->write_buf, buf, write_this);
           buf += write_this;
@@ -2303,7 +2330,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
               from_buf = channel->partial_write_buf;
               from_buf_old_len = strlen (channel->partial_write_buf);
               g_assert (from_buf_old_len > 0);
-              from_buf_len = MIN (6, from_buf_old_len + count);
+              from_buf_len = MIN (6, from_buf_old_len + count_unsigned);
 
               memcpy (channel->partial_write_buf + from_buf_old_len, buf,
                       from_buf_len - from_buf_old_len);
@@ -2311,7 +2338,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
           else
             {
               from_buf = buf;
-              from_buf_len = count - wrote_bytes;
+              from_buf_len = count_unsigned - wrote_bytes;
               from_buf_old_len = 0;
             }
 
@@ -2324,7 +2351,7 @@ reconvert:
 
               /* UTF-8, just validate, emulate g_iconv */
 
-              if (!_g_utf8_validate_len (from_buf, try_len, &badchar))
+              if (!g_utf8_validate_len (from_buf, try_len, &badchar))
                 {
                   gunichar try_char;
                   gsize incomplete_len = from_buf + try_len - badchar;
@@ -2357,7 +2384,7 @@ reconvert:
                       default:
                         g_assert_not_reached ();
                         err = (gsize) -1;
-                        errnum = 0; /* Don't confunse the compiler */
+                        errnum = 0; /* Don't confuse the compiler */
                     }
                 }
               else
@@ -2390,7 +2417,7 @@ reconvert:
           if (err == (gsize) -1)
             {
               switch (errnum)
-            {
+          {
                   case EINVAL:
                     g_assert (left_len < 6);
 
@@ -2401,7 +2428,7 @@ reconvert:
                         memcpy (channel->partial_write_buf, from_buf, left_len);
                         channel->partial_write_buf[left_len] = '\0';
                         if (bytes_written)
-                          *bytes_written = count;
+                          *bytes_written = count_unsigned;
                         return G_IO_STATUS_NORMAL;
                       }
 
@@ -2413,12 +2440,12 @@ reconvert:
                          * less than a full character
                          */
 
-                        g_assert (count == from_buf_len - from_buf_old_len);
+                        g_assert (count_unsigned == from_buf_len - from_buf_old_len);
 
                         channel->partial_write_buf[from_buf_len] = '\0';
 
                         if (bytes_written)
-                          *bytes_written = count;
+                          *bytes_written = count_unsigned;
 
                         return G_IO_STATUS_NORMAL;
                       }
@@ -2480,7 +2507,7 @@ reconvert:
     }
 
   if (bytes_written)
-    *bytes_written = count;
+    *bytes_written = count_unsigned;
 
   return G_IO_STATUS_NORMAL;
 }
@@ -2499,8 +2526,8 @@ reconvert:
  **/
 GIOStatus
 g_io_channel_write_unichar (GIOChannel  *channel,
-                gunichar     thechar,
-                GError     **error)
+          gunichar     thechar,
+          GError     **error)
 {
   GIOStatus status;
   gchar static_buf[6];
@@ -2509,7 +2536,7 @@ g_io_channel_write_unichar (GIOChannel  *channel,
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->encoding != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL),
-            G_IO_STATUS_ERROR);
+      G_IO_STATUS_ERROR);
   g_return_val_if_fail (channel->is_writeable, G_IO_STATUS_ERROR);
 
   char_len = g_unichar_to_utf8 (thechar, static_buf);

@@ -29,18 +29,22 @@
 
 #pragma once
 
+#include "Exception.h"
 #include "InjectedScript.h"
-#include "InjectedScriptHost.h"
 #include "InspectorEnvironment.h"
+#include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/NakedPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 }
 
 namespace Inspector {
+
+class InjectedScriptHost;
 
 class JS_EXPORT_PRIVATE InjectedScriptManager {
     WTF_MAKE_NONCOPYABLE(InjectedScriptManager);
@@ -49,28 +53,30 @@ public:
     InjectedScriptManager(InspectorEnvironment&, Ref<InjectedScriptHost>&&);
     virtual ~InjectedScriptManager();
 
+    virtual void connect();
     virtual void disconnect();
     virtual void discardInjectedScripts();
 
     InjectedScriptHost& injectedScriptHost();
     InspectorEnvironment& inspectorEnvironment() const { return m_environment; }
 
-    InjectedScript injectedScriptFor(JSC::ExecState*);
+    InjectedScript injectedScriptFor(JSC::JSGlobalObject*);
     InjectedScript injectedScriptForId(int);
-    int injectedScriptIdFor(JSC::ExecState*);
+    int injectedScriptIdFor(JSC::JSGlobalObject*);
     InjectedScript injectedScriptForObjectId(const String& objectId);
     void releaseObjectGroup(const String& objectGroup);
+    void clearEventValue();
     void clearExceptionValue();
 
 protected:
     virtual void didCreateInjectedScript(const InjectedScript&);
 
     HashMap<int, InjectedScript> m_idToInjectedScript;
-    HashMap<JSC::ExecState*, int> m_scriptStateToId;
+    HashMap<JSC::JSGlobalObject*, int> m_scriptStateToId;
 
 private:
     String injectedScriptSource();
-    JSC::JSObject* createInjectedScript(const String& source, JSC::ExecState*, int id);
+    Expected<JSC::JSObject*, NakedPtr<JSC::Exception>> createInjectedScript(const String& source, JSC::JSGlobalObject*, int id);
 
     InspectorEnvironment& m_environment;
     Ref<InjectedScriptHost> m_injectedScriptHost;

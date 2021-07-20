@@ -26,15 +26,14 @@
 #pragma once
 
 #include "GenericTypedArrayView.h"
-#include "JSGlobalObject.h"
+#include "JSGlobalObjectInlines.h"
 
 namespace JSC {
 
 template<typename Adaptor>
 GenericTypedArrayView<Adaptor>::GenericTypedArrayView(
-    RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
-    : ArrayBufferView(WTFMove(buffer), byteOffset)
-    , m_length(length)
+RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
+    : ArrayBufferView(WTFMove(buffer), byteOffset, length * sizeof(typename Adaptor::Type))
 {
 }
 
@@ -88,7 +87,9 @@ template<typename Adaptor>
 RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate(
     RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
 {
-    ASSERT(buffer);
+    if (!buffer)
+        return nullptr;
+
     if (!ArrayBufferView::verifySubRangeLength(*buffer, byteOffset, length, sizeof(typename Adaptor::Type))
         || !verifyByteOffsetAlignment(byteOffset, sizeof(typename Adaptor::Type))) {
         return nullptr;
@@ -137,11 +138,10 @@ GenericTypedArrayView<Adaptor>::subarray(int start, int end) const
 }
 
 template<typename Adaptor>
-JSArrayBufferView* GenericTypedArrayView<Adaptor>::wrap(
-    ExecState* exec, JSGlobalObject* globalObject)
+JSArrayBufferView* GenericTypedArrayView<Adaptor>::wrap(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject)
 {
-    return Adaptor::JSViewType::create(
-        exec->vm(), globalObject->typedArrayStructure(Adaptor::typeValue), this);
+    UNUSED_PARAM(lexicalGlobalObject);
+    return Adaptor::JSViewType::create(globalObject->vm(), globalObject->typedArrayStructure(Adaptor::typeValue), this);
 }
 
 } // namespace JSC

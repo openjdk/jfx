@@ -27,9 +27,10 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayBox.h"
 #include "LayoutBox.h"
-#include "LayoutUnit.h"
+#include "LayoutBoxGeometry.h"
+#include "LayoutPoint.h"
+#include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -37,58 +38,70 @@ namespace WebCore {
 
 namespace Layout {
 
-class FloatingState;
-class LayoutState;
-
 class FloatAvoider {
     WTF_MAKE_ISO_ALLOCATED(FloatAvoider);
 public:
-    FloatAvoider(const Box&, const FloatingState&, const LayoutState&);
+    FloatAvoider(LayoutPoint absoluteTopLeft, LayoutUnit borderBoxWidth, const Edges& margin, HorizontalEdges containingBlockAbsoluteContentBox, bool isFloatingPositioned, bool isLeftAligned);
     virtual ~FloatAvoider() = default;
 
-    virtual Display::Box::Rect rect() const { return m_absoluteDisplayBox.rect(); }
-    Display::Box::Rect rectInContainingBlock() const;
-
-    struct HorizontalConstraints {
-        Optional<PositionInContextRoot> left;
-        Optional<PositionInContextRoot> right;
-    };
-    void setHorizontalConstraints(HorizontalConstraints);
-    void setVerticalConstraint(PositionInContextRoot);
+    void setHorizontalPosition(LayoutUnit);
+    void setVerticalPosition(LayoutUnit);
+    void resetHorizontalPosition() { m_absoluteTopLeft.setX(initialHorizontalPosition()); }
 
     bool overflowsContainingBlock() const;
 
-    void resetPosition();
+    LayoutUnit top() const;
+    LayoutUnit left() const;
+    LayoutUnit right() const;
 
-protected:
-    virtual bool isLeftAligned() const { return layoutBox().style().isLeftToRightDirection(); }
-    virtual PositionInContextRoot initialHorizontalPosition() const;
-    virtual PositionInContextRoot initialVerticalPosition() const { return m_initialVerticalPosition; }
-
-    void resetHorizontalConstraints();
-
-    virtual PositionInContextRoot horizontalPositionCandidate(HorizontalConstraints);
-    virtual PositionInContextRoot verticalPositionCandidate(PositionInContextRoot);
-
-    LayoutUnit marginBefore() const { return displayBox().marginBefore(); }
-    LayoutUnit marginAfter() const { return displayBox().marginAfter(); }
-    // Do not use the used values here because they computed as if this box was not a float avoider.
-    LayoutUnit marginStart() const { return displayBox().computedMarginStart().valueOr(0); }
-    LayoutUnit marginEnd() const { return displayBox().computedMarginEnd().valueOr(0); }
-
-    LayoutUnit marginBoxWidth() const { return marginStart() + displayBox().width() + marginEnd(); }
-
-    const FloatingState& floatingState() const { return m_floatingState; }
-    const Box& layoutBox() const { return *m_layoutBox; }
-    const Display::Box& displayBox() const { return m_absoluteDisplayBox; }
+    bool isLeftAligned() const { return m_isLeftAligned; }
 
 private:
-    WeakPtr<const Box> m_layoutBox;
-    const FloatingState& m_floatingState;
-    Display::Box m_absoluteDisplayBox;
-    Display::Box m_containingBlockAbsoluteDisplayBox;
-    PositionInContextRoot m_initialVerticalPosition;
+    LayoutUnit borderBoxWidth() const { return m_borderBoxWidth; }
+    LayoutUnit initialHorizontalPosition() const;
+
+    LayoutUnit marginBefore() const { return m_margin.vertical.top; }
+    LayoutUnit marginAfter() const { return m_margin.vertical.bottom; }
+    LayoutUnit marginStart() const { return m_margin.horizontal.left; }
+    LayoutUnit marginEnd() const { return m_margin.horizontal.right; }
+    LayoutUnit marginBoxWidth() const { return marginStart() + borderBoxWidth() + marginEnd(); }
+
+    bool isFloatingBox() const { return m_isFloatingPositioned; }
+
+private:
+    // These coordinate values are relative to the formatting root's border box.
+    LayoutPoint m_absoluteTopLeft;
+    // Note that float avoider should work with no height value.
+    LayoutUnit m_borderBoxWidth;
+    Edges m_margin;
+    HorizontalEdges m_containingBlockAbsoluteContentBox;
+    bool m_isFloatingPositioned { true };
+    bool m_isLeftAligned { true };
 };
+
+inline LayoutUnit FloatAvoider::top() const
+{
+    auto top = m_absoluteTopLeft.y();
+    if (isFloatingBox())
+        top -= marginBefore();
+    return top;
+}
+
+inline LayoutUnit FloatAvoider::left() const
+{
+    auto left = m_absoluteTopLeft.x();
+    if (isFloatingBox())
+        left -= marginStart();
+    return left;
+}
+
+inline LayoutUnit FloatAvoider::right() const
+{
+    auto right = left() + borderBoxWidth();
+    if (isFloatingBox())
+        right += marginAfter();
+    return right;
+}
 
 }
 }

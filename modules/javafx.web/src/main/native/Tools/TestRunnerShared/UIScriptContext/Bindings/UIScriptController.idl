@@ -38,41 +38,57 @@ enum ModifierKey {
     "shift"
 };
 
+dictionary ScrollToOptions {
+    boolean unconstrained = false;
+};
+
 interface UIScriptController {
 
-    void doAsyncTask(object callback); // Used to test the harness.
-    void uiScriptComplete(DOMString result);
+    undefined doAsyncTask(object callback); // Used to test the harness.
+    undefined uiScriptComplete(DOMString result);
 
-    void doAfterPresentationUpdate(object callback); // Call the callback after sending a message to the WebProcess and receiving a subsequent update.
-    void doAfterNextStablePresentationUpdate(object callback);
+    undefined doAfterPresentationUpdate(object callback); // Call the callback after sending a message to the WebProcess and receiving a subsequent update.
+    undefined doAfterNextStablePresentationUpdate(object callback);
+    undefined ensurePositionInformationIsUpToDateAt(long x, long y, object callback);
+    undefined doAfterVisibleContentRectUpdate(object callback);
 
-    void doAfterVisibleContentRectUpdate(object callback);
+    undefined doAfterDoubleTapDelay(object callback);
 
-    void simulateAccessibilitySettingsChangeNotification(object callback);
+    undefined simulateAccessibilitySettingsChangeNotification(object callback);
 
     // Interaction.
     // These functions post events asynchronously. The callback is fired when the events have been dispatched, but any
-    // resulting behavior may also be asynchronous.
-    void touchDownAtPoint(long x, long y, long touchCount, object callback);
-    void liftUpAtPoint(long x, long y, long touchCount, object callback);
-    void singleTapAtPoint(long x, long y, object callback);
-    void singleTapAtPointWithModifiers(long x, long y, object modifierArray, object callback);
-    void doubleTapAtPoint(long x, long y, object callback);
-    void dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, object callback);
+    // resulting behavior may also be asynchronous. Points are in "global" (WKWebView) coordinates.
+    undefined touchDownAtPoint(long x, long y, long touchCount, object callback);
+    undefined liftUpAtPoint(long x, long y, long touchCount, object callback);
+    undefined singleTapAtPoint(long x, long y, object callback);
+    undefined singleTapAtPointWithModifiers(long x, long y, object modifierArray, object callback);
+    undefined twoFingerSingleTapAtPoint(long x, long y, object callback);
+    undefined doubleTapAtPoint(long x, long y, float delay, object callback);
+    undefined dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, object callback);
 
-    void longPressAtPoint(long x, long y, object callback);
+    undefined activateAtPoint(long x, long y, object callback);
 
-    void stylusDownAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
-    void stylusMoveToPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
-    void stylusUpAtPoint(long x, long y, object callback);
-    void stylusTapAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
-    void stylusTapAtPointWithModifiers(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object modifierArray, object callback);
+    undefined longPressAtPoint(long x, long y, object callback);
 
-    void enterText(DOMString text);
-    void typeCharacterUsingHardwareKeyboard(DOMString character, object callback);
+    undefined stylusDownAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
+    undefined stylusMoveToPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
+    undefined stylusUpAtPoint(long x, long y, object callback);
+    undefined stylusTapAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
+    undefined stylusTapAtPointWithModifiers(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object modifierArray, object callback);
 
-    void keyDown(DOMString character, object modifierArray);
-    void toggleCapsLock(object callback);
+    undefined enterText(DOMString text);
+    undefined typeCharacterUsingHardwareKeyboard(DOMString character, object callback);
+
+    undefined keyDown(DOMString character, object modifierArray);
+    undefined toggleCapsLock(object callback);
+    undefined setContinuousSpellCheckingEnabled(boolean enabled);
+    undefined setSpellCheckerResults(object results);
+
+    readonly attribute boolean keyboardIsAutomaticallyShifted;
+
+    undefined rawKeyDown(DOMString key);
+    undefined rawKeyUp(DOMString key);
 
     // eventsJSON describes a series of user events in JSON form. For the keys, see HIDEventGenerator.mm.
     // For example, this JSON describes a touch down followed by a touch up (i.e. a single tap).
@@ -177,15 +193,17 @@ interface UIScriptController {
     //          },
     //      ]
     //  }
-    void sendEventStream(DOMString eventsJSON, object callback);
+    undefined sendEventStream(DOMString eventsJSON, object callback);
 
-    void beginBackSwipe(object callback);
-    void completeBackSwipe(object callback);
+    undefined beginBackSwipe(object callback);
+    undefined completeBackSwipe(object callback);
 
-    void playBackEventStream(DOMString eventStream, object callback);
+    undefined playBackEventStream(DOMString eventStream, object callback);
 
     // Equivalent of pressing the Done button in the form accessory bar.
-    void dismissFormAccessoryView();
+    undefined dismissFormAccessoryView();
+
+    undefined dismissFilePicker(object callback);
 
     readonly attribute DOMString textContentType;
 
@@ -193,27 +211,37 @@ interface UIScriptController {
     attribute object didStartFormControlInteractionCallback;
     attribute object didEndFormControlInteractionCallback;
 
-    // Force press preview handling
-    attribute object didShowForcePressPreviewCallback;
-    attribute object didDismissForcePressPreviewCallback;
+    // Pop Over preview handling
+    attribute object didShowContextMenuCallback;
+    attribute object didDismissContextMenuCallback;
+
+    readonly attribute boolean isShowingContextMenu;
 
     // <select> picker
-    void selectFormAccessoryPickerRow(long rowIndex);
+    undefined selectFormAccessoryPickerRow(long rowIndex);
+    boolean selectFormAccessoryHasCheckedItemAtRow(long rowIndex);
     readonly attribute DOMString selectFormPopoverTitle;
     readonly attribute DOMString formInputLabel;
 
-    void setTimePickerValue(long hour, long minute);
+    undefined setTimePickerValue(long hour, long minute);
+    readonly attribute double timePickerValueHour;
+    readonly attribute double timePickerValueMinute;
 
-    // Share sheet
-    void setShareSheetCompletesImmediatelyWithResolution(boolean resolved);
+    readonly attribute boolean isShowingDateTimePicker;
+    readonly attribute double dateTimePickerValue;
+    undefined chooseDateTimePickerValue();
 
     // <datalist>
     readonly attribute boolean isShowingDataListSuggestions;
+    undefined activateDataListSuggestion(unsigned long index, object callback);
 
-    void keyboardAccessoryBarNext();
-    void keyboardAccessoryBarPrevious();
+    // <input type=color>
+    undefined setSelectedColorForColorPicker(double red, double green, double blue);
 
-    void applyAutocorrection(DOMString newString, DOMString oldString, object callback);
+    undefined keyboardAccessoryBarNext();
+    undefined keyboardAccessoryBarPrevious();
+
+    undefined applyAutocorrection(DOMString newString, DOMString oldString, object callback);
 
     // Returned object is a dictionary with the passed in string as a key for returned object
     object contentsOfUserInterfaceItem(DOMString interfaceItem);
@@ -222,26 +250,54 @@ interface UIScriptController {
     attribute object didShowKeyboardCallback;
     attribute object didHideKeyboardCallback;
     readonly attribute boolean isShowingKeyboard;
+    readonly attribute boolean hasInputSession;
+
+    attribute boolean windowIsKey;
+
+    attribute object didShowMenuCallback;
+    attribute object didHideMenuCallback;
+    readonly attribute boolean isDismissingMenu;
+    readonly attribute boolean isShowingMenu;
+    readonly attribute object menuRect;
+    object rectForMenuAction(DOMString action);
+    undefined chooseMenuAction(DOMString action, object callback);
+    undefined dismissMenu();
+
+    readonly attribute boolean isShowingPopover;
+    attribute object willPresentPopoverCallback;
+    attribute object didDismissPopoverCallback;
 
     attribute object willBeginZoomingCallback;
     attribute object didEndZoomingCallback;
 
-    void zoomToScale(double scale, object callback);
+    attribute object willCreateNewPageCallback;
 
-    void setViewScale(double scale);
-    void setMinimumEffectiveWidth(double effectiveWidth);
+    undefined zoomToScale(double scale, object callback);
 
-    void resignFirstResponder();
+    undefined setViewScale(double scale);
+    undefined setMinimumEffectiveWidth(double effectiveWidth);
+    undefined setAllowsViewportShrinkToFit(boolean allows);
+
+    undefined becomeFirstResponder();
+    undefined resignFirstResponder();
     readonly attribute boolean isPresentingModally;
+
+    undefined copyText(DOMString text);
+    undefined paste();
 
     readonly attribute double contentOffsetX;
     readonly attribute double contentOffsetY;
 
-    void scrollToOffset(long x, long y); // Initiate an animated scroll in the UI process.
+    attribute boolean scrollUpdatesDisabled; // Turns off notifications back to the web process after scrolls (used for testing scrolling tree).
+
+    undefined scrollToOffset(long x, long y, ScrollToOptions options); // Initiate an animated scroll in the UI process.
     attribute object didEndScrollingCallback;
 
-    void immediateScrollToOffset(long x, long y); // Set the scroll position in the UI process without animation.
-    void immediateZoomToScale(double scale); // Set the zoom scale in the UI process without animation.
+    undefined immediateScrollToOffset(long x, long y, ScrollToOptions options); // Set the scroll position in the UI process without animation.
+    undefined immediateZoomToScale(double scale); // Set the zoom scale in the UI process without animation.
+
+    // Find the scroller for the given point in content ("absolute") coordinates, and do an immediate scroll.
+    undefined immediateScrollElementAtContentPointToOffset(long x, long y, long xOffset, long yOffset);
 
     // View state
     readonly attribute double zoomScale;
@@ -261,43 +317,51 @@ interface UIScriptController {
     readonly attribute object selectionCaretViewRect;
     readonly attribute object selectionRangeViewRects;
     readonly attribute object calendarType;
-    void setDefaultCalendarType(DOMString calendarIdentifier);
+    undefined setDefaultCalendarType(DOMString calendarIdentifier, DOMString localeIdentifier);
     readonly attribute object inputViewBounds;
 
-    void setKeyboardInputModeIdentifier(DOMString identifier);
+    undefined setKeyboardInputModeIdentifier(DOMString identifier);
 
-    void replaceTextAtRange(DOMString text, long location, long length);
-    void removeAllDynamicDictionaries();
+    undefined replaceTextAtRange(DOMString text, long location, long length);
 
     readonly attribute DOMString scrollingTreeAsText;
 
+    boolean mayContainEditableElementsInRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);
+
     object propertiesOfLayerWithID(unsigned long long layerID);
 
-    void retrieveSpeakSelectionContent(object callback);
+    undefined retrieveSpeakSelectionContent(object callback);
     readonly attribute DOMString accessibilitySpeakSelectionContent;
     
-    void simulateRotation(DeviceOrientation orientation, object callback);
-    void simulateRotationLikeSafari(DeviceOrientation orientation, object callback);
+    undefined simulateRotation(DeviceOrientation orientation, object callback);
+    undefined simulateRotationLikeSafari(DeviceOrientation orientation, object callback);
 
-    void findString(DOMString string, unsigned long options, unsigned long maxCount);
+    undefined findString(DOMString string, unsigned long options, unsigned long maxCount);
 
     // Unparent and parent the web view, simulating, for example, tab switching.
-    void removeViewFromWindow(object callback);
-    void addViewToWindow(object callback);
+    undefined removeViewFromWindow(object callback);
+    undefined addViewToWindow(object callback);
 
-    void overridePreference(DOMString preference, DOMString value);
+    undefined installTapGestureOnWindow(object callback);
 
-    void setSafeAreaInsets(double top, double right, double bottom, double left);
+    undefined overridePreference(DOMString preference, DOMString value);
 
-    void firstResponderSuppressionForWebView(boolean shouldSuppress);
-    void makeWindowContentViewFirstResponder();
+    undefined setSafeAreaInsets(double top, double right, double bottom, double left);
+
+    undefined firstResponderSuppressionForWebView(boolean shouldSuppress);
+    undefined makeWindowContentViewFirstResponder();
     readonly attribute boolean isWindowContentViewFirstResponder;
 
-    object attachmentInfo(DOMString attachmentIdentifier);
+    undefined setHardwareKeyboardAttached(boolean attached);
 
-    // Editing
-    void drawSquareInEditableImage();
-    readonly attribute long numberOfStrokesInEditableImage;
+    object attachmentInfo(DOMString attachmentIdentifier);
+    undefined insertAttachmentForFilePath(DOMString filePath, DOMString contentType, object callback);
+
+    attribute object didShowContactPickerCallback;
+    attribute object didHideContactPickerCallback;
+    undefined dismissContactPickerWithContacts(object contacts);
+    readonly attribute boolean isShowingContactPicker;
+
     readonly attribute DOMString lastUndoLabel;
     readonly attribute DOMString firstRedoLabel;
 };

@@ -55,11 +55,11 @@ AffineTransform SVGTextElement::animatedLocalTransform() const
         TransformationMatrix t;
         // For now, the transform-origin is not taken into account
         // Also, any percentage values will not be taken into account
-        style->applyTransform(t, FloatRect(0, 0, 0, 0), RenderStyle::ExcludeTransformOrigin);
+        style->applyTransform(t, FloatRect(0, 0, 0, 0), RenderStyle::individualTransformOperations);
         // Flatten any 3D transform
         matrix = t.toAffineTransform();
     } else
-        transform().concatenate(matrix);
+        matrix = transform().concatenate();
 
     const AffineTransform* transform = const_cast<SVGTextElement*>(this)->supplementalTransform();
     if (transform)
@@ -76,9 +76,7 @@ bool SVGTextElement::childShouldCreateRenderer(const Node& child) const
 {
     if (child.isTextNode()
         || child.hasTagName(SVGNames::aTag)
-#if ENABLE(SVG_FONTS)
         || child.hasTagName(SVGNames::altGlyphTag)
-#endif
         || child.hasTagName(SVGNames::textPathTag)
         || child.hasTagName(SVGNames::trefTag)
         || child.hasTagName(SVGNames::tspanTag))

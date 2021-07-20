@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WHLSLUnsignedIntegerLiteral.h"
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLNativeTypeDeclaration.h"
 #include "WHLSLTypeReference.h"
@@ -39,10 +39,8 @@ namespace AST {
 
 int64_t UnsignedIntegerLiteral::valueForSelectedType() const
 {
-    ASSERT(m_type.resolvedType());
-    auto& typeReference = downcast<TypeReference>(*m_type.resolvedType());
-    ASSERT(typeReference.resolvedType());
-    auto& nativeTypeDeclaration = downcast<NativeTypeDeclaration>(*typeReference.resolvedType());
+    auto& typeReference = downcast<TypeReference>(m_type.resolvedType());
+    auto& nativeTypeDeclaration = downcast<NativeTypeDeclaration>(typeReference.resolvedType());
     return nativeTypeDeclaration.formatValueFromUnsignedInteger()(m_value);
 }
 
@@ -52,4 +50,4 @@ int64_t UnsignedIntegerLiteral::valueForSelectedType() const
 
 }
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

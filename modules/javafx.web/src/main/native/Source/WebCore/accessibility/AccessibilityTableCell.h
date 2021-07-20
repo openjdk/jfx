@@ -42,19 +42,19 @@ public:
 
     bool isTableCell() const final;
     bool isTableHeaderCell() const;
-    bool isColumnHeaderCell() const;
-    bool isRowHeaderCell() const;
+    bool isColumnHeaderCell() const override;
+    bool isRowHeaderCell() const override;
 
-    // fills in the start location and row span of cell
-    virtual void rowIndexRange(std::pair<unsigned, unsigned>& rowRange) const;
-    // fills in the start location and column span of cell
-    virtual void columnIndexRange(std::pair<unsigned, unsigned>& columnRange) const;
+    // Returns the start location and row span of the cell.
+    std::pair<unsigned, unsigned> rowIndexRange() const override;
+    // Returns the start location and column span of the cell.
+    std::pair<unsigned, unsigned> columnIndexRange() const override;
 
-    void columnHeaders(AccessibilityChildrenVector&);
-    void rowHeaders(AccessibilityChildrenVector&);
+    AccessibilityChildrenVector columnHeaders() override;
+    AccessibilityChildrenVector rowHeaders() override;
 
-    int axColumnIndex() const;
-    int axRowIndex() const;
+    int axColumnIndex() const override;
+    int axRowIndex() const override;
     int axColumnSpan() const;
     int axRowSpan() const;
     void setAXColIndexFromRow(int index) { m_axColIndexFromRow = index; }
@@ -77,8 +77,8 @@ private:
     String expandedTextValue() const final;
     bool supportsExpandedTextValue() const final;
 
-    bool isTableCellInSameRowGroup(AccessibilityTableCell*);
-    bool isTableCellInSameColGroup(AccessibilityTableCell*);
+    bool isTableCellInSameRowGroup(AXCoreObject*);
+    bool isTableCellInSameColGroup(AXCoreObject*);
 };
 
 } // namespace WebCore

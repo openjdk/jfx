@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,83 +26,111 @@
 #pragma once
 
 #include "IterationKind.h"
-#include "JSObject.h"
+#include "JSInternalFieldObjectImpl.h"
 #include "JSSet.h"
 
 namespace JSC {
 
-// Now, it is only used for serialization.
-class JSSetIterator final : public JSCell {
-    typedef HashMapBucket<HashMapBucketDataKey> HashMapBucketType;
+class JSSetIterator final : public JSInternalFieldObjectImpl<3> {
 public:
-    using Base = JSCell;
+    using HashMapBucketType = HashMapBucket<HashMapBucketDataKey>;
+    using Base = JSInternalFieldObjectImpl<3>;
 
     DECLARE_EXPORT_INFO;
 
+    enum class Field : uint8_t {
+        SetBucket = 0,
+        IteratedObject,
+        Kind,
+    };
+    static_assert(numberOfInternalFields == 3);
+
+    static std::array<JSValue, numberOfInternalFields> initialValues()
+    {
+        return { {
+            jsNull(),
+            jsNull(),
+            jsNumber(0),
+        } };
+    }
+
+    const WriteBarrier<Unknown>& internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
+    WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.setIteratorSpace<mode>();
+    }
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSSetIteratorType, StructureFlags), info());
     }
 
     static JSSetIterator* create(VM& vm, Structure* structure, JSSet* iteratedObject, IterationKind kind)
     {
-        JSSetIterator* instance = new (NotNull, allocateCell<JSSetIterator>(vm.heap)) JSSetIterator(vm, structure, iteratedObject, kind);
-        instance->finishCreation(vm, iteratedObject);
+        JSSetIterator* instance = new (NotNull, allocateCell<JSSetIterator>(vm.heap)) JSSetIterator(vm, structure);
+        instance->finishCreation(vm, iteratedObject, kind);
         return instance;
     }
 
-    ALWAYS_INLINE HashMapBucketType* advanceIter(ExecState* exec)
+    static JSSetIterator* createWithInitialValues(VM&, Structure*);
+
+    ALWAYS_INLINE HashMapBucketType* advanceIter(VM& vm)
     {
-        HashMapBucketType* prev = m_iter.get();
-        if (!prev)
+        HashMapBucketType* prev = iterator();
+        HashMapBucketType* sentinel = jsCast<HashMapBucketType*>(vm.sentinelSetBucket());
+        if (prev == sentinel)
             return nullptr;
-        VM& vm = exec->vm();
-        HashMapBucketType* bucket = m_iter->next();
+        HashMapBucketType* bucket = prev->next();
         while (bucket && bucket->deleted())
             bucket = bucket->next();
         if (!bucket) {
-            setIterator(vm, nullptr);
+            setIterator(vm, sentinel);
             return nullptr;
         }
-        setIterator(vm, bucket); // We keep m_iter on the last value since the first thing we do in this function is call next().
+        setIterator(vm, bucket); // We keep iterator on the last value since the first thing we do in this function is call next().
         return bucket;
     }
 
-    bool next(ExecState* exec, JSValue& value)
+    bool next(JSGlobalObject* globalObject, JSValue& value)
     {
-        HashMapBucketType* bucket = advanceIter(exec);
+        HashMapBucketType* bucket = advanceIter(getVM(globalObject));
         if (!bucket)
             return false;
 
-        if (m_kind == IterateValue || m_kind == IterateKey)
+        switch (kind()) {
+        case IterationKind::Values:
+        case IterationKind::Keys:
             value = bucket->key();
-        else
-            value = createPair(exec, bucket->key(), bucket->key());
+            break;
+        case IterationKind::Entries:
+            value = createPair(globalObject, bucket->key(), bucket->key());
+            break;
+        }
         return true;
     }
 
-    IterationKind kind() const { return m_kind; }
-    JSValue iteratedValue() const { return m_set.get(); }
+    IterationKind kind() const { return static_cast<IterationKind>(internalField(Field::Kind).get().asUInt32AsAnyInt()); }
+    JSObject* iteratedObject() const { return jsCast<JSObject*>(internalField(Field::IteratedObject).get()); }
+    HashMapBucketType* iterator() const { return jsCast<HashMapBucketType*>(internalField(Field::SetBucket).get()); }
 
 private:
-    JSSetIterator(VM& vm, Structure* structure, JSSet*, IterationKind kind)
+    JSSetIterator(VM& vm, Structure* structure)
         : Base(vm, structure)
-        , m_kind(kind)
     {
     }
 
     void setIterator(VM& vm, HashMapBucketType* bucket)
     {
-        m_iter.setMayBeNull(vm, this, bucket);
+        internalField(Field::SetBucket).set(vm, this, bucket);
     }
 
-    JS_EXPORT_PRIVATE void finishCreation(VM&, JSSet*);
-    JS_EXPORT_PRIVATE JSValue createPair(CallFrame*, JSValue, JSValue);
-    static void visitChildren(JSCell*, SlotVisitor&);
-
-    WriteBarrier<JSSet> m_set;
-    WriteBarrier<HashMapBucketType> m_iter;
-    IterationKind m_kind;
+    JS_EXPORT_PRIVATE void finishCreation(VM&, JSSet*, IterationKind);
+    void finishCreation(VM&);
+    JS_EXPORT_PRIVATE JSValue createPair(JSGlobalObject*, JSValue, JSValue);
+    DECLARE_VISIT_CHILDREN;
 };
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSSetIterator);
 

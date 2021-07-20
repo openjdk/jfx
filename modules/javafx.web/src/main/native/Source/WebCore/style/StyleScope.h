@@ -43,7 +43,6 @@ class Document;
 class Element;
 class Node;
 class ProcessingInstruction;
-class StyleResolver;
 class StyleSheet;
 class StyleSheetContents;
 class StyleSheetList;
@@ -52,10 +51,12 @@ class TreeScope;
 
 namespace Style {
 
+class Resolver;
+
 // This is used to identify style scopes that can affect an element.
 // Scopes are in tree-of-trees order. Styles from earlier scopes win over later ones (modulo !important).
 enum class ScopeOrdinal : int {
-    ContainingHost = -1, // Author-exposed UA pseudo classes from the host tree scope.
+    ContainingHost = -1, // ::part rules and author-exposed UA pseudo classes from the host tree scope.
     Element = 0, // Normal rules in the same tree where the element is.
     FirstSlot = 1, // ::slotted rules in the parent's shadow tree. Values greater than FirstSlot indicate subsequent slots in the chain.
     Shadow = std::numeric_limits<int>::max(), // :host rules in element's own shadow tree.
@@ -107,19 +108,25 @@ public:
     // The change is assumed to potentially affect all author and user stylesheets including shadow roots.
     WEBCORE_EXPORT void didChangeStyleSheetEnvironment();
 
+    void invalidateMatchedDeclarationsCache();
+
     bool hasPendingUpdate() const { return m_pendingUpdate || m_hasDescendantWithPendingUpdate; }
     void flushPendingUpdate();
+    void insertedInDocument();
 
 #if ENABLE(XSLT)
     Vector<Ref<ProcessingInstruction>> collectXSLTransforms();
 #endif
 
-    StyleResolver& resolver();
-    StyleResolver* resolverIfExists();
+    WEBCORE_EXPORT Resolver& resolver();
+    Resolver* resolverIfExists();
     void clearResolver();
     void releaseMemory();
 
     const Document& document() const { return m_document; }
+    Document& document() { return m_document; }
+    const ShadowRoot* shadowRoot() const { return m_shadowRoot; }
+    ShadowRoot* shadowRoot() { return m_shadowRoot; }
 
     static Scope& forNode(Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
@@ -129,7 +136,7 @@ private:
 
     void didRemovePendingStylesheet();
 
-    enum class UpdateType { ActiveSet, ContentsOrInterpretation };
+    enum class UpdateType : uint8_t { ActiveSet, ContentsOrInterpretation };
     void updateActiveStyleSheets(UpdateType);
     void scheduleUpdate(UpdateType);
 
@@ -140,26 +147,27 @@ private:
 
     void collectActiveStyleSheets(Vector<RefPtr<StyleSheet>>&);
 
-    enum StyleResolverUpdateType {
+    enum class ResolverUpdateType {
         Reconstruct,
         Reset,
         Additive
     };
-    StyleResolverUpdateType analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets, bool& requiresFullStyleRecalc);
-    void updateStyleResolver(Vector<RefPtr<CSSStyleSheet>>&, StyleResolverUpdateType);
+    struct StyleSheetChange {
+        ResolverUpdateType resolverUpdateType;
+        Vector<StyleSheetContents*> addedSheets { };
+    };
+    StyleSheetChange analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets);
+    void invalidateStyleAfterStyleSheetChange(const StyleSheetChange&);
 
-    void pendingUpdateTimerFired();
-    void clearPendingUpdate();
+    void updateResolver(Vector<RefPtr<CSSStyleSheet>>&, ResolverUpdateType);
 
     Document& m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
-    std::unique_ptr<StyleResolver> m_resolver;
+    std::unique_ptr<Resolver> m_resolver;
 
     Vector<RefPtr<StyleSheet>> m_styleSheetsForStyleSheetList;
     Vector<RefPtr<CSSStyleSheet>> m_activeStyleSheets;
-
-    Timer m_pendingUpdateTimer;
 
     mutable std::unique_ptr<HashSet<const CSSStyleSheet*>> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
@@ -171,13 +179,14 @@ private:
     HashSet<const Element*> m_elementsInHeadWithPendingSheets;
     HashSet<const Element*> m_elementsInBodyWithPendingSheets;
 
-    Optional<UpdateType> m_pendingUpdate;
-    bool m_hasDescendantWithPendingUpdate { false };
 
     ListHashSet<Node*> m_styleSheetCandidateNodes;
 
     String m_preferredStylesheetSetName;
 
+    Optional<UpdateType> m_pendingUpdate;
+
+    bool m_hasDescendantWithPendingUpdate { false };
     bool m_usesStyleBasedEditability { false };
     bool m_isUpdatingStyleResolver { false };
 };

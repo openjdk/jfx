@@ -42,6 +42,7 @@ class Image;
 namespace Nicosia {
 
 class ImageBackingTextureMapperImpl final : public ImageBacking::Impl {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static Factory createFactory();
 
@@ -59,6 +60,7 @@ public:
 
         bool isVisible { false };
         RefPtr<Nicosia::Buffer> buffer;
+        uintptr_t nativeImageID { 0 };
     };
 
     // An immutable layer-side state object. flushUpdate() prepares
@@ -71,7 +73,6 @@ public:
         LayerState& operator=(LayerState&&) = delete;
 
         uintptr_t imageID { 0 };
-        uintptr_t nativeImageID { 0 };
         Update update;
     };
     LayerState& layerState() { return m_layerState; }

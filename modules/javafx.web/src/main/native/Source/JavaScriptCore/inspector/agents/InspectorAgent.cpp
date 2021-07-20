@@ -32,7 +32,6 @@
 #include "InspectorAgent.h"
 
 #include "InspectorEnvironment.h"
-#include "InspectorFrontendRouter.h"
 #include <wtf/JSONValues.h>
 
 namespace Inspector {
@@ -40,14 +39,12 @@ namespace Inspector {
 InspectorAgent::InspectorAgent(AgentContext& context)
     : InspectorAgentBase("Inspector"_s)
     , m_environment(context.environment)
-    , m_frontendDispatcher(std::make_unique<InspectorFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<InspectorFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(InspectorBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
-InspectorAgent::~InspectorAgent()
-{
-}
+InspectorAgent::~InspectorAgent() = default;
 
 void InspectorAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
@@ -57,44 +54,49 @@ void InspectorAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
     m_pendingEvaluateTestCommands.clear();
 
-    ErrorString unused;
-    disable(unused);
+    disable();
 }
 
-void InspectorAgent::enable(ErrorString&)
+Protocol::ErrorStringOr<void> InspectorAgent::enable()
 {
     m_enabled = true;
 
     if (m_pendingInspectData.first)
-        inspect(m_pendingInspectData.first.copyRef(), m_pendingInspectData.second.copyRef());
+        inspect(m_pendingInspectData.first.releaseNonNull(), m_pendingInspectData.second.releaseNonNull());
 
     for (auto& testCommand : m_pendingEvaluateTestCommands)
         m_frontendDispatcher->evaluateForTestInFrontend(testCommand);
 
     m_pendingEvaluateTestCommands.clear();
+
+    return { };
 }
 
-void InspectorAgent::disable(ErrorString&)
+Protocol::ErrorStringOr<void> InspectorAgent::disable()
 {
     m_enabled = false;
+
+    return { };
 }
 
-void InspectorAgent::initialized(ErrorString&)
+Protocol::ErrorStringOr<void> InspectorAgent::initialized()
 {
     m_environment.frontendInitialized();
+
+    return { };
 }
 
-void InspectorAgent::inspect(RefPtr<Protocol::Runtime::RemoteObject>&& objectToInspect, RefPtr<JSON::Object>&& hints)
+void InspectorAgent::inspect(Ref<Protocol::Runtime::RemoteObject>&& object, Ref<JSON::Object>&& hints)
 {
     if (m_enabled) {
-        m_frontendDispatcher->inspect(objectToInspect, hints);
+        m_frontendDispatcher->inspect(WTFMove(object), WTFMove(hints));
         m_pendingInspectData.first = nullptr;
         m_pendingInspectData.second = nullptr;
         return;
     }
 
-    m_pendingInspectData.first = objectToInspect;
-    m_pendingInspectData.second = hints;
+    m_pendingInspectData.first = WTFMove(object);
+    m_pendingInspectData.second = WTFMove(hints);
 }
 
 void InspectorAgent::evaluateForTestInFrontend(const String& script)
@@ -104,29 +106,5 @@ void InspectorAgent::evaluateForTestInFrontend(const String& script)
     else
         m_pendingEvaluateTestCommands.append(script);
 }
-
-#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-void InspectorAgent::activateExtraDomain(const String& domainName)
-{
-    if (!m_enabled)
-        return;
-
-    auto domainNames = JSON::ArrayOf<String>::create();
-    domainNames->addItem(domainName);
-    m_frontendDispatcher->activateExtraDomains(WTFMove(domainNames));
-}
-
-void InspectorAgent::activateExtraDomains(const Vector<String>& extraDomains)
-{
-    if (extraDomains.isEmpty())
-        return;
-
-    auto domainNames = JSON::ArrayOf<String>::create();
-    for (auto domainName : extraDomains)
-        domainNames->addItem(domainName);
-
-    m_frontendDispatcher->activateExtraDomains(WTFMove(domainNames));
-}
-#endif
 
 } // namespace Inspector

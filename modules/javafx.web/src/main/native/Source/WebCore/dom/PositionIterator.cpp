@@ -51,7 +51,7 @@ PositionIterator::operator Position() const
         return atStartOfNode() ? positionBeforeNode(m_anchorNode) : positionAfterNode(m_anchorNode);
     if (m_anchorNode->hasChildNodes())
         return lastPositionInOrAfterNode(m_anchorNode);
-    return createLegacyEditingPosition(m_anchorNode, m_offsetInAnchor);
+    return makeDeprecatedLegacyPosition(m_anchorNode, m_offsetInAnchor);
 }
 
 void PositionIterator::increment()
@@ -156,7 +156,7 @@ bool PositionIterator::isCandidate() const
         return false;
 
     if (renderer->isBR())
-        return !m_offsetInAnchor && !Position::nodeIsUserSelectNone(m_anchorNode->parentNode());
+        return Position(*this).isCandidate();
 
     if (is<RenderText>(*renderer))
         return !Position::nodeIsUserSelectNone(m_anchorNode) && downcast<RenderText>(*renderer).containsCaretOffset(m_offsetInAnchor);

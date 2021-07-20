@@ -55,11 +55,11 @@ void* tryLargeZeroedMemalignVirtual(size_t requiredAlignment, size_t requestedSi
     if (auto* debugHeap = DebugHeap::tryGet())
         result = debugHeap->memalignLarge(alignment, size);
     else {
-    kind = mapToActiveHeapKind(kind);
-    Heap& heap = PerProcess<PerHeapKind<Heap>>::get()->at(kind);
+        kind = mapToActiveHeapKind(kind);
+        Heap& heap = PerProcess<PerHeapKind<Heap>>::get()->at(kind);
 
-        std::unique_lock<Mutex> lock(Heap::mutex());
-        result = heap.tryAllocateLarge(lock, alignment, size);
+        UniqueLockHolder lock(Heap::mutex());
+        result = heap.allocateLarge(lock, alignment, size, FailureAction::ReturnNull);
         if (result) {
             // Don't track this as dirty memory that dictates how we drive the scavenger.
             // FIXME: We should make it so that users of this API inform bmalloc which
@@ -82,7 +82,7 @@ void freeLargeVirtual(void* object, size_t size, HeapKind kind)
     }
     kind = mapToActiveHeapKind(kind);
     Heap& heap = PerProcess<PerHeapKind<Heap>>::get()->at(kind);
-    std::unique_lock<Mutex> lock(Heap::mutex());
+    UniqueLockHolder lock(Heap::mutex());
     // Balance out the externalDecommit when we allocated the zeroed virtual memory.
     heap.externalCommit(lock, object, size);
     heap.deallocateLarge(lock, object);
@@ -92,13 +92,15 @@ void scavenge()
 {
     scavengeThisThread();
 
-    if (!DebugHeap::tryGet())
-    PerProcess<Scavenger>::get()->scavenge();
+    if (DebugHeap* debugHeap = DebugHeap::tryGet())
+        debugHeap->scavenge();
+    else
+        Scavenger::get()->scavenge();
 }
 
 bool isEnabled(HeapKind)
 {
-    return !PerProcess<Environment>::get()->isDebugHeapEnabled();
+    return !Environment::get()->isDebugHeapEnabled();
 }
 
 #if BOS(DARWIN)
@@ -106,8 +108,8 @@ void setScavengerThreadQOSClass(qos_class_t overrideClass)
 {
     if (DebugHeap::tryGet())
         return;
-    std::unique_lock<Mutex> lock(Heap::mutex());
-    PerProcess<Scavenger>::get()->setScavengerThreadQOSClass(overrideClass);
+    UniqueLockHolder lock(Heap::mutex());
+    Scavenger::get()->setScavengerThreadQOSClass(overrideClass);
 }
 #endif
 
@@ -130,7 +132,13 @@ void decommitAlignedPhysical(void* object, size_t size, HeapKind kind)
 void enableMiniMode()
 {
     if (!DebugHeap::tryGet())
-    PerProcess<Scavenger>::get()->enableMiniMode();
+        Scavenger::get()->enableMiniMode();
+}
+
+void disableScavenger()
+{
+    if (!DebugHeap::tryGet())
+        Scavenger::get()->disable();
 }
 
 } } // namespace bmalloc::api

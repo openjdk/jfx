@@ -30,12 +30,14 @@
 
 #include "IDBConnectionProxy.h"
 #include "IDBDatabase.h"
+#include "IDBDatabaseNameAndVersion.h"
 #include "IDBGetRecordData.h"
 #include "IDBKeyRangeData.h"
 #include "IDBOpenDBRequest.h"
 #include "IDBRequestData.h"
 #include "IDBResultData.h"
 #include "Logging.h"
+#include "SecurityOrigin.h"
 #include "TransactionOperation.h"
 #include <wtf/MainThread.h>
 
@@ -49,11 +51,11 @@ Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDe
 
 IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& delegate)
     : m_delegate(makeWeakPtr(delegate))
-    , m_proxy(std::make_unique<IDBConnectionProxy>(*this))
+    , m_proxy(makeUnique<IDBConnectionProxy>(*this))
 {
 }
 
-uint64_t IDBConnectionToServer::identifier() const
+IDBConnectionIdentifier IDBConnectionToServer::identifier() const
 {
     return m_delegate->identifier();
 }
@@ -73,7 +75,7 @@ void IDBConnectionToServer::callResultFunctionWithErrorLater(ResultFunction func
 
 void IDBConnectionToServer::deleteDatabase(const IDBRequestData& request)
 {
-    LOG(IndexedDB, "IDBConnectionToServer::deleteDatabase - %s", request.databaseIdentifier().debugString().utf8().data());
+    LOG(IndexedDB, "IDBConnectionToServer::deleteDatabase - %s", request.databaseIdentifier().loggingString().utf8().data());
 
     if (m_serverConnectionIsValid)
         m_delegate->deleteDatabase(request);
@@ -89,7 +91,7 @@ void IDBConnectionToServer::didDeleteDatabase(const IDBResultData& resultData)
 
 void IDBConnectionToServer::openDatabase(const IDBRequestData& request)
 {
-    LOG(IndexedDB, "IDBConnectionToServer::openDatabase - %s (%s) (%" PRIu64 ")", request.databaseIdentifier().debugString().utf8().data(), request.requestIdentifier().loggingString().utf8().data(), request.requestedVersion());
+    LOG(IndexedDB, "IDBConnectionToServer::openDatabase - %s (%s) (%" PRIu64 ")", request.databaseIdentifier().loggingString().utf8().data(), request.requestIdentifier().loggingString().utf8().data(), request.requestedVersion());
 
     if (m_serverConnectionIsValid)
         m_delegate->openDatabase(request);
@@ -414,13 +416,13 @@ void IDBConnectionToServer::fireVersionChangeEvent(uint64_t databaseConnectionId
     m_proxy->fireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, requestedVersion);
 }
 
-void IDBConnectionToServer::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier)
+void IDBConnectionToServer::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosed)
 {
     LOG(IndexedDB, "IDBConnectionToServer::didFireVersionChangeEvent");
     ASSERT(isMainThread());
 
     if (m_serverConnectionIsValid)
-        m_delegate->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier);
+        m_delegate->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, connectionClosed);
 }
 
 void IDBConnectionToServer::didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError& error)
@@ -437,15 +439,6 @@ void IDBConnectionToServer::didCloseFromServer(uint64_t databaseConnectionIdenti
     ASSERT(isMainThread());
 
     m_proxy->didCloseFromServer(databaseConnectionIdentifier, error);
-}
-
-void IDBConnectionToServer::confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier)
-{
-    LOG(IndexedDB, "IDBConnectionToServer::confirmDidCloseFromServer");
-    ASSERT(isMainThread());
-
-    if (m_serverConnectionIsValid)
-        m_delegate->confirmDidCloseFromServer(databaseConnectionIdentifier);
 }
 
 void IDBConnectionToServer::connectionToServerLost(const IDBError& error)
@@ -502,27 +495,27 @@ void IDBConnectionToServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectio
         m_delegate->abortOpenAndUpgradeNeeded(databaseConnectionIdentifier, transactionIdentifier);
 }
 
-void IDBConnectionToServer::getAllDatabaseNames(const SecurityOrigin& mainFrameOrigin, const SecurityOrigin& openingOrigin, Function<void (const Vector<String>&)>&& callback)
+void IDBConnectionToServer::getAllDatabaseNamesAndVersions(const IDBResourceIdentifier& requestIdentifier, const ClientOrigin& origin)
 {
-    static uint64_t callbackID = 0;
+    LOG(IndexedDB, "IDBConnectionToServer::getAllDatabaseNamesAndVersions");
+    ASSERT(isMainThread());
 
-    m_getAllDatabaseNamesCallbacks.add(++callbackID, WTFMove(callback));
-
-    if (m_serverConnectionIsValid)
-        m_delegate->getAllDatabaseNames(mainFrameOrigin.data(), openingOrigin.data(), callbackID);
-    else {
-        callOnMainThread([this, protectedThis = makeRef(*this), callbackID = callbackID] {
-            didGetAllDatabaseNames(callbackID, { });
-        });
+    if (m_serverConnectionIsValid) {
+        m_delegate->getAllDatabaseNamesAndVersions(requestIdentifier, origin);
+        return;
     }
+
+    callOnMainThread([this, protectedThis = makeRef(*this), requestIdentifier] {
+        didGetAllDatabaseNamesAndVersions(requestIdentifier, { });
+    });
 }
 
-void IDBConnectionToServer::didGetAllDatabaseNames(uint64_t callbackID, const Vector<String>& databaseNames)
+void IDBConnectionToServer::didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier& requestIdentifier, Vector<IDBDatabaseNameAndVersion>&& databases)
 {
-    auto callback = m_getAllDatabaseNamesCallbacks.take(callbackID);
-    ASSERT(callback);
+    LOG(IndexedDB, "IDBConnectionToServer::didGetAllDatabaseNamesAndVersions");
+    ASSERT(isMainThread());
 
-    callback(databaseNames);
+    m_proxy->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(databases));
 }
 
 } // namespace IDBClient

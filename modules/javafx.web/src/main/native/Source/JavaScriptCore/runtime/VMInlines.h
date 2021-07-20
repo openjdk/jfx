@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CallFrameInlines.h"
 #include "EntryFrame.h"
 #include "ProfilerDatabase.h"
 #include "VM.h"
@@ -36,7 +35,6 @@ namespace JSC {
 bool VM::ensureStackCapacityFor(Register* newTopOfStack)
 {
 #if !ENABLE(C_LOOP)
-    ASSERT(Thread::current().stack().isGrowingDownward());
     return newTopOfStack >= m_softStackLimit;
 #else
     return ensureStackCapacityForCLoop(newTopOfStack);

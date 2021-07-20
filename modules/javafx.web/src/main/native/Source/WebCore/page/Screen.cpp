@@ -29,14 +29,21 @@
 #include "config.h"
 #include "Screen.h"
 
+#include "DOMWindow.h"
+#include "Document.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "Page.h"
 #include "PlatformScreen.h"
+#include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "RuntimeEnabledFeatures.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(Screen);
 
 Screen::Screen(DOMWindow& window)
     : DOMWindowProperty(&window)
@@ -50,8 +57,7 @@ unsigned Screen::height() const
         return 0;
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::Height);
-    long height = static_cast<long>(screenRect(frame->view()).height());
-    return static_cast<unsigned>(height);
+    return static_cast<unsigned>(frame->screenSize().height());
 }
 
 unsigned Screen::width() const
@@ -61,8 +67,7 @@ unsigned Screen::width() const
         return 0;
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::Width);
-    long width = static_cast<long>(screenRect(frame->view()).width());
-    return static_cast<unsigned>(width);
+    return static_cast<unsigned>(frame->screenSize().width());
 }
 
 unsigned Screen::colorDepth() const
@@ -82,7 +87,12 @@ unsigned Screen::pixelDepth() const
         return 0;
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::PixelDepth);
-    return static_cast<unsigned>(screenDepth(frame->view()));
+
+    auto* document = window()->document();
+    if (!document || !document->quirks().needsHDRPixelDepthQuirk() || !screenSupportsHighDynamicRange(frame->view()))
+        return static_cast<unsigned>(screenDepth(frame->view()));
+
+    return static_cast<unsigned>(screenDepth(frame->view())) + 1;
 }
 
 int Screen::availLeft() const

@@ -27,12 +27,17 @@
 #include "CSSPropertyNames.h"
 #include <wtf/Vector.h>
 #include <wtf/HashSet.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
+class Element;
 class RenderStyle;
 class TimingFunction;
+
+namespace Style {
+class Resolver;
+}
 
 class KeyframeValue {
 public:
@@ -64,7 +69,7 @@ private:
 
 class KeyframeList {
 public:
-    explicit KeyframeList(const AtomicString& animationName)
+    explicit KeyframeList(const AtomString& animationName)
         : m_animationName(animationName)
     {
     }
@@ -74,7 +79,7 @@ public:
     bool operator==(const KeyframeList& o) const;
     bool operator!=(const KeyframeList& o) const { return !(*this == o); }
 
-    const AtomicString& animationName() const { return m_animationName; }
+    const AtomString& animationName() const { return m_animationName; }
 
     void insert(KeyframeValue&&);
 
@@ -88,8 +93,12 @@ public:
     const KeyframeValue& operator[](size_t index) const { return m_keyframes[index]; }
     const Vector<KeyframeValue>& keyframes() const { return m_keyframes; }
 
+    void copyKeyframes(KeyframeList&);
+    bool hasImplicitKeyframes() const;
+    void fillImplicitKeyframes(const Element&, Style::Resolver&, const RenderStyle* elementStyle, const RenderStyle* parentElementStyle);
+
 private:
-    AtomicString m_animationName;
+    AtomString m_animationName;
     Vector<KeyframeValue> m_keyframes; // Kept sorted by key.
     HashSet<CSSPropertyID> m_properties; // The properties being animated.
 };

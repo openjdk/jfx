@@ -28,17 +28,16 @@
 
 #pragma once
 
-#if ENABLE(STREAMS_API)
-
 #include "JSDOMPromiseDeferred.h"
 #include "ReadableStreamDefaultController.h"
 #include <wtf/Optional.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class ReadableStreamSource : public RefCounted<ReadableStreamSource> {
 public:
-    virtual ~ReadableStreamSource() = default;
+    virtual ~ReadableStreamSource();
 
     void start(ReadableStreamDefaultController&&, DOMPromiseDeferred<void>&&);
     void pull(DOMPromiseDeferred<void>&&);
@@ -63,59 +62,28 @@ protected:
     virtual void doCancel() = 0;
 
 private:
-    Optional<DOMPromiseDeferred<void>> m_promise;
+    std::unique_ptr<DOMPromiseDeferred<void>> m_promise;
     Optional<ReadableStreamDefaultController> m_controller;
 };
 
-inline void ReadableStreamSource::start(ReadableStreamDefaultController&& controller, DOMPromiseDeferred<void>&& promise)
-{
-    ASSERT(!m_promise);
-    m_promise = WTFMove(promise);
-    m_controller = WTFMove(controller);
+class SimpleReadableStreamSource
+    : public ReadableStreamSource
+    , public CanMakeWeakPtr<SimpleReadableStreamSource> {
+public:
+    static Ref<SimpleReadableStreamSource> create() { return adoptRef(*new SimpleReadableStreamSource); }
 
-    setActive();
-    doStart();
-}
+    void close() { controller().close(); }
+    void enqueue(JSC::JSValue value) { controller().enqueue(value); }
 
-inline void ReadableStreamSource::pull(DOMPromiseDeferred<void>&& promise)
-{
-    ASSERT(!m_promise);
-    ASSERT(m_controller);
+private:
+    SimpleReadableStreamSource() = default;
 
-    m_promise = WTFMove(promise);
-
-    setActive();
-    doPull();
-}
-
-inline void ReadableStreamSource::startFinished()
-{
-    ASSERT(m_promise);
-    std::exchange(m_promise, WTF::nullopt).value().resolve();
-    setInactive();
-}
-
-inline void ReadableStreamSource::pullFinished()
-{
-    ASSERT(m_promise);
-    std::exchange(m_promise, WTF::nullopt).value().resolve();
-    setInactive();
-}
-
-inline void ReadableStreamSource::cancel(JSC::JSValue)
-{
-    clean();
-    doCancel();
-}
-
-inline void ReadableStreamSource::clean()
-{
-    if (m_promise) {
-        m_promise = WTF::nullopt;
-        setInactive();
-    }
-}
+    // ReadableStreamSource
+    void setActive() final { }
+    void setInactive() final { }
+    void doStart() final { }
+    void doPull() final { }
+    void doCancel() final { }
+};
 
 } // namespace WebCore
-
-#endif // ENABLE(STREAMS_API)

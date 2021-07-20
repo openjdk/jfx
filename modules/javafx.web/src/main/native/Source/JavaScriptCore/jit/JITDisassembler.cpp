@@ -31,8 +31,6 @@
 #include "CodeBlock.h"
 #include "CodeBlockWithJITType.h"
 #include "Disassembler.h"
-#include "JIT.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
 #include "ProfilerCompilation.h"
 #include <wtf/StringPrintStream.h>
@@ -89,7 +87,7 @@ void JITDisassembler::reportToProfiler(Profiler::Compilation* compilation, LinkB
 
 void JITDisassembler::dumpHeader(PrintStream& out, LinkBuffer& linkBuffer)
 {
-    out.print("Generated Baseline JIT code for ", CodeBlockWithJITType(m_codeBlock, JITCode::BaselineJIT), ", instruction count = ", m_codeBlock->instructionCount(), "\n");
+    out.print("Generated Baseline JIT code for ", CodeBlockWithJITType(m_codeBlock, JITType::BaselineJIT), ", instructions size = ", m_codeBlock->instructionsSize(), "\n");
     out.print("   Source: ", m_codeBlock->sourceCodeOnOneLine(), "\n");
     out.print("   Code at [", RawPointer(linkBuffer.debugAddress()), ", ", RawPointer(static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.size()), "):\n");
 }
@@ -118,7 +116,7 @@ Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(Lin
         }
         out.reset();
         result.append(DumpedOp());
-        result.last().index = i;
+        result.last().bytecodeIndex = BytecodeIndex(i);
         out.print(prefix);
         m_codeBlock->dumpBytecode(out, i);
         for (unsigned nextIndex = i + 1; ; nextIndex++) {
@@ -154,7 +152,7 @@ void JITDisassembler::reportInstructions(Profiler::Compilation* compilation, Lin
     for (unsigned i = 0; i < dumpedOps.size(); ++i) {
         compilation->addDescription(
             Profiler::CompiledBytecode(
-                Profiler::OriginStack(Profiler::Origin(compilation->bytecodes(), dumpedOps[i].index)),
+                Profiler::OriginStack(Profiler::Origin(compilation->bytecodes(), dumpedOps[i].bytecodeIndex)),
                 dumpedOps[i].disassembly));
     }
 }

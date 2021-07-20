@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,16 +182,6 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long quota)
     // FIXME: implement
 }
 
-void TestRunner::setAllowUniversalAccessFromFileURLs(bool)
-{
-    // FIXME: implement
-}
-
-void TestRunner::setAuthorAndUserStylesEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setCacheModel(int model)
 {
     // FIXME: implement
@@ -227,27 +217,12 @@ void TestRunner::setPersistentUserStyleSheetLocation(JSStringRef path)
     // FIXME: implement
 }
 
-void TestRunner::setPopupBlockingEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setPrivateBrowsingEnabled(bool enabled)
 {
     // FIXME: implement
 }
 
-void TestRunner::setXSSAuditorEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setTabKeyCyclesThroughElements(bool cycles)
-{
-    // FIXME: implement
-}
-
-void TestRunner::setUseDashboardCompatibilityMode(bool flag)
 {
     // FIXME: implement
 }
@@ -361,7 +336,7 @@ void TestRunner::abortModal()
     //FIXME: implement
 }
 
-void TestRunner::addOriginAccessWhitelistEntry(
+void TestRunner::addOriginAccessAllowListEntry(
     JSStringRef sourceOrigin,
     JSStringRef destinationProtocol,
     JSStringRef destinationHost,
@@ -397,11 +372,7 @@ bool TestRunner::callShouldCloseOnWebView()
     return false;
 }
 
-void TestRunner::removeOriginAccessWhitelistEntry(JSStringRef, JSStringRef, JSStringRef,bool) {
-    //FIXME: implement
-}
-
-void TestRunner::setAllowFileAccessFromFileURLs(bool) {
+void TestRunner::removeOriginAccessAllowListEntry(JSStringRef, JSStringRef, JSStringRef,bool) {
     //FIXME: implement
 }
 
@@ -409,23 +380,7 @@ void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool,JSStringRef) {
     //FIXME: implement
 }
 
-void TestRunner::setJavaScriptCanAccessClipboard(bool enable) {
-    JSStringRef webkitJavaScriptCanAccessClipboard = JSStringCreateWithUTF8CString("WebKitJavaScriptCanAccessClipboardPreferenceKey");
-    JSStringRef value = JSStringCreateWithUTF8CString(enable ? "1" : "0");
-    overridePreference(webkitJavaScriptCanAccessClipboard, value);
-    JSStringRelease(webkitJavaScriptCanAccessClipboard);
-    JSStringRelease(value);
-}
-
-void TestRunner::setPluginsEnabled(bool) {
-    //FIXME: implement
-}
-
 void TestRunner::setScrollbarPolicy(JSStringRef,JSStringRef) {
-    //FIXME: implement
-}
-
-void TestRunner::setSpatialNavigationEnabled(bool) {
     //FIXME: implement
 }
 
@@ -585,11 +540,6 @@ void TestRunner::setSpellCheckerLoggingEnabled(bool enabled)
     fprintf(testResult, "ERROR: TestRunner::setSpellCheckerLoggingEnabled() not implemented\n");
 }
 
-void TestRunner::setNeedsStorageAccessFromFileURLsQuirk(bool needsQuirk)
-{
-    fprintf(testResult, "ERROR: TestRunner::setNeedsStorageAccessFromFileURLsQuirk() not implemented\n");
-}
-
 unsigned TestRunner::imageCountInGeneralPasteboard() const
 {
     fprintf(testResult, "ERROR: TestRunner::imageCountInGeneralPasteboard() not implemented\n");
@@ -598,17 +548,7 @@ unsigned TestRunner::imageCountInGeneralPasteboard() const
 
 void TestRunner::forceImmediateCompletion()
 {
-    fprintf(testResult, "ERROR: TestRunner::forceImmediateCompletion() not implemented\n");
-}
-
-void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)
-{
-    fprintf(testResult, "ERROR: TestRunner::setSpellCheckerResults() not implemented\n");
-}
-
-void TestRunner::setIDBPerOriginQuota(uint64_t)
-{
-    fprintf(testResult, "ERROR: TestRunner::setIDBPerOriginQuota() not implemented\n");
+    notifyDone();
 }
 
 void TestRunner::setOnlyAcceptFirstPartyCookies(bool)

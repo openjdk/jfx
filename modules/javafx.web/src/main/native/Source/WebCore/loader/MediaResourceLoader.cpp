@@ -34,18 +34,27 @@
 #include "CachedResourceRequest.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
-#include "HTMLMediaElement.h"
+#include "Element.h"
+#include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "SecurityOrigin.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-MediaResourceLoader::MediaResourceLoader(Document& document, HTMLMediaElement& mediaElement, const String& crossOriginMode)
+static bool shouldRecordResponsesForTesting = false;
+
+void MediaResourceLoader::recordResponsesForTesting()
+{
+    shouldRecordResponsesForTesting = true;
+}
+
+MediaResourceLoader::MediaResourceLoader(Document& document, Element& element, const String& crossOriginMode, FetchOptions::Destination destination)
     : ContextDestructionObserver(&document)
-    , m_document(&document)
-    , m_mediaElement(makeWeakPtr(mediaElement))
+    , m_document(makeWeakPtr(document))
+    , m_element(makeWeakPtr(element))
     , m_crossOriginMode(crossOriginMode)
+    , m_destination(destination)
 {
 }
 
@@ -58,8 +67,17 @@ void MediaResourceLoader::contextDestroyed()
 {
     ContextDestructionObserver::contextDestroyed();
     m_document = nullptr;
-    m_mediaElement = nullptr;
+    m_element = nullptr;
 }
+
+void MediaResourceLoader::sendH2Ping(const URL& url, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&& completionHandler)
+{
+    if (!m_document || !m_document->frame())
+        return completionHandler(makeUnexpected(internalError(url)));
+
+    m_document->frame()->loader().client().sendH2Ping(url, WTFMove(completionHandler));
+}
+
 
 RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceRequest&& request, LoadOptions options)
 {
@@ -71,16 +89,16 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
 
     request.setRequester(ResourceRequest::Requester::Media);
 
-    if (m_mediaElement)
-        request.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(*m_mediaElement));
+    if (m_element)
+        request.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(*m_element));
 
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && PLATFORM(MAC)
+#if PLATFORM(MAC)
     // FIXME: Workaround for <rdar://problem/26071607>. We are not able to do CORS checking on 304 responses because they are usually missing the headers we need.
     if (!m_crossOriginMode.isNull())
         request.makeUnconditional();
 #endif
 
-    ContentSecurityPolicyImposition contentSecurityPolicyImposition = m_mediaElement && m_mediaElement->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
+    ContentSecurityPolicyImposition contentSecurityPolicyImposition = m_element && m_element->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
     ResourceLoaderOptions loaderOptions {
         SendCallbackPolicy::SendCallbacks,
         ContentSniffingPolicy::DoNotSniffContent,
@@ -94,10 +112,10 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
         contentSecurityPolicyImposition,
         DefersLoadingPolicy::AllowDefersLoading,
         cachingPolicy };
-    loaderOptions.destination = m_mediaElement && !m_mediaElement->isVideo() ? FetchOptions::Destination::Audio : FetchOptions::Destination::Video;
-    auto cachedRequest = createPotentialAccessControlRequest(WTFMove(request), *m_document, m_crossOriginMode, WTFMove(loaderOptions));
-    if (m_mediaElement)
-        cachedRequest.setInitiator(*m_mediaElement.get());
+    loaderOptions.destination = m_destination;
+    auto cachedRequest = createPotentialAccessControlRequest(WTFMove(request), WTFMove(loaderOptions), *m_document, m_crossOriginMode);
+    if (m_element)
+        cachedRequest.setInitiator(*m_element);
 
     auto resource = m_document->cachedResourceLoader().requestMedia(WTFMove(cachedRequest)).value_or(nullptr);
     if (!resource)
@@ -106,7 +124,7 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
     Ref<MediaResource> mediaResource = MediaResource::create(*this, resource);
     m_resources.add(mediaResource.ptr());
 
-    return WTFMove(mediaResource);
+    return mediaResource;
 }
 
 void MediaResourceLoader::removeResource(MediaResource& mediaResource)
@@ -118,7 +136,7 @@ void MediaResourceLoader::removeResource(MediaResource& mediaResource)
 void MediaResourceLoader::addResponseForTesting(const ResourceResponse& response)
 {
     const auto maximumResponsesForTesting = 5;
-    if (m_responsesForTesting.size() > maximumResponsesForTesting)
+    if (!shouldRecordResponsesForTesting || m_responsesForTesting.size() > maximumResponsesForTesting)
         return;
     m_responsesForTesting.append(response);
 }
@@ -172,10 +190,10 @@ void MediaResource::responseReceived(CachedResource& resource, const ResourceRes
 
     m_didPassAccessControlCheck = m_resource->options().mode == FetchOptions::Mode::Cors;
     if (m_client)
-        m_client->responseReceived(*this, response, [this, protectedThis = makeRef(*this), completionHandler = completionHandlerCaller.release()] (ShouldContinue shouldContinue) mutable {
+        m_client->responseReceived(*this, response, [this, protectedThis = makeRef(*this), completionHandler = completionHandlerCaller.release()] (auto shouldContinue) mutable {
             if (completionHandler)
                 completionHandler();
-            if (shouldContinue == ShouldContinue::No)
+            if (shouldContinue == ShouldContinuePolicyCheck::No)
                 stop();
         });
 
@@ -221,7 +239,7 @@ void MediaResource::dataReceived(CachedResource& resource, const char* data, int
         m_client->dataReceived(*this, data, dataLength);
 }
 
-void MediaResource::notifyFinished(CachedResource& resource)
+void MediaResource::notifyFinished(CachedResource& resource, const NetworkLoadMetrics& metrics)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
 
@@ -230,7 +248,7 @@ void MediaResource::notifyFinished(CachedResource& resource)
         if (m_resource->loadFailedOrCanceled())
             m_client->loadFailed(*this, m_resource->resourceError());
         else
-            m_client->loadFinished(*this);
+            m_client->loadFinished(*this, metrics);
     }
     stop();
 }

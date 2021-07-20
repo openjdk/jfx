@@ -59,18 +59,16 @@ Position InsertTextCommand::positionInsideTextNode(const Position& p)
     Position pos = p;
     if (isTabSpanTextNode(pos.anchorNode())) {
         auto textNode = document().createEditingTextNode(emptyString());
-        auto* textNodePtr = textNode.ptr();
-        insertNodeAtTabSpanPosition(WTFMove(textNode), pos);
-        return firstPositionInNode(textNodePtr);
+        insertNodeAtTabSpanPosition(textNode.copyRef(), pos);
+        return firstPositionInNode(textNode.ptr());
     }
 
     // Prepare for text input by looking at the specified position.
     // It may be necessary to insert a text node to receive characters.
     if (!pos.containerNode()->isTextNode()) {
         auto textNode = document().createEditingTextNode(emptyString());
-        auto* textNodePtr = textNode.ptr();
-        insertNodeAt(WTFMove(textNode), pos);
-        return firstPositionInNode(textNodePtr);
+        insertNodeAt(textNode.copyRef(), pos);
+        return firstPositionInNode(textNode.ptr());
     }
 
     return pos;
@@ -148,7 +146,7 @@ void InsertTextCommand::doApply()
         // anything other than NoSelection. The rest of this function requires a real endingSelection, so bail out.
         if (endingSelection().isNone())
             return;
-    } else if (frame().editor().isOverwriteModeEnabled()) {
+    } else if (document().editor().isOverwriteModeEnabled()) {
         if (performOverwrite(m_text, m_selectInsertedText))
             return;
     }
@@ -224,7 +222,7 @@ void InsertTextCommand::doApply()
     setEndingSelectionWithoutValidation(startPosition, endPosition);
 
     // Handle the case where there is a typing style.
-    if (RefPtr<EditingStyle> typingStyle = frame().selection().typingStyle()) {
+    if (RefPtr<EditingStyle> typingStyle = document().selection().typingStyle()) {
         typingStyle->prepareToApplyAt(endPosition, EditingStyle::PreserveWritingDirection);
         if (!typingStyle->isEmpty())
             applyStyle(typingStyle.get());
@@ -236,7 +234,7 @@ void InsertTextCommand::doApply()
 
 Position InsertTextCommand::insertTab(const Position& pos)
 {
-    Position insertPos = VisiblePosition(pos, DOWNSTREAM).deepEquivalent();
+    Position insertPos = VisiblePosition(pos).deepEquivalent();
     if (insertPos.isNull())
         return pos;
 

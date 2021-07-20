@@ -333,7 +333,7 @@ U_CDECL_END
 ******************************************************************
 */
 
-static UMutex lock = U_MUTEX_INITIALIZER;
+static UMutex lock;
 
 ICUService::ICUService()
 : name()
@@ -702,9 +702,9 @@ ICUService::getDisplayName(const UnicodeString& id, UnicodeString& result, const
             }
 
             // fallback
-            UErrorCode status = U_ZERO_ERROR;
+            status = U_ZERO_ERROR;
             ICUServiceKey* fallbackKey = createKey(&id, status);
-            while (fallbackKey->fallback()) {
+            while (fallbackKey != NULL && fallbackKey->fallback()) {
                 UnicodeString us;
                 fallbackKey->currentID(us);
                 f = (ICUServiceFactory*)map->get(us);

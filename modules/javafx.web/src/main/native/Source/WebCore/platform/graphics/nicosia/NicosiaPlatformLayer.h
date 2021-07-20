@@ -35,7 +35,9 @@
 #include "FloatRect.h"
 #include "FloatSize.h"
 #include "NicosiaAnimatedBackingStoreClient.h"
-#include "TextureMapperAnimation.h"
+#include "NicosiaAnimation.h"
+#include "NicosiaSceneIntegration.h"
+#include "ScrollTypes.h"
 #include "TransformationMatrix.h"
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
@@ -54,6 +56,20 @@ public:
     using LayerID = uint64_t;
     LayerID id() const { return m_id; }
 
+    void setSceneIntegration(RefPtr<SceneIntegration>&& sceneIntegration)
+    {
+        LockHolder locker(m_state.lock);
+        m_state.sceneIntegration = WTFMove(sceneIntegration);
+    }
+
+    std::unique_ptr<SceneIntegration::UpdateScope> createUpdateScope()
+    {
+        LockHolder locker(m_state.lock);
+        if (m_state.sceneIntegration)
+            return m_state.sceneIntegration->createUpdateScope();
+        return nullptr;
+    }
+
 protected:
     explicit PlatformLayer(uint64_t);
 
@@ -61,6 +77,7 @@ protected:
 
     struct {
         Lock lock;
+        RefPtr<SceneIntegration> sceneIntegration;
     } m_state;
 };
 
@@ -96,13 +113,17 @@ public:
                     bool positionChanged : 1;
                     bool anchorPointChanged : 1;
                     bool sizeChanged : 1;
+                    bool boundsOriginChanged : 1;
                     bool transformChanged : 1;
                     bool childrenTransformChanged : 1;
                     bool contentsRectChanged : 1;
                     bool contentsTilingChanged : 1;
+                    bool contentsClippingRectChanged : 1;
                     bool opacityChanged : 1;
                     bool solidColorChanged : 1;
                     bool filtersChanged : 1;
+                    bool backdropFiltersChanged : 1;
+                    bool backdropFiltersRectChanged : 1;
                     bool animationsChanged : 1;
                     bool childrenChanged : 1;
                     bool maskChanged : 1;
@@ -114,6 +135,7 @@ public:
                     bool animatedBackingStoreClientChanged : 1;
                     bool repaintCounterChanged : 1;
                     bool debugBorderChanged : 1;
+                    bool scrollingNodeChanged : 1;
                 };
                 uint32_t value { 0 };
             };
@@ -141,6 +163,7 @@ public:
         WebCore::FloatPoint position;
         WebCore::FloatPoint3D anchorPoint;
         WebCore::FloatSize size;
+        WebCore::FloatPoint boundsOrigin;
 
         WebCore::TransformationMatrix transform;
         WebCore::TransformationMatrix childrenTransform;
@@ -148,6 +171,7 @@ public:
         WebCore::FloatRect contentsRect;
         WebCore::FloatSize contentsTilePhase;
         WebCore::FloatSize contentsTileSize;
+        WebCore::FloatRoundedRect contentsClippingRect;
 
         float opacity { 0 };
         WebCore::Color solidColor;
@@ -155,11 +179,13 @@ public:
         WebCore::FilterOperations filters;
         // FIXME: Despite the name, this implementation is not
         // TextureMapper-specific. Should be renamed when necessary.
-        WebCore::TextureMapperAnimations animations;
+        Animations animations;
 
         Vector<RefPtr<CompositionLayer>> children;
         RefPtr<CompositionLayer> replica;
         RefPtr<CompositionLayer> mask;
+        RefPtr<CompositionLayer> backdropLayer;
+        WebCore::FloatRoundedRect backdropFiltersRect;
 
         RefPtr<ContentLayer> contentLayer;
         RefPtr<BackingStore> backingStore;
@@ -175,6 +201,8 @@ public:
             float width { 0 };
             bool visible { false };
         } debugBorder;
+
+        WebCore::ScrollingNodeID scrollingNodeID { 0 };
     };
 
     template<typename T>
@@ -199,6 +227,8 @@ public:
             staging.anchorPoint = pending.anchorPoint;
         if (pending.delta.sizeChanged)
             staging.size = pending.size;
+        if (pending.delta.boundsOriginChanged)
+            staging.boundsOrigin = pending.boundsOrigin;
 
         if (pending.delta.transformChanged)
             staging.transform = pending.transform;
@@ -211,6 +241,8 @@ public:
             staging.contentsTilePhase = pending.contentsTilePhase;
             staging.contentsTileSize = pending.contentsTileSize;
         }
+        if (pending.delta.contentsClippingRectChanged)
+            staging.contentsClippingRect = pending.contentsClippingRect;
 
         if (pending.delta.opacityChanged)
             staging.opacity = pending.opacity;
@@ -219,6 +251,10 @@ public:
 
         if (pending.delta.filtersChanged)
             staging.filters = pending.filters;
+        if (pending.delta.backdropFiltersChanged)
+            staging.backdropLayer = pending.backdropLayer;
+        if (pending.delta.backdropFiltersRectChanged)
+            staging.backdropFiltersRect = pending.backdropFiltersRect;
         if (pending.delta.animationsChanged)
             staging.animations = pending.animations;
 
@@ -236,6 +272,9 @@ public:
             staging.repaintCounter = pending.repaintCounter;
         if (pending.delta.debugBorderChanged)
             staging.debugBorder = pending.debugBorder;
+
+        if (pending.delta.scrollingNodeChanged)
+            staging.scrollingNodeID = pending.scrollingNodeID;
 
         if (pending.delta.backingStoreChanged)
             staging.backingStore = pending.backingStore;
@@ -259,6 +298,13 @@ public:
         m_state.staging.delta = { };
 
         functor(m_state.committed);
+    }
+
+    template<typename T>
+    void accessPending(const T& functor)
+    {
+        LockHolder locker(PlatformLayer::m_state.lock);
+        functor(m_state.pending);
     }
 
     template<typename T>

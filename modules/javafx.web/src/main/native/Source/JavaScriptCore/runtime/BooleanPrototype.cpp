@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2008, 2011, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,17 +21,13 @@
 #include "config.h"
 #include "BooleanPrototype.h"
 
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "JSFunction.h"
-#include "JSString.h"
-#include "ObjectPrototype.h"
+#include "IntegrityInlines.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState*);
-static EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(booleanProtoFuncToString);
+static JSC_DECLARE_HOST_FUNCTION(booleanProtoFuncValueOf);
 
 }
 
@@ -65,11 +61,11 @@ void BooleanPrototype::finishCreation(VM& vm, JSGlobalObject*)
 
 // ------------------------------ Functions ---------------------------
 
-EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(booleanProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSValue thisValue = exec->thisValue();
+    JSValue thisValue = callFrame->thisValue();
     if (thisValue == jsBoolean(false))
         return JSValue::encode(vm.smallStrings.falseString());
 
@@ -78,8 +74,9 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
 
     auto* thisObject = jsDynamicCast<BooleanObject*>(vm, thisValue);
     if (UNLIKELY(!thisObject))
-        return throwVMTypeError(exec, scope);
+        return throwVMTypeError(globalObject, scope);
 
+    Integrity::auditStructureID(vm, thisObject->structureID());
     if (thisObject->internalValue() == jsBoolean(false))
         return JSValue::encode(vm.smallStrings.falseString());
 
@@ -87,18 +84,19 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
     return JSValue::encode(vm.smallStrings.trueString());
 }
 
-EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(booleanProtoFuncValueOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSValue thisValue = exec->thisValue();
+    JSValue thisValue = callFrame->thisValue();
     if (thisValue.isBoolean())
         return JSValue::encode(thisValue);
 
     auto* thisObject = jsDynamicCast<BooleanObject*>(vm, thisValue);
     if (UNLIKELY(!thisObject))
-        return throwVMTypeError(exec, scope);
+        return throwVMTypeError(globalObject, scope);
 
+    Integrity::auditStructureID(vm, thisObject->structureID());
     return JSValue::encode(thisObject->internalValue());
 }
 

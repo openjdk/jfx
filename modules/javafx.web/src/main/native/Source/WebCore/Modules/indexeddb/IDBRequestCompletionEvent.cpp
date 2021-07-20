@@ -28,9 +28,13 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
-IDBRequestCompletionEvent::IDBRequestCompletionEvent(const AtomicString& type, CanBubble canBubble, IsCancelable cancelable, IDBRequest& request)
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBRequestCompletionEvent);
+
+IDBRequestCompletionEvent::IDBRequestCompletionEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, IDBRequest& request)
     : Event(type, canBubble, cancelable)
     , m_request(request)
 {

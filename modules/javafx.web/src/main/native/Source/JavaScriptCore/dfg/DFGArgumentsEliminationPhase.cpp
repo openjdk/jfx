@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,8 @@
 #if ENABLE(DFG_JIT)
 
 #include "ArrayPrototype.h"
-#include "BytecodeLivenessAnalysisInlines.h"
 #include "ClonedArguments.h"
 #include "DFGArgumentsUtilities.h"
-#include "DFGBasicBlockInlines.h"
 #include "DFGBlockMapInlines.h"
 #include "DFGClobberize.h"
 #include "DFGCombinedLiveness.h"
@@ -52,7 +50,7 @@ namespace JSC { namespace DFG {
 namespace {
 
 namespace DFGArgumentsEliminationPhaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 class ArgumentsEliminationPhase : public Phase {
@@ -358,9 +356,12 @@ private:
                 case NewArrayBuffer:
                     break;
 
+                case VarargsLength:
+                    break;
+
                 case LoadVarargs:
-                    if (node->loadVarargsData()->offset && (node->child1()->op() == NewArrayWithSpread || node->child1()->op() == Spread || node->child1()->op() == NewArrayBuffer))
-                        escape(node->child1(), node);
+                    if (node->loadVarargsData()->offset && (node->argumentsChild()->op() == NewArrayWithSpread || node->argumentsChild()->op() == Spread || node->argumentsChild()->op() == NewArrayBuffer))
+                        escape(node->argumentsChild(), node);
                     break;
 
                 case CallVarargs:
@@ -400,12 +401,16 @@ private:
                     // butterfly's child and check if it's a candidate.
                     break;
 
-                case FilterGetByIdStatus:
+                case FilterGetByStatus:
                 case FilterPutByIdStatus:
                 case FilterCallLinkStatus:
                 case FilterInByIdStatus:
+                case FilterDeleteByStatus:
+                case FilterCheckPrivateBrandStatus:
+                case FilterSetPrivateBrandStatus:
                     break;
 
+                case CheckArrayOrEmpty:
                 case CheckArray:
                     escapeBasedOnArrayMode(node->arrayMode(), node->child1(), node);
                     break;
@@ -493,13 +498,40 @@ private:
                             return;
                         }
                         ASSERT(!heap.payload().isTop());
-                        VirtualRegister reg(heap.payload().value32());
+                        Operand operand = heap.operand();
                         // The register may not point to an argument or local, for example if we are looking at SetArgumentCountIncludingThis.
-                        if (!reg.isHeader())
-                            clobberedByThisBlock.operand(reg) = true;
+                        if (!operand.isHeader())
+                            clobberedByThisBlock.operand(operand) = true;
                     },
                     NoOpClobberize());
             }
+        }
+
+        using InlineCallFrames = HashSet<InlineCallFrame*, WTF::DefaultHash<InlineCallFrame*>, WTF::NullableHashTraits<InlineCallFrame*>>;
+        using InlineCallFramesForCanditates = HashMap<Node*, InlineCallFrames>;
+        InlineCallFramesForCanditates inlineCallFramesForCandidate;
+        auto forEachDependentNode = recursableLambda([&](auto self, Node* node, const auto& functor) -> void {
+            functor(node);
+
+            if (node->op() == Spread) {
+                self(node->child1().node(), functor);
+                return;
+            }
+
+            if (node->op() == NewArrayWithSpread) {
+                BitVector* bitVector = node->bitVector();
+                for (unsigned i = node->numChildren(); i--; ) {
+                    if (bitVector->get(i))
+                        self(m_graph.varArgChild(node, i).node(), functor);
+                }
+                return;
+            }
+        });
+        for (Node* candidate : m_candidates) {
+            auto& set = inlineCallFramesForCandidate.add(candidate, InlineCallFrames()).iterator->value;
+            forEachDependentNode(candidate, [&](Node* dependent) {
+                set.add(dependent->origin.semantic.inlineCallFrame());
+            });
         }
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
@@ -524,82 +556,97 @@ private:
                     if (!m_candidates.contains(candidate))
                         return;
 
-                    // Check if this block has any clobbers that affect this candidate. This is a fairly
-                    // fast check.
-                    bool isClobberedByBlock = false;
-                    Operands<bool>& clobberedByThisBlock = clobberedByBlock[block];
+                    for (InlineCallFrame* inlineCallFrame : inlineCallFramesForCandidate.get(candidate)) {
+                        // Check if this block has any clobbers that affect this candidate. This is a fairly
+                        // fast check.
+                        bool isClobberedByBlock = false;
+                        Operands<bool>& clobberedByThisBlock = clobberedByBlock[block];
 
-                    if (InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame) {
-                        if (inlineCallFrame->isVarargs()) {
-                            isClobberedByBlock |= clobberedByThisBlock.operand(
-                                inlineCallFrame->stackOffset + CallFrameSlot::argumentCount);
-                        }
+                        if (inlineCallFrame) {
+                            if (inlineCallFrame->isVarargs()) {
+                                isClobberedByBlock |= clobberedByThisBlock.operand(
+                                    VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
+                            }
 
-                        if (!isClobberedByBlock || inlineCallFrame->isClosureCall) {
-                            isClobberedByBlock |= clobberedByThisBlock.operand(
-                                inlineCallFrame->stackOffset + CallFrameSlot::callee);
-                        }
+                            if (!isClobberedByBlock || inlineCallFrame->isClosureCall) {
+                                isClobberedByBlock |= clobberedByThisBlock.operand(
+                                    VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
+                            }
 
-                        if (!isClobberedByBlock) {
-                            for (unsigned i = 0; i < inlineCallFrame->argumentCountIncludingThis - 1; ++i) {
-                                VirtualRegister reg =
-                                    VirtualRegister(inlineCallFrame->stackOffset) +
-                                    CallFrame::argumentOffset(i);
-                                if (clobberedByThisBlock.operand(reg)) {
+                            if (!isClobberedByBlock) {
+                                for (unsigned i = 0; i < static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1); ++i) {
+                                    VirtualRegister reg =
+                                        VirtualRegister(inlineCallFrame->stackOffset) +
+                                        CallFrame::argumentOffset(i);
+                                    if (clobberedByThisBlock.operand(reg)) {
+                                        isClobberedByBlock = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            // We don't include the ArgumentCount or Callee in this case because we can be
+                            // damn sure that this won't be clobbered.
+                            for (unsigned i = 1; i < static_cast<unsigned>(codeBlock()->numParameters()); ++i) {
+                                if (clobberedByThisBlock.argument(i)) {
                                     isClobberedByBlock = true;
                                     break;
                                 }
                             }
                         }
-                    } else {
-                        // We don't include the ArgumentCount or Callee in this case because we can be
-                        // damn sure that this won't be clobbered.
-                        for (unsigned i = 1; i < static_cast<unsigned>(codeBlock()->numParameters()); ++i) {
-                            if (clobberedByThisBlock.argument(i)) {
-                                isClobberedByBlock = true;
-                                break;
-                            }
-                        }
-                    }
 
-                    if (!isClobberedByBlock)
-                        return;
+                        if (!isClobberedByBlock)
+                            continue;
 
-                    // Check if we can immediately eliminate this candidate. If the block has a clobber
-                    // for this arguments allocation, and we'd have to examine every node in the block,
-                    // then we can just eliminate the candidate.
-                    if (nodeIndex == block->size() && candidate->owner != block) {
-                        if (DFGArgumentsEliminationPhaseInternal::verbose)
-                            dataLog("eliminating candidate: ", candidate, " because it is clobbered by: ", block->at(nodeIndex), "\n");
-                        transitivelyRemoveCandidate(candidate);
-                        return;
-                    }
-
-                    // This loop considers all nodes up to the nodeIndex, excluding the nodeIndex.
-                    while (nodeIndex--) {
-                        Node* node = block->at(nodeIndex);
-                        if (node == candidate)
-                            break;
-
-                        bool found = false;
-                        clobberize(
-                            m_graph, node, NoOpClobberize(),
-                            [&] (AbstractHeap heap) {
-                                if (heap.kind() == Stack && !heap.payload().isTop()) {
-                                    if (argumentsInvolveStackSlot(candidate, VirtualRegister(heap.payload().value32())))
-                                        found = true;
-                                    return;
-                                }
-                                if (heap.overlaps(Stack))
-                                    found = true;
-                            },
-                            NoOpClobberize());
-
-                        if (found) {
+                        // Check if we can immediately eliminate this candidate. If the block has a clobber
+                        // for this arguments allocation, and we'd have to examine every node in the block,
+                        // then we can just eliminate the candidate.
+                        if (nodeIndex == block->size() && candidate->owner != block) {
                             if (DFGArgumentsEliminationPhaseInternal::verbose)
-                                dataLog("eliminating candidate: ", candidate, " because it is clobbered by ", block->at(nodeIndex), "\n");
+                                dataLog("eliminating candidate: ", candidate, " because it is clobbered by: ", block->at(nodeIndex), "\n");
                             transitivelyRemoveCandidate(candidate);
                             return;
+                        }
+
+                        // This loop considers all nodes up to the nodeIndex, excluding the nodeIndex.
+                        //
+                        // Note: nodeIndex here has a double meaning. Before entering this
+                        // while loop, it refers to the remaining number of nodes that have
+                        // yet to be processed. Inside the look, it refers to the index
+                        // of the current node to process (after we decrement it).
+                        //
+                        // If the remaining number of nodes is 0, we should not decrement nodeIndex.
+                        // Hence, we must only decrement nodeIndex inside the while loop instead of
+                        // in its condition statement. Note that this while loop is embedded in an
+                        // outer for loop. If we decrement nodeIndex in the condition statement, a
+                        // nodeIndex of 0 will become UINT_MAX, and the outer loop will wrongly
+                        // treat this as there being UINT_MAX remaining nodes to process.
+                        while (nodeIndex) {
+                            --nodeIndex;
+                            Node* node = block->at(nodeIndex);
+                            if (node == candidate)
+                                break;
+
+                            bool found = false;
+                            clobberize(
+                                m_graph, node, NoOpClobberize(),
+                                [&] (AbstractHeap heap) {
+                                    if (heap.kind() == Stack && !heap.payload().isTop()) {
+                                        if (argumentsInvolveStackSlot(inlineCallFrame, heap.operand()))
+                                            found = true;
+                                        return;
+                                    }
+                                    if (heap.overlaps(Stack))
+                                        found = true;
+                                },
+                                NoOpClobberize());
+
+                            if (found) {
+                                if (DFGArgumentsEliminationPhaseInternal::verbose)
+                                    dataLog("eliminating candidate: ", candidate, " because it is clobbered by ", block->at(nodeIndex), "\n");
+                                transitivelyRemoveCandidate(candidate);
+                                return;
+                            }
                         }
                     }
                 });
@@ -661,6 +708,12 @@ private:
                     if (!m_candidates.contains(node))
                         break;
 
+                    ASSERT(node->origin.exitOK);
+                    ASSERT(node->child1().useKind() == Int32Use);
+                    insertionSet.insertNode(
+                        nodeIndex, SpecNone, Check, node->origin,
+                        node->child1());
+
                     node->setOpAndDefaultFlags(PhantomCreateRest);
                     // We don't need this parameter for OSR exit, we can find out all the information
                     // we need via the static parameter count and the dynamic argument count.
@@ -704,7 +757,7 @@ private:
                     DFG_ASSERT(
                         m_graph, node, node->child1()->op() == PhantomDirectArguments, node->child1()->op());
                     VirtualRegister reg =
-                        virtualRegisterForArgument(node->capturedArgumentsOffset().offset() + 1) +
+                        virtualRegisterForArgumentIncludingThis(node->capturedArgumentsOffset().offset() + 1) +
                         node->origin.semantic.stackOffset();
                     StackAccessData* data = m_graph.m_stackAccessData.add(reg, FlushedJSValue);
                     node->convertToGetStack(data);
@@ -753,19 +806,19 @@ private:
                     Node* result = nullptr;
                     if (m_graph.varArgChild(node, 1)->isInt32Constant()) {
                         unsigned index = m_graph.varArgChild(node, 1)->asUInt32();
-                        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
+                        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
                         index += numberOfArgumentsToSkip;
 
                         bool safeToGetStack = index >= numberOfArgumentsToSkip;
                         if (inlineCallFrame)
-                            safeToGetStack &= index < inlineCallFrame->argumentCountIncludingThis - 1;
+                            safeToGetStack &= index < static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1);
                         else {
                             safeToGetStack &=
                                 index < static_cast<unsigned>(codeBlock()->numParameters()) - 1;
                         }
                         if (safeToGetStack) {
                             StackAccessData* data;
-                            VirtualRegister arg = virtualRegisterForArgument(index + 1);
+                            VirtualRegister arg = virtualRegisterForArgumentIncludingThis(index + 1);
                             if (inlineCallFrame)
                                 arg += inlineCallFrame->stackOffset;
                             data = m_graph.m_stackAccessData.add(arg, FlushedJSValue);
@@ -798,8 +851,22 @@ private:
                     break;
                 }
 
+                case VarargsLength: {
+                    Node* candidate = node->argumentsChild().node();
+                    if (!isEliminatedAllocation(candidate))
+                        break;
+
+                    // VarargsLength can exit, so it better be exitOK.
+                    DFG_ASSERT(m_graph, node, node->origin.exitOK);
+                    NodeOrigin origin = node->origin.withExitOK(true);
+
+
+                    node->convertToIdentityOn(emitCodeToGetArgumentsArrayLength(insertionSet, candidate, nodeIndex, origin, /* addThis = */ true));
+                    break;
+                }
+
                 case LoadVarargs: {
-                    Node* candidate = node->child1().node();
+                    Node* candidate = node->argumentsChild().node();
                     if (!isEliminatedAllocation(candidate))
                         break;
 
@@ -813,8 +880,11 @@ private:
                             nodeIndex, node->origin.withExitOK(canExit),
                             jsNumber(argumentCountIncludingThis));
                         insertionSet.insertNode(
+                            nodeIndex, SpecNone, KillStack, node->origin.takeValidExit(canExit),
+                            OpInfo(varargsData->count));
+                        insertionSet.insertNode(
                             nodeIndex, SpecNone, MovHint, node->origin.takeValidExit(canExit),
-                            OpInfo(varargsData->count.offset()), Edge(argumentCountIncludingThisNode));
+                            OpInfo(varargsData->count), Edge(argumentCountIncludingThisNode));
                         insertionSet.insertNode(
                             nodeIndex, SpecNone, PutStack, node->origin.withExitOK(canExit),
                             OpInfo(m_graph.m_stackAccessData.add(varargsData->count, FlushedInt32)),
@@ -823,12 +893,15 @@ private:
 
                     auto storeValue = [&] (Node* value, unsigned storeIndex) {
                         VirtualRegister reg = varargsData->start + storeIndex;
+                        ASSERT(reg.isLocal());
                         StackAccessData* data =
                             m_graph.m_stackAccessData.add(reg, FlushedJSValue);
 
                         insertionSet.insertNode(
+                            nodeIndex, SpecNone, KillStack, node->origin.takeValidExit(canExit), OpInfo(reg));
+                        insertionSet.insertNode(
                             nodeIndex, SpecNone, MovHint, node->origin.takeValidExit(canExit),
-                            OpInfo(reg.offset()), Edge(value));
+                            OpInfo(reg), Edge(value));
                         insertionSet.insertNode(
                             nodeIndex, SpecNone, PutStack, node->origin.withExitOK(canExit),
                             OpInfo(data), Edge(value));
@@ -855,7 +928,7 @@ private:
                                 return true;
 
                             ASSERT(candidate->op() == PhantomCreateRest);
-                            InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
+                            InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
                             return inlineCallFrame && !inlineCallFrame->isVarargs();
                         });
 
@@ -881,8 +954,8 @@ private:
 
                                 ASSERT(candidate->op() == PhantomCreateRest);
                                 unsigned numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
-                                InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
-                                unsigned frameArgumentCount = inlineCallFrame->argumentCountIncludingThis - 1;
+                                InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
+                                unsigned frameArgumentCount = static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1);
                                 if (frameArgumentCount >= numberOfArgumentsToSkip)
                                     return frameArgumentCount - numberOfArgumentsToSkip;
                                 return 0;
@@ -929,10 +1002,10 @@ private:
 
                                     ASSERT(candidate->op() == PhantomCreateRest);
                                     unsigned numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
-                                    InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
-                                    unsigned frameArgumentCount = inlineCallFrame->argumentCountIncludingThis - 1;
+                                    InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
+                                    unsigned frameArgumentCount = static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1);
                                     for (unsigned loadIndex = numberOfArgumentsToSkip; loadIndex < frameArgumentCount; ++loadIndex) {
-                                        VirtualRegister reg = virtualRegisterForArgument(loadIndex + 1) + inlineCallFrame->stackOffset;
+                                        VirtualRegister reg = virtualRegisterForArgumentIncludingThis(loadIndex + 1) + inlineCallFrame->stackOffset;
                                         StackAccessData* data = m_graph.m_stackAccessData.add(reg, FlushedJSValue);
                                         Node* value = insertionSet.insertNode(
                                             nodeIndex, SpecNone, GetStack, node->origin.withExitOK(canExit),
@@ -964,11 +1037,9 @@ private:
                             numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
                         varargsData->offset += numberOfArgumentsToSkip;
 
-                        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
+                        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
 
-                        if (inlineCallFrame
-                            && !inlineCallFrame->isVarargs()) {
-
+                        if (inlineCallFrame && !inlineCallFrame->isVarargs()) {
                             unsigned argumentCountIncludingThis = inlineCallFrame->argumentCountIncludingThis;
                             if (argumentCountIncludingThis > varargsData->offset)
                                 argumentCountIncludingThis -= varargsData->offset;
@@ -977,7 +1048,6 @@ private:
                             RELEASE_ASSERT(argumentCountIncludingThis >= 1);
 
                             if (argumentCountIncludingThis <= varargsData->limit) {
-
                                 storeArgumentCountIncludingThis(argumentCountIncludingThis);
 
                                 DFG_ASSERT(m_graph, node, varargsData->limit - 1 >= varargsData->mandatoryMinimum, varargsData->limit, varargsData->mandatoryMinimum);
@@ -992,7 +1062,7 @@ private:
                                     unsigned loadIndex = storeIndex + varargsData->offset;
 
                                     if (loadIndex + 1 < inlineCallFrame->argumentCountIncludingThis) {
-                                        VirtualRegister reg = virtualRegisterForArgument(loadIndex + 1) + inlineCallFrame->stackOffset;
+                                        VirtualRegister reg = virtualRegisterForArgumentIncludingThis(loadIndex + 1) + inlineCallFrame->stackOffset;
                                         StackAccessData* data = m_graph.m_stackAccessData.add(
                                             reg, FlushedJSValue);
 
@@ -1105,7 +1175,7 @@ private:
                                 return true;
 
                             ASSERT(candidate->op() == PhantomCreateRest);
-                            InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
+                            InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
                             return inlineCallFrame && !inlineCallFrame->isVarargs();
                         });
 
@@ -1144,11 +1214,11 @@ private:
                                 }
 
                                 ASSERT(candidate->op() == PhantomCreateRest);
-                                InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
+                                InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
                                 unsigned numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
                                 for (unsigned i = 1 + numberOfArgumentsToSkip; i < inlineCallFrame->argumentCountIncludingThis; ++i) {
                                     StackAccessData* data = m_graph.m_stackAccessData.add(
-                                        virtualRegisterForArgument(i) + inlineCallFrame->stackOffset,
+                                        virtualRegisterForArgumentIncludingThis(i) + inlineCallFrame->stackOffset,
                                         FlushedJSValue);
 
                                     Node* value = insertionSet.insertNode(
@@ -1169,12 +1239,12 @@ private:
                         CallVarargsData* varargsData = node->callVarargsData();
                         varargsData->firstVarArgOffset += numberOfArgumentsToSkip;
 
-                        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame;
+                        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
                         if (inlineCallFrame && !inlineCallFrame->isVarargs()) {
                             Vector<Node*> arguments;
                             for (unsigned i = 1 + varargsData->firstVarArgOffset; i < inlineCallFrame->argumentCountIncludingThis; ++i) {
                                 StackAccessData* data = m_graph.m_stackAccessData.add(
-                                    virtualRegisterForArgument(i) + inlineCallFrame->stackOffset,
+                                    virtualRegisterForArgumentIncludingThis(i) + inlineCallFrame->stackOffset,
                                     FlushedJSValue);
 
                                 Node* value = insertionSet.insertNode(
@@ -1191,12 +1261,16 @@ private:
                     break;
                 }
 
+                case CheckArrayOrEmpty:
                 case CheckArray:
                 case GetButterfly:
-                case FilterGetByIdStatus:
+                case FilterGetByStatus:
                 case FilterPutByIdStatus:
                 case FilterCallLinkStatus:
-                case FilterInByIdStatus: {
+                case FilterInByIdStatus:
+                case FilterDeleteByStatus:
+                case FilterCheckPrivateBrandStatus:
+                case FilterSetPrivateBrandStatus: {
                     if (!isEliminatedAllocation(node->child1().node()))
                         break;
                     node->remove(m_graph);

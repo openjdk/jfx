@@ -46,6 +46,7 @@ public:
     void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const override;
 
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
+    bool isInLayout() const { return m_inLayout; }
     void setNeedsBoundariesUpdate() override { m_needsBoundariesOrTransformUpdate = true; }
     bool needsBoundariesUpdate() override { return m_needsBoundariesOrTransformUpdate; }
     void setNeedsTransformUpdate() override { m_needsBoundariesOrTransformUpdate = true; }
@@ -94,7 +95,7 @@ private:
     LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
     Optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
 
-    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
+    void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
     bool canBeSelectionLeaf() const override { return false; }
@@ -106,7 +107,8 @@ private:
 
     IntSize m_containerSize;
     FloatRect m_objectBoundingBox;
-    bool m_objectBoundingBoxValid;
+    bool m_objectBoundingBoxValid { false };
+    bool m_inLayout { false };
     FloatRect m_strokeBoundingBox;
     FloatRect m_repaintBoundingBox;
     FloatRect m_repaintBoundingBoxExcludingShadow;

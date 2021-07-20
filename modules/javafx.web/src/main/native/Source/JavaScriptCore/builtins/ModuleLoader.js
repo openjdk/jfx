@@ -99,6 +99,8 @@ function newRegistryEntry(key)
         linkError: @undefined,
         linkSucceeded: true,
         evaluated: false,
+        then: @undefined,
+        isAsync: false,
     };
 }
 
@@ -122,7 +124,9 @@ function forceFulfillPromise(promise, value)
 {
     "use strict";
 
-    if (@getByIdDirectPrivate(promise, "promiseState") === @promiseStatePending)
+    @assert(@isPromise(promise));
+
+    if ((@getPromiseInternalField(promise, @promiseFieldFlags) & @promiseStateMask) === @promiseStatePending)
         @fulfillPromise(promise, value);
 }
 
@@ -283,11 +287,15 @@ function link(entry, fetcher)
         // Since we already have the "dependencies" field,
         // we can call moduleDeclarationInstantiation with the correct order
         // without constructing the dependency graph by calling dependencyGraph.
+        var hasAsyncDependency = false;
         var dependencies = entry.dependencies;
-        for (var i = 0, length = dependencies.length; i < length; ++i)
-            this.link(dependencies[i], fetcher);
+        for (var i = 0, length = dependencies.length; i < length; ++i) {
+            var dependency = dependencies[i];
+            this.link(dependency, fetcher);
+            hasAsyncDependency ||= dependency.isAsync;
+        }
 
-        this.moduleDeclarationInstantiation(entry.module, fetcher);
+        entry.isAsync = this.moduleDeclarationInstantiation(entry.module, fetcher) || hasAsyncDependency;
     } catch (error) {
         entry.linkSucceeded = false;
         entry.linkError = error;
@@ -300,7 +308,6 @@ function link(entry, fetcher)
 function moduleEvaluation(entry, fetcher)
 {
     // http://www.ecma-international.org/ecma-262/6.0/#sec-moduleevaluation
-
     "use strict";
 
     if (entry.evaluated)
@@ -309,10 +316,41 @@ function moduleEvaluation(entry, fetcher)
 
     // The contents of the [[RequestedModules]] is cloned into entry.dependencies.
     var dependencies = entry.dependencies;
-    for (var i = 0, length = dependencies.length; i < length; ++i)
-        this.moduleEvaluation(dependencies[i], fetcher);
 
-    this.evaluate(entry.key, entry.module, fetcher);
+    if (!entry.isAsync) {
+        // Since linking sets isAsync for any strongly connected component with an async module we should only get here if all our dependencies are also sync.
+        for (var i = 0, length = dependencies.length; i < length; ++i) {
+            var dependency = dependencies[i];
+            @assert(!dependency.isAsync);
+            this.moduleEvaluation(dependency, fetcher);
+        }
+
+        this.evaluate(entry.key, entry.module, fetcher);
+    } else
+        return this.asyncModuleEvaluation(entry, fetcher, dependencies);
+}
+
+async function asyncModuleEvaluation(entry, fetcher, dependencies)
+{
+    "use strict";
+
+    for (var i = 0, length = dependencies.length; i < length; ++i)
+        await this.moduleEvaluation(dependencies[i], fetcher);
+
+    var resumeMode = @GeneratorResumeModeNormal;
+    while (true) {
+        var awaitedValue = this.evaluate(entry.key, entry.module, fetcher, awaitedValue, resumeMode);
+        if (@getAbstractModuleRecordInternalField(entry.module, @abstractModuleRecordFieldState) == @GeneratorStateExecuting)
+            return;
+
+        try {
+            awaitedValue = await awaitedValue;
+            resumeMode = @GeneratorResumeModeNormal;
+        } catch (e) {
+            awaitedValue = e;
+            resumeMode = @GeneratorResumeModeThrow;
+        }
+    }
 }
 
 // APIs to control the module loader.
@@ -336,8 +374,8 @@ async function loadModule(moduleName, parameters, fetcher)
     // resolve: moduleName => Promise(moduleKey)
     // Take the name and resolve it to the unique identifier for the resource location.
     // For example, take the "jquery" and return the URL for the resource.
-    let key = await this.resolve(moduleName, @undefined, fetcher);
-    let entry = await this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
+    var key = await this.resolve(moduleName, @undefined, fetcher);
+    var entry = await this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
     return entry.key;
 }
 
@@ -357,7 +395,7 @@ async function loadAndEvaluateModule(moduleName, parameters, fetcher)
 {
     "use strict";
 
-    let key = await this.loadModule(moduleName, parameters, fetcher);
+    var key = await this.loadModule(moduleName, parameters, fetcher);
     return await this.linkAndEvaluateModule(key, fetcher);
 }
 
@@ -365,7 +403,24 @@ async function requestImportModule(key, parameters, fetcher)
 {
     "use strict";
 
-    let entry = await this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
-    this.linkAndEvaluateModule(entry.key, fetcher);
+    var entry = await this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
+    await this.linkAndEvaluateModule(entry.key, fetcher);
     return this.getModuleNamespaceObject(entry.module);
+}
+
+function dependencyKeysIfEvaluated(key)
+{
+    "use strict";
+
+    var entry = this.registry.@get(key);
+    if (!entry || !entry.evaluated)
+        return null;
+
+    var dependencies = entry.dependencies;
+    var length = dependencies.length;
+    var result = new @Array(length);
+    for (var i = 0; i < length; ++i)
+        result[i] = dependencies[i].key;
+
+    return result;
 }

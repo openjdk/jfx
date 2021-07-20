@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(JIT)
 
+#include "CacheableIdentifier.h"
 #include "JSFunctionInlines.h"
 #include "ObjectPropertyConditionSet.h"
 #include "PolyProtoAccessChain.h"
@@ -35,6 +36,8 @@
 namespace JSC {
 
 struct AccessGenerationState;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
 
 // An AccessCase describes one of the cases of a PolymorphicAccess. A PolymorphicAccess represents a
 // planned (to generate in future) or generated stub for some inline cache. That stub contains fast
@@ -77,11 +80,14 @@ struct AccessGenerationState;
 // code. This allows us to only regenerate once we've accumulated (hopefully) more than one new
 // AccessCase.
 class AccessCase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessCase);
 public:
     enum AccessType : uint8_t {
         Load,
         Transition,
+        Delete,
+        DeleteNonConfigurable,
+        DeleteMiss,
         Replace,
         Miss,
         GetGetter,
@@ -101,7 +107,25 @@ public:
         ModuleNamespaceLoad,
         InstanceOfHit,
         InstanceOfMiss,
-        InstanceOfGeneric
+        InstanceOfGeneric,
+        CheckPrivateBrand,
+        SetPrivateBrand,
+        IndexedInt32Load,
+        IndexedDoubleLoad,
+        IndexedContiguousLoad,
+        IndexedArrayStorageLoad,
+        IndexedScopedArgumentsLoad,
+        IndexedDirectArgumentsLoad,
+        IndexedTypedArrayInt8Load,
+        IndexedTypedArrayUint8Load,
+        IndexedTypedArrayUint8ClampedLoad,
+        IndexedTypedArrayInt16Load,
+        IndexedTypedArrayUint16Load,
+        IndexedTypedArrayInt32Load,
+        IndexedTypedArrayUint32Load,
+        IndexedTypedArrayFloat32Load,
+        IndexedTypedArrayFloat64Load,
+        IndexedStringLoad
     };
 
     enum State : uint8_t {
@@ -123,14 +147,19 @@ public:
         return std::unique_ptr<AccessCaseType>(new AccessCaseType(arguments...));
     }
 
-    static std::unique_ptr<AccessCase> create(VM&, JSCell* owner, AccessType, PropertyOffset = invalidOffset,
+    static std::unique_ptr<AccessCase> create(VM&, JSCell* owner, AccessType, CacheableIdentifier, PropertyOffset = invalidOffset,
         Structure* = nullptr, const ObjectPropertyConditionSet& = ObjectPropertyConditionSet(), std::unique_ptr<PolyProtoAccessChain> = nullptr);
 
-    // This create method should be used for transitions.
-    static std::unique_ptr<AccessCase> create(VM&, JSCell* owner, PropertyOffset, Structure* oldStructure,
+    static std::unique_ptr<AccessCase> createTransition(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure,
         Structure* newStructure, const ObjectPropertyConditionSet&, std::unique_ptr<PolyProtoAccessChain>);
 
-    static std::unique_ptr<AccessCase> fromStructureStubInfo(VM&, JSCell* owner, StructureStubInfo&);
+    static std::unique_ptr<AccessCase> createDelete(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure,
+        Structure* newStructure);
+
+    static std::unique_ptr<AccessCase> createCheckPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure*);
+    static std::unique_ptr<AccessCase> createSetPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure* oldStructure, Structure* newStructure);
+
+    static std::unique_ptr<AccessCase> fromStructureStubInfo(VM&, JSCell* owner, CacheableIdentifier, StructureStubInfo&);
 
     AccessType type() const { return m_type; }
     State state() const { return m_state; }
@@ -138,15 +167,15 @@ public:
 
     Structure* structure() const
     {
-        if (m_type == Transition)
+        if (m_type == Transition || m_type == Delete || m_type == SetPrivateBrand)
             return m_structure->previousID();
         return m_structure.get();
     }
-    bool guardedByStructureCheck() const;
+    bool guardedByStructureCheck(const StructureStubInfo&) const;
 
     Structure* newStructure() const
     {
-        ASSERT(m_type == Transition);
+        ASSERT(m_type == Transition || m_type == Delete || m_type == SetPrivateBrand);
         return m_structure.get();
     }
 
@@ -160,7 +189,20 @@ public:
 
     // If you supply the optional vector, this will append the set of cells that this will need to keep alive
     // past the call.
-    bool doesCalls(Vector<JSCell*>* cellsToMark = nullptr) const;
+    bool doesCalls(VM&, Vector<JSCell*>* cellsToMark = nullptr) const;
+
+    bool isCustom() const
+    {
+        switch (type()) {
+        case CustomValueGetter:
+        case CustomAccessorGetter:
+        case CustomValueSetter:
+        case CustomAccessorSetter:
+            return true;
+        default:
+            return false;
+        }
+    }
 
     bool isGetter() const
     {
@@ -197,8 +239,23 @@ public:
         return !!m_polyProtoAccessChain;
     }
 
+    bool requiresIdentifierNameMatch() const;
+    bool requiresInt32PropertyCheck() const;
+    bool needsScratchFPR() const;
+
+    static TypedArrayType toTypedArrayType(AccessType);
+
+    UniquedStringImpl* uid() const { return m_identifier.uid(); }
+    CacheableIdentifier identifier() const { return m_identifier; }
+
+#if ASSERT_ENABLED
+    void checkConsistency(StructureStubInfo&);
+#else
+    ALWAYS_INLINE void checkConsistency(StructureStubInfo&) { }
+#endif
+
 protected:
-    AccessCase(VM&, JSCell* owner, AccessType, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, std::unique_ptr<PolyProtoAccessChain>);
+    AccessCase(VM&, JSCell* owner, AccessType, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, std::unique_ptr<PolyProtoAccessChain>);
     AccessCase(AccessCase&&) = default;
     AccessCase(const AccessCase& other)
         : m_type(other.m_type)
@@ -207,6 +264,7 @@ protected:
         , m_offset(other.m_offset)
         , m_structure(other.m_structure)
         , m_conditionSet(other.m_conditionSet)
+        , m_identifier(other.m_identifier)
     {
         if (other.m_polyProtoAccessChain)
             m_polyProtoAccessChain = other.m_polyProtoAccessChain->clone();
@@ -219,8 +277,12 @@ private:
     friend class CodeBlock;
     friend class PolymorphicAccess;
 
+    template<typename Functor>
+    void forEachDependentCell(VM&, const Functor&) const;
+
+    DECLARE_VISIT_AGGREGATE_WITH_MODIFIER(const);
     bool visitWeak(VM&) const;
-    bool propagateTransitions(SlotVisitor&) const;
+    template<typename Visitor> bool propagateTransitions(Visitor&) const;
 
     // FIXME: This only exists because of how AccessCase puts post-generation things into itself.
     // https://bugs.webkit.org/show_bug.cgi?id=156456
@@ -228,7 +290,7 @@ private:
 
     // Perform any action that must be performed before the end of the epoch in which the case
     // was created. Returns a set of watchpoint sets that will need to be watched.
-    Vector<WatchpointSet*, 2> commit(VM&, const Identifier&);
+    Vector<WatchpointSet*, 2> commit(VM&);
 
     // Fall through on success. Two kinds of failures are supported: fall-through, which means that we
     // should try a different case; and failure, which means that this was the right case but it needs
@@ -239,6 +301,8 @@ private:
     void generate(AccessGenerationState&);
 
     void generateImpl(AccessGenerationState&);
+
+    bool guardedByStructureCheckSkippingConstantIdentifierCheck() const;
 
     AccessType m_type;
     State m_state { Primordial };
@@ -258,6 +322,8 @@ private:
     ObjectPropertyConditionSet m_conditionSet;
 
     std::unique_ptr<PolyProtoAccessChain> m_polyProtoAccessChain;
+
+    CacheableIdentifier m_identifier;
 };
 
 } // namespace JSC

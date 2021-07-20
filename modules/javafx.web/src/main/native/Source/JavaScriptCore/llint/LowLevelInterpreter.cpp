@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,7 +54,7 @@ using namespace JSC::LLInt;
 // includes.
 //
 // In addition, some JIT trampoline functions which are needed by LLInt
-// (e.g. getHostCallReturnValue, ctiOpThrowNotCaught) are also added as
+// (e.g. ctiOpThrowNotCaught) are also added as
 // bytecodes, and the CLoop will provide bytecode handlers for them.
 //
 // In the CLoop, we can only dispatch indirectly to these bytecodes
@@ -86,6 +86,10 @@ using namespace JSC::LLInt;
 //============================================================================
 // Define the opcode dispatch mechanism when using the C loop:
 //
+
+#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+using WebConfig::g_config;
+#endif
 
 // These are for building a C Loop interpreter:
 #define OFFLINE_ASM_BEGIN
@@ -144,7 +148,6 @@ public:
     ALWAYS_INLINE void* vp() const { return bitwise_cast<void*>(m_value); }
     ALWAYS_INLINE const void* cvp() const { return bitwise_cast<const void*>(m_value); }
     ALWAYS_INLINE CallFrame* callFrame() const { return bitwise_cast<CallFrame*>(m_value); }
-    ALWAYS_INLINE ExecState* execState() const { return bitwise_cast<ExecState*>(m_value); }
     ALWAYS_INLINE const void* instruction() const { return bitwise_cast<const void*>(m_value); }
     ALWAYS_INLINE VM* vm() const { return bitwise_cast<VM*>(m_value); }
     ALWAYS_INLINE JSCell* cell() const { return bitwise_cast<JSCell*>(m_value); }
@@ -157,7 +160,7 @@ public:
 #endif
     ALWAYS_INLINE Opcode opcode() const { return bitwise_cast<Opcode>(m_value); }
 
-    operator ExecState*() { return bitwise_cast<ExecState*>(m_value); }
+    operator CallFrame*() { return bitwise_cast<CallFrame*>(m_value); }
     operator const Instruction*() { return bitwise_cast<const Instruction*>(m_value); }
     operator JSCell*() { return bitwise_cast<JSCell*>(m_value); }
     operator ProtoCallFrame*() { return bitwise_cast<ProtoCallFrame*>(m_value); }
@@ -249,12 +252,14 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     // are at play.
     if (UNLIKELY(isInitializationPass)) {
         Opcode* opcodeMap = LLInt::opcodeMap();
-        Opcode* opcodeMapWide = LLInt::opcodeMapWide();
+        Opcode* opcodeMapWide16 = LLInt::opcodeMapWide16();
+        Opcode* opcodeMapWide32 = LLInt::opcodeMapWide32();
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
         #define OPCODE_ENTRY(__opcode, length) \
             opcodeMap[__opcode] = bitwise_cast<void*>(&&__opcode); \
-            opcodeMapWide[__opcode] = bitwise_cast<void*>(&&__opcode##_wide);
+            opcodeMapWide16[__opcode] = bitwise_cast<void*>(&&__opcode##_wide16); \
+            opcodeMapWide32[__opcode] = bitwise_cast<void*>(&&__opcode##_wide32);
 
         #define LLINT_OPCODE_ENTRY(__opcode, length) \
             opcodeMap[__opcode] = bitwise_cast<void*>(&&__opcode);
@@ -263,7 +268,8 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
         //   narrow opcodes don't need any mapping and wide opcodes just need to add numOpcodeIDs
         #define OPCODE_ENTRY(__opcode, length) \
             opcodeMap[__opcode] = __opcode; \
-            opcodeMapWide[__opcode] = static_cast<OpcodeID>(__opcode##_wide);
+            opcodeMapWide16[__opcode] = static_cast<OpcodeID>(__opcode##_wide16); \
+            opcodeMapWide32[__opcode] = static_cast<OpcodeID>(__opcode##_wide32);
 
         #define LLINT_OPCODE_ENTRY(__opcode, length) \
             opcodeMap[__opcode] = __opcode;
@@ -278,14 +284,14 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
         // initialized the opcodeMap above. This is because getCodePtr()
         // can depend on the opcodeMap.
         uint8_t* exceptionInstructions = reinterpret_cast<uint8_t*>(LLInt::exceptionInstructions());
-        for (int i = 0; i < maxOpcodeLength + 1; ++i)
+        for (unsigned i = 0; i < maxOpcodeLength + 1; ++i)
             exceptionInstructions[i] = llint_throw_from_slow_path_trampoline;
 
         return JSValue();
     }
 
     // Define the pseudo registers used by the LLINT C Loop backend:
-    ASSERT(sizeof(CLoopRegister) == sizeof(intptr_t));
+    static_assert(sizeof(CLoopRegister) == sizeof(intptr_t));
 
     // The CLoop llint backend is initially based on the ARMv7 backend, and
     // then further enhanced with a few instructions from the x86 backend to
@@ -313,8 +319,9 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 
     CLoopRegister t0, t1, t2, t3, t5, sp, cfr, lr, pc;
 #if USE(JSVALUE64)
-    CLoopRegister pcBase, tagTypeNumber, tagMask;
+    CLoopRegister numberTag, notCellMask;
 #endif
+    CLoopRegister pcBase;
     CLoopRegister metadataTable;
     CLoopDoubleRegister d0, d1;
 
@@ -353,8 +360,8 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #if USE(JSVALUE64)
     // For the ASM llint, JITStubs takes care of this initialization. We do
     // it explicitly here for the C loop:
-    tagTypeNumber = 0xFFFF000000000000;
-    tagMask = 0xFFFF000000000002;
+    numberTag = JSValue::NumberTag;
+    notCellMask = JSValue::NotCellMask;
 #endif // USE(JSVALUE64)
 
     // Interpreter variables for value passing between opcodes and/or helpers:
@@ -379,18 +386,6 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #else
 #define RECORD_OPCODE_STATS(__opcode)
 #endif
-
-#if USE(JSVALUE32_64)
-#define FETCH_OPCODE() *pc.i8p
-#else // USE(JSVALUE64)
-#define FETCH_OPCODE() *bitwise_cast<OpcodeID*>(pcBase.i8p + pc.i)
-#endif // USE(JSVALUE64)
-
-#define NEXT_INSTRUCTION() \
-    do {                         \
-        opcode = FETCH_OPCODE(); \
-        DISPATCH_OPCODE();       \
-    } while (false)
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
 
@@ -445,23 +440,6 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #endif
         }
 
-        // In the ASM llint, getHostCallReturnValue() is a piece of glue
-        // function provided by the JIT (see jit/JITOperations.cpp).
-        // We simulate it here with a pseduo-opcode handler.
-        OFFLINE_ASM_GLUE_LABEL(getHostCallReturnValue)
-        {
-            // The part in getHostCallReturnValueWithExecState():
-            JSValue result = vm->hostCallReturnValue;
-#if USE(JSVALUE32_64)
-            t1 = result.tag();
-            t0 = result.payload();
-#else
-            t0 = JSValue::encode(result);
-#endif
-            opcode = lr.opcode();
-            DISPATCH_OPCODE();
-        }
-
 #if !ENABLE(COMPUTED_GOTO_OPCODES)
     default:
         ASSERT(false);
@@ -482,7 +460,6 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     #undef LLINT_OPCODE_ENTRY
 #endif
 
-    #undef NEXT_INSTRUCTION
     #undef DEFINE_OPCODE
     #undef CHECK_FOR_TIMEOUT
     #undef CAST
@@ -502,7 +479,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #define OFFLINE_ASM_BEGIN   asm (
 #define OFFLINE_ASM_END     );
 
-#if USE(LLINT_EMBEDDED_OPCODE_ID)
+#if ENABLE(LLINT_EMBEDDED_OPCODE_ID)
 #define EMBED_OPCODE_ID_IF_NEEDED(__opcode) ".int " __opcode##_value_string "\n"
 #else
 #define EMBED_OPCODE_ID_IF_NEEDED(__opcode)
@@ -547,8 +524,19 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #define OFFLINE_ASM_OPCODE_DEBUG_LABEL(label)
 #endif
 
+// This works around a bug in GDB where, if the compilation unit
+// doesn't have any address range information, its line table won't
+// even be consulted. Emit {before,after}_llint_asm so that the code
+// emitted in the top level inline asm statement is within functions
+// visible to the compiler. This way, GDB can resolve a PC in the
+// llint asm code to this compilation unit and the successfully look
+// up the line number information.
+DEBUGGER_ANNOTATION_MARKER(before_llint_asm)
+
 // This is a file generated by offlineasm, which contains all of the assembly code
 // for the interpreter, as compiled from LowLevelInterpreter.asm.
 #include "LLIntAssembly.h"
+
+DEBUGGER_ANNOTATION_MARKER(after_llint_asm)
 
 #endif // ENABLE(C_LOOP)

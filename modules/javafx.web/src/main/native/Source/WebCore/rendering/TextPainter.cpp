@@ -24,10 +24,14 @@
 #include "TextPainter.h"
 
 #include "DisplayListReplayer.h"
+#include "FilterOperations.h"
 #include "GraphicsContext.h"
+#include "HTMLParserIdioms.h"
 #include "InlineTextBox.h"
+#include "LayoutIntegrationRun.h"
 #include "RenderCombineText.h"
 #include "RenderLayer.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ShadowData.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -98,10 +102,17 @@ TextPainter::TextPainter(GraphicsContext& context)
 {
 }
 
-void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRun& textRun, const AtomicString& emphasisMark,
+void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRun& textRun, const AtomString& emphasisMark,
     float emphasisMarkOffset, const FloatPoint& textOrigin, unsigned startOffset, unsigned endOffset)
 {
     ASSERT(startOffset < endOffset);
+
+    if (m_context.detectingContentfulPaint()) {
+        if (!textRun.text().isAllSpecialCharacters<isHTMLSpace>())
+            m_context.setContentfulPaintDetected();
+        return;
+    }
+
     if (!emphasisMark.isEmpty())
         m_context.drawEmphasisMarks(font, textRun, emphasisMark, textOrigin + FloatSize(0, emphasisMarkOffset), startOffset, endOffset);
     else if (startOffset || endOffset < textRun.length() || !m_glyphDisplayList)
@@ -117,7 +128,7 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
 }
 
 void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOperations* colorFilter, const FontCascade& font, const TextRun& textRun, const FloatRect& boxRect, const FloatPoint& textOrigin,
-    unsigned startOffset, unsigned endOffset, const AtomicString& emphasisMark, float emphasisMarkOffset, bool stroked)
+    unsigned startOffset, unsigned endOffset, const AtomString& emphasisMark, float emphasisMarkOffset, bool stroked)
 {
     if (!shadow) {
         paintTextOrEmphasisMarks(font, textRun, emphasisMark, emphasisMarkOffset, textOrigin, startOffset, endOffset);
@@ -156,17 +167,23 @@ void TextPainter::paintTextAndEmphasisMarksIfNeeded(const TextRun& textRun, cons
 
         for (auto order : paintOrder) {
             switch (order) {
-            case PaintType::Fill:
-                m_context.setTextDrawingMode(textDrawingMode & ~TextModeStroke);
+            case PaintType::Fill: {
+                auto textDrawingModeWithoutStroke = textDrawingMode;
+                textDrawingModeWithoutStroke.remove(TextDrawingMode::Stroke);
+                m_context.setTextDrawingMode(textDrawingModeWithoutStroke);
                 paintTextWithShadows(shadowToUse, shadowColorFilter, *m_font, textRun, boxRect, textOrigin, startOffset, endOffset, nullAtom(), 0, false);
                 shadowToUse = nullptr;
                 m_context.setTextDrawingMode(textDrawingMode);
                 break;
-            case PaintType::Stroke:
-                m_context.setTextDrawingMode(textDrawingMode & ~TextModeFill);
+            }
+            case PaintType::Stroke: {
+                auto textDrawingModeWithoutFill = textDrawingMode;
+                textDrawingModeWithoutFill.remove(TextDrawingMode::Fill);
+                m_context.setTextDrawingMode(textDrawingModeWithoutFill);
                 paintTextWithShadows(shadowToUse, shadowColorFilter, *m_font, textRun, boxRect, textOrigin, startOffset, endOffset, nullAtom(), 0, paintStyle.strokeWidth > 0);
                 shadowToUse = nullptr;
                 m_context.setTextDrawingMode(textDrawingMode);
+            }
                 break;
             case PaintType::Markers:
                 continue;
@@ -211,7 +228,10 @@ void TextPainter::paintRange(const TextRun& textRun, const FloatRect& boxRect, c
 void TextPainter::clearGlyphDisplayLists()
 {
     GlyphDisplayListCache<InlineTextBox>::singleton().clear();
-    GlyphDisplayListCache<SimpleLineLayout::Run>::singleton().clear();
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled())
+        GlyphDisplayListCache<LayoutIntegration::Run>::singleton().clear();
+#endif
 }
 
 bool TextPainter::shouldUseGlyphDisplayList(const PaintInfo& paintInfo)

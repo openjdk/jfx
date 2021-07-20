@@ -35,16 +35,26 @@
 namespace WebCore {
 
 StyleRuleKeyframe::StyleRuleKeyframe(Ref<StyleProperties>&& properties)
-    : StyleRuleBase(Keyframe)
+    : StyleRuleBase(StyleRuleType::Keyframe)
     , m_properties(WTFMove(properties))
 {
 }
 
-StyleRuleKeyframe::StyleRuleKeyframe(std::unique_ptr<Vector<double>> keys, Ref<StyleProperties>&& properties)
-    : StyleRuleBase(Keyframe)
+StyleRuleKeyframe::StyleRuleKeyframe(Vector<double>&& keys, Ref<StyleProperties>&& properties)
+    : StyleRuleBase(StyleRuleType::Keyframe)
     , m_properties(WTFMove(properties))
-    , m_keys(*keys)
+    , m_keys(WTFMove(keys))
 {
+}
+
+Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Ref<StyleProperties>&& properties)
+{
+    return adoptRef(*new StyleRuleKeyframe(WTFMove(properties)));
+}
+
+Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<double>&& keys, Ref<StyleProperties>&& properties)
+{
+    return adoptRef(*new StyleRuleKeyframe(WTFMove(keys), WTFMove(properties)));
 }
 
 StyleRuleKeyframe::~StyleRuleKeyframe() = default;
@@ -59,14 +69,11 @@ MutableStyleProperties& StyleRuleKeyframe::mutableProperties()
 String StyleRuleKeyframe::keyText() const
 {
     StringBuilder keyText;
-
     for (size_t i = 0; i < m_keys.size(); ++i) {
         if (i)
             keyText.append(',');
-        keyText.appendNumber(m_keys.at(i) * 100);
-        keyText.append('%');
+        keyText.append(m_keys[i] * 100, '%');
     }
-
     return keyText.toString();
 }
 
@@ -74,9 +81,9 @@ bool StyleRuleKeyframe::setKeyText(const String& keyText)
 {
     ASSERT(!keyText.isNull());
     auto keys = CSSParser::parseKeyframeKeyList(keyText);
-    if (!keys || keys->isEmpty())
+    if (keys.isEmpty())
         return false;
-    m_keys = *keys;
+    m_keys = WTFMove(keys);
     return true;
 }
 

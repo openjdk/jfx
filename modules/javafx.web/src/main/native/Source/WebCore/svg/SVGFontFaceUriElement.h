@@ -19,8 +19,6 @@
 
 #pragma once
 
-#if ENABLE(SVG_FONTS)
-
 #include "CachedFontClient.h"
 #include "CachedResourceHandle.h"
 #include "SVGElement.h"
@@ -41,7 +39,7 @@ public:
 private:
     SVGFontFaceUriElement(const QualifiedName&, Document&);
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     void childrenChanged(const ChildChange&) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
@@ -52,5 +50,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG_FONTS)

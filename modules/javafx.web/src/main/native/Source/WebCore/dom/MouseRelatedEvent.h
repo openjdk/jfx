@@ -37,6 +37,7 @@ struct MouseRelatedEventInit : public EventModifierInit {
 
 // Internal only: Helper class for what's common between mouse and wheel events.
 class MouseRelatedEvent : public UIEventWithKeyState {
+    WTF_MAKE_ISO_ALLOCATED(MouseRelatedEvent);
 public:
     enum class IsSimulated : uint8_t { Yes, No };
 
@@ -60,7 +61,7 @@ public:
     void setIsSimulated(bool value) { m_isSimulated = value; }
     int pageX() const final;
     int pageY() const final;
-    FloatPoint locationInRootViewCoordinates() const;
+    WEBCORE_EXPORT FloatPoint locationInRootViewCoordinates() const;
     virtual const LayoutPoint& pageLocation() const;
     WEBCORE_EXPORT int x() const;
     WEBCORE_EXPORT int y() const;
@@ -76,11 +77,11 @@ public:
 
 protected:
     MouseRelatedEvent() = default;
-    MouseRelatedEvent(const AtomicString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime, RefPtr<WindowProxy>&&, int detail,
+    MouseRelatedEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime, RefPtr<WindowProxy>&&, int detail,
         const IntPoint& screenLocation, const IntPoint& windowLocation, const IntPoint& movementDelta, OptionSet<Modifier> modifiers,
         IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
-    MouseRelatedEvent(const AtomicString& type, IsCancelable, MonotonicTime, RefPtr<WindowProxy>&&, const IntPoint& globalLocation, OptionSet<Modifier>);
-    MouseRelatedEvent(const AtomicString& type, const MouseRelatedEventInit&, IsTrusted = IsTrusted::No);
+    MouseRelatedEvent(const AtomString& type, IsCancelable, MonotonicTime, RefPtr<WindowProxy>&&, const IntPoint& globalLocation, OptionSet<Modifier>);
+    MouseRelatedEvent(const AtomString& type, const MouseRelatedEventInit&, IsTrusted = IsTrusted::No);
 
     void initCoordinates();
     void initCoordinates(const LayoutPoint& clientLocation);

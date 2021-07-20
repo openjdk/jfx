@@ -21,18 +21,17 @@
 #include "config.h"
 #include "JSLock.h"
 
-#include "Heap.h"
-#include "CallFrame.h"
+#include "HeapInlines.h"
 #include "JSGlobalObject.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
 #include "MachineStackMarker.h"
 #include "SamplingProfiler.h"
-#include "WasmMachineThreads.h"
-#include <thread>
 #include <wtf/StackPointer.h>
 #include <wtf/Threading.h>
 #include <wtf/threads/Signals.h>
+
+#if USE(WEB_THREAD)
+#include <wtf/ios/WebCoreThread.h>
+#endif
 
 namespace JSC {
 
@@ -48,25 +47,18 @@ GlobalJSLock::~GlobalJSLock()
     s_sharedInstanceMutex.unlock();
 }
 
-JSLockHolder::JSLockHolder(ExecState* exec)
-    : m_vm(&exec->vm())
+JSLockHolder::JSLockHolder(JSGlobalObject* globalObject)
+    : JSLockHolder(globalObject->vm())
 {
-    init();
 }
 
 JSLockHolder::JSLockHolder(VM* vm)
-    : m_vm(vm)
+    : JSLockHolder(*vm)
 {
-    init();
 }
 
 JSLockHolder::JSLockHolder(VM& vm)
     : m_vm(&vm)
-{
-    init();
-}
-
-void JSLockHolder::init()
 {
     m_vm->apiLock().lock();
 }
@@ -82,7 +74,7 @@ JSLock::JSLock(VM* vm)
     : m_lockCount(0)
     , m_lockDropDepth(0)
     , m_vm(vm)
-    , m_entryAtomicStringTable(nullptr)
+    , m_entryAtomStringTable(nullptr)
 {
 }
 
@@ -104,6 +96,13 @@ void JSLock::lock()
 void JSLock::lock(intptr_t lockCount)
 {
     ASSERT(lockCount > 0);
+#if USE(WEB_THREAD)
+    if (m_isWebThreadAware) {
+        ASSERT(WebCoreWebThreadIsEnabled && WebCoreWebThreadIsEnabled());
+        WebCoreWebThreadLock();
+    }
+#endif
+
     bool success = m_lock.tryLock();
     if (UNLIKELY(!success)) {
         if (currentThreadIsHoldingLock()) {
@@ -129,9 +128,9 @@ void JSLock::didAcquireLock()
         return;
 
     Thread& thread = Thread::current();
-    ASSERT(!m_entryAtomicStringTable);
-    m_entryAtomicStringTable = thread.setCurrentAtomicStringTable(m_vm->atomicStringTable());
-    ASSERT(m_entryAtomicStringTable);
+    ASSERT(!m_entryAtomStringTable);
+    m_entryAtomStringTable = thread.setCurrentAtomStringTable(m_vm->atomStringTable());
+    ASSERT(m_entryAtomStringTable);
 
     m_vm->setLastStackTop(thread.savedLastStackTop());
     ASSERT(thread.stack().contains(m_vm->lastStackTop()));
@@ -147,24 +146,23 @@ void JSLock::didAcquireLock()
     void* p = currentStackPointer();
     m_vm->setStackPointerAtVMEntry(p);
 
-    m_vm->heap.machineThreads().addCurrentThread();
-#if ENABLE(WEBASSEMBLY)
-    if (Options::useWebAssembly())
-        Wasm::startTrackingCurrentThread();
-#endif
-
-#if HAVE(MACH_EXCEPTIONS)
-    registerThreadForMachExceptionHandling(Thread::current());
-#endif
+    if (thread.uid() != m_lastOwnerThread) {
+        m_lastOwnerThread = thread.uid();
+        if (m_vm->heap.machineThreads().addCurrentThread()) {
+            if (isKernTCSMAvailable())
+                enableKernTCSM();
+        }
+    }
 
     // Note: everything below must come after addCurrentThread().
     m_vm->traps().notifyGrabAllLocks();
 
-    m_vm->firePrimitiveGigacageEnabledIfNecessary();
-
 #if ENABLE(SAMPLING_PROFILER)
-    if (SamplingProfiler* samplingProfiler = m_vm->samplingProfiler())
-        samplingProfiler->noticeJSLockAcquisition();
+    {
+        SamplingProfiler* samplingProfiler = m_vm->samplingProfiler();
+        if (UNLIKELY(samplingProfiler))
+            samplingProfiler->noticeJSLockAcquisition();
+    }
 #endif
 }
 
@@ -207,20 +205,20 @@ void JSLock::willReleaseLock()
             vm->heap.releaseAccess();
     }
 
-    if (m_entryAtomicStringTable) {
-        Thread::current().setCurrentAtomicStringTable(m_entryAtomicStringTable);
-        m_entryAtomicStringTable = nullptr;
+    if (m_entryAtomStringTable) {
+        Thread::current().setCurrentAtomStringTable(m_entryAtomStringTable);
+        m_entryAtomStringTable = nullptr;
     }
 }
 
-void JSLock::lock(ExecState* exec)
+void JSLock::lock(JSGlobalObject* globalObject)
 {
-    exec->vm().apiLock().lock();
+    globalObject->vm().apiLock().lock();
 }
 
-void JSLock::unlock(ExecState* exec)
+void JSLock::unlock(JSGlobalObject* globalObject)
 {
-    exec->vm().apiLock().unlock();
+    globalObject->vm().apiLock().unlock();
 }
 
 // This function returns the number of locks that were dropped.
@@ -270,7 +268,7 @@ JSLock::DropAllLocks::DropAllLocks(VM* vm)
     // If the VM is in the middle of being destroyed then we don't want to resurrect it
     // by allowing DropAllLocks to ref it. By this point the JSLock has already been
     // released anyways, so it doesn't matter that DropAllLocks is a no-op.
-    , m_vm(vm->refCount() ? vm : nullptr)
+    , m_vm(vm->heap.isShuttingDown() ? nullptr : vm)
 {
     if (!m_vm)
         return;
@@ -278,8 +276,8 @@ JSLock::DropAllLocks::DropAllLocks(VM* vm)
     m_droppedLockCount = m_vm->apiLock().dropAllLocks(this);
 }
 
-JSLock::DropAllLocks::DropAllLocks(ExecState* exec)
-    : DropAllLocks(exec ? &exec->vm() : nullptr)
+JSLock::DropAllLocks::DropAllLocks(JSGlobalObject* globalObject)
+    : DropAllLocks(globalObject ? &globalObject->vm() : nullptr)
 {
 }
 

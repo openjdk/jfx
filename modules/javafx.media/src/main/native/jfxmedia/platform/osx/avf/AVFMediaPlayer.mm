@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
 
 @implementation AVFMediaPlayer
 
-static void SpectrumCallbackProc(void *context, double duration);
+static void SpectrumCallbackProc(void *context, double duration, double timestamp);
 
 static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                                     const CVTimeStamp *inNow,
@@ -333,6 +333,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void) setCurrentTime:(double)time
 {
     [self.player seekToTime:CMTimeMakeWithSeconds(time, 1)];
+    if (previousPlayerState == kPlayerState_FINISHED) {
+        [self play];
+    }
 }
 
 - (BOOL) mute {
@@ -377,7 +380,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (double) duration {
     if (self.player.currentItem.status == AVPlayerItemStatusReadyToPlay) {
-        return CMTimeGetSeconds(self.player.currentItem.duration);
+        CMTime dur = self.player.currentItem.duration;
+        if (!CMTIME_IS_INDEFINITE(dur)) {
+            return CMTimeGetSeconds(self.player.currentItem.duration);
+        }
     }
     return -1.0;
 }
@@ -399,6 +405,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 }
 
 - (void) finish {
+    [self.player pause];
+    [self setPlayerState:kPlayerState_FINISHED];
 }
 
 - (void) dispose {
@@ -651,19 +659,19 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     eventHandler->SendNewFrameEvent(frame);
 }
 
-- (void) sendSpectrumEventDuration:(double)duration {
+- (void) sendSpectrumEventDuration:(double)duration timestamp:(double)timestamp {
     if (eventHandler) {
-        double timestamp = self.currentTime;
-        eventHandler->SendAudioSpectrumEvent(timestamp, duration);
+        // Always true for queryTimestamp to avoid hang. See JDK-8240694.
+        eventHandler->SendAudioSpectrumEvent(timestamp, duration, true);
     }
 }
 
 @end
 
-static void SpectrumCallbackProc(void *context, double duration) {
+static void SpectrumCallbackProc(void *context, double duration, double timestamp) {
     if (context) {
         AVFMediaPlayer *player = (__bridge AVFMediaPlayer*)context;
-        [player sendSpectrumEventDuration:duration];
+        [player sendSpectrumEventDuration:duration timestamp:timestamp];
     }
 }
 

@@ -31,7 +31,7 @@
 #include "config.h"
 #include "WebSocketDeflater.h"
 
-#if USE(ZLIB)
+#if !PLATFORM(JAVA)
 
 #include "Logging.h"
 #include <wtf/FastMalloc.h>
@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-static const int defaultMemLevel = 1;
+static const int defaultMemLevel = 8;
 static const size_t bufferIncrementUnit = 4096;
 
 WebSocketDeflater::WebSocketDeflater(int windowBits, ContextTakeOverMode contextTakeOverMode)
@@ -52,7 +52,7 @@ WebSocketDeflater::WebSocketDeflater(int windowBits, ContextTakeOverMode context
 {
     ASSERT(m_windowBits >= 8);
     ASSERT(m_windowBits <= 15);
-    m_stream = std::make_unique<z_stream>();
+    m_stream = makeUniqueWithoutFastMallocCheck<z_stream>();
     memset(m_stream.get(), 0, sizeof(z_stream));
 }
 
@@ -101,11 +101,13 @@ bool WebSocketDeflater::finish()
         size_t availableCapacity = m_buffer.size() - writePosition;
         setStreamParameter(m_stream.get(), 0, 0, m_buffer.data() + writePosition, availableCapacity);
         int result = deflate(m_stream.get(), Z_SYNC_FLUSH);
-        m_buffer.shrink(writePosition + availableCapacity - m_stream->avail_out);
-        if (result == Z_OK)
-            break;
-        if (result != Z_BUF_ERROR)
-            return false;
+        if (m_stream->avail_out) {
+            m_buffer.shrink(writePosition + availableCapacity - m_stream->avail_out);
+            if (result == Z_OK)
+                break;
+            if (result != Z_BUF_ERROR)
+                return false;
+        }
     }
     // Remove 4 octets from the tail as the specification requires.
     if (m_buffer.size() <= 4)
@@ -124,7 +126,7 @@ void WebSocketDeflater::reset()
 WebSocketInflater::WebSocketInflater(int windowBits)
     : m_windowBits(windowBits)
 {
-    m_stream = std::make_unique<z_stream>();
+    m_stream = makeUniqueWithoutFastMallocCheck<z_stream>();
     memset(m_stream.get(), 0, sizeof(z_stream));
 }
 
@@ -205,4 +207,4 @@ void WebSocketInflater::reset()
 
 } // namespace WebCore
 
-#endif // USE(ZLIB)
+#endif

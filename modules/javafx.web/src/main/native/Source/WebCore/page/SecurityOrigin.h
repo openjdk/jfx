@@ -29,6 +29,8 @@
 #pragma once
 
 #include "SecurityOriginData.h"
+#include "StorageBlockingPolicy.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,17 +44,17 @@ public:
         Ask
     };
 
-    enum StorageBlockingPolicy {
-        AllowAllStorage = 0,
-        BlockThirdPartyStorage,
-        BlockAllStorage
-    };
-
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const URL&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> createUnique();
 
     WEBCORE_EXPORT static Ref<SecurityOrigin> createFromString(const String&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const String& protocol, const String& host, Optional<uint16_t> port);
+
+    // QuickLook documents are in non-local origins even when loaded from file: URLs. They need to
+    // be allowed to display their own file: URLs in order to perform reloads and same-document
+    // navigations. This lets those documents specify the file path that should be allowed to be
+    // displayed from their non-local origin.
+    static Ref<SecurityOrigin> createNonLocalWithAllowedFilePath(const URL&, const String& filePath);
 
     // Some URL schemes use nested URLs for their security context. For example,
     // filesystem URLs look like the following:
@@ -82,16 +84,20 @@ public:
     const String& domain() const { return m_domain; }
     Optional<uint16_t> port() const { return m_data.port; }
 
+    static bool shouldIgnoreHost(const URL&);
+
     // Returns true if a given URL is secure, based either directly on its
     // own protocol, or, when relevant, on the protocol of its "inner URL"
     // Protocols like blob: and filesystem: fall into this latter category.
     static bool isSecure(const URL&);
 
+    // This method implements the "same origin-domain" algorithm from the HTML Standard:
+    // https://html.spec.whatwg.org/#same-origin-domain
     // Returns true if this SecurityOrigin can script objects in the given
     // SecurityOrigin. For example, call this function before allowing
     // script from one security origin to read or write objects from
     // another SecurityOrigin.
-    WEBCORE_EXPORT bool canAccess(const SecurityOrigin&) const;
+    WEBCORE_EXPORT bool isSameOriginDomain(const SecurityOrigin&) const;
 
     // Returns true if this SecurityOrigin can read content retrieved from
     // the given URL. For example, call this function before issuing
@@ -139,7 +145,7 @@ public:
 
     WEBCORE_EXPORT String domainForCachePartition() const;
 
-    bool canAccessDatabase(const SecurityOrigin& topOrigin) const { return canAccessStorage(&topOrigin); };
+    bool canAccessDatabase(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); };
     bool canAccessSessionStorage(const SecurityOrigin& topOrigin) const { return canAccessStorage(&topOrigin, AlwaysAllowFromThirdParty); }
     bool canAccessLocalStorage(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); };
     bool canAccessPluginStorage(const SecurityOrigin& topOrigin) const { return canAccessStorage(&topOrigin); }
@@ -185,7 +191,7 @@ public:
 
     // This method checks for equality between SecurityOrigins, not whether
     // one origin can access another. It is used for hash table keys.
-    // For access checks, use canAccess().
+    // For access checks, use isSameOriginDomain().
     // FIXME: If this method is really only useful for hash table keys, it
     // should be refactored into SecurityOriginHash.
     WEBCORE_EXPORT bool equal(const SecurityOrigin*) const;
@@ -198,10 +204,14 @@ public:
     // https://html.spec.whatwg.org/multipage/browsers.html#same-origin
     WEBCORE_EXPORT bool isSameOriginAs(const SecurityOrigin&) const;
 
+    // This method implements the "is a registrable domain suffix of or is equal to" algorithm from the HTML Standard:
+    // https://html.spec.whatwg.org/multipage/origin.html#is-a-registrable-domain-suffix-of-or-is-equal-to
+    WEBCORE_EXPORT bool isMatchingRegistrableDomainSuffix(const String&, bool treatIPAddressAsDomain = false) const;
+
     bool isPotentiallyTrustworthy() const { return m_isPotentiallyTrustworthy; }
     void setIsPotentiallyTrustworthy(bool value) { m_isPotentiallyTrustworthy = value; }
 
-    static bool isLocalHostOrLoopbackIPAddress(StringView);
+    WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
 
     const SecurityOriginData& data() const { return m_data; }
 
@@ -230,7 +240,7 @@ private:
     bool m_universalAccess { false };
     bool m_domainWasSetInDOM { false };
     bool m_canLoadLocalResources { false };
-    StorageBlockingPolicy m_storageBlockingPolicy { AllowAllStorage };
+    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
     bool m_enforcesFilePathSeparation { false };
     bool m_needsStorageAccessFromFileURLsQuirk { false };
     bool m_isPotentiallyTrustworthy { false };
@@ -240,8 +250,8 @@ private:
 bool shouldTreatAsPotentiallyTrustworthy(const URL&);
 
 // Returns true if the Origin header values serialized from these two origins would be the same.
-bool originsMatch(const SecurityOrigin&, const SecurityOrigin&);
-bool originsMatch(const SecurityOrigin*, const SecurityOrigin*);
+bool serializedOriginsMatch(const SecurityOrigin&, const SecurityOrigin&);
+bool serializedOriginsMatch(const SecurityOrigin*, const SecurityOrigin*);
 
 template<class Encoder> inline void SecurityOrigin::encode(Encoder& encoder) const
 {
@@ -252,7 +262,7 @@ template<class Encoder> inline void SecurityOrigin::encode(Encoder& encoder) con
     encoder << m_universalAccess;
     encoder << m_domainWasSetInDOM;
     encoder << m_canLoadLocalResources;
-    encoder.encodeEnum(m_storageBlockingPolicy);
+    encoder << m_storageBlockingPolicy;
     encoder << m_enforcesFilePathSeparation;
     encoder << m_needsStorageAccessFromFileURLsQuirk;
     encoder << m_isPotentiallyTrustworthy;
@@ -280,7 +290,7 @@ template<class Decoder> inline RefPtr<SecurityOrigin> SecurityOrigin::decode(Dec
         return nullptr;
     if (!decoder.decode(origin->m_canLoadLocalResources))
         return nullptr;
-    if (!decoder.decodeEnum(origin->m_storageBlockingPolicy))
+    if (!decoder.decode(origin->m_storageBlockingPolicy))
         return nullptr;
     if (!decoder.decode(origin->m_enforcesFilePathSeparation))
         return nullptr;
@@ -291,7 +301,7 @@ template<class Decoder> inline RefPtr<SecurityOrigin> SecurityOrigin::decode(Dec
     if (!decoder.decode(origin->m_isLocal))
         return nullptr;
 
-    return WTFMove(origin);
+    return origin;
 }
 
 } // namespace WebCore

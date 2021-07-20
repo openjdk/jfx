@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,11 +34,19 @@
 #include "JSEventListener.h"
 #include "JSWindowProxy.h"
 #include "JSWorkerGlobalScope.h"
-#include "OffscreenCanvas.h"
 #include "WorkerGlobalScope.h"
+
+#if ENABLE(OFFSCREEN_CANVAS)
+#include "OffscreenCanvas.h"
+#endif
 
 namespace WebCore {
 using namespace JSC;
+
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<EventTarget>&& value)
+{
+    return createWrapper<EventTarget>(globalObject, WTFMove(value));
+}
 
 EventTarget* JSEventTarget::toWrapped(VM& vm, JSValue value)
 {
@@ -56,17 +64,20 @@ EventTarget* JSEventTarget::toWrapped(VM& vm, JSValue value)
 std::unique_ptr<JSEventTargetWrapper> jsEventTargetCast(VM& vm, JSValue thisValue)
 {
     if (auto* target = jsDynamicCast<JSEventTarget*>(vm, thisValue))
-        return std::make_unique<JSEventTargetWrapper>(target->wrapped(), *target);
+        return makeUnique<JSEventTargetWrapper>(target->wrapped(), *target);
     if (auto* window = toJSDOMWindow(vm, thisValue))
-        return std::make_unique<JSEventTargetWrapper>(window->wrapped(), *window);
+        return makeUnique<JSEventTargetWrapper>(window->wrapped(), *window);
     if (auto* scope = toJSWorkerGlobalScope(vm, thisValue))
-        return std::make_unique<JSEventTargetWrapper>(scope->wrapped(), *scope);
+        return makeUnique<JSEventTargetWrapper>(scope->wrapped(), *scope);
     return nullptr;
 }
 
-void JSEventTarget::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSEventTarget::visitAdditionalChildren(Visitor& visitor)
 {
     wrapped().visitJSEventListeners(visitor);
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSEventTarget);
 
 } // namespace WebCore

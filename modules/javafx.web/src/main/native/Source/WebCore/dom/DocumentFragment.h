@@ -39,8 +39,10 @@ public:
     bool canContainRangeEndPoint() const final { return true; }
     virtual bool isTemplateContent() const { return false; }
 
+    void setIsDocumentFragmentForInnerOuterHTML() { setNodeFlag(NodeFlag::IsDocumentFragmentForInnerOuterHTML); }
+
     // From the NonElementParentNode interface - https://dom.spec.whatwg.org/#interface-nonelementparentnode
-    WEBCORE_EXPORT Element* getElementById(const AtomicString&) const;
+    WEBCORE_EXPORT Element* getElementById(const AtomString&) const;
 
 protected:
     DocumentFragment(Document&, ConstructionType = CreateContainer);

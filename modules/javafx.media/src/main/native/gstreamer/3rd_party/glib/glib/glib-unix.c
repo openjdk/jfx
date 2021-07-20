@@ -30,6 +30,8 @@
 #include "gmain-internal.h"
 
 #include <string.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 /**
  * SECTION:gunix
@@ -310,7 +312,7 @@ g_unix_fd_source_dispatch (GSource     *source,
 }
 
 GSourceFuncs g_unix_fd_source_funcs = {
-  NULL, NULL, g_unix_fd_source_dispatch, NULL
+  NULL, NULL, g_unix_fd_source_dispatch, NULL, NULL, NULL
 };
 
 /**
@@ -420,4 +422,123 @@ g_unix_fd_add (gint              fd,
                gpointer          user_data)
 {
   return g_unix_fd_add_full (G_PRIORITY_DEFAULT, fd, condition, function, user_data, NULL);
+}
+
+/**
+ * g_unix_get_passwd_entry:
+ * @user_name: the username to get the passwd file entry for
+ * @error: return location for a #GError, or %NULL
+ *
+ * Get the `passwd` file entry for the given @user_name using `getpwnam_r()`.
+ * This can fail if the given @user_name doesn’t exist.
+ *
+ * The returned `struct passwd` has been allocated using g_malloc() and should
+ * be freed using g_free(). The strings referenced by the returned struct are
+ * included in the same allocation, so are valid until the `struct passwd` is
+ * freed.
+ *
+ * This function is safe to call from multiple threads concurrently.
+ *
+ * You will need to include `pwd.h` to get the definition of `struct passwd`.
+ *
+ * Returns: (transfer full): passwd entry, or %NULL on error; free the returned
+ *    value with g_free()
+ * Since: 2.64
+ */
+struct passwd *
+g_unix_get_passwd_entry (const gchar  *user_name,
+                         GError      **error)
+{
+  struct passwd *passwd_file_entry;
+  struct
+    {
+      struct passwd pwd;
+      char string_buffer[];
+    } *buffer = NULL;
+  gsize string_buffer_size = 0;
+  GError *local_error = NULL;
+  int errsv = 0;
+
+  g_return_val_if_fail (user_name != NULL, NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+#ifdef _SC_GETPW_R_SIZE_MAX
+    {
+      /* Get the recommended buffer size */
+      glong string_buffer_size_long = sysconf (_SC_GETPW_R_SIZE_MAX);
+      if (string_buffer_size_long > 0)
+        string_buffer_size = string_buffer_size_long;
+    }
+#endif /* _SC_GETPW_R_SIZE_MAX */
+
+  /* Default starting size. */
+  if (string_buffer_size == 0)
+    string_buffer_size = 64;
+
+  do
+    {
+      int retval;
+
+      g_free (buffer);
+      /* Allocate space for the `struct passwd`, and then a buffer for all its
+       * strings (whose size is @string_buffer_size, which increases in this
+       * loop until it’s big enough). Add 6 extra bytes to work around a bug in
+       * macOS < 10.3. See #156446.
+       */
+      buffer = g_malloc0 (sizeof (*buffer) + string_buffer_size + 6);
+
+      errno = 0;
+      retval = getpwnam_r (user_name, &buffer->pwd, buffer->string_buffer,
+                           string_buffer_size, &passwd_file_entry);
+      errsv = errno;
+
+      /* Bail out if: the lookup was successful, or if the user id can't be
+       * found (should be pretty rare case actually), or if the buffer should be
+       * big enough and yet lookups are still not successful.
+       */
+      if (passwd_file_entry != NULL)
+        {
+          /* Success. */
+          break;
+        }
+      else if (retval == 0 ||
+          errsv == ENOENT || errsv == ESRCH ||
+          errsv == EBADF || errsv == EPERM)
+        {
+          /* Username not found. */
+          g_unix_set_error_from_errno (&local_error, errsv);
+          break;
+        }
+      else if (errsv == ERANGE)
+        {
+          /* Can’t allocate enough string buffer space. */
+          if (string_buffer_size > 32 * 1024)
+            {
+              g_unix_set_error_from_errno (&local_error, errsv);
+              break;
+            }
+
+          string_buffer_size *= 2;
+          continue;
+        }
+      else
+        {
+          g_unix_set_error_from_errno (&local_error, errsv);
+          break;
+        }
+    }
+  while (passwd_file_entry == NULL);
+
+  g_assert (passwd_file_entry == NULL ||
+            (gpointer) passwd_file_entry == (gpointer) buffer);
+
+  /* Success or error. */
+  if (local_error != NULL)
+    {
+      g_clear_pointer (&buffer, g_free);
+      g_propagate_error (error, g_steal_pointer (&local_error));
+      errno = errsv;
+    }
+
+  return (struct passwd *) g_steal_pointer (&buffer);
 }

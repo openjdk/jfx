@@ -29,6 +29,7 @@
 #include <mutex>
 #include <wtf/HashTraits.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -43,12 +44,19 @@ template<typename T> class ObjectIdentifier : private ObjectIdentifierBase {
 public:
     static ObjectIdentifier generate()
     {
+        RELEASE_ASSERT(!m_generationProtected);
         return ObjectIdentifier { generateIdentifierInternal() };
     }
 
     static ObjectIdentifier generateThreadSafe()
     {
+        RELEASE_ASSERT(!m_generationProtected);
         return ObjectIdentifier { generateThreadSafeIdentifierInternal() };
+    }
+
+    static void enableGenerationProtection()
+    {
+        m_generationProtected = true;
     }
 
     ObjectIdentifier() = default;
@@ -61,13 +69,13 @@ public:
         ASSERT(isValidIdentifier(m_identifier));
         encoder << m_identifier;
     }
+
     template<typename Decoder> static Optional<ObjectIdentifier> decode(Decoder& decoder)
     {
         Optional<uint64_t> identifier;
         decoder >> identifier;
-        if (!identifier)
+        if (!identifier || !isValidIdentifier(*identifier))
             return WTF::nullopt;
-        ASSERT(isValidIdentifier(*identifier));
         return ObjectIdentifier { *identifier };
     }
 
@@ -89,6 +97,18 @@ public:
         return String::number(m_identifier);
     }
 
+    struct MarkableTraits {
+        static bool isEmptyValue(ObjectIdentifier identifier)
+        {
+            return !identifier.m_identifier;
+        }
+
+        static constexpr ObjectIdentifier emptyValue()
+        {
+            return ObjectIdentifier();
+        }
+    };
+
 private:
     template<typename U> friend ObjectIdentifier<U> makeObjectIdentifier(uint64_t);
     friend struct HashTraits<ObjectIdentifier>;
@@ -97,12 +117,13 @@ private:
     static uint64_t hashTableDeletedValue() { return std::numeric_limits<uint64_t>::max(); }
     static bool isValidIdentifier(uint64_t identifier) { return identifier && identifier != hashTableDeletedValue(); }
 
-    explicit ObjectIdentifier(uint64_t identifier)
+    explicit constexpr ObjectIdentifier(uint64_t identifier)
         : m_identifier(identifier)
     {
     }
 
     uint64_t m_identifier { 0 };
+    inline static bool m_generationProtected { false };
 };
 
 template<typename T> inline ObjectIdentifier<T> makeObjectIdentifier(uint64_t identifier)
@@ -113,14 +134,19 @@ template<typename T> inline ObjectIdentifier<T> makeObjectIdentifier(uint64_t id
 template<typename T> struct ObjectIdentifierHash {
     static unsigned hash(const ObjectIdentifier<T>& identifier) { return intHash(identifier.m_identifier); }
     static bool equal(const ObjectIdentifier<T>& a, const ObjectIdentifier<T>& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 template<typename T> struct HashTraits<ObjectIdentifier<T>> : SimpleClassHashTraits<ObjectIdentifier<T>> { };
 
-template<typename T> struct DefaultHash<ObjectIdentifier<T>> {
-    typedef ObjectIdentifierHash<T> Hash;
-};
+template<typename T> struct DefaultHash<ObjectIdentifier<T>> : ObjectIdentifierHash<T> { };
+
+template<typename T>
+TextStream& operator<<(TextStream& ts, const ObjectIdentifier<T>& identifier)
+{
+    ts << identifier.toUInt64();
+    return ts;
+}
 
 } // namespace WTF
 

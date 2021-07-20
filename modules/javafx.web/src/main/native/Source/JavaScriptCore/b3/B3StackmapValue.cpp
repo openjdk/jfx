@@ -28,6 +28,8 @@
 
 #if ENABLE(B3_JIT)
 
+#include "B3ValueInlines.h"
+
 namespace JSC { namespace B3 {
 
 StackmapValue::~StackmapValue()
@@ -37,14 +39,14 @@ StackmapValue::~StackmapValue()
 void StackmapValue::append(Value* value, const ValueRep& rep)
 {
     if (rep == ValueRep::ColdAny) {
-        children().append(value);
+        childrenVector().append(value);
         return;
     }
 
     while (m_reps.size() < numChildren())
         m_reps.append(ValueRep::ColdAny);
 
-    children().append(value);
+    childrenVector().append(value);
     m_reps.append(rep);
 }
 
@@ -89,7 +91,7 @@ void StackmapValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 }
 
 StackmapValue::StackmapValue(CheckedOpcodeTag, Kind kind, Type type, Origin origin)
-    : Value(CheckedOpcode, kind, type, origin)
+    : Value(CheckedOpcode, kind, type, VarArgs, origin)
 {
     ASSERT(accepts(kind));
 }

@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pasteboard, Frame& frame, Range& range, bool allowPlainText, bool& chosePlainText)
+static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pasteboard, Frame& frame, const SimpleRange& range, bool allowPlainText, bool& chosePlainText)
 {
     chosePlainText = false;
 
@@ -47,8 +47,7 @@ static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pas
 
     if (types.contains("text/html;charset=utf-8") && frame.document()) {
         String markup = pasteboard.readString("text/html;charset=utf-8");
-        if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), markup, emptyString(), DisallowScriptingAndPluginContent))
-            return fragment;
+        return createFragmentFromMarkup(*frame.document(), markup, emptyString(), DisallowScriptingAndPluginContent);
     }
 
     if (!allowPlainText)
@@ -56,8 +55,7 @@ static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pas
 
     if (types.contains("text/plain;charset=utf-8")) {
         chosePlainText = true;
-        if (RefPtr<DocumentFragment> fragment = createFragmentFromText(range, pasteboard.readString("text/plain;charset=utf-8")))
-            return fragment;
+        return createFragmentFromText(range, pasteboard.readString("text/plain;charset=utf-8"));
     }
 
     return nullptr;
@@ -67,8 +65,8 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
     PasteboardWebContent pasteboardContent;
     pasteboardContent.text = selectedTextForDataTransfer();
-    pasteboardContent.markup = serializePreservingVisualAppearance(m_frame.selection().selection(), ResolveURLs::YesExcludingLocalFileURLsForPrivacy,
-        m_frame.settings().selectionAcrossShadowBoundariesEnabled() ? SerializeComposedTree::Yes : SerializeComposedTree::No);
+    pasteboardContent.markup = serializePreservingVisualAppearance(m_document.selection().selection(), ResolveURLs::YesExcludingLocalFileURLsForPrivacy,
+        m_document.settings().selectionAcrossShadowBoundariesEnabled() ? SerializeComposedTree::Yes : SerializeComposedTree::No);
     pasteboard.write(pasteboardContent);
 }
 
@@ -79,17 +77,17 @@ void Editor::writeImageToPasteboard(Pasteboard&, Element&, const URL&, const Str
 
 void Editor::pasteWithPasteboard(Pasteboard* pasteboard, OptionSet<PasteOption> options)
 {
-    RefPtr<Range> range = selectedRange();
+    auto range = selectedRange();
     if (!range)
         return;
 
     bool chosePlainText;
-    RefPtr<DocumentFragment> fragment = createFragmentFromPasteboardData(*pasteboard, m_frame, *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
+    auto fragment = createFragmentFromPasteboardData(*pasteboard, *m_document.frame(), *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
 
     if (fragment && options.contains(PasteOption::AsQuotation))
         quoteFragmentForPasting(*fragment);
 
-    if (fragment && shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Pasted))
+    if (fragment && shouldInsertFragment(*fragment, *range, EditorInsertAction::Pasted))
         pasteAsFragment(*fragment, canSmartReplaceWithPasteboard(*pasteboard), chosePlainText, options.contains(PasteOption::IgnoreMailBlockquote) ? MailBlockquoteHandling::IgnoreBlockquote : MailBlockquoteHandling::RespectBlockquote);
 }
 

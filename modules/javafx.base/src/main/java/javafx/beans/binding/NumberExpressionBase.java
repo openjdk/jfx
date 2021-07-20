@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,12 @@ import com.sun.javafx.binding.StringFormatter;
  * @since JavaFX 2.0
  */
 public abstract class NumberExpressionBase implements NumberExpression {
+
+    /**
+     * Creates a default {@code NumberExpressionBase}.
+     */
+    public NumberExpressionBase() {
+    }
 
     /**
      * Returns an {@code NumberExpressionBase} that wraps a

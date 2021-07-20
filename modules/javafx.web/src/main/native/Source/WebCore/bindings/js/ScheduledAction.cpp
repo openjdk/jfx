@@ -93,34 +93,38 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     ASSERT(m_function);
     VM& vm = context.vm();
     JSLockHolder lock(vm);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    CallData callData;
-    CallType callType = getCallData(vm, m_function.get(), callData);
-    if (callType == CallType::None)
+    auto callData = getCallData(vm, m_function.get());
+    if (callData.type == CallData::Type::None)
         return;
 
-    ExecState* exec = globalObject->globalExec();
+    JSGlobalObject* lexicalGlobalObject = globalObject;
 
     MarkedArgumentBuffer arguments;
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
     if (UNLIKELY(arguments.hasOverflowed())) {
-        throwOutOfMemoryError(exec, scope);
-        NakedPtr<JSC::Exception> exception = scope.exception();
-        reportException(exec, exception);
+        {
+            auto throwScope = DECLARE_THROW_SCOPE(vm);
+            throwOutOfMemoryError(lexicalGlobalObject, throwScope);
+        }
+        NakedPtr<JSC::Exception> exception = catchScope.exception();
+        catchScope.clearException();
+        reportException(lexicalGlobalObject, exception);
         return;
     }
 
-    InspectorInstrumentationCookie cookie = JSExecState::instrumentFunctionCall(&context, callType, callData);
+    JSExecState::instrumentFunction(&context, callData);
 
     NakedPtr<JSC::Exception> exception;
-    JSExecState::profiledCall(exec, JSC::ProfilingReason::Other, m_function.get(), callType, callData, thisValue, arguments, exception);
+    JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, m_function.get(), callData, thisValue, arguments, exception);
+    EXCEPTION_ASSERT(!catchScope.exception());
 
-    InspectorInstrumentation::didCallFunction(cookie, &context);
+    InspectorInstrumentation::didCallFunction(&context);
 
     if (exception)
-        reportException(exec, exception);
+        reportException(lexicalGlobalObject, exception);
 }
 
 void ScheduledAction::execute(Document& document)
@@ -134,9 +138,9 @@ void ScheduledAction::execute(Document& document)
         return;
 
     if (m_function)
-        executeFunctionInContext(window, window->proxy(), document);
+        executeFunctionInContext(window, &window->proxy(), document);
     else
-        frame->script().executeScriptInWorld(m_isolatedWorld, m_code);
+        frame->script().executeScriptInWorldIgnoringException(m_isolatedWorld, m_code);
 }
 
 void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
@@ -144,10 +148,10 @@ void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
     // In a Worker, the execution should always happen on a worker thread.
     ASSERT(workerGlobalScope.thread().thread() == &Thread::current());
 
-    WorkerScriptController* scriptController = workerGlobalScope.script();
+    auto* scriptController = workerGlobalScope.script();
 
     if (m_function) {
-        JSWorkerGlobalScope* contextWrapper = scriptController->workerGlobalScopeWrapper();
+        auto* contextWrapper = scriptController->globalScopeWrapper();
         executeFunctionInContext(contextWrapper, contextWrapper, workerGlobalScope);
     } else {
         ScriptSourceCode code(m_code, URL(workerGlobalScope.url()));

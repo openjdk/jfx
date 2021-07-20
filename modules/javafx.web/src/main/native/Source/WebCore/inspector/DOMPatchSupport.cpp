@@ -76,11 +76,11 @@ void DOMPatchSupport::patchDocument(const String& markup)
 {
     RefPtr<Document> newDocument;
     if (m_document.isHTMLDocument())
-        newDocument = HTMLDocument::create(nullptr, URL());
+        newDocument = HTMLDocument::create(nullptr, m_document.settings(), URL());
     else if (m_document.isXHTMLDocument())
-        newDocument = XMLDocument::createXHTML(nullptr, URL());
+        newDocument = XMLDocument::createXHTML(nullptr, m_document.settings(), URL());
     else if (m_document.isSVGDocument())
-        newDocument = XMLDocument::create(nullptr, URL());
+        newDocument = XMLDocument::create(nullptr, m_document.settings(), URL());
 
     ASSERT(newDocument);
     RefPtr<DocumentParser> parser;
@@ -402,7 +402,7 @@ static void addStringToSHA1(SHA1& sha1, const String& string)
 
 std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& node, UnusedNodesMap* unusedNodesMap)
 {
-    auto digest = std::make_unique<Digest>();
+    auto digest = makeUnique<Digest>();
     digest->node = &node;
     SHA1 sha1;
 

@@ -28,70 +28,42 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCallingConvention.h"
 #include "WasmContextInlines.h"
-#include "WasmMemory.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace JSC { namespace Wasm {
-
-static Vector<GPRReg> getPinnedRegisters(unsigned remainingPinnedRegisters)
-{
-    Vector<GPRReg> registers;
-    jscCallingConvention().m_calleeSaveRegisters.forEach([&] (Reg reg) {
-        if (!reg.isGPR())
-            return;
-        GPRReg gpr = reg.gpr();
-        if (!remainingPinnedRegisters || RegisterSet::stackRegisters().get(reg))
-            return;
-        --remainingPinnedRegisters;
-        registers.append(gpr);
-    });
-    return registers;
-}
 
 const PinnedRegisterInfo& PinnedRegisterInfo::get()
 {
     static LazyNeverDestroyed<PinnedRegisterInfo> staticPinnedRegisterInfo;
     static std::once_flag staticPinnedRegisterInfoFlag;
     std::call_once(staticPinnedRegisterInfoFlag, [] () {
-        Vector<PinnedSizeRegisterInfo> sizeRegisters;
-        GPRReg baseMemoryPointer = InvalidGPRReg;
-        GPRReg wasmContextInstancePointer = InvalidGPRReg;
-
-        // FIXME: We should support more than one memory size register, and we should allow different
-        //        WebAssembly.Instance to have different pins. Right now we take a vector with only one entry.
-        //        If we have more than one size register, we can have one for each load size class.
-        //        see: https://bugs.webkit.org/show_bug.cgi?id=162952
-        Vector<unsigned> pinnedSizes = { 0 };
-        unsigned numberOfPinnedRegisters = pinnedSizes.size() + 1;
+        unsigned numberOfPinnedRegisters = 2;
         if (!Context::useFastTLS())
             ++numberOfPinnedRegisters;
-        Vector<GPRReg> pinnedRegs = getPinnedRegisters(numberOfPinnedRegisters);
-
-        baseMemoryPointer = pinnedRegs.takeLast();
+        GPRReg baseMemoryPointer = GPRInfo::regCS3;
+        GPRReg boundsCheckingSizeRegister = GPRInfo::regCS4;
+        GPRReg wasmContextInstancePointer = InvalidGPRReg;
         if (!Context::useFastTLS())
-            wasmContextInstancePointer = pinnedRegs.takeLast();
+            wasmContextInstancePointer = GPRInfo::regCS0;
 
-        ASSERT(pinnedSizes.size() == pinnedRegs.size());
-        for (unsigned i = 0; i < pinnedSizes.size(); ++i)
-            sizeRegisters.append({ pinnedRegs[i], pinnedSizes[i] });
-        staticPinnedRegisterInfo.construct(WTFMove(sizeRegisters), baseMemoryPointer, wasmContextInstancePointer);
+        staticPinnedRegisterInfo.construct(boundsCheckingSizeRegister, baseMemoryPointer, wasmContextInstancePointer);
     });
 
     return staticPinnedRegisterInfo.get();
 }
 
-PinnedRegisterInfo::PinnedRegisterInfo(Vector<PinnedSizeRegisterInfo>&& sizeRegisters, GPRReg baseMemoryPointer, GPRReg wasmContextInstancePointer)
-    : sizeRegisters(WTFMove(sizeRegisters))
+PinnedRegisterInfo::PinnedRegisterInfo(GPRReg boundsCheckingSizeRegister, GPRReg baseMemoryPointer, GPRReg wasmContextInstancePointer)
+    : boundsCheckingSizeRegister(boundsCheckingSizeRegister)
     , baseMemoryPointer(baseMemoryPointer)
     , wasmContextInstancePointer(wasmContextInstancePointer)
 {
 }
 
-MemoryInformation::MemoryInformation(PageCount initial, PageCount maximum, bool isImport)
+MemoryInformation::MemoryInformation(PageCount initial, PageCount maximum, bool isShared, bool isImport)
     : m_initial(initial)
     , m_maximum(maximum)
+    , m_isShared(isShared)
     , m_isImport(isImport)
 {
     RELEASE_ASSERT(!!m_initial);

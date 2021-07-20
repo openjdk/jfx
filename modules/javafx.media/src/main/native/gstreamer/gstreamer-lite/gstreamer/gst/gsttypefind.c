@@ -43,13 +43,13 @@ G_DEFINE_POINTER_TYPE (GstTypeFind, gst_type_find);
 
 /**
  * gst_type_find_register:
- * @plugin: (allow-none): A #GstPlugin, or %NULL for a static typefind function
+ * @plugin: (nullable): A #GstPlugin, or %NULL for a static typefind function
  * @name: The name for registering
  * @rank: The rank (or importance) of this typefind function
  * @func: The #GstTypeFindFunction to use
- * @extensions: (allow-none): Optional comma-separated list of extensions
+ * @extensions: (nullable): Optional comma-separated list of extensions
  *     that could belong to this type
- * @possible_caps: Optionally the caps that could be returned when typefinding
+ * @possible_caps: (nullable): Optionally the caps that could be returned when typefinding
  *                 succeeds
  * @data: Optional user data. This user data must be available until the plugin
  *        is unloaded.
