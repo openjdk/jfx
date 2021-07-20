@@ -1195,8 +1195,15 @@ void InspectorOverlay::drawLayoutLabel(GraphicsContext& context, String label, F
     FontCascade font(WTFMove(fontDescription), 0, 0);
     font.update(nullptr);
 
+#if PLATFORM(JAVA)
+    // VS2017 complains if these are not defined as float constants (which they
+    // really should be anyway)
+    constexpr auto padding = 4.0f;
+    constexpr auto arrowSize = 4.0f;
+#else
     constexpr auto padding = 4;
     constexpr auto arrowSize = 4;
+#endif
     float textHeight = font.fontMetrics().floatHeight();
     float textDescent = font.fontMetrics().floatDescent();
 

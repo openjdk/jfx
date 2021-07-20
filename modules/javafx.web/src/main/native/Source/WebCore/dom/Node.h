@@ -941,10 +941,15 @@ inline void Node::addInclusiveAncestorState(AncestorState state)
     }
 }
 
+#if PLATFORM(JAVA)
+// VS 2017 has buggy support for compile-time inline constants, so the
+// definitions are moved to Node.cpp
+#else
 inline constexpr PartialOrdering PartialOrdering::less(Type::Less);
 inline constexpr PartialOrdering PartialOrdering::equivalent(Type::Equivalent);
 inline constexpr PartialOrdering PartialOrdering::greater(Type::Greater);
 inline constexpr PartialOrdering PartialOrdering::unordered(Type::Unordered);
+#endif
 
 constexpr bool is_eq(PartialOrdering ordering)
 {
