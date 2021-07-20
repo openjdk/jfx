@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 public class WrongStageFocusWithApplicationModalityTest {
     private static Robot robot;
     private static Stage stage;
-    private static CountDownLatch startupLatch = new CountDownLatch(3);
+    private static CountDownLatch startupLatch = new CountDownLatch(4);
     private static CountDownLatch alertCloseLatch = new CountDownLatch(3);
 
     @BeforeClass
@@ -90,6 +90,7 @@ public class WrongStageFocusWithApplicationModalityTest {
 
             BorderPane root = new BorderPane();
             stage.setScene(new Scene(root, 500, 500));
+            stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
             stage.show();
 
             showAlert();
