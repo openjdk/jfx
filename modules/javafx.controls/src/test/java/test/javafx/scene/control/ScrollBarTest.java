@@ -415,6 +415,34 @@ public class ScrollBarTest {
         assertEquals(scrollBar.getValue(), 50.0, 0.0);
     }
 
+    /**
+     * @test
+     * @bug 8090158
+     * Adjusting the scrollbar value close to the max value should use the block increment and reach the max value.
+     */
+    @Test
+    public void incrementCloseToMax() {
+        scrollBar.setMin(0.0);
+        scrollBar.setMax(100.0);
+        scrollBar.setValue(90.0);
+        scrollBar.adjustValue(0.95); //This should block increment to the max value
+        assertEquals(scrollBar.getValue(), 100.0, 0.0);
+    }
+
+    /**
+     * @test
+     * @bug 8090158
+     * Adjusting the scrollbar value close to the min value should use the block increment and reach the min value.
+     */
+    @Test
+    public void incrementCloseToMin() {
+        scrollBar.setMin(0.0);
+        scrollBar.setMax(100.0);
+        scrollBar.setValue(10.0);
+        scrollBar.adjustValue(0.05); //This should block increment to the max value
+        assertEquals(scrollBar.getValue(), 0.0, 0.0);
+    }
+
     @Test public void incrementWhenValueIsNegativeAndSeeIfValueIsClampedToMin() {
         scrollBar.setValue(-30.0);
         scrollBar.increment();
