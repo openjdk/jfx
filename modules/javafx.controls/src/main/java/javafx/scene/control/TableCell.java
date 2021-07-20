@@ -304,6 +304,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final TableView<S> table = getTableView();
         final TableColumn<S,T> column = getTableColumn();
         final TableRow<S> row = getTableRow();
