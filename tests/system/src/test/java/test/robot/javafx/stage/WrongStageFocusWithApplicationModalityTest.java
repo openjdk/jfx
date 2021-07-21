@@ -51,14 +51,18 @@ public class WrongStageFocusWithApplicationModalityTest {
     @BeforeClass
     public static void initFX() throws Exception {
         new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        waitForLatch(startupLatch, 15, "FX runtime failed to start.");
     }
 
-    @Test(timeout = 15000)
+    @Test(timeout = 25000)
     public void testWindowFocusByClosingAlerts() throws Exception {
+        Thread.sleep(1000);
         keyPress(KeyCode.ESCAPE);
+        Thread.sleep(500);
         keyPress(KeyCode.ESCAPE);
+        Thread.sleep(500);
         keyPress(KeyCode.ESCAPE);
+        Thread.sleep(500);
         waitForLatch(alertCloseLatch, 10, "Alerts not closed, wrong focus");
     }
 
@@ -78,7 +82,6 @@ public class WrongStageFocusWithApplicationModalityTest {
         Util.runAndWait(() -> {
             robot.keyPress(code);
             robot.keyRelease(code);
-            Util.sleep(50);
         });
     }
 
@@ -93,15 +96,16 @@ public class WrongStageFocusWithApplicationModalityTest {
             stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
             stage.show();
 
-            showAlert();
-            showAlert();
-            showAlert();
+            showAlert("Alert 1");
+            showAlert("Alert 2");
+            showAlert("Alert 3");
         }
 
-        private void showAlert()
+        private void showAlert(String title)
         {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.initOwner(stage);
+            alert.setTitle(title);
             alert.setOnShown(event -> Platform.runLater(startupLatch::countDown));
             alert.setOnHidden(event -> Platform.runLater(alertCloseLatch::countDown));
             alert.show();
