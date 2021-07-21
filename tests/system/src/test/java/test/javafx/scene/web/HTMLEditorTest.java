@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -95,6 +95,12 @@ public class HTMLEditorTest {
         Font.loadFont(
             HTMLEditorTest.class.getResource("WebKit_Layout_Tests_2.ttf").toExternalForm(),
             10
+        );
+
+        // Used by selectAgainFontFamilyWithSpace() for JDK-8230231
+        Font.loadFont(
+                HTMLEditorTest.class.getResource("WebKitWeightWatcher100.ttf").toExternalForm(),
+                10
         );
 
         assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
@@ -357,6 +363,121 @@ public class HTMLEditorTest {
         assertNotNull("result must have a valid reference ", result.get());
         assertTrue("font-family must be 'WebKit Layout Test 2' ", result.get().
             contains("font-family: &quot;WebKit Layout Tests 2&quot;"));
+    }
+
+    /**
+     * @test
+     * @bug 8230231
+     * Summary Check font-family ComboBox change on font name with space in it
+     */
+    @Test
+    public void selectAgainFontFamilyWithSpace() {
+        final CountDownLatch initLatch = new CountDownLatch(1);
+        final CountDownLatch fontSetupLatch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
+        final String editorCommand1 =
+                "document.execCommand('insertText', false, 'Hello World');";
+
+        Util.runAndWait(() -> {
+            webView.getEngine().getLoadWorker().stateProperty().
+                    addListener((observable, oldValue, newValue) -> {
+                        if (newValue == SUCCEEDED) {
+                            htmlEditor.requestFocus();
+                        }
+                    });
+
+
+            htmlEditor.setHtmlText(htmlEditor.getHtmlText());
+            webView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    webView.getEngine().executeScript("document.body.focus();");
+                    webView.getEngine().executeScript(editorCommand1);
+
+                    initLatch.countDown();
+                }
+            });
+        });
+
+        assertTrue("Timeout while waiting for test html text setup", Util.await(initLatch));
+
+        // Select 'World' word
+        Util.runAndWait(() -> {
+            KeyEventFirer keyboard = new KeyEventFirer(htmlEditor, scene);
+            for (int i = 0; i < 5; i++) {
+                keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+            }
+
+            // Find font-family ComboBox
+            ComboBox<String> fontFamilyComboBox = null;
+            int i = 0;
+            for (Node comboBox : htmlEditor.lookupAll(".font-menu-button")) {
+                // 0 - Format, 1 - Font Family, 2 - Font Size
+                if (i == 1) {
+                    assertTrue("fontFamilyComboBox must be ComboBox",
+                            comboBox instanceof ComboBox);
+                    fontFamilyComboBox = (ComboBox<String>) comboBox;
+                    assertNotNull("fontFamilyComboBox must not be null",
+                            fontFamilyComboBox);
+                }
+                i++;
+            }
+            // 'World' takes the font with space
+            fontFamilyComboBox.getSelectionModel().select("WebKit Layout Tests 2");
+
+
+            // Actually unselect 'World'
+            keyboard.doLeftArrowPress();
+
+            // Go after the blank space between 'Hello' and 'World'
+            keyboard.doLeftArrowPress();
+
+            // Select 'Hello'
+            for (int j = 0; j < 5; j++) {
+                keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+            }
+
+            // 'Hello' takes the font without space
+            fontFamilyComboBox.getSelectionModel().select("WebKitWeightWatcher100");
+
+            // Unselect 'Hello'
+            keyboard.doRightArrowPress();
+
+            // Go after blank space between 'Hello' and 'World'
+            keyboard.doRightArrowPress();
+
+            // Position the caret inside 'World'.
+            keyboard.doRightArrowPress();
+            fontSetupLatch.countDown();
+        });
+
+        assertTrue("Timeout when waiting for focus change ", Util.await(fontSetupLatch));
+
+        final CountDownLatch retrieveFontLatch = new CountDownLatch(1);
+
+        Util.runAndWait(() -> {
+            ComboBox<String> fontFamilyComboBox = null;
+            int i = 0;
+            for (Node comboBox : htmlEditor.lookupAll(".font-menu-button")) {
+                // 0 - Format, 1 - Font Family, 2 - Font Size
+                if (i == 1) {
+                    assertTrue("fontFamilyComboBox must be ComboBox",
+                            comboBox instanceof ComboBox);
+                    fontFamilyComboBox = (ComboBox<String>) comboBox;
+                    assertNotNull("fontFamilyComboBox must not be null",
+                            fontFamilyComboBox);
+                }
+                i++;
+            }
+            // Retrieve the selected font
+            result.set(fontFamilyComboBox.getSelectionModel().getSelectedItem());
+            retrieveFontLatch.countDown();
+        });
+
+
+        assertTrue("Timeout when waiting for font selection ", Util.await(retrieveFontLatch));
+        assertNotNull("result must have a valid reference ", result.get());
+        assertTrue("font-family must be 'WebKit Layout Test 2', it was" + result.get(), result.get().
+                contains("WebKit Layout Tests 2"));
     }
 
     /**
