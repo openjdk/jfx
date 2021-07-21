@@ -62,6 +62,7 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
 import javafx.beans.property.*;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -4081,18 +4082,34 @@ public class Scene implements EventTarget {
 
         private void windowForSceneChanged(Window oldWindow, Window window) {
             if (oldWindow != null) {
+                oldWindow.showingProperty().removeListener(sceneWindowShowingListener);
                 oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
             }
 
             if (window != null) {
+                window.showingProperty().addListener(sceneWindowShowingListener);
                 window.focusedProperty().addListener(sceneWindowFocusedListener);
                 setWindowFocused(window.isFocused());
             } else {
                 setWindowFocused(false);
             }
+
+            checkCleanDirtyNodes();
         }
 
+        private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> {checkCleanDirtyNodes(); } ;
         private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
+
+        private void checkCleanDirtyNodes() {
+            if(window == null || !window.get().isShowing()) {
+                setAllowPGAccess(true);
+                if(Scene.this.dirtyNodes != null) {
+                    scenePulseListener.syncAll(getRoot()); // clear removedList in Parent
+                }
+                Scene.this.dirtyNodes = null;
+                setAllowPGAccess(false);
+            }
+        }
 
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
