@@ -41,7 +41,7 @@ import javafx.scene.control.ToggleButton;
  */
 public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -51,7 +51,7 @@ public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -74,7 +74,7 @@ public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

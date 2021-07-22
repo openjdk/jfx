@@ -202,7 +202,7 @@ public abstract class Parent extends Node {
     }
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                        Scenegraph Structure                         *
      *                                                                     *
      *  Functions and variables related to the scenegraph structure,       *
@@ -863,7 +863,7 @@ public abstract class Parent extends Node {
         return traversalEngine;
     }
 
-    /***********************************************************************
+    /* *********************************************************************
      *                               Layout                                *
      *                                                                     *
      *  Functions and variables related to the layout scheme used by       *
@@ -1261,7 +1261,7 @@ public abstract class Parent extends Node {
         return sceneRoot;
     }
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      *                         Stylesheet Handling                         *
      *                                                                     *
@@ -1401,7 +1401,7 @@ public abstract class Parent extends Node {
         }
     }
 
-    /***********************************************************************
+    /* *********************************************************************
      *                               Misc                                  *
      *                                                                     *
      *  Initialization and other functions                                 *
@@ -1431,7 +1431,7 @@ public abstract class Parent extends Node {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Bounds Computations                             *
      *                                                                         *

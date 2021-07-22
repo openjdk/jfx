@@ -72,7 +72,7 @@ import javafx.scene.control.skin.ListCellSkin;
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -87,7 +87,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *     We have to listen to a number of properties on the ListView itself  *
@@ -228,7 +228,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -315,7 +315,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -347,7 +347,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
@@ -565,7 +565,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -575,7 +575,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

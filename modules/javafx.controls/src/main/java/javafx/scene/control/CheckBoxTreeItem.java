@@ -111,7 +111,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     private static final EventType<? extends Event> CHECK_BOX_SELECTION_CHANGED_EVENT
             = new EventType<Event>(TreeModificationEvent.ANY, "checkBoxSelectionChangedEvent");
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -184,7 +184,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks                                                               *
      *                                                                         *
@@ -194,7 +194,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -274,7 +274,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *

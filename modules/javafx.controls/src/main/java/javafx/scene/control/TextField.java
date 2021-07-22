@@ -164,7 +164,7 @@ public class TextField extends TextInputControl {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -265,7 +265,7 @@ public class TextField extends TextInputControl {
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.CENTER_LEFT : alignment.get(); }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -281,7 +281,7 @@ public class TextField extends TextInputControl {
         return TextInputControl.filterInput(text, true, true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

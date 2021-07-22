@@ -124,7 +124,7 @@ import javafx.css.StyleableProperty;
 @DefaultProperty("items")
 public class SplitPane extends Control {
 
-    /********************************************************************
+    /* ******************************************************************
      *  static methods
      ********************************************************************/
     private static final String RESIZABLE_WITH_PARENT = "resizable-with-parent";
@@ -162,7 +162,7 @@ public class SplitPane extends Control {
         return true;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -237,7 +237,7 @@ public class SplitPane extends Control {
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -300,7 +300,7 @@ public class SplitPane extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -314,7 +314,7 @@ public class SplitPane extends Control {
     // Cache the divider positions if the items have not been created.
     private final WeakHashMap<Integer, Double> dividerCache = new WeakHashMap<Integer, Double>();
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -390,7 +390,7 @@ public class SplitPane extends Control {
         return new SplitPaneSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -464,7 +464,7 @@ public class SplitPane extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *

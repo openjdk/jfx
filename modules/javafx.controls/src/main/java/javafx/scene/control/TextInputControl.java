@@ -122,7 +122,7 @@ public abstract class TextInputControl extends Control {
 
     private boolean blockSelectedTextUpdate;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -187,7 +187,7 @@ public abstract class TextInputControl extends Control {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -441,7 +441,7 @@ public abstract class TextInputControl extends Control {
     public final boolean isRedoable() { return redoable.get(); }
     public final ReadOnlyBooleanProperty redoableProperty() { return redoable.getReadOnlyProperty(); }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -1580,7 +1580,7 @@ public abstract class TextInputControl extends Control {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1633,7 +1633,7 @@ public abstract class TextInputControl extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

@@ -78,7 +78,7 @@ import static com.sun.javafx.PlatformUtil.isWindows;
  */
 public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -89,7 +89,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -151,7 +151,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -452,7 +452,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -1011,7 +1011,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -1187,7 +1187,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes
      *

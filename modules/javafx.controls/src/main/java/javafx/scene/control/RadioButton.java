@@ -63,7 +63,7 @@ import javafx.scene.AccessibleRole;
  */
  public class RadioButton extends ToggleButton {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -96,7 +96,7 @@ import javafx.scene.AccessibleRole;
         ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER_LEFT);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -119,7 +119,7 @@ import javafx.scene.AccessibleRole;
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -138,7 +138,7 @@ import javafx.scene.AccessibleRole;
         return Pos.CENTER_LEFT;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

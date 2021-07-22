@@ -43,7 +43,7 @@ import com.sun.javafx.scene.control.behavior.DateCellBehavior;
  */
 public class DateCellSkin extends CellSkinBase<DateCell> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -53,7 +53,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -78,7 +78,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -138,7 +138,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Pirvate implementation                                                  *
      *                                                                         *

@@ -44,7 +44,7 @@ import com.sun.javafx.scene.control.behavior.SplitMenuButtonBehavior;
  */
 public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -54,7 +54,7 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -96,7 +96,7 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -113,7 +113,7 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
