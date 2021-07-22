@@ -545,6 +545,7 @@ public class Scene implements EventTarget {
                 dirtyNodes = tmp;
             }
             dirtyNodes[dirtyNodesSize++] = n;
+            checkCleanDirtyNodes();
         }
     }
 
@@ -716,6 +717,21 @@ public class Scene implements EventTarget {
             return;
         }
         postLayoutPulseListeners.remove(r);
+    }
+
+    private boolean cleanupAdded = false;
+    private TKPulseListener cleanupListener = () -> {
+        cleanupAdded = false;
+        // JDK-8269907 - This is important, to avoid memoryleaks in dirtyNodes and Parent.removed
+        scenePulseListener.synchronizeSceneNodes();
+    };
+    private void checkCleanDirtyNodes() {
+        if(!cleanupAdded) {
+            if((window.get() == null || !window.get().isShowing()) && dirtyNodesSize > 0) {
+                Toolkit.getToolkit().addCleanupListener(cleanupListener);
+                cleanupAdded = true;
+            }
+        }
     }
 
     /**
@@ -4099,17 +4115,6 @@ public class Scene implements EventTarget {
 
         private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> {checkCleanDirtyNodes(); } ;
         private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
-
-        private void checkCleanDirtyNodes() {
-            if(window == null || !window.get().isShowing()) {
-                setAllowPGAccess(true);
-                if(Scene.this.dirtyNodes != null) {
-                    scenePulseListener.syncAll(getRoot()); // clear removedList in Parent
-                }
-                Scene.this.dirtyNodes = null;
-                setAllowPGAccess(false);
-            }
-        }
 
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
