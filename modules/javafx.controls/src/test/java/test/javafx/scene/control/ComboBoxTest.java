@@ -349,9 +349,9 @@ public class ComboBoxTest {
         comboBox.setSelectionModel(null);
         ListView<String> listView = (ListView<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
                 .getPopupContent();
-        listView.getSelectionModel().select(1);
 
-        assertNull(comboBox.getValue());
+        // Should not throw an NPE.
+        listView.getSelectionModel().select(1);
     }
 
     @Test public void selectionModelCanBeBound() {
