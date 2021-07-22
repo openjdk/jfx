@@ -1167,7 +1167,7 @@ public abstract class Parent extends Node {
         return super.getBaselineOffset();
     }
 
-    /***
+    /**
      * It stores the reference to the current child being laid out by its parent.
      * This reference is important to differentiate whether a layout is triggered
      * by its parent or other events.
