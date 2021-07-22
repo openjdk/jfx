@@ -564,8 +564,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         _listView.getSelectionModel().selectedIndexProperty().addListener(o -> {
             if (listSelectionLock) return;
+            SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+            if (selectionModel == null) return;
+
             int index = listView.getSelectionModel().getSelectedIndex();
-            comboBox.getSelectionModel().select(index);
+            selectionModel.select(index);
             updateDisplayNode();
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });

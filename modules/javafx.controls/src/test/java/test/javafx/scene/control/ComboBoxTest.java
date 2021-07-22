@@ -299,30 +299,23 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setSelectionModel(null);
 
+        // Should not throw an NPE.
         comboBox.setValue(items.get(1));
 
+        assertEquals(items.get(1), comboBox.getValue());
         assertEquals(items.get(1), comboBox.getButtonCell().getText());
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnLayout() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 
-        ListCell<String> buttonCell = new ListCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(item);
-            }
-        };
-        comboBox.setButtonCell(buttonCell);
         comboBox.setItems(items);
 
         comboBox.setValue(items.get(1));
         comboBox.setSelectionModel(null);
 
+        // Should not throw an NPE.
         comboBox.layout();
-
-        assertEquals(items.get(1), comboBox.getButtonCell().getText());
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnEditableChange() {
@@ -331,9 +324,9 @@ public class ComboBoxTest {
         comboBox.setEditable(true);
         comboBox.setItems(items);
         comboBox.setSelectionModel(null);
-        comboBox.setEditable(false);
 
-        assertNull(comboBox.getValue());
+        // Should not throw an NPE.
+        comboBox.setEditable(false);
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
@@ -343,9 +336,22 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setSelectionModel(null);
 
+        // Should not throw an NPE.
         comboBox.setValue(items.get(1));
 
         assertEquals(items.get(1), comboBox.getValue());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnListViewSelect() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+        ListView<String> listView = (ListView<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getPopupContent();
+        listView.getSelectionModel().select(1);
+
+        assertNull(comboBox.getValue());
     }
 
     @Test public void selectionModelCanBeBound() {
