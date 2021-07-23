@@ -91,8 +91,8 @@ public class WrongStageFocusWithApplicationModalityTest {
 
     private static void mouseClick() {
         Util.runAndWait(() -> {
-            robot.mouseMove((int) (alert.getX()+alert.getWidth()/2),
-                    (int) (alert.getY()+alert.getHeight()/2));
+            robot.mouseMove((int) (alert.getX() + alert.getWidth() / 2),
+                    (int) (alert.getY() + alert.getHeight() / 2));
             Util.sleep(100);
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
