@@ -549,6 +549,11 @@ gst_directsound_sink_open (GstAudioSink * asink)
   if (FAILED (hRes = DirectSoundCreate (lpGuid, &dsoundsink->pDS, NULL))) {
 #ifdef GSTREAMER_LITE
     dsoundsink->pDS = NULL;
+    if (hRes == DSERR_NODRIVER) {
+      dsoundsink->need_reload = TRUE;
+      g_free(lpGuid);
+      return TRUE;
+    }
 #endif // GSTREAMER_LITE
     gchar *error_text = gst_hres_to_string (hRes);
     GST_ELEMENT_ERROR (dsoundsink, RESOURCE, OPEN_READ,
@@ -604,8 +609,9 @@ gst_directsound_sink_prepare (GstAudioSink * asink,
   dsoundsink->rate = spec->info.rate;
   if (dsoundsink->bytes_per_sample == 0 || dsoundsink->rate == 0)
     return FALSE;
-  if (dsoundsink->pDS == NULL)
-    return TRUE;
+  // Do not return here if DirectSoundCreate failed, device might
+  // return during playback, so we need to init format for device
+  // reload.
 #endif // GSTREAMER_LITE
 
   /* fill the WAVEFORMATEX structure with spec params */
@@ -674,6 +680,18 @@ gst_directsound_sink_prepare (GstAudioSink * asink,
   descSecondary.dwBufferBytes = dsoundsink->buffer_size;
   descSecondary.lpwfxFormat = (WAVEFORMATEX *) & wfx;
 
+#ifdef GSTREAMER_LITE
+  // Store DSBUFFERDESC and WAVEFORMATEX in case we need to reload DirectSound
+  memcpy(&dsoundsink->descSecondary, &descSecondary, sizeof(DSBUFFERDESC));
+  memcpy(&dsoundsink->wfx, &wfx, sizeof(WAVEFORMATEX));
+  dsoundsink->descSecondary.lpwfxFormat = (WAVEFORMATEX*)&dsoundsink->wfx;
+
+  // We done if device is not available. It might come back, so we do not
+  // fail playback.
+  if (dsoundsink->pDS == NULL)
+      return TRUE;
+#endif // GSTREAMER_LITE
+
   hRes = IDirectSound_CreateSoundBuffer (dsoundsink->pDS, &descSecondary,
       &dsoundsink->pDSBSecondary, NULL);
   if (FAILED (hRes)) {
@@ -690,13 +708,6 @@ gst_directsound_sink_prepare (GstAudioSink * asink,
     g_free (error_text);
     return FALSE;
   }
-
-#ifdef GSTREAMER_LITE
-  // Store DSBUFFERDESC and WAVEFORMATEX in case we need to reload DirectSound
-  memcpy(&dsoundsink->descSecondary, &descSecondary, sizeof(DSBUFFERDESC));
-  memcpy(&dsoundsink->wfx, &wfx, sizeof(WAVEFORMATEX));
-  dsoundsink->descSecondary.lpwfxFormat = (WAVEFORMATEX*)&dsoundsink->wfx;
-#endif // GSTREAMER_LITE
 
   gst_directsound_sink_set_volume (dsoundsink,
       gst_directsound_sink_get_volume (dsoundsink), FALSE);
