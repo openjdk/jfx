@@ -265,7 +265,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         TreeTableColumn tableColumn = (TreeTableColumn<T,?>) tcb;
         TreeTableCell cell = (TreeTableCell) tableColumn.getCellFactory().call(tableColumn);
 
-        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTableColumn(tableColumn);
         cell.updateTreeTableView(tableColumn.getTreeTableView());
 
         return cell;
@@ -321,7 +321,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected void updateCell(TreeTableCell<T, ?> cell, TreeTableRow<T> row) {
-        cell.updateTreeTableRow(row);
+        cell.updateTableRow(row);
     }
 
     /** {@inheritDoc} */

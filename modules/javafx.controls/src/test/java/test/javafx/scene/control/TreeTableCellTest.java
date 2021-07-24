@@ -29,6 +29,7 @@ import javafx.scene.control.skin.TreeTableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
@@ -125,10 +126,10 @@ public class TreeTableCellTest {
         cell.updateIndex(0);
         cell.updateTreeTableView(tree);
         assertSame(ROOT, cell.getItem());
-        assertSame(root, cell.getTreeTableRow().getTreeItem());
+        assertSame(root, cell.getTableRow().getTreeItem());
         cell.updateIndex(1);
         assertSame(APPLES, cell.getItem());
-        assertSame(apples, cell.getTreeTableRow().getTreeItem());
+        assertSame(apples, cell.getTableRow().getTreeItem());
     }
 
     @Ignore // TODO file bug!
@@ -136,10 +137,10 @@ public class TreeTableCellTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
         assertSame(ROOT, cell.getItem());
-        assertSame(root, cell.getTreeTableRow().getTreeItem());
+        assertSame(root, cell.getTableRow().getTreeItem());
         cell.updateIndex(1);
         assertSame(APPLES, cell.getItem());
-        assertSame(apples, cell.getTreeTableRow().getTreeItem());
+        assertSame(apples, cell.getTableRow().getTreeItem());
     }
 
     @Test public void itemIsNullWhenIndexIsOutOfRange() {
@@ -150,9 +151,9 @@ public class TreeTableCellTest {
 
     @Test public void treeItemIsNullWhenIndexIsOutOfRange() {
         cell.updateIndex(50);
-        cell.updateTreeTableRow(row);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
-        assertNull(cell.getTreeTableRow().getTreeItem());
+        assertNull(cell.getTableRow().getTreeItem());
     }
 
     @Test public void itemIsNullWhenIndexIsOutOfRange2() {
@@ -178,7 +179,7 @@ public class TreeTableCellTest {
         cell.updateTreeTableView(tree);
         assertSame(ORANGES, cell.getItem());
         root.getChildren().remove(oranges);
-        assertNull(cell.getTreeTableRow().getTreeItem());
+        assertNull(cell.getTableRow().getTreeItem());
         assertNull(cell.getItem());
     }
 
@@ -188,7 +189,7 @@ public class TreeTableCellTest {
         cell.updateIndex(1);
         cell.updateTreeTableView(tree);
         assertSame(APPLES, cell.getItem());
-        assertSame(apples, cell.getTreeTableRow().getTreeItem());
+        assertSame(apples, cell.getTableRow().getTreeItem());
 
         // then update the root children list so that the 1st item (including root),
         // is no longer 'Apples', but 'Lime'
@@ -201,7 +202,7 @@ public class TreeTableCellTest {
         cell.updateIndex(2);
         cell.updateTreeTableView(tree);
         assertSame(ORANGES, cell.getItem());
-        assertSame(oranges, cell.getTreeTableRow().getTreeItem());
+        assertSame(oranges, cell.getTableRow().getTreeItem());
         String previous = APPLES;
         root.getChildren().add(0, new TreeItem<>("Lime"));
         assertEquals(previous, cell.getItem());
@@ -495,6 +496,31 @@ public class TreeTableCellTest {
         assertEquals("treeTableView", cell.treeTableViewProperty().getName());
     }
 
+    @Test public void checkTableRowPropertyName() {
+        assertEquals("tableRow", cell.tableRowProperty().getName());
+    }
+
+    @Test public void checkTableColumnPropertyName() {
+        assertEquals("tableColumn", cell.tableColumnProperty().getName());
+    }
+
+    @Test public void checkTableRowProperty() {
+        cell.updateTreeTableView(tree);
+        cell.updateTableRow(row);
+        assertSame(row, cell.getTableRow());
+        assertSame(row, cell.tableRowProperty().get());
+        assertFalse(cell.tableRowProperty() instanceof ObjectProperty);
+    }
+
+    @Test public void checkTableColumnProperty() {
+        TreeTableColumn<String, String> column = new TreeTableColumn<>();
+        cell.updateTreeTableView(tree);
+        cell.updateTableColumn(column);
+        assertSame(column, cell.getTableColumn());
+        assertSame(column, cell.tableColumnProperty().get());
+        assertFalse(cell.tableColumnProperty() instanceof ObjectProperty);
+    }
+
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
@@ -507,7 +533,7 @@ public class TreeTableCellTest {
         TreeTableColumn col = new TreeTableColumn("TEST");
         col.setCellValueFactory(param -> null);
         tree.getColumns().add(col);
-        cell.updateTreeTableColumn(col);
+        cell.updateTableColumn(col);
         cell.updateTreeTableView(tree);
 
         // set index to 0, which results in the cell value factory returning
@@ -662,8 +688,8 @@ public class TreeTableCellTest {
         treeTableColumn.setEditable(true);
         tree.getColumns().add(treeTableColumn);
 
-        cell.updateTreeTableColumn(treeTableColumn);
-        cell.updateTreeTableRow(row);
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
 
         cell.updateIndex(0);
@@ -687,8 +713,8 @@ public class TreeTableCellTest {
         treeTableColumn.setEditable(true);
         tree.getColumns().add(treeTableColumn);
 
-        cell.updateTreeTableColumn(treeTableColumn);
-        cell.updateTreeTableRow(row);
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
 
         cell.updateIndex(0);
@@ -712,8 +738,8 @@ public class TreeTableCellTest {
         treeTableColumn.setEditable(false);
         tree.getColumns().add(treeTableColumn);
 
-        cell.updateTreeTableColumn(treeTableColumn);
-        cell.updateTreeTableRow(row);
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
 
         cell.updateIndex(0);
@@ -733,7 +759,7 @@ public class TreeTableCellTest {
         editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(""));
 
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableColumn(editingColumn);
+        cell.updateTableColumn(editingColumn);
     }
 
     @Test
@@ -867,7 +893,7 @@ public class TreeTableCellTest {
         editingColumn.setCellValueFactory(param -> null);
         tree.getColumns().add(editingColumn);
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableColumn(editingColumn);
+        cell.updateTableColumn(editingColumn);
         // test editing: first round
         // switch cell off editing by table api
         int editingIndex = 1;
