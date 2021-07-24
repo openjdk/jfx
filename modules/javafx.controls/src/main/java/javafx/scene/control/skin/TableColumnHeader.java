@@ -725,9 +725,9 @@ public class TableColumnHeader extends Region {
             treeTableRow.updateIndex(row);
             treeTableRow.updateTreeItem(ttv.getTreeItem(row));
 
-            cell.updateTreeTableColumn(tc);
+            cell.updateTableColumn(tc);
             cell.updateTreeTableView(ttv);
-            cell.updateTreeTableRow(treeTableRow);
+            cell.updateTableRow(treeTableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
