@@ -81,18 +81,21 @@ public abstract class PseudoClass {
     }
 
     /**
-     * There is only one PseudoClass instance for a given pseudoClass.
-     * @param pseudoClass the pseudo-class
-     * @return The PseudoClass for the given pseudoClass. Will not return null.
+     * Gets the {@code PseudoClass} instance for a given pseudo class name.
+     * Note : There is only one PseudoClass instance for a given pseudo class name.
+     * @param pseudoClass the name of the pseudo-class
+     * @return the {@code PseudoClass} instance for a given pseudo class name.
+     * It will not return null.
      * @throws IllegalArgumentException if pseudoClass parameter is null or an empty String
      */
     public static PseudoClass getPseudoClass(String pseudoClass) {
-
         return PseudoClassState.getPseudoClass(pseudoClass);
-
     }
 
-    /** @return the pseudo-class state */
+    /**
+     * Gets the name of the {@code PseudoClass}.
+     * @return the name of the {@code PseudoClass}.
+     */
     abstract public String getPseudoClassName();
 
 }

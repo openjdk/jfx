@@ -25,26 +25,41 @@
 package javafx.css;
 
 /**
- *
+ * A class that contains StyleClass information
  * @since 9
  */
 public final class StyleClass {
 
+    /**
+     * Constructs a {@code StyleClass} object
+     * @param styleClassName name of the style class
+     * @param index style class index
+     */
     public StyleClass(String styleClassName, int index) {
         this.styleClassName = styleClassName;
         this.index = index;
     }
 
-    /** @return the style-class */
+    /**
+     * Returns the name of StyleClass.
+     * @return the style-class
+     */
     public String getStyleClassName() {
         return styleClassName;
     }
 
-    /** @return the style-class */
+    /**
+     * Returns the name of StyleClass.
+     * @return the style-class
+     */
     @Override public String toString() {
         return styleClassName;
     }
 
+    /**
+     * Returns the index of this StyleClass in styleClasses list.
+     * @return index
+     */
     public int getIndex() {
        return index;
     }

@@ -33,6 +33,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
+ * This class serves as a container of CSS-property and it's value.
  * @since 9
  */
 final public class Declaration {
@@ -42,6 +43,12 @@ final public class Declaration {
     // The Rule to which this Declaration belongs.
     Rule rule;
 
+    /**
+     * Constructs a {@code Declaration} object
+     * @param propertyName Name of the CSS property
+     * @param parsedValue Value of the CSS property
+     * @param important Importance of the Declaration
+     */
     Declaration(final String propertyName, final ParsedValue parsedValue,
                 final boolean important) {
         this.property = propertyName;
@@ -55,26 +62,41 @@ final public class Declaration {
         }
     }
 
-    /** @return ParsedValue contains the parsed declaration. */
+    /**
+     * Get the parsed value
+     * @return ParsedValue
+     */
     public ParsedValue getParsedValue() {
         return parsedValue;
     }
 
-    /** @return The CSS property name */
+    /**
+     * Get the CSS property name
+     * @return css-property
+     */
     public String getProperty() {
         return property;
     }
 
-    /** @return The Rule to which this Declaration belongs. */
+    /**
+     * Get the {@code Rule} to which this {@code Declaration} belongs.
+     * @return rule
+     */
     public Rule getRule() {
         return rule;
     }
 
+    /**
+     * Get the importance of this {@code Declaration}.
+     * @return important
+     */
     public final boolean isImportant() {
         return important;
     }
 
-    /** Helper */
+    /**
+     * Get the {@code StyleOrigin} of this {@code Declaration}
+     */
     private StyleOrigin getOrigin() {
         Rule rule = getRule();
         if (rule != null)  {
@@ -83,8 +105,8 @@ final public class Declaration {
         return null;
     }
     /**
-     * One declaration is the equal to another regardless of the Rule to which
-     * the Declaration belongs. Only the property, value and importance are
+     * One declaration is equal to another regardless of the {@code Rule} to which
+     * the {@code Declaration} belongs. Only the property, value and importance are
      * considered.
      */
     @Override public boolean equals(Object obj) {
@@ -113,6 +135,9 @@ final public class Declaration {
         return true;
     }
 
+    /**
+     * Returns the hash code of this {@code Declaration}
+     */
     @Override public int hashCode() {
         int hash = 5;
         hash = 89 * hash + (this.property != null ? this.property.hashCode() : 0);
@@ -121,6 +146,9 @@ final public class Declaration {
         return hash;
     }
 
+    /**
+     * Returns a String version of this {@code Declaration}
+     */
     @Override public String toString() {
         StringBuilder sbuf = new StringBuilder(property);
         sbuf.append(": ");

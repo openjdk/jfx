@@ -37,6 +37,12 @@ final public class Size {
 
     final private double value;
     final private SizeUnits units;
+
+    /**
+     * Constructs a {@code Size} object
+     * @param value value of the Size
+     * @param units unit of the Size
+     */
     public Size(double value, SizeUnits units) {
         this.value = value;
         this.units = (units != null) ? units : SizeUnits.PX;

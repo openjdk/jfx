@@ -68,6 +68,7 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
+     * Gets Immutable List of style-classes of the selector.
      * @return Immutable List&lt;String&gt; of style-classes of the selector
      */
     public List<String> getStyleClasses() {
@@ -82,6 +83,10 @@ final public class SimpleSelector extends Selector {
         return Collections.unmodifiableList(names);
     }
 
+    /**
+     * Gets {@code Set} of {@code StyleClass} of the selector.
+     * @return styleClassSet
+     */
     public Set<StyleClass> getStyleClassSet() {
         return styleClassSet;
     }
@@ -90,7 +95,8 @@ final public class SimpleSelector extends Selector {
     final private StyleClassSet styleClassSet;
 
     final private String id;
-    /*
+    /**
+     * Gets the value of the selector id
      * @return The value of the selector id, which may be an empty string.
      */
     public String getId() {
@@ -139,6 +145,9 @@ final public class SimpleSelector extends Selector {
 
     // Used in Match. If nodeOrientation is ltr or rtl,
     // then count it as a pseudoclass
+    /** Gets {@code NodeOrientation} of this Selector.
+     * @return nodeOrientation
+     */
     public NodeOrientation getNodeOrientation() {
         return nodeOrientation;
     }

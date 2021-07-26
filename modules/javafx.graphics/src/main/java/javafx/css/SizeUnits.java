@@ -34,6 +34,9 @@ import javafx.scene.text.Font;
  */
 public enum SizeUnits {
 
+    /**
+     * Percentage
+     */
     PERCENT(false) {
 
         @Override
@@ -50,6 +53,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Inches
+     */
     IN(true) {
 
         @Override
@@ -66,6 +73,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Centimeters
+     */
     CM(true) {
 
         @Override
@@ -82,6 +93,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Millimeters
+     */
     MM(true) {
 
         @Override
@@ -98,6 +113,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * EM (Unit relative to the font-size of the element)
+     */
     EM(false) {
 
         @Override
@@ -114,6 +133,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * EX
+     */
     EX(false) {
 
         @Override
@@ -132,6 +155,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Points
+     */
     PT(true) {
         @Override
         public String toString() { return "pt"; }
@@ -147,6 +174,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Picas
+     */
     PC(true) {
         @Override
         public String toString() { return "pc"; }
@@ -162,6 +193,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Pixels
+     */
     PX(true) {
         @Override
         public String toString() { return "px"; }
@@ -178,6 +213,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Degrees
+     */
     DEG(true) {
         @Override
         public String toString() { return "deg"; }
@@ -194,6 +232,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Gradians (400 Gradians = 360 Degrees)
+     */
     GRAD(true) {
 
         @Override
@@ -213,6 +254,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Radians
+     */
     RAD(true) {
 
         @Override
@@ -232,6 +276,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Turns (1 Turn = 360 Degrees)
+     */
     TURN(true) {
 
         @Override
@@ -250,7 +297,9 @@ public enum SizeUnits {
 
     },
 
-
+    /**
+     * Seconds
+     */
     S(true) {
 
         @Override
@@ -268,6 +317,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Milliseconds
+     */
     MS(true) {
 
         @Override
@@ -285,7 +337,22 @@ public enum SizeUnits {
 
     };
 
+    /**
+     * Calculates points for a particular {@code SizeUnits}
+     * @param value value
+     * @param multiplier multiplier
+     * @param font font
+     * @return points for a particular {@code SizeUnits}
+     */
     public abstract double points(double value, double multiplier, Font font);
+
+    /**
+     * Calculates pixels for a particular {@code SizeUnits}
+     * @param value value
+     * @param multiplier multiplier
+     * @param font font
+     * @return pixels for a particular {@code SizeUnits}
+     */
     public abstract double pixels(double value, double multiplier, Font font);
 
     private SizeUnits(boolean absolute) {
@@ -293,6 +360,11 @@ public enum SizeUnits {
     }
 
     private final boolean absolute;
+
+    /**
+     * Gets wehther this {@code SizeUnits} value is absolute
+     * @return whether value is absoulute
+     */
     public boolean isAbsolute() {
         return absolute;
     }

@@ -32,7 +32,7 @@ import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
 /**
- * A type that combines two Size values.  The primary purpose of
+ * Converter to combine two {@code Size} values.  The primary purpose of
  * this type is to handle "convert(size1, size2)" expressions in CSS.
  */
 public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, Size>[], Size> {
@@ -42,6 +42,10 @@ public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, 
         static final DeriveSizeConverter INSTANCE = new DeriveSizeConverter();
     }
 
+    /**
+     * Get the {@code DeriveSizeConverter} instance.
+     * @return the {@code DeriveSizeConverter} instance.
+     */
     public static DeriveSizeConverter getInstance() {
         return Holder.INSTANCE;
     }
