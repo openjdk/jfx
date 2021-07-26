@@ -528,7 +528,6 @@ static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const P
     // This applies to Mail and Notes when pasting from Xcode. <rdar://problem/40529867>
 
     RefPtr<Element> editableRoot = insertionPos.rootEditableElement();
-    ASSERT(editableRoot);
     if (!editableRoot)
         return false;
 
@@ -800,7 +799,8 @@ void ReplaceSelectionCommand::moveNodeOutOfAncestor(Node& node, Node& ancestor, 
     } else {
         RefPtr<Node> nodeToSplitTo = splitTreeToNode(node, ancestor, true);
         removeNode(node);
-        insertNodeBefore(WTFMove(protectedNode), *nodeToSplitTo);
+        if (nodeToSplitTo)
+            insertNodeBefore(WTFMove(protectedNode), *nodeToSplitTo);
     }
 
     document().updateLayoutIgnorePendingStylesheets();
@@ -835,6 +835,8 @@ void ReplaceSelectionCommand::removeUnrenderedTextNodesAtEnds(InsertedNodes& ins
         insertedNodes.willRemoveNode(lastLeafInserted);
         removeNode(*lastLeafInserted);
     }
+
+    document().updateLayoutIgnorePendingStylesheets();
 
     // We don't have to make sure that firstNodeInserted isn't inside a select or script element
     // because it is a top level node in the fragment and the user can't insert into those elements.
@@ -1159,7 +1161,7 @@ void ReplaceSelectionCommand::doApply()
     RefPtr<Node> endBR = insertionPos.downstream().deprecatedNode()->hasTagName(brTag) ? insertionPos.downstream().deprecatedNode() : nullptr;
     VisiblePosition originalVisPosBeforeEndBR;
     if (endBR)
-        originalVisPosBeforeEndBR = VisiblePosition(positionBeforeNode(endBR.get()), DOWNSTREAM).previous();
+        originalVisPosBeforeEndBR = VisiblePosition(positionBeforeNode(endBR.get())).previous();
 
     RefPtr<Node> insertionBlock = enclosingBlock(insertionPos.deprecatedNode());
 
@@ -1204,9 +1206,11 @@ void ReplaceSelectionCommand::doApply()
     // our style spans and for positions inside list items
     // since insertAsListItems already does the right thing.
     if (!m_matchStyle && !enclosingList(insertionPos.containerNode())) {
-        if (insertionPos.containerNode()->isTextNode() && insertionPos.offsetInContainerNode() && !insertionPos.atLastEditingPositionForNode()) {
-            splitTextNode(*insertionPos.containerText(), insertionPos.offsetInContainerNode());
-            insertionPos = firstPositionInNode(insertionPos.containerNode());
+        if (auto* containerNode = insertionPos.containerNode()) {
+            if (containerNode->isTextNode() && insertionPos.offsetInContainerNode() && !insertionPos.atLastEditingPositionForNode()) {
+                splitTextNode(*insertionPos.containerText(), insertionPos.offsetInContainerNode());
+                insertionPos = firstPositionInNode(insertionPos.containerNode());
+            }
         }
 
         if (RefPtr<Node> nodeToSplitTo = nodeToSplitToAvoidPastingIntoInlineNodesWithStyle(insertionPos)) {
@@ -1246,7 +1250,7 @@ void ReplaceSelectionCommand::doApply()
     && blockStart && blockStart->renderer()->isListItem();
     if (isInsertingIntoList)
         refNode = insertAsListItems(downcast<HTMLElement>(*refNode), blockStart, insertionPos, insertedNodes);
-    else {
+    else if (isEditablePosition(insertionPos)) {
         insertNodeAt(*refNode, insertionPos);
         insertedNodes.respondToNodeInsertion(refNode.get());
     }
@@ -1596,9 +1600,9 @@ void ReplaceSelectionCommand::completeHTMLReplacement(const Position &lastPositi
         m_visibleSelectionForInsertedText = VisibleSelection(start, end);
 
     if (m_selectReplacement)
-        setEndingSelection(VisibleSelection(start, end, SEL_DEFAULT_AFFINITY, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(start, end, VisibleSelection::defaultAffinity, endingSelection().isDirectional()));
     else
-        setEndingSelection(VisibleSelection(end, SEL_DEFAULT_AFFINITY, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(end, VisibleSelection::defaultAffinity, endingSelection().isDirectional()));
 }
 
 void ReplaceSelectionCommand::mergeTextNodesAroundPosition(Position& position, Position& positionOnlyToBeUpdated)

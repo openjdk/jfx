@@ -511,13 +511,6 @@ void FrameLoaderClientJava::redirectDataToPlugin(Widget&)
     notImplemented();
 }
 
-RefPtr<Widget> FrameLoaderClientJava::createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&,
-                                                      const Vector<String>&, const Vector<String>&)
-{
-    notImplemented();
-    return nullptr;
-}
-
 ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const String& mimeType)
 {
     //copied from FrameLoaderClientEfl.cpp
@@ -802,7 +795,7 @@ void FrameLoaderClientJava::restoreViewState()
     notImplemented();
 }
 
-Frame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& action)
+Frame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& action, NewFrameOpenerPolicy)
 {
     Page* webPage = frame()->page();
     if (!webPage)

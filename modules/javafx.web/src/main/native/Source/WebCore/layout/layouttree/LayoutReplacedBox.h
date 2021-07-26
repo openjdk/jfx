@@ -57,11 +57,15 @@ public:
     LayoutUnit intrinsicHeight() const;
     LayoutUnit intrinsicRatio() const;
 
+    void setBaseline(LayoutUnit baseline) { m_baseline = baseline; }
+    Optional<LayoutUnit> baseline() const { return m_baseline; }
+
 private:
     bool hasAspectRatio() const;
 
     Optional<LayoutSize> m_intrinsicSize;
     Optional<LayoutUnit> m_intrinsicRatio;
+    Optional<LayoutUnit> m_baseline;
     CachedImage* m_cachedImage { nullptr };
 };
 

@@ -61,12 +61,12 @@ public:
 
     Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const override;
 
-    bool paintCheckbox(const RenderObject& o, const PaintInfo& i, const IntRect& r) override
-    { return paintButton(o, i, r); }
+    bool paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r) override
+    { return paintButton(o, i, IntRect(r)); }
     void setCheckboxSize(RenderStyle&) const override;
 
-    bool paintRadio(const RenderObject& o, const PaintInfo& i, const IntRect& r) override
-    { return paintButton(o, i, r); }
+    bool paintRadio(const RenderObject& o, const PaintInfo& i, const FloatRect& r) override
+    { return paintButton(o, i, IntRect(r)); }
     void setRadioSize(RenderStyle& style) const override
     { return setCheckboxSize(style); }
 
@@ -84,7 +84,7 @@ public:
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
 
-    bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
@@ -124,12 +124,10 @@ public:
     String mediaControlsScript() override;
 #endif
 
-#if ENABLE(METER_ELEMENT)
     IntSize meterSizeForBounds(const RenderMeter&, const IntRect&) const override;
-    bool supportsMeter(ControlPart) const override;
+    bool supportsMeter(ControlPart, const HTMLMeterElement&) const override;
     void adjustMeterStyle(RenderStyle&, const Element*) const override;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
-#endif
 
 private:
     enum ControlSubPart {
@@ -140,8 +138,6 @@ private:
 
     RenderThemeWin();
     virtual ~RenderThemeWin();
-
-    bool canPaint(const PaintInfo&) const final { return true; }
 
     // System fonts.
     void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;

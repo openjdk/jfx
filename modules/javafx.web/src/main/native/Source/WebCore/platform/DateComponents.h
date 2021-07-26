@@ -36,6 +36,21 @@
 
 namespace WebCore {
 
+enum class SecondFormat : uint8_t {
+    None, // Suppress the second part and the millisecond part if they are 0.
+    Second, // Always show the second part, and suppress the millisecond part if it is 0.
+    Millisecond // Always show the second part and the millisecond part.
+};
+
+enum class DateComponentsType : uint8_t {
+    Invalid,
+    Date,
+    DateTimeLocal,
+    Month,
+    Time,
+    Week,
+};
+
 // A DateComponents instance represents one of the following date and time combinations:
 // * Month type: year-month
 // * Date type: year-month-day
@@ -53,18 +68,9 @@ public:
         , m_month(0)
         , m_year(0)
         , m_week(0)
-        , m_type(Invalid)
+        , m_type(DateComponentsType::Invalid)
     {
     }
-
-    enum Type {
-        Invalid,
-        Date,
-        DateTimeLocal,
-        Month,
-        Time,
-        Week,
-    };
 
     int millisecond() const { return m_millisecond; }
     int second() const { return m_second; }
@@ -74,17 +80,11 @@ public:
     int month() const { return m_month; }
     int fullYear() const { return m_year; }
     int week() const { return m_week; }
-    Type type() const { return m_type; }
-
-    enum SecondFormat {
-        None, // Suppress the second part and the millisecond part if they are 0.
-        Second, // Always show the second part, and suppress the millisecond part if it is 0.
-        Millisecond // Always show the second part and the millisecond part.
-    };
+    DateComponentsType type() const { return m_type; }
 
     // Returns an ISO 8601 representation for this instance.
     // The format argument is valid for DateTimeLocal and Time types.
-    String toString(SecondFormat = None) const;
+    String toString(SecondFormat = SecondFormat::None) const;
 
     // Sets year and month.
     static Optional<DateComponents> fromParsingMonth(StringView);
@@ -136,6 +136,14 @@ public:
     static constexpr inline double maximumMonth() { return (275760 - 1970) * 12.0 + 9 - 1; } // 275760-09
     static constexpr inline double maximumTime() { return 86399999; } // 23:59:59.999
     static constexpr inline double maximumWeek() { return 8639999568000000.0; } // 275760-09-08, the Monday of the week including 275760-09-13.
+
+    // HTML uses ISO-8601 format with year >= 1. Gregorian calendar started in
+    // 1582. However, we need to support 0001-01-01 in Gregorian calendar rule.
+    static constexpr inline int minimumYear() { return 1; }
+
+    // Date in ECMAScript can't represent dates later than 275760-09-13T00:00Z.
+    // So, we have the same upper limit in HTML5 date/time types.
+    static constexpr inline int maximumYear() { return 275760; }
 
 private:
     template<typename CharacterType> bool parseYear(StringParsingBuffer<CharacterType>&);
@@ -193,7 +201,7 @@ private:
     int m_year; //  1582 -
     int m_week; // 1 - 53
 
-    Type m_type;
+    DateComponentsType m_type;
 };
 
 } // namespace WebCore

@@ -28,9 +28,12 @@
 
 #if ENABLE(WEBXR)
 
+#include <wtf/IsoMallocInlines.h>
 #include "WebXRSession.h"
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(XRSessionEvent);
 
 Ref<XRSessionEvent> XRSessionEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
 {
@@ -46,8 +49,14 @@ XRSessionEvent::XRSessionEvent(const AtomString& type, const Init& initializer, 
 
 XRSessionEvent::~XRSessionEvent() = default;
 
+EventInterface XRSessionEvent::eventInterface() const
+{
+    return XRSessionEventInterfaceType;
+}
+
 const WebXRSession& XRSessionEvent::session() const
 {
+    ASSERT(m_session);
     return *m_session;
 }
 

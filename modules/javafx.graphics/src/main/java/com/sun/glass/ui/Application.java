@@ -676,6 +676,10 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
+    public String getHighContrastScheme(String themeName) {
+        return themeName;
+    }
+
     /**
      * Gets the Name of the currently active high contrast theme.
      * If null, then high contrast is not enabled.

@@ -40,8 +40,6 @@
 
 #if HAVE(IOSURFACE)
 #include "ImageBufferIOSurfaceBackend.h"
-#elif USE(CAIRO) && ENABLE(ACCELERATED_2D_CANVAS)
-#include "ImageBufferCairoGLSurfaceBackend.h"
 #endif
 
 namespace WebCore {
@@ -58,8 +56,6 @@ using UnacceleratedImageBufferBackend = ImageBufferJavaBackend;
 
 #if HAVE(IOSURFACE)
 using AcceleratedImageBufferBackend = ImageBufferIOSurfaceBackend;
-#elif USE(CAIRO) && ENABLE(ACCELERATED_2D_CANVAS)
-using AcceleratedImageBufferBackend = ImageBufferCairoGLSurfaceBackend;
 #else
 using AcceleratedImageBufferBackend = UnacceleratedImageBufferBackend;
 #endif
@@ -83,5 +79,5 @@ using DisplayListAcceleratedImageBuffer = DisplayList::ImageBuffer<AcceleratedIm
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AcceleratedImageBuffer)
-    static bool isType(const WebCore::ImageBuffer& buffer) { return buffer.isAccelerated(); }
+    static bool isType(const WebCore::ImageBuffer& buffer) { return buffer.renderingMode() == WebCore::RenderingMode::Accelerated; }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -27,15 +27,12 @@
 
 #if ENABLE(WEBGPU)
 
+#include "GPUPlatformTypes.h"
 #include "GPUProgrammablePassEncoder.h"
 #include "GPURenderPipeline.h"
-
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
-
-OBJC_PROTOCOL(MTLRenderCommandEncoder);
 
 namespace WebCore {
 
@@ -44,9 +41,6 @@ class GPUCommandBuffer;
 
 struct GPUColor;
 struct GPURenderPassDescriptor;
-
-using PlatformRenderPassEncoder = MTLRenderCommandEncoder;
-using PlatformRenderPassEncoderSmartPtr = RetainPtr<MTLRenderCommandEncoder>;
 
 class GPURenderPassEncoder : public GPUProgrammablePassEncoder {
 public:

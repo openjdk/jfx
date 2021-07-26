@@ -192,8 +192,8 @@ public abstract class Animation {
     }
 
     // package private only for the sake of testing
-    @SuppressWarnings("removal")
     final PulseReceiver pulseReceiver = new PulseReceiver() {
+        @SuppressWarnings("removal")
         @Override public void timePulse(long now) {
             final long elapsedTime = now - startTime;
             if (elapsedTime < 0) {

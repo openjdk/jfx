@@ -47,7 +47,7 @@ function symbolHasInstance(value)
 {
     "use strict";
 
-    if (typeof this !== "function")
+    if (!@isCallable(this))
         return false;
 
     if (@isBoundFunction(this))
@@ -62,7 +62,7 @@ function bind(thisValue)
     "use strict";
 
     var target = this;
-    if (typeof target !== "function")
+    if (!@isCallable(target))
         @throwTypeError("|this| is not a function inside Function.prototype.bind");
 
     var argumentCount = @argumentCount();
@@ -77,7 +77,7 @@ function bind(thisValue)
     if (@hasOwnLengthProperty(target)) {
         var lengthValue = target.length;
         if (typeof lengthValue === "number") {
-            lengthValue = lengthValue | 0;
+            lengthValue = @toIntegerOrInfinity(lengthValue);
             // Note that we only care about positive lengthValues, however, this comparision
             // against numBoundArgs suffices to prove we're not a negative number.
             if (lengthValue > numBoundArgs)

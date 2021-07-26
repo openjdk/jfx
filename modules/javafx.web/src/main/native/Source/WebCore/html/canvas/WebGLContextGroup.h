@@ -28,6 +28,7 @@
 #if ENABLE(WEBGL)
 
 #include "WebGLRenderingContextBase.h"
+#include <wtf/Lock.h>
 
 namespace WebCore {
 
@@ -42,7 +43,9 @@ public:
     void addObject(WebGLSharedObject&);
     void removeObject(WebGLSharedObject&);
 
-    GraphicsContextGLOpenGL& getAGraphicsContextGL();
+    bool hasAContext() const;
+    GraphicsContextGL& getAGraphicsContextGL();
+    Lock& objectGraphLockForAContext();
 
     void loseContextGroup(WebGLRenderingContextBase::LostContextMode);
 

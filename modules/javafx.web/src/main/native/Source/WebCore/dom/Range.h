@@ -24,93 +24,72 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntRect.h"
+#include "AbstractRange.h"
 #include "RangeBoundaryPoint.h"
-#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
 class DOMRect;
 class DOMRectList;
+class DOMWindow;
 class DocumentFragment;
-class FloatQuad;
 class NodeWithIndex;
-class RenderText;
-class SelectionRect;
 class Text;
-class VisiblePosition;
 
 struct SimpleRange;
 
-// FIXME: Rename to LiveRange, while leaving the DOM-exposed name as Range.
-class Range : public RefCounted<Range> {
+class Range final : public AbstractRange {
+    WTF_MAKE_ISO_ALLOCATED(Range);
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
     WEBCORE_EXPORT ~Range();
 
-    Document& ownerDocument() const { return m_ownerDocument; }
+    Node& startContainer() const final { return m_start.container(); }
+    unsigned startOffset() const final { return m_start.offset(); }
+    Node& endContainer() const final { return m_end.container(); }
+    unsigned endOffset() const final { return m_end.offset(); }
+    bool collapsed() const final { return m_start == m_end; }
+    WEBCORE_EXPORT Node* commonAncestorContainer() const;
 
-    Node& startContainer() const { ASSERT(m_start.container()); return *m_start.container(); }
-    unsigned startOffset() const { return m_start.offset(); }
-    Node& endContainer() const { ASSERT(m_end.container()); return *m_end.container(); }
-    unsigned endOffset() const { return m_end.offset(); }
-    bool collapsed() const { return m_start == m_end; }
-
-    Node* commonAncestorContainer() const { return commonInclusiveAncestor(startContainer(), endContainer()).get(); }
-    WEBCORE_EXPORT ExceptionOr<void> setStart(Ref<Node>&& container, unsigned offset);
-    WEBCORE_EXPORT ExceptionOr<void> setEnd(Ref<Node>&& container, unsigned offset);
+    WEBCORE_EXPORT ExceptionOr<void> setStart(Ref<Node>&&, unsigned offset);
+    WEBCORE_EXPORT ExceptionOr<void> setEnd(Ref<Node>&&, unsigned offset);
+    WEBCORE_EXPORT ExceptionOr<void> setStartBefore(Node&);
+    WEBCORE_EXPORT ExceptionOr<void> setStartAfter(Node&);
+    WEBCORE_EXPORT ExceptionOr<void> setEndBefore(Node&);
+    WEBCORE_EXPORT ExceptionOr<void> setEndAfter(Node&);
     WEBCORE_EXPORT void collapse(bool toStart);
-    WEBCORE_EXPORT ExceptionOr<bool> isPointInRange(Node& refNode, unsigned offset);
-    WEBCORE_EXPORT ExceptionOr<short> comparePoint(Node& refNode, unsigned offset) const;
-    enum CompareResults { NODE_BEFORE, NODE_AFTER, NODE_BEFORE_AND_AFTER, NODE_INSIDE };
-    WEBCORE_EXPORT ExceptionOr<CompareResults> compareNode(Node& refNode) const;
-    enum CompareHow { START_TO_START, START_TO_END, END_TO_END, END_TO_START };
-    WEBCORE_EXPORT ExceptionOr<short> compareBoundaryPoints(CompareHow, const Range& sourceRange) const;
-    WEBCORE_EXPORT ExceptionOr<short> compareBoundaryPointsForBindings(unsigned short compareHow, const Range& sourceRange) const;
-    static ExceptionOr<short> compareBoundaryPoints(Node* containerA, unsigned offsetA, Node* containerB, unsigned offsetB);
-    static ExceptionOr<short> compareBoundaryPoints(const RangeBoundaryPoint& boundaryA, const RangeBoundaryPoint& boundaryB);
-    WEBCORE_EXPORT bool boundaryPointsValid() const;
-    WEBCORE_EXPORT ExceptionOr<bool> intersectsNode(Node& refNode) const;
+    WEBCORE_EXPORT ExceptionOr<void> selectNode(Node&);
+    WEBCORE_EXPORT ExceptionOr<void> selectNodeContents(Node&);
+
+    enum CompareHow : unsigned short { START_TO_START, START_TO_END, END_TO_END, END_TO_START };
+    WEBCORE_EXPORT ExceptionOr<short> compareBoundaryPoints(unsigned short compareHow, const Range& sourceRange) const;
+
     WEBCORE_EXPORT ExceptionOr<void> deleteContents();
     WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> extractContents();
     WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> cloneContents();
     WEBCORE_EXPORT ExceptionOr<void> insertNode(Ref<Node>&&);
+    WEBCORE_EXPORT ExceptionOr<void> surroundContents(Node&);
+
+    WEBCORE_EXPORT Ref<Range> cloneRange() const;
+    static void detach() { }
+
+    WEBCORE_EXPORT ExceptionOr<bool> isPointInRange(Node&, unsigned offset);
+    WEBCORE_EXPORT ExceptionOr<short> comparePoint(Node&, unsigned offset) const;
+    WEBCORE_EXPORT bool intersectsNode(Node&) const;
+
     WEBCORE_EXPORT String toString() const;
 
-    WEBCORE_EXPORT String text() const;
+    Ref<DOMRectList> getClientRects() const;
+    Ref<DOMRect> getBoundingClientRect() const;
 
-    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(const String& html);
+    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(const String& fragment);
 
-    WEBCORE_EXPORT void detach();
-    WEBCORE_EXPORT Ref<Range> cloneRange() const;
+    // Expand range to a unit (word or sentence or block or document) boundary.
+    // Please refer to https://bugs.webkit.org/show_bug.cgi?id=27632 comment #5 for details.
+    WEBCORE_EXPORT ExceptionOr<void> expand(const String&);
 
-    WEBCORE_EXPORT ExceptionOr<void> setStartAfter(Node&);
-    WEBCORE_EXPORT ExceptionOr<void> setEndBefore(Node&);
-    WEBCORE_EXPORT ExceptionOr<void> setEndAfter(Node&);
-    WEBCORE_EXPORT ExceptionOr<void> selectNode(Node&);
-    WEBCORE_EXPORT ExceptionOr<void> selectNodeContents(Node&);
-    WEBCORE_EXPORT ExceptionOr<void> surroundContents(Node&);
-    WEBCORE_EXPORT ExceptionOr<void> setStartBefore(Node&);
-
-    Position startPosition() const { return m_start.toPosition(); }
-    Position endPosition() const { return m_end.toPosition(); }
-
-    WEBCORE_EXPORT Node* firstNode() const;
-
-    enum class BoundingRectBehavior : uint8_t {
-        RespectClipping = 1 << 0,
-        UseVisibleBounds = 1 << 1,
-        IgnoreTinyRects = 1 << 2,
-        IgnoreEmptyTextSelections = 1 << 3, // Do not return empty text rectangles, which is required for Element.getClientRect() conformance.
-    };
-
-    // Not transform-friendly
-    WEBCORE_EXPORT void absoluteTextRects(Vector<IntRect>&, bool useSelectionHeight = false, OptionSet<BoundingRectBehavior> = { }) const;
-    WEBCORE_EXPORT IntRect absoluteBoundingBox(OptionSet<BoundingRectBehavior> = { }) const;
-
-    // Transform-friendly
-    WEBCORE_EXPORT FloatRect absoluteBoundingRect(OptionSet<BoundingRectBehavior> = { }) const;
+    enum CompareResults : uint8_t { NODE_BEFORE, NODE_AFTER, NODE_BEFORE_AND_AFTER, NODE_INSIDE };
+    WEBCORE_EXPORT ExceptionOr<CompareResults> compareNode(Node&) const;
 
     void nodeChildrenChanged(ContainerNode&);
     void nodeChildrenWillBeRemoved(ContainerNode&);
@@ -123,45 +102,35 @@ public:
     void textNodesMerged(NodeWithIndex& oldNode, unsigned offset);
     void textNodeSplit(Text& oldNode);
 
-    // Expand range to a unit (word or sentence or block or document) boundary.
-    // Please refer to https://bugs.webkit.org/show_bug.cgi?id=27632 comment #5
-    // for details.
-    WEBCORE_EXPORT ExceptionOr<void> expand(const String&);
+    void didAssociateWithSelection() { m_isAssociatedWithSelection = true; }
+    void didDisassociateFromSelection() { m_isAssociatedWithSelection = false; }
+    void updateFromSelection(const SimpleRange&);
 
-    Ref<DOMRectList> getClientRects() const;
-    Ref<DOMRect> getBoundingClientRect() const;
+    // For use by garbage collection. Returns nullptr for ranges not assocated with selection.
+    DOMWindow* window() const;
+
+    static ExceptionOr<Node*> checkNodeOffsetPair(Node&, unsigned offset);
 
 #if ENABLE(TREE_DEBUGGING)
-    void formatForDebugger(char* buffer, unsigned length) const;
+    String debugDescription() const;
 #endif
 
-    WEBCORE_EXPORT bool contains(const Range&) const;
-    bool contains(const VisiblePosition&) const;
-
-    enum ActionType { Delete, Extract, Clone };
+    enum ActionType : uint8_t { Delete, Extract, Clone };
 
 private:
     explicit Range(Document&);
 
-    void setDocument(Document&);
-    ExceptionOr<Node*> checkNodeWOffset(Node&, unsigned offset) const;
+    bool isLiveRange() const final { return true; }
+
+    void updateDocument();
+    void updateAssociatedSelection();
     ExceptionOr<RefPtr<DocumentFragment>> processContents(ActionType);
-
-    enum class CoordinateSpace { Absolute, Client };
-    Vector<FloatRect> borderAndTextRects(CoordinateSpace, OptionSet<BoundingRectBehavior> = { }) const;
-    FloatRect boundingRect(CoordinateSpace, OptionSet<BoundingRectBehavior> = { }) const;
-
-    Vector<FloatRect> absoluteRectsForRangeInText(Node*, RenderText&, bool useSelectionHeight, bool& isFixed, OptionSet<BoundingRectBehavior>) const;
-
-    Node* pastLastNode() const;
 
     Ref<Document> m_ownerDocument;
     RangeBoundaryPoint m_start;
     RangeBoundaryPoint m_end;
+    bool m_isAssociatedWithSelection { false };
 };
-
-WEBCORE_EXPORT bool areRangesEqual(const Range*, const Range*);
-WEBCORE_EXPORT bool rangesOverlap(const Range*, const Range*);
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Range&);
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Ref<Range>&);
@@ -171,19 +140,13 @@ WEBCORE_EXPORT Optional<SimpleRange> makeSimpleRange(const RefPtr<Range>&);
 WEBCORE_EXPORT Ref<Range> createLiveRange(const SimpleRange&);
 WEBCORE_EXPORT RefPtr<Range> createLiveRange(const Optional<SimpleRange>&);
 
-bool documentOrderComparator(const Node*, const Node*);
-
-WTF::TextStream& operator<<(WTF::TextStream&, const RangeBoundaryPoint&);
-WTF::TextStream& operator<<(WTF::TextStream&, const Range&);
-
-inline bool documentOrderComparator(const Node* a, const Node* b)
-{
-    return Range::compareBoundaryPoints(const_cast<Node*>(a), 0, const_cast<Node*>(b), 0).releaseReturnValue() < 0;
-}
-
 } // namespace WebCore
 
 #if ENABLE(TREE_DEBUGGING)
 // Outside the WebCore namespace for ease of invocation from the debugger.
 void showTree(const WebCore::Range*);
 #endif
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Range)
+    static bool isType(const WebCore::AbstractRange& range) { return range.isLiveRange(); }
+SPECIALIZE_TYPE_TRAITS_END()

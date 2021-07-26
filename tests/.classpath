@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="manual/printing"/>
-	<classpathentry kind="src" path="performance/VMPerformance/src"/>
 	<classpathentry kind="src" output="testbin" path="system/src/test/java">
 		<attributes>
 			<attribute name="test" value="true"/>

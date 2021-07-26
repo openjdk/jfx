@@ -32,6 +32,7 @@ const Icons = {
     Forward         : { name: "Forward", type: "svg", label: UIString("Forward") },
     InvalidCompact  : { name: "InvalidCompact", type: "pdf", label: UIString("Invalid") },
     InvalidPlacard  : { name: "invalid-placard", type: "png", label: UIString("Invalid") },
+    Overflow        : { name: "Overflow", type: "svg", label: UIString("More...") },
     Pause           : { name: "Pause", type: "svg", label: UIString("Pause") },
     PiPPlacard      : { name: "pip-placard", type: "png", label: UIString("Picture in Picture") },
     Play            : { name: "Play", type: "svg", label: UIString("Play") },
@@ -41,12 +42,16 @@ const Icons = {
     SkipForward     : { name: "SkipForward15", type: "svg", label: UIString("Skip Forward %s Seconds", SkipSeconds) },
     SpinnerCompact  : { name: "ActivityIndicatorSpriteCompact", type: "png", label: UIString("Loading…") },
     Tracks          : { name: "MediaSelector", type: "svg", label: UIString("Media Selection") },
-    Volume          : { name: "VolumeHi", type: "svg", label: UIString("Mute") },
-    VolumeRTL       : { name: "VolumeHi-RTL", type: "svg", label: UIString("Mute") },
-    VolumeDown      : { name: "VolumeLo", type: "svg", label: UIString("Volume Down") },
-    VolumeMuted     : { name: "Mute", type: "svg", label: UIString("Unmute") },
-    VolumeMutedRTL  : { name: "Mute-RTL", type: "svg", label: UIString("Unmute") },
-    VolumeUp        : { name: "VolumeHi", type: "svg", label: UIString("Volume Up") }
+    Volume0         : { name: "Volume0", type: "svg", label: UIString("Mute") },
+    Volume0RTL      : { name: "Volume0-RTL", type: "svg", label: UIString("Mute") },
+    Volume1         : { name: "Volume1", type: "svg", label: UIString("Mute") },
+    Volume1RTL      : { name: "Volume1-RTL", type: "svg", label: UIString("Mute") },
+    Volume2         : { name: "Volume2", type: "svg", label: UIString("Mute") },
+    Volume2RTL      : { name: "Volume2-RTL", type: "svg", label: UIString("Mute") },
+    Volume3         : { name: "Volume3", type: "svg", label: UIString("Mute") },
+    Volume3RTL      : { name: "Volume3-RTL", type: "svg", label: UIString("Mute") },
+    VolumeMuted     : { name: "VolumeMuted", type: "svg", label: UIString("Unmute") },
+    VolumeMutedRTL  : { name: "VolumeMuted-RTL", type: "svg", label: UIString("Unmute") },
 };
 
 const MimeTypes = {

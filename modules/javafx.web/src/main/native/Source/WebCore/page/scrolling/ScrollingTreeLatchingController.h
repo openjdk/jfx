@@ -31,28 +31,40 @@
 #include <wtf/Lock.h>
 #include <wtf/Markable.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Optional.h>
 
 namespace WebCore {
 
 class PlatformWheelEvent;
+enum class WheelEventProcessingSteps : uint8_t;
 
 class ScrollingTreeLatchingController {
 public:
+    struct ScrollingNodeAndProcessingSteps {
+        ScrollingNodeID scrollingNodeID;
+        OptionSet<WheelEventProcessingSteps> processingSteps;
+    };
+
     ScrollingTreeLatchingController();
 
-    void receivedWheelEvent(const PlatformWheelEvent&, bool allowLatching);
-    Optional<ScrollingNodeID> latchedNodeForEvent(const PlatformWheelEvent&, bool allowLatching) const;
-    void nodeDidHandleEvent(ScrollingNodeID, const PlatformWheelEvent&, bool allowLatching);
+    void receivedWheelEvent(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>, bool allowLatching);
+
+    Optional<ScrollingNodeAndProcessingSteps> latchingDataForEvent(const PlatformWheelEvent&, bool allowLatching) const;
+    void nodeDidHandleEvent(ScrollingNodeID, OptionSet<WheelEventProcessingSteps>, const PlatformWheelEvent&, bool allowLatching);
 
     Optional<ScrollingNodeID> latchedNodeID() const;
+    Optional<ScrollingNodeAndProcessingSteps> latchedNodeAndSteps() const;
 
     void nodeWasRemoved(ScrollingNodeID);
     void clearLatchedNode();
 
 private:
+    bool latchedNodeIsRelevant() const;
+
     mutable Lock m_latchedNodeMutex;
-    Markable<ScrollingNodeID, IntegralMarkableTraits<ScrollingNodeID, 0>> m_latchedNodeID;
+    Optional<ScrollingNodeAndProcessingSteps> m_latchedNodeAndSteps;
+    Optional<OptionSet<WheelEventProcessingSteps>> m_processingStepsForCurrentGesture;
     MonotonicTime m_lastLatchedNodeInterationTime;
 };
 

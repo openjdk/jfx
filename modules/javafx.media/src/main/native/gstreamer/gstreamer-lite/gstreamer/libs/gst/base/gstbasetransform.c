@@ -746,7 +746,7 @@ done:
 static gboolean
 gst_base_transform_set_allocation (GstBaseTransform * trans,
     GstBufferPool * pool, GstAllocator * allocator,
-    GstAllocationParams * params, GstQuery * query)
+    const GstAllocationParams * params, GstQuery * query)
 {
   GstAllocator *oldalloc;
   GstBufferPool *oldpool;

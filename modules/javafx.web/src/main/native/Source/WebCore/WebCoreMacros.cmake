@@ -209,42 +209,41 @@ macro(GENERATE_SETTINGS_MACROS _infile _outfile)
         ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.h.erb
     )
 
+    set(WTF_WEB_PREFERENCES
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml
+    )
+
+    set_source_files_properties(${WTF_WEB_PREFERENCES} PROPERTIES GENERATED TRUE)
+
     add_custom_command(
         OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/${_outfile} ${_extra_output}
         MAIN_DEPENDENCY ${_infile}
-        DEPENDS ${NAMES_GENERATOR} ${GENERATE_SETTINGS_SCRIPTS} ${SCRIPTS_BINDINGS}
-        COMMAND ${RUBY_EXECUTABLE} ${NAMES_GENERATOR} --input ${_infile} --outputDir ${WebCore_DERIVED_SOURCES_DIR}
+        DEPENDS ${NAMES_GENERATOR} ${GENERATE_SETTINGS_SCRIPTS} ${SCRIPTS_BINDINGS} ${WTF_WEB_PREFERENCES} WTF_CopyPreferences
+        COMMAND ${RUBY_EXECUTABLE} ${NAMES_GENERATOR} --additionalSettings ${_infile} --base ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml --debug ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml --internal ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml --outputDir ${WebCore_DERIVED_SOURCES_DIR} --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.cpp.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.idl.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.h.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.cpp.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.h.erb
         VERBATIM ${_args})
 endmacro()
 
 
-macro(GENERATE_DOM_NAMES _namespace _attrs)
+function(GENERATE_DOM_NAMES _namespace _attrs)
+    if (ARGN)
+        list(GET ARGN 0 _tags)
+        list(REMOVE_AT ARGN 0)
+    endif ()
     set(NAMES_GENERATOR ${WEBCORE_DIR}/dom/make_names.pl)
     set(_arguments  --attrs ${_attrs})
     set(_outputfiles ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}Names.cpp ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}Names.h)
-    set(_extradef)
-    set(_tags)
-
-    foreach (f ${ARGN})
-        if (_tags)
-            set(_extradef "${_extradef} ${f}")
-        else ()
-            set(_tags ${f})
-        endif ()
-    endforeach ()
 
     if (_tags)
         set(_arguments "${_arguments}" --tags ${_tags} --factory --wrapperFactory)
         set(_outputfiles "${_outputfiles}" ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}ElementFactory.cpp ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}ElementFactory.h ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}ElementTypeHelpers.h ${WebCore_DERIVED_SOURCES_DIR}/JS${_namespace}ElementWrapperFactory.cpp ${WebCore_DERIVED_SOURCES_DIR}/JS${_namespace}ElementWrapperFactory.h)
     endif ()
 
-    if (_extradef)
-        set(_additionArguments "${_additionArguments}" --extraDefines=${_extradef})
-    endif ()
-
     add_custom_command(
         OUTPUT  ${_outputfiles}
         DEPENDS ${MAKE_NAMES_DEPENDENCIES} ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS} ${_attrs} ${_tags}
-        COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --preprocessor "${CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS}" --outputDir ${WebCore_DERIVED_SOURCES_DIR} ${_arguments} ${_additionArguments}
+        COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --outputDir ${WebCore_DERIVED_SOURCES_DIR} ${_arguments} ${_additionArguments}
         VERBATIM)
-endmacro()
+endfunction()

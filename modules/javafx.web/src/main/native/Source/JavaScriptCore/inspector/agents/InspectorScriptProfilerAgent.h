@@ -37,8 +37,6 @@ class Profile;
 
 namespace Inspector {
 
-typedef String ErrorString;
-
 class JS_EXPORT_PRIVATE InspectorScriptProfilerAgent final : public InspectorAgentBase, public ScriptProfilerBackendDispatcherHandler, public JSC::Debugger::ProfilingClient {
     WTF_MAKE_NONCOPYABLE(InspectorScriptProfilerAgent);
     WTF_MAKE_FAST_ALLOCATED;
@@ -51,8 +49,8 @@ public:
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // ScriptProfilerBackendDispatcherHandler
-    void startTracking(ErrorString&, const bool* includeSamples) final;
-    void stopTracking(ErrorString&) final;
+    Protocol::ErrorStringOr<void> startTracking(Optional<bool>&& includeSamples) final;
+    Protocol::ErrorStringOr<void> stopTracking() final;
 
     // JSC::Debugger::ProfilingClient
     bool isAlreadyProfiling() const final;

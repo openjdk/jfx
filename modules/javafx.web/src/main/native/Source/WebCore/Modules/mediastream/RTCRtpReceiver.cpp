@@ -49,10 +49,19 @@ RTCRtpReceiver::RTCRtpReceiver(PeerConnectionBackend& connection, Ref<MediaStrea
 {
 }
 
+RTCRtpReceiver::~RTCRtpReceiver()
+{
+    if (m_transform)
+        m_transform->detachFromReceiver(*this);
+}
+
 void RTCRtpReceiver::stop()
 {
     if (!m_backend)
         return;
+
+    if (m_transform)
+        m_transform->detachFromReceiver(*this);
 
     m_backend = nullptr;
     m_track->stopTrack(MediaStreamTrack::StopMode::PostEvent);
@@ -70,6 +79,29 @@ void RTCRtpReceiver::getStats(Ref<DeferredPromise>&& promise)
 Optional<RTCRtpCapabilities> RTCRtpReceiver::getCapabilities(ScriptExecutionContext& context, const String& kind)
 {
     return PeerConnectionBackend::receiverCapabilities(context, kind);
+}
+
+ExceptionOr<void> RTCRtpReceiver::setTransform(Optional<RTCRtpTransform>&& transform)
+{
+    if (transform && m_transform && *transform == *m_transform)
+        return { };
+    if (transform && transform->isAttached())
+        return Exception { InvalidStateError, "transform is already in use"_s };
+
+    if (m_transform)
+        m_transform->detachFromReceiver(*this);
+    m_transform = WTFMove(transform);
+    if (m_transform)
+        m_transform->attachToReceiver(*this);
+
+    return { };
+}
+
+Optional<RTCRtpTransform::Internal> RTCRtpReceiver::transform()
+{
+    if (!m_transform)
+        return { };
+    return m_transform->internalTransform();
 }
 
 } // namespace WebCore

@@ -376,8 +376,6 @@ void WebPage::setRootChildLayer(GraphicsLayer* layer)
         m_rootLayer->addChild(*layer);
 
         m_textureMapper = TextureMapper::create();
-        downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer()
-                .setTextureMapper(m_textureMapper.get());
     } else {
         m_rootLayer = nullptr;
         m_textureMapper.reset();
@@ -396,7 +394,7 @@ void WebPage::scheduleRenderingUpdate()
 void WebPage::markForSync()
 {
     if (!m_rootLayer) {
-        m_page->updateRendering();
+        m_page->isolatedUpdateRendering();
         return;
     }
     m_syncLayers = true;
@@ -441,8 +439,8 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     m_textureMapper->beginPainting();
     m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
     rootTextureMapperLayer.applyAnimationsRecursively(MonotonicTime::now());
-    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
-    rootTextureMapperLayer.paint();
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers(*m_textureMapper);
+    rootTextureMapperLayer.paint(*m_textureMapper);
     m_textureMapper->endClip();
     m_textureMapper->endPainting();
 }
@@ -925,7 +923,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setFixedFontFamily("Monospaced");
     page->setDeviceScaleFactor(devicePixelScale);
 
-    RuntimeEnabledFeatures::sharedFeatures().setLinkPrefetchEnabled(true);
+    settings.setLinkPrefetchEnabled(true);
     static_cast<FrameLoaderClientJava&>(page->mainFrame().loader().client())
                                             .setFrame(&page->mainFrame());
 
@@ -1306,28 +1304,36 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setFixedFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
         settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
-    } else if (nativePropertyName == "WebKitJavaScriptCanAccessClipboardPreferenceKey") {
+    } else if (nativePropertyName == "JavaScriptCanAccessClipboard") {
         settings.setJavaScriptCanAccessClipboard(nativePropertyValue.toInt() != 0);
     } else if (nativePropertyName == "allowTopNavigationToDataURLs") {
         settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true");
-    } else if (nativePropertyName == "enableBackForwardCache") {
+    } else if (nativePropertyName == "UsesBackForwardCache") {
         settings.setUsesBackForwardCache(nativePropertyValue == "true");
     } else if (nativePropertyName == "enableColorFilter") {
         settings.setColorFilterEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "enableKeygenElement") {
+    } else if (nativePropertyName == "KeygenElementEnabled") {
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
         RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "experimental:WebAnimationsCSSIntegrationEnabled") {
-        RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsCSSIntegrationEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
-        RuntimeEnabledFeatures::sharedFeatures().setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "enableIntersectionObserver") {
+    } else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "IntersectionObserverEnabled") {
 #if ENABLE(INTERSECTION_OBSERVER)
-        RuntimeEnabledFeatures::sharedFeatures().setIntersectionObserverEnabled(nativePropertyValue == "true");
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
 #endif
-    } else if (nativePropertyName == "experimental:RequestIdleCallbackEnabled") {
+    } else if (nativePropertyName == "ResizeObserverEnabled") {
+#if ENABLE(RESIZE_OBSERVER)
+        settings.setResizeObserverEnabled(nativePropertyValue == "true");
+#endif
+    } else if (nativePropertyName == "RequestIdleCallbackEnabled") {
         settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "ContactPickerAPIEnabled") {
+        settings.setContactPickerAPIEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "AttachmentElementEnabled") {
+#if ENABLE(ATTACHMENT_ELEMENT)
+        RuntimeEnabledFeatures::sharedFeatures().setAttachmentElementEnabled(nativePropertyValue == "true");
+#endif
     } else if (nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
         JSC::Options::setOptions(nativePropertyValue.utf8().data());
     }
@@ -1359,13 +1365,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setJavaEnabled(false);
     settings.setFullScreenEnabled(true);
     settings.setScriptEnabled(true);
-    settings.setEditableLinkBehavior(EditableLinkOnlyLiveWithShiftKey);
+    settings.setEditableLinkBehavior(EditableLinkBehavior::OnlyLiveWithShiftKey);
     // settings.setTabsToLinks(false);
     settings.setDOMPasteAllowed(true);
     settings.setShouldPrintBackgrounds(true);
     // settings.setCacheModel(WebCacheModelDocumentBrowser);
     settings.setXSSAuditorEnabled(false);
-    settings.setExperimentalNotificationsEnabled(false);
     settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
@@ -1379,6 +1384,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
     settings.setJavaScriptCanAccessClipboard(true);
     settings.setOfflineWebApplicationCacheEnabled(true);
+    settings.setDataTransferItemsEnabled(true);
     // settings.setDeveloperExtrasEnabled(false);
     settings.setJavaScriptRuntimeFlags(JSC::RuntimeFlags(0));
     // Set JS experiments enabled: YES
@@ -1397,15 +1403,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
     RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setShadowDOMEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setCustomElementsEnabled(true);
     RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
-    RuntimeEnabledFeatures::sharedFeatures().setResourceTimingEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setUserTimingEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setDataTransferItemsEnabled(true);
     RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsEnabled(true);
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
     Frame& coreFrame = page->mainFrame();
@@ -1627,7 +1626,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetBackgroundColor
     if (!frame || !frame->view()) {
         return;
     }
-    frame->view()->setBaseBackgroundColor(asSRGBA(WebCore::Packed::RGBA { static_cast<uint32_t>(backgroundColor) }));
+    frame->view()->setBaseBackgroundColor(asSRGBA(WebCore::PackedColor::RGBA { static_cast<uint32_t>(backgroundColor) }));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrePaint
@@ -1645,7 +1644,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateContent
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateRendering
     (JNIEnv*, jobject, jlong pPage)
 {
-    WebPage::pageFromJLong(pPage)->updateRendering();
+    WebPage::pageFromJLong(pPage)->isolatedUpdateRendering();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPostPaint
@@ -1698,12 +1697,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
                 // comment out the following line to get focus to the last
                 // focused node instead of the first focusable one
                 focusedFrame->document()->setFocusedElement(0);
-                focusController.advanceFocus(FocusDirectionForward, nullptr);
+                focusController.advanceFocus(FocusDirection::Backward, nullptr);
             } else if (direction == com_sun_webkit_event_WCFocusEvent_BACKWARD) {
                 // comment out the following line to get focus to the last
                 // focused node instead of the last focusable one
                 focusedFrame->document()->setFocusedElement(0);
-                focusController.advanceFocus(FocusDirectionBackward, nullptr);
+                focusController.advanceFocus(FocusDirection::Backward, nullptr);
             }
             break;
         case com_sun_webkit_event_WCFocusEvent_FOCUS_LOST:
@@ -1819,7 +1818,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
                                                        IntPoint(screenX, screenY),
                                                        deltaX, deltaY,
                                                        shift, ctrl, alt, meta);
-    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent);
+    OptionSet<WheelEventProcessingSteps> processingSteps =
+    {
+        WheelEventProcessingSteps::MainThreadForScrolling,
+        WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch
+    };
+    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent, processingSteps);
 
     return bool_to_jbool(consumeEvent);
 }
@@ -1905,7 +1909,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
 
     // FIXME: the following code may not work with having committed text
     Position position(text, caretPosition);
-    VisibleSelection selection(position, DOWNSTREAM);
+    VisibleSelection selection(position, Affinity::Downstream);
     frame->selection().setSelection(selection /*, default is CharacterGranularity*/);//true, false, false
     return JNI_TRUE;
 }

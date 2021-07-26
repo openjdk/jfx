@@ -31,14 +31,8 @@
 #include "GPUProgrammablePassEncoder.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
-
-OBJC_PROTOCOL(MTLComputeCommandEncoder);
 
 namespace WebCore {
-
-using PlatformComputePassEncoder = MTLComputeCommandEncoder;
-using PlatformComputePassEncoderSmartPtr = RetainPtr<MTLComputeCommandEncoder>;
 
 class GPUComputePassEncoder : public GPUProgrammablePassEncoder {
 public:

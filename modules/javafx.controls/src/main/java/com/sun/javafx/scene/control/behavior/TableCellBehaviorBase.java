@@ -66,7 +66,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     protected abstract TableSelectionModel<S> getSelectionModel();
     protected abstract TableFocusModel<S,TC> getFocusModel();
     protected abstract TablePositionBase getFocusedCell();
-    protected abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
+    protected abstract boolean isTableRowSelected(); // tableCell.getTableRow().isSelected()
 
     /**
      * Returns the position of the given table column in the visible leaf columns

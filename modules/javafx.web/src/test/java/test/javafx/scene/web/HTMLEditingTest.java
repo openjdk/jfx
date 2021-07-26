@@ -75,7 +75,7 @@ public class HTMLEditingTest extends TestBase {
                     executeScript("srcInput.defaultValue").toString(),
                     defaultText);
             assertEquals("Source clipboard onpaste data", getEngine().
-                    executeScript("srcInput.value").toString(), clipboardData);
+                    executeScript("srcInput.value").toString(), clipboardData + defaultText);
             assertEquals("Target onpaste data", getEngine().
                     executeScript("pasteTarget.value").toString(),
                     clipboardData);

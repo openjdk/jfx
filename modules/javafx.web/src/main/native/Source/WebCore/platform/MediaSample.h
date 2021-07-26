@@ -35,6 +35,8 @@
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef struct _GstSample GstSample;
+typedef struct OpaqueMTPluginByteSource *MTPluginByteSourceRef;
+typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
@@ -46,11 +48,13 @@ struct PlatformSample {
         MockSampleBoxType,
         CMSampleBufferType,
         GStreamerSampleType,
+        ByteRangeSampleType,
     } type;
     union {
         MockSampleBox* mockSampleBox;
         CMSampleBufferRef cmSampleBuffer;
         GstSample* gstSample;
+        std::pair<MTPluginByteSourceRef, CMFormatDescriptionRef> byteRangeSample;
     } sample;
 };
 
@@ -79,9 +83,16 @@ public:
         IsSync = 1 << 0,
         IsNonDisplaying = 1 << 1,
         HasAlpha = 1 << 2,
+        HasSyncInfo = 1 << 3,
     };
     virtual SampleFlags flags() const = 0;
     virtual PlatformSample platformSample() = 0;
+
+    struct ByteRange {
+        size_t byteOffset { 0 };
+        size_t byteLength { 0 };
+    };
+    virtual Optional<ByteRange> byteRange() const = 0;
 
     enum class VideoRotation {
         None = 0,
@@ -96,6 +107,7 @@ public:
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
+    bool hasSyncInfo() const { return flags() & HasSyncInfo; }
 
     virtual void dump(PrintStream&) const = 0;
     String toJSONString() const

@@ -28,6 +28,7 @@
 #define JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
     macro(Array) \
     macro(ArrayBuffer) \
+    macro(Atomics) \
     macro(BYTES_PER_ELEMENT) \
     macro(BigInt) \
     macro(Boolean) \
@@ -41,6 +42,7 @@
     macro(Function) \
     macro(Infinity) \
     macro(Intl) \
+    macro(ListFormat) \
     macro(Loader) \
     macro(Locale) \
     macro(Map) \
@@ -54,6 +56,7 @@
     macro(RegExp) \
     macro(RelativeTimeFormat) \
     macro(RemotePlayback) \
+    macro(Segmenter) \
     macro(Set) \
     macro(SharedArrayBuffer) \
     macro(String) \
@@ -92,7 +95,9 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(dateStyle) \
     macro(day) \
+    macro(dayPeriod) \
     macro(defineProperty) \
     macro(deref) \
     macro(description) \
@@ -114,13 +119,16 @@
     macro(formatMatcher) \
     macro(formatToParts) \
     macro(forward) \
+    macro(fractionalSecondDigits) \
     macro(from) \
     macro(fromCharCode) \
     macro(get) \
     macro(global) \
     macro(go) \
+    macro(granularity) \
     macro(groups) \
     macro(has) \
+    macro(hasIndices) \
     macro(hasOwnProperty) \
     macro(hash) \
     macro(header) \
@@ -131,6 +139,7 @@
     macro(ignoreCase) \
     macro(ignorePunctuation) \
     macro(index) \
+    macro(indices) \
     macro(inferredName) \
     macro(input) \
     macro(instructionCount) \
@@ -139,6 +148,7 @@
     macro(isPrototypeOf) \
     macro(isView) \
     macro(isWatchpoint) \
+    macro(isWordLike) \
     macro(jettisonReason) \
     macro(join) \
     macro(language) \
@@ -147,7 +157,12 @@
     macro(line) \
     macro(locale) \
     macro(localeMatcher) \
+    macro(maximumFractionDigits) \
+    macro(maximumSignificantDigits) \
     macro(message) \
+    macro(minimumFractionDigits) \
+    macro(minimumIntegerDigits) \
+    macro(minimumSignificantDigits) \
     macro(minute) \
     macro(month) \
     macro(multiline) \
@@ -176,6 +191,7 @@
     macro(resolve) \
     macro(script) \
     macro(second) \
+    macro(segment) \
     macro(sensitivity) \
     macro(set) \
     macro(size) \
@@ -193,6 +209,7 @@
     macro(test) \
     macro(then) \
     macro(time) \
+    macro(timeStyle) \
     macro(timeZone) \
     macro(timeZoneName) \
     macro(toExponential) \
@@ -287,6 +304,7 @@
     macro(generatorFrame) \
     macro(meta) \
     macro(starDefault) \
+    macro(starNamespace) \
     macro(undefined) \
 
 namespace JSC {
@@ -327,6 +345,7 @@ namespace JSC {
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
+        const Identifier intlLegacyConstructedSymbol;
 
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_FIELD_GLOBAL(name) const Identifier name##PrivateField;
         JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(JSC_IDENTIFIER_DECLARE_PRIVATE_FIELD_GLOBAL)

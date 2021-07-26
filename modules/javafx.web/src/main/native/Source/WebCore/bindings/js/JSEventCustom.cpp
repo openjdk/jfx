@@ -29,24 +29,14 @@
 #include "config.h"
 #include "JSEvent.h"
 
-#include "DataTransfer.h"
-#include "Event.h"
-#include "EventHeaders.h"
-#include "EventInterfaces.h"
-#include "JSDOMBinding.h"
-#include "JSDataTransfer.h"
-#include <JavaScriptCore/JSLock.h>
-#include <wtf/text/AtomString.h>
-
+#include "JSDOMWrapperCache.h"
+#include <JavaScriptCore/JSCJSValue.h>
 
 namespace WebCore {
-using namespace JSC;
 
-JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Event& event)
+JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Event& event)
 {
     return wrap(lexicalGlobalObject, globalObject, event);
 }
-
-#undef TRY_TO_WRAP_WITH_INTERFACE
 
 } // namespace WebCore

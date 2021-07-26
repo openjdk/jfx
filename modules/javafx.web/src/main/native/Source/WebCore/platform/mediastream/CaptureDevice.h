@@ -31,7 +31,7 @@ namespace WebCore {
 
 class CaptureDevice {
 public:
-    enum class DeviceType { Unknown, Microphone, Camera, Screen, Window };
+    enum class DeviceType { Unknown, Microphone, Speaker, Camera, Screen, Window };
 
     CaptureDevice(const String& persistentId, DeviceType type, const String& label, const String& groupId = emptyString())
         : m_persistentId(persistentId)
@@ -49,18 +49,25 @@ public:
     {
         static NeverDestroyed<String> airPods(MAKE_STATIC_STRING_IMPL("AirPods"));
 
-        if (m_type == DeviceType::Microphone && m_label.contains(airPods))
+        if ((m_type == DeviceType::Microphone || m_type == DeviceType::Speaker) && m_label.contains(airPods))
             return airPods;
 
         return m_label;
     }
 
+    void setGroupId(const String& groupId) { m_groupId = groupId; }
     const String& groupId() const { return m_groupId; }
 
     DeviceType type() const { return m_type; }
 
     bool enabled() const { return m_enabled; }
     void setEnabled(bool enabled) { m_enabled = enabled; }
+
+    bool isDefault() const { return m_default; }
+    void setIsDefault(bool isDefault) { m_default = isDefault; }
+
+    bool isMockDevice() const { return m_isMockDevice; }
+    void setIsMockDevice(bool isMockDevice) { m_isMockDevice = isMockDevice; }
 
     explicit operator bool() const { return m_type != DeviceType::Unknown; }
 
@@ -72,7 +79,9 @@ public:
         encoder << m_label;
         encoder << m_groupId;
         encoder << m_enabled;
+        encoder << m_default;
         encoder << m_type;
+        encoder << m_isMockDevice;
     }
 
     template <class Decoder>
@@ -98,13 +107,25 @@ public:
         if (!enabled)
             return WTF::nullopt;
 
+        Optional<bool> isDefault;
+        decoder >> isDefault;
+        if (!isDefault)
+            return WTF::nullopt;
+
         Optional<CaptureDevice::DeviceType> type;
         decoder >> type;
         if (!type)
             return WTF::nullopt;
 
+        Optional<bool> isMockDevice;
+        decoder >> isMockDevice;
+        if (!isMockDevice)
+            return WTF::nullopt;
+
         Optional<CaptureDevice> device = {{ WTFMove(*persistentId), WTFMove(*type), WTFMove(*label), WTFMove(*groupId) }};
         device->setEnabled(*enabled);
+        device->setIsDefault(*isDefault);
+        device->setIsMockDevice(*isMockDevice);
         return device;
     }
 #endif
@@ -115,7 +136,29 @@ private:
     String m_label;
     String m_groupId;
     bool m_enabled { false };
+    bool m_default { false };
+    bool m_isMockDevice { false };
 };
+
+inline bool haveDevicesChanged(const Vector<CaptureDevice>& oldDevices, const Vector<CaptureDevice>& newDevices)
+{
+    if (oldDevices.size() != newDevices.size())
+        return true;
+
+    for (auto& newDevice : newDevices) {
+        if (newDevice.type() != CaptureDevice::DeviceType::Camera && newDevice.type() != CaptureDevice::DeviceType::Microphone)
+            continue;
+
+        auto index = oldDevices.findMatching([&newDevice](auto& oldDevice) {
+            return newDevice.persistentId() == oldDevice.persistentId() && newDevice.enabled() != oldDevice.enabled();
+        });
+
+        if (index == notFound)
+            return true;
+    }
+
+    return false;
+}
 
 } // namespace WebCore
 
@@ -127,6 +170,7 @@ template<> struct EnumTraits<WebCore::CaptureDevice::DeviceType> {
         WebCore::CaptureDevice::DeviceType,
         WebCore::CaptureDevice::DeviceType::Unknown,
         WebCore::CaptureDevice::DeviceType::Microphone,
+        WebCore::CaptureDevice::DeviceType::Speaker,
         WebCore::CaptureDevice::DeviceType::Camera,
         WebCore::CaptureDevice::DeviceType::Screen,
         WebCore::CaptureDevice::DeviceType::Window

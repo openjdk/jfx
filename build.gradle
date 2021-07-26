@@ -4754,7 +4754,7 @@ compileTargets { t ->
     // and the standalone sdk should be independent of one another, but seems
     // better than the alternatives.
     def zipSourceFilesTask = project.task("zipSourceFilesStandalone$t.capital", type: Zip, dependsOn: buildModulesTask) {
-        destinationDirectory = file("${standaloneLibDir}")
+        destinationDirectory = file("${standaloneSdkDir}")
         archiveFileName = standaloneSrcZipName
         includeEmptyDirs = false
         from modulesSrcDir

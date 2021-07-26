@@ -70,8 +70,8 @@ public:
 
     // AudioNode
     void process(size_t framesToProcess) override;
+    void processOnlyAudioParams(size_t framesToProcess) final;
     void pullInputs(size_t framesToProcess) override;
-    void reset() override;
     void initialize() override;
     void uninitialize() override;
 
@@ -84,14 +84,14 @@ public:
 
     // Position
     FloatPoint3D position() const;
-    void setPosition(float x, float y, float z);
+    ExceptionOr<void> setPosition(float x, float y, float z);
     AudioParam& positionX() { return m_positionX.get(); }
     AudioParam& positionY() { return m_positionY.get(); }
     AudioParam& positionZ() { return m_positionZ.get(); }
 
     // Orientation
     FloatPoint3D orientation() const;
-    void setOrientation(float x, float y, float z);
+    ExceptionOr<void> setOrientation(float x, float y, float z);
     AudioParam& orientationX() { return m_orientationX.get(); }
     AudioParam& orientationY() { return m_orientationY.get(); }
     AudioParam& orientationZ() { return m_orientationZ.get(); }
@@ -111,10 +111,10 @@ public:
 
     // Sound cones - angles in degrees
     double coneInnerAngle() const { return m_coneEffect.innerAngle(); }
-    void setConeInnerAngle(double angle) { m_coneEffect.setInnerAngle(angle); }
+    void setConeInnerAngle(double);
 
     double coneOuterAngle() const { return m_coneEffect.outerAngle(); }
-    void setConeOuterAngle(double angle) { m_coneEffect.setOuterAngle(angle); }
+    void setConeOuterAngle(double);
 
     double coneOuterGain() const { return m_coneEffect.outerGain(); }
     ExceptionOr<void> setConeOuterGain(double);
@@ -122,12 +122,8 @@ public:
     ExceptionOr<void> setChannelCount(unsigned) final;
     ExceptionOr<void> setChannelCountMode(ChannelCountMode) final;
 
-    void getAzimuthElevation(double* outAzimuth, double* outElevation);
+    void azimuthElevation(double* outAzimuth, double* outElevation);
     float dopplerRate() final;
-
-    // Accessors for dynamically calculated gain values.
-    AudioParam* distanceGain() { return m_distanceGain.get(); }
-    AudioParam* coneGain() { return m_coneGain.get(); }
 
     double tailTime() const override { return m_panner ? m_panner->tailTime() : 0; }
     double latencyTime() const override { return m_panner ? m_panner->latencyTime() : 0; }
@@ -135,22 +131,28 @@ public:
 private:
     PannerNode(BaseAudioContext&, const PannerOptions&);
 
+    void calculateAzimuthElevation(double* outAzimuth, double* outElevation, const FloatPoint3D& position, const FloatPoint3D& listenerPosition, const FloatPoint3D& listenerForward, const FloatPoint3D& listenerUp);
+    float calculateDistanceConeGain(const FloatPoint3D& position, const FloatPoint3D& orientation, const FloatPoint3D& listenerPosition);
+
     // Returns the combined distance and cone gain attenuation.
     float distanceConeGain();
+
+    bool requiresTailProcessing() const final;
 
     // Notifies any AudioBufferSourceNodes connected to us either directly or indirectly about our existence.
     // This is in order to handle the pitch change necessary for the doppler shift.
     void notifyAudioSourcesConnectedToNode(AudioNode*, HashSet<AudioNode*>& visitedNodes);
 
+    void processSampleAccurateValues(AudioBus* destination, const AudioBus* source, size_t framesToProcess);
+    bool hasSampleAccurateValues() const;
+    bool shouldUseARate() const;
+
     std::unique_ptr<Panner> m_panner;
     PanningModelType m_panningModel;
 
     // Gain
-    RefPtr<AudioParam> m_distanceGain;
-    RefPtr<AudioParam> m_coneGain;
     DistanceEffect m_distanceEffect;
     ConeEffect m_coneEffect;
-    float m_lastGain { -1.0 };
 
     Ref<AudioParam> m_positionX;
     Ref<AudioParam> m_positionY;
@@ -165,8 +167,9 @@ private:
 
     unsigned m_connectionCount { 0 };
 
-    // Synchronize process() and setPanningModel() which can change the panner.
-    mutable Lock m_pannerMutex;
+    // Synchronize process() with setting of the panning model, source's location
+    // information, listener, distance parameters and sound cones.
+    mutable Lock m_processLock;
 };
 
 } // namespace WebCore

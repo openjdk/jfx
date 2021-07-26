@@ -34,16 +34,10 @@
 namespace WebCore {
 
 struct SameSizeAsElementRareData : NodeRareData {
-    int tabIndex;
-    unsigned short childIndex;
-#if ENABLE(FULLSCREEN_API)
-    unsigned bitfields : 12;
-#else
-    unsigned bitfields : 11;
-#endif
     LayoutSize sizeForResizing;
     IntPoint savedLayerScrollPosition;
-    void* pointers[11];
+    Vector<std::unique_ptr<ElementAnimationRareData>> animationRareData;
+    void* pointers[10];
 #if ENABLE(INTERSECTION_OBSERVER)
     void* intersectionObserverData;
 #endif

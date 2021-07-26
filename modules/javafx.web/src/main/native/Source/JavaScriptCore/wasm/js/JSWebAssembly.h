@@ -53,13 +53,15 @@ public:
     JS_EXPORT_PRIVATE static void webAssemblyModuleInstantinateAsync(JSGlobalObject*, JSPromise*, Vector<uint8_t>&&, JSObject*);
     static JSValue instantiate(JSGlobalObject*, JSPromise*, const Identifier&, JSValue);
 
+    static void instantiateForStreaming(VM&, JSGlobalObject*, JSPromise*, JSWebAssemblyModule*, JSObject*);
+
 private:
     JSWebAssembly(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*);
 };
 
-EncodedJSValue JSC_HOST_CALL webAssemblyCompileStreamingInternal(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL webAssemblyInstantiateStreamingInternal(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(webAssemblyCompileStreamingInternal);
+JSC_DECLARE_HOST_FUNCTION(webAssemblyInstantiateStreamingInternal);
 
 } // namespace JSC
 

@@ -63,7 +63,7 @@ void RemoteInspector::connect(ConnectionID id)
     start();
 }
 
-void RemoteInspector::didClose(ConnectionID)
+void RemoteInspector::didClose(RemoteInspectorSocketEndpoint&, ConnectionID)
 {
     ASSERT(isConnected());
 
@@ -106,6 +106,9 @@ void RemoteInspector::stopInternal(StopSource)
     for (auto targetConnection : m_targetConnectionMap.values())
         targetConnection->close();
     m_targetConnectionMap.clear();
+
+    if (m_client)
+        m_client->closeAutomationSession();
 
     updateHasActiveDebugSession();
 
@@ -158,7 +161,7 @@ void RemoteInspector::pushListingsNow()
 
     auto targetListJSON = JSON::Array::create();
     for (auto listing : m_targetListingMap.values())
-        targetListJSON->pushObject(listing);
+        targetListJSON->pushObject(*listing);
 
     auto jsonEvent = JSON::Object::create();
     jsonEvent->setString("event"_s, "SetTargetList"_s);
@@ -194,7 +197,7 @@ void RemoteInspector::sendAutomaticInspectionCandidateMessage()
     // FIXME: Implement automatic inspection.
 }
 
-void RemoteInspector::requestAutomationSession(const String& sessionID, const Client::SessionCapabilities& capabilities)
+void RemoteInspector::requestAutomationSession(String&& sessionID, const Client::SessionCapabilities& capabilities)
 {
     if (!m_client)
         return;
@@ -209,7 +212,7 @@ void RemoteInspector::requestAutomationSession(const String& sessionID, const Cl
         return;
     }
 
-    m_client->requestAutomationSession(sessionID, capabilities);
+    m_client->requestAutomationSession(WTFMove(sessionID), capabilities);
     updateClientCapabilities();
 }
 
@@ -359,13 +362,17 @@ void RemoteInspector::startAutomationSession(const Event& event)
 {
     ASSERT(isMainThread());
 
+    if (!m_clientConnection)
+        return;
+
     if (!event.message)
         return;
 
-    requestAutomationSession(event.message.value(), { });
+    String sessionID = *event.message;
+    requestAutomationSession(WTFMove(sessionID), { });
 
     auto sendEvent = JSON::Object::create();
-    sendEvent->setString("event"_s, "SetCapabilities"_s);
+    sendEvent->setString("event"_s, "StartAutomationSession_Return"_s);
 
     auto capability = clientCapabilities();
 

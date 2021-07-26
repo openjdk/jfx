@@ -31,10 +31,17 @@
 
 namespace WebCore {
 
-Ref<SocketStreamHandle> SocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, PAL::SessionID sessionID, Page* page, const String& credentialPartition, const StorageSessionProvider* provider)
+#if PLATFORM(JAVA)
+Ref<SocketStreamHandle> SocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, WebSocketIdentifier, PAL::SessionID sessionID, Page* page, const String& credentialPartition, const StorageSessionProvider* provider)
 {
     return SocketStreamHandleImpl::create(url, client, sessionID, page, credentialPartition, { }, provider);
 }
+#else
+Ref<SocketStreamHandle> SocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, WebSocketIdentifier, PAL::SessionID sessionID, const String& credentialPartition, const StorageSessionProvider* provider)
+{
+    return SocketStreamHandleImpl::create(url, client, sessionID, credentialPartition, { }, provider);
+}
+#endif
 
 RefPtr<ThreadableWebSocketChannel> SocketProvider::createWebSocketChannel(Document&, WebSocketChannelClient&)
 {

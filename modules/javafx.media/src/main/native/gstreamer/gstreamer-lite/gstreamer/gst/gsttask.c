@@ -112,6 +112,11 @@ struct _GstTaskPrivate
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+typedef HRESULT (WINAPI * pSetThreadDescription) (HANDLE hThread,
+    PCWSTR lpThreadDescription);
+static pSetThreadDescription SetThreadDescriptionFunc = NULL;
+HMODULE kernel32_module = NULL;
+
 struct _THREADNAME_INFO
 {
   DWORD dwType;                 // must be 0x1000
@@ -121,7 +126,7 @@ struct _THREADNAME_INFO
 };
 typedef struct _THREADNAME_INFO THREADNAME_INFO;
 
-void
+static void
 SetThreadName (DWORD dwThreadID, LPCSTR szThreadName)
 {
   THREADNAME_INFO info;
@@ -136,6 +141,57 @@ SetThreadName (DWORD dwThreadID, LPCSTR szThreadName)
   }
   __except (EXCEPTION_CONTINUE_EXECUTION) {
   }
+}
+
+static gboolean
+gst_task_win32_load_library (void)
+{
+  /* FIXME: Add support for UWP app */
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+  static volatile gsize _init_once = 0;
+  if (g_once_init_enter (&_init_once)) {
+    kernel32_module = LoadLibraryW (L"kernel32.dll");
+    if (kernel32_module) {
+      SetThreadDescriptionFunc =
+          (pSetThreadDescription) GetProcAddress (kernel32_module,
+          "SetThreadDescription");
+      if (!SetThreadDescriptionFunc)
+        FreeLibrary (kernel32_module);
+    }
+    g_once_init_leave (&_init_once, 1);
+  }
+#endif
+
+  return ! !SetThreadDescriptionFunc;
+}
+
+static gboolean
+gst_task_win32_set_thread_desc (const gchar * name)
+{
+  HRESULT hr;
+  wchar_t *namew;
+
+  if (!gst_task_win32_load_library () || !name)
+    return FALSE;
+
+  namew = g_utf8_to_utf16 (name, -1, NULL, NULL, NULL);
+  if (!namew)
+    return FALSE;
+
+  hr = SetThreadDescriptionFunc (GetCurrentThread (), namew);
+
+  g_free (namew);
+  return SUCCEEDED (hr);
+}
+
+static void
+gst_task_win32_set_thread_name (const gchar * name)
+{
+  /* Prefer SetThreadDescription over exception based way if available,
+   * since thread description set by SetThreadDescription will be preserved
+   * in dump file */
+  if (!gst_task_win32_set_thread_desc (name))
+    SetThreadName ((DWORD) - 1, name);
 }
 #endif
 
@@ -265,7 +321,7 @@ gst_task_configure_name (GstTask * task)
 
   /* set the thread name to something easily identifiable */
   GST_DEBUG_OBJECT (task, "Setting thread name to '%s'", name);
-  SetThreadName (-1, name);
+  gst_task_win32_set_thread_name (name);
 #endif
 }
 

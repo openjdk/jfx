@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_GL) && (USE(OPENGL) || USE(OPENGL_ES))
+#if ENABLE(WEBGL) && !USE(ANGLE)
 #include "ExtensionsGLOpenGLCommon.h"
 
 #include "ANGLEWebKitBridge.h"
@@ -128,7 +128,7 @@ void ExtensionsGLOpenGLCommon::ensureEnabled(const String& name)
         ShBuiltInResources ANGLEResources = compiler.getResources();
         if (!ANGLEResources.EXT_draw_buffers) {
             ANGLEResources.EXT_draw_buffers = 1;
-            m_context->getIntegerv(ExtensionsGL::MAX_DRAW_BUFFERS_EXT, &ANGLEResources.MaxDrawBuffers);
+            ANGLEResources.MaxDrawBuffers = m_context->getInteger(ExtensionsGL::MAX_DRAW_BUFFERS_EXT);
             compiler.setResources(ANGLEResources);
         }
     } else if (name == "GL_EXT_shader_texture_lod") {
@@ -172,7 +172,7 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
 
     ANGLEWebKitBridge& compiler = m_context->m_compiler;
 
-    m_context->getShaderiv(shader, GraphicsContextGL::SHADER_TYPE, &GLshaderType);
+    GLshaderType = m_context->getShaderi(shader, GraphicsContextGL::SHADER_TYPE);
 
     if (GLshaderType == GraphicsContextGL::VERTEX_SHADER)
         shaderType = SHADER_TYPE_VERTEX;
@@ -214,7 +214,7 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
 
 void ExtensionsGLOpenGLCommon::initializeAvailableExtensions()
 {
-#if (PLATFORM(COCOA) && USE(OPENGL)) || (PLATFORM(GTK) && !USE(OPENGL_ES))
+#if PLATFORM(GTK) && !USE(OPENGL_ES)
     if (m_useIndexedGetString) {
         GLint numExtensions = 0;
         ::glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
@@ -254,331 +254,6 @@ void ExtensionsGLOpenGLCommon::getnUniformivEXT(GCGLuint, int, GCGLsizei, GCGLin
     m_context->synthesizeGLError(GL_INVALID_OPERATION);
 }
 
-void ExtensionsGLOpenGLCommon::getBooleanvRobustANGLE(GCGLenum, GCGLsizei, GCGLsizei *, GCGLboolean *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getBufferParameterivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getFloatvRobustANGLE(GCGLenum, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getFramebufferAttachmentParameterivRobustANGLE(GCGLenum, GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getIntegervRobustANGLE(GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getProgramivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getRenderbufferParameterivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getShaderivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getTexParameterfvRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getTexParameterivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getUniformfvRobustANGLE(GCGLuint, int, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getUniformivRobustANGLE(GCGLuint, int, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getVertexAttribfvRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getVertexAttribivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getVertexAttribPointervRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, void **)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::readPixelsRobustANGLE(int, int, GCGLsizei, GCGLsizei, GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLsizei *, GCGLsizei *, void *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texImage2DRobustANGLE(GCGLenum, int, int, GCGLsizei, GCGLsizei, int, GCGLenum, GCGLenum, GCGLsizei, const void *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texParameterfvRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, const GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texParameterivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, const GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texSubImage2DRobustANGLE(GCGLenum, int, int, int, GCGLsizei, GCGLsizei, GCGLenum, GCGLenum, GCGLsizei, const void *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::compressedTexImage2DRobustANGLE(GCGLenum, int, GCGLenum, GCGLsizei, GCGLsizei, int, GCGLsizei, GCGLsizei, const void*)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::compressedTexSubImage2DRobustANGLE(GCGLenum, int, int, int, GCGLsizei, GCGLsizei, GCGLenum, GCGLsizei, GCGLsizei, const void*)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::compressedTexImage3DRobustANGLE(GCGLenum, int, GCGLenum, GCGLsizei, GCGLsizei, GCGLsizei, int, GCGLsizei, GCGLsizei, const void*)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::compressedTexSubImage3DRobustANGLE(GCGLenum, int, int, int, int, GCGLsizei, GCGLsizei, GCGLsizei, GCGLenum, GCGLsizei, GCGLsizei, const void*)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-
-void ExtensionsGLOpenGLCommon::texImage3DRobustANGLE(GCGLenum, int, int, GCGLsizei, GCGLsizei, GCGLsizei, int, GCGLenum, GCGLenum, GCGLsizei, const void *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texSubImage3DRobustANGLE(GCGLenum, int, int, int, int, GCGLsizei, GCGLsizei, GCGLsizei, GCGLenum, GCGLenum, GCGLsizei, const void *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getQueryivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getQueryObjectuivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getBufferPointervRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, void **)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getIntegeri_vRobustANGLE(GCGLenum, GCGLuint, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getInternalformativRobustANGLE(GCGLenum, GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getVertexAttribIivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getVertexAttribIuivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getUniformuivRobustANGLE(GCGLuint, int, GCGLsizei, GCGLsizei *, GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getActiveUniformBlockivRobustANGLE(GCGLuint, GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getInteger64vRobustANGLE(GCGLenum, GCGLsizei, GCGLsizei *, GCGLint64 *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getInteger64i_vRobustANGLE(GCGLenum, GCGLuint, GCGLsizei, GCGLsizei *, GCGLint64 *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getBufferParameteri64vRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint64 *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::samplerParameterivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, const GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::samplerParameterfvRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, const GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getSamplerParameterivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getSamplerParameterfvRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-
-void ExtensionsGLOpenGLCommon::getFramebufferParameterivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getProgramInterfaceivRobustANGLE(GCGLuint, GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getBooleani_vRobustANGLE(GCGLenum, GCGLuint, GCGLsizei, GCGLsizei *, GCGLboolean *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getMultisamplefvRobustANGLE(GCGLenum, GCGLuint, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getTexLevelParameterivRobustANGLE(GCGLenum, int, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getTexLevelParameterfvRobustANGLE(GCGLenum, int, GCGLenum, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-
-void ExtensionsGLOpenGLCommon::getPointervRobustANGLERobustANGLE(GCGLenum, GCGLsizei, GCGLsizei *, void **)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::readnPixelsRobustANGLE(int, int, GCGLsizei, GCGLsizei, GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLsizei *, GCGLsizei *, void *, bool)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getnUniformfvRobustANGLE(GCGLuint, int, GCGLsizei, GCGLsizei *, GCGLfloat *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getnUniformivRobustANGLE(GCGLuint, int, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getnUniformuivRobustANGLE(GCGLuint, int, GCGLsizei, GCGLsizei *, GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texParameterIivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, const GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::texParameterIuivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, const GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getTexParameterIivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getTexParameterIuivRobustANGLE(GCGLenum, GCGLenum, GCGLsizei, GCGLsizei *, GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::samplerParameterIivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, const GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::samplerParameterIuivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, const GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getSamplerParameterIivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getSamplerParameterIuivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLuint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-
-void ExtensionsGLOpenGLCommon::getQueryObjectivRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getQueryObjecti64vRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLint64 *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-void ExtensionsGLOpenGLCommon::getQueryObjectui64vRobustANGLE(GCGLuint, GCGLenum, GCGLsizei, GCGLsizei *, GCGLuint64 *)
-{
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-}
-
-
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL) && (USE(OPENGL) || USE(OPENGL_ES))
+#endif // ENABLE(WEBGL) && !USE(ANGLE)

@@ -23,10 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://w3c.github.io/user-timing/
-
+// https://w3c.github.io/user-timing/#performancemeasure
 [
-    EnabledAtRuntime=UserTiming,
     Exposed=(Window,Worker),
 ] interface PerformanceMeasure : PerformanceEntry {
+    [CallWith=GlobalObject, CachedAttribute] readonly attribute any detail;
 };
