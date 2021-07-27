@@ -206,7 +206,7 @@ static JSValueRef uiElementCountForSearchPredicateCallback(JSContextRef context,
     AccessibilityUIElement* startElement = nullptr;
     bool isDirectionNext = true;
     JSValueRef searchKey = nullptr;
-    JSRetainPtr<JSStringRef> searchText = nullptr;
+    JSRetainPtr<JSStringRef> searchText;
     bool visibleOnly = false;
     bool immediateDescendantsOnly = false;
     if (argumentCount >= 5 && argumentCount <= 6) {
@@ -1381,6 +1381,11 @@ static JSValueRef getIsVisibleCallback(JSContextRef context, JSObjectRef thisObj
     return JSValueMakeBoolean(context, toAXElement(thisObject)->isVisible());
 }
 
+static JSValueRef getIsOnScreenCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeBoolean(context, toAXElement(thisObject)->isOnScreen());
+}
+
 static JSValueRef getIsOffScreenCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
 {
     return JSValueMakeBoolean(context, toAXElement(thisObject)->isOffScreen());
@@ -1605,6 +1610,14 @@ static JSValueRef mathPrescriptsDescriptionCallback(JSContextRef context, JSObje
 
 #endif
 
+#if PLATFORM(COCOA)
+static JSValueRef getEmbeddedImageDescription(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    auto embeddedImageDescription = toAXElement(thisObject)->embeddedImageDescription();
+    return JSValueMakeString(context, embeddedImageDescription.get());
+}
+#endif
+
 // Implementation
 
 // Unsupported methods on various platforms.
@@ -1637,6 +1650,7 @@ bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
 
 #if !PLATFORM(MAC)
 void AccessibilityUIElement::setBoolAttributeValue(JSStringRef, bool) { }
+bool AccessibilityUIElement::isOnScreen() const { return true; }
 #endif
 
 #if !SUPPORTS_AX_TEXTMARKERS
@@ -1891,6 +1905,7 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "isChecked", getIsCheckedCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isIndeterminate", getIsIndeterminate, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isVisible", getIsVisibleCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "isOnScreen", getIsOnScreenCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isOffScreen", getIsOffScreenCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isCollapsed", getIsCollapsedCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "hasPopup", getHasPopupCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -1926,6 +1941,9 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "supportedActions", supportedActionsCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "mathPostscriptsDescription", mathPostscriptsDescriptionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "mathPrescriptsDescription", mathPrescriptsDescriptionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+#endif
+#if PLATFORM(COCOA)
+        { "embeddedImageDescription", getEmbeddedImageDescription, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
 #endif
         { 0, 0, 0, 0 }
     };

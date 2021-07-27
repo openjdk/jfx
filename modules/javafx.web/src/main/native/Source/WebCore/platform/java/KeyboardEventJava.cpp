@@ -68,9 +68,9 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
             altKey,
             metaKey,
             WallTime::fromRawSeconds(timestamp))
-        , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
         , m_autoRepeat(false)
         , m_isKeypad(false)
+        , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 

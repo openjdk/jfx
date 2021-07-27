@@ -35,12 +35,14 @@
 #if USE(LIBWEBRTC)
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
 #include <webrtc/api/peer_connection_interface.h>
 #include <webrtc/api/video_codecs/video_encoder_factory.h>
 #include <webrtc/api/video_codecs/video_decoder_factory.h>
 #include <webrtc/api/scoped_refptr.h>
 
+ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace rtc {
@@ -73,10 +75,10 @@ public:
 
     static bool webRTCAvailable();
     static void registerWebKitVP9Decoder();
+    static void registerWebKitVP8Decoder();
+    static void setH264HardwareEncoderAllowed(bool);
 
     virtual void setActive(bool);
-
-    virtual void setH264HardwareEncoderAllowed(bool) { }
 
     using IPAddressOrError = Expected<String, MDNSRegisterError>;
     using MDNSNameOrError = Expected<String, MDNSRegisterError>;
@@ -106,9 +108,12 @@ public:
     void enableEnumeratingAllNetworkInterfaces();
 
     void setH265Support(bool value) { m_supportsH265 = value; }
-    void setVP9Support(bool value) { m_supportsVP9 = value; }
+    void setVP9Support(bool supportsVP9Profile0, bool supportsVP9Profile2);
+    void setVP9VTBSupport(bool value) { m_supportsVP9VTB = value; }
     bool isSupportingH265() const { return m_supportsH265; }
-    bool isSupportingVP9() const { return m_supportsVP9; }
+    bool isSupportingVP9Profile0() const { return m_supportsVP9Profile0; }
+    bool isSupportingVP9Profile2() const { return m_supportsVP9Profile2; }
+    bool isSupportingVP9VTB() const { return m_supportsVP9VTB; }
     virtual void disableNonLocalhostConnections() { m_disableNonLocalhostConnections = true; }
 
     // Callback is executed on a background thread.
@@ -136,7 +141,7 @@ protected:
 
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::NetworkManager&, rtc::PacketSocketFactory&, webrtc::PeerConnectionInterface::RTCConfiguration&&, std::unique_ptr<webrtc::AsyncResolverFactory>&&);
 
-    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> createPeerConnectionFactory(rtc::Thread* networkThread, rtc::Thread* signalingThread, LibWebRTCAudioModule*);
+    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> createPeerConnectionFactory(rtc::Thread* networkThread, rtc::Thread* signalingThread);
     virtual std::unique_ptr<webrtc::VideoDecoderFactory> createDecoderFactory();
     virtual std::unique_ptr<webrtc::VideoEncoderFactory> createEncoderFactory();
 
@@ -151,11 +156,21 @@ protected:
     rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> m_factory;
     bool m_disableNonLocalhostConnections { false };
     bool m_supportsH265 { false };
-    bool m_supportsVP9 { false };
+    bool m_supportsVP9Profile0 { false };
+    bool m_supportsVP9Profile2 { false };
+    bool m_supportsVP9VTB { false };
     bool m_enableLogging { true };
     bool m_useDTLS10 { false };
 #endif
 };
+
+#if USE(LIBWEBRTC)
+inline void LibWebRTCProvider::setVP9Support(bool supportsVP9Profile0, bool supportsVP9Profile2)
+{
+    m_supportsVP9Profile0 = supportsVP9Profile0;
+    m_supportsVP9Profile2 = supportsVP9Profile2;
+}
+#endif
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "DFGClobbersExitState.h"
 #include "DFGDominators.h"
 #include "DFGMayExit.h"
+#include "DFGOSRAvailabilityAnalysisPhase.h"
 #include <wtf/Assertions.h>
 
 namespace JSC { namespace DFG {
@@ -82,6 +83,11 @@ public:
 
     void validate()
     {
+        if (m_graph.m_isValidating)
+            return;
+
+        auto isValidating = SetForScope(m_graph.m_isValidating, true);
+
         // NB. This code is not written for performance, since it is not intended to run
         // in release builds.
 
@@ -376,6 +382,20 @@ public:
                 case NewArrayBuffer:
                     VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
                     break;
+                case GetByVal:
+                    switch (node->arrayMode().type()) {
+                    case Array::Int32:
+                    case Array::Double:
+                    case Array::Contiguous:
+                        // We rely on being an original array structure because we are SaneChain, and we need
+                        // Array.prototype to be our prototype, so we can return undefined when we go OOB.
+                        if (node->arrayMode().isOutOfBoundsSaneChain())
+                            VALIDATE((node), node->arrayMode().isJSArrayWithOriginalStructure());
+                        break;
+                    default:
+                        break;
+                    }
+                    break;
                 default:
                     break;
                 }
@@ -618,6 +638,7 @@ private:
                 switch (node->op()) {
                 case Phi:
                 case Upsilon:
+                case AssertInBounds:
                 case CheckInBounds:
                 case PhantomNewObject:
                 case PhantomNewFunction:
@@ -801,32 +822,25 @@ private:
 
         auto& dominators = m_graph.ensureSSADominators();
 
+        if (Options::validateFTLOSRExitLiveness())
+            validateOSRExitAvailability(m_graph);
+
         for (unsigned entrypointIndex : m_graph.m_entrypointIndexToCatchBytecodeIndex.keys())
             VALIDATE((), entrypointIndex > 0); // By convention, 0 is the entrypoint index for the op_enter entrypoint, which can not be in a catch.
 
-        for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
-            BasicBlock* block = m_graph.block(blockIndex);
-            if (!block)
-                continue;
-
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             VALIDATE((block), block->phis.isEmpty());
 
-            bool didSeeExitOK = false;
             bool isOSRExited = false;
 
             HashSet<Node*> nodesInThisBlock;
 
             for (auto* node : *block) {
-                didSeeExitOK |= node->origin.exitOK;
                 switch (node->op()) {
                 case Phi:
                     // Phi cannot exit, and it would be wrong to hoist anything to the Phi that could
                     // exit.
                     VALIDATE((node), !node->origin.exitOK);
-
-                    // It never makes sense to have exitOK anywhere in the block before a Phi. It's only
-                    // OK to exit after all Phis are done.
-                    VALIDATE((node), !didSeeExitOK);
                     break;
 
                 case GetLocal:

@@ -65,7 +65,7 @@ public class ProgressBarTreeTableCellTest {
 
     private void setTableViewAndTreeTableColumn(TreeTableCell cell) {
         cell.updateTreeTableView(tableView);
-        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTableColumn(tableColumn);
     }
 
 

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "Gate.h"
+#include "Opcode.h"
 #include "OptionsList.h"
 #include <wtf/WTFConfig.h>
 
@@ -34,13 +36,13 @@ class ExecutableAllocator;
 class FixedVMPoolExecutableAllocator;
 class VM;
 
-constexpr size_t ConfigSizeToProtect = CeilingOnPageSize;
-
 #if ENABLE(SEPARATED_WX_HEAP)
 using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
 #endif
 
 struct Config {
+    static Config& singleton();
+
     JS_EXPORT_PRIVATE static void disableFreezingForTesting();
     JS_EXPORT_PRIVATE static void enableRestrictedOptions();
     static void permanentlyFreeze() { WTF::Config::permanentlyFreeze(); }
@@ -85,8 +87,18 @@ struct Config {
 
             void (*shellTimeoutCheckCallback)(VM&);
 
+    struct {
+        uint8_t exceptionInstructions[maxOpcodeLength + 1];
+        uint8_t wasmExceptionInstructions[maxOpcodeLength + 1];
+        const void* gateMap[numberOfGates];
+    } llint;
+
+#if CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
     WTF::PtrTagLookup ptrTagLookupRecord;
+#endif
 };
+
+#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
 constexpr size_t alignmentOfJSCConfig = std::alignment_of<JSC::Config>::value;
 
@@ -95,4 +107,17 @@ static_assert(roundUpToMultipleOf<alignmentOfJSCConfig>(WTF::offsetOfWTFConfigEx
 
 #define g_jscConfig (*bitwise_cast<JSC::Config*>(&g_wtfConfig.spaceForExtensions))
 
+#else // not ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+extern "C" JS_EXPORT_PRIVATE Config g_jscConfig;
+
+#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
+constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
+
 } // namespace JSC
+
+#if !ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+using JSC::g_jscConfig;
+#endif

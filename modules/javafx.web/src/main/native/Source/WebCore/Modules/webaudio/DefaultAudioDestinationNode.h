@@ -41,28 +41,36 @@ public:
     virtual ~DefaultAudioDestinationNode();
 
     unsigned framesPerBuffer() const;
-    float sampleRate() const final { return m_sampleRate; }
+
+    void startRendering(CompletionHandler<void(Optional<Exception>&&)>&&) final;
 
 private:
-    explicit DefaultAudioDestinationNode(BaseAudioContext&, Optional<float>);
+    DefaultAudioDestinationNode(BaseAudioContext&, Optional<float>);
+
     void createDestination();
+    void clearDestination();
+    void recreateDestination();
+
+    Function<void(Function<void()>&&)> dispatchToRenderThreadFunction();
 
     void initialize() final;
     void uninitialize() final;
     ExceptionOr<void> setChannelCount(unsigned) final;
 
+    bool requiresTailProcessing() const final { return false; }
+
     void enableInput(const String& inputDeviceId) final;
-    ExceptionOr<void> startRendering() final;
-    void resume(Function<void ()>&&) final;
-    void suspend(Function<void ()>&&) final;
-    void close(Function<void ()>&&) final;
+    void resume(CompletionHandler<void(Optional<Exception>&&)>&&) final;
+    void suspend(CompletionHandler<void(Optional<Exception>&&)>&&) final;
+    void restartRendering() final;
+    void close(CompletionHandler<void()>&&) final;
     unsigned maxChannelCount() const final;
     bool isPlaying() final;
 
-    std::unique_ptr<AudioDestination> m_destination;
+    RefPtr<AudioDestination> m_destination;
+    bool m_wasDestinationStarted { false };
     String m_inputDeviceId;
     unsigned m_numberOfInputChannels { 0 };
-    float m_sampleRate { 0 };
 };
 
 } // namespace WebCore

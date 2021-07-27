@@ -162,7 +162,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
             return indentation;
         }
 
-        TreeTableRow<S> treeTableRow = cell.getTreeTableRow();
+        TreeTableRow<S> treeTableRow = cell.getTableRow();
         if (treeTableRow == null) return indentation;
 
         TreeItem<S> treeItem = treeTableRow.getTreeItem();

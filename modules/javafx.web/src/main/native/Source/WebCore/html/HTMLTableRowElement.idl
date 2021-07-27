@@ -18,15 +18,17 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface HTMLTableRowElement : HTMLElement {
+[
+    Exposed=Window
+] interface HTMLTableRowElement : HTMLElement {
     readonly attribute long rowIndex;
     readonly attribute long sectionRowIndex;
     readonly attribute HTMLCollection cells;
     [CEReactions=NotNeeded, Reflect] attribute DOMString align;
-    [CEReactions=NotNeeded, Reflect] attribute [TreatNullAs=EmptyString] DOMString bgColor;
+    [CEReactions=NotNeeded, Reflect] attribute [LegacyNullToEmptyString] DOMString bgColor;
     [CEReactions=NotNeeded, Reflect=char] attribute DOMString ch;
     [CEReactions=NotNeeded, Reflect=charoff] attribute DOMString chOff;
     [CEReactions=NotNeeded, Reflect] attribute DOMString vAlign;
     [MayThrowException] HTMLElement insertCell(optional long index = -1);
-    [CEReactions, MayThrowException] void deleteCell(long index);
+    [CEReactions, MayThrowException] undefined deleteCell(long index);
 };

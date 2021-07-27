@@ -36,7 +36,6 @@ namespace WebCore {
 
 AudioSummingJunction::AudioSummingJunction(BaseAudioContext& context)
     : m_context(context)
-    , m_renderingStateNeedUpdating(false)
 {
 }
 
@@ -46,13 +45,31 @@ AudioSummingJunction::~AudioSummingJunction()
         context().removeMarkedSummingJunction(this);
 }
 
-void AudioSummingJunction::changedOutputs()
+void AudioSummingJunction::markRenderingStateAsDirty()
 {
     ASSERT(context().isGraphOwner());
     if (!m_renderingStateNeedUpdating && canUpdateState()) {
         context().markSummingJunctionDirty(this);
         m_renderingStateNeedUpdating = true;
     }
+}
+
+bool AudioSummingJunction::addOutput(AudioNodeOutput& output)
+{
+    ASSERT(context().isGraphOwner());
+    if (!m_outputs.add(&output).isNewEntry)
+        return false;
+    markRenderingStateAsDirty();
+    return true;
+}
+
+bool AudioSummingJunction::removeOutput(AudioNodeOutput& output)
+{
+    ASSERT(context().isGraphOwner());
+    if (!m_outputs.remove(&output))
+        return false;
+    markRenderingStateAsDirty();
+    return true;
 }
 
 void AudioSummingJunction::updateRenderingState()
@@ -72,6 +89,17 @@ void AudioSummingJunction::updateRenderingState()
 
         m_renderingStateNeedUpdating = false;
     }
+}
+
+unsigned AudioSummingJunction::maximumNumberOfChannels() const
+{
+    unsigned maxChannels = 0;
+    for (auto* output : m_outputs) {
+        // Use output()->numberOfChannels() instead of output->bus()->numberOfChannels(),
+        // because the calling of AudioNodeOutput::bus() is not safe here.
+        maxChannels = std::max(maxChannels, output->numberOfChannels());
+    }
+    return maxChannels;
 }
 
 } // namespace WebCore

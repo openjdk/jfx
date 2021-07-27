@@ -64,6 +64,8 @@ typedef void (GL_APIENTRYP PFNGLGETNUNIFORMIVEXTPROC) (GLuint program, GLint loc
 
 namespace WebCore {
 
+class GraphicsContextGLOpenGL;
+
 class ExtensionsGLOpenGLES : public ExtensionsGLOpenGLCommon {
 public:
     // This class only needs to be instantiated by GraphicsContextGLOpenGL implementations.
@@ -75,21 +77,17 @@ public:
 
     // Extension3D methods
     bool isEnabled(const String&) override;
-    void blitFramebuffer(long srcX0, long srcY0, long srcX1, long srcY1, long dstX0, long dstY0, long dstX1, long dstY1, unsigned long mask, unsigned long filter) override;
-    void renderbufferStorageMultisample(unsigned long target, unsigned long samples, unsigned long internalformat, unsigned long width, unsigned long height) override;
-    void insertEventMarkerEXT(const String&) override;
-    void pushGroupMarkerEXT(const String&) override;
-    void popGroupMarkerEXT(void) override;
+    void renderbufferStorageMultisampleANGLE(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height);
 
     PlatformGLObject createVertexArrayOES() override;
     void deleteVertexArrayOES(PlatformGLObject) override;
     GCGLboolean isVertexArrayOES(PlatformGLObject) override;
     void bindVertexArrayOES(PlatformGLObject) override;
-    void drawBuffersEXT(GCGLsizei, const GCGLenum*) override;
+    void drawBuffersEXT(GCGLSpan<const GCGLenum>) override;
 
-    void drawArraysInstanced(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) override;
-    void drawElementsInstanced(GCGLenum mode, GCGLsizei count, GCGLenum type, long long offset, GCGLsizei primcount) override;
-    void vertexAttribDivisor(GCGLuint index, GCGLuint divisor) override;
+    void drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) override;
+    void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount) override;
+    void vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor) override;
 
     // EXT Robustness - reset
     int getGraphicsResetStatusARB() override;

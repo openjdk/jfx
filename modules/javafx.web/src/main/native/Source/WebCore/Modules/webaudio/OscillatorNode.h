@@ -57,13 +57,15 @@ protected:
 
 private:
     void process(size_t framesToProcess) final;
-    void reset() final;
 
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
 
     // Returns true if there are sample-accurate timeline parameter changes.
     bool calculateSampleAccuratePhaseIncrements(size_t framesToProcess);
+
+    double processARate(int, float* destP, double virtualReadIndex, float* phaseIncrements);
+    double processKRate(int, float* destP, double virtualReadIndex);
 
     bool propagatesSilence() const final;
 
@@ -83,19 +85,13 @@ private:
     double m_virtualReadIndex { 0 };
 
     // This synchronizes process().
-    mutable Lock m_processMutex;
+    mutable Lock m_processLock;
 
     // Stores sample-accurate values calculated according to frequency and detune.
-    AudioFloatArray m_phaseIncrements { AudioNode::ProcessingSizeInFrames };
-    AudioFloatArray m_detuneValues { AudioNode::ProcessingSizeInFrames };
+    AudioFloatArray m_phaseIncrements;
+    AudioFloatArray m_detuneValues;
 
     RefPtr<PeriodicWave> m_periodicWave;
-
-    // Cache the wave tables for different waveform types, except CUSTOM.
-    static PeriodicWave* s_periodicWaveSine;
-    static PeriodicWave* s_periodicWaveSquare;
-    static PeriodicWave* s_periodicWaveSawtooth;
-    static PeriodicWave* s_periodicWaveTriangle;
 };
 
 String convertEnumerationToString(OscillatorType); // In JSOscillatorNode.cpp

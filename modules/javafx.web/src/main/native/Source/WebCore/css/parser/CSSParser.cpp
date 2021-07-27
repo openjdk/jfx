@@ -108,12 +108,16 @@ Color CSSParser::parseColor(const String& string, bool strict)
     return primitiveValue.color();
 }
 
-Color CSSParser::parseColorWorkerSafe(StringView string)
+Color CSSParser::parseColorWorkerSafe(const String& string)
 {
     if (auto color = CSSParserFastPaths::parseSimpleColor(string))
         return *color;
-    // FIXME: This function does not parse many types of valid CSS color syntax, such as color with non-sRGB color spaces.
-    return { };
+
+    CSSTokenizer tokenizer(string);
+    CSSParserTokenRange range(tokenizer.tokenRange());
+    range.consumeWhitespace();
+
+    return CSSPropertyParserHelpers::consumeColorWorkerSafe(range, CSSParserContext(HTMLStandardMode));
 }
 
 Color CSSParser::parseSystemColor(StringView string)
@@ -132,6 +136,15 @@ Optional<SRGBA<uint8_t>> CSSParser::parseNamedColor(StringView string)
 Optional<SRGBA<uint8_t>> CSSParser::parseHexColor(StringView string)
 {
     return CSSParserFastPaths::parseHexColor(string);
+}
+
+Optional<CSSPropertyParserHelpers::FontRaw> CSSParser::parseFontWorkerSafe(const String& string, CSSParserMode cssParserMode)
+{
+    CSSTokenizer tokenizer(string);
+    CSSParserTokenRange range(tokenizer.tokenRange());
+    range.consumeWhitespace();
+
+    return CSSPropertyParserHelpers::consumeFontWorkerSafe(range, cssParserMode);
 }
 
 RefPtr<CSSValue> CSSParser::parseSingleValue(CSSPropertyID propertyID, const String& string, const CSSParserContext& context)
@@ -163,9 +176,9 @@ CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration
     return CSSParserImpl::parseValue(&declaration, propertyID, string, important, m_context);
 }
 
-void CSSParser::parseSelector(const String& string, CSSSelectorList& selectorList)
+Optional<CSSSelectorList> CSSParser::parseSelector(const String& string)
 {
-    selectorList = parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, nullptr);
+    return parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, nullptr);
 }
 
 Ref<ImmutableStyleProperties> CSSParser::parseInlineStyleDeclaration(const String& string, const Element* element)

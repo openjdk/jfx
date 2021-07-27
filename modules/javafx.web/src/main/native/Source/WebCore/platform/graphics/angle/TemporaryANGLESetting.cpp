@@ -26,10 +26,10 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_GL) && USE(ANGLE)
+#if ENABLE(WEBGL) && USE(ANGLE)
 #include "TemporaryANGLESetting.h"
 
-#include <ANGLE/entry_points_gles_2_0_autogen.h>
+#include "ANGLEHeaders.h"
 
 namespace WebCore {
 
@@ -60,4 +60,4 @@ TemporaryANGLESetting::~TemporaryANGLESetting()
 
 }
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL) && USE(ANGLE)
+#endif // ENABLE(WEBGL) && USE(ANGLE)

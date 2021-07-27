@@ -25,7 +25,6 @@
 
 #include "CollectionType.h"
 #include "Node.h"
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -36,7 +35,7 @@ class RenderElement;
 const int initialNodeVectorSize = 11; // Covers 99.5%. See webkit.org/b/80706
 typedef Vector<Ref<Node>, initialNodeVectorSize> NodeVector;
 
-class ContainerNode : public CanMakeWeakPtr<ContainerNode>, public Node {
+class ContainerNode : public Node {
     WTF_MAKE_ISO_ALLOCATED(ContainerNode);
 public:
     virtual ~ContainerNode();
@@ -48,8 +47,8 @@ public:
     bool hasChildNodes() const { return m_firstChild; }
     bool hasOneChild() const { return m_firstChild && !m_firstChild->nextSibling(); }
 
-    bool directChildNeedsStyleRecalc() const { return getFlag(DirectChildNeedsStyleRecalcFlag); }
-    void setDirectChildNeedsStyleRecalc() { setFlag(DirectChildNeedsStyleRecalcFlag); }
+    bool directChildNeedsStyleRecalc() const { return hasStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
+    void setDirectChildNeedsStyleRecalc() { setStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
 
     WEBCORE_EXPORT unsigned countChildNodes() const;
     WEBCORE_EXPORT Node* traverseToChildAt(unsigned) const;
@@ -58,7 +57,7 @@ public:
     ExceptionOr<void> replaceChild(Node& newChild, Node& oldChild);
     WEBCORE_EXPORT ExceptionOr<void> removeChild(Node& child);
     WEBCORE_EXPORT ExceptionOr<void> appendChild(Node& newChild);
-    void replaceAllChildren(Ref<Node>&&);
+    void replaceAllChildrenWithNewText(const String&);
     void replaceAllChildren(std::nullptr_t);
 
     // These methods are only used during parsing.
@@ -74,27 +73,28 @@ public:
 
     void cloneChildNodes(ContainerNode& clone);
 
-    enum ChildChangeType { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildRemoved, NonContentsChildInserted, AllChildrenReplaced };
-    enum class ChildChangeSource { Parser, API };
     struct ChildChange {
-        ChildChangeType type;
+        enum class Type : uint8_t { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildRemoved, NonContentsChildInserted, AllChildrenReplaced };
+        enum class Source : bool { Parser, API };
+
+        ChildChange::Type type;
         Element* previousSiblingElement;
         Element* nextSiblingElement;
-        ChildChangeSource source;
+        ChildChange::Source source;
 
         bool isInsertion() const
         {
             switch (type) {
-            case ElementInserted:
-            case TextInserted:
-            case NonContentsChildInserted:
-            case AllChildrenReplaced:
+            case ChildChange::Type::ElementInserted:
+            case ChildChange::Type::TextInserted:
+            case ChildChange::Type::NonContentsChildInserted:
+            case ChildChange::Type::AllChildrenReplaced:
                 return true;
-            case ElementRemoved:
-            case TextRemoved:
-            case TextChanged:
-            case AllChildrenRemoved:
-            case NonContentsChildRemoved:
+            case ChildChange::Type::ElementRemoved:
+            case ChildChange::Type::TextRemoved:
+            case ChildChange::Type::TextChanged:
+            case ChildChange::Type::AllChildrenRemoved:
+            case ChildChange::Type::NonContentsChildRemoved:
                 return false;
             }
             ASSERT_NOT_REACHED();
@@ -102,6 +102,8 @@ public:
         }
     };
     virtual void childrenChanged(const ChildChange&);
+
+    ExceptionOr<void> appendChild(ChildChange::Source, Node& newChild);
 
     void disconnectDescendantFrames();
 
@@ -146,8 +148,9 @@ protected:
 private:
     void executePreparedChildrenRemoval();
     enum class DeferChildrenChanged { Yes, No };
-    NodeVector removeAllChildrenWithScriptAssertion(ChildChangeSource, DeferChildrenChanged = DeferChildrenChanged::No);
-    bool removeNodeWithScriptAssertion(Node&, ChildChangeSource);
+    NodeVector removeAllChildrenWithScriptAssertion(ChildChange::Source, DeferChildrenChanged = DeferChildrenChanged::No);
+    bool removeNodeWithScriptAssertion(Node&, ChildChange::Source);
+    ExceptionOr<void> removeSelfOrChildNodesForInsertion(Node&, NodeVector&);
 
     void removeBetween(Node* previousChild, Node* nextChild, Node& oldChild);
     ExceptionOr<void> appendChildWithoutPreInsertionValidityCheck(Node&);

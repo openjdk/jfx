@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +49,8 @@ DOMGCOutputConstraint::~DOMGCOutputConstraint()
 {
 }
 
-void DOMGCOutputConstraint::executeImpl(SlotVisitor& visitor)
+template<typename Visitor>
+void DOMGCOutputConstraint::executeImplImpl(Visitor& visitor)
 {
     Heap& heap = m_vm.heap;
 
@@ -60,15 +61,19 @@ void DOMGCOutputConstraint::executeImpl(SlotVisitor& visitor)
 
     m_clientData.forEachOutputConstraintSpace(
         [&] (Subspace& subspace) {
-            auto func = [] (SlotVisitor& visitor, HeapCell* heapCell, HeapCell::Kind) {
-                SetRootMarkReasonScope rootScope(visitor, SlotVisitor::RootMarkReason::DOMGCOutput);
+            auto func = [] (Visitor& visitor, HeapCell* heapCell, HeapCell::Kind) {
+                SetRootMarkReasonScope rootScope(visitor, RootMarkReason::DOMGCOutput);
                 JSCell* cell = static_cast<JSCell*>(heapCell);
                 cell->methodTable(visitor.vm())->visitOutputConstraints(cell, visitor);
             };
 
-            visitor.addParallelConstraintTask(subspace.forEachMarkedCellInParallel(func));
+            RefPtr<SharedTask<void(Visitor&)>> task = subspace.template forEachMarkedCellInParallel<Visitor>(func);
+            visitor.addParallelConstraintTask(task);
         });
 }
+
+void DOMGCOutputConstraint::executeImpl(AbstractSlotVisitor& visitor) { executeImplImpl(visitor); }
+void DOMGCOutputConstraint::executeImpl(SlotVisitor& visitor) { executeImplImpl(visitor); }
 
 } // namespace WebCore
 

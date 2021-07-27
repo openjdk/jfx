@@ -103,10 +103,14 @@ Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(const QualifiedName& tagNam
     return textArea;
 }
 
+Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(Document& document)
+{
+    return create(textareaTag, document, nullptr);
+}
+
 void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
-    root.appendChild(TextControlInnerTextElement::create(document()));
-    updateInnerTextElementEditability();
+    root.appendChild(TextControlInnerTextElement::create(document(), isInnerTextElementEditable()));
 }
 
 const AtomString& HTMLTextAreaElement::formControlType() const
@@ -263,13 +267,14 @@ bool HTMLTextAreaElement::isMouseFocusable() const
 
 void HTMLTextAreaElement::updateFocusAppearance(SelectionRestorationMode restorationMode, SelectionRevealMode revealMode)
 {
-    if (restorationMode == SelectionRestorationMode::SetDefault || !hasCachedSelection()) {
+    if (restorationMode == SelectionRestorationMode::RestoreOrSelectAll && hasCachedSelection())
+        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    else {
         // If this is the first focus, set a caret at the beginning of the text.
         // This matches some browsers' behavior; see bug 11746 Comment #15.
         // http://bugs.webkit.org/show_bug.cgi?id=11746#c15
         setSelectionRange(0, 0, SelectionHasNoDirection, revealMode, Element::defaultFocusTextStateChangeIntent());
-    } else
-        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    }
 }
 
 void HTMLTextAreaElement::defaultEventHandler(Event& event)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ namespace {
 Atomic<unsigned> constraintCounter;
 
 struct Marker : JSMarker {
-    SlotVisitor* visitor;
+    AbstractSlotVisitor* visitor;
 };
 
 bool isMarked(JSMarkerRef markerRef, JSObjectRef objectRef)
@@ -44,7 +44,7 @@ bool isMarked(JSMarkerRef markerRef, JSObjectRef objectRef)
     if (!objectRef)
         return true; // Null is an immortal object.
 
-    return static_cast<Marker*>(markerRef)->visitor->vm().heap.isMarked(toJS(objectRef));
+    return static_cast<Marker*>(markerRef)->visitor->isMarked(toJS(objectRef));
 }
 
 void mark(JSMarkerRef markerRef, JSObjectRef objectRef)
@@ -73,15 +73,14 @@ void JSContextGroupAddMarkingConstraint(JSContextGroupRef group, JSMarkingConstr
     auto constraint = makeUnique<SimpleMarkingConstraint>(
         toCString("Amc", constraintIndex, "(", RawPointer(bitwise_cast<void*>(constraintCallback)), ")"),
         toCString("API Marking Constraint #", constraintIndex, " (", RawPointer(bitwise_cast<void*>(constraintCallback)), ", ", RawPointer(userData), ")"),
-        [constraintCallback, userData]
-        (SlotVisitor& slotVisitor) {
+        MAKE_MARKING_CONSTRAINT_EXECUTOR_PAIR(([constraintCallback, userData] (AbstractSlotVisitor& visitor) {
             Marker marker;
             marker.IsMarked = isMarked;
             marker.Mark = mark;
-            marker.visitor = &slotVisitor;
+            marker.visitor = &visitor;
 
             constraintCallback(&marker, userData);
-        },
+        })),
         volatility,
         ConstraintConcurrency::Sequential);
 

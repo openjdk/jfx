@@ -19,11 +19,9 @@
  */
 
 // https://dom.spec.whatwg.org/#childnode
-[
-    NoInterfaceObject,
-] interface ChildNode {
-    [CEReactions, Unscopable, MayThrowException] void before((Node or DOMString)... nodes);
-    [CEReactions, Unscopable, MayThrowException] void after((Node or DOMString)... nodes);
-    [CEReactions, Unscopable, MayThrowException] void replaceWith((Node or DOMString)... nodes);
-    [CEReactions, Unscopable, MayThrowException] void remove();
+interface mixin ChildNode {
+    [CEReactions, Unscopable, MayThrowException] undefined before((Node or DOMString)... nodes);
+    [CEReactions, Unscopable, MayThrowException] undefined after((Node or DOMString)... nodes);
+    [CEReactions, Unscopable, MayThrowException] undefined replaceWith((Node or DOMString)... nodes);
+    [CEReactions, Unscopable, MayThrowException] undefined remove();
 };

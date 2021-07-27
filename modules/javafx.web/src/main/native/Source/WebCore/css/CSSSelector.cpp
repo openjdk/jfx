@@ -128,6 +128,7 @@ static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelec
             return 0;
         case CSSSelector::PseudoClassNthChild:
         case CSSSelector::PseudoClassNthLastChild:
+        case CSSSelector::PseudoClassHost:
             return CSSSelector::addSpecificities(static_cast<unsigned>(SelectorSpecificityIncrement::ClassB), simpleSelector.selectorList() ? maxSpecificity(*simpleSelector.selectorList()) : 0);
         default:
             break;
@@ -276,9 +277,6 @@ CSSSelector::PseudoElementType CSSSelector::parsePseudoElementType(StringView na
     }
 
     if (type == PseudoElementHighlight && !RuntimeEnabledFeatures::sharedFeatures().highlightAPIEnabled())
-        return PseudoElementUnknown;
-
-    if (type == PseudoElementPart && !RuntimeEnabledFeatures::sharedFeatures().cssShadowPartsEnabled())
         return PseudoElementUnknown;
 
     return type;
@@ -506,6 +504,9 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassFocus:
                 builder.appendLiteral(":focus");
                 break;
+            case CSSSelector::PseudoClassFocusVisible:
+                builder.appendLiteral(":focus-visible");
+                break;
             case CSSSelector::PseudoClassFocusWithin:
                 builder.appendLiteral(":focus-within");
                 break;
@@ -668,6 +669,11 @@ String CSSSelector::selectorText(const String& rightSide) const
                 break;
             case CSSSelector::PseudoClassHost:
                 builder.appendLiteral(":host");
+                if (auto* selectorList = cs->selectorList()) {
+                    builder.append('(');
+                    selectorList->buildSelectorsText(builder);
+                    builder.append(')');
+                }
                 break;
             case CSSSelector::PseudoClassDefined:
                 builder.appendLiteral(":defined");
@@ -697,6 +703,8 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
                 if (cs->value() == "placeholder")
                     builder.appendLiteral("::-webkit-input-placeholder");
+                if (cs->value() == "file-selector-button")
+                    builder.appendLiteral("::-webkit-file-upload-button");
                 break;
 #if ENABLE(VIDEO)
             case CSSSelector::PseudoElementCue: {

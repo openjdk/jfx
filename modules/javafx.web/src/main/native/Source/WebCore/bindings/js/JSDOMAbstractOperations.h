@@ -26,20 +26,18 @@
 #pragma once
 
 #include "JSDOMConvertStrings.h"
+#include "JSDOMExceptionHandling.h"
 
 namespace WebCore {
 
 // Implementations of the abstract operations defined at
 // https://heycam.github.io/webidl/#legacy-platform-object-abstract-ops
 
-enum class OverrideBuiltins {
-    No,
-    Yes
-};
+enum class LegacyOverrideBuiltIns { No, Yes };
 
 // An implementation of the 'named property visibility algorithm'
 // https://heycam.github.io/webidl/#dfn-named-property-visibility
-template<OverrideBuiltins overrideBuiltins, class JSClass>
+template<LegacyOverrideBuiltIns overrideBuiltins, class JSClass>
 static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSClass& thisObject, JSC::PropertyName propertyName)
 {
     // FIXME: It seems unfortunate that have to do two lookups for the property name,
@@ -63,8 +61,8 @@ static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSC
     if (JSC::JSObject::getOwnPropertySlot(&thisObject, &lexicalGlobalObject, propertyName, slot))
         return false;
 
-    // 3. If O implements an interface that has the [OverrideBuiltins] extended attribute, then return true.
-    if (overrideBuiltins == OverrideBuiltins::Yes)
+    // 3. If O implements an interface that has the [LegacyOverrideBuiltIns] extended attribute, then return true.
+    if (overrideBuiltins == LegacyOverrideBuiltIns::Yes)
         return true;
 
     // 4. Initialize prototype to be the value of the internal [[Prototype]] property of O.
@@ -85,7 +83,7 @@ static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSC
 // for the property name, via passed in functor. This allows us to avoid two looking up the
 // the property name twice; once for 'named property visibility algorithm' check, and then
 // again when the value is needed.
-template<OverrideBuiltins overrideBuiltins, class JSClass, class Functor>
+template<LegacyOverrideBuiltIns overrideBuiltins, class JSClass, class Functor>
 static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSClass& thisObject, JSC::PropertyName propertyName, Functor&& itemAccessor) -> decltype(itemAccessor(thisObject, propertyName))
 {
     // NOTE: While it is not specified, a Symbol can never be a 'supported property
@@ -103,8 +101,8 @@ static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject,
     if (JSC::JSObject::getOwnPropertySlot(&thisObject, &lexicalGlobalObject, propertyName, slot))
         return WTF::nullopt;
 
-    // 3. If O implements an interface that has the [OverrideBuiltins] extended attribute, then return true.
-    if (overrideBuiltins == OverrideBuiltins::Yes && !worldForDOMObject(thisObject).shouldDisableOverrideBuiltinsBehavior())
+    // 3. If O implements an interface that has the [LegacyOverrideBuiltIns] extended attribute, then return true.
+    if (overrideBuiltins == LegacyOverrideBuiltIns::Yes && !worldForDOMObject(thisObject).shouldDisableLegacyOverrideBuiltInsBehavior())
         return result;
 
     // 4. Initialize prototype to be the value of the internal [[Prototype]] property of O.
@@ -118,6 +116,31 @@ static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject,
 
     // 6. Return true.
     return result;
+}
+
+// This implements steps 2.2 through 2.5 of https://heycam.github.io/webidl/#legacy-platform-object-delete.
+template<typename Functor> bool performLegacyPlatformObjectDeleteOperation(JSC::JSGlobalObject& lexicalGlobalObject, Functor&& functor)
+{
+    using ReturnType = std::invoke_result_t<Functor>;
+
+    if constexpr (IsExceptionOr<ReturnType>) {
+        auto result = functor();
+        if (result.hasException()) {
+            auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
+            propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+            return true;
+        }
+
+        if constexpr (std::is_same_v<ReturnType, ExceptionOr<bool>>)
+            return result.releaseReturnValue();
+        return true;
+    }
+
+    if constexpr (std::is_same_v<ReturnType, bool>)
+        return functor();
+
+    functor();
+    return true;
 }
 
 }

@@ -46,10 +46,19 @@ function toLocaleString(/* locales, options */)
             options.year === @undefined &&
             options.month === @undefined &&
             options.day === @undefined &&
+            (!@useIntlDateTimeFormatDayPeriod || options.dayPeriod === @undefined) &&
             options.hour === @undefined &&
             options.minute === @undefined &&
-            options.second === @undefined
+            options.second === @undefined &&
+            options.fractionalSecondDigits === @undefined
         );
+
+        if (options) {
+            var dateStyle = options.dateStyle;
+            var timeStyle = options.timeStyle;
+            if (dateStyle !== @undefined || timeStyle !== @undefined)
+                needsDefaults = false;
+        }
 
         // Only create descendant if it will have own properties.
         if (needsDefaults) {
@@ -103,6 +112,15 @@ function toLocaleDateString(/* locales, options */)
             options.day === @undefined
         );
 
+        if (options) {
+            var dateStyle = options.dateStyle;
+            var timeStyle = options.timeStyle;
+            if (timeStyle !== @undefined)
+                @throwTypeError("timeStyle cannot be specified");
+            if (dateStyle !== @undefined)
+                needsDefaults = false;
+        }
+
         // Only create descendant if it will have own properties.
         if (needsDefaults) {
             options = @Object.@create(options);
@@ -145,10 +163,21 @@ function toLocaleTimeString(/* locales, options */)
 
         // Check original instead of descendant to reduce lookups up the prototype chain.
         var needsDefaults = !options || (
+            (!@useIntlDateTimeFormatDayPeriod || options.dayPeriod === @undefined) &&
             options.hour === @undefined &&
             options.minute === @undefined &&
-            options.second === @undefined
+            options.second === @undefined &&
+            options.fractionalSecondDigits === @undefined
         );
+
+        if (options) {
+            var dateStyle = options.dateStyle;
+            var timeStyle = options.timeStyle;
+            if (dateStyle !== @undefined)
+                @throwTypeError("dateStyle cannot be specified");
+            if (timeStyle !== @undefined)
+                needsDefaults = false;
+        }
 
         // Only create descendant if it will have own properties.
         if (needsDefaults) {

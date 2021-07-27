@@ -39,12 +39,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(WaveShaperNode);
 
 ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& context, const WaveShaperOptions& options)
 {
-    if (context.isStopped())
-        return Exception { InvalidStateError };
-
-    context.lazyInitialize();
-    UNUSED_PARAM(options);
-
     RefPtr<Float32Array> curve;
     if (options.curve) {
         curve = Float32Array::tryCreate(options.curve->data(), options.curve->size());
@@ -70,9 +64,8 @@ ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& contex
 }
 
 WaveShaperNode::WaveShaperNode(BaseAudioContext& context)
-    : AudioBasicProcessorNode(context)
+    : AudioBasicProcessorNode(context, NodeTypeWaveShaper)
 {
-    setNodeType(NodeTypeWaveShaper);
     m_processor = makeUnique<WaveShaperProcessor>(context.sampleRate(), 1);
 
     initialize();
@@ -84,6 +77,13 @@ ExceptionOr<void> WaveShaperNode::setCurve(RefPtr<Float32Array>&& curve)
     DEBUG_LOG(LOGIDENTIFIER);
     if (curve && curve->length() < 2)
         return Exception { InvalidStateError, "Length of curve array cannot be less than 2" };
+
+    if (curve) {
+        // The specification states that we should maintain an internal copy of the curve so that
+        // subsequent modifications of the contents of the array have no effect.
+        auto clonedCurve = Float32Array::create(curve->data(), curve->length());
+        curve = WTFMove(clonedCurve);
+    }
 
     waveShaperProcessor()->setCurve(curve.get());
     return { };
@@ -130,6 +130,12 @@ auto WaveShaperNode::oversample() const -> OverSampleType
     }
     ASSERT_NOT_REACHED();
     return OverSampleType::None;
+}
+
+bool WaveShaperNode::propagatesSilence() const
+{
+    auto curve = const_cast<WaveShaperNode*>(this)->curve();
+    return !curve || !curve->length();
 }
 
 } // namespace WebCore

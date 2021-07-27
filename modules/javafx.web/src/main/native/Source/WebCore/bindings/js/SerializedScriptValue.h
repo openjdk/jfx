@@ -27,7 +27,6 @@
 #pragma once
 
 #include "ExceptionOr.h"
-#include "ImageBuffer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/Strong.h>
@@ -42,6 +41,7 @@ typedef const struct OpaqueJSValue* JSValueRef;
 #if ENABLE(WEBASSEMBLY)
 namespace JSC { namespace Wasm {
 class Module;
+class MemoryHandle;
 } }
 #endif
 
@@ -51,8 +51,8 @@ namespace WebCore {
 class DetachedOffscreenCanvas;
 #endif
 class IDBValue;
-class ImageBitmap;
 class MessagePort;
+class ImageBitmapBacking;
 class SharedBuffer;
 enum class SerializationReturnCode;
 
@@ -62,6 +62,7 @@ enum class SerializationContext { Default, WorkerPostMessage, WindowPostMessage 
 using ArrayBufferContentsArray = Vector<JSC::ArrayBufferContents>;
 #if ENABLE(WEBASSEMBLY)
 using WasmModuleArray = Vector<RefPtr<JSC::Wasm::Module>>;
+using WasmMemoryHandleArray = Vector<RefPtr<JSC::Wasm::MemoryHandle>>;
 #endif
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SerializedScriptValue);
@@ -117,12 +118,13 @@ public:
 private:
     WEBCORE_EXPORT SerializedScriptValue(Vector<unsigned char>&&);
     WEBCORE_EXPORT SerializedScriptValue(Vector<unsigned char>&&, std::unique_ptr<ArrayBufferContentsArray>);
-    SerializedScriptValue(Vector<unsigned char>&&, const Vector<String>& blobURLs, std::unique_ptr<ArrayBufferContentsArray>, std::unique_ptr<ArrayBufferContentsArray> sharedBuffers, Vector<std::pair<std::unique_ptr<ImageBuffer>, ImageBuffer::SerializationState>>&& imageBuffers
+    SerializedScriptValue(Vector<unsigned char>&&, const Vector<String>& blobURLs, std::unique_ptr<ArrayBufferContentsArray>, std::unique_ptr<ArrayBufferContentsArray> sharedBuffers, Vector<Optional<ImageBitmapBacking>>&& backingStores
 #if ENABLE(OFFSCREEN_CANVAS)
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& = { }
 #endif
 #if ENABLE(WEBASSEMBLY)
         , std::unique_ptr<WasmModuleArray> = nullptr
+        , std::unique_ptr<WasmMemoryHandleArray> = nullptr
 #endif
         );
 
@@ -131,12 +133,13 @@ private:
     Vector<unsigned char> m_data;
     std::unique_ptr<ArrayBufferContentsArray> m_arrayBufferContentsArray;
     std::unique_ptr<ArrayBufferContentsArray> m_sharedBufferContentsArray;
-    Vector<std::pair<std::unique_ptr<ImageBuffer>, ImageBuffer::SerializationState>> m_imageBuffers;
+    Vector<Optional<ImageBitmapBacking>> m_backingStores;
 #if ENABLE(OFFSCREEN_CANVAS)
     Vector<std::unique_ptr<DetachedOffscreenCanvas>> m_detachedOffscreenCanvases;
 #endif
 #if ENABLE(WEBASSEMBLY)
     std::unique_ptr<WasmModuleArray> m_wasmModulesArray;
+    std::unique_ptr<WasmMemoryHandleArray> m_wasmMemoryHandlesArray;
 #endif
     Vector<String> m_blobURLs;
     size_t m_memoryCost { 0 };

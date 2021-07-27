@@ -112,7 +112,7 @@ private:
     void updateComputedLength();
 
     Direction m_direction { TopLeft };
-    Length m_length { Undefined };
+    Length m_length { LengthType::Undefined };
     Length m_computedLength;
 };
 
@@ -131,7 +131,7 @@ public:
         , m_type(Value)
     { }
     explicit BasicShapeRadius(Type t)
-        : m_value(Undefined)
+        : m_value(LengthType::Undefined)
         , m_type(t)
     { }
 
@@ -158,7 +158,7 @@ public:
     }
 
 private:
-    Length m_value { Undefined };
+    Length m_value { LengthType::Undefined };
     Type m_type { ClosestSide };
 };
 
@@ -270,6 +270,8 @@ public:
     void setWindRule(WindRule windRule) { m_windRule = windRule; }
     WindRule windRule() const override { return m_windRule; }
 
+    void setZoom(float z) { m_zoom = z; }
+
     const SVGPathByteStream* pathData() const { return m_byteStream.get(); }
 
 private:
@@ -287,6 +289,7 @@ private:
     void dump(TextStream&) const final;
 
     std::unique_ptr<SVGPathByteStream> m_byteStream;
+    float m_zoom { 1 };
     WindRule m_windRule { WindRule::NonZero };
 };
 

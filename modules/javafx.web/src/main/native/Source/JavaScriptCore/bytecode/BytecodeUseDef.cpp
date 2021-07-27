@@ -100,9 +100,9 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     case op_unreachable:
     case op_super_sampler_begin:
     case op_super_sampler_end:
+    case op_get_scope:
         return;
 
-    USES(OpGetScope, dst)
     USES(OpToThis, srcDst)
     USES(OpCheckTdz, targetVirtualRegister)
     USES(OpIdentityWithProfile, srcDst)
@@ -183,14 +183,15 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     USES(OpTypeof, value)
     USES(OpIsEmpty, operand)
     USES(OpTypeofIsUndefined, operand)
+    USES(OpTypeofIsObject, operand)
+    USES(OpTypeofIsFunction, operand)
     USES(OpIsUndefinedOrNull, operand)
     USES(OpIsBoolean, operand)
     USES(OpIsNumber, operand)
     USES(OpIsBigInt, operand)
     USES(OpIsObject, operand)
-    USES(OpIsObjectOrNull, operand)
     USES(OpIsCellWithType, operand)
-    USES(OpIsFunction, operand)
+    USES(OpIsCallable, operand)
     USES(OpIsConstructor, operand)
     USES(OpToNumber, operand)
     USES(OpToNumeric, operand)
@@ -220,12 +221,16 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     USES(OpGetFromArguments, arguments)
     USES(OpNewArrayBuffer, immutableButterfly)
 
-    USES(OpHasGenericProperty, base, property)
-    USES(OpHasIndexedProperty, base, property)
+    USES(OpHasEnumerableIndexedProperty, base, property)
+    USES(OpHasEnumerableStructureProperty, base, property, enumerator)
+    USES(OpHasEnumerableProperty, base, property)
     USES(OpEnumeratorStructurePname, enumerator, index)
     USES(OpEnumeratorGenericPname, enumerator, index)
     USES(OpGetByVal, base, property)
     USES(OpGetPrivateName, base, property)
+    USES(OpPutPrivateName, base, property, value)
+    USES(OpSetPrivateBrand, base, brand)
+    USES(OpCheckPrivateBrand, base, brand)
     USES(OpInByVal, base, property)
     USES(OpOverridesHasInstance, constructor, hasInstanceValue)
     USES(OpInstanceof, value, prototype)
@@ -258,7 +263,6 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
 
     USES(OpGetByValWithThis, base, thisValue, property)
     USES(OpInstanceofCustom, value, constructor, hasInstanceValue)
-    USES(OpHasStructureProperty, base, property, enumerator)
     USES(OpHasOwnStructureProperty, base, property, enumerator)
     USES(OpInStructureProperty, base, property, enumerator)
 
@@ -287,7 +291,7 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     USES(OpGetInternalField, base)
     USES(OpPutInternalField, base, value)
 
-    USES(OpYield, generator, argument)
+    USES(OpYield, argument)
 
     case op_iterator_open: {
         auto bytecode = instruction->as<OpIteratorOpen>();
@@ -394,6 +398,9 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
     case op_put_setter_by_val:
     case op_put_by_val:
     case op_put_by_val_direct:
+    case op_put_private_name:
+    case op_set_private_brand:
+    case op_check_private_brand:
     case op_put_internal_field:
     case op_define_data_property:
     case op_define_accessor_property:
@@ -417,11 +424,11 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
     DEFS(OpArgumentCount, dst)
     DEFS(OpToIndexString, dst)
     DEFS(OpGetEnumerableLength, dst)
-    DEFS(OpHasIndexedProperty, dst)
-    DEFS(OpHasStructureProperty, dst)
+    DEFS(OpHasEnumerableIndexedProperty, dst)
+    DEFS(OpHasEnumerableStructureProperty, dst)
+    DEFS(OpHasEnumerableProperty, dst)
     DEFS(OpHasOwnStructureProperty, dst)
     DEFS(OpInStructureProperty, dst)
-    DEFS(OpHasGenericProperty, dst)
     DEFS(OpGetDirectPname, dst)
     DEFS(OpGetPropertyEnumerator, dst)
     DEFS(OpEnumeratorStructurePname, dst)
@@ -490,14 +497,15 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
     DEFS(OpIdentityWithProfile, srcDst)
     DEFS(OpIsEmpty, dst)
     DEFS(OpTypeofIsUndefined, dst)
+    DEFS(OpTypeofIsObject, dst)
+    DEFS(OpTypeofIsFunction, dst)
     DEFS(OpIsUndefinedOrNull, dst)
     DEFS(OpIsBoolean, dst)
     DEFS(OpIsNumber, dst)
     DEFS(OpIsBigInt, dst)
     DEFS(OpIsObject, dst)
-    DEFS(OpIsObjectOrNull, dst)
     DEFS(OpIsCellWithType, dst)
-    DEFS(OpIsFunction, dst)
+    DEFS(OpIsCallable, dst)
     DEFS(OpIsConstructor, dst)
     DEFS(OpInById, dst)
     DEFS(OpInByVal, dst)

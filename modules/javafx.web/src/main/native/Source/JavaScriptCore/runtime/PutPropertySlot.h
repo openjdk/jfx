@@ -38,7 +38,8 @@ class PutPropertySlot {
 public:
     enum Type : uint8_t { Uncachable, ExistingProperty, NewProperty, SetterProperty, CustomValue, CustomAccessor };
     enum Context { UnknownContext, PutById, PutByIdEval };
-    typedef bool (*PutValueFunc)(JSGlobalObject*, EncodedJSValue thisObject, EncodedJSValue value);
+    using PutValueFunc = JSC::PutValueFunc;
+    using PutValueFuncWithPtr = JSC::PutValueFuncWithPtr;
 
     PutPropertySlot(JSValue thisValue, bool isStrictMode = false, Context context = UnknownContext, bool isInitialization = false)
         : m_base(nullptr)
@@ -66,14 +67,14 @@ public:
         m_offset = offset;
     }
 
-    void setCustomValue(JSObject* base, FunctionPtr<OperationPtrTag> function)
+    void setCustomValue(JSObject* base, PutValueFunc function)
     {
         m_type = CustomValue;
         m_base = base;
         m_putFunction = function;
     }
 
-    void setCustomAccessor(JSObject* base, FunctionPtr<OperationPtrTag> function)
+    void setCustomAccessor(JSObject* base, PutValueFunc function)
     {
         m_type = CustomAccessor;
         m_base = base;
@@ -97,7 +98,7 @@ public:
         m_isStrictMode = value;
     }
 
-    FunctionPtr<OperationPtrTag> customSetter() const
+    FunctionPtr<CustomAccessorPtrTag> customSetter() const
     {
         ASSERT(isCacheableCustom());
         return m_putFunction;
@@ -112,7 +113,7 @@ public:
     bool isStrictMode() const { return m_isStrictMode; }
     bool isCacheablePut() const { return isCacheable() && (m_type == NewProperty || m_type == ExistingProperty); }
     bool isCacheableSetter() const { return isCacheable() && m_type == SetterProperty; }
-    bool isCacheableCustom() const { return isCacheable() && (m_type == CustomValue || m_type == CustomAccessor); }
+    bool isCacheableCustom() const { return isCacheable() && (m_type == CustomValue || m_type == CustomAccessor) && !!m_putFunction; }
     bool isCustomAccessor() const { return isCacheable() && m_type == CustomAccessor; }
     bool isInitialization() const { return m_isInitialization; }
 
@@ -137,7 +138,7 @@ private:
     Type m_type;
     uint8_t m_context;
     CacheabilityType m_cacheability;
-    FunctionPtr<OperationPtrTag> m_putFunction;
+    FunctionPtr<CustomAccessorPtrTag> m_putFunction;
 };
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,35 +28,36 @@
 #include "ExceptionOr.h"
 #include "TextEncoding.h"
 #include <wtf/RefCounted.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class TextCodec;
+
 class TextDecoder : public RefCounted<TextDecoder> {
 public:
+    ~TextDecoder();
+
     struct Options {
         bool fatal { false };
         bool ignoreBOM { false };
     };
-    struct DecodeOptions {
-        bool stream { false };
-    };
-
     static ExceptionOr<Ref<TextDecoder>> create(const String& label, Options);
 
     String encoding() const;
     bool fatal() const { return m_options.fatal; }
     bool ignoreBOM() const { return m_options.ignoreBOM; }
+
+    struct DecodeOptions {
+        bool stream { false };
+    };
     ExceptionOr<String> decode(Optional<BufferSource::VariantType>, DecodeOptions);
 
 private:
-    String prependBOMIfNecessary(const String&);
-    void ignoreBOMIfNecessary(const uint8_t*& data, size_t& length);
     TextDecoder(const char*, Options);
-    TextEncoding m_textEncoding;
-    Options m_options;
-    bool m_hasDecoded { false };
-    Vector<uint8_t> m_buffer;
+
+    const TextEncoding m_textEncoding;
+    const Options m_options;
+    std::unique_ptr<TextCodec> m_codec;
 };
 
 }

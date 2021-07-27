@@ -721,13 +721,12 @@ namespace JSC {
     enum class ClassElementTag : uint8_t { No, Instance, Static, LastTag };
     class PropertyNode final : public ParserArenaFreeable {
     public:
-        enum Type : uint8_t { Constant = 1, Getter = 2, Setter = 4, Computed = 8, Shorthand = 16, Spread = 32, Private = 64 };
-        enum PutType : uint8_t { Unknown, KnownDirect };
+        enum Type : uint16_t { Constant = 1, Getter = 2, Setter = 4, Computed = 8, Shorthand = 16, Spread = 32, PrivateField = 64, PrivateMethod = 128, PrivateSetter = 256, PrivateGetter = 512 };
 
-        PropertyNode(const Identifier&, ExpressionNode*, Type, PutType, SuperBinding, ClassElementTag);
-        PropertyNode(ExpressionNode*, Type, PutType, SuperBinding, ClassElementTag);
-        PropertyNode(ExpressionNode* propertyName, ExpressionNode*, Type, PutType, SuperBinding, ClassElementTag);
-        PropertyNode(const Identifier&, ExpressionNode* propertyName, ExpressionNode*, Type, PutType, SuperBinding, ClassElementTag);
+        PropertyNode(const Identifier&, ExpressionNode*, Type, SuperBinding, ClassElementTag);
+        PropertyNode(ExpressionNode*, Type, SuperBinding, ClassElementTag);
+        PropertyNode(ExpressionNode* propertyName, ExpressionNode*, Type, SuperBinding, ClassElementTag);
+        PropertyNode(const Identifier&, ExpressionNode* propertyName, ExpressionNode*, Type, SuperBinding, ClassElementTag);
 
         ExpressionNode* expressionName() const { return m_expression; }
         const Identifier* name() const { return m_name; }
@@ -739,21 +738,30 @@ namespace JSC {
         bool isInstanceClassProperty() const { return static_cast<ClassElementTag>(m_classElementTag) == ClassElementTag::Instance; }
         bool isClassField() const { return isClassProperty() && !needsSuperBinding(); }
         bool isInstanceClassField() const { return isInstanceClassProperty() && !needsSuperBinding(); }
+        bool isStaticClassField() const { return isStaticClassProperty() && !needsSuperBinding(); }
         bool isOverriddenByDuplicate() const { return m_isOverriddenByDuplicate; }
-        bool isPrivate() const { return m_type & Private; }
+        bool isPrivate() const { return m_type & (PrivateField | PrivateMethod | PrivateGetter | PrivateSetter); }
         bool hasComputedName() const { return m_expression; }
         bool isComputedClassField() const { return isClassField() && hasComputedName(); }
         void setIsOverriddenByDuplicate() { m_isOverriddenByDuplicate = true; }
-        PutType putType() const { return static_cast<PutType>(m_putType); }
+
+        ALWAYS_INLINE static bool isUnderscoreProtoSetter(VM& vm, const PropertyNode& node)
+        {
+            return isUnderscoreProtoSetter(vm, node.name(), node.type(), node.needsSuperBinding(), node.isClassProperty());
+        }
+
+        ALWAYS_INLINE static bool isUnderscoreProtoSetter(VM& vm, const Identifier* name, Type type, bool needsSuperBinding, bool isClassProperty)
+        {
+            return name && *name == vm.propertyNames->underscoreProto && type == Type::Constant && !needsSuperBinding && !isClassProperty;
+        }
 
     private:
         friend class PropertyListNode;
         const Identifier* m_name;
         ExpressionNode* m_expression;
         ExpressionNode* m_assign;
-        unsigned m_type : 7;
+        unsigned m_type : 10;
         unsigned m_needsSuperBinding : 1;
-        unsigned m_putType : 1;
         static_assert(1 << 2 > static_cast<unsigned>(ClassElementTag::LastTag), "ClassElementTag shouldn't use more than two bits");
         unsigned m_classElementTag : 2;
         unsigned m_isOverriddenByDuplicate : 1;
@@ -775,22 +783,38 @@ namespace JSC {
         }
         bool hasInstanceFields() const;
 
+        bool isStaticClassField() const
+        {
+            return m_node->isStaticClassField();
+        }
+
+        void setHasPrivateAccessors(bool hasPrivateAccessors)
+        {
+            m_hasPrivateAccessors = hasPrivateAccessors;
+        }
+
+        bool hasPrivateAccessors() const
+        {
+            return m_hasPrivateAccessors;
+        }
+
         static bool shouldCreateLexicalScopeForClass(PropertyListNode*);
 
-        RegisterID* emitBytecode(BytecodeGenerator&, RegisterID*, RegisterID*, Vector<JSTextPosition>*);
+        RegisterID* emitBytecode(BytecodeGenerator&, RegisterID*, RegisterID*, Vector<JSTextPosition>*, Vector<JSTextPosition>*);
 
         void emitDeclarePrivateFieldNames(BytecodeGenerator&, RegisterID* scope);
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator& generator, RegisterID* dst = nullptr) final
         {
-            return emitBytecode(generator, dst, nullptr, nullptr);
+            return emitBytecode(generator, dst, nullptr, nullptr, nullptr);
         }
         void emitPutConstantProperty(BytecodeGenerator&, RegisterID*, PropertyNode&);
         void emitSaveComputedFieldName(BytecodeGenerator&, PropertyNode&);
 
         PropertyNode* m_node;
         PropertyListNode* m_next { nullptr };
+        bool m_hasPrivateAccessors { false };
     };
 
     class ObjectLiteralNode final : public ExpressionNode {
@@ -825,7 +849,7 @@ namespace JSC {
         bool m_subscriptHasAssignments;
     };
 
-    enum class DotType { Name, PrivateField };
+    enum class DotType { Name, PrivateMember };
     class BaseDotNode : public ExpressionNode {
     public:
         BaseDotNode(const JSTokenLocation&, ExpressionNode* base, const Identifier&, DotType);
@@ -833,7 +857,7 @@ namespace JSC {
         ExpressionNode* base() const { return m_base; }
         const Identifier& identifier() const { return m_ident; }
         DotType type() const { return m_type; }
-        bool isPrivateField() const { return m_type == DotType::PrivateField; }
+        bool isPrivateMember() const { return m_type == DotType::PrivateMember; }
 
         RegisterID* emitGetPropertyValue(BytecodeGenerator&, RegisterID* dst, RegisterID* base, RefPtr<RegisterID>& thisValue);
         RegisterID* emitGetPropertyValue(BytecodeGenerator&, RegisterID* dst, RegisterID* base);
@@ -857,7 +881,7 @@ namespace JSC {
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
 
         bool isLocation() const final { return true; }
-        bool isPrivateLocation() const override { return m_type == DotType::PrivateField; }
+        bool isPrivateLocation() const override { return m_type == DotType::PrivateMember; }
         bool isDotAccessorNode() const final { return true; }
     };
 
@@ -901,9 +925,13 @@ namespace JSC {
     class ArgumentsNode final : public ParserArenaFreeable {
     public:
         ArgumentsNode();
-        ArgumentsNode(ArgumentListNode*);
+        ArgumentsNode(ArgumentListNode*, bool hasAssignments);
+
+        bool hasAssignments() const { return m_hasAssignments; }
 
         ArgumentListNode* m_listNode;
+    private:
+        bool m_hasAssignments { false };
     };
 
     class NewExprNode final : public ExpressionNode, public ThrowableExpressionData {
@@ -1863,7 +1891,6 @@ namespace JSC {
         int startStartOffset() const { return m_startStartOffset; }
         int startLineStartOffset() const { return m_startLineStartOffset; }
 
-        void setFeatures(CodeFeatures features) { m_features = features; }
         CodeFeatures features() { return m_features; }
         InnerArrowFunctionCodeFeatures innerArrowFunctionCodeFeatures() { return m_innerArrowFunctionCodeFeatures; }
         bool doAnyInnerArrowFunctionsUseAnyFeature() { return m_innerArrowFunctionCodeFeatures != NoInnerArrowFunctionFeatures; }
@@ -1878,7 +1905,6 @@ namespace JSC {
         bool usesArguments() const { return (m_features & ArgumentsFeature) && !(m_features & ShadowsArgumentsFeature); }
         bool usesArrowFunction() const { return m_features & ArrowFunctionFeature; }
         bool isStrictMode() const { return m_features & StrictModeFeature; }
-        void setUsesArguments() { m_features |= ArgumentsFeature; }
         bool usesThis() const { return m_features & ThisFeature; }
         bool usesSuperCall() const { return m_features & SuperCallFeature; }
         bool usesSuperProperty() const { return m_features & SuperPropertyFeature; }
@@ -1888,6 +1914,7 @@ namespace JSC {
         bool captures(UniquedStringImpl* uid) { return m_varDeclarations.captures(uid); }
         bool captures(const Identifier& ident) { return captures(ident.impl()); }
         bool hasSloppyModeHoistedFunction(UniquedStringImpl* uid) const { return m_sloppyModeHoistedFunctions.contains(uid); }
+        bool usesNonSimpleParameterList() const { return m_features & NonSimpleParameterListFeature; }
 
         bool needsNewTargetRegisterForThisScope() const
         {
@@ -1963,6 +1990,7 @@ namespace JSC {
 
         unsigned startColumn() const { return m_startColumn; }
         unsigned endColumn() const { return m_endColumn; }
+        bool usesAwait() const { return m_usesAwait; }
 
         static constexpr bool scopeIsFunction = false;
 
@@ -1975,6 +2003,7 @@ namespace JSC {
         void emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
         unsigned m_startColumn;
         unsigned m_endColumn;
+        bool m_usesAwait;
         Ref<ModuleScopeData> m_moduleScopeData;
     };
 
@@ -2145,6 +2174,9 @@ namespace JSC {
         void setEcmaName(const Identifier& ecmaName) { m_ecmaName = ecmaName; }
         const Identifier& ecmaName() { return m_ident.isEmpty() ? m_ecmaName : m_ident; }
 
+        void setPrivateBrandRequirement(PrivateBrandRequirement privateBrandRequirement) { m_privateBrandRequirement = static_cast<unsigned>(privateBrandRequirement); }
+        PrivateBrandRequirement privateBrandRequirement() { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
+
         FunctionMode functionMode() { return m_functionMode; }
 
         int functionNameStart() const { return m_functionNameStart; }
@@ -2193,6 +2225,7 @@ namespace JSC {
         unsigned m_constructorKind : 2;
         unsigned m_needsClassFieldInitializer : 1;
         unsigned m_isArrowFunctionBodyExpression : 1;
+        unsigned m_privateBrandRequirement : 1;
         SourceParseMode m_parseMode;
         FunctionMode m_functionMode;
         Identifier m_ident;
@@ -2363,6 +2396,9 @@ namespace JSC {
         virtual bool isRestParameter() const { return false; }
         virtual RegisterID* emitDirectBinding(BytecodeGenerator&, RegisterID*, ExpressionNode*) { return nullptr; }
 
+        virtual RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const { return nullptr; }
+        virtual void finishDirectBindingAssignment(BytecodeGenerator&) const { }
+
     protected:
         DestructuringPatternNode();
     };
@@ -2449,6 +2485,9 @@ namespace JSC {
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
 
+        RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
+        void finishDirectBindingAssignment(BytecodeGenerator&) const;
+
     private:
         void collectBoundIdentifiers(Vector<Identifier>&) const final;
         void bindValue(BytecodeGenerator&, RegisterID*) const final;
@@ -2486,6 +2525,9 @@ namespace JSC {
 
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
+
+        RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
+        void finishDirectBindingAssignment(BytecodeGenerator&) const;
 
     private:
         void collectBoundIdentifiers(Vector<Identifier>&) const final;

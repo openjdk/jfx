@@ -842,7 +842,7 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
 
-    public void disposePeer() {
+    void disposePeer() {
         if (peer == null) {
             // This is fine, the window is either not shown yet and there is no
             // need in disposing scene peer, or is hidden and disposePeer()
@@ -2135,7 +2135,7 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT);
     }
 
-    public void processKeyEvent(KeyEvent e) {
+    void processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
                 dndGesture = null;
@@ -2221,7 +2221,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    public void enableInputMethodEvents(boolean enable) {
+    void enableInputMethodEvents(boolean enable) {
        if (peer != null) {
            peer.enableInputMethodEvents(enable);
        }

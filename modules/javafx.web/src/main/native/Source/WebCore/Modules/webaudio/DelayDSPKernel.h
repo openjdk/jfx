@@ -38,6 +38,7 @@ public:
     DelayDSPKernel(double maxDelayTime, float sampleRate);
 
     void process(const float* source, float* destination, size_t framesToProcess) override;
+    void processOnlyAudioParams(size_t framesToProcess) final;
     void reset() override;
 
     double maxDelayTime() const { return m_maxDelayTime; }
@@ -46,14 +47,12 @@ public:
 
     double tailTime() const override;
     double latencyTime() const override;
+    bool requiresTailProcessing() const final;
 
 private:
     AudioFloatArray m_buffer;
     double m_maxDelayTime;
-    int m_writeIndex;
-    double m_currentDelayTime;
-    double m_smoothingRate;
-    bool m_firstTime;
+    int m_writeIndex { 0 };
     double m_desiredDelayFrames;
 
     AudioFloatArray m_delayTimes;
