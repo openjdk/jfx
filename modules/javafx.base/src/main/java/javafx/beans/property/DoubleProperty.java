@@ -92,7 +92,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<Number> other) {
+    public void unbindBidirectional(Property<?> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

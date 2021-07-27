@@ -85,7 +85,7 @@ public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<ObservableList<E>> other) {
+    public void unbindBidirectional(Property<?> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

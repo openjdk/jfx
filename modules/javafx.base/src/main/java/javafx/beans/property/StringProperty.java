@@ -127,7 +127,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property other) {
+    public void unbindBidirectional(Property<?> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         BidirectionalBinding.unbind(this, other);
     }
@@ -141,15 +141,15 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      *
      * @param other
      *            the other {@code Property}
-     * @throws NullPointerException
-     *             if {@code other} is {@code null}
      * @throws IllegalArgumentException
      *             if {@code other} is {@code this}
      * @since JavaFX 2.1
      */
     @Deprecated(since = "18", forRemoval = true)
     public void unbindBidirectional(Object other) {
-        Bindings.unbindBidirectional(this, other);
+        if (other instanceof Property<?>) {
+            unbindBidirectional((Property<?>)other);
+        }
     }
 
     /**

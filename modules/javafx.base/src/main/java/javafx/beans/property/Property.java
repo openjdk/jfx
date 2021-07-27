@@ -138,6 +138,6 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is {@code this}
      */
-    void unbindBidirectional(Property<T> other);
+    void unbindBidirectional(Property<?> other);
 
 }

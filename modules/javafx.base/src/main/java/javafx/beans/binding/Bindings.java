@@ -875,18 +875,16 @@ public final class Bindings {
      * Delete a bidirectional binding that was previously defined with
      * {@link #bindBidirectional(Property, Property)}.
      *
-     * @param <T>
-     *            the types of the properties
      * @param property1
-     *            the first {@code Property<T>}
+     *            the first {@code Property}
      * @param property2
-     *            the second {@code Property<T>}
+     *            the second {@code Property}
      * @throws NullPointerException
      *            if one of the properties is {@code null}
      * @throws IllegalArgumentException
      *            if both properties are equal
      */
-    public static <T> void unbindBidirectional(Property<T> property1, Property<T> property2) {
+    public static void unbindBidirectional(Property<?> property1, Property<?> property2) {
         BidirectionalBinding.unbind(property1, property2);
     }
 
