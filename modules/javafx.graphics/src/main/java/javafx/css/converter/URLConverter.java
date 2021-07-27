@@ -58,8 +58,8 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
     }
 
     /**
-     * Get the {@code URLConverter} instance.
-     * @return the {@code URLConverter} instance.
+     * Gets the {@code URLConverter} instance.
+     * @return the {@code URLConverter} instance
      */
     public static StyleConverter<ParsedValue[], String> getInstance() {
         return Holder.INSTANCE;
@@ -252,12 +252,13 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
     /**
      * Converter to convert a sequence of URLs to a String[].
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], String>[], String[]> {
 
         /**
-         * Get the {@code SequenceConverter} instance.
-         * @return the {@code SequenceConverter} instance.
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
          */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

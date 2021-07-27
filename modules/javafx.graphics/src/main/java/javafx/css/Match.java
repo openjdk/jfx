@@ -66,8 +66,8 @@ public final class Match implements Comparable<Match> {
     }
 
     /**
-     * Gets the Selector.
-     * @return the selector.
+     * Gets the {@code Selector}.
+     * @return the {@code Selector}
      */
     public Selector getSelector() {
         return selector;
@@ -75,7 +75,7 @@ public final class Match implements Comparable<Match> {
 
     /**
      * Gets the pseudo class state.
-     * @return the pseudo class state.
+     * @return the pseudo class state
      */
     public PseudoClassState getPseudoClasses() {
         return pseudoClasses;

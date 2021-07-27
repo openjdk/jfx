@@ -82,8 +82,10 @@ public abstract class PseudoClass {
 
     /**
      * Gets the {@code PseudoClass} instance for a given pseudo class name.
-     * Note : There is only one PseudoClass instance for a given pseudo class name.
-     * @param pseudoClass the name of the pseudo-class
+     * <p>
+     * Note: There is only one {@code PseudoClass} instance for a given pseudo class name.
+     * </p>
+     * @param pseudoClass the name of the pseudo class
      * @return the {@code PseudoClass} instance for a given pseudo class name.
      * It will not return null.
      * @throws IllegalArgumentException if pseudoClass parameter is null or an empty String

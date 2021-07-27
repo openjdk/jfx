@@ -31,7 +31,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 /**
- * Converter to convert a {@code String} to a {@code Color}
+ * Converter to convert a {@code String} to a {@code Color}.
  * @since 9
  */
 public final class ColorConverter extends StyleConverter<String, Color> {
@@ -42,8 +42,8 @@ public final class ColorConverter extends StyleConverter<String, Color> {
 
     // lazy, thread-safe instatiation
     /**
-     * Get the {@code ColorConverter} instance.
-     * @return the {@code ColorConverter} instance.
+     * Gets the {@code ColorConverter} instance.
+     * @return the {@code ColorConverter} instance
      */
     public static StyleConverter<String, Color> getInstance() {
         return Holder.COLOR_INSTANCE;

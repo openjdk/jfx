@@ -42,8 +42,8 @@ public class ShapeConverter extends StyleConverter<String, Shape> {
     private static final ShapeConverter INSTANCE = new ShapeConverter();
 
     /**
-     * Get the {@code ShapeConverter} instance.
-     * @return the {@code ShapeConverter} instance.
+     * Gets the {@code ShapeConverter} instance.
+     * @return the {@code ShapeConverter} instance
      */
     public static StyleConverter<String, Shape> getInstance() { return INSTANCE; }
 
@@ -68,7 +68,7 @@ public class ShapeConverter extends StyleConverter<String, Shape> {
     private static Map<ParsedValue<String, Shape>, Shape> cache;
 
     /**
-     * Clears the ShapeConverter cache.
+     * Clears the {@code ShapeConverter} cache.
      */
     public static void clearCache() { if (cache != null) cache.clear(); }
 

@@ -51,8 +51,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
     }
 
     /**
-     * Get the {@code FontConverter} instance.
-     * @return the {@code FontConverter} instance.
+     * Gets the {@code FontConverter} instance.
+     * @return the {@code FontConverter} instance
      */
     public static StyleConverter<ParsedValue[], Font> getInstance() {
         return Holder.INSTANCE;
@@ -117,6 +117,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
 
     /**
      * Converter to convert a {@code String} value to a {@code FontPosture} object.
+     *
+     * @since 9
      */
     public static final class FontStyleConverter extends StyleConverter<String, FontPosture> {
 
@@ -126,8 +128,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
 
         /**
-         * Get the {@code FontStyleConverter} instance.
-         * @return the {@code FontStyleConverter} instance.
+         * Gets the {@code FontStyleConverter} instance.
+         * @return the {@code FontStyleConverter} instance
          */
         public static FontStyleConverter getInstance() {
             return Holder.INSTANCE;
@@ -170,6 +172,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
 
     /**
      * Converter to convert a {@code String} value to a {@code FontWeight} object.
+     *
+     * @since 9
      */
     public static final class FontWeightConverter extends StyleConverter<String, FontWeight> {
 
@@ -179,8 +183,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
 
         /**
-         * Get the {@code FontWeightConverter} instance.
-         * @return the {@code FontWeightConverter} instance.
+         * Gets the {@code FontWeightConverter} instance.
+         * @return the {@code FontWeightConverter} instance
          */
         public static FontWeightConverter getInstance() {
             return Holder.INSTANCE;
@@ -224,6 +228,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
 
     /**
      * Converter to convert a parsed font size value to a {@code Number} object.
+     *
+     * @since 9
      */
     public static final class FontSizeConverter extends StyleConverter<ParsedValue<?, Size>, Number> {
 
@@ -233,8 +239,8 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
 
         /**
-         * Get the {@code FontSizeConverter} instance.
-         * @return the {@code FontSizeConverter} instance.
+         * Gets the {@code FontSizeConverter} instance.
+         * @return the {@code FontSizeConverter} instance
          */
         public static FontSizeConverter getInstance() {
             return Holder.INSTANCE;

@@ -43,8 +43,8 @@ public final class LadderConverter extends StyleConverter<ParsedValue[], Color> 
     }
 
     /**
-     * Get the {@code LadderConverter} instance.
-     * @return the {@code LadderConverter} instance.
+     * Gets the {@code LadderConverter} instance.
+     * @return the {@code LadderConverter} instance
      */
     public static LadderConverter getInstance() {
         return Holder.INSTANCE;

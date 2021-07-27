@@ -31,7 +31,7 @@ import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 /**
- * Converter to convert a {@code Size} to a {@code Number}
+ * Converter to convert a {@code Size} to a {@code Number}.
  *
  * @since 9
  */
@@ -44,8 +44,8 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Nu
     }
 
     /**
-     * Get the {@code SizeConverter} instance.
-     * @return the {@code SizeConverter} instance.
+     * Gets the {@code SizeConverter} instance.
+     * @return the {@code SizeConverter} instance
      */
     public static StyleConverter<ParsedValue<?, Size>, Number> getInstance() {
         return Holder.INSTANCE;
@@ -68,12 +68,13 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Nu
 
     /**
      * Converter to convert a sequence of sizes to an array of {@code Number}.
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue[], Number[]> {
 
         /**
-         * Get the {@code SequenceConverter} instance.
-         * @return the {@code SequenceConverter} instance.
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
          */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

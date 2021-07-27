@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Used by CSSRule to determine whether or not the selector applies to a
+ * Used by {@code CSSRule} to determine whether or not the {@code Selector} applies to a
  * given object.
  *
  * @since 9
@@ -59,15 +59,15 @@ abstract public class Selector {
 
     private Rule rule;
     /**
-     * Sets {@code Rule} of this Selector
-     * @param rule Rule of this Selector
+     * Sets the {@code Rule} of this Selector.
+     * @param rule the {@code Rule} of this Selector
      */
     void setRule(Rule rule) {
         this.rule = rule;
     }
 
     /**
-     * Gets {@code Rule} of this Selector
+     * Gets the {@code Rule} of this Selector.
      * @return rule
      */
     public Rule getRule() {
@@ -76,23 +76,23 @@ abstract public class Selector {
 
     private int ordinal = -1;
     /**
-     * Sets ordinal of this Selector
-     * @param ordinal ordinal of this Selector
+     * Sets the ordinal of this Selector.
+     * @param ordinal the ordinal of this Selector
      */
     public void setOrdinal(int ordinal) {
         this.ordinal = ordinal;
     }
 
     /**
-     * Gets ordinal
-     * @return ordinal
+     * Gets the ordinal of this Selector.
+     * @return the ordinal of this Selector
      */
     public int getOrdinal() {
         return ordinal;
     }
 
     /**
-     * Creates a {@code Match}
+     * Creates a {@code Match}.
      * @return match
      */
     public abstract Match createMatch();
@@ -128,7 +128,7 @@ abstract public class Selector {
     private static final int TYPE_COMPOUND = 2;
 
     /**
-     * Writes {@code Selector} data in binary form to given {@code DataOutputStream}
+     * Writes {@code Selector} data in binary form to given {@code DataOutputStream}.
      * @param os {@code DataOutputStream} to write {@code Selector} data to
      * @param stringStore unsused
      * @throws IOException if writing to {@code DataOutputStream} fails
@@ -159,7 +159,7 @@ abstract public class Selector {
     }
 
     /**
-     * Creates a {@code Selector} object
+     * Creates a {@code Selector} object.
      * @param cssSelector css selector string
      * @return a Selector
      */

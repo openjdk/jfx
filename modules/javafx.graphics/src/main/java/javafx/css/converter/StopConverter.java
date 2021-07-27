@@ -33,7 +33,7 @@ import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 
 /**
- * Converter to convert a {@code Stop} from a {@code Size} and a {@code Color}
+ * Converter to convert a {@code Stop} from a {@code Size} and a {@code Color}.
  */
 public final class StopConverter extends StyleConverter<ParsedValue[], Stop> {
 
@@ -43,8 +43,8 @@ public final class StopConverter extends StyleConverter<ParsedValue[], Stop> {
     }
 
     /**
-     * Get the {@code StopConverter} instance.
-     * @return the {@code StopConverter} instance.
+     * Gets the {@code StopConverter} instance.
+     * @return the {@code StopConverter} instance
      */
     public static StopConverter getInstance() {
         return Holder.INSTANCE;

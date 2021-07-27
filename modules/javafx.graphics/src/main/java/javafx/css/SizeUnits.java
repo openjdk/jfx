@@ -35,7 +35,7 @@ import javafx.scene.text.Font;
 public enum SizeUnits {
 
     /**
-     * Percentage
+     * Represents a size as a percentage.
      */
     PERCENT(false) {
 
@@ -55,7 +55,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Inches
+     * Represents a size in inches.
      */
     IN(true) {
 
@@ -75,7 +75,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Centimeters
+     * Represents a size in centimeters.
      */
     CM(true) {
 
@@ -95,7 +95,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Millimeters
+     * Represents a size in millimeters.
      */
     MM(true) {
 
@@ -115,7 +115,8 @@ public enum SizeUnits {
     },
 
     /**
-     * EM (Unit relative to the font-size of the element)
+     * Represents a size in EM unit.
+     * Note: It is a unit relative to the font-size of the element.
      */
     EM(false) {
 
@@ -135,7 +136,8 @@ public enum SizeUnits {
     },
 
     /**
-     * EX
+     * Represents a size in EX unit.
+     * Note: In the absence of font metrics, one {@code EX} is taken to be half an {@code EM} unit.
      */
     EX(false) {
 
@@ -157,7 +159,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Points
+     * Represents a size in points.
      */
     PT(true) {
         @Override
@@ -176,7 +178,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Picas
+     * Represents a size in picas.
      */
     PC(true) {
         @Override
@@ -195,7 +197,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Pixels
+     * Represents a size in pixels.
      */
     PX(true) {
         @Override
@@ -214,7 +216,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Degrees
+     * Represents an angle in degrees.
      */
     DEG(true) {
         @Override
@@ -233,7 +235,8 @@ public enum SizeUnits {
     },
 
     /**
-     * Gradians (400 Gradians = 360 Degrees)
+     * Represents an angle in gradians.
+     * Note: 400 Gradians = 360 Degrees.
      */
     GRAD(true) {
 
@@ -255,7 +258,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Radians
+     * Represents an angle in radians.
      */
     RAD(true) {
 
@@ -277,7 +280,8 @@ public enum SizeUnits {
     },
 
     /**
-     * Turns (1 Turn = 360 Degrees)
+     * Represents an angle in turns.
+     * Note: 1 Turn = 360 Degrees.
      */
     TURN(true) {
 
@@ -298,7 +302,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Seconds
+     * Represents time in seconds.
      */
     S(true) {
 
@@ -318,7 +322,7 @@ public enum SizeUnits {
     },
 
     /**
-     * Milliseconds
+     * Represents time in milliseconds.
      */
     MS(true) {
 
@@ -338,7 +342,7 @@ public enum SizeUnits {
     };
 
     /**
-     * Calculates points for a particular {@code SizeUnits}
+     * Calculates points for a particular {@code SizeUnits}.
      * @param value value
      * @param multiplier multiplier
      * @param font font
@@ -347,7 +351,7 @@ public enum SizeUnits {
     public abstract double points(double value, double multiplier, Font font);
 
     /**
-     * Calculates pixels for a particular {@code SizeUnits}
+     * Calculates pixels for a particular {@code SizeUnits}.
      * @param value value
      * @param multiplier multiplier
      * @param font font
@@ -362,7 +366,7 @@ public enum SizeUnits {
     private final boolean absolute;
 
     /**
-     * Gets wehther this {@code SizeUnits} value is absolute
+     * Gets wehther this {@code SizeUnits} value is absolute.
      * @return whether value is absoulute
      */
     public boolean isAbsolute() {

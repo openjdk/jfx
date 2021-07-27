@@ -32,7 +32,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 /**
- * Converter to convert a combination of color and brightness values to a derived {@code Color}
+ * Converter to convert a combination of color and brightness values to a derived {@code Color}.
  */
 public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Color> {
 
@@ -42,8 +42,8 @@ public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Co
     }
 
     /**
-     * Get the {@code DeriveColorConverter} instance.
-     * @return the {@code DeriveColorConverter} instance.
+     * Gets the {@code DeriveColorConverter} instance.
+     * @return the {@code DeriveColorConverter} instance
      */
     public static DeriveColorConverter getInstance() {
         return Holder.INSTANCE;

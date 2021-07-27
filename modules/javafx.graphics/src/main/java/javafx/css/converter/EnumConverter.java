@@ -49,8 +49,8 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
     final Class<E> enumClass;
 
     /**
-     * Creates an {@code EnumConvertor} object
-     * @param enumClass enum Class
+     * Creates an {@code EnumConvertor} object.
+     * @param enumClass enum class
      */
     public EnumConverter(Class<E> enumClass) {
         this.enumClass = enumClass;
@@ -88,7 +88,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
      * Reads binary {@code StyleConverter} data from a given {@code DataInputStream}.
      * @param is {@code DataInputStream} to read {@code StyleConverter} data from
      * @param strings string array containing StyleConverter details
-     * @return A {@code StyleConverter} from read binary data
+     * @return a {@code StyleConverter} from read binary data
      * @throws IOException if reading from {@code DataInputStream} fails
      */
     public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)

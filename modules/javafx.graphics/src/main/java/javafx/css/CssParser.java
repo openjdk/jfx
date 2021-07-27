@@ -113,7 +113,7 @@ import java.util.Stack;
 final public class CssParser {
 
     /**
-     * Constructs a {@code CssParser}
+     * Constructs a {@code CssParser}.
      */
     public CssParser() {
         properties = new HashMap<String,String>();
@@ -4721,8 +4721,8 @@ final public class CssParser {
     }
 
     /**
-     * List of errors that may have occurred during css processing.
-     * @return An {@code ObservableList} of {@code ParseError}
+     * List of errors that may have occurred during CSS processing.
+     * @return an {@code ObservableList} of {@code ParseError}
      */
     public static ObservableList<ParseError> errorsProperty() {
         return StyleManager.errorsProperty();
@@ -4737,14 +4737,15 @@ final public class CssParser {
     public static class ParseError {
 
         /**
-         * @return The error message from the CSS code.
+         * Returns the error message.
+         * @return the error message
          */
         public final String getMessage() {
             return message;
         }
 
         /**
-         * Constructs a {@code ParseError} object with given message.
+         * Constructs a {@code ParseError} object with the message.
          * @param message message
          */
         public ParseError(String message) {
@@ -4832,7 +4833,7 @@ final public class CssParser {
 
             /**
              * Constructs a {@code PropertySetError} object.
-             * @param styleableProperty css meta data
+             * @param styleableProperty CSS meta data
              * @param styleable styleable node
              * @param message parse error message
              */

@@ -43,8 +43,8 @@ public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, 
     }
 
     /**
-     * Get the {@code DeriveSizeConverter} instance.
-     * @return the {@code DeriveSizeConverter} instance.
+     * Gets the {@code DeriveSizeConverter} instance.
+     * @return the {@code DeriveSizeConverter} instance
      */
     public static DeriveSizeConverter getInstance() {
         return Holder.INSTANCE;

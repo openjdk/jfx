@@ -38,7 +38,7 @@ import javafx.scene.text.Font;
 import java.util.Map;
 
 /**
- * Converter to convert representation of an {@code Effect} to an {@code Effect}
+ * Converter to convert representation of an {@code Effect} to an {@code Effect}.
  * @since 9
  */
 public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
@@ -54,8 +54,8 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     }
 
     /**
-     * Get the {@code EffectConverter} instance.
-     * @return the {@code EffectConverter} instance.
+     * Gets the {@code EffectConverter} instance.
+     * @return the {@code EffectConverter} instance
      */
     public static StyleConverter<ParsedValue[], Effect> getInstance() {
         return Holder.EFFECT_CONVERTER;
@@ -79,14 +79,14 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     }
 
     /**
-     * Converter to convert DropShadow {@code Effect}
+     * Converter to convert DropShadow {@code Effect}.
      * @since 9
      */
     public static final class DropShadowConverter extends EffectConverter {
 
         /**
-         * Get the {@code DropShadowConverter} instance.
-         * @return the {@code DropShadowConverter} instance.
+         * Gets the {@code DropShadowConverter} instance.
+         * @return the {@code DropShadowConverter} instance
          */
         public static DropShadowConverter getInstance() {
             return Holder.DROP_SHADOW_INSTANCE;
@@ -158,14 +158,14 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     }
 
     /**
-     * Converter to convert InnerShadow {@code Effect}
+     * Converter to convert InnerShadow {@code Effect}.
      * @since 9
      */
     public static final class InnerShadowConverter extends EffectConverter {
 
         /**
-         * Get the {@code InnerShadowConverter} instance.
-         * @return the {@code InnerShadowConverter} instance.
+         * Gets the {@code InnerShadowConverter} instance.
+         * @return the {@code InnerShadowConverter} instance
          */
         public static InnerShadowConverter getInstance() {
             return Holder.INNER_SHADOW_INSTANCE;

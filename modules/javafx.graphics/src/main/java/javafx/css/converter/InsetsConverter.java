@@ -50,8 +50,8 @@ public final class InsetsConverter extends StyleConverter<ParsedValue[], Insets>
     }
 
     /**
-     * Get the {@code InsetsConverter} instance.
-     * @return the {@code InsetsConverter} instance.
+     * Gets the {@code InsetsConverter} instance.
+     * @return the {@code InsetsConverter} instance
      */
     public static StyleConverter<ParsedValue[], Insets> getInstance() {
         return Holder.INSTANCE;
@@ -79,12 +79,13 @@ public final class InsetsConverter extends StyleConverter<ParsedValue[], Insets>
     /**
      * Converter to convert an array of parsed values, each of which is an array
      * of 1 to 4 size components, to an array of {@code Insets} objects.
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], Insets>[], Insets[]> {
 
         /**
-         * Get the {@code SequenceConverter} instance.
-         * @return the {@code SequenceConverter} instance.
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
          */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

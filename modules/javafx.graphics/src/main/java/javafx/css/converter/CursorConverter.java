@@ -31,7 +31,7 @@ import javafx.scene.Cursor;
 import javafx.scene.text.Font;
 
 /**
- * Converter to convert a {@code String} to a {@code Cursor}
+ * Converter to convert a {@code String} to a {@code Cursor}.
  * @since 9
  */
 public final class CursorConverter extends StyleConverter<String, Cursor> {
@@ -42,8 +42,8 @@ public final class CursorConverter extends StyleConverter<String, Cursor> {
     }
 
     /**
-     * Get the {@code CursorConverter} instance.
-     * @return the {@code CursorConverter} instance.
+     * Gets the {@code CursorConverter} instance.
+     * @return the {@code CursorConverter} instance
      */
     public static StyleConverter<String, Cursor> getInstance() {
         return Holder.INSTANCE;

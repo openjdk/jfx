@@ -32,7 +32,7 @@ import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 /**
- * Converter to Convert a {@code Size} to {@code Duration}
+ * Converter to Convert a {@code Size} to {@code Duration}.
  *
  * @since 9
  */
@@ -44,8 +44,8 @@ public final class DurationConverter extends StyleConverter<ParsedValue<?, Size>
     }
 
     /**
-     * Get the {@code DurationConverter} instance.
-     * @return the {@code DurationConverter} instance.
+     * Gets the {@code DurationConverter} instance.
+     * @return the {@code DurationConverter} instance
      */
     public static StyleConverter<ParsedValue<?, Size>, Duration> getInstance() {
         return Holder.INSTANCE;

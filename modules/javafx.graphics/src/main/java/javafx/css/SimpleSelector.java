@@ -60,8 +60,10 @@ final public class SimpleSelector extends Selector {
      * then name would be "Rectangle".
      */
     final private String name;
+
     /**
-     * @return The name of the java class to which this selector is applied, or *.
+     * Gets the name of the java class to which this selector is applied, or *.
+     * @return the name of the java class
      */
     public String getName() {
         return name;
@@ -84,8 +86,8 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * Gets {@code Set} of {@code StyleClass} of the selector.
-     * @return styleClassSet
+     * Gets the {@code Set} of {@code StyleClass} of the selector.
+     * @return set of style class
      */
     public Set<StyleClass> getStyleClassSet() {
         return styleClassSet;
@@ -95,9 +97,10 @@ final public class SimpleSelector extends Selector {
     final private StyleClassSet styleClassSet;
 
     final private String id;
+
     /**
-     * Gets the value of the selector id
-     * @return The value of the selector id, which may be an empty string.
+     * Gets the value of the selector id.
+     * @return the value of the selector id, which may be an empty string
      */
     public String getId() {
         return id;

@@ -33,7 +33,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * This class serves as a container of CSS-property and it's value.
+ * This class serves as a container of CSS property and its value.
  * @since 9
  */
 final public class Declaration {
@@ -44,10 +44,10 @@ final public class Declaration {
     Rule rule;
 
     /**
-     * Constructs a {@code Declaration} object
-     * @param propertyName Name of the CSS property
-     * @param parsedValue Value of the CSS property
-     * @param important Importance of the Declaration
+     * Constructs a {@code Declaration} object.
+     * @param propertyName name of the CSS property
+     * @param parsedValue value of the CSS property
+     * @param important importance of the Declaration
      */
     Declaration(final String propertyName, final ParsedValue parsedValue,
                 final boolean important) {
@@ -63,31 +63,31 @@ final public class Declaration {
     }
 
     /**
-     * Get the parsed value
-     * @return ParsedValue
+     * Gets the parsed value.
+     * @return the parsed value
      */
     public ParsedValue getParsedValue() {
         return parsedValue;
     }
 
     /**
-     * Get the CSS property name
-     * @return css-property
+     * Gets the CSS property name.
+     * @return the CSS property
      */
     public String getProperty() {
         return property;
     }
 
     /**
-     * Get the {@code Rule} to which this {@code Declaration} belongs.
-     * @return rule
+     * Gets the {@code Rule} to which this {@code Declaration} belongs.
+     * @return the {@code Rule}
      */
     public Rule getRule() {
         return rule;
     }
 
     /**
-     * Get the importance of this {@code Declaration}.
+     * Gets the importance of this {@code Declaration}.
      * @return important
      */
     public final boolean isImportant() {
@@ -95,7 +95,7 @@ final public class Declaration {
     }
 
     /**
-     * Get the {@code StyleOrigin} of this {@code Declaration}
+     * Gets the {@code StyleOrigin} of this {@code Declaration}.
      */
     private StyleOrigin getOrigin() {
         Rule rule = getRule();
@@ -105,9 +105,13 @@ final public class Declaration {
         return null;
     }
     /**
+     * Indicates whether some other object is "equal to" this one.
+     * <p>
      * One declaration is equal to another regardless of the {@code Rule} to which
      * the {@code Declaration} belongs. Only the property, value and importance are
      * considered.
+     * </p>
+     * @return true if this object is the same as the obj argument; false otherwise.
      */
     @Override public boolean equals(Object obj) {
         if (this == obj) {
@@ -136,7 +140,7 @@ final public class Declaration {
     }
 
     /**
-     * Returns the hash code of this {@code Declaration}
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         int hash = 5;
@@ -147,7 +151,7 @@ final public class Declaration {
     }
 
     /**
-     * Returns a String version of this {@code Declaration}
+     * {@inheritDoc}
      */
     @Override public String toString() {
         StringBuilder sbuf = new StringBuilder(property);

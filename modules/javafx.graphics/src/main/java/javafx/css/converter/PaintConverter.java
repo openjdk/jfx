@@ -57,8 +57,8 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
     }
 
     /**
-     * Get the {@code PaintConverter} instance.
-     * @return the {@code PaintConverter} instance.
+     * Gets the {@code PaintConverter} instance.
+     * @return the {@code PaintConverter} instance
      */
     public static StyleConverter<ParsedValue<?, Paint>, Paint> getInstance() {
         return Holder.INSTANCE;
@@ -84,12 +84,13 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
 
     /**
      * Converter to convert a sequence of parsed values to an array of {@code Paint} objects.
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<?, Paint>[], Paint[]> {
 
         /**
-         * Get the {@code SequenceConverter} instance.
-         * @return the {@code SequenceConverter} instance.
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
          */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
@@ -117,12 +118,13 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
 
     /**
      * Converter to convert linear gradient parsed values to a {@code Paint} object.
+     * @since 9
      */
     public static final class LinearGradientConverter extends StyleConverter<ParsedValue[], Paint> {
 
         /**
-         * Get the {@code LinearGradientConverter} instance.
-         * @return the {@code LinearGradientConverter} instance.
+         * Gets the {@code LinearGradientConverter} instance.
+         * @return the {@code LinearGradientConverter} instance
          */
         public static LinearGradientConverter getInstance() {
             return Holder.LINEAR_GRADIENT_INSTANCE;
@@ -164,12 +166,13 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
 
     /**
      * Converter to convert image pattern parsed values to a {@code Paint} object.
+     * @since 9
      */
     public static final class ImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
 
         /**
-         * Get the {@code ImagePatternConverter} instance.
-         * @return the {@code ImagePatternConverter} instance.
+         * Gets the {@code ImagePatternConverter} instance.
+         * @return the {@code ImagePatternConverter} instance
          */
         public static ImagePatternConverter getInstance() {
             return Holder.IMAGE_PATTERN_INSTANCE;
@@ -217,12 +220,13 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
 
     /**
      * Converter to convert repeating image pattern parsed values to a {@code Paint} object.
+     * @since 9
      */
     public static final class RepeatingImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
 
         /**
-         * Get the {@code RepeatingImagePatternConverter} instance.
-         * @return the {@code RepeatingImagePatternConverter} instance.
+         * Gets the {@code RepeatingImagePatternConverter} instance.
+         * @return the {@code RepeatingImagePatternConverter} instance
          */
         public static RepeatingImagePatternConverter getInstance() {
             return Holder.REPEATING_IMAGE_PATTERN_INSTANCE;
@@ -258,12 +262,13 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
 
     /**
      * Converter to convert radial gradient parsed values to a {@code Paint} object.
+     * @since 9
      */
     public static final class RadialGradientConverter extends StyleConverter<ParsedValue[], Paint> {
 
         /**
-         * Get the {@code RadialGradientConverter} instance.
-         * @return the {@code RadialGradientConverter} instance.
+         * Gets the {@code RadialGradientConverter} instance.
+         * @return the {@code RadialGradientConverter} instance
          */
         public static RadialGradientConverter getInstance() {
             return Holder.RADIAL_GRADIENT_INSTANCE;

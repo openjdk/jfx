@@ -538,7 +538,7 @@ public class StyleConverter<F, T> {
         private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
 
         /**
-         * List of strings of this {@code StringStore}
+         * List of strings of this {@code StringStore}.
          */
         public final List<String> strings = new ArrayList<String>();
 
@@ -587,7 +587,7 @@ public class StyleConverter<F, T> {
         /**
          * Read the StringStore strings from a given {@code DataInputStream}.
          * @param is {@code DataInputStream} from where StringStore strings need to be read from
-         * @return a String array constructed by reading {@code DataInputStream}
+         * @return a {@code String} array constructed by reading {@code DataInputStream}
          * @throws IOException if reading from {@code DataInputStream} fails
          */
         public static String[] readBinary(DataInputStream is) throws IOException {
