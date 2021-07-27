@@ -67,8 +67,10 @@ public abstract class BidirectionalContentBinding implements WeakListener {
     }
 
     public static <E> Object bind(ObservableList<E> list1, ObservableList<E> list2) {
-        unbind(list1, list2);
+        checkParameters(list1, list2, ObservableList.class);
         final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
+        list1.removeListener(binding);
+        list2.removeListener(binding);
         list1.setAll(list2);
         list1.addListener(binding);
         list2.addListener(binding);
@@ -76,8 +78,10 @@ public abstract class BidirectionalContentBinding implements WeakListener {
     }
 
     public static <E> Object bind(ObservableSet<E> set1, ObservableSet<E> set2) {
-        unbind(set1, set2);
+        checkParameters(set1, set2, ObservableSet.class);
         final SetContentBinding<E> binding = new SetContentBinding<>(set1, set2);
+        set1.removeListener(binding);
+        set2.removeListener(binding);
         set1.clear();
         set1.addAll(set2);
         set1.addListener(binding);
@@ -86,8 +90,10 @@ public abstract class BidirectionalContentBinding implements WeakListener {
     }
 
     public static <K, V> Object bind(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
-        unbind(map1, map2);
+        checkParameters(map1, map2, ObservableMap.class);
         final MapContentBinding<K, V> binding = new MapContentBinding<>(map1, map2);
+        map1.removeListener(binding);
+        map2.removeListener(binding);
         map1.clear();
         map1.putAll(map2);
         map1.addListener(binding);

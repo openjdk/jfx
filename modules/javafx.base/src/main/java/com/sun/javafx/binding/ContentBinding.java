@@ -45,45 +45,61 @@ public abstract class ContentBinding implements WeakListener {
     }
 
     public static <E> Object bind(List<E> list1, ObservableList<? extends E> list2) {
-        unbind(list1, list2);
+        checkParameters(list1, list2);
         final ListContentBinding<E> contentBinding = new ListContentBinding<>(list1, list2);
         if (list1 instanceof ObservableList) {
+            ((ObservableList<E>)list1).removeListener(contentBinding);
             ((ObservableList<E>)list1).setAll(list2);
         } else {
             list1.clear();
             list1.addAll(list2);
         }
+
         list2.removeListener(contentBinding);
         list2.addListener(contentBinding);
+
         if (list1 instanceof ObservableList<?>) {
             ((ObservableList<E>)list1).addListener(contentBinding);
         }
+
         return contentBinding;
     }
 
     public static <E> Object bind(Set<E> set1, ObservableSet<? extends E> set2) {
-        unbind(set1, set2);
+        checkParameters(set1, set2);
         final SetContentBinding<E> contentBinding = new SetContentBinding<>(set1, set2);
+        if (set1 instanceof ObservableSet<?>) {
+            ((ObservableSet<E>)set1).removeListener(contentBinding);
+        }
+
+        set2.removeListener(contentBinding);
         set1.clear();
         set1.addAll(set2);
-        set2.removeListener(contentBinding);
         set2.addListener(contentBinding);
+
         if (set1 instanceof ObservableSet<?>) {
             ((ObservableSet<E>)set1).addListener(contentBinding);
         }
+
         return contentBinding;
     }
 
     public static <K, V> Object bind(Map<K, V> map1, ObservableMap<? extends K, ? extends V> map2) {
-        unbind(map1, map2);
+        checkParameters(map1, map2);
         final MapContentBinding<K, V> contentBinding = new MapContentBinding<>(map1, map2);
+        if (map1 instanceof ObservableMap<?, ?>) {
+            ((ObservableMap<? extends K, ? extends V>)map1).removeListener(contentBinding);
+        }
+
+        map2.removeListener(contentBinding);
         map1.clear();
         map1.putAll(map2);
-        map2.removeListener(contentBinding);
         map2.addListener(contentBinding);
+
         if (map1 instanceof ObservableMap<?, ?>) {
             ((ObservableMap<? extends K, ? extends V>)map1).addListener(contentBinding);
         }
+
         return contentBinding;
     }
 
