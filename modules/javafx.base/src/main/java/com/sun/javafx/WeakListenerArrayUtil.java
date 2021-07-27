@@ -30,22 +30,22 @@ import java.util.function.Predicate;
 
 public final class WeakListenerArrayUtil {
 
+    private static final Predicate<Object> collectedTest =
+        t -> t instanceof WeakListener && ((WeakListener)t).wasGarbageCollected();
+
     private WeakListenerArrayUtil() {}
 
     public static int trim(int size, Object[] listeners) {
-        Predicate<Object> p = t -> t instanceof WeakListener &&
-                ((WeakListener)t).wasGarbageCollected();
-
         int index = 0;
         for (; index < size; index++) {
-            if (p.test(listeners[index])) {
+            if (collectedTest.test(listeners[index])) {
                 break;
             }
         }
 
         if (index < size) {
             for (int src = index + 1; src < size; src++) {
-                if (!p.test(listeners[src])) {
+                if (!collectedTest.test(listeners[src])) {
                     listeners[index++] = listeners[src];
                 }
             }

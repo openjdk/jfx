@@ -25,18 +25,19 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.ListExpressionHelper;
-import java.lang.ref.WeakReference;
-import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+
+import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 /**
  * The class {@code ListPropertyBase} is the base class for a property
@@ -296,7 +297,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
     public void bindContent(ObservableList<E> source) {
         Objects.requireNonNull(source, "Source cannot be null");
         ListExpressionHelper.requireNotContentBoundBidirectional(helper);
-        ContentBinding.bind(this, source);
+        Bindings.bindContent(this, source);
     }
 
     @Override
@@ -309,20 +310,20 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
     @Override
     public void unbindContent(Object object) {
-        ContentBinding.unbind(this, object);
+        Bindings.unbindContent(this, object);
     }
 
     @Override
     public void bindContentBidirectional(ObservableList<E> other) {
         Objects.requireNonNull(other, "List cannot be null");
         ListExpressionHelper.requireNotContentBound(helper);
-        BidirectionalContentBinding.bind(this, other);
+        Bindings.bindContentBidirectional(this, other);
     }
 
     @Override
     public void unbindContentBidirectional(ObservableList<E> other) {
         Objects.requireNonNull(other, "List cannot be null");
-        BidirectionalContentBinding.unbind(this, other);
+        Bindings.unbindContentBidirectional(this, other);
     }
 
     @Override
