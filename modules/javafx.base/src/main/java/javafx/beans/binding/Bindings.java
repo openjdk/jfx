@@ -1112,6 +1112,10 @@ public final class Bindings {
      *            the first {@code ObservableMap<K, V>}
      * @param map2
      *            the second {@code ObservableMap<K, V>}
+     * @throws NullPointerException
+     *            if one of the maps is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code map1} == {@code map2}
      * @since JavaFX 2.1
      */
     public static <K, V> void bindContentBidirectional(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
@@ -1144,40 +1148,52 @@ public final class Bindings {
     /**
      * Removes a bidirectional content binding.
      *
-     * @param obj1
+     * @param list1
      *            the first {@code ObservableList}
-     * @param obj2
+     * @param list2
      *            the second {@code ObservableList}
+     * @throws NullPointerException
+     *            if one of the lists is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code list1} == {@code list2}
      * @since 18
      */
-    public static <E> void unbindContentBidirectional(ObservableList<E> obj1, ObservableList<E> obj2) {
-        BidirectionalContentBinding.unbind(obj1, obj2);
+    public static <E> void unbindContentBidirectional(ObservableList<E> list1, ObservableList<E> list2) {
+        BidirectionalContentBinding.unbind(list1, list2);
     }
 
     /**
      * Removes a bidirectional content binding.
      *
-     * @param obj1
+     * @param set1
      *            the first {@code ObservableSet}
-     * @param obj2
+     * @param set2
      *            the second {@code ObservableSet}
+     * @throws NullPointerException
+     *            if one of the sets is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code set1} == {@code set2}
      * @since 18
      */
-    public static <E> void unbindContentBidirectional(ObservableSet<E> obj1, ObservableSet<E> obj2) {
-        BidirectionalContentBinding.unbind(obj1, obj2);
+    public static <E> void unbindContentBidirectional(ObservableSet<E> set1, ObservableSet<E> set2) {
+        BidirectionalContentBinding.unbind(set1, set2);
     }
 
     /**
      * Removes a bidirectional content binding.
      *
-     * @param obj1
+     * @param map1
      *            the first {@code ObservableMap}
-     * @param obj2
+     * @param map2
      *            the second {@code ObservableMap}
+     * @throws NullPointerException
+     *            if one of the maps is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code map1} == {@code map2}
      * @since 18
      */
-    public static <K, V> void unbindContentBidirectional(ObservableMap<K, V> obj1, ObservableMap<K, V> obj2) {
-        BidirectionalContentBinding.unbind(obj1, obj2);
+    public static <K, V> void unbindContentBidirectional(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
+        BidirectionalContentBinding.unbind(map1, map2);
     }
 
     /**
@@ -1200,6 +1216,10 @@ public final class Bindings {
      *            the {@code List}
      * @param list2
      *            the {@code ObservableList}
+     * @throws NullPointerException
+     *            if one of the lists is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code list1} == {@code list2}
      * @since JavaFX 2.1
      */
     public static <E> void bindContent(List<E> list1, ObservableList<? extends E> list2) {
@@ -1269,6 +1289,57 @@ public final class Bindings {
     }
 
     /**
+     * Removes a content binding.
+     *
+     * @param list1
+     *            the first {@code List}
+     * @param list2
+     *            the second {@code ObservableList}
+     * @throws NullPointerException
+     *            if one of the lists is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code list1} == {@code list2}
+     * @since 18
+     */
+    public static <E> void unbindContent(List<E> list1, ObservableList<E> list2) {
+        ContentBinding.unbind(list1, list2);
+    }
+
+    /**
+     * Removes a content binding.
+     *
+     * @param set1
+     *            the first {@code Set}
+     * @param set2
+     *            the second {@code ObservableSet}
+     * @throws NullPointerException
+     *            if one of the sets is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code set1} == {@code set2}
+     * @since 18
+     */
+    public static <E> void unbindContent(Set<E> set1, ObservableSet<E> set2) {
+        ContentBinding.unbind(set1, set2);
+    }
+
+    /**
+     * Removes a content binding.
+     *
+     * @param map1
+     *            the first {@code Map}
+     * @param map2
+     *            the second {@code ObservableMap}
+     * @throws NullPointerException
+     *            if one of the maps is {@code null}
+     * @throws IllegalArgumentException
+     *            if {@code map1} == {@code map2}
+     * @since 18
+     */
+    public static <K, V> void unbindContent(Map<K, V> map1, ObservableMap<K, V> map2) {
+        ContentBinding.unbind(map1, map2);
+    }
+
+    /**
      * Remove a content binding.
      *
      * @param obj1
@@ -1280,9 +1351,19 @@ public final class Bindings {
      * @throws IllegalArgumentException
      *            if {@code obj1} == {@code obj2}
      * @since JavaFX 2.1
+     * @deprecated use {@link #unbindContent(List, ObservableList)},
+     *             {@link #unbindContent(Set, ObservableSet)} or
+     *             {@link #unbindContent(Map, ObservableMap)} instead
      */
+    @Deprecated(since = "18", forRemoval = true)
     public static void unbindContent(Object obj1, Object obj2) {
-        ContentBinding.unbind(obj1, obj2);
+        if (obj1 instanceof List && obj2 instanceof ObservableList) {
+            unbindContent((List)obj1, (ObservableList)obj2);
+        } else if (obj1 instanceof Set && obj2 instanceof ObservableSet) {
+            unbindContent((Set)obj1, (ObservableSet)obj2);
+        } else if (obj1 instanceof Map && obj2 instanceof ObservableMap) {
+            unbindContent((Map)obj1, (ObservableMap)obj2);
+        }
     }
 
 

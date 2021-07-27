@@ -25,10 +25,10 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.SetExpressionHelper;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
@@ -120,7 +120,7 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
     public void bindContent(ObservableSet<E> source) {
         Objects.requireNonNull(source, "Source cannot be null");
         SetExpressionHelper.requireNotContentBoundBidirectional(helper);
-        ContentBinding.bind(this, source);
+        Bindings.bindContent(this, source);
     }
 
     @Override
@@ -133,20 +133,20 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
 
     @Override
     public void unbindContent(Object object) {
-        ContentBinding.unbind(this, object);
+        Bindings.unbindContent(this, object);
     }
 
     @Override
     public void bindContentBidirectional(ObservableSet<E> other) {
         Objects.requireNonNull(other, "Set cannot be null");
         SetExpressionHelper.requireNotContentBound(helper);
-        BidirectionalContentBinding.bind(this, other);
+        Bindings.bindContentBidirectional(this, other);
     }
 
     @Override
     public void unbindContentBidirectional(ObservableSet<E> other) {
         Objects.requireNonNull(other, "Set cannot be null");
-        BidirectionalContentBinding.unbind(this, other);
+        Bindings.unbindContentBidirectional(this, other);
     }
 
     @Override

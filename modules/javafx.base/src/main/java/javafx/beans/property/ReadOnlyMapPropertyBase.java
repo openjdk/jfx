@@ -25,10 +25,10 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.MapExpressionHelper;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
@@ -118,7 +118,7 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
     public void bindContent(ObservableMap<K, V> source) {
         Objects.requireNonNull(source, "Source cannot be null");
         MapExpressionHelper.requireNotContentBoundBidirectional(helper);
-        ContentBinding.bind(this, source);
+        Bindings.bindContent(this, source);
     }
 
     @Override
@@ -131,20 +131,20 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
 
     @Override
     public void unbindContent(Object object) {
-        ContentBinding.unbind(this, object);
+        Bindings.unbindContent(this, object);
     }
 
     @Override
     public void bindContentBidirectional(ObservableMap<K, V> other) {
         Objects.requireNonNull(other, "Map cannot be null");
         MapExpressionHelper.requireNotContentBound(helper);
-        BidirectionalContentBinding.bind(this, other);
+        Bindings.bindContentBidirectional(this, other);
     }
 
     @Override
     public void unbindContentBidirectional(ObservableMap<K, V> other) {
         Objects.requireNonNull(other, "Map cannot be null");
-        BidirectionalContentBinding.unbind(this, other);
+        Bindings.unbindContentBidirectional(this, other);
     }
 
     @Override

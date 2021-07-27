@@ -87,30 +87,33 @@ public abstract class ContentBinding implements WeakListener {
         return contentBinding;
     }
 
-    public static void unbind(Object obj1, Object obj2) {
+    public static <E> void unbind(List<E> obj1, ObservableList<? extends E> obj2) {
         checkParameters(obj1, obj2);
+        var binding = new ListContentBinding<>(obj1, obj2);
+        obj2.removeListener(binding);
 
-        if ((obj1 instanceof List) && (obj2 instanceof ObservableList)) {
-            var binding = new ListContentBinding<>((List)obj1, (ObservableList)obj2);
-            ((ObservableList)obj2).removeListener(binding);
+        if (obj1 instanceof ObservableList<?>) {
+            ((ObservableList<? extends E>)obj1).removeListener(binding);
+        }
+    }
 
-            if (obj1 instanceof ObservableList<?>) {
-                ((ObservableList<?>)obj1).removeListener(binding);
-            }
-        } else if ((obj1 instanceof Set) && (obj2 instanceof ObservableSet)) {
-            var binding = new SetContentBinding((Set)obj1, (ObservableSet)obj2);
-            ((ObservableSet)obj2).removeListener(binding);
+    public static <E> void unbind(Set<E> obj1, ObservableSet<? extends E> obj2) {
+        checkParameters(obj1, obj2);
+        var binding = new SetContentBinding<>(obj1, obj2);
+        obj2.removeListener(binding);
 
-            if (obj1 instanceof ObservableSet<?>) {
-                ((ObservableSet<?>)obj1).removeListener(binding);
-            }
-        } else if ((obj1 instanceof Map) && (obj2 instanceof ObservableMap)) {
-            var binding = new MapContentBinding((Map)obj1, (ObservableMap)obj2);
-            ((ObservableMap)obj2).removeListener(binding);
+        if (obj1 instanceof ObservableSet<?>) {
+            ((ObservableSet<? extends E>)obj1).removeListener(binding);
+        }
+    }
 
-            if (obj1 instanceof ObservableMap<?, ?>) {
-                ((ObservableMap<?, ?>)obj1).removeListener(binding);
-            }
+    public static <K, V> void unbind(Map<K, V> obj1, ObservableMap<? extends K, ? extends V> obj2) {
+        checkParameters(obj1, obj2);
+        var binding = new MapContentBinding<>(obj1, obj2);
+        obj2.removeListener(binding);
+
+        if (obj1 instanceof ObservableMap<?, ?>) {
+            ((ObservableMap<? extends K, ? extends V>)obj1).removeListener(binding);
         }
     }
 
