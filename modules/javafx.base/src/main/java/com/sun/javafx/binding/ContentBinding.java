@@ -269,7 +269,7 @@ public abstract class ContentBinding implements WeakListener {
             if (updating) {
                 return;
             }
-            
+
             final Set<E> set1 = this.set1.get();
 
             // If the change is originating from set1 (which is the bound set), the change is an
@@ -286,7 +286,7 @@ public abstract class ContentBinding implements WeakListener {
                 throw new RuntimeException(
                     "Illegal set modification: Content binding was removed because the sets are out-of-sync.");
             }
-            
+
             if (set1 == null) {
                 change.getSet().removeListener(this);
             } else {
@@ -397,7 +397,7 @@ public abstract class ContentBinding implements WeakListener {
                 throw new RuntimeException(
                     "Illegal map modification: Content binding was removed because the maps are out-of-sync.");
             }
-            
+
             if (map1 == null) {
                 change.getMap().removeListener(this);
             } else {

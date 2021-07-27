@@ -294,7 +294,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
             observable = null;
         }
     }
-    
+
     @Override
     public void bindContent(ObservableSet<E> source) {
         Objects.requireNonNull(source, "Source cannot be null");
