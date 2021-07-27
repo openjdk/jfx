@@ -34,6 +34,8 @@ import javafx.scene.text.Font;
 
 /**
  * Converter to convert a {@code Stop} from a {@code Size} and a {@code Color}.
+ *
+ * @since 9
  */
 public final class StopConverter extends StyleConverter<ParsedValue[], Stop> {
 

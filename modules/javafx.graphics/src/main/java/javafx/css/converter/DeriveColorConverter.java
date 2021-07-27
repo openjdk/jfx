@@ -33,6 +33,8 @@ import javafx.scene.text.Font;
 
 /**
  * Converter to convert a combination of color and brightness values to a derived {@code Color}.
+ *
+ * @since 9
  */
 public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Color> {
 

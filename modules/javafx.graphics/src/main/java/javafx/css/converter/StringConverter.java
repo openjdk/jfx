@@ -70,6 +70,8 @@ public final class StringConverter extends StyleConverter<String, String> {
 
     /**
      * Converter to convert a sequence of {@code String}s to a String[].
+     *
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<String, String>[], String[]> {
         /**

@@ -34,6 +34,8 @@ import javafx.scene.text.Font;
 /**
  * Converter to combine two {@code Size} values.  The primary purpose of
  * this type is to handle "convert(size1, size2)" expressions in CSS.
+ *
+ * @since 9
  */
 public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, Size>[], Size> {
 
