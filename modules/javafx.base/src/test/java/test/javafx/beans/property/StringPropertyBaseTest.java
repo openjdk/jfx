@@ -443,4 +443,20 @@ public class StringPropertyBaseTest {
         @Override public String getName() { return name; }
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
+        var target = new SimpleStringProperty();
+        var source = new SimpleStringProperty();
+        target.bind(source);
+        target.bindBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
+        var target = new SimpleStringProperty();
+        var source = new SimpleStringProperty();
+        target.bindBidirectional(source);
+        target.bind(source);
+    }
+
 }
