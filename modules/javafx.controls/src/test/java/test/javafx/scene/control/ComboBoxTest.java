@@ -354,6 +354,14 @@ public class ComboBoxTest {
         listView.getSelectionModel().select(1);
     }
 
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnSkinCreation() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
+    }
+
     @Test public void selectionModelCanBeBound() {
         SingleSelectionModel<String> sm = ComboBoxShim.<String>get_ComboBoxSelectionModel(comboBox);
         ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);

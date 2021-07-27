@@ -573,9 +573,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
 
-        comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
-            listViewSelectionDirty = true;
-        });
+        SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().addListener(o -> {
+                listViewSelectionDirty = true;
+            });
+        }
 
         _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
             // RT-18672: Without checking if the user is clicking in the
