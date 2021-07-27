@@ -25,6 +25,8 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
+import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.SetExpressionHelper;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
@@ -270,6 +272,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
     @Override
     public void bind(final ObservableValue<? extends ObservableSet<E>> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        SetExpressionHelper.requireNotBoundBidirectional(helper);
 
         if (source != this.observable) {
             unbind();
@@ -288,6 +291,46 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
             value = observable.getValue();
             observable.removeListener(listener);
             observable = null;
+        }
+    }
+    
+    @Override
+    public void bindContent(ObservableSet<E> source) {
+        Objects.requireNonNull(source, "Source cannot be null");
+        SetExpressionHelper.requireNotContentBoundBidirectional(helper);
+        ContentBinding.bind(this, source);
+    }
+
+    @Override
+    public void unbindContent() {
+        ContentBinding binding = SetExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        if (binding != null) {
+            binding.dispose();
+        }
+    }
+
+    @Override
+    public void unbindContent(Object object) {
+        ContentBinding.unbind(this, object);
+    }
+
+    @Override
+    public void bindContentBidirectional(ObservableSet<E> other) {
+        Objects.requireNonNull(other, "Set cannot be null");
+        SetExpressionHelper.requireNotContentBound(helper);
+        BidirectionalContentBinding.bind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(ObservableSet<E> other) {
+        Objects.requireNonNull(other, "Set cannot be null");
+        BidirectionalContentBinding.unbind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(Object object) {
+        if (object instanceof ObservableSet<?>) {
+            unbindContentBidirectional((ObservableSet<E>)object);
         }
     }
 

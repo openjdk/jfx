@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,10 @@
 
 package javafx.beans.property;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Set;
-import javafx.beans.binding.Bindings;
 import javafx.beans.binding.SetExpression;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
+
+import java.util.Set;
 
 /**
  * Superclass for all readonly properties wrapping an {@link javafx.collections.ObservableSet}.
@@ -63,9 +60,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws NullPointerException if {@code set} is {@code null}
      * @throws IllegalArgumentException if {@code set} is the same set that this {@code ReadOnlySetProperty} points to
      */
-    public void bindContentBidirectional(ObservableSet<E> set) {
-        Bindings.bindContentBidirectional(this, set);
-    }
+    public abstract void bindContentBidirectional(ObservableSet<E> set);
 
     /**
      * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableSet}, that is
@@ -75,9 +70,19 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws NullPointerException if {@code object} is {@code null}
      * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
      */
-    public void unbindContentBidirectional(Object object) {
-        Bindings.unbindContentBidirectional(this, object);
-    }
+    public abstract void unbindContentBidirectional(ObservableSet<E> object);
+
+    /**
+     * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableSet}, that is
+     * wrapped in this {@code ReadOnlySetProperty}, and another {@code Object}.
+     *
+     * @param object the {@code Object} to which the bidirectional binding should be removed
+     * @throws NullPointerException if {@code object} is {@code null}
+     * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
+     * @deprecated use {@link #unbindContentBidirectional(ObservableSet)} instead
+     */
+    @Deprecated(since = "18", forRemoval = true)
+    public abstract void unbindContentBidirectional(Object object);
 
     /**
      * Creates a content binding between the {@link javafx.collections.ObservableSet}, that is
@@ -91,9 +96,16 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws NullPointerException if {@code set} is {@code null}
      * @throws IllegalArgumentException if {@code set} is the same set that this {@code ReadOnlySetProperty} points to
      */
-    public void bindContent(ObservableSet<E> set) {
-        Bindings.bindContent(this, set);
-    }
+    public abstract void bindContent(ObservableSet<E> set);
+
+    /**
+     * Deletes a content binding between the {@link javafx.collections.ObservableSet}, that is
+     * wrapped in this {@code ReadOnlySetProperty}, and another {@code Object}.
+     *
+     * @throws NullPointerException if {@code object} is {@code null}
+     * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
+     */
+    public abstract void unbindContent();
 
     /**
      * Deletes a content binding between the {@link javafx.collections.ObservableSet}, that is
@@ -102,10 +114,10 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @param object the {@code Object} to which the binding should be removed
      * @throws NullPointerException if {@code object} is {@code null}
      * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
+     * @deprecated use {@link #unbindContent()} instead
      */
-    public void unbindContent(Object object) {
-        Bindings.unbindContent(this, object);
-    }
+    @Deprecated(since = "18", forRemoval = true)
+    public abstract void unbindContent(Object object);
 
     @Override
     public boolean equals(Object obj) {

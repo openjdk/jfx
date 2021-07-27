@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,28 +26,49 @@
 package com.sun.javafx.binding;
 
 import javafx.beans.WeakListener;
-import javafx.collections.*;
+import javafx.beans.property.ReadOnlyProperty;
+import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.Set;
 
-/**
- */
-public class BidirectionalContentBinding {
+public abstract class BidirectionalContentBinding implements WeakListener {
 
-    private static void checkParameters(Object property1, Object property2) {
-        if ((property1 == null) || (property2 == null)) {
+    private static void checkParameters(Object collection1, Object collection2, Class<?> collectionType) {
+        if (collection1 == null || collection2 == null) {
             throw new NullPointerException("Both parameters must be specified.");
         }
-        if (property1 == property2) {
-            throw new IllegalArgumentException("Cannot bind object to itself");
+
+        collection1 = unwrapObservableCollection(collection1, collectionType);
+        collection2 = unwrapObservableCollection(collection2, collectionType);
+
+        if (collection1 != null && collection1 == collection2) {
+            throw new IllegalArgumentException(
+                "Cannot bind to the same " + collectionType.getSimpleName() + " instance.");
         }
     }
 
+    private static Object unwrapObservableCollection(Object property, Class<?> collectionType) {
+        while (property != null) {
+            if (property instanceof ReadOnlyProperty<?>) {
+                property = ((ReadOnlyProperty<?>)property).getValue();
+            } else {
+                return collectionType.isInstance(property) ? property : null;
+            }
+        }
+
+        return null;
+    }
+
     public static <E> Object bind(ObservableList<E> list1, ObservableList<E> list2) {
-        checkParameters(list1, list2);
-        final ListContentBinding<E> binding = new ListContentBinding<E>(list1, list2);
+        unbind(list1, list2);
+        final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
         list1.setAll(list2);
         list1.addListener(binding);
         list2.addListener(binding);
@@ -55,8 +76,8 @@ public class BidirectionalContentBinding {
     }
 
     public static <E> Object bind(ObservableSet<E> set1, ObservableSet<E> set2) {
-        checkParameters(set1, set2);
-        final SetContentBinding<E> binding = new SetContentBinding<E>(set1, set2);
+        unbind(set1, set2);
+        final SetContentBinding<E> binding = new SetContentBinding<>(set1, set2);
         set1.clear();
         set1.addAll(set2);
         set1.addListener(binding);
@@ -65,8 +86,8 @@ public class BidirectionalContentBinding {
     }
 
     public static <K, V> Object bind(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
-        checkParameters(map1, map2);
-        final MapContentBinding<K, V> binding = new MapContentBinding<K, V>(map1, map2);
+        unbind(map1, map2);
+        final MapContentBinding<K, V> binding = new MapContentBinding<>(map1, map2);
         map1.clear();
         map1.putAll(map2);
         map1.addListener(binding);
@@ -74,30 +95,29 @@ public class BidirectionalContentBinding {
         return binding;
     }
 
-    public static void unbind(Object obj1, Object obj2) {
-        checkParameters(obj1, obj2);
-        if ((obj1 instanceof ObservableList) && (obj2 instanceof ObservableList)) {
-            final ObservableList list1 = (ObservableList)obj1;
-            final ObservableList list2 = (ObservableList)obj2;
-            final ListContentBinding binding = new ListContentBinding(list1, list2);
-            list1.removeListener(binding);
-            list2.removeListener(binding);
-        } else if ((obj1 instanceof ObservableSet) && (obj2 instanceof ObservableSet)) {
-            final ObservableSet set1 = (ObservableSet)obj1;
-            final ObservableSet set2 = (ObservableSet)obj2;
-            final SetContentBinding binding = new SetContentBinding(set1, set2);
-            set1.removeListener(binding);
-            set2.removeListener(binding);
-        } else if ((obj1 instanceof ObservableMap) && (obj2 instanceof ObservableMap)) {
-            final ObservableMap map1 = (ObservableMap)obj1;
-            final ObservableMap map2 = (ObservableMap)obj2;
-            final MapContentBinding binding = new MapContentBinding(map1, map2);
-            map1.removeListener(binding);
-            map2.removeListener(binding);
-        }
+    public static <E> void unbind(ObservableList<E> list1, ObservableList<E> list2) {
+        checkParameters(list1, list2, ObservableList.class);
+        final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
+        list1.removeListener(binding);
+        list2.removeListener(binding);
     }
 
-    private static class ListContentBinding<E> implements ListChangeListener<E>, WeakListener {
+    public static <E> void unbind(ObservableSet<E> set1, ObservableSet<E> set2) {
+        checkParameters(set1, set2, ObservableSet.class);
+        final SetContentBinding<E> binding = new SetContentBinding<>(set1, set2);
+        set1.removeListener(binding);
+        set2.removeListener(binding);
+    }
+
+    public static <K, V> void unbind(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
+        checkParameters(map1, map2, ObservableMap.class);
+        final MapContentBinding<K, V> binding = new MapContentBinding<>(map1, map2);
+        map1.removeListener(binding);
+        map2.removeListener(binding);
+    }
+
+    private static class ListContentBinding<E>
+            extends BidirectionalContentBinding implements ListChangeListener<E> {
 
         private final WeakReference<ObservableList<E>> propertyRef1;
         private final WeakReference<ObservableList<E>> propertyRef2;
@@ -191,7 +211,8 @@ public class BidirectionalContentBinding {
         }
     }
 
-    private static class SetContentBinding<E> implements SetChangeListener<E>, WeakListener {
+    private static class SetContentBinding<E>
+            extends BidirectionalContentBinding implements SetChangeListener<E> {
 
         private final WeakReference<ObservableSet<E>> propertyRef1;
         private final WeakReference<ObservableSet<E>> propertyRef2;
@@ -277,7 +298,8 @@ public class BidirectionalContentBinding {
         }
     }
 
-    private static class MapContentBinding<K, V> implements MapChangeListener<K, V>, WeakListener {
+    private static class MapContentBinding<K, V>
+            extends BidirectionalContentBinding implements MapChangeListener<K, V> {
 
         private final WeakReference<ObservableMap<K, V>> propertyRef1;
         private final WeakReference<ObservableMap<K, V>> propertyRef2;

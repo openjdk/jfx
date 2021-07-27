@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.beans.property;
 
+import javafx.collections.MapChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableObjectValueStub;
@@ -831,4 +832,91 @@ public class MapPropertyBaseTest {
             return name;
         }
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
+        var target = new SimpleMapProperty<String, String>();
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bind(source);
+        target.bindBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
+        var target = new SimpleMapProperty<String, String>();
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindBidirectional(source);
+        target.bind(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
+        var target = new SimpleMapProperty<String, String>();
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContent(source);
+        target.bindContentBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
+        var target = new SimpleMapProperty<String, String>();
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        target.bindContent(source);
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((MapChangeListener<String, String>) change -> calls[0]++);
+
+        source.put("foo", "bar");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContent(source);
+        source.put("foo", "bar");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.put("qux", "quux");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((MapChangeListener<String, String>)change -> calls[0]++);
+
+        source.put("foo", "bar");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        source.put("foo", "bar");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.put("qux", "quux");
+        assertEquals(1, target.size());
+    }
+
 }

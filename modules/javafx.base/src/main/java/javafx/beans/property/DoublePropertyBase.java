@@ -164,6 +164,7 @@ public abstract class DoublePropertyBase extends DoubleProperty {
     @Override
     public void bind(final ObservableValue<? extends Number> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         ObservableDoubleValue newObservable;
         if (source instanceof ObservableDoubleValue) {
@@ -267,9 +268,8 @@ public abstract class DoublePropertyBase extends DoubleProperty {
         }
     }
 
-    private abstract class ValueWrapper extends DoubleBinding {
-
-        private ObservableValue<? extends Number> observable;
+    private abstract static class ValueWrapper extends DoubleBinding {
+        private final ObservableValue<? extends Number> observable;
 
         public ValueWrapper(ObservableValue<? extends Number> observable) {
             this.observable = observable;

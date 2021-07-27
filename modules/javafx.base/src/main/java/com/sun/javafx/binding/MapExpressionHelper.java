@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.binding;
 
+import com.sun.javafx.WeakListenerArrayUtil;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableMapValue;
@@ -36,7 +37,7 @@ import java.util.Map;
 
 /**
 */
-public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
+public abstract class MapExpressionHelper<K, V> extends CollectionExpressionHelperBase {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
@@ -84,12 +85,6 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         return (helper == null)? null : helper.removeListener(listener);
     }
 
-    public static <K, V> void fireValueChangedEvent(MapExpressionHelper<K, V> helper) {
-        if (helper != null) {
-            helper.fireValueChangedEvent();
-        }
-    }
-
     public static <K, V> void fireValueChangedEvent(MapExpressionHelper<K, V> helper, MapChangeListener.Change<? extends K, ? extends V> change) {
         if (helper != null) {
             helper.fireValueChangedEvent(change);
@@ -114,7 +109,6 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
     protected abstract MapExpressionHelper<K, V> addListener(MapChangeListener<? super K, ? super V> listener);
     protected abstract MapExpressionHelper<K, V> removeListener(MapChangeListener<? super K, ? super V> listener);
 
-    protected abstract void fireValueChangedEvent();
     protected abstract void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,6 +151,16 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         @Override
         protected MapExpressionHelper<K, V> removeListener(MapChangeListener<? super K, ? super V> listener) {
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return listener instanceof BidirectionalBinding;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return null;
         }
 
         @Override
@@ -209,6 +213,16 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         @Override
         protected MapExpressionHelper<K, V> removeListener(MapChangeListener<? super K, ? super V> listener) {
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return null;
         }
 
         @Override
@@ -265,6 +279,16 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         @Override
         protected MapExpressionHelper<K, V> removeListener(MapChangeListener<? super K, ? super V> listener) {
             return (listener.equals(this.listener))? null : this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return type.isInstance(listener) ? (T)listener : null;
         }
 
         @Override
@@ -379,7 +403,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                     final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
                 } else if (invalidationSize == oldCapacity) {
-                    invalidationSize = trim(invalidationSize, invalidationListeners);
+                    invalidationSize = WeakListenerArrayUtil.trim(invalidationSize, invalidationListeners);
                     if (invalidationSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
@@ -438,7 +462,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                     final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     changeListeners = Arrays.copyOf(changeListeners, newCapacity);
                 } else if (changeSize == oldCapacity) {
-                    changeSize = trim(changeSize, changeListeners);
+                    changeSize = WeakListenerArrayUtil.trim(changeSize, changeListeners);
                     if (changeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         changeListeners = Arrays.copyOf(changeListeners, newCapacity);
@@ -500,7 +524,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                     final int newCapacity = (mapChangeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     mapChangeListeners = Arrays.copyOf(mapChangeListeners, newCapacity);
                 } else if (mapChangeSize == oldCapacity) {
-                    mapChangeSize = trim(mapChangeSize, mapChangeListeners);
+                    mapChangeSize = WeakListenerArrayUtil.trim(mapChangeSize, mapChangeListeners);
                     if (mapChangeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         mapChangeListeners = Arrays.copyOf(mapChangeListeners, newCapacity);
@@ -549,6 +573,28 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                 }
             }
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            for (int i = 0; i < invalidationSize; ++i) {
+                if (invalidationListeners[i] instanceof BidirectionalBinding) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            for (int i = 0; i < mapChangeSize; ++i) {
+                if (type.isInstance(mapChangeListeners[i])) {
+                    return (T)mapChangeListeners[i];
+                }
+            }
+
+            return null;
         }
 
         @Override

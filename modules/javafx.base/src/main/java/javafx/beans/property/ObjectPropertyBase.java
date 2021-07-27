@@ -163,6 +163,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
     @Override
     public void bind(final ObservableValue<? extends T> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         if (!source.equals(this.observable)) {
             unbind();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,15 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
+import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.ListExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+
+import java.util.Objects;
 
 /**
  * Base class for all readonly properties wrapping an
@@ -111,6 +115,44 @@ public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E
         ListExpressionHelper.fireValueChangedEvent(helper, change);
     }
 
+    @Override
+    public void bindContent(ObservableList<E> source) {
+        Objects.requireNonNull(source, "Source cannot be null");
+        ListExpressionHelper.requireNotContentBoundBidirectional(helper);
+        ContentBinding.bind(this, source);
+    }
 
+    @Override
+    public void unbindContent() {
+        ContentBinding binding = ListExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        if (binding != null) {
+            binding.dispose();
+        }
+    }
+
+    @Override
+    public void unbindContent(Object object) {
+        ContentBinding.unbind(this, object);
+    }
+
+    @Override
+    public void bindContentBidirectional(ObservableList<E> other) {
+        Objects.requireNonNull(other, "List cannot be null");
+        ListExpressionHelper.requireNotContentBound(helper);
+        BidirectionalContentBinding.bind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(ObservableList<E> other) {
+        Objects.requireNonNull(other, "List cannot be null");
+        BidirectionalContentBinding.unbind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(Object object) {
+        if (object instanceof ObservableList<?>) {
+            unbindContentBidirectional((ObservableList<E>)object);
+        }
+    }
 
 }

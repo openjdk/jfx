@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -513,6 +513,22 @@ public class BooleanPropertyBaseTest {
         @Override public Object getBean() { return bean; }
 
         @Override public String getName() { return name; }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
+        var target = new SimpleBooleanProperty();
+        var source = new SimpleBooleanProperty();
+        target.bind(source);
+        target.bindBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
+        var target = new SimpleBooleanProperty();
+        var source = new SimpleBooleanProperty();
+        target.bindBidirectional(source);
+        target.bind(source);
     }
 
 }

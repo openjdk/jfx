@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package javafx.beans.property;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.WritableListValue;
 import javafx.collections.ObservableList;
+
+import java.util.Objects;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping an
@@ -75,6 +77,7 @@ public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
      */
     @Override
     public void bindBidirectional(Property<ObservableList<E>> other) {
+        Objects.requireNonNull(other, "Property cannot be null");
         Bindings.bindBidirectional(this, other);
     }
 
@@ -83,6 +86,7 @@ public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
      */
     @Override
     public void unbindBidirectional(Property<ObservableList<E>> other) {
+        Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -852,6 +852,9 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
+     * <p>
+     * If the two properties are already bidirectionally bound, the existing binding
+     * will be removed as if by calling {@link #unbindBidirectional(Object, Object)}.
      *
      * @param <T>
      *            the types of the properties
@@ -901,9 +904,13 @@ public final class Bindings {
      * @throws IllegalArgumentException
      *            if both properties are equal
      * @since JavaFX 2.1
+     * @deprecated use {@link #unbindBidirectional(Property, Property)} instead
      */
+    @Deprecated(since = "18", forRemoval = true)
     public static void unbindBidirectional(Object property1, Object property2) {
-        BidirectionalBinding.unbind(property1, property2);
+        if (property1 instanceof Property<?> && property2 instanceof Property<?>) {
+            BidirectionalBinding.unbind((Property<?>) property1, (Property<?>)property2);
+        }
     }
 
     /**
@@ -926,6 +933,9 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
+     * <p>
+     * If the two properties are already bidirectionally bound, the existing binding
+     * will be removed as if by calling {@link #unbindBidirectional(Object, Object)}.
      *
      * @param stringProperty
      *            the {@code String} {@code Property}
@@ -963,6 +973,9 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
+     * <p>
+     * If the two properties are already bidirectionally bound, the existing binding
+     * will be removed as if by calling {@link #unbindBidirectional(Object, Object)}.
      *
      * @param <T> the type of the wrapped {@code Object}
      * @param stringProperty
@@ -1003,6 +1016,9 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
+     * <p>
+     * If the two lists are already bidirectionally content-bound, the existing binding
+     * will be removed as if by calling {@link #unbindContentBidirectional(Object, Object)}.
      *
      * @param <E>
      *            the type of the list elements
@@ -1042,6 +1058,9 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
+     * <p>
+     * If the two sets are already bidirectionally content-bound, the existing binding
+     * will be removed as if by calling {@link #unbindContentBidirectional(Object, Object)}.
      *
      * @param <E>
      *            the type of the set elements
@@ -1081,6 +1100,9 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
+     * <p>
+     * If the two maps are already bidirectionally content-bound, the existing binding
+     * will be removed as if by calling {@link #unbindContentBidirectional(Object, Object)}.
      *
      * @param <K>
      *            the type of the key elements
@@ -1104,8 +1126,57 @@ public final class Bindings {
      * @param obj2
      *            the second {@code Object}
      * @since JavaFX 2.1
+     * @deprecated use {@link #unbindContentBidirectional(ObservableList, ObservableList)},
+     *             {@link #unbindContentBidirectional(ObservableSet, ObservableSet)}, or
+     *             {@link #unbindContentBidirectional(ObservableMap, ObservableMap)} instead
      */
+    @Deprecated(since = "18", forRemoval = true)
     public static void unbindContentBidirectional(Object obj1, Object obj2) {
+        if (obj1 instanceof ObservableList && obj2 instanceof ObservableList) {
+            unbindContentBidirectional((ObservableList)obj1, (ObservableList)obj2);
+        } else if (obj1 instanceof ObservableSet && obj2 instanceof ObservableSet) {
+            unbindContentBidirectional((ObservableSet)obj1, (ObservableSet)obj2);
+        } else if (obj1 instanceof ObservableMap && obj2 instanceof ObservableMap) {
+            unbindContentBidirectional((ObservableMap)obj1, (ObservableMap)obj2);
+        }
+    }
+
+    /**
+     * Removes a bidirectional content binding.
+     *
+     * @param obj1
+     *            the first {@code ObservableList}
+     * @param obj2
+     *            the second {@code ObservableList}
+     * @since 18
+     */
+    public static <E> void unbindContentBidirectional(ObservableList<E> obj1, ObservableList<E> obj2) {
+        BidirectionalContentBinding.unbind(obj1, obj2);
+    }
+
+    /**
+     * Removes a bidirectional content binding.
+     *
+     * @param obj1
+     *            the first {@code ObservableSet}
+     * @param obj2
+     *            the second {@code ObservableSet}
+     * @since 18
+     */
+    public static <E> void unbindContentBidirectional(ObservableSet<E> obj1, ObservableSet<E> obj2) {
+        BidirectionalContentBinding.unbind(obj1, obj2);
+    }
+
+    /**
+     * Removes a bidirectional content binding.
+     *
+     * @param obj1
+     *            the first {@code ObservableMap}
+     * @param obj2
+     *            the second {@code ObservableMap}
+     * @since 18
+     */
+    public static <K, V> void unbindContentBidirectional(ObservableMap<K, V> obj1, ObservableMap<K, V> obj2) {
         BidirectionalContentBinding.unbind(obj1, obj2);
     }
 
@@ -1119,6 +1190,9 @@ public final class Bindings {
      * anymore. Doing so would lead to unexpected results.
      * <p>
      * A content-binding can be removed with {@link #unbindContent(Object, Object)}.
+     * <p>
+     * If the two lists are already content-bound, the existing binding will be removed
+     * as if by calling {@link #unbindContent(Object, Object)}.
      *
      * @param <E>
      *            the type of the {@code List} elements
@@ -1142,6 +1216,9 @@ public final class Bindings {
      * anymore. Doing so would lead to unexpected results.
      * <p>
      * A content-binding can be removed with {@link #unbindContent(Object, Object)}.
+     * <p>
+     * If the two sets are already content-bound, the existing binding will be removed
+     * as if by calling {@link #unbindContent(Object, Object)}.
      *
      * @param <E>
      *            the type of the {@code Set} elements
@@ -1169,6 +1246,9 @@ public final class Bindings {
      * anymore. Doing so would lead to unexpected results.
      * <p>
      * A content-binding can be removed with {@link #unbindContent(Object, Object)}.
+     * <p>
+     * If the two maps are already content-bound, the existing binding will be removed
+     * as if by calling {@link #unbindContent(Object, Object)}.
      *
      * @param <K>
      *            the type of the key elements of the {@code Map}

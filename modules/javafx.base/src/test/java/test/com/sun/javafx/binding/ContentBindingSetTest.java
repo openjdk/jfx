@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import javafx.collections.ObservableSet;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -203,4 +204,27 @@ public class ContentBindingSetTest {
         assertTrue(binding1.equals(binding1));
         assertFalse(binding1.equals(binding2));
     }
+
+    @Test
+    public void testContentBoundSetThrowsExceptionWhenModified() {
+        var target = FXCollections.observableSet();
+        var source = FXCollections.observableSet();
+        ContentBinding.bind(target, source);
+
+        var exceptions = new ArrayList<Throwable>();
+        var oldHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.add(e));
+
+        try {
+            source.add("qux");
+            assertEquals(0, exceptions.size());
+
+            target.remove("qux");
+            assertEquals(1, exceptions.size());
+            assertTrue(exceptions.get(0).getMessage().contains("Illegal set modification"));
+        } finally {
+            Thread.currentThread().setUncaughtExceptionHandler(oldHandler);
+        }
+    }
+
 }

@@ -157,11 +157,11 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
 
     /**
      * {@inheritDoc}
-     * Note:
      */
     @Override
     public void bind(final ObservableValue<? extends Boolean> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         final ObservableBooleanValue newObservable = (source instanceof ObservableBooleanValue) ?
                 (ObservableBooleanValue) source : new ValueWrapper(source);
@@ -245,8 +245,8 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         }
     }
 
-    private class ValueWrapper extends BooleanBinding {
-        private ObservableValue<? extends Boolean> observable;
+    private static class ValueWrapper extends BooleanBinding {
+        private final ObservableValue<? extends Boolean> observable;
 
         public ValueWrapper(ObservableValue<? extends Boolean> observable) {
             this.observable = observable;

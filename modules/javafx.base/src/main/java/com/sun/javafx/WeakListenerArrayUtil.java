@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,40 @@
  * questions.
  */
 
-package javafx.beans.property;
+package com.sun.javafx;
 
-import javafx.beans.value.ObservableValue;
+import javafx.beans.WeakListener;
+import java.util.function.Predicate;
 
-/**
- * Generic interface that defines the methods common to all readable properties
- * independent of their type.
- *
- *
- * @param <T>
- *            the type of the wrapped value
- * @since JavaFX 2.0
- */
-public interface ReadOnlyProperty<T> extends ObservableValue<T> {
+public final class WeakListenerArrayUtil {
 
-    /**
-     * Returns the {@code Object} that contains this property. If this property
-     * is not contained in an {@code Object}, {@code null} is returned.
-     *
-     * @return the containing {@code Object} or {@code null}
-     */
-    Object getBean();
+    private WeakListenerArrayUtil() {}
 
-    /**
-     * Returns the name of this property. If the property does not have a name,
-     * this method returns an empty {@code String}.
-     *
-     * @return the name or an empty {@code String}
-     */
-    String getName();
+    public static int trim(int size, Object[] listeners) {
+        Predicate<Object> p = t -> t instanceof WeakListener &&
+                ((WeakListener)t).wasGarbageCollected();
+
+        int index = 0;
+        for (; index < size; index++) {
+            if (p.test(listeners[index])) {
+                break;
+            }
+        }
+
+        if (index < size) {
+            for (int src = index + 1; src < size; src++) {
+                if (!p.test(listeners[src])) {
+                    listeners[index++] = listeners[src];
+                }
+            }
+            int oldSize = size;
+            size = index;
+            for (; index < oldSize; index++) {
+                listeners[index] = null;
+            }
+        }
+
+        return size;
+    }
 
 }

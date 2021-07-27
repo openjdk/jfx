@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.binding;
 
+import com.sun.javafx.WeakListenerArrayUtil;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.SourceAdapterChange;
 import javafx.beans.InvalidationListener;
@@ -35,7 +36,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static javafx.collections.ListChangeListener.Change;
 
@@ -49,7 +49,7 @@ import static javafx.collections.ListChangeListener.Change;
  *
  *
  */
-public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
+public abstract class ListExpressionHelper<E> extends CollectionExpressionHelperBase {
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -98,12 +98,6 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         return (helper == null)? null : helper.removeListener(listener);
     }
 
-    public static <E> void fireValueChangedEvent(ListExpressionHelper<E> helper) {
-        if (helper != null) {
-            helper.fireValueChangedEvent();
-        }
-    }
-
     public static <E> void fireValueChangedEvent(ListExpressionHelper<E> helper, Change<? extends E> change) {
         if (helper != null) {
             helper.fireValueChangedEvent(change);
@@ -128,7 +122,6 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
     protected abstract ListExpressionHelper<E> addListener(ListChangeListener<? super E> listener);
     protected abstract ListExpressionHelper<E> removeListener(ListChangeListener<? super E> listener);
 
-    protected abstract void fireValueChangedEvent();
     protected abstract void fireValueChangedEvent(Change<? extends E> change);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -171,6 +164,16 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         @Override
         protected ListExpressionHelper<E> removeListener(ListChangeListener<? super E> listener) {
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return listener instanceof BidirectionalBinding;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return null;
         }
 
         @Override
@@ -223,6 +226,16 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         @Override
         protected ListExpressionHelper<E> removeListener(ListChangeListener<? super E> listener) {
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return null;
         }
 
         @Override
@@ -279,6 +292,16 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         @Override
         protected ListExpressionHelper<E> removeListener(ListChangeListener<? super E> listener) {
             return (listener.equals(this.listener))? null : this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return type.isInstance(listener) ? (T)listener : null;
         }
 
         @Override
@@ -370,7 +393,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                     final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
                 } else if (invalidationSize == oldCapacity) {
-                    invalidationSize = trim(invalidationSize, invalidationListeners);
+                    invalidationSize = WeakListenerArrayUtil.trim(invalidationSize, invalidationListeners);
                     if (invalidationSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
@@ -429,7 +452,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                     final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     changeListeners = Arrays.copyOf(changeListeners, newCapacity);
                 } else if (changeSize == oldCapacity) {
-                    changeSize = trim(changeSize, changeListeners);
+                    changeSize = WeakListenerArrayUtil.trim(changeSize, changeListeners);
                     if (changeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         changeListeners = Arrays.copyOf(changeListeners, newCapacity);
@@ -491,7 +514,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                     final int newCapacity = (listChangeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     listChangeListeners = Arrays.copyOf(listChangeListeners, newCapacity);
                 } else if (listChangeSize == oldCapacity) {
-                    listChangeSize = trim(listChangeSize, listChangeListeners);
+                    listChangeSize = WeakListenerArrayUtil.trim(listChangeSize, listChangeListeners);
                     if (listChangeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         listChangeListeners = Arrays.copyOf(listChangeListeners, newCapacity);
@@ -540,6 +563,28 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                 }
             }
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            for (int i = 0; i < invalidationSize; ++i) {
+                if (invalidationListeners[i] instanceof BidirectionalBinding) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            for (int i = 0; i < listChangeSize; ++i) {
+                if (type.isInstance(listChangeListeners[i])) {
+                    return (T)listChangeListeners[i];
+                }
+            }
+
+            return null;
         }
 
         @Override

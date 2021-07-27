@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,26 @@
 
 package com.sun.javafx.binding;
 
-public abstract class ExpressionHelperBase {
+public abstract class CollectionExpressionHelperBase extends ExpressionHelperBase {
 
-    public static void requireNotBoundBidirectional(ExpressionHelperBase helper) {
-        if (helper != null && helper.isBoundBidirectional()) {
+    public static void requireNotContentBound(CollectionExpressionHelperBase helper) {
+        if (getCollectionChangeListener(helper, ContentBinding.class) != null) {
             throw new IllegalStateException(
-                "Cannot bind a property for which a bidirectional binding was established.");
+                "Cannot establish a bidirectional content binding because a content binding already exists.");
         }
     }
 
-    public static void fireValueChangedEvent(ExpressionHelperBase helper) {
-        if (helper != null) {
-            helper.fireValueChangedEvent();
+    public static void requireNotContentBoundBidirectional(CollectionExpressionHelperBase helper) {
+        if (getCollectionChangeListener(helper, BidirectionalContentBinding.class) != null) {
+            throw new IllegalStateException(
+                "Cannot establish a content binding because a bidirectional content binding already exists.");
         }
     }
 
+    public static <T> T getCollectionChangeListener(CollectionExpressionHelperBase helper, Class<T> type) {
+        return helper != null ? helper.getCollectionChangeListener(type) : null;
+    }
 
-    protected abstract boolean isBoundBidirectional();
-    protected abstract void fireValueChangedEvent();
+    protected abstract <T> T getCollectionChangeListener(Class<T> type);
 
 }

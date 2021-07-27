@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.binding;
 
+import com.sun.javafx.WeakListenerArrayUtil;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableSetValue;
@@ -35,7 +36,7 @@ import java.util.Arrays;
 
 /**
 */
-public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
+public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperBase {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
@@ -83,12 +84,6 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         return (helper == null)? null : helper.removeListener(listener);
     }
 
-    public static <E> void fireValueChangedEvent(SetExpressionHelper<E> helper) {
-        if (helper != null) {
-            helper.fireValueChangedEvent();
-        }
-    }
-
     public static <E> void fireValueChangedEvent(SetExpressionHelper<E> helper, SetChangeListener.Change<? extends E> change) {
         if (helper != null) {
             helper.fireValueChangedEvent(change);
@@ -113,7 +108,6 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
     protected abstract SetExpressionHelper<E> addListener(SetChangeListener<? super E> listener);
     protected abstract SetExpressionHelper<E> removeListener(SetChangeListener<? super E> listener);
 
-    protected abstract void fireValueChangedEvent();
     protected abstract void fireValueChangedEvent(SetChangeListener.Change<? extends E> change);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -156,6 +150,16 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         @Override
         protected SetExpressionHelper<E> removeListener(SetChangeListener<? super E> listener) {
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return listener instanceof BidirectionalBinding;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return null;
         }
 
         @Override
@@ -208,6 +212,16 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         @Override
         protected SetExpressionHelper<E> removeListener(SetChangeListener<? super E> listener) {
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return null;
         }
 
         @Override
@@ -264,6 +278,16 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         @Override
         protected SetExpressionHelper<E> removeListener(SetChangeListener<? super E> listener) {
             return (listener.equals(this.listener))? null : this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            return type.isInstance(listener) ? (T)listener : null;
         }
 
         @Override
@@ -370,7 +394,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                     final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
                 } else if (invalidationSize == oldCapacity) {
-                    invalidationSize = trim(invalidationSize, invalidationListeners);
+                    invalidationSize = WeakListenerArrayUtil.trim(invalidationSize, invalidationListeners);
                     if (invalidationSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
@@ -429,7 +453,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                     final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     changeListeners = Arrays.copyOf(changeListeners, newCapacity);
                 } else if (changeSize == oldCapacity) {
-                    changeSize = trim(changeSize, changeListeners);
+                    changeSize = WeakListenerArrayUtil.trim(changeSize, changeListeners);
                     if (changeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         changeListeners = Arrays.copyOf(changeListeners, newCapacity);
@@ -491,7 +515,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                     final int newCapacity = (setChangeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     setChangeListeners = Arrays.copyOf(setChangeListeners, newCapacity);
                 } else if (setChangeSize == oldCapacity) {
-                    setChangeSize = trim(setChangeSize, setChangeListeners);
+                    setChangeSize = WeakListenerArrayUtil.trim(setChangeSize, setChangeListeners);
                     if (setChangeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         setChangeListeners = Arrays.copyOf(setChangeListeners, newCapacity);
@@ -540,6 +564,28 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                 }
             }
             return this;
+        }
+
+        @Override
+        protected boolean isBoundBidirectional() {
+            for (int i = 0; i < invalidationSize; ++i) {
+                if (invalidationListeners[i] instanceof BidirectionalBinding) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        @Override
+        protected <T> T getCollectionChangeListener(Class<T> type) {
+            for (int i = 0; i < setChangeSize; ++i) {
+                if (type.isInstance(setChangeListeners[i])) {
+                    return (T)setChangeListeners[i];
+                }
+            }
+
+            return null;
         }
 
         @Override

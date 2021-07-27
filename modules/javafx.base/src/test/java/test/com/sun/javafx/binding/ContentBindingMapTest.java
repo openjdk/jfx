@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import javafx.collections.ObservableMap;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -215,4 +216,27 @@ public class ContentBindingMapTest {
         op2.put(key2_1, 1);
         assertEquals(1, op1.get(key2_1).intValue());
     }
+
+    @Test
+    public void testContentBoundMapThrowsExceptionWhenModified() {
+        var target = FXCollections.observableHashMap();
+        var source = FXCollections.observableHashMap();
+        ContentBinding.bind(target, source);
+
+        var exceptions = new ArrayList<Throwable>();
+        var oldHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.add(e));
+
+        try {
+            source.put("foo", "bar");
+            assertEquals(0, exceptions.size());
+
+            target.remove("foo");
+            assertEquals(1, exceptions.size());
+            assertTrue(exceptions.get(0).getMessage().contains("Illegal map modification"));
+        } finally {
+            Thread.currentThread().setUncaughtExceptionHandler(oldHandler);
+        }
+    }
+
 }

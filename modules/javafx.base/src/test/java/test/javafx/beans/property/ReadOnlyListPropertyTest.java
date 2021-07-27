@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,6 +118,30 @@ public class ReadOnlyListPropertyTest {
         public ReadOnlyBooleanProperty emptyProperty() {
             fail("Not in use");
             return null;
+        }
+
+        @Override
+        public void bindContentBidirectional(ObservableList<Object> other) {
+        }
+
+        @Override
+        public void unbindContentBidirectional(ObservableList<Object> other) {
+        }
+
+        @Override
+        public void unbindContentBidirectional(Object object) {
+        }
+
+        @Override
+        public void bindContent(ObservableList<Object> source) {
+        }
+
+        @Override
+        public void unbindContent(Object object) {
+        }
+
+        @Override
+        public void unbindContent() {
         }
     }
 

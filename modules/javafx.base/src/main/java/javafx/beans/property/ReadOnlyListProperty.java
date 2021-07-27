@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package javafx.beans.property;
 
 import java.util.List;
 import java.util.ListIterator;
-import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ListExpression;
 import javafx.collections.ObservableList;
 
@@ -52,19 +51,28 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
     }
 
     /**
-     * Creates a bidirectional content binding of the {@link javafx.collections.ObservableList}, that is
-     * wrapped in this {@code ReadOnlyListProperty}, and another {@code ObservableList}.
+     * Creates a bidirectional content binding between the {@link javafx.collections.ObservableList} that is
+     * wrapped in this {@code ReadOnlyListProperty} and another {@code ObservableList}.
      * <p>
      * A bidirectional content binding ensures that the content of two {@code ObservableLists} is the
      * same. If the content of one of the lists changes, the other one will be updated automatically.
      *
-     * @param list the {@code ObservableList} this property should be bound to
-     * @throws NullPointerException if {@code list} is {@code null}
-     * @throws IllegalArgumentException if {@code list} is the same list that this {@code ReadOnlyListProperty} points to
+     * @param other the {@code ObservableList} this property should be bound to
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is the list wrapped in this {@code ReadOnlyListProperty}
      */
-    public void bindContentBidirectional(ObservableList<E> list) {
-        Bindings.bindContentBidirectional(this, list);
-    }
+    public abstract void bindContentBidirectional(ObservableList<E> other);
+
+    /**
+     * Removes a bidirectional content binding between the {@link ObservableList} that is
+     * wrapped in this {@code ReadOnlyListProperty} and another {@code ObservableList}.
+     *
+     * @param other the {@code ObservableList} to which the bidirectional binding should be removed
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is the list wrapped in this {@code ReadOnlyListProperty}
+     * @since 18
+     */
+    public abstract void unbindContentBidirectional(ObservableList<E> other);
 
     /**
      * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableList}, that is
@@ -73,26 +81,41 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @param object the {@code Object} to which the bidirectional binding should be removed
      * @throws NullPointerException if {@code object} is {@code null}
      * @throws IllegalArgumentException if {@code object} is the same list that this {@code ReadOnlyListProperty} points to
+     * @deprecated use {@link #unbindContentBidirectional(ObservableList)} instead
      */
-    public void unbindContentBidirectional(Object object) {
-        Bindings.unbindContentBidirectional(this, object);
-    }
+    @Deprecated(since = "18", forRemoval = true)
+    public abstract void unbindContentBidirectional(Object object);
 
     /**
-     * Creates a content binding between the {@link javafx.collections.ObservableList}, that is
-     * wrapped in this {@code ReadOnlyListProperty}, and another {@code ObservableList}.
+     * Creates a content binding between the {@link javafx.collections.ObservableList} that is
+     * wrapped in this {@code ReadOnlyListProperty} (the <em>bound list</em>), and another {@code ObservableList}
+     * (the <em>source list</em>).
      * <p>
-     * A content binding ensures that the content of the wrapped {@code ObservableLists} is the
-     * same as that of the other list. If the content of the other list changes, the wrapped list will be updated
-     * automatically. Once the wrapped list is bound to another list, you must not change it directly.
+     * A content binding ensures that the content of the bound list is the same as that of the source list.
+     * If the content of the source list changes, the content of the bound list will be updated automatically.
+     * In contrast, a regular binding will replace the bound list instance with the source list instance,
+     * which means that only a single list instance exists for both properties.
+     * <p>
+     * Once a content binding is established, the bound list becomes effectively read-only: any attempt to
+     * change the content of the bound list by calling a mutating method of {@link ObservableList} will cause
+     * the content binding to fail. In this case, the content binding is removed because the bound list and
+     * the source list may be out-of-sync.
      *
-     * @param list the {@code ObservableList} this property should be bound to
-     * @throws NullPointerException if {@code list} is {@code null}
-     * @throws IllegalArgumentException if {@code list} is the same list that this {@code ReadOnlyListProperty} points to
+     * @param source the source {@code ObservableList} this property should be bound to
+     * @throws NullPointerException if {@code source} is {@code null}
+     * @throws IllegalArgumentException if {@code source} is the list wrapped in this {@code ReadOnlyListProperty}
      */
-    public void bindContent(ObservableList<E> list) {
-        Bindings.bindContent(this, list);
-    }
+    public abstract void bindContent(ObservableList<E> source);
+
+    /**
+     * Removes the content binding that was established with {@link #bindContent(ObservableList)}.
+     * <p>
+     * The content of the wrapped list will remain unchanged.
+     * If this property is not content-bound, calling this method has no effect.
+     *
+     * @since 18
+     */
+    public abstract void unbindContent();
 
     /**
      * Deletes a content binding between the {@link javafx.collections.ObservableList}, that is
@@ -101,10 +124,10 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @param object the {@code Object} to which the binding should be removed
      * @throws NullPointerException if {@code object} is {@code null}
      * @throws IllegalArgumentException if {@code object} is the same list that this {@code ReadOnlyListProperty} points to
+     * @deprecated use {@link #unbindContent()}
      */
-    public void unbindContent(Object object) {
-        Bindings.unbindContent(this, object);
-    }
+    @Deprecated(since = "18", forRemoval = true)
+    public abstract void unbindContent(Object object);
 
     @Override
     public boolean equals(Object obj) {

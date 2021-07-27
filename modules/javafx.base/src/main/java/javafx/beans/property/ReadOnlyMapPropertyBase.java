@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,15 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
+import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.MapExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
+
+import java.util.Objects;
 
 /**
  * Base class for all readonly properties wrapping an {@link javafx.collections.ObservableMap}.
@@ -110,6 +114,44 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
         MapExpressionHelper.fireValueChangedEvent(helper, change);
     }
 
+    @Override
+    public void bindContent(ObservableMap<K, V> source) {
+        Objects.requireNonNull(source, "Source cannot be null");
+        MapExpressionHelper.requireNotContentBoundBidirectional(helper);
+        ContentBinding.bind(this, source);
+    }
 
+    @Override
+    public void unbindContent() {
+        ContentBinding binding = MapExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        if (binding != null) {
+            binding.dispose();
+        }
+    }
+
+    @Override
+    public void unbindContent(Object object) {
+        ContentBinding.unbind(this, object);
+    }
+
+    @Override
+    public void bindContentBidirectional(ObservableMap<K, V> other) {
+        Objects.requireNonNull(other, "Map cannot be null");
+        MapExpressionHelper.requireNotContentBound(helper);
+        BidirectionalContentBinding.bind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(ObservableMap<K, V> other) {
+        Objects.requireNonNull(other, "Map cannot be null");
+        BidirectionalContentBinding.unbind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(Object object) {
+        if (object instanceof ObservableMap<?, ?>) {
+            unbindContentBidirectional((ObservableMap<K, V>)object);
+        }
+    }
 
 }

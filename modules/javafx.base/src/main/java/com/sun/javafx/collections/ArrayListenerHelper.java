@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,16 +24,14 @@
  */
 package com.sun.javafx.collections;
 
-import com.sun.javafx.binding.ExpressionHelperBase;
-import java.util.Arrays;
+import com.sun.javafx.WeakListenerArrayUtil;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableArray;
-import com.sun.javafx.logging.PlatformLogger;
 
-/**
- */
-public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends ExpressionHelperBase {
+import java.util.Arrays;
+
+public abstract class ArrayListenerHelper<T extends ObservableArray<T>> {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
@@ -213,7 +211,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
                     final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
                 } else if (invalidationSize == oldCapacity) {
-                    invalidationSize = trim(invalidationSize, invalidationListeners);
+                    invalidationSize = WeakListenerArrayUtil.trim(invalidationSize, invalidationListeners);
                     if (invalidationSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
@@ -270,7 +268,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
                     final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     changeListeners = Arrays.copyOf(changeListeners, newCapacity);
                 } else if (changeSize == oldCapacity) {
-                    changeSize = trim(changeSize, changeListeners);
+                    changeSize = WeakListenerArrayUtil.trim(changeSize, changeListeners);
                     if (changeSize == oldCapacity) {
                         final int newCapacity = (oldCapacity * 3)/2 + 1;
                         changeListeners = Arrays.copyOf(changeListeners, newCapacity);

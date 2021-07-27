@@ -25,6 +25,8 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
+import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.ListExpressionHelper;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
@@ -268,6 +270,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
     @Override
     public void bind(final ObservableValue<? extends ObservableList<E>> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ListExpressionHelper.requireNotBoundBidirectional(helper);
 
         if (source != observable) {
             unbind();
@@ -286,6 +289,46 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             value = observable.getValue();
             observable.removeListener(listener);
             observable = null;
+        }
+    }
+
+    @Override
+    public void bindContent(ObservableList<E> source) {
+        Objects.requireNonNull(source, "Source cannot be null");
+        ListExpressionHelper.requireNotContentBoundBidirectional(helper);
+        ContentBinding.bind(this, source);
+    }
+
+    @Override
+    public void unbindContent() {
+        ContentBinding binding = ListExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        if (binding != null) {
+            binding.dispose();
+        }
+    }
+
+    @Override
+    public void unbindContent(Object object) {
+        ContentBinding.unbind(this, object);
+    }
+
+    @Override
+    public void bindContentBidirectional(ObservableList<E> other) {
+        Objects.requireNonNull(other, "List cannot be null");
+        ListExpressionHelper.requireNotContentBound(helper);
+        BidirectionalContentBinding.bind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(ObservableList<E> other) {
+        Objects.requireNonNull(other, "List cannot be null");
+        BidirectionalContentBinding.unbind(this, other);
+    }
+
+    @Override
+    public void unbindContentBidirectional(Object object) {
+        if (object instanceof ObservableList<?>) {
+            unbindContentBidirectional((ObservableList<E>)object);
         }
     }
 

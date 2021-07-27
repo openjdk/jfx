@@ -164,6 +164,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
     @Override
     public void bind(final ObservableValue<? extends Number> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         ObservableIntegerValue newObservable;
         if (source instanceof ObservableIntegerValue) {
@@ -267,9 +268,8 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
         }
     }
 
-    private abstract class ValueWrapper extends IntegerBinding {
-
-        private ObservableValue<? extends Number> observable;
+    private abstract static class ValueWrapper extends IntegerBinding {
+        private final ObservableValue<? extends Number> observable;
 
         public ValueWrapper(ObservableValue<? extends Number> observable) {
             this.observable = observable;

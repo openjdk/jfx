@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyListPropertyBase;
 import javafx.beans.property.ReadOnlyListPropertyBaseShim;
+import javafx.collections.ListChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.collections.FXCollections;
@@ -36,6 +37,7 @@ import javafx.collections.ObservableList;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class ReadOnlyListPropertyBaseTest {
@@ -86,6 +88,13 @@ public class ReadOnlyListPropertyBaseTest {
 
         private ObservableList<Object> value;
 
+        public ReadOnlyPropertyMock() {}
+
+        public ReadOnlyPropertyMock(ObservableList<Object> value) {
+            this.value = value;
+            value.addListener((ListChangeListener<? super Object>)this::fireValueChangedEvent);
+        }
+
         @Override
         public Object getBean() {
             // not used
@@ -119,6 +128,76 @@ public class ReadOnlyListPropertyBaseTest {
             fail("Not in use");
             return null;
         }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        target.bindContent(source);
+        target.bindContentBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        target.bindContentBidirectional(source);
+        target.bindContent(source);
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((ListChangeListener<Object>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        target.bindContent(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.add("bar");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((ListChangeListener<Object>) change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
+        target.bindContentBidirectional(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.add("bar");
+        assertEquals(1, target.size());
     }
 
 }

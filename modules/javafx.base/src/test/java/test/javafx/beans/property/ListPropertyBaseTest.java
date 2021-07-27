@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package test.javafx.beans.property;
 
 import java.util.Arrays;
+
+import javafx.collections.ListChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableObjectValueStub;
@@ -862,4 +864,91 @@ public class ListPropertyBaseTest {
             return name;
         }
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
+        var target = new SimpleListProperty<String>();
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bind(source);
+        target.bindBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
+        var target = new SimpleListProperty<String>();
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindBidirectional(source);
+        target.bind(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        target.bindContentBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContentBidirectional(source);
+        target.bindContent(source);
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((ListChangeListener<? super String>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.add("bar");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((ListChangeListener<? super String>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContentBidirectional(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.add("bar");
+        assertEquals(1, target.size());
+    }
+
 }

@@ -29,7 +29,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
 import javafx.beans.property.*;
-import javafx.beans.value.ObservableValue;
 import javafx.util.StringConverter;
 
 import java.lang.ref.WeakReference;
@@ -39,16 +38,21 @@ import java.util.Objects;
 
 public abstract class BidirectionalBinding implements InvalidationListener, WeakListener {
 
-    private static void checkParameters(Object property1, Object property2) {
+    private static void checkParameters(Property<?> property1, Property<?> property2) {
         Objects.requireNonNull(property1, "Both properties must be specified.");
         Objects.requireNonNull(property2, "Both properties must be specified.");
+
         if (property1 == property2) {
             throw new IllegalArgumentException("Cannot bind property to itself");
+        }
+
+        if (property1.isBound() || property2.isBound()) {
+            throw new IllegalStateException("Cannot establish a bidirectional binding for a bound property.");
         }
     }
 
     public static <T> BidirectionalBinding bind(Property<T> property1, Property<T> property2) {
-        checkParameters(property1, property2);
+        unbind(property1, property2);
         final BidirectionalBinding binding =
                 ((property1 instanceof DoubleProperty) && (property2 instanceof DoubleProperty)) ?
                         new BidirectionalDoubleBinding((DoubleProperty) property1, (DoubleProperty) property2)
@@ -68,8 +72,8 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
     }
 
     public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format) {
-        checkParameters(stringProperty, otherProperty);
         Objects.requireNonNull(format, "Format cannot be null");
+        unbind(stringProperty, otherProperty);
         final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
         stringProperty.setValue(format.format(otherProperty.getValue()));
         stringProperty.addListener(binding);
@@ -78,8 +82,8 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
     }
 
     public static <T> Object bind(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
-        checkParameters(stringProperty, otherProperty);
         Objects.requireNonNull(converter, "Converter cannot be null");
+        unbind(stringProperty, otherProperty);
         final var binding = new StringConverterBidirectionalBinding<>(stringProperty, otherProperty, converter);
         stringProperty.setValue(converter.toString(otherProperty.getValue()));
         stringProperty.addListener(binding);
@@ -87,22 +91,11 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         return binding;
     }
 
-    public static <T> void unbind(Property<T> property1, Property<T> property2) {
+    public static void unbind(Property<?> property1, Property<?> property2) {
         checkParameters(property1, property2);
         final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
         property1.removeListener(binding);
         property2.removeListener(binding);
-    }
-
-    public static void unbind(Object property1, Object property2) {
-        checkParameters(property1, property2);
-        final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
-        if (property1 instanceof ObservableValue) {
-            ((ObservableValue<?>)property1).removeListener(binding);
-        }
-        if (property2 instanceof ObservableValue) {
-            ((ObservableValue<?>)property2).removeListener(binding);
-        }
     }
 
     public static BidirectionalBinding bindNumber(Property<Integer> property1, IntegerProperty property2) {
@@ -139,9 +132,8 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
 
     private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> property1, Property<T> property2) {
         checkParameters(property1, property2);
-
+        unbind(property1, property2);
         final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(property2, property1);
-
         property1.setValue(property2.getValue());
         property1.addListener(binding);
         property2.addListener(binding);
@@ -150,9 +142,8 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
 
     private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
         checkParameters(property1, property2);
-
+        unbind(property1, property2);
         final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(property1, property2);
-
         property1.setValue((T)property2.getValue());
         property1.addListener(binding);
         property2.addListener(binding);

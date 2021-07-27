@@ -161,6 +161,7 @@ public abstract class StringPropertyBase extends StringProperty {
     @Override
     public void bind(ObservableValue<? extends String> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         if (!source.equals(observable)) {
             unbind();

@@ -164,6 +164,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
     @Override
     public void bind(final ObservableValue<? extends Number> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         ObservableFloatValue newObservable;
         if (source instanceof ObservableFloatValue) {
@@ -268,9 +269,8 @@ public abstract class FloatPropertyBase extends FloatProperty {
         }
     }
 
-    private abstract class ValueWrapper extends FloatBinding {
-
-        private ObservableValue<? extends Number> observable;
+    private abstract static class ValueWrapper extends FloatBinding {
+        private final ObservableValue<? extends Number> observable;
 
         public ValueWrapper(ObservableValue<? extends Number> observable) {
             this.observable = observable;

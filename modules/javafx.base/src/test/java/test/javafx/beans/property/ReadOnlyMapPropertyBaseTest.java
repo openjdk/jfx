@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.beans.property;
 
+import javafx.collections.MapChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.collections.FXCollections;
@@ -33,12 +34,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyMapPropertyBase;
 import javafx.beans.property.ReadOnlyMapPropertyBaseShim;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class ReadOnlyMapPropertyBaseTest {
@@ -89,6 +90,13 @@ public class ReadOnlyMapPropertyBaseTest {
 
         private ObservableMap<Object, Object> value;
 
+        public ReadOnlyPropertyMock() {}
+
+        public ReadOnlyPropertyMock(ObservableMap<Object, Object> value) {
+            this.value = value;
+            value.addListener((MapChangeListener<? super Object, ? super Object>)this::fireValueChangedEvent);
+        }
+
         @Override
         public Object getBean() {
             // not used
@@ -122,6 +130,76 @@ public class ReadOnlyMapPropertyBaseTest {
             fail("Not in use");
             return null;
         }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
+        var target = new ReadOnlyPropertyMock();
+        var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        target.bindContent(source);
+        target.bindContentBidirectional(source);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
+        var target = new ReadOnlyPropertyMock();
+        var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        target.bindContent(source);
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((MapChangeListener<Object, Object>)change -> calls[0]++);
+
+        source.put("foo", "bar");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        target.bindContent(source);
+        source.put("foo", "bar");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.put("qux", "quux");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((MapChangeListener<Object, Object>)change -> calls[0]++);
+
+        source.put("foo", "bar");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        source.put("foo", "bar");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.put("qux", "quux");
+        assertEquals(1, target.size());
     }
 
 }

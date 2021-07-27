@@ -40,32 +40,36 @@ import javafx.beans.value.WritableValue;
 public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
 
     /**
-     * Establishes a unidirectional binding between this property (the <i>bound property</i>)
-     * and an {@link ObservableValue} (the <i>binding source</i>).
+     * Establishes a unidirectional binding between this property (the <em>bound property</em>)
+     * and an {@link ObservableValue} (the <em>binding source</em>).
      * <p>
      * After establishing the binding, the value of the bound property is synchronized with the value
      * of the binding source: any change to the value of the binding source will immediately result in
      * the value of the bound property being changed accordingly. Furthermore, the bound property becomes
      * effectively read-only: any call to {@link #setValue(Object)} will fail with an exception.
+     * When the binding is first established, the value of the bound property is set to the current value
+     * of the binding source.
      * <p>
-     * The bound property <i>strongly</i> references the binding source; this means that, as long as
+     * The bound property <em>strongly</em> references the binding source; this means that, as long as
      * the bound property is alive, the binding source will not be garbage-collected. As a consequence,
      * a bound property will not unexpectedly be unbound if its binding source would otherwise become
      * unreachable.
      * <p>
-     * Conversely, the binding source only <i>weakly</i> references the bound property. In order to be
+     * Conversely, the binding source only <em>weakly</em> references the bound property. In order to be
      * eligible for garbage collection, a bound property need not be unbound from its binding source.
      * <p>
      * If this method is called when the property is already bound, the previous binding is removed
-     * as if by calling {@link #unbind()} before establishing the new binding.
+     * as if by calling {@link #unbind()} before establishing the new binding. If this property is
+     * already bidirectionally bound, calling this method will fail with an exception.
      *
      * @param source the binding source
      * @throws NullPointerException if {@code source} is {@code null}
+     * @throws IllegalStateException if this property is bidirectionally bound
      */
     void bind(ObservableValue<? extends T> source);
 
     /**
-     * Removes a unidirectional binding that was established with {@link #bind(ObservableValue)}.
+     * Removes the unidirectional binding that was established with {@link #bind(ObservableValue)}.
      * <p>
      * The value of this property will remain unchanged.
      * If this property is not bound, calling this method has no effect.
@@ -74,10 +78,10 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
 
     /**
      * Returns whether this property is bound by a unidirectional binding that was
-     * established by calling {@link #bind(ObservableValue)}.
+     * established by calling {@link Property#bind(ObservableValue)}.
      * <p>
-     * Note that this method does <b>not</b> account for bidirectional bindings that were
-     * established by calling {@link #bindBidirectional(Property)}.
+     * Note that this method does not account for bidirectional bindings that were
+     * established by calling {@link Property#bindBidirectional(Property)}.
      *
      * @return whether this property is unidirectionally bound
      */
@@ -88,44 +92,46 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * <p>
      * After establishing the binding, the values of both properties are synchronized: any change
      * to the value of one property will immediately result in the value of the other property being
-     * changed accordingly.
+     * changed accordingly. When the binding is first established, the value of the this property
+     * is set to the current value of the other property.
      * <p>
      * While it is not possible for a property to be bound by more than one unidirectional binding,
      * it is legal to establish multiple bidirectional bindings for the same property. However,
      * since a bidirectional binding allows for the values of both properties to be changed
-     * by calling {@link #setValue(Object)}, neither of the properties is considered to be a
-     * <i>bound property</i> that returns {@code true} from {@link #isBound()}.
+     * by calling {@link #setValue(Object)}, {@link #isBound()} will return {@code false} for
+     * both properties.
      * <p>
-     * Both properties of a bidirectional binding <i>weakly</i> reference their counterparts.
-     * This is different from a unidirectional binding, where the bound property <i>strongly</i>
+     * Both properties of a bidirectional binding <em>weakly</em> reference their counterparts.
+     * This is different from a unidirectional binding, where the target property <em>strongly</em>
      * references its binding source. In practice, this means that if any of the bidirectionally
      * bound properties become unreachable, the binding is eligible for garbage collection.
      * Furthermore, neither of the bidirectionally bound properties will keep its counterpart
      * alive if the counterpart would otherwise become unreachable.
      * <p>
-     * Bidirectional bindings are independent from unidirectional bindings. As a consequence,
-     * establishing a bidirectional binding does not remove a unidirectional binding that has
-     * already been established, nor does it prevent a unidirectional binding from being
-     * established. However, doing so is not a meaningful use of this API, because the
-     * unidirectionally bound property will cause any attempt to change the value of any of
-     * the properties to fail with an exception.
+     * Bidirectional bindings and unidirectional bindings are mutually exclusive. If a property is
+     * unidirectionally bound, any attempt to establish a bidirectional binding will fail with an
+     * exception.
+     * <p>
+     * If this property is already bidirectionally bound to the other property, the existing binding
+     * will be removed as if by calling {@link #unbindBidirectional(Property)}.
      *
      * @param other the other property
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is {@code this}
+     * @throws IllegalStateException if this property or the other property is unidirectionally bound
      *
      * @see #bind(ObservableValue)
      */
     void bindBidirectional(Property<T> other);
 
     /**
-     * Removes a bidirectional binding that was established with {@link #bindBidirectional(Property)}.
+     * Removes the bidirectional binding that was established with {@link #bindBidirectional(Property)}.
      * <p>
      * Bidirectional bindings can be removed by calling this method on either of the two properties:
-     * <pre><code>
+     * <pre>{@code
      * property1.bindBidirectional(property2);
      * property2.unbindBidirectional(property1);
-     * </code></pre>
+     * }</pre>
      * If the properties are not bidirectionally bound, calling this method has no effect.
      *
      * @param other the other property

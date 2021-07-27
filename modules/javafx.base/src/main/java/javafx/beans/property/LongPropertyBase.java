@@ -164,6 +164,7 @@ public abstract class LongPropertyBase extends LongProperty {
     @Override
     public void bind(final ObservableValue<? extends Number> source) {
         Objects.requireNonNull(source, "Cannot bind to null");
+        ExpressionHelper.requireNotBoundBidirectional(helper);
 
         ObservableLongValue newObservable;
         if (source instanceof ObservableLongValue) {
@@ -267,9 +268,8 @@ public abstract class LongPropertyBase extends LongProperty {
         }
     }
 
-    private abstract class ValueWrapper extends LongBinding {
-
-        private ObservableValue<? extends Number> observable;
+    private abstract static class ValueWrapper extends LongBinding {
+        private final ObservableValue<? extends Number> observable;
 
         public ValueWrapper(ObservableValue<? extends Number> observable) {
             this.observable = observable;

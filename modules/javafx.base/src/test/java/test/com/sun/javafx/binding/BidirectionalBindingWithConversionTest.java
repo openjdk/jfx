@@ -36,11 +36,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.lang.ref.WeakReference;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import static org.junit.Assert.*;
@@ -52,7 +55,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         PropertyMock<U> create0();
         PropertyMock<V> create1();
         void bind(PropertyMock<U> obj0, PropertyMock<V> obj1);
-        void unbind(Object obj0, Object obj1);
+        void unbind(PropertyMock<?> obj0, PropertyMock<?> obj1);
         Object createBindingDirectly(PropertyMock<U> op0, PropertyMock<V> op1);
         void check0(U obj0, U obj1);
         void check1(V obj0, V obj1);
@@ -206,8 +209,8 @@ public class BidirectionalBindingWithConversionTest<S, T> {
                         Bindings.bindBidirectional(op0, op1, format);
                     }
                     @Override
-                    public void unbind(Object op0, Object op1) {
-                        Bindings.unbindBidirectional(op0, op1);
+                    public void unbind(PropertyMock<?> op0, PropertyMock<?> op1) {
+                        BidirectionalBinding.unbind(op0, op1);
                     }
                     @Override
                     public Object createBindingDirectly(PropertyMock<String> op0, PropertyMock<Date> op1) {
@@ -243,8 +246,8 @@ public class BidirectionalBindingWithConversionTest<S, T> {
                         Bindings.bindBidirectional(op0, op1, converter);
                     }
                     @Override
-                    public void unbind(Object op0, Object op1) {
-                        Bindings.unbindBidirectional(op0, op1);
+                    public void unbind(PropertyMock<?> op0, PropertyMock<?> op1) {
+                        BidirectionalBinding.unbind(op0, op1);
                     }
                     @Override
                     public Object createBindingDirectly(PropertyMock<String> op0, PropertyMock<Date> op1) {
@@ -273,45 +276,59 @@ public class BidirectionalBindingWithConversionTest<S, T> {
 
     private static class ObjectPropertyMock<T> extends SimpleObjectProperty<T> implements PropertyMock<T> {
 
-        private int listenerCount = 0;
+        private final List<WeakReference<InvalidationListener>> listeners = new ArrayList<>();
 
         @Override
         public int getListenerCount() {
-            return listenerCount;
+            listeners.removeIf(ref -> ref.get() == null);
+            return listeners.size();
         }
 
         @Override
         public void addListener(InvalidationListener listener) {
             super.addListener(listener);
-            listenerCount++;
+            listeners.add(new WeakReference<>(listener));
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
             super.removeListener(listener);
-            listenerCount--;
+            var it = listeners.listIterator();
+            while (it.hasNext()) {
+                if (it.next().get() == listener) {
+                    it.remove();
+                    return;
+                }
+            }
         }
     }
 
     private static class StringPropertyMock extends SimpleStringProperty implements PropertyMock<String> {
 
-        private int listenerCount = 0;
+        private final List<WeakReference<InvalidationListener>> listeners = new ArrayList<>();
 
         @Override
         public int getListenerCount() {
-            return listenerCount;
+            listeners.removeIf(ref -> ref.get() == null);
+            return listeners.size();
         }
 
         @Override
         public void addListener(InvalidationListener listener) {
             super.addListener(listener);
-            listenerCount++;
+            listeners.add(new WeakReference<>(listener));
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
             super.removeListener(listener);
-            listenerCount--;
+            var it = listeners.listIterator();
+            while (it.hasNext()) {
+                if (it.next().get() == listener) {
+                    it.remove();
+                    return;
+                }
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -228,4 +228,27 @@ public class ContentBindingListTest {
         op2.set(0, 1);
         assertEquals(1, op1.get(0).intValue());
     }
+
+    @Test
+    public void testContentBoundListThrowsExceptionWhenModified() {
+        var target = FXCollections.observableArrayList();
+        var source = FXCollections.observableArrayList("foo", "bar");
+        ContentBinding.bind(target, source);
+
+        var exceptions = new ArrayList<Throwable>();
+        var oldHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.add(e));
+
+        try {
+            source.add("qux");
+            assertEquals(0, exceptions.size());
+
+            target.remove(0);
+            assertEquals(1, exceptions.size());
+            assertTrue(exceptions.get(0).getMessage().contains("Illegal list modification"));
+        } finally {
+            Thread.currentThread().setUncaughtExceptionHandler(oldHandler);
+        }
+    }
+
 }
