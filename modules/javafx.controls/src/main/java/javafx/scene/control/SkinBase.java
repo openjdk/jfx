@@ -58,7 +58,7 @@ import javafx.scene.layout.Region;
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -86,7 +86,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Event Handlers / Listeners                                              *
      *                                                                         *
@@ -107,7 +107,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -133,7 +133,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API (from Skin)                                                  *
      *                                                                         *
@@ -163,7 +163,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -318,7 +318,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Layout-related API                                               *
      *                                                                         *
@@ -524,7 +524,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * (Mostly ugly) Skin -> Control forwarding API                            *
      *                                                                         *
@@ -948,7 +948,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -956,7 +956,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
 
-     /**************************************************************************
+     /* ************************************************************************
       *                                                                        *
       * Specialization of CSS handling code                                    *
       *                                                                        *
@@ -1028,7 +1028,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -1078,7 +1078,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Testing-only API                                                        *
      *                                                                         *

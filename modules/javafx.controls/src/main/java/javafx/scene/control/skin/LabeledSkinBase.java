@@ -66,7 +66,7 @@ import static javafx.scene.control.OverrunStyle.CLIP;
  */
 public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -135,7 +135,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -233,7 +233,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -761,7 +761,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

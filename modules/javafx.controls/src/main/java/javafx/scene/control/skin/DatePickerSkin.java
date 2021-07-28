@@ -54,7 +54,7 @@ import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
  */
 public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -68,7 +68,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -155,7 +155,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -222,7 +222,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

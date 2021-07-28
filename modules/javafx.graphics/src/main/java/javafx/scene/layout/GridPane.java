@@ -268,7 +268,7 @@ public class GridPane extends Pane {
      */
     public static final int REMAINING = Integer.MAX_VALUE;
 
-    /********************************************************************
+    /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
     private static final String MARGIN_CONSTRAINT = "gridpane-margin";
@@ -722,7 +722,7 @@ public class GridPane extends Pane {
         return array;
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
@@ -2393,7 +2393,7 @@ public class GridPane extends Pane {
         return new double[][] {currentWidths.asArray(), currentHeights.asArray()};
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

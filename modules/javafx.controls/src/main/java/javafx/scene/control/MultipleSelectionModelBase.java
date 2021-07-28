@@ -52,7 +52,7 @@ import javafx.util.Pair;
  */
 abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Constructors                                                        *
      *                                                                     *
@@ -78,7 +78,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Observable properties                                               *
      *                                                                     *
@@ -119,7 +119,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Internal field                                                      *
      *                                                                     *
@@ -129,7 +129,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Public selection API                                                *
      *                                                                     *
@@ -618,7 +618,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Private implementation                                              *
      *                                                                     *

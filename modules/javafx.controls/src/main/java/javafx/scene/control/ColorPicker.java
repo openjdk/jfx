@@ -112,7 +112,7 @@ public class ColorPicker extends ComboBoxBase<Color> {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -123,7 +123,7 @@ public class ColorPicker extends ComboBoxBase<Color> {
         return new ColorPickerSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

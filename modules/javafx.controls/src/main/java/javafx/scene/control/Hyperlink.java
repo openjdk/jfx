@@ -55,7 +55,7 @@ import javafx.css.StyleableProperty;
  */
 public class Hyperlink extends ButtonBase {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -100,7 +100,7 @@ public class Hyperlink extends ButtonBase {
         ((StyleableProperty<Cursor>)(WritableValue<Cursor>)cursorProperty()).applyStyle(null, Cursor.HAND);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -137,7 +137,7 @@ public class Hyperlink extends ButtonBase {
         return visited == null ? false : visited.get();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -163,7 +163,7 @@ public class Hyperlink extends ButtonBase {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -185,7 +185,7 @@ public class Hyperlink extends ButtonBase {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

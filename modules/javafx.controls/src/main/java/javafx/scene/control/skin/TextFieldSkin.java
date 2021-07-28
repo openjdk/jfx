@@ -71,7 +71,7 @@ import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
  */
 public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -131,7 +131,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -383,7 +383,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -701,7 +701,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *

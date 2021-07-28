@@ -41,7 +41,7 @@ import javafx.collections.ObservableList;
  */
 public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -94,7 +94,7 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -107,7 +107,7 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

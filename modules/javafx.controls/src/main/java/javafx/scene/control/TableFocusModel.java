@@ -36,7 +36,7 @@ package javafx.scene.control;
  */
 public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extends FocusModel<T> {
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Public API                                                          *
      *                                                                     *
@@ -88,7 +88,7 @@ public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extend
 
 
 
-     /***********************************************************************
+     /* *********************************************************************
      *                                                                     *
      * Private Implementation                                              *
      *                                                                     *

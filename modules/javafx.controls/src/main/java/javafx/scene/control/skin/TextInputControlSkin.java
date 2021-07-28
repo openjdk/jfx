@@ -95,7 +95,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class TextInputControlSkin<T extends TextInputControl> extends SkinBase<T> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields / blocks
      *
@@ -136,7 +136,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     private final static boolean IS_FXVK_SUPPORTED = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -166,7 +166,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -361,7 +361,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -560,7 +560,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Abstract API
      *
@@ -602,7 +602,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      */
     public abstract void moveCaret(TextUnit unit, Direction dir, boolean select);
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -752,7 +752,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -836,7 +836,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes
      *

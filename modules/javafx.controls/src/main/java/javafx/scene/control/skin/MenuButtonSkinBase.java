@@ -58,7 +58,7 @@ import java.util.List;
  */
 public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -77,7 +77,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     private final ChangeListener<? super Scene> sceneChangeListener;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -210,7 +210,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -289,7 +289,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -328,7 +328,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

@@ -111,7 +111,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
                 });
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -143,7 +143,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -168,7 +168,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -176,7 +176,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -186,7 +186,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -639,7 +639,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -763,7 +763,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -797,7 +797,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -812,7 +812,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
