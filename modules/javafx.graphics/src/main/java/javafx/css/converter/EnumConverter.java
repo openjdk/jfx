@@ -40,7 +40,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Converter to convert a String representation of an {@code Enum} to an {@code Enum}.
+ * Converter to convert a string representation of an {@code Enum} to an {@code Enum}.
  * @since 9
  */
 public final class EnumConverter<E extends Enum<E>> extends StyleConverter<String, E> {
@@ -123,7 +123,6 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
      * @param ename enum name
      * @return an {@code EnumConverter} instance for a given enum name.
      */
-    // package for unit testing
     static public StyleConverter<?,?> getInstance(final String ename) {
 
         StyleConverter<?,?> converter = null;

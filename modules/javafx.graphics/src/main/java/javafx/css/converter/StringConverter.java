@@ -44,7 +44,7 @@ public final class StringConverter extends StyleConverter<String, String> {
 
     /**
      * Get the {@code StringConverter} instance.
-     * @return the {@code StringConverter} instance.
+     * @return the {@code StringConverter} instance
      */
     public static StyleConverter<String, String> getInstance() {
         return Holder.INSTANCE;
@@ -69,14 +69,14 @@ public final class StringConverter extends StyleConverter<String, String> {
     }
 
     /**
-     * Converter to convert a sequence of {@code String}s to a String[].
+     * Converter to convert a sequence of {@code String}s to an array of {@code String}s.
      *
      * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<String, String>[], String[]> {
         /**
          * Get the {@code SequenceConverter} instance.
-         * @return the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
          */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

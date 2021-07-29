@@ -33,7 +33,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * This class serves as a container of CSS property and its value.
+ * This class serves as a container of a CSS property and its value.
  * @since 9
  */
 final public class Declaration {
@@ -88,7 +88,7 @@ final public class Declaration {
 
     /**
      * Gets the importance of this {@code Declaration}.
-     * @return important
+     * @return the important flag
      */
     public final boolean isImportant() {
         return important;
@@ -105,13 +105,14 @@ final public class Declaration {
         return null;
     }
     /**
-     * Indicates whether some other object is "equal to" this one.
+     * Indicates whether some other {@code Object} is "equal to" this one.
      * <p>
-     * One declaration is equal to another regardless of the {@code Rule} to which
+     * One {@code Declaration} is equal to another regardless of the {@code Rule} to which
      * the {@code Declaration} belongs. Only the property, value and importance are
      * considered.
-     * </p>
-     * @return true if this object is the same as the obj argument; false otherwise.
+     *
+     * @param obj an {@code Object} to compare
+     * @return {@code true} if this object is the same as the {@code obj} argument; {@code false} otherwise.
      */
     @Override public boolean equals(Object obj) {
         if (this == obj) {

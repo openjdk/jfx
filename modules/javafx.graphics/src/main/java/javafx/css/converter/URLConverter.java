@@ -251,7 +251,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
     }
 
     /**
-     * Converter to convert a sequence of URLs to a String[].
+     * Converter to convert a sequence of URLs to an array of {@code String}s.
      * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], String>[], String[]> {

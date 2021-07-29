@@ -107,7 +107,7 @@ import java.util.Map;
 import java.util.Stack;
 
 /**
- * A parser for CSS document string.
+ * A parser for a CSS document string.
  * @since 9
  */
 final public class CssParser {
@@ -4746,7 +4746,7 @@ final public class CssParser {
 
         /**
          * Constructs a {@code ParseError} object with the message.
-         * @param message message
+         * @param message the message
          */
         public ParseError(String message) {
             this.message = message;

@@ -98,19 +98,22 @@ abstract public class Selector {
     public abstract Match createMatch();
 
     /**
-     * Same as the matches method expect return true/false rather than a match.
-     * @param styleable styleable to match.
-     * @return {@code true} if this {@code Selector} applies to the given {@code Styleable}.
+     * Gets whether this {@code Selector} applies to the given {@code Styleable}.
+     * It is same as the {@link createMatch} method except it returns true/false rather than a {@code Match}.
+     * @param styleable the {@code Styleable} to match
+     * @return {@code true} if this {@code Selector} applies to the given {@code Styleable}
      */
     public abstract boolean applies(Styleable styleable);
 
     /**
-     * Same as applies, but will return pseudoclass state that it finds along the way.
-     * @param styleable styleable to match.
+     * Gets whether this {@code Selector} applies to the given {@code Styleable}.
+     * It is same as {@link applies} method except it also returns
+     * {@code PseudoClass} state that it finds along the way.
+     * @param styleable the {@code Styleable} to match
      * @param triggerStates a set of {@code PseudoClass} states
      * @param depth depth of the {@code Node} heirarchy to look for
      * @return {@code true} if this {@code Selector} and a set of {@code PseudoClass}
-     * applies to the given {@code Styleable}.
+     * applies to the given {@code Styleable}
      */
     public abstract boolean applies(Styleable styleable, Set<PseudoClass>[] triggerStates, int depth);
 
@@ -130,7 +133,7 @@ abstract public class Selector {
     /**
      * Writes {@code Selector} data in binary form to given {@code DataOutputStream}.
      * @param os {@code DataOutputStream} to write {@code Selector} data to
-     * @param stringStore unsused
+     * @param stringStore unused
      * @throws IOException if writing to {@code DataOutputStream} fails
      */
     protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
@@ -160,8 +163,8 @@ abstract public class Selector {
 
     /**
      * Creates a {@code Selector} object.
-     * @param cssSelector css selector string
-     * @return a Selector
+     * @param cssSelector CSS selector string
+     * @return a {@code Selector}
      */
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {

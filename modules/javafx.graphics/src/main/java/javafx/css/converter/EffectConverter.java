@@ -38,7 +38,7 @@ import javafx.scene.text.Font;
 import java.util.Map;
 
 /**
- * Converter to convert representation of an {@code Effect} to an {@code Effect}.
+ * Converter to convert a string representation of an {@code Effect} to an {@code Effect}.
  * @since 9
  */
 public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
@@ -79,7 +79,7 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     }
 
     /**
-     * Converter to convert DropShadow {@code Effect}.
+     * Converter to convert a {@code DropShadow} effect.
      * @since 9
      */
     public static final class DropShadowConverter extends EffectConverter {

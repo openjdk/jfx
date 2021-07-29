@@ -70,8 +70,8 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * Gets Immutable List of style-classes of the selector.
-     * @return Immutable List&lt;String&gt; of style-classes of the selector
+     * Gets an immutable list of style-classes of the {@code Selector}.
+     * @return an immutable list of style-classes of the {@code Selector}
      */
     public List<String> getStyleClasses() {
 
@@ -86,14 +86,16 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * Gets the {@code Set} of {@code StyleClass} of the selector.
-     * @return set of style class
+     * Gets the {@code Set} of {@code StyleClass}es of the {@code Selector}.
+     * @return the {@code Set} of {@code StyleClass}es
      */
     public Set<StyleClass> getStyleClassSet() {
         return styleClassSet;
     }
 
-    /** styleClasses converted to a set of bit masks */
+    /**
+     * styleClasses converted to a set of bit masks
+     */
     final private StyleClassSet styleClassSet;
 
     final private String id;
@@ -114,7 +116,8 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
+     * Gets an immutable list of {@code String}s of pseudo classes of the {@code Selector}
+     * @return an immutable list of {@code String}s
      */
     List<String> getPseudoclasses() {
 
@@ -148,8 +151,9 @@ final public class SimpleSelector extends Selector {
 
     // Used in Match. If nodeOrientation is ltr or rtl,
     // then count it as a pseudoclass
-    /** Gets {@code NodeOrientation} of this Selector.
-     * @return nodeOrientation
+    /**
+     * Gets the {@code NodeOrientation} of this {@code Selector}.
+     * @return the {@code NodeOrientation}
      */
     public NodeOrientation getNodeOrientation() {
         return nodeOrientation;

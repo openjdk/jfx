@@ -531,7 +531,7 @@ public class StyleConverter<F, T> {
 
 
     /**
-     * The StringStore class
+     * The StringStore class.
      * @since 9
      */
     public static class StringStore {
@@ -564,7 +564,7 @@ public class StyleConverter<F, T> {
         }
 
         /**
-         * Writes the StringStore strings to a given {@code DataOutputStream}.
+         * Writes the {@code StringStore} strings to a given {@code DataOutputStream}.
          * @param os {@code DataOutputStream} where the StringStore strings need to be written
          * @throws IOException if writing to {@code DataOutputStream} fails
          */

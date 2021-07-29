@@ -138,7 +138,7 @@ final public class Rule {
     private Stylesheet stylesheet;
 
     /**
-     * The {@code Stylesheet} this {@code Selector} belongs to.
+     * Gets the {@code Stylesheet} this {@code Rule} belongs to.
      * @return the stylesheet
      */
     public Stylesheet getStylesheet() {
