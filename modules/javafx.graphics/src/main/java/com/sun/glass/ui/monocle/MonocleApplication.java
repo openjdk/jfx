@@ -153,7 +153,7 @@ public final class MonocleApplication extends Application {
 
     @Override
     public Window createWindow(Window owner, Screen screen, WindowRegionClassifier classifier, int styleMask) {
-        return new MonocleWindow(owner, screen, styleMask);
+        return new MonocleWindow(owner, screen, classifier, styleMask);
     }
 
     @Override

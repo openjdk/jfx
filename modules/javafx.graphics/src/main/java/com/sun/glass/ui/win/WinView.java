@@ -98,10 +98,10 @@ final class WinView extends View {
         updateLocation();
     }
 
-    /*@Override
+    @Override
     protected MoveResizeHelper getMoveResizeHelper() {
         // We don't use a move-resize helper on Windows, but handle the WM_NCHITTEST message instead.
         return null;
-    }*/
+    }
 }
 

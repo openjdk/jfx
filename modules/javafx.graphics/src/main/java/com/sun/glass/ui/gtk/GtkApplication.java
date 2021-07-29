@@ -380,7 +380,7 @@ final class GtkApplication extends Application implements
 
     @Override
     public Window createWindow(Window owner, Screen screen, WindowRegionClassifier classifier, int styleMask) {
-        return new GtkWindow(owner, screen, styleMask);
+        return new GtkWindow(owner, screen, classifier, styleMask);
     }
 
     @Override

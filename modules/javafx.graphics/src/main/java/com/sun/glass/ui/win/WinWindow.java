@@ -254,7 +254,7 @@ class WinWindow extends Window {
     }
 
     protected int classifyWindowRegion(int x, int y) {
-        /*if (regionClassifier != null) {
+        if (regionClassifier != null) {
             double wx = (x - this.x) / platformScaleX;
             double wy = (y - this.y) / platformScaleY;
 
@@ -273,7 +273,7 @@ class WinWindow extends Window {
                 case LEFT: return 10; // HTLEFT
                 case TOP_LEFT: return 13; // HTTOPLEFT
             }
-        }*/
+        }
 
         return 1; // HTCLIENT
     }
