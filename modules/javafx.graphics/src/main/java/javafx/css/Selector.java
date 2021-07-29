@@ -99,7 +99,7 @@ abstract public class Selector {
 
     /**
      * Gets whether this {@code Selector} applies to the given {@code Styleable}.
-     * It is same as the {@link createMatch} method except it returns true/false rather than a {@code Match}.
+     * It is the same as the {@link createMatch} method except it returns a boolean rather than a {@code Match}.
      * @param styleable the {@code Styleable} to match
      * @return {@code true} if this {@code Selector} applies to the given {@code Styleable}
      */
@@ -107,7 +107,7 @@ abstract public class Selector {
 
     /**
      * Gets whether this {@code Selector} applies to the given {@code Styleable}.
-     * It is same as {@link applies} method except it also returns
+     * It is the same as the {@link applies(Styleable)} method except it also returns
      * {@code PseudoClass} state that it finds along the way.
      * @param styleable the {@code Styleable} to match
      * @param triggerStates a set of {@code PseudoClass} states

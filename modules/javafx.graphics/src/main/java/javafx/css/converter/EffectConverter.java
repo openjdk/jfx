@@ -158,7 +158,7 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     }
 
     /**
-     * Converter to convert InnerShadow {@code Effect}.
+     * Converter to convert an {@code InnerShadow} effect.
      * @since 9
      */
     public static final class InnerShadowConverter extends EffectConverter {

@@ -83,12 +83,22 @@ public final class Match implements Comparable<Match> {
 
     /**
      * Gets the specificity.
-     * @return the specificity.
+     * @return the specificity
      */
     public int getSpecificity() {
         return specificity;
     }
 
+    /**
+     * Compares this object with the given {@code Match} object.
+     * <p>
+     * Comparison is based on the specificity of the objects.
+     * Specificity is calculated based on the id count, the style class count and
+     * the pseudoclass count.
+     * @param o the {@code Match} object to be compared
+     * @return the difference between the specificity of this object and
+     * the specificity of the given {@code Match} object
+     */
     @Override public int compareTo(Match o) {
         return specificity - o.specificity;
     }

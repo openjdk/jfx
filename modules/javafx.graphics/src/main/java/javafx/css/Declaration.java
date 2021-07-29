@@ -112,7 +112,7 @@ final public class Declaration {
      * considered.
      *
      * @param obj an {@code Object} to compare
-     * @return {@code true} if this object is the same as the {@code obj} argument; {@code false} otherwise.
+     * @return {@code true} if this object is the same as the {@code obj} argument; {@code false} otherwise
      */
     @Override public boolean equals(Object obj) {
         if (this == obj) {
@@ -140,9 +140,6 @@ final public class Declaration {
         return true;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override public int hashCode() {
         int hash = 5;
         hash = 89 * hash + (this.property != null ? this.property.hashCode() : 0);
@@ -151,9 +148,6 @@ final public class Declaration {
         return hash;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override public String toString() {
         StringBuilder sbuf = new StringBuilder(property);
         sbuf.append(": ");
