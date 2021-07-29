@@ -114,9 +114,6 @@ RECT utils::GetScreenSpaceClipRect(HWND hwnd)
     monitorInfo.cbSize = sizeof(MONITORINFO);
     LONG_PTR userData = ::GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
-    // Due to historical reasons, a maximized window with the undecorated-interactive style
-    // will extend slightly beyond the edges of the screen's work area. The pixels that fall
-    // outside of the work area are clipped, which we need to take into account here.
     if (userData != NULL
             && ((WndUserData*)userData)->interactive
             && SUCCEEDED(::GetWindowPlacement(hwnd, &placement))

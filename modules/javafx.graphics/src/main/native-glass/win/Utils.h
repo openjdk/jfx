@@ -89,6 +89,11 @@ struct WndUserData {
     bool interactive = false;
 };
 
+// A maximized window will extend slightly beyond the edges of the screen, such that
+// its borders are clipped. However, with the undecorated-interactive style, we extended
+// the client area to include the (now invisible) borders.
+// We define the part of the client area that is visible on the screen as the "clip area"
+// and use this area instead of the client area when we are dealing with a maximized window.
 namespace utils {
     RECT GetScreenSpaceClipRect(HWND);
     RECT GetScreenSpaceWindowRect(HWND);
