@@ -61,7 +61,7 @@ import java.util.WeakHashMap;
  */
 public class NestedTableColumnHeader extends TableColumnHeader {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -76,7 +76,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -104,7 +104,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -135,7 +135,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -231,7 +231,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Methods                                                          *
      *                                                                         *
@@ -390,7 +390,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -653,7 +653,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation: Column Resizing                                 *
      *                                                                         *

@@ -1234,7 +1234,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         return Platform.isFxApplicationThread();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
      *                                                                         *

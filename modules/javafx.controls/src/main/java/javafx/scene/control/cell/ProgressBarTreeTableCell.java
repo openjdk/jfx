@@ -40,7 +40,7 @@ import javafx.util.Callback;
  */
 public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -63,7 +63,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -75,7 +75,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -93,7 +93,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

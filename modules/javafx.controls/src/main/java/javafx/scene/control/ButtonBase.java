@@ -49,7 +49,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 
 public abstract class ButtonBase extends Labeled {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -78,7 +78,7 @@ public abstract class ButtonBase extends Labeled {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -140,7 +140,7 @@ public abstract class ButtonBase extends Labeled {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -182,7 +182,7 @@ public abstract class ButtonBase extends Labeled {
     public abstract void fire();
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -191,7 +191,7 @@ public abstract class ButtonBase extends Labeled {
     private static final PseudoClass ARMED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("armed");
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

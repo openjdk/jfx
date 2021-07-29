@@ -46,7 +46,7 @@ import javafx.scene.input.KeyCodeCombination;
  */
 public class ButtonSkin extends LabeledSkinBase<Button> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -58,7 +58,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -101,7 +101,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
     WeakChangeListener<Scene> weakSceneChangeListener = new WeakChangeListener<>(sceneChangeListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -167,7 +167,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -192,7 +192,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

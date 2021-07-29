@@ -50,7 +50,7 @@ import javafx.scene.shape.Rectangle;
  */
 public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends CellSkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -60,7 +60,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -95,7 +95,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -108,7 +108,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -125,7 +125,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Methods                                                          *
      *                                                                         *

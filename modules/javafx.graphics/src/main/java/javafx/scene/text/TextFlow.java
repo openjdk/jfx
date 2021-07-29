@@ -532,7 +532,7 @@ public class TextFlow extends Pane {
         return top - getTextLayout().getBounds().getMinY();
     }
 
-   /***************************************************************************
+   /* *************************************************************************
     *                                                                         *
     *                            Stylesheet Handling                          *
     *                                                                         *
