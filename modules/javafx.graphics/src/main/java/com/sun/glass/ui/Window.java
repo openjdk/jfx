@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
 import javafx.stage.WindowRegionClassifier;
@@ -211,7 +210,6 @@ public abstract class Window {
     protected Screen screen = null;
     private MenuBar menubar = null;
     private String title = "";
-    private UndecoratedMoveResizeHelper helper = null;
 
     private int state = State.NORMAL;
     private int level = Level.NORMAL;
@@ -431,9 +429,6 @@ public abstract class Window {
         if (view != null && _setView(this.ptr, view)) {
             this.view = view;
             this.view.setWindow(this);
-            if (this.isDecorated == false) {
-                this.helper = new UndecoratedMoveResizeHelper();
-            }
         } else {
             _setView(this.ptr, null);
             this.view = null;
@@ -1318,11 +1313,6 @@ public abstract class Window {
             }
             this.width = width;
             this.height = height;
-
-            // update moveRect/resizeRect
-            if (this.helper != null){
-                this.helper.updateRectangles();
-            }
         }
         handleWindowEvent(System.nanoTime(), type);
 
@@ -1364,102 +1354,6 @@ public abstract class Window {
         }
     }
 
-    // *****************************************************
-    // programmatical move/resize
-    // *****************************************************
-    /** Sets "programmatical move" rectangle.
-     * The rectangle is measured from top of the View:
-     * width is View.width, height is size.
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public void setUndecoratedMoveRectangle(int size) {
-        Application.checkEventThread();
-        if (this.isDecorated == true) {
-            //throw new RuntimeException("setUndecoratedMoveRectangle is only valid for Undecorated Window");
-            System.err.println("Glass Window.setUndecoratedMoveRectangle is only valid for Undecorated Window. In the future this will be hard error.");
-            Thread.dumpStack();
-            return;
-        }
-
-        if (this.helper != null) {
-            this.helper.setMoveRectangle(size);
-        }
-    }
-    /** The method called only for undecorated windows
-     * x, y: mouse coordinates (in View space).
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public boolean shouldStartUndecoratedMove(final int x, final int y) {
-        Application.checkEventThread();
-        if (this.shouldStartUndecoratedMove == true) {
-            return true;
-        }
-        if (this.isDecorated == true) {
-            return false;
-        }
-
-        if (this.helper != null) {
-            return this.helper.shouldStartMove(x, y);
-        } else {
-            return false;
-        }
-    }
-
-    /** Sets "programmatical resize" rectangle.
-     * The rectangle is measured from top of the View:
-     * width is View.width, height is size.
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public void setUndecoratedResizeRectangle(int size) {
-        Application.checkEventThread();
-        if ((this.isDecorated == true) || (this.isResizable == false)) {
-            //throw new RuntimeException("setUndecoratedMoveRectangle is only valid for Undecorated Resizable Window");
-            System.err.println("Glass Window.setUndecoratedResizeRectangle is only valid for Undecorated Resizable Window. In the future this will be hard error.");
-            Thread.dumpStack();
-            return;
-        }
-
-        if (this.helper != null) {
-            this.helper.setResizeRectangle(size);
-        }
-    }
-
-    /** The method called only for undecorated windows
-     * x, y: mouse coordinates (in View space).
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public boolean shouldStartUndecoratedResize(final int x, final int y) {
-        Application.checkEventThread();
-        if ((this.isDecorated == true) || (this.isResizable == false)) {
-            return false;
-        }
-
-        if (this.helper != null) {
-            return this.helper.shouldStartResize(x, y);
-        }  else {
-            return false;
-        }
-    }
-
-    /** Mouse event handler for processing programmatical resize/move
-     * (for undecorated windows only).
-     * Must be called by View.
-     * x & y are View coordinates.
-     * NOTE: it's package private!
-     * @return true if the event is processed by the window,
-     *         false if it has to be delivered to the app
-     */
-    boolean handleMouseEvent(int type, int button, int x, int y, int xAbs, int yAbs) {
-        if (this.isDecorated == false) {
-            return this.helper.handleMouseEvent(type, button, x, y, xAbs, yAbs);
-        }
-        return false;
-    }
-
     @Override
     public String toString() {
         Application.checkEventThread();
@@ -1492,143 +1386,6 @@ public abstract class Window {
         this.level = level;
         if (this.eventHandler != null) {
             this.eventHandler.handleLevelEvent(level);
-        }
-    }
-
-    private class UndecoratedMoveResizeHelper {
-        TrackingRectangle moveRect = null;
-        TrackingRectangle resizeRect = null;
-
-        boolean inMove = false;         // we are in "move" mode
-        boolean inResize = false;       // we are in "resize" mode
-
-        int startMouseX, startMouseY;   // start mouse coords
-        int startX, startY;             // start window location (for move)
-        int startWidth, startHeight;    // start window size (for resize)
-
-        UndecoratedMoveResizeHelper() {
-            this.moveRect = new TrackingRectangle();
-            this.resizeRect = new TrackingRectangle();
-        }
-
-        void setMoveRectangle(final int size) {
-            this.moveRect.size = size;
-
-            this.moveRect.x = 0;
-            this.moveRect.y = 0;
-            this.moveRect.width = getWidth();
-            this.moveRect.height = this.moveRect.size;
-        }
-
-        boolean shouldStartMove(final int x, final int y) {
-            return this.moveRect.contains(x, y);
-        }
-
-        boolean inMove() {
-            return this.inMove;
-        }
-
-        void startMove(final int x, final int y) {
-            this.inMove = true;
-
-            this.startMouseX = x;
-            this.startMouseY = y;
-
-            this.startX = getX();
-            this.startY = getY();
-        }
-
-        void deltaMove(final int x, final int y) {
-            int deltaX = x - this.startMouseX;
-            int deltaY = y - this.startMouseY;
-
-            setPosition(this.startX + deltaX, this.startY + deltaY);
-        }
-
-        void stopMove() {
-            this.inMove = false;
-        }
-
-        void setResizeRectangle(final int size) {
-            this.resizeRect.size = size;
-
-            // set the rect (bottom right corner of the Window)
-            this.resizeRect.x = getWidth() - this.resizeRect.size;
-            this.resizeRect.y = getHeight() - this.resizeRect.size;
-            this.resizeRect.width = this.resizeRect.size;
-            this.resizeRect.height = this.resizeRect.size;
-        }
-
-        boolean shouldStartResize(final int x, final int y) {
-            return this.resizeRect.contains(x, y);
-        }
-
-        boolean inResize() {
-            return this.inResize;
-        }
-
-        void startResize(final int x, final int y) {
-            this.inResize = true;
-
-            this.startMouseX = x;
-            this.startMouseY = y;
-
-            this.startWidth = getWidth();
-            this.startHeight = getHeight();
-        }
-
-        void deltaResize(final int x, final int y) {
-            int deltaX = x - this.startMouseX;
-            int deltaY = y - this.startMouseY;
-
-            setSize(this.startWidth + deltaX, this.startHeight + deltaY);
-        }
-
-        protected void stopResize() {
-            this.inResize = false;
-        }
-
-        void updateRectangles() {
-            if (this.moveRect.size > 0) {
-                setMoveRectangle(this.moveRect.size);
-            }
-            if (this.resizeRect.size > 0) {
-                setResizeRectangle(this.resizeRect.size);
-            }
-        }
-
-        boolean handleMouseEvent(final int type, final int button, final int x, final int y, final int xAbs, final int yAbs) {
-            switch (type) {
-                case MouseEvent.DOWN:
-                    if (button == MouseEvent.BUTTON_LEFT) {
-                        if (shouldStartUndecoratedMove(x, y) == true) {
-                            startMove(xAbs, yAbs);
-                            return true;
-                        } else if (shouldStartUndecoratedResize(x, y) == true) {
-                            startResize(xAbs, yAbs);
-                            return true;
-                        }
-                    }
-                    break;
-
-                case MouseEvent.MOVE:
-                case MouseEvent.DRAG:
-                    if (inMove() == true) {
-                        deltaMove(xAbs, yAbs);
-                        return true;
-                    } else if (inResize() == true) {
-                        deltaResize(xAbs, yAbs);
-                        return true;
-                    }
-                    break;
-
-                case MouseEvent.UP:
-                    boolean wasProcessed = inMove() || inResize();
-                    stopResize();
-                    stopMove();
-                    return wasProcessed;
-            }
-            return false;
         }
     }
 

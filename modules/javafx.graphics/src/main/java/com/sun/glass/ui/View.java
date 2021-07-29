@@ -929,15 +929,6 @@ public abstract class View {
             return;
         }
 
-        // gznote: optimize - only call for undecorated Windows!
-        if (this.window != null) {
-            // handled by window (programmatical move/resize)
-            if (this.window.handleMouseEvent(type, button, x, y, xAbs, yAbs)) {
-                // The evnet has been processed by Glass
-                return;
-            }
-        }
-
         long now = System.nanoTime();
         if (type == MouseEvent.DOWN) {
             View lastClickedView = View.lastClickedView == null ? null : View.lastClickedView.get();
