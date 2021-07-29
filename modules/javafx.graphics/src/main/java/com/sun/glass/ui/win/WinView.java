@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,9 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
+import com.sun.glass.ui.MoveResizeHelper;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
-import com.sun.glass.ui.Window;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.Map;
 
@@ -100,5 +97,11 @@ final class WinView extends View {
         // to be recalculated.
         updateLocation();
     }
+
+    /*@Override
+    protected MoveResizeHelper getMoveResizeHelper() {
+        // We don't use a move-resize helper on Windows, but handle the WM_NCHITTEST message instead.
+        return null;
+    }*/
 }
 

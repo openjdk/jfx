@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,14 +30,13 @@ import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
+import javafx.stage.WindowRegionClassifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Iterator;
-import java.util.Locale;
 import java.util.ResourceBundle;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -225,8 +224,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     // FACTORY METHODS
 
-    @Override public Window createWindow(Window owner, Screen screen, int styleMask) {
-        return new WinWindow(owner, screen, styleMask);
+    @Override public Window createWindow(Window owner, Screen screen, WindowRegionClassifier classifier, int styleMask) {
+        return new WinWindow(owner, screen, classifier, styleMask);
     }
 
     @Override public Window createWindow(long parent) {

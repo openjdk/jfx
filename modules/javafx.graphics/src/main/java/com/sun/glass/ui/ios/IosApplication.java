@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.glass.ui.ios;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import javafx.stage.WindowRegionClassifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -75,8 +76,8 @@ public final class IosApplication extends Application {
      * @inheritDoc
      */
     @Override
-    public Window createWindow(Window owner, Screen screen, int styleMask) {
-        return new IosWindow(owner, screen, styleMask);
+    public Window createWindow(Window owner, Screen screen, WindowRegionClassifier classifier, int styleMask) {
+        return new IosWindow(owner, screen, classifier, styleMask);
     }
 
     /**

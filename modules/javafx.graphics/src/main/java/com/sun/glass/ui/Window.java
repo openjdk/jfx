@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,9 @@ package com.sun.glass.ui;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
+import javafx.stage.WindowRegionClassifier;
 
 import java.lang.annotation.Native;
-
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -165,6 +165,11 @@ public abstract class Window {
      */
     @Native public static final int MODAL = 1 << 9;
 
+    /**
+     * Indicates that the window enables platform-specific window interactions.
+     */
+    @Native public static final int INTERACTIVE = 1 << 10;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -198,8 +203,10 @@ public abstract class Window {
     private final long parent;
     private final int styleMask;
     private final boolean isDecorated;
+    private final boolean isInteractive;
     private boolean shouldStartUndecoratedMove = false;
 
+    protected final WindowRegionClassifier regionClassifier;
     protected View view = null;
     protected Screen screen = null;
     private MenuBar menubar = null;
@@ -245,7 +252,8 @@ public abstract class Window {
     private EventHandler eventHandler;
 
     protected abstract long _createWindow(long ownerPtr, long screenPtr, int mask);
-    protected Window(Window owner, Screen screen, int styleMask) {
+
+    protected Window(Window owner, Screen screen, WindowRegionClassifier regionClassifier, int styleMask) {
         Application.checkEventThread();
         switch (styleMask & (TITLED | TRANSPARENT)) {
             case UNTITLED:
@@ -274,11 +282,16 @@ public abstract class Window {
             styleMask &= ~TRANSPARENT;
         }
 
+        if ((styleMask & INTERACTIVE) == 0) {
+            regionClassifier = null;
+        }
 
         this.owner = owner;
         this.parent = 0L;
         this.styleMask = styleMask;
+        this.regionClassifier = regionClassifier;
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
+        this.isInteractive = (this.styleMask & Window.INTERACTIVE) != 0;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
         if (PrismSettings.allowHiDPIScaling) {
@@ -304,7 +317,9 @@ public abstract class Window {
         this.owner = null;
         this.parent = parent;
         this.styleMask = Window.UNTITLED;
+        this.regionClassifier = null;
         this.isDecorated = false;
+        this.isInteractive = false;
 
         // Note: we can't always catch screen changes when parent is moved...
         this.screen = null; // should infer from the parent
@@ -466,6 +481,11 @@ public abstract class Window {
     public boolean isDecorated() {
         Application.checkEventThread();
         return this.isDecorated;
+    }
+
+    public boolean isInteractive() {
+        Application.checkEventThread();
+        return this.isInteractive;
     }
 
     public boolean isMinimized() {
@@ -1130,6 +1150,8 @@ public abstract class Window {
         _setIcon(this.ptr, pixels);
     }
 
+    private Cursor cursor;
+
     protected abstract void _setCursor(long ptr, Cursor cursor);
 
     /**
@@ -1140,7 +1162,12 @@ public abstract class Window {
      */
     public void setCursor(Cursor cursor) {
         Application.checkEventThread();
+        this.cursor = cursor;
         _setCursor(this.ptr, cursor);
+    }
+
+    public Cursor getCursor() {
+        return cursor;
     }
 
     protected abstract void _toFront(long ptr);

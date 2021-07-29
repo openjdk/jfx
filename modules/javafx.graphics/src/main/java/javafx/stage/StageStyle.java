@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,15 @@ public enum StageStyle {
      * Defines a {@code Stage} style with a solid white background and no decorations.
      */
     UNDECORATED,
+
+    /**
+     * Defines a {@code Stage} style that is similar to {@code StageStyle.UNDECORATED}, but enables
+     * platform-specific window interactions. A stage that is initialized with this style must also
+     * provide a region classifier using {@link Stage#initRegionClassifier(WindowRegionClassifier)}.
+     *
+     * @since 18
+     */
+    UNDECORATED_INTERACTIVE,
 
     /**
      * Defines a {@code Stage} style with a transparent background and no decorations.

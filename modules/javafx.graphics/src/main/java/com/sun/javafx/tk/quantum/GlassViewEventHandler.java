@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
@@ -1390,5 +1391,17 @@ class GlassViewEventHandler extends View.EventHandler {
             return scene.sceneListener.getSceneAccessible();
         }
         return null;
+    }
+
+    @Override
+    public Node pickNode(double x, double y) {
+        return QuantumToolkit.runWithoutRenderLock(() -> {
+            return AccessController.doPrivileged((PrivilegedAction<Node>) () -> {
+                if (scene.sceneListener != null) {
+                    return scene.sceneListener.pickNode(x, y);
+                }
+                return null;
+            });
+        });
     }
 }

@@ -61,6 +61,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import javafx.stage.WindowRegionClassifier;
 import javafx.util.Pair;
 
 import java.io.File;
@@ -120,7 +121,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, WindowRegionClassifier classifier, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
 
         return new StubStage();
     }

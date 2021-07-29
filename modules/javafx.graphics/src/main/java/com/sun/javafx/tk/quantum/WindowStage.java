@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.WindowRegionClassifier;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
@@ -64,6 +65,7 @@ class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
+    private final WindowRegionClassifier regionClassifier;
     private final boolean securityDialog;
 
     private OverlayWarning warning = null;
@@ -102,10 +104,11 @@ class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
 
-    public WindowStage(javafx.stage.Window peerWindow, boolean securityDialog, final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, boolean securityDialog, final StageStyle stageStyle, Modality modality, WindowRegionClassifier classifier, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
+        this.regionClassifier = classifier;
         this.securityDialog = securityDialog;
 
         if (peerWindow instanceof javafx.stage.Stage) {
@@ -188,6 +191,9 @@ class WindowStage extends GlassStage {
                         case UTILITY:
                             windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
                             break;
+                        case UNDECORATED_INTERACTIVE:
+                            windowMask |= Window.INTERACTIVE;
+                            // fall through
                         default:
                             windowMask |=
                                     (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
@@ -198,7 +204,7 @@ class WindowStage extends GlassStage {
                     windowMask |= Window.MODAL;
                 }
                 platformWindow =
-                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+                        app.createWindow(ownerWindow, Screen.getMainScreen(), regionClassifier, windowMask);
                 platformWindow.setResizable(resizable);
                 platformWindow.setFocusable(focusable);
                 if (securityDialog) {

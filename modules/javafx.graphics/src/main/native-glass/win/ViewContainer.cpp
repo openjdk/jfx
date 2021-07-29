@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,13 +212,12 @@ void ViewContainer::NotifyViewSize(HWND hwnd)
         return;
     }
 
-    RECT r;
-    if (::GetClientRect(hwnd, &r)) {
-        JNIEnv* env = GetEnv();
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyResize,
-                            r.right-r.left, r.bottom - r.top);
-        CheckAndClearException(env);
-    }
+    RECT rect;
+    utils::GetClipRect(hwnd, &rect);
+    JNIEnv* env = GetEnv();
+    env->CallVoidMethod(GetView(), javaIDs.View.notifyResize,
+                        rect.right - rect.left, rect.bottom - rect.top);
+    CheckAndClearException(env);
 }
 
 void ViewContainer::HandleViewPaintEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -322,10 +321,10 @@ void ViewContainer::HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     POINT pt;
     int absX = pt.x = GET_X_LPARAM(lParam);
     int absY = pt.y = GET_Y_LPARAM(lParam);
-    ::ScreenToClient (hwnd, &pt);
+    utils::ScreenToClip(hwnd, &pt);
     if (!isKeyboardTrigger) {
         RECT rect;
-        ::GetClientRect(hwnd, &rect);
+        utils::GetClipRect(hwnd, &rect);
         if (!::PtInRect(&rect, pt)) {
             return;
         }
@@ -334,7 +333,7 @@ void ViewContainer::HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     LONG style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
     if (style & WS_EX_LAYOUTRTL) {
         RECT rect = {0};
-        ::GetClientRect(hwnd, &rect);
+        utils::GetClipRect(hwnd, &rect);
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
     JNIEnv* env = GetEnv();
@@ -759,7 +758,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         pt.x = GET_X_LPARAM(lParam);
         pt.y = GET_Y_LPARAM(lParam);
         // this is screen coords, convert to client
-        ::ScreenToClient(hwnd, &pt);
+        utils::ScreenToClip(hwnd, &pt);
 
         // Windows has finished tracking mouse pointer already
         m_bTrackingMouse = FALSE;
@@ -769,6 +768,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         // for all other messages lParam contains cursor coords
         pt.x = GET_X_LPARAM(lParam);
         pt.y = GET_Y_LPARAM(lParam);
+        utils::ClientToClip(hwnd, &pt);
 
         switch (msg) {
             case WM_MOUSEMOVE:
@@ -885,16 +885,16 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     // get screen coords
     POINT ptAbs = pt;
     if (type == com_sun_glass_events_MouseEvent_WHEEL) {
-        ::ScreenToClient(hwnd, &pt);
+        utils::ScreenToClip(hwnd, &pt);
     } else {
-        ::ClientToScreen(hwnd, &ptAbs);
+        utils::ClipToScreen(hwnd, &ptAbs);
     }
 
     // unmirror the x coordinate
     LONG style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
     if (style & WS_EX_LAYOUTRTL) {
         RECT rect = {0};
-        ::GetClientRect(hwnd, &rect);
+        utils::GetClipRect(hwnd, &rect);
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
 
@@ -1014,13 +1014,13 @@ void ViewContainer::ResetMouseTracking(HWND hwnd)
     ::GetCursorPos(&ptAbs);
 
     POINT pt = ptAbs;
-    ::ScreenToClient(hwnd, &pt);
+    utils::ScreenToClip(hwnd, &pt);
 
     // unmirror the x coordinate
     LONG style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
     if (style & WS_EX_LAYOUTRTL) {
         RECT rect = {0};
-        ::GetClientRect(hwnd, &rect);
+        utils::GetClipRect(hwnd, &rect);
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
 
@@ -1130,7 +1130,7 @@ void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam)
         CANDIDATEFORM cf;
 
         GetCandidatePos(&curPos);
-        ::ScreenToClient(hwnd, &curPos);
+        utils::ScreenToClip(hwnd, &curPos);
 
         for (int iCandType=0; iCandType<32; iCandType++, bits<<=1) {
             if (lParam & bits) {
@@ -1294,13 +1294,13 @@ void NotifyTouchInput(
         POINT client;
         client.x = screen.x = LONG(ti->x / 100);
         client.y = screen.y = LONG(ti->y / 100);
-        ScreenToClient(hWnd, &client);
+        utils::ScreenToClip(hWnd, &client);
 
         // unmirror the x coordinate
         LONG style = ::GetWindowLong(hWnd, GWL_EXSTYLE);
         if (style & WS_EX_LAYOUTRTL) {
             RECT rect = {0};
-            ::GetClientRect(hWnd, &rect);
+            utils::GetClipRect(hWnd, &rect);
             client.x = max(0, rect.right - rect.left) - client.x;
         }
 
@@ -1513,13 +1513,13 @@ void ViewContainer::NotifyGesturePerformed(HWND hWnd,
     POINT client;
     client.x = screen.x;
     client.y = screen.y;
-    ScreenToClient(hWnd, &client);
+    utils::ScreenToClip(hWnd, &client);
 
     // unmirror the x coordinate
     LONG style = ::GetWindowLong(hWnd, GWL_EXSTYLE);
     if (style & WS_EX_LAYOUTRTL) {
         RECT rect = {0};
-        ::GetClientRect(hWnd, &rect);
+        utils::GetClipRect(hWnd, &rect);
         client.x = max(0, rect.right - rect.left) - client.x;
     }
 

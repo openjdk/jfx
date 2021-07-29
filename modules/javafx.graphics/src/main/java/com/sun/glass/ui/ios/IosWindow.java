@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,13 +30,14 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import javafx.stage.WindowRegionClassifier;
 
 /**
  * iOS platform Window implementation class.
  */
 final class IosWindow extends Window {
-    protected IosWindow(Window owner, Screen screen, int styleMask) {
-        super(owner, screen, styleMask);
+    protected IosWindow(Window owner, Screen screen, WindowRegionClassifier regionClassifier, int styleMask) {
+        super(owner, screen, regionClassifier, styleMask);
     }
     protected IosWindow(long parent) {
         super(parent);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,6 +84,19 @@ JNIEnv* GetEnv();
 jboolean CheckAndClearException(JNIEnv *env);
 
 jint GetModifiers();
+
+struct WndUserData {
+    bool interactive = false;
+};
+
+namespace utils {
+    RECT GetScreenSpaceClipRect(HWND);
+    RECT GetScreenSpaceWindowRect(HWND);
+    BOOL GetClipRect(HWND, LPRECT);
+    BOOL ScreenToClip(HWND, LPPOINT);
+    BOOL ClipToScreen(HWND, LPPOINT);
+    BOOL ClientToClip(HWND, LPPOINT);
+}
 
 class JString {
 public:
@@ -443,6 +456,7 @@ typedef struct _tagJavaIDs {
         jmethodID notifyFocusUngrab;
         jmethodID notifyDestroy;
         jmethodID notifyDelegatePtr;
+        jmethodID classifyWindowRegion;
     } Window;
     struct {
         jmethodID notifyResize;

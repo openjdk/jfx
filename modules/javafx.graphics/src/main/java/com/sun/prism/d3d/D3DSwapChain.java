@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,12 +66,15 @@ class D3DSwapChain
         int sh = texBackBuffer.getContentHeight();
         int dw = this.getContentWidth();
         int dh = this.getContentHeight();
+        int dx = (dw - sw) / 2;
+        int dy = (dh - sh) / 2;
+
         if (isMSAA()) {
             context.flushVertexBuffer();
-            g.blit(texBackBuffer, null, 0, 0, sw, sh, 0, 0, dw, dh);
+            g.blit(texBackBuffer, null, 0, 0, sw, sh, dx, dy, dx + sw, dy + sh);
         } else {
             g.setCompositeMode(CompositeMode.SRC);
-            g.drawTexture(texBackBuffer, 0, 0, dw, dh, 0, 0, sw, sh);
+            g.drawTexture(texBackBuffer, dx, dy, dx + sw, dy + sh, 0, 0, sw, sh);
         }
         context.flushVertexBuffer();
         texBackBuffer.unlock();

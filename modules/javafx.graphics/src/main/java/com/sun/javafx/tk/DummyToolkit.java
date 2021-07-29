@@ -43,7 +43,6 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
@@ -67,6 +66,8 @@ import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import javafx.stage.WindowRegionClassifier;
+
 import java.util.Optional;
 
 /**
@@ -103,7 +104,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, WindowRegionClassifier classifier, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

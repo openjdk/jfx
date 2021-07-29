@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
+import javafx.scene.Node;
 
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
@@ -367,6 +368,10 @@ public abstract class View {
         public Accessible getSceneAccessible() {
             return null;
         }
+
+        public Node pickNode(double x, double y) {
+            return null;
+        }
     }
 
     public static long getMultiClickTime() {
@@ -394,6 +399,7 @@ public abstract class View {
      */
     private volatile long ptr; // Native handle (NSView*, or internal structure pointer)
     private Window window; // parent window
+    private MoveResizeHelper moveResizeHelper;
     private EventHandler eventHandler;
 
     private int width = -1;     // not set
@@ -499,6 +505,16 @@ public abstract class View {
         this.window = window;
         _setParent(this.ptr, window == null ? 0L : window.getNativeHandle());
         this.isValid = this.ptr != 0 && window != null;
+
+        if (isValid && window.regionClassifier != null && !window.isDecorated() && window.isInteractive()) {
+            this.moveResizeHelper = getMoveResizeHelper();
+        } else {
+            this.moveResizeHelper = null;
+        }
+    }
+
+    protected MoveResizeHelper getMoveResizeHelper() {
+        return new MoveResizeHelper(this, window);
     }
 
     // package private
@@ -908,6 +924,11 @@ public abstract class View {
     protected void notifyMouse(int type, int button, int x, int y, int xAbs,
                                int yAbs, int modifiers, boolean isPopupTrigger,
                                boolean isSynthesized) {
+        // If we have a move-resize helper, we give it the first chance to handle the event.
+        if (moveResizeHelper != null && moveResizeHelper.handleMouseEvent(type, button, x, y, xAbs, yAbs)) {
+            return;
+        }
+
         // gznote: optimize - only call for undecorated Windows!
         if (this.window != null) {
             // handled by window (programmatical move/resize)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import javafx.scene.Node;
+import javafx.stage.WindowRegionClassifier;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -50,8 +52,8 @@ class WinWindow extends Window {
         _initIDs();
     }
 
-    protected WinWindow(Window owner, Screen screen, int styleMask) {
-        super(owner, screen, styleMask);
+    protected WinWindow(Window owner, Screen screen, WindowRegionClassifier regionClassifier, int styleMask) {
+        super(owner, screen, regionClassifier, styleMask);
     }
 
     protected WinWindow(long parent) {
@@ -249,6 +251,31 @@ class WinWindow extends Window {
             return _setBackground2(ptr, r, g, b);
         }
         return true;
+    }
+
+    protected int classifyWindowRegion(int x, int y) {
+        /*if (regionClassifier != null) {
+            double wx = (x - this.x) / platformScaleX;
+            double wy = (y - this.y) / platformScaleY;
+
+            var eventHandler = view.getEventHandler();
+            Node pickedNode = eventHandler != null ? eventHandler.pickNode(wx, wy) : null;
+
+            switch (regionClassifier.classify(wx, wy, pickedNode)) {
+                case NONE: return 0; // HTNOWHERE
+                case TITLE: return 2; // HTCAPTION
+                case TOP: return 12; // HTTOP
+                case TOP_RIGHT: return 14; // HTTOPRIGHT
+                case RIGHT: return 11; // HTRIGHT
+                case BOTTOM_RIGHT: return 17; // HTBOTTOMRIGHT
+                case BOTTOM: return 15; // HTBOTTOM
+                case BOTTOM_LEFT: return 16; // HTBOTTOMLEFT
+                case LEFT: return 10; // HTLEFT
+                case TOP_LEFT: return 13; // HTTOPLEFT
+            }
+        }*/
+
+        return 1; // HTCLIENT
     }
 
     native private long _getInsets(long ptr);

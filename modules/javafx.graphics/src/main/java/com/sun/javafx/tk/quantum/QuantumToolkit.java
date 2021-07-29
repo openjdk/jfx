@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import javafx.stage.WindowRegionClassifier;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.Buffer;
@@ -607,9 +608,9 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
+    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, WindowRegionClassifier classifier, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, securityDialog, stageStyle, modality, owner);
+        WindowStage stage = new WindowStage(peerWindow, securityDialog, stageStyle, modality, classifier, owner);
         stage.setSecurityContext(acc);
         if (primary) {
             stage.setIsPrimary();
@@ -684,7 +685,7 @@ public final class QuantumToolkit extends Toolkit {
         assertToolkitRunning();
         boolean securityDialog = owner instanceof WindowStage ?
                 ((WindowStage)owner).isSecurityDialog() : false;
-        WindowStage stage = new WindowStage(peerWindow, securityDialog, popupStyle, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, securityDialog, popupStyle, null, null, owner);
         stage.setSecurityContext(acc);
         stage.setIsPopup();
         stage.init(systemMenu);

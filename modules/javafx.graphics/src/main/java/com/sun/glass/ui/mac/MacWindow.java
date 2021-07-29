@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,9 +31,9 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.Window.State;
-import java.nio.ByteBuffer;
+import javafx.stage.WindowRegionClassifier;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -46,8 +46,8 @@ final class MacWindow extends Window {
         _initIDs();
     }
 
-    protected MacWindow(Window owner, Screen screen, int styleMask) {
-        super(owner, screen, styleMask);
+    protected MacWindow(Window owner, Screen screen, WindowRegionClassifier regionClassifier, int styleMask) {
+        super(owner, screen, regionClassifier, styleMask);
     }
     protected MacWindow(long parent) {
         super(parent);

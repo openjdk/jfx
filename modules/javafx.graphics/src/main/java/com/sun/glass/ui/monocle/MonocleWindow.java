@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import javafx.stage.WindowRegionClassifier;
 
 
 final class MonocleWindow extends Window {
@@ -51,8 +52,8 @@ final class MonocleWindow extends Window {
     private int maxW = -1;
     private int maxH = -1;
 
-    MonocleWindow(Window owner, Screen screen, int styleMask) {
-        super(owner, screen, styleMask);
+    MonocleWindow(Window owner, Screen screen, WindowRegionClassifier regionClassifier, int styleMask) {
+        super(owner, screen, regionClassifier, styleMask);
     }
 
     MonocleWindow(long parent) {

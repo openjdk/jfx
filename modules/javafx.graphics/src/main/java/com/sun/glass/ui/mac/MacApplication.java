@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.util.Logging;
+import javafx.stage.WindowRegionClassifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -243,8 +244,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     // FACTORY METHODS
 
-    @Override public Window createWindow(Window owner, Screen screen, int styleMask) {
-        return new MacWindow(owner, screen, styleMask);
+    @Override public Window createWindow(Window owner, Screen screen, WindowRegionClassifier classifier, int styleMask) {
+        return new MacWindow(owner, screen, classifier, styleMask);
     }
 
     final static long BROWSER_PARENT_ID = -1L;

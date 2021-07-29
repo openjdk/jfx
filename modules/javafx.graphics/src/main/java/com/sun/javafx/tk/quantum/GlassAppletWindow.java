@@ -53,7 +53,7 @@ class GlassAppletWindow implements AppletWindow {
             if (serverName != null) {
                 throw new RuntimeException("GlassAppletWindow constructor used incorrectly.");
             }
-            glassWindow = Application.GetApplication().createWindow(null, Window.NORMAL);
+            glassWindow = Application.GetApplication().createWindow(null, null, Window.NORMAL);
         } else {
             this.serverName = serverName;
             glassWindow = Application.GetApplication().createWindow(nativeParent);

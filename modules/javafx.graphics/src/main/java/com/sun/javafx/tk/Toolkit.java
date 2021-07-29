@@ -28,7 +28,6 @@ package com.sun.javafx.tk;
 import javafx.application.ConditionalFeature;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
-import javafx.scene.Scene;
 import javafx.scene.effect.BlurType;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
@@ -51,11 +50,10 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import javafx.stage.WindowRegionClassifier;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
@@ -63,7 +61,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,7 +79,6 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
@@ -370,7 +366,7 @@ public abstract class Toolkit {
 
     public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc);
+    public abstract TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, WindowRegionClassifier classifier, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc);
 
     public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc);
     public abstract TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc);

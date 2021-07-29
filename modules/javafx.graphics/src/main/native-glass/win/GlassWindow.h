@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@
 
 class GlassWindow : public BaseWnd, public ViewContainer {
 public:
-    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isChild, HWND parentOrOwner);
+    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isInteractive, bool isChild, HWND parentOrOwner);
     virtual ~GlassWindow();
 
     static GlassWindow* FromHandle(HWND hWnd) {
@@ -60,6 +60,7 @@ public:
     inline bool IsTransparent() { return m_isTransparent; }
     inline bool IsResizable() { return m_isResizable; }
     inline bool IsDecorated() { return m_isDecorated; }
+    inline bool IsInteractive() { return m_isInteractive; }
     inline virtual bool IsGlassWindow() { return true; }
 
     bool SetResizable(bool resizable);
@@ -146,6 +147,7 @@ private:
     const bool m_isTransparent;
     const bool m_isDecorated;
     const bool m_isUnified;
+    const bool m_isInteractive;
     const HWND m_parent; // != NULL for child windows only
 
     bool m_isResizable;
@@ -181,12 +183,13 @@ private:
     void HandleDestroyEvent();
     // if pRect == NULL => get position/size by GetWindowRect
     void HandleWindowPosChangingEvent(WINDOWPOS *pWinPos);
-    void HandleMoveEvent(RECT *pRect);
+    void HandleMoveEvent();
     // if pRect == NULL => get position/size by GetWindowRect
-    void HandleSizeEvent(int type, RECT *pRect);
+    void HandleSizeEvent(int type);
     void HandleDPIEvent(WPARAM wParam, LPARAM lParam);
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
+    LRESULT HandleNCHitTestEvent(SHORT, SHORT);
 };
 
 

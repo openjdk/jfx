@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
 static HWND activeTouchWindow = NULL;
 
-GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isChild, HWND parentOrOwner)
+GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isInteractive, bool isChild, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
     ViewContainer(),
     m_winChangingReason(Unknown),
@@ -74,6 +74,7 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_isTransparent(isTransparent),
     m_isDecorated(isDecorated),
     m_isUnified(isUnified),
+    m_isInteractive(isInteractive),
     m_hMenu(NULL),
     m_alpha(255),
     m_isEnabled(true),
@@ -106,6 +107,12 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
 
 GlassWindow::~GlassWindow()
 {
+    LONG_PTR userData = ::GetWindowLongPtr(GetHWND(), GWLP_USERDATA);
+    if (userData != NULL) {
+        delete (WndUserData*)userData;
+        ::SetWindowLongPtr(GetHWND(), GWLP_USERDATA, NULL);
+    }
+
     if (m_hIcon) {
         ::DestroyIcon(m_hIcon);
     }
@@ -153,11 +160,21 @@ HWND GlassWindow::Create(DWORD dwStyle, DWORD dwExStyle, HMONITOR hMonitor, HWND
     ViewContainer::InitDropTarget(hwnd);
     ViewContainer::InitManipProcessor(hwnd);
 
+    WndUserData* userData = new WndUserData();
+    userData->interactive = m_isInteractive;
+    ::SetWindowLongPtr(hwnd, GWLP_USERDATA, LONG_PTR(userData));
+
     return hwnd;
 }
 
 void GlassWindow::Close()
 {
+    LONG_PTR userData = ::GetWindowLongPtr(GetHWND(), GWLP_USERDATA);
+    if (userData != NULL) {
+        delete (WndUserData*)userData;
+        ::SetWindowLongPtr(GetHWND(), GWLP_USERDATA, NULL);
+    }
+
     UngrabFocus();
     ViewContainer::ReleaseDropTarget();
     ViewContainer::ReleaseManipProcessor();
@@ -343,8 +360,8 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             // It's possible that move/size events are reported by the platform
             // before the peer listener is set. As a result, location/size are
             // not reported, so resending them from here.
-            HandleMoveEvent(NULL);
-            HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+            HandleMoveEvent();
+            HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE);
             // The call below may be restricted to WS_POPUP windows
             NotifyViewSize(GetHWND());
 
@@ -356,10 +373,10 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_DWMCOMPOSITIONCHANGED:
-            if (m_isUnified && (IS_WINVISTA)) {
+            if ((m_isUnified || m_isInteractive) && (IS_WINVISTA)) {
                 BOOL bEnabled = FALSE;
                 if(SUCCEEDED(::DwmIsCompositionEnabled(&bEnabled)) && bEnabled) {
-                    MARGINS dwmMargins = { -1, -1, -1, -1 };
+                    MARGINS dwmMargins = { m_isInteractive ? 1 : -1 };
                     ::DwmExtendFrameIntoClientArea(GetHWND(), &dwmMargins);
                 }
             }
@@ -374,18 +391,18 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             switch (wParam) {
                 case SIZE_RESTORED:
                     if (m_state != Normal) {
-                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESTORE, NULL);
+                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESTORE);
                         m_state = Normal;
                     } else {
-                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE);
                     }
                     break;
                 case SIZE_MINIMIZED:
-                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MINIMIZE, NULL);
+                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MINIMIZE);
                     m_state = Minimized;
                     break;
                 case SIZE_MAXIMIZED:
-                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MAXIMIZE, NULL);
+                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MAXIMIZE);
                     m_state = Maximized;
                     break;
             }
@@ -396,7 +413,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
-                HandleMoveEvent(NULL);
+                HandleMoveEvent();
             }
             break;
         case WM_WINDOWPOSCHANGING:
@@ -492,6 +509,9 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 //                p->rgrc[0].bottom++;
 //                return WVR_VALIDRECTS;
 //            }
+            if (BOOL(wParam) && IsInteractive()) {
+                return 0;
+            }
             break;
         case WM_PAINT:
             HandleViewPaintEvent(GetHWND(), msg, wParam, lParam);
@@ -581,6 +601,11 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             if (IsEnabled() &&
                 HandleViewInputMethodEvent(GetHWND(), msg, wParam, lParam)) {
                 return 0;
+            }
+            break;
+        case WM_NCHITTEST:
+            if (IsInteractive()) {
+                return HandleNCHitTestEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
             break;
         case WM_NCLBUTTONDOWN:
@@ -754,34 +779,19 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
     }
 }
 
-// if pRect == NULL => get position/size by GetWindowRect
-void GlassWindow::HandleMoveEvent(RECT *pRect)
+void GlassWindow::HandleMoveEvent()
 {
     JNIEnv* env = GetEnv();
-
-    RECT r;
-    if (pRect == NULL) {
-        ::GetWindowRect(GetHWND(), &r);
-        pRect = &r;
-    }
-
-    env->CallVoidMethod(m_grefThis, midNotifyMove, pRect->left, pRect->top);
+    RECT rect = utils::GetScreenSpaceWindowRect(GetHWND());
+    env->CallVoidMethod(m_grefThis, midNotifyMove, rect.left, rect.top);
     CheckAndClearException(env);
 }
 
-// if pRect == NULL => get position/size by GetWindowRect
-void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
+void GlassWindow::HandleSizeEvent(int type)
 {
     JNIEnv* env = GetEnv();
-
-    RECT r;
-    if (pRect == NULL) {
-        ::GetWindowRect(GetHWND(), &r);
-        pRect = &r;
-    }
-
-    env->CallVoidMethod(m_grefThis, midNotifyResize,
-                        type, pRect->right-pRect->left, pRect->bottom-pRect->top);
+    RECT rect = utils::GetScreenSpaceWindowRect(GetHWND());
+    env->CallVoidMethod(m_grefThis, midNotifyResize, type, rect.right - rect.left, rect.bottom - rect.top);
     CheckAndClearException(env);
 }
 
@@ -804,6 +814,14 @@ void GlassWindow::HandleFocusDisabledEvent()
 
     env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocusDisabled);
     CheckAndClearException(env);
+}
+
+LRESULT GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y)
+{
+    JNIEnv* env = GetEnv();
+    jint result = env->CallIntMethod(m_grefThis, javaIDs.Window.classifyWindowRegion, jint(x), jint(y));
+    CheckAndClearException(env);
+    return LRESULT(result);
 }
 
 bool GlassWindow::HandleCommand(WORD cmdID) {
@@ -903,6 +921,10 @@ bool GlassWindow::SetResizable(bool resizable)
     LONG resizableStyle = WS_MAXIMIZEBOX;
     if (IsDecorated()) {
         resizableStyle |= WS_THICKFRAME;
+    }
+
+    if (IsInteractive()) {
+        resizableStyle |= WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION;
     }
 
     if (resizable) {
@@ -1216,6 +1238,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      javaIDs.Window.notifyDelegatePtr = env->GetMethodID(cls, "notifyDelegatePtr", "(J)V");
      ASSERT(javaIDs.Window.notifyDelegatePtr);
      if (env->ExceptionCheck()) return;
+
+     javaIDs.Window.classifyWindowRegion = env->GetMethodID(cls, "classifyWindowRegion", "(II)I");
+     ASSERT(javaIDs.Window.classifyWindowRegion);
+     if (env->ExceptionCheck()) return;
 }
 
 /*
@@ -1277,6 +1303,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                 (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
                 (mask & com_sun_glass_ui_Window_TITLED) != 0,
                 (mask & com_sun_glass_ui_Window_UNIFIED) != 0,
+                (mask & com_sun_glass_ui_Window_INTERACTIVE) != 0,
                 false,
                 owner);
 
@@ -1332,7 +1359,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createChildWindow
         dwExStyle = WS_EX_NOINHERITLAYOUT;
 
         GlassWindow *pWindow =
-            new GlassWindow(jThis, false, false, false, true, parent);
+            new GlassWindow(jThis, false, false, false, false, true, parent);
 
         HWND hWnd = pWindow->Create(dwStyle, dwExStyle, NULL, parent);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -344,13 +344,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinView__1getX
             return 0;
         }
 
-        RECT rect1, rect2;
-
-        ::GetWindowRect(hWnd, &rect1);
-        ::GetClientRect(hWnd, &rect2);
-        ::MapWindowPoints(hWnd, (HWND)NULL, (LPPOINT)&rect2, (sizeof(RECT)/sizeof(POINT)));
-
-        return rect2.left - rect1.left;
+        return utils::GetScreenSpaceClipRect(hWnd).left;
     }
     LEAVE_MAIN_THREAD_WITH_view;
 
@@ -373,14 +367,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinView__1getY
             return 0;
         }
 
-        RECT rect1, rect2;
-        POINT p = {0, 0};
-
-        ::GetWindowRect(hWnd, &rect1);
-        ::GetClientRect(hWnd, &rect2);
-        ::MapWindowPoints(hWnd, (HWND)NULL, (LPPOINT)&rect2, (sizeof(RECT)/sizeof(POINT)));
-
-        return rect2.top - rect1.top;
+        return utils::GetScreenSpaceClipRect(hWnd).top;
     }
     LEAVE_MAIN_THREAD_WITH_view;
 
@@ -428,6 +415,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1uploadPixels
 
         GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
         Pixels pixels(GetEnv(), jPixels);
+        RECT windowRect;
+        ::GetWindowRect(hWnd, &windowRect);
+        SIZE windowSize = { windowRect.right - windowRect.left, windowRect.bottom - windowRect.top };
+        int dx = (windowSize.cx - pixels.GetWidth()) / 2;
+        int dy = (windowSize.cy - pixels.GetHeight()) / 2;
 
         if (!pWindow || !pWindow->IsTransparent()) {
             // Either a non-glass window (FullScreenWindow), or not transparent
@@ -444,7 +436,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1uploadPixels
             HDC hdcDst = ::GetDC(hWnd);
             ::SetDIBitsToDevice(
                     hdcDst,
-                    0, 0, pixels.GetWidth(), pixels.GetHeight(),
+                    dx, dy, pixels.GetWidth(), pixels.GetHeight(),
                     0, 0,
                     0, pixels.GetHeight(),
                     pixels.GetBits(),
@@ -452,18 +444,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1uploadPixels
             ::ReleaseDC(hWnd, hdcDst);
         } else { // IsTransparent() == TRUE
             // http://msdn.microsoft.com/en-us/library/ms997507.aspx
-            RECT rect;
-            ::GetWindowRect(hWnd, &rect);
-            SIZE size = { rect.right - rect.left, rect.bottom - rect.top };
 
-            if (size.cx != pixels.GetWidth() || size.cy != pixels.GetHeight()) {
+            if (windowSize.cx != pixels.GetWidth() || windowSize.cy != pixels.GetHeight()) {
                 //XXX: should report a error? OTOH, we could proceed, but
                 //this will cause the window to resize to the size of the bitmap
                 return;
             }
 
             POINT ptSrc = { 0, 0 };
-            POINT ptDst = { rect.left, rect.top };
+            POINT ptDst = { windowRect.left, windowRect.top };
 
             BLENDFUNCTION bf;
             bf.SourceConstantAlpha = pWindow->GetAlpha();
@@ -477,7 +466,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1uploadPixels
             HDC hdcSrc = ::CreateCompatibleDC(NULL);
             HBITMAP oldBitmap = (HBITMAP)::SelectObject(hdcSrc, bitmap);
 
-            ::UpdateLayeredWindow(hWnd, hdcDst, &ptDst, &size, hdcSrc, &ptSrc,
+            ::UpdateLayeredWindow(hWnd, hdcDst, &ptDst, &windowSize, hdcSrc, &ptSrc,
                     RGB(0, 0, 0), &bf, ULW_ALPHA);
 
             ::SelectObject(hdcSrc, oldBitmap);

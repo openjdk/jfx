@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import com.sun.javafx.util.Logging;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
+import javafx.stage.WindowRegionClassifier;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -378,7 +379,7 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    public Window createWindow(Window owner, Screen screen, int styleMask) {
+    public Window createWindow(Window owner, Screen screen, WindowRegionClassifier classifier, int styleMask) {
         return new GtkWindow(owner, screen, styleMask);
     }
 
