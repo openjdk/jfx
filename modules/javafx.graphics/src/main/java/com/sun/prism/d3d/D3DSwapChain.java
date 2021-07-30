@@ -62,6 +62,12 @@ class D3DSwapChain
         if (g == null) {
             return false;
         }
+
+        // The size of the swap chain surface may be different than the size of the back buffer.
+        // This happens for a maximized window with the UNDECORATED_INTERACTIVE stage style:
+        // In this case, the window extends slightly beyond the edges of the screen, while the
+        // back buffer only contains the pixels that are actually visible. We need to center
+        // the back buffer texture on the swap chain surface to line it up with the screen edges.
         int sw = texBackBuffer.getContentWidth();
         int sh = texBackBuffer.getContentHeight();
         int dw = this.getContentWidth();
