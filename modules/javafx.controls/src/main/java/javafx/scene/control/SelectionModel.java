@@ -40,7 +40,7 @@ import javafx.collections.ListChangeListener;
  */
 public abstract class SelectionModel<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Selection Properties                                                    *
      *                                                                         *
@@ -124,7 +124,7 @@ public abstract class SelectionModel<T> {
     public final T getSelectedItem() { return selectedItemProperty().get(); }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -136,7 +136,7 @@ public abstract class SelectionModel<T> {
     public SelectionModel() { }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Selection API                                                           *
      *                                                                         *

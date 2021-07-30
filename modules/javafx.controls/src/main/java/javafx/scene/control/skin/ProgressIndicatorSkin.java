@@ -79,7 +79,7 @@ import javafx.css.Styleable;
  */
 public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -87,7 +87,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -111,7 +111,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -141,7 +141,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -225,7 +225,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -320,7 +320,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -396,7 +396,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -478,7 +478,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

@@ -71,7 +71,7 @@ public class Accordion extends Control {
     private boolean biasDirty = true;
     private Orientation bias;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -104,7 +104,7 @@ public class Accordion extends Control {
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -130,7 +130,7 @@ public class Accordion extends Control {
         }
     };
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -193,7 +193,7 @@ public class Accordion extends Control {
      */
     public final ObjectProperty<TitledPane> expandedPaneProperty() { return expandedPane; }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -239,7 +239,7 @@ public class Accordion extends Control {
         return bias;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

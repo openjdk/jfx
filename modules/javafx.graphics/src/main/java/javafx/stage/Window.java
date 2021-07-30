@@ -688,7 +688,7 @@ public class Window implements EventTarget {
     public final boolean isFocused() { return focused.get(); }
     public final ReadOnlyBooleanProperty focusedProperty() { return focused.getReadOnlyProperty(); }
 
-    /*************************************************************************
+    /* ***********************************************************************
     *                                                                        *
     *                                                                        *
     *                                                                        *

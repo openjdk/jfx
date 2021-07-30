@@ -43,7 +43,7 @@ import javafx.scene.layout.StackPane;
  */
 public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -55,7 +55,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -81,7 +81,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -146,7 +146,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

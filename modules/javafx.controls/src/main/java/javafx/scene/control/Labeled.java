@@ -97,7 +97,7 @@ public abstract class Labeled extends Control {
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -126,7 +126,7 @@ public abstract class Labeled extends Control {
         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(null, graphic);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -836,7 +836,7 @@ public abstract class Labeled extends Control {
         return builder.toString();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

@@ -51,7 +51,7 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
  */
 public class IndexedCell<T> extends Cell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -66,7 +66,7 @@ public class IndexedCell<T> extends Cell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -100,7 +100,7 @@ public class IndexedCell<T> extends Cell<T> {
      */
     public final ReadOnlyIntegerProperty indexProperty() { return index.getReadOnlyProperty(); }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Expert API                                                              *
      *                                                                         *

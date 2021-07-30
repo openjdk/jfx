@@ -96,7 +96,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
 @IDProperty("id")
 public class MenuItem implements EventTarget, Styleable {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -134,7 +134,7 @@ public class MenuItem implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -148,7 +148,7 @@ public class MenuItem implements EventTarget, Styleable {
     private Object userData;
     private ObservableMap<Object, Object> properties;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -442,7 +442,7 @@ public class MenuItem implements EventTarget, Styleable {
         return mnemonicParsing;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -536,7 +536,7 @@ public class MenuItem implements EventTarget, Styleable {
         return properties;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
