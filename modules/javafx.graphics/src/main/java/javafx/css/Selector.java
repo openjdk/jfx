@@ -99,7 +99,6 @@ abstract public class Selector {
 
     /**
      * Gets whether this {@code Selector} applies to the given {@code Styleable}.
-     * It is the same as the {@link createMatch} method except it returns a boolean rather than a {@code Match}.
      * @param styleable the {@code Styleable} to match
      * @return {@code true} if this {@code Selector} applies to the given {@code Styleable}
      */
