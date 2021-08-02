@@ -957,6 +957,7 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
+                        updateRemovedParentFocus(oldParent);
                         oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
                         oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
@@ -8157,8 +8158,8 @@ public abstract class Node implements EventTarget, Styleable {
      * by the implementation of {@link #focused}.
      */
     final void setFocusQuietly(boolean focused, boolean focusVisible) {
-        ((FocusPropertyBase)focusedProperty()).set(focused);
-        ((FocusPropertyBase)focusVisibleProperty()).set(focused && focusVisible);
+        this.focused.set(focused);
+        this.focusVisible.set(focused && focusVisible);
     }
 
     /**
@@ -8167,14 +8168,32 @@ public abstract class Node implements EventTarget, Styleable {
      * are fired on the current node and on all of its parents, if necessary.
      */
     final void notifyFocusListeners() {
-        ((FocusPropertyBase)focusedProperty()).notifyListeners();
-        ((FocusPropertyBase)focusVisibleProperty()).notifyListeners();
+        focused.notifyListeners();
+        focusVisible.notifyListeners();
 
         Node node = this;
         do {
-            ((FocusPropertyBase)node.focusWithinProperty()).notifyListeners();
+            node.focusWithin.notifyListeners();
             node = node.getParent();
         } while (node != null);
+    }
+
+    /**
+     * Called when the current node was removed from the scene graph in order to clear
+     * the focus bits of the former parents.
+     */
+    private void updateRemovedParentFocus(Node oldParent) {
+        if (oldParent != null && focusWithin.get()) {
+            Node node = oldParent;
+            while (node != null) {
+                node.focused.set(false);
+                node.focusVisible.set(false);
+                node.focusWithin.set(false);
+                node = node.getParent();
+            }
+
+            oldParent.notifyFocusListeners();
+        }
     }
 
     /**
@@ -8186,7 +8205,39 @@ public abstract class Node implements EventTarget, Styleable {
      * @see #requestFocus()
      * @defaultValue false
      */
-    private FocusPropertyBase focused;
+    private final FocusPropertyBase focused = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUSED_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focused";
+        }
+
+        @Override
+        protected boolean notifyListeners() {
+            if (super.notifyListeners()) {
+                notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUSED);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void set(boolean value) {
+            if (get() != value) {
+                super.set(value);
+
+                Node node = Node.this;
+                do {
+                    node.focusWithin.set(value);
+                    node = node.getParent();
+                } while (node != null);
+            }
+        }
+    };
 
     protected final void setFocused(boolean value) {
         setFocusQuietly(value, false);
@@ -8194,76 +8245,39 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final boolean isFocused() {
-        return focused != null && focused.get();
+        return focused.get();
     }
 
     public final ReadOnlyBooleanProperty focusedProperty() {
-        if (focused == null) {
-            focused = new FocusPropertyBase() {
-                @Override
-                protected PseudoClass getPseudoClass() {
-                    return FOCUSED_PSEUDOCLASS_STATE;
-                }
-
-                @Override
-                public String getName() {
-                    return "focused";
-                }
-
-                @Override
-                protected boolean notifyListeners() {
-                    if (super.notifyListeners()) {
-                        notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUSED);
-                        return true;
-                    }
-                    return false;
-                }
-
-                @Override
-                public void set(boolean value) {
-                    if (get() != value) {
-                        super.set(value);
-
-                        Node node = Node.this;
-                        do {
-                            ((FocusPropertyBase)node.focusWithinProperty()).set(value);
-                            node = node.getParent();
-                        } while (node != null);
-                    }
-                }
-            };
-        }
         return focused;
     }
 
     /**
      * Indicates whether this {@code Node} should visibly indicate focus.
-     * This flag is set when a node acquires input focus via keyboard navigation,
-     * and it is cleared when {@link #requestFocus()} is called.
+     * This flag is set when the node acquires input focus via keyboard navigation,
+     * and it is cleared when the node loses focus, or when {@link #requestFocus()}
+     * is called.
      *
      * @defaultValue false
-     * @since 17
+     * @since 18
      */
-    private FocusPropertyBase focusVisible;
+    private final FocusPropertyBase focusVisible = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUS_VISIBLE_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focusVisible";
+        }
+    };
 
     public final boolean isFocusVisible() {
-        return focusVisible != null && focusVisible.get();
+        return focusVisible.get();
     }
 
     public final ReadOnlyBooleanProperty focusVisibleProperty() {
-        if (focusVisible == null) {
-            focusVisible = new FocusPropertyBase() {
-                @Override
-                protected PseudoClass getPseudoClass() {
-                    return FOCUS_VISIBLE_PSEUDOCLASS_STATE;
-                }
-
-                @Override
-                public String getName() {
-                    return "focusVisible";
-                }
-            };
-        }
         return focusVisible;
     }
 
@@ -8272,28 +8286,25 @@ public abstract class Node implements EventTarget, Styleable {
      * has the input focus.
      *
      * @defaultValue false
-     * @since 17
+     * @since 18
      */
-    private FocusPropertyBase focusWithin;
+    private final FocusPropertyBase focusWithin = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUS_WITHIN_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focusWithin";
+        }
+    };
 
     public final boolean isFocusWithin() {
-        return focusWithin != null && focusWithin.get();
+        return focusWithin.get();
     }
 
     public final ReadOnlyBooleanProperty focusWithinProperty() {
-        if (focusWithin == null) {
-            focusWithin = new FocusPropertyBase() {
-                @Override
-                protected PseudoClass getPseudoClass() {
-                    return FOCUS_WITHIN_PSEUDOCLASS_STATE;
-                }
-
-                @Override
-                public String getName() {
-                    return "focusWithin";
-                }
-            };
-        }
         return focusWithin;
     }
 

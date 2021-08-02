@@ -913,6 +913,23 @@ public class FocusTest {
         assertEquals(Boolean.TRUE, focusWithinValues.get(0));
     }
 
-    // TODO: tests for moving nodes between scenes
-    // and active and inactive stages
+    /**
+     * When a focused node is removed from the scene graph, the focus states
+     * of its former parents are cleared.
+     */
+    @Test public void testFocusStatesAreClearedFromFormerParentsOfFocusedNode() {
+        Node node1 = n(), node2 = n();
+        Group g2, g3, g1 = new Group(g2 = new Group(g3 = new Group(node1)), new Group(new Group(node2)));
+        scene.setRoot(g1);
+
+        node1.requestFocus();
+        assertIsFocusWithin(g1);
+        assertIsFocusWithin(g2);
+        assertIsFocusWithin(g3);
+
+        g2.getChildren().remove(0);
+        assertNotFocusWithin(g1);
+        assertNotFocusWithin(g2);
+    }
+
 }
