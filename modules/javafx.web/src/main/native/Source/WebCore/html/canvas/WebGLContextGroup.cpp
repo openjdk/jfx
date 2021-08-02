@@ -28,7 +28,7 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContextGLOpenGL.h"
+#include "GraphicsContextGL.h"
 #include "WebGLRenderingContextBase.h"
 #include "WebGLSharedObject.h"
 
@@ -44,10 +44,26 @@ WebGLContextGroup::~WebGLContextGroup()
     detachAndRemoveAllObjects();
 }
 
-GraphicsContextGLOpenGL& WebGLContextGroup::getAGraphicsContextGL()
+bool WebGLContextGroup::hasAContext() const
+{
+    return !m_contexts.isEmpty();
+}
+
+GraphicsContextGL& WebGLContextGroup::getAGraphicsContextGL()
 {
     ASSERT(!m_contexts.isEmpty());
     return *(*m_contexts.begin())->graphicsContextGL();
+}
+
+WTF::Lock& WebGLContextGroup::objectGraphLockForAContext()
+{
+    ASSERT(!m_contexts.isEmpty());
+    // Since the WEBGL_shared_objects extension never shipped, and is
+    // unlikely to, this is equivalent to WebGLContextObject's
+    // implementation. If there were the possibility of WebGL objects
+    // being shared between multiple contexts, this would have to be
+    // rethought.
+    return (*m_contexts.begin())->objectGraphLock();
 }
 
 void WebGLContextGroup::addContext(WebGLRenderingContextBase& context)
@@ -76,8 +92,17 @@ void WebGLContextGroup::addObject(WebGLSharedObject& object)
 
 void WebGLContextGroup::detachAndRemoveAllObjects()
 {
+    if (m_contexts.isEmpty()) {
+        // No objectGraphLock is available to cover the calls to
+        // WebGLObject::deleteObject.
+        while (!m_groupObjects.isEmpty())
+            (*m_groupObjects.begin())->detachContextGroupWithoutDeletingObject();
+        return;
+    }
+
+    auto locker = holdLock(objectGraphLockForAContext());
     while (!m_groupObjects.isEmpty())
-        (*m_groupObjects.begin())->detachContextGroup();
+        (*m_groupObjects.begin())->detachContextGroup(locker);
 }
 
 void WebGLContextGroup::loseContextGroup(WebGLRenderingContextBase::LostContextMode mode)

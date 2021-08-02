@@ -90,8 +90,10 @@ class EPDScreen implements NativeScreen {
      * @throws IllegalStateException if an error occurs opening the frame buffer
      */
     EPDScreen() {
-        fbPath = AccessController.doPrivileged((PrivilegedAction<String>) ()
+        @SuppressWarnings("removal")
+        String tmp = AccessController.doPrivileged((PrivilegedAction<String>) ()
                 -> System.getProperty(FB_PATH_KEY, FB_PATH_DEFAULT));
+        fbPath = tmp;
         try {
             fbDevice = new EPDFrameBuffer(fbPath);
             fbDevice.init();

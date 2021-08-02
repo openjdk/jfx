@@ -85,15 +85,13 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
 
     JSValueRef exception = 0;
 
-    gTestRunner->makeWindowObject(gContext, windowObject, &exception);
-    ASSERT(!exception);
+    gTestRunner->makeWindowObject(gContext);
 
     JLObject jlEventSender(eventSender, true);
     makeEventSender(gContext, windowObject, jlEventSender, &exception);
     ASSERT(!exception);
     WebCoreTestSupport::injectInternalsObject(gContext);
-    gGCController->makeWindowObject(gContext, windowObject, &exception);
-    ASSERT(!exception);
+    gGCController->makeWindowObject(gContext);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dispose

@@ -500,6 +500,12 @@ String AXListMarkerText()
     return getLocalizedProperty("AXListMarkerText");
 }
 
+String AXAttachmentRoleText()
+{
+    notImplemented();
+    return String();
+}
+
 String AXImageMapText()
 {
     return getLocalizedProperty("AXImageMapText");

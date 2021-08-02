@@ -113,6 +113,10 @@ private:
     bool copyBaseWindowsDriveLetter(const URL&);
     StringView parsedDataView(size_t start, size_t length);
     UChar parsedDataView(size_t position);
+    template<typename CharacterType> bool startsWithXNDashDash(CodePointIterator<CharacterType>);
+
+    bool needsNonSpecialDotSlash() const;
+    void addNonSpecialDotSlash();
 
     using IPv4Address = uint32_t;
     void serializeIPv4(IPv4Address);

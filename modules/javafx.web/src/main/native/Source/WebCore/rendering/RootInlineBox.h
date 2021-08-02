@@ -54,8 +54,8 @@ public:
     LayoutUnit lineTop() const { return m_lineTop; }
     LayoutUnit lineBottom() const { return m_lineBottom; }
 
-    LayoutUnit lineTopWithLeading() const { return m_lineTopWithLeading; }
-    LayoutUnit lineBottomWithLeading() const { return m_lineBottomWithLeading; }
+    LayoutUnit lineBoxTop() const { return m_lineBoxTop; }
+    LayoutUnit lineBoxBottom() const { return m_lineBoxBottom; }
 
     LayoutUnit paginationStrut() const { return m_paginationStrut; }
     void setPaginationStrut(LayoutUnit strut) { m_paginationStrut = strut; }
@@ -80,15 +80,13 @@ public:
     LayoutUnit selectionTopAdjustedForPrecedingBlock() const;
     LayoutUnit selectionHeightAdjustedForPrecedingBlock() const { return std::max<LayoutUnit>(0, selectionBottom() - selectionTopAdjustedForPrecedingBlock()); }
 
-    int blockDirectionPointInLine() const;
-
     LayoutUnit alignBoxesInBlockDirection(LayoutUnit heightOfBlock, GlyphOverflowAndFallbackFontsMap&, VerticalPositionCache&);
-    void setLineTopBottomPositions(LayoutUnit top, LayoutUnit bottom, LayoutUnit topWithLeading, LayoutUnit bottomWithLeading)
+    void setLineTopBottomPositions(LayoutUnit top, LayoutUnit bottom, LayoutUnit lineBoxTop, LayoutUnit lineBoxBottom)
     {
         m_lineTop = top;
         m_lineBottom = bottom;
-        m_lineTopWithLeading = topWithLeading;
-        m_lineBottomWithLeading = bottomWithLeading;
+        m_lineBoxTop = lineBoxTop;
+        m_lineBoxBottom = lineBoxBottom;
     }
 
     RenderObject* lineBreakObj() const { return m_lineBreakObj.get(); }
@@ -124,20 +122,12 @@ public:
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
 
-    using InlineBox::hasSelectedChildren;
-    using InlineBox::setHasSelectedChildren;
-
     RenderObject::HighlightState selectionState() final;
     InlineBox* firstSelectedBox();
     InlineBox* lastSelectedBox();
 
     GapRects lineSelectionGap(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
         LayoutUnit selTop, LayoutUnit selHeight, const LogicalSelectionOffsetCaches&, const PaintInfo*);
-
-    IntRect computeCaretRect(float logicalLeftPosition, unsigned caretWidth, LayoutUnit* extraWidthToEndOfLine) const;
-
-    InlineBox* closestLeafChildForPoint(const IntPoint&, bool onlyEditableLeaves);
-    InlineBox* closestLeafChildForLogicalLeftPosition(int, bool onlyEditableLeaves = false);
 
     using CleanLineFloatList = Vector<WeakPtr<RenderBox>>;
     void appendFloat(RenderBox& floatingBox)
@@ -191,12 +181,10 @@ public:
         return InlineFlowBox::logicalBottomLayoutOverflow(lineBottom());
     }
 
-    Node* getLogicalStartBoxWithNode(InlineBox*&) const;
-    Node* getLogicalEndBoxWithNode(InlineBox*&) const;
-
     virtual bool isTrailingFloatsRootInlineBox() const { return false; }
 
 #if ENABLE(TREE_DEBUGGING)
+    void outputLineBox(WTF::TextStream&, bool mark, int depth) const final;
     const char* boxName() const final;
 #endif
 private:
@@ -220,8 +208,8 @@ private:
     LayoutUnit m_lineTop;
     LayoutUnit m_lineBottom;
 
-    LayoutUnit m_lineTopWithLeading;
-    LayoutUnit m_lineBottomWithLeading;
+    LayoutUnit m_lineBoxTop;
+    LayoutUnit m_lineBoxBottom;
 
     LayoutUnit m_paginationStrut;
     LayoutUnit m_paginatedLineWidth;

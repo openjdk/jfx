@@ -37,12 +37,12 @@ class AudioProcessor;
 class AudioBasicProcessorNode : public AudioNode {
     WTF_MAKE_ISO_ALLOCATED(AudioBasicProcessorNode);
 public:
-    explicit AudioBasicProcessorNode(BaseAudioContext&);
+    AudioBasicProcessorNode(BaseAudioContext&, NodeType);
 
     // AudioNode
     void process(size_t framesToProcess) override;
+    void processOnlyAudioParams(size_t framesToProcess) override;
     void pullInputs(size_t framesToProcess) override;
-    void reset() override;
     void initialize() override;
     void uninitialize() override;
 
@@ -55,6 +55,7 @@ public:
 protected:
     double tailTime() const override;
     double latencyTime() const override;
+    bool requiresTailProcessing() const override;
 
     AudioProcessor* processor() { return m_processor.get(); }
     std::unique_ptr<AudioProcessor> m_processor;

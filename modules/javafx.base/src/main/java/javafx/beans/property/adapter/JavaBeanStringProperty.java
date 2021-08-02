@@ -96,6 +96,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
     private ObservableValue<? extends String> observable = null;
     private ExpressionHelper<String> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanStringProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public String get() {
         return AccessController.doPrivileged((PrivilegedAction<String>) () -> {
@@ -132,6 +134,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final String value) {
         if (isBound()) {

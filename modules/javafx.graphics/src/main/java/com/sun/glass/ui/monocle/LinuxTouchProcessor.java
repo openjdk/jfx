@@ -34,6 +34,7 @@ abstract class LinuxTouchProcessor implements LinuxInputProcessor {
     final TouchPipeline pipeline;
     final LinuxTouchTransform transform;
 
+    @SuppressWarnings("removal")
     LinuxTouchProcessor(LinuxInputDevice device) {
         transform = new LinuxTouchTransform(device);
         PrivilegedAction<String> getFilterProperty =

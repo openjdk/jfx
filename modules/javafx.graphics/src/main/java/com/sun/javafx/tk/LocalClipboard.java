@@ -44,7 +44,7 @@ final class LocalClipboard implements TKClipboard {
     }
 
     @Override
-    public void setSecurityContext(final AccessControlContext ctx) {
+    public void setSecurityContext(@SuppressWarnings("removal") final AccessControlContext ctx) {
         // ctx not needed
     }
 

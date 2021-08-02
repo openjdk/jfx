@@ -29,6 +29,10 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
+#if USE(GLIB) && HAVE(GURI)
+#include <wtf/glib/GRefPtr.h>
+#endif
+
 #if USE(CF)
 typedef const struct __CFURL* CFURLRef;
 #endif
@@ -111,7 +115,7 @@ public:
     WTF_EXPORT_PRIVATE StringView queryWithLeadingQuestionMark() const;
     WTF_EXPORT_PRIVATE StringView fragmentIdentifierWithLeadingNumberSign() const;
     WTF_EXPORT_PRIVATE StringView stringWithoutQueryOrFragmentIdentifier() const;
-    StringView stringWithoutFragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE StringView stringWithoutFragmentIdentifier() const;
 
     WTF_EXPORT_PRIVATE String protocolHostAndPort() const;
     WTF_EXPORT_PRIVATE String hostAndPort() const;
@@ -171,7 +175,7 @@ public:
 
     WTF_EXPORT_PRIVATE static bool hostIsIPAddress(StringView);
 
-    unsigned pathStart() const;
+    WTF_EXPORT_PRIVATE unsigned pathStart() const;
     unsigned pathEnd() const;
     unsigned pathAfterLastSlash() const;
 
@@ -189,6 +193,11 @@ public:
     URL(JNIEnv* env, jstring url) : URL(URL(), String(env, url)) {}
 #endif
 
+#if USE(GLIB) && HAVE(GURI)
+    WTF_EXPORT_PRIVATE URL(GUri*);
+    WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
+#endif
+
 #ifndef NDEBUG
     void print() const;
 #endif
@@ -197,6 +206,8 @@ public:
     template<typename Encoder> void encode(Encoder&) const;
     template<typename Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, URL&);
     template<typename Decoder> static Optional<URL> decode(Decoder&);
+
+    WTF_EXPORT_PRIVATE bool hasSpecialScheme() const;
 
 private:
     friend class URLParser;
@@ -376,11 +387,6 @@ inline bool URL::hasFragmentIdentifier() const
 inline bool URL::protocolIsInHTTPFamily() const
 {
     return m_protocolIsInHTTPFamily;
-}
-
-inline unsigned URL::pathStart() const
-{
-    return m_hostEnd + m_portLength;
 }
 
 inline unsigned URL::pathEnd() const

@@ -148,6 +148,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
         }
     }
 
+    @SuppressWarnings("removal")
     private void handleSwipeType(final EventType<SwipeEvent> swipeType,
             final CenterComputer cc, final int touchCount, final int modifiers, final boolean isDirect)
     {

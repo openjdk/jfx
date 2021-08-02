@@ -39,15 +39,6 @@ public:
     static bool shouldUseHighResolutionTimers() { return gShouldUseHighResolutionTimers; }
 #endif
 
-    static bool isPostLoadCPUUsageMeasurementEnabled();
-    static bool isPostBackgroundingCPUUsageMeasurementEnabled();
-    static bool isPerActivityStateCPUUsageMeasurementEnabled();
-
-    static bool isPostLoadMemoryUsageMeasurementEnabled();
-    static bool isPostBackgroundingMemoryUsageMeasurementEnabled();
-
-    static bool globalConstRedeclarationShouldThrow();
-
 #if USE(AVFOUNDATION)
     WEBCORE_EXPORT static void setAVFoundationEnabled(bool flag);
     static bool isAVFoundationEnabled() { return gAVFoundationEnabled; }
@@ -137,50 +128,5 @@ private:
     WEBCORE_EXPORT static bool gResourceLoadStatisticsEnabledEnabled;
     static bool gAllowsAnySSLCertificate;
 };
-
-inline bool DeprecatedGlobalSettings::isPostLoadCPUUsageMeasurementEnabled()
-{
-#if PLATFORM(COCOA)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPostBackgroundingCPUUsageMeasurementEnabled()
-{
-#if PLATFORM(MAC)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPerActivityStateCPUUsageMeasurementEnabled()
-{
-#if PLATFORM(MAC)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPostLoadMemoryUsageMeasurementEnabled()
-{
-#if PLATFORM(COCOA)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPostBackgroundingMemoryUsageMeasurementEnabled()
-{
-#if PLATFORM(MAC)
-    return true;
-#else
-    return false;
-#endif
-}
 
 } // namespace WebCore

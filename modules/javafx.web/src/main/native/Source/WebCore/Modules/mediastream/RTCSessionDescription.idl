@@ -32,33 +32,15 @@
 [
     Conditional=WEB_RTC,
     EnabledAtRuntime=PeerConnection,
-    ImplementedAs=RTCSdpType
-] enum RTCSdpType {
-    "offer",
-    "pranswer",
-    "answer",
-    "rollback"
-};
-
-[
-    Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
     ImplementationLacksVTable,
     PrivateIdentifier,
-    PublicIdentifier
+    PublicIdentifier,
+    Exposed=Window
 ] interface RTCSessionDescription {
     constructor(RTCSessionDescriptionInit descriptionInitDict);
 
     readonly attribute RTCSdpType type;
     readonly attribute DOMString sdp;
 
-    serializer = {type, sdp};
-};
-
-[
-    Conditional=WEB_RTC,
-    JSGenerateToJSObject
-] dictionary RTCSessionDescriptionInit {
-    required RTCSdpType type;
-    DOMString sdp = "";
+    [Default] object toJSON();
 };

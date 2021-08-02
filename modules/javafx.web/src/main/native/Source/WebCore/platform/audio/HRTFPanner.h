@@ -39,7 +39,8 @@ public:
     virtual ~HRTFPanner();
 
     // Panner
-    void pan(double azimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) override;
+    void pan(double azimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) final;
+    void panWithSampleAccurateValues(double* azimuth, double* elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) final;
     void reset() override;
 
     size_t fftSize() const { return fftSizeForSampleRate(m_sampleRate); }
@@ -49,6 +50,7 @@ public:
 
     double tailTime() const override;
     double latencyTime() const override;
+    bool requiresTailProcessing() const final;
 
 private:
     // Given an azimuth angle in the range -180 -> +180, returns the corresponding azimuth index for the database,
@@ -75,21 +77,21 @@ private:
         CrossfadeSelection2
     };
 
-    CrossfadeSelection m_crossfadeSelection;
+    CrossfadeSelection m_crossfadeSelection { CrossfadeSelection1 };
 
     // azimuth/elevation for CrossfadeSelection1.
-    int m_azimuthIndex1;
-    double m_elevation1;
+    Optional<int> m_azimuthIndex1;
+    double m_elevation1 { 0 };
 
     // azimuth/elevation for CrossfadeSelection2.
-    int m_azimuthIndex2;
-    double m_elevation2;
+    Optional<int> m_azimuthIndex2;
+    double m_elevation2 { 0 };
 
     // A crossfade value 0 <= m_crossfadeX <= 1.
-    float m_crossfadeX;
+    float m_crossfadeX { 0 };
 
     // Per-sample-frame crossfade value increment.
-    float m_crossfadeIncr;
+    float m_crossfadeIncr { 0 };
 
     FFTConvolver m_convolverL1;
     FFTConvolver m_convolverR1;

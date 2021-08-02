@@ -81,6 +81,7 @@ public abstract class NativePlatformFactory {
      */
     public static synchronized NativePlatform getNativePlatform() {
         if (platform == null) {
+            @SuppressWarnings("removal")
             String platformFactoryProperty =
                     AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("monocle.platform",
                                               "MX6,OMAP,Dispman,Android,X11,Linux,Headless"));

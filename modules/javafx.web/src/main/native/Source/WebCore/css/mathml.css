@@ -1,3 +1,29 @@
+/*
+ * Copyright (C) 2020 Apple Inc.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#if defined(ENABLE_MATHML) && ENABLE_MATHML
+
 @namespace "http://www.w3.org/1998/Math/MathML";
 
 :any-link {
@@ -15,6 +41,7 @@
 
 math {
     display: inline;
+    math-style: compact;
 
     /*
     We use the exact bounding boxes of glyphs to avoid excessive gaps in mathematical formulas.
@@ -122,9 +149,13 @@ math {
     /* FIXME: Should we reset more CSS properties (http://webkit.org/b/156839)? */
 }
 
-math[display="block"] {
+math[display="block" i] {
     display: block;
     page-break-inside: avoid;
+    math-style: normal;
+}
+math[display="inline" i] {
+  math-style: compact;
 }
 
 ms, mspace, mtext, mi, mn, mo, mrow, mfenced, mfrac, msub, msup, msubsup, mmultiscripts, mprescripts, none, munder, mover, munderover, msqrt, mroot, merror, mphantom, mstyle, menclose, semantics, mpadded, maction {
@@ -135,13 +166,18 @@ ms, mtext, mi, mn, mo, annotation, mtd {
     white-space: nowrap !important;
 }
 
+mfrac > * {
+    math-style: compact;
+}
+
 msub > * + *, msup > * + *, msubsup > * + *, mmultiscripts > * + *, munder > * + *, mover > * + *, munderover > * + * {
     font-size: 0.75em; /* FIXME: MathML standard is 0.71em */
+    math-style: compact;
 }
 mroot > *:last-child {
     font-size: 0.5625em; /* This 0.75^2 since the scriptlevel is incremented by 2 in the index. */
+    math-style: compact;
 }
-
 mi {
     -webkit-padding-end: 0.1em;
 }
@@ -167,6 +203,7 @@ merror {
 mtable {
     display: inline-table;
     text-align: center;
+    math-style: compact;
 }
 
 mtr {
@@ -229,3 +266,5 @@ mtable[columnlines="solid"] > mtr > mtd + mtd {
 mtable[columnlines="dashed"] > mtr > mtd + mtd {
     border-left: dashed thin;
 }
+
+#endif

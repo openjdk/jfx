@@ -39,6 +39,7 @@
 #include "HTMLImageElement.h"
 #include "HTMLParserIdioms.h"
 #include "Image.h"
+#include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -68,17 +69,18 @@ private:
 
 #endif
 
-DataTransfer::DataTransfer(StoreMode mode, std::unique_ptr<Pasteboard> pasteboard, Type type)
+DataTransfer::DataTransfer(StoreMode mode, std::unique_ptr<Pasteboard> pasteboard, Type type, String&& effectAllowed)
     : m_storeMode(mode)
     , m_pasteboard(WTFMove(pasteboard))
 #if ENABLE(DRAG_SUPPORT)
     , m_type(type)
     , m_dropEffect("uninitialized"_s)
-    , m_effectAllowed("uninitialized"_s)
+    , m_effectAllowed(WTFMove(effectAllowed))
     , m_shouldUpdateDragImage(false)
 #endif
 {
 #if !ENABLE(DRAG_SUPPORT)
+    UNUSED_PARAM(effectAllowed);
     ASSERT_UNUSED(type, type != Type::DragAndDropData && type != Type::DragAndDropFiles);
 #endif
 }
@@ -88,6 +90,11 @@ Ref<DataTransfer> DataTransfer::createForCopyAndPaste(const Document& document, 
     auto dataTransfer = adoptRef(*new DataTransfer(storeMode, WTFMove(pasteboard)));
     dataTransfer->m_originIdentifier = document.originIdentifierForPasteboard();
     return dataTransfer;
+}
+
+Ref<DataTransfer> DataTransfer::create()
+{
+    return adoptRef(*new DataTransfer(StoreMode::ReadWrite, makeUnique<StaticPasteboard>(), Type::CopyAndPaste, "none"_s));
 }
 
 DataTransfer::~DataTransfer()
@@ -268,11 +275,11 @@ void DataTransfer::setDataFromItemList(const String& type, const String& data)
         m_pasteboard->writeString(type, sanitizedData);
 }
 
-void DataTransfer::updateFileList()
+void DataTransfer::updateFileList(ScriptExecutionContext* context)
 {
     ASSERT(canWriteData());
 
-    m_fileList->m_files = filesFromPasteboardAndItemList();
+    m_fileList->m_files = filesFromPasteboardAndItemList(context);
 }
 
 void DataTransfer::didAddFileToItemList()
@@ -286,10 +293,10 @@ void DataTransfer::didAddFileToItemList()
     m_fileList->append(*newItem->file());
 }
 
-DataTransferItemList& DataTransfer::items()
+DataTransferItemList& DataTransfer::items(Document& document)
 {
     if (!m_itemList)
-        m_itemList = makeUnique<DataTransferItemList>(*this);
+        m_itemList = makeUnique<DataTransferItemList>(document, *this);
     return *m_itemList;
 }
 
@@ -343,12 +350,12 @@ Vector<String> DataTransfer::types(AddFilesType addFilesType) const
     return safeTypes;
 }
 
-Vector<Ref<File>> DataTransfer::filesFromPasteboardAndItemList() const
+Vector<Ref<File>> DataTransfer::filesFromPasteboardAndItemList(ScriptExecutionContext* context) const
 {
     bool addedFilesFromPasteboard = false;
     Vector<Ref<File>> files;
     if ((!forDrag() || forFileDrag()) && m_pasteboard->fileContentState() != Pasteboard::FileContentState::NoFileOrImageData) {
-        WebCorePasteboardFileReader reader;
+        WebCorePasteboardFileReader reader(context);
         m_pasteboard->read(reader);
         files = WTFMove(reader.files);
         addedFilesFromPasteboard = !files.isEmpty();
@@ -368,7 +375,7 @@ Vector<Ref<File>> DataTransfer::filesFromPasteboardAndItemList() const
     return files;
 }
 
-FileList& DataTransfer::files() const
+FileList& DataTransfer::files(Document* document) const
 {
     if (!canReadData()) {
         if (m_fileList)
@@ -379,9 +386,14 @@ FileList& DataTransfer::files() const
     }
 
     if (!m_fileList)
-        m_fileList = FileList::create(filesFromPasteboardAndItemList());
+        m_fileList = FileList::create(filesFromPasteboardAndItemList(document));
 
     return *m_fileList;
+}
+
+FileList& DataTransfer::files(Document& document) const
+{
+    return files(&document);
 }
 
 struct PasteboardFileTypeReader final : PasteboardFileReader {
@@ -471,15 +483,15 @@ void DataTransfer::setEffectAllowed(const String&)
 {
 }
 
-void DataTransfer::setDragImage(Element*, int, int)
+void DataTransfer::setDragImage(Element&, int, int)
 {
 }
 
 #else
 
-Ref<DataTransfer> DataTransfer::createForDrag()
+Ref<DataTransfer> DataTransfer::createForDrag(const Document& document)
 {
-    return adoptRef(*new DataTransfer(StoreMode::ReadWrite, Pasteboard::createForDragAndDrop(), Type::DragAndDropData));
+    return adoptRef(*new DataTransfer(StoreMode::ReadWrite, Pasteboard::createForDragAndDrop(PagePasteboardContext::create(document.pageID())), Type::DragAndDropData));
 }
 
 Ref<DataTransfer> DataTransfer::createForDragStartEvent(const Document& document)
@@ -505,14 +517,14 @@ Ref<DataTransfer> DataTransfer::createForUpdatingDropTarget(const Document& docu
     return dataTransfer;
 }
 
-void DataTransfer::setDragImage(Element* element, int x, int y)
+void DataTransfer::setDragImage(Element& element, int x, int y)
 {
     if (!forDrag() || !canWriteData())
         return;
 
     CachedImage* image = nullptr;
-    if (is<HTMLImageElement>(element) && !element->isConnected())
-        image = downcast<HTMLImageElement>(*element).cachedImage();
+    if (is<HTMLImageElement>(element) && !element.isConnected())
+        image = downcast<HTMLImageElement>(element).cachedImage();
 
     m_dragLocation = IntPoint(x, y);
 
@@ -525,7 +537,7 @@ void DataTransfer::setDragImage(Element* element, int x, int y)
         m_dragImageLoader->startLoading(m_dragImage);
     }
 
-    m_dragImageElement = image ? nullptr : element;
+    m_dragImageElement = image ? nullptr : &element;
 
     updateDragImage();
 }

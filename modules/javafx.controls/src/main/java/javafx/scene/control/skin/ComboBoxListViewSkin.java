@@ -66,7 +66,7 @@ import javafx.util.StringConverter;
  */
 public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -80,7 +80,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -102,7 +102,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -122,7 +122,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             new WeakListChangeListener<T>(listViewItemsListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -201,7 +201,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -227,7 +227,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -335,7 +335,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *
@@ -612,7 +612,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * API for testing
      *
@@ -625,7 +625,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

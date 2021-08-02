@@ -48,6 +48,8 @@ public:
     // Preserves floating point precision for the use in DRT. It knows how to round and does a better job than enclosingIntRect.
     FloatRect floatLinesBoundingBox() const;
 
+    SVGInlineTextBox* firstTextBox() const;
+
 private:
     const char* renderName() const override { return "RenderSVGInlineText"; }
 
@@ -60,7 +62,6 @@ private:
     bool isSVGInlineText() const override { return true; }
 
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
-    LayoutRect localCaretRect(InlineBox*, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine = 0) override;
     IntRect linesBoundingBox() const override;
     std::unique_ptr<InlineTextBox> createTextBox() override;
 

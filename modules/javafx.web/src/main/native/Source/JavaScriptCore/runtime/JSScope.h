@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,15 @@
 
 #include "GetPutInfo.h"
 #include "JSObject.h"
+#include "VariableEnvironment.h"
 
 namespace JSC {
 
 class ScopeChainIterator;
 class SymbolTable;
-class VariableEnvironment;
 class WatchpointSet;
+
+using TDZEnvironment = HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash>;
 
 class JSScope : public JSNonFinalObject {
 public:
@@ -60,9 +62,9 @@ public:
     static bool hasConstantScope(ResolveType);
     static JSScope* constantScopeForCodeBlock(ResolveType, CodeBlock*);
 
-    static void collectClosureVariablesUnderTDZ(JSScope*, VariableEnvironment& result);
+    static void collectClosureVariablesUnderTDZ(JSScope*, TDZEnvironment& result, PrivateNameEnvironment&);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     bool isVarScope();
     bool isLexicalScope();

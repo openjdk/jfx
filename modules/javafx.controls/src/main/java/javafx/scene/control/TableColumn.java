@@ -135,7 +135,7 @@ import javafx.beans.value.WritableValue;
  */
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -235,7 +235,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -283,7 +283,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -330,7 +330,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -341,7 +341,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -551,7 +551,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -595,7 +595,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -685,7 +685,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *

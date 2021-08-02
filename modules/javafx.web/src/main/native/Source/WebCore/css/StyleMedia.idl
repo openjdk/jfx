@@ -24,8 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+// FIXME: This was removed from the CSSOM View specification.
 [
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     GenerateIsReachable=ReachableFromDOMWindow,
     ImplementationLacksVTable,
 ] interface StyleMedia {

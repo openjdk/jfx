@@ -72,6 +72,7 @@ class EPDPlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
+        @SuppressWarnings("removal")
         String fbinfo = AccessController.doPrivileged((PrivilegedAction<String>) () -> {
             String line = null;
             try (var reader = new BufferedReader(new FileReader(FB_FILE))) {

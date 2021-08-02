@@ -49,9 +49,11 @@ namespace LLInt {
 #define WASM_SLOW_PATH_HIDDEN_DECL(name) \
     WASM_SLOW_PATH_DECL(name) WTF_INTERNAL
 
+#if ENABLE(WEBASSEMBLY_B3JIT)
 WASM_SLOW_PATH_HIDDEN_DECL(prologue_osr);
 WASM_SLOW_PATH_HIDDEN_DECL(loop_osr);
 WASM_SLOW_PATH_HIDDEN_DECL(epilogue_osr);
+#endif
 
 WASM_SLOW_PATH_HIDDEN_DECL(trace);
 WASM_SLOW_PATH_HIDDEN_DECL(out_of_line_jump_target);
@@ -59,16 +61,26 @@ WASM_SLOW_PATH_HIDDEN_DECL(out_of_line_jump_target);
 WASM_SLOW_PATH_HIDDEN_DECL(ref_func);
 WASM_SLOW_PATH_HIDDEN_DECL(table_get);
 WASM_SLOW_PATH_HIDDEN_DECL(table_set);
+WASM_SLOW_PATH_HIDDEN_DECL(table_init);
+WASM_SLOW_PATH_HIDDEN_DECL(elem_drop);
 WASM_SLOW_PATH_HIDDEN_DECL(table_size);
 WASM_SLOW_PATH_HIDDEN_DECL(table_fill);
+WASM_SLOW_PATH_HIDDEN_DECL(table_copy);
 WASM_SLOW_PATH_HIDDEN_DECL(table_grow);
 WASM_SLOW_PATH_HIDDEN_DECL(grow_memory);
+WASM_SLOW_PATH_HIDDEN_DECL(memory_fill);
+WASM_SLOW_PATH_HIDDEN_DECL(memory_copy);
+WASM_SLOW_PATH_HIDDEN_DECL(memory_init);
+WASM_SLOW_PATH_HIDDEN_DECL(data_drop);
 WASM_SLOW_PATH_HIDDEN_DECL(call);
 WASM_SLOW_PATH_HIDDEN_DECL(call_no_tls);
 WASM_SLOW_PATH_HIDDEN_DECL(call_indirect);
 WASM_SLOW_PATH_HIDDEN_DECL(call_indirect_no_tls);
 WASM_SLOW_PATH_HIDDEN_DECL(set_global_ref);
 WASM_SLOW_PATH_HIDDEN_DECL(set_global_ref_portable_binding);
+WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_wait32);
+WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_wait64);
+WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_notify);
 
 extern "C" SlowPathReturnType slow_path_wasm_throw_exception(CallFrame*, const Instruction*, Wasm::Instance* instance, Wasm::ExceptionType) WTF_INTERNAL;
 extern "C" SlowPathReturnType slow_path_wasm_popcount(const Instruction* pc, uint32_t) WTF_INTERNAL;

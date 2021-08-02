@@ -31,21 +31,8 @@
 
 #if USE(NICOSIA) && USE(TEXTURE_MAPPER)
 
+#include "ANGLEHeaders.h"
 #include "Logging.h"
-
-#define EGL_EGL_PROTOTYPES 0
-// Skip the inclusion of ANGLE's explicit context entry points for now.
-#define GL_ANGLE_explicit_context
-#define GL_ANGLE_explicit_context_gles1
-typedef void* GLeglContext;
-#include <ANGLE/egl.h>
-#include <ANGLE/eglext.h>
-#include <ANGLE/eglext_angle.h>
-#include <ANGLE/entry_points_egl.h>
-#include <ANGLE/entry_points_gles_2_0_autogen.h>
-#include <ANGLE/entry_points_gles_ext_autogen.h>
-#include <ANGLE/gl2ext.h>
-#include <ANGLE/gl2ext_angle.h>
 
 namespace Nicosia {
 
@@ -179,17 +166,10 @@ PlatformGraphicsContextGL GCGLANGLELayer::ANGLEContext::platformContext() const
     return m_context;
 }
 
-GCGLANGLELayer::GCGLANGLELayer(GraphicsContextGLOpenGL& context, GraphicsContextGLOpenGL::Destination destination)
+GCGLANGLELayer::GCGLANGLELayer(GraphicsContextGLOpenGL& context)
     : GCGLLayer(context)
+    , m_angleContext(ANGLEContext::createContext())
 {
-    switch (destination) {
-    case GraphicsContextGLOpenGL::Destination::Offscreen:
-        m_angleContext = ANGLEContext::createContext();
-        break;
-    case GraphicsContextGLOpenGL::Destination::DirectlyToHostWindow:
-        ASSERT_NOT_REACHED();
-        break;
-    }
 }
 
 GCGLANGLELayer::~GCGLANGLELayer()

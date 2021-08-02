@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "MarkingConstraint.h"
+#include "MarkingConstraintExecutorPair.h"
 #include <wtf/BitVector.h>
 #include <wtf/Vector.h>
 
@@ -46,21 +47,24 @@ public:
     void add(
         CString abbreviatedName,
         CString name,
-        ::Function<void(SlotVisitor&)>,
+        MarkingConstraintExecutorPair&&,
         ConstraintVolatility,
         ConstraintConcurrency = ConstraintConcurrency::Concurrent,
         ConstraintParallelism = ConstraintParallelism::Sequential);
 
     void add(
         CString abbreviatedName, CString name,
-        ::Function<void(SlotVisitor&)> func,
+        MarkingConstraintExecutorPair&& executors,
         ConstraintVolatility volatility,
         ConstraintParallelism parallelism)
     {
-        add(abbreviatedName, name, WTFMove(func), volatility, ConstraintConcurrency::Concurrent, parallelism);
+        add(abbreviatedName, name, WTFMove(executors), volatility, ConstraintConcurrency::Concurrent, parallelism);
     }
 
     void add(std::unique_ptr<MarkingConstraint>);
+
+    // The following functions are only used by the real GC via the MarkingConstraintSolver.
+    // Hence, we only need the SlotVisitor version.
 
     // Assuming that the mark stacks are all empty, this will give you a guess as to whether or
     // not the wavefront is advancing.
@@ -71,8 +75,11 @@ public:
     // assumes that you've alraedy visited roots and drained from there.
     bool executeConvergence(SlotVisitor&);
 
+    // This function is only used by the verifier GC via Heap::verifyGC().
+    // Hence, we only need the AbstractSlotVisitor version.
+
     // Simply runs all constraints without any shenanigans.
-    void executeAll(SlotVisitor&);
+    void executeAllSynchronously(AbstractSlotVisitor&);
 
 private:
     friend class MarkingConstraintSolver;

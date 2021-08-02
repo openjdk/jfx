@@ -52,7 +52,7 @@ import javafx.util.Pair;
  */
 abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Constructors                                                        *
      *                                                                     *
@@ -78,7 +78,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Observable properties                                               *
      *                                                                     *
@@ -119,7 +119,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Internal field                                                      *
      *                                                                     *
@@ -129,7 +129,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Public selection API                                                *
      *                                                                     *
@@ -372,7 +372,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
          *   return the same number - the place where the removed elements were positioned in the list.
          */
         if (wasSelected) {
-            change = ControlUtils.buildClearAndSelectChange(selectedIndices, previousSelectedIndices, row);
+            change = ControlUtils.buildClearAndSelectChange(
+                    selectedIndices, previousSelectedIndices, row, Comparator.naturalOrder());
         } else {
             int changeIndex = Math.max(0, selectedIndices.indexOf(row));
             change = new NonIterableChange.GenericAddRemoveChange<>(
@@ -617,7 +618,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Private implementation                                              *
      *                                                                     *

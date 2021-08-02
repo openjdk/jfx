@@ -44,7 +44,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
  */
 public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -54,7 +54,7 @@ public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -77,7 +77,7 @@ public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

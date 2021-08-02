@@ -26,18 +26,21 @@
 
 [
     ActiveDOMObject,
+    Exposed=Window
 ] interface Worker : EventTarget {
-    [CallWith=ScriptExecutionContext&RuntimeFlags, MayThrowException] constructor(USVString scriptUrl, optional WorkerOptions options);
+    [CallWith=ScriptExecutionContext&RuntimeFlags] constructor(USVString scriptUrl, optional WorkerOptions options);
 
-    void terminate();
+    undefined terminate();
 
-    [CallWith=GlobalObject, MayThrowException] void postMessage(any message, sequence<object> transfer);
-    [CallWith=GlobalObject, MayThrowException] void postMessage(any message, optional PostMessageOptions options);
+    [CallWith=GlobalObject, MayThrowException] undefined postMessage(any message, sequence<object> transfer);
+    [CallWith=GlobalObject, MayThrowException] undefined postMessage(any message, optional PostMessageOptions options);
     attribute EventHandler onmessage;
 };
 
 dictionary WorkerOptions {
+    WorkerType type = "classic";
+    FetchRequestCredentials credentials = "same-origin"; // credentials is only used if type is "module"
     DOMString name = "";
 };
 
-Worker implements AbstractWorker;
+Worker includes AbstractWorker;

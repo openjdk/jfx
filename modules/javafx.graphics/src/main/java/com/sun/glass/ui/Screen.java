@@ -37,11 +37,9 @@ public final class Screen {
     private static volatile List<Screen> screens = null ;
 
     // If dpiOverride is non-zero, use its value as screen DPI
-    private static final int dpiOverride;
-
-    static {
-        dpiOverride = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("com.sun.javafx.screenDPI", 0)).intValue();
-    }
+    @SuppressWarnings("removal")
+    private static final int dpiOverride = AccessController.doPrivileged((PrivilegedAction<Integer>) () ->
+        Integer.getInteger("com.sun.javafx.screenDPI", 0)).intValue();
 
     public static class EventHandler {
         public void handleSettingsChanged() {

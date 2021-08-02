@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -34,12 +35,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
@@ -296,5 +299,78 @@ public class AcceleratorParameterizedTest {
 
         keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
         assertEquals(0, eventCounter);
+    }
+
+    @Test public void testAcceleratorShouldNotGetFiredWhenMenuItemRemovedFromScene() {
+        KeyEventFirer kb = new KeyEventFirer(item1, scene);
+
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
+        assertEquals(1, getListenerCount(item1.acceleratorProperty()));
+
+        // Remove all children from the scene
+        Group root = (Group)scene.getRoot();
+        root.getChildren().clear();
+
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
+    }
+
+    @Test public void testAcceleratorShouldGetFiredWhenMenuItemRemovedAndAddedBackToScene() {
+        KeyEventFirer kb = new KeyEventFirer(item1, scene);
+
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
+
+        Group root = (Group)scene.getRoot();
+        scene.setRoot(new Group()); // Remove all children from the scene
+        scene.setRoot(root); // Add the children to the same scene
+
+        assertEquals(1, getListenerCount(item1.acceleratorProperty()));
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(2, eventCounter);
+    }
+
+    @Test public void testAcceleratorShouldGetFiredWhenMenuItemRemovedAndAddedToDifferentScene() {
+        KeyEventFirer kb = new KeyEventFirer(item1, scene);
+
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
+
+        Group root = (Group)scene.getRoot();
+        scene.setRoot(new Group()); // Remove all children from the scene
+        Scene diffScene = new Scene(root); // Add the children to a different scene
+        sl.getStage().setScene(diffScene);
+        kb = new KeyEventFirer(item1, diffScene);
+
+        assertEquals(1, getListenerCount(item1.acceleratorProperty()));
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(2, eventCounter);
+    }
+
+    @Ignore("JDK-8268374")
+    @Test public void testAcceleratorShouldNotGetFiredWhenControlsIsRemovedFromSceneThenContextMenuIsSetToNullAndControlIsAddedBackToScene() {
+        KeyEventFirer kb = new KeyEventFirer(item1, scene);
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
+
+        Group root = (Group)scene.getRoot();
+        scene.setRoot(new Group()); // Remove all children from the scene
+
+        if (testClass == Button.class) {
+            btn.setContextMenu(null);
+        } else if (testClass == Tab.class) {
+            tab.setContextMenu(null);
+        } else if (testClass == TableColumn.class) {
+            tableColumn.setContextMenu(null);
+        } else if (testClass == TreeTableColumn.class) {
+            treeTableColumn.setContextMenu(null);
+        }
+        scene.setRoot(root); // Add the children to a different scene
+
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
     }
 }

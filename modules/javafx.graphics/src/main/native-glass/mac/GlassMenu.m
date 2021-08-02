@@ -137,7 +137,7 @@ static jfieldID  jDelegateMenuField = 0;
 
 - (void)dealloc
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
 
     if (env != NULL)
     {

@@ -31,7 +31,6 @@
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "HashTools.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "StyledElement.h"
 #include <wtf/IsoMallocInlines.h>
@@ -45,10 +44,12 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(CSSStyleDeclaration);
 namespace {
 
 enum class PropertyNamePrefix {
-    None, Epub, CSS, Pixel, Pos, WebKit,
-#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
-    Apple, KHTML,
-#endif
+    None,
+    Epub,
+    CSS,
+    Pixel,
+    Pos,
+    WebKit
 };
 
 template<size_t prefixCStringLength>
@@ -89,22 +90,10 @@ static PropertyNamePrefix propertyNamePrefix(const StringImpl& propertyName)
     // First character of the prefix within the property name may be upper or lowercase.
     UChar firstChar = toASCIILower(propertyName[0]);
     switch (firstChar) {
-#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
-    case 'a':
-        if (RuntimeEnabledFeatures::sharedFeatures().legacyCSSVendorPrefixesEnabled() && matchesCSSPropertyNamePrefix(propertyName, "apple"))
-            return PropertyNamePrefix::Apple;
-        break;
-#endif
     case 'c':
         if (matchesCSSPropertyNamePrefix(propertyName, "css"))
             return PropertyNamePrefix::CSS;
         break;
-#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
-    case 'k':
-        if (RuntimeEnabledFeatures::sharedFeatures().legacyCSSVendorPrefixesEnabled() && matchesCSSPropertyNamePrefix(propertyName, "khtml"))
-            return PropertyNamePrefix::KHTML;
-        break;
-#endif
     case 'e':
         if (matchesCSSPropertyNamePrefix(propertyName, "epub"))
             return PropertyNamePrefix::Epub;
@@ -197,14 +186,6 @@ static CSSPropertyInfo parseJavaScriptCSSPropertyName(const AtomString& property
         i += 3;
         hadPixelOrPosPrefix = true;
         break;
-#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
-    case PropertyNamePrefix::Apple:
-    case PropertyNamePrefix::KHTML:
-        ASSERT(RuntimeEnabledFeatures::sharedFeatures().legacyCSSVendorPrefixesEnabled());
-        writeWebKitPrefix(bufferPtr);
-        i += 5;
-        break;
-#endif
     case PropertyNamePrefix::Epub:
         writeEpubPrefix(bufferPtr);
         i += 4;
@@ -273,10 +254,14 @@ CSSPropertyID CSSStyleDeclaration::getCSSPropertyIDFromJavaScriptPropertyName(co
     return propertyInfoFromJavaScriptCSSPropertyName(propertyName, nullptr).propertyID;
 }
 
+const Settings* CSSStyleDeclaration::settings() const
+{
+    return parentElement() ? &parentElement()->document().settings() : nullptr;
+}
+
 Optional<Variant<String, double>> CSSStyleDeclaration::namedItem(const AtomString& propertyName)
 {
-    auto* settings = parentElement() ? &parentElement()->document().settings() : nullptr;
-    auto propertyInfo = propertyInfoFromJavaScriptCSSPropertyName(propertyName, settings);
+    auto propertyInfo = propertyInfoFromJavaScriptCSSPropertyName(propertyName, settings());
     if (!propertyInfo.propertyID)
         return WTF::nullopt;
 
@@ -298,8 +283,7 @@ Optional<Variant<String, double>> CSSStyleDeclaration::namedItem(const AtomStrin
 
 ExceptionOr<void> CSSStyleDeclaration::setNamedItem(const AtomString& propertyName, String value, bool& propertySupported)
 {
-    auto* settings = parentElement() ? &parentElement()->document().settings() : nullptr;
-    auto propertyInfo = propertyInfoFromJavaScriptCSSPropertyName(propertyName, settings);
+    auto propertyInfo = propertyInfoFromJavaScriptCSSPropertyName(propertyName, settings());
     if (!propertyInfo.propertyID) {
         propertySupported = false;
         return { };
@@ -329,12 +313,11 @@ ExceptionOr<void> CSSStyleDeclaration::setNamedItem(const AtomString& propertyNa
 Vector<AtomString> CSSStyleDeclaration::supportedPropertyNames() const
 {
     static unsigned numNames = 0;
-    static const AtomString* const cssPropertyNames = [] {
+    static const AtomString* const cssPropertyNames = [this] {
         String names[numCSSProperties];
         for (int i = 0; i < numCSSProperties; ++i) {
             CSSPropertyID id = static_cast<CSSPropertyID>(firstCSSProperty + i);
-            // FIXME: Should take account for flags in settings().
-            if (isEnabledCSSProperty(id))
+            if (isEnabledCSSProperty(id) && isCSSPropertyEnabledBySettings(id, settings()))
                 names[numNames++] = getJSPropertyName(id);
         }
         std::sort(&names[0], &names[numNames], WTF::codePointCompareLessThan);

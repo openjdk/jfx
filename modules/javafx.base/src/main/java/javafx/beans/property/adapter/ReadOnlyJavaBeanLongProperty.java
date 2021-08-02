@@ -85,6 +85,7 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
     private final ReadOnlyPropertyDescriptor descriptor;
     private final ReadOnlyPropertyDescriptor.ReadOnlyListener<Number> listener;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanLongProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
@@ -101,6 +102,7 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public long get() {
         return AccessController.doPrivileged((PrivilegedAction<Long>) () -> {

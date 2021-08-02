@@ -33,7 +33,8 @@ typedef RTCRtpTransceiverDirection RtpTransceiverDirection;
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection
+    EnabledAtRuntime=PeerConnection,
+    Exposed=Window
 ] interface RTCRtpTransceiver {
     readonly attribute DOMString? mid;
     [SameObject] readonly attribute RTCRtpSender sender;
@@ -41,6 +42,6 @@ typedef RTCRtpTransceiverDirection RtpTransceiverDirection;
     readonly attribute boolean stopped;
     attribute RtpTransceiverDirection direction;
     readonly attribute RTCRtpTransceiverDirection? currentDirection;
-    void stop();
-    void setCodecPreferences(sequence<RTCRtpCodecCapability> codecs);
+    [MayThrowException] undefined stop();
+    [MayThrowException] undefined setCodecPreferences(sequence<RTCRtpCodecCapability> codecs);
 };

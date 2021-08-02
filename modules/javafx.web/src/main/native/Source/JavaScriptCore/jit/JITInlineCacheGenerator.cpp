@@ -38,7 +38,7 @@ namespace JSC {
 
 static StructureStubInfo* garbageStubInfo()
 {
-    static StructureStubInfo* stubInfo = new StructureStubInfo(AccessType::GetById);
+    static StructureStubInfo* stubInfo = new StructureStubInfo(AccessType::GetById, CodeOrigin());
     return stubInfo;
 }
 
@@ -47,8 +47,7 @@ JITInlineCacheGenerator::JITInlineCacheGenerator(
     const RegisterSet& usedRegisters)
     : m_codeBlock(codeBlock)
 {
-    m_stubInfo = m_codeBlock ? m_codeBlock->addStubInfo(accessType) : garbageStubInfo();
-    m_stubInfo->codeOrigin = codeOrigin;
+    m_stubInfo = m_codeBlock ? m_codeBlock->addStubInfo(accessType, codeOrigin) : garbageStubInfo();
     m_stubInfo->callSiteIndex = callSite;
 
     m_stubInfo->usedRegisters = usedRegisters;
@@ -136,11 +135,10 @@ void JITGetByIdWithThisGenerator::generateFastPath(MacroAssembler& jit)
 JITPutByIdGenerator::JITPutByIdGenerator(
     CodeBlock* codeBlock, CodeOrigin codeOrigin, CallSiteIndex callSite, const RegisterSet& usedRegisters, CacheableIdentifier,
     JSValueRegs base, JSValueRegs value, GPRReg scratch,
-    ECMAMode ecmaMode, PutKind putKind, PrivateFieldAccessKind privateFieldAccessKind)
+    ECMAMode ecmaMode, PutKind putKind)
         : JITByIdGenerator(codeBlock, codeOrigin, callSite, AccessType::Put, usedRegisters, base, value)
         , m_ecmaMode(ecmaMode)
         , m_putKind(putKind)
-        , m_privateFieldAccessKind(privateFieldAccessKind)
 {
     m_stubInfo->usedRegisters.clear(scratch);
 }
@@ -152,22 +150,25 @@ void JITPutByIdGenerator::generateFastPath(MacroAssembler& jit)
 
 V_JITOperation_GSsiJJC JITPutByIdGenerator::slowPathFunction()
 {
-    if (m_privateFieldAccessKind != PrivateFieldAccessKind::None) {
-        ASSERT(m_putKind == Direct);
-        ASSERT(m_ecmaMode.isStrict());
-        if (m_privateFieldAccessKind == PrivateFieldAccessKind::Create)
-            return operationPutByIdDefinePrivateFieldStrictOptimize;
-        return operationPutByIdPutPrivateFieldStrictOptimize;
-    }
-
-    if (m_ecmaMode.isStrict()) {
-        if (m_putKind == Direct)
+    switch (m_putKind) {
+    case PutKind::NotDirect:
+        if (m_ecmaMode.isStrict())
+            return operationPutByIdStrictOptimize;
+        return operationPutByIdNonStrictOptimize;
+    case PutKind::Direct:
+        if (m_ecmaMode.isStrict())
             return operationPutByIdDirectStrictOptimize;
-        return operationPutByIdStrictOptimize;
-    }
-    if (m_putKind == Direct)
         return operationPutByIdDirectNonStrictOptimize;
-    return operationPutByIdNonStrictOptimize;
+    case PutKind::DirectPrivateFieldDefine:
+        ASSERT(m_ecmaMode.isStrict());
+        return operationPutByIdDefinePrivateFieldStrictOptimize;
+    case PutKind::DirectPrivateFieldSet:
+        ASSERT(m_ecmaMode.isStrict());
+        return operationPutByIdSetPrivateFieldStrictOptimize;
+    }
+    // Make win port compiler happy
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 JITDelByValGenerator::JITDelByValGenerator(CodeBlock* codeBlock, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters, JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg scratch)
@@ -316,6 +317,37 @@ void JITGetByValGenerator::generateFastPath(MacroAssembler& jit)
 }
 
 void JITGetByValGenerator::finalize(
+    LinkBuffer& fastPath, LinkBuffer& slowPath)
+{
+    ASSERT(m_start.isSet());
+    Base::finalize(
+        fastPath, slowPath, fastPath.locationOf<JITStubRoutinePtrTag>(m_start));
+}
+
+JITPrivateBrandAccessGenerator::JITPrivateBrandAccessGenerator(CodeBlock* codeBlock, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, AccessType accessType, const RegisterSet& usedRegisters, JSValueRegs base, JSValueRegs brand)
+    : Base(codeBlock, codeOrigin, callSiteIndex, accessType, usedRegisters)
+{
+    ASSERT(accessType == AccessType::CheckPrivateBrand || accessType == AccessType::SetPrivateBrand);
+    m_stubInfo->hasConstantIdentifier = false;
+
+    m_stubInfo->baseGPR = base.payloadGPR();
+    m_stubInfo->regs.brandGPR = brand.payloadGPR();
+    m_stubInfo->valueGPR = InvalidGPRReg;
+#if USE(JSVALUE32_64)
+    m_stubInfo->baseTagGPR = base.tagGPR();
+    m_stubInfo->v.brandTagGPR = brand.tagGPR();
+    m_stubInfo->valueTagGPR = InvalidGPRReg;
+#endif
+}
+
+void JITPrivateBrandAccessGenerator::generateFastPath(MacroAssembler& jit)
+{
+    m_start = jit.label();
+    m_slowPathJump = jit.patchableJump();
+    m_done = jit.label();
+}
+
+void JITPrivateBrandAccessGenerator::finalize(
     LinkBuffer& fastPath, LinkBuffer& slowPath)
 {
     ASSERT(m_start.isSet());

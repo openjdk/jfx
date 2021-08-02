@@ -61,7 +61,7 @@ public:
         virtual ~ANGLEContext();
 
         bool makeContextCurrent();
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL)
         PlatformGraphicsContextGL platformContext() const;
 #endif
 
@@ -73,7 +73,7 @@ public:
         EGLSurface m_surface { nullptr };
     };
 
-    GCGLANGLELayer(WebCore::GraphicsContextGLOpenGL&, WebCore::GraphicsContextGLOpenGL::Destination);
+    GCGLANGLELayer(WebCore::GraphicsContextGLOpenGL&);
     virtual ~GCGLANGLELayer();
 
     bool makeContextCurrent() override;

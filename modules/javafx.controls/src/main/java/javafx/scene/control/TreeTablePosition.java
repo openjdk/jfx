@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ import javafx.beans.NamedArg;
  */
 public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -72,7 +72,8 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
     TreeTablePosition(@NamedArg("treeTableView") TreeTableView<S> treeTableView, @NamedArg("row") int row, @NamedArg("tableColumn") TreeTableColumn<S,T> tableColumn, boolean doLookup) {
         super(row, tableColumn);
         this.controlRef = new WeakReference<>(treeTableView);
-        this.treeItemRef = new WeakReference<>(doLookup ? treeTableView.getTreeItem(row) : null);
+        this.treeItemRef = new WeakReference<>(doLookup ?
+                (treeTableView != null ? treeTableView.getTreeItem(row) : null) : null);
 
         nonFixedColumnIndex = treeTableView == null || tableColumn == null ? -1 : treeTableView.getVisibleLeafIndex(tableColumn);
     }
@@ -89,7 +90,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -100,7 +101,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
     int fixedColumnIndex = -1;
     private final int nonFixedColumnIndex;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

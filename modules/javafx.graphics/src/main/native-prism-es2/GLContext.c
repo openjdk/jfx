@@ -2114,18 +2114,24 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2MeshView
     meshViewInfo->ambientLightColor[0] = 0;
     meshViewInfo->ambientLightColor[1] = 0;
     meshViewInfo->ambientLightColor[2] = 0;
-    meshViewInfo->pointLightIndex = 0;
-    meshViewInfo->pointLightColor[0] = 0;
-    meshViewInfo->pointLightColor[1] = 0;
-    meshViewInfo->pointLightColor[2] = 0;
-    meshViewInfo->pointLightPosition[0] = 0;
-    meshViewInfo->pointLightPosition[1] = 0;
-    meshViewInfo->pointLightPosition[2] = 0;
-    meshViewInfo->pointLightWeight = 0;
-    meshViewInfo->pointLightAttenuation[0] = 1;
-    meshViewInfo->pointLightAttenuation[1] = 0;
-    meshViewInfo->pointLightAttenuation[2] = 0;
-    meshViewInfo->pointLightMaxRange = 0;
+    meshViewInfo->lightIndex = 0;
+    meshViewInfo->lightColor[0] = 0;
+    meshViewInfo->lightColor[1] = 0;
+    meshViewInfo->lightColor[2] = 0;
+    meshViewInfo->lightPosition[0] = 0;
+    meshViewInfo->lightPosition[1] = 0;
+    meshViewInfo->lightPosition[2] = 0;
+    meshViewInfo->lightWeight = 0;
+    meshViewInfo->lightAttenuation[0] = 1;
+    meshViewInfo->lightAttenuation[1] = 0;
+    meshViewInfo->lightAttenuation[2] = 0;
+    meshViewInfo->lightMaxRange = 0;
+    meshViewInfo->lightDir[0] = 1;
+    meshViewInfo->lightDir[1] = 0;
+    meshViewInfo->lightDir[2] = 0;
+    meshViewInfo->lightInnerAngle = 0;
+    meshViewInfo->lightOuterAngle = 0;
+    meshViewInfo->lightFalloff = 0;
 
     return ptr_to_jlong(meshViewInfo);
 }
@@ -2264,13 +2270,14 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetAmbientLight
 
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nSetPointLight
- * Signature: (JJIFFFFFFF)V
+ * Method:    nSetLight
+ * Signature: (JJIFFFFFFFFFFFFFFFFF)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetPointLight
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetLight
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshViewInfo,
         jint index, jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
-        jfloat ca, jfloat la, jfloat qa, jfloat maxRange)
+        jfloat ca, jfloat la, jfloat qa, jfloat maxRange, jfloat dirX, jfloat dirY, jfloat dirZ,
+        jfloat innerAngle, jfloat outerAngle, jfloat falloff)
 {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     MeshViewInfo *meshViewInfo = (MeshViewInfo *) jlong_to_ptr(nativeMeshViewInfo);
@@ -2278,18 +2285,24 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetPointLight
     if ((ctxInfo == NULL) || (meshViewInfo == NULL) || (index < 0) || (index > 2)) {
         return;
     }
-    meshViewInfo->pointLightIndex = index;
-    meshViewInfo->pointLightPosition[0] = x;
-    meshViewInfo->pointLightPosition[1] = y;
-    meshViewInfo->pointLightPosition[2] = z;
-    meshViewInfo->pointLightColor[0] = r;
-    meshViewInfo->pointLightColor[1] = g;
-    meshViewInfo->pointLightColor[2] = b;
-    meshViewInfo->pointLightWeight = w;
-    meshViewInfo->pointLightAttenuation[0] = ca;
-    meshViewInfo->pointLightAttenuation[1] = la;
-    meshViewInfo->pointLightAttenuation[2] = qa;
-    meshViewInfo->pointLightMaxRange = maxRange;
+    meshViewInfo->lightIndex = index;
+    meshViewInfo->lightPosition[0] = x;
+    meshViewInfo->lightPosition[1] = y;
+    meshViewInfo->lightPosition[2] = z;
+    meshViewInfo->lightColor[0] = r;
+    meshViewInfo->lightColor[1] = g;
+    meshViewInfo->lightColor[2] = b;
+    meshViewInfo->lightWeight = w;
+    meshViewInfo->lightAttenuation[0] = ca;
+    meshViewInfo->lightAttenuation[1] = la;
+    meshViewInfo->lightAttenuation[2] = qa;
+    meshViewInfo->lightMaxRange = maxRange;
+    meshViewInfo->lightDir[0] = dirX;
+    meshViewInfo->lightDir[1] = dirY;
+    meshViewInfo->lightDir[2] = dirZ;
+    meshViewInfo->lightInnerAngle = innerAngle;
+    meshViewInfo->lightOuterAngle = outerAngle;
+    meshViewInfo->lightFalloff = falloff;
 }
 
 /*

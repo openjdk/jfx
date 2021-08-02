@@ -98,6 +98,7 @@ public:
     bool isAccessibilityTableInstance() const override { return false; }
     bool isAccessibilityTableColumnInstance() const override { return false; }
     bool isAccessibilityProgressIndicatorInstance() const override { return false; }
+    bool isAccessibilityListBoxInstance() const override { return false; }
     bool isAXIsolatedObjectInstance() const override { return false; }
 
     bool isAttachmentElement() const override { return false; }
@@ -110,7 +111,6 @@ public:
     AccessibilityObject* passwordFieldOrContainingPasswordField() override { return nullptr; }
     bool isNativeTextControl() const override { return false; }
     bool isSearchField() const override { return false; }
-    bool isNativeListBox() const override { return false; }
     bool isListBoxOption() const override { return false; }
     bool isAttachment() const override { return false; }
     bool isMediaTimeline() const override { return false; }
@@ -248,7 +248,7 @@ public:
     bool canSetValueAttribute() const override { return false; }
     bool canSetNumericValue() const override { return false; }
     bool canSetSelectedAttribute() const override { return false; }
-    bool canSetSelectedChildrenAttribute() const override { return false; }
+    bool canSetSelectedChildren() const override { return false; }
     bool canSetExpandedAttribute() const override { return false; }
 
     Element* element() const override;
@@ -275,7 +275,7 @@ public:
     int layoutCount() const override { return 0; }
     double estimatedLoadingProgress() const override { return 0; }
     WEBCORE_EXPORT static bool isARIAControl(AccessibilityRole);
-    WEBCORE_EXPORT static bool isARIAInput(AccessibilityRole);
+    bool supportsCheckedState() const override;
 
     bool supportsARIAOwns() const override { return false; }
     bool isActiveDescendantOfFocusedContainer() const override;
@@ -305,6 +305,7 @@ public:
     bool supportsPressed() const override;
     bool supportsExpanded() const override;
     bool supportsChecked() const override;
+    bool supportsRowCountChange() const override;
     AccessibilitySortDirection sortDirection() const override;
     bool canvasHasFallbackContent() const override { return false; }
     bool supportsRangeValue() const override;
@@ -396,6 +397,9 @@ public:
     String ariaDescribedByAttribute() const override { return String(); }
     const String placeholderValue() const override;
     bool accessibleNameDerivesFromContent() const override;
+    String brailleLabel() const override { return getAttribute(HTMLNames::aria_braillelabelAttr); }
+    String brailleRoleDescription() const override { return getAttribute(HTMLNames::aria_brailleroledescriptionAttr); }
+    String embeddedImageDescription() const override;
 
     // Abbreviations
     String expandedTextValue() const override { return String(); }
@@ -440,6 +444,7 @@ public:
     PlatformWidget platformWidget() const override { return nullptr; }
 #if PLATFORM(COCOA)
     RemoteAXObjectRef remoteParentObject() const override;
+    FloatRect convertRectToPlatformSpace(const FloatRect&, AccessibilityConversionSpace) const override;
 #endif
     Widget* widgetForAttachmentView() const override { return nullptr; }
     Page* page() const override;
@@ -455,7 +460,10 @@ public:
     unsigned hierarchicalLevel() const override { return 0; }
     bool isInlineText() const override;
 
-    void setFocused(bool) override { }
+    // Ensures that the view is focused and active before attempting to set focus to an AccessibilityObject.
+    // Subclasses that override setFocused should call this base implementation first.
+    void setFocused(bool) override;
+
     void setSelectedText(const String&) override { }
     void setSelectedTextRange(const PlainTextRange&) override { }
     bool setValue(const String&) override { return false; }
@@ -500,12 +508,12 @@ public:
 
     bool canHaveSelectedChildren() const override { return false; }
     void selectedChildren(AccessibilityChildrenVector&) override { }
+    void setSelectedChildren(const AccessibilityChildrenVector&) override { }
     void visibleChildren(AccessibilityChildrenVector&) override { }
     void tabChildren(AccessibilityChildrenVector&) override { }
     bool shouldFocusActiveDescendant() const override { return false; }
     AccessibilityObject* activeDescendant() const override { return nullptr; }
     void handleActiveDescendantChanged() override { }
-    void handleAriaExpandedChanged() override { }
     AccessibilityObject* firstAnonymousBlockChild() const override;
 
     WEBCORE_EXPORT static AccessibilityRole ariaRoleToWebCoreRole(const String&);
@@ -532,6 +540,9 @@ public:
     VisiblePositionRange lineRangeForPosition(const VisiblePosition&) const override;
 
     Optional<SimpleRange> rangeForPlainTextRange(const PlainTextRange&) const override;
+#if PLATFORM(MAC)
+    AXTextMarkerRangeRef textMarkerRangeForNSRange(const NSRange&) const override;
+#endif
 
     static String stringForVisiblePositionRange(const VisiblePositionRange&);
     String stringForRange(const SimpleRange&) const override;
@@ -729,7 +740,7 @@ public:
     bool hasApplePDFAnnotationAttribute() const override { return hasAttribute(HTMLNames::x_apple_pdf_annotationAttr); }
 #endif
 
-#if PLATFORM(COCOA) && !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
     bool caretBrowsingEnabled() const override;
     void setCaretBrowsingEnabled(bool) override;
 #endif
@@ -773,6 +784,7 @@ protected:
     bool isOnScreen() const override;
     bool dispatchTouchEvent();
 
+    static bool isARIAInput(AccessibilityRole);
     void ariaElementsFromAttribute(AccessibilityChildrenVector&, const QualifiedName&) const;
     void ariaElementsReferencedByAttribute(AccessibilityChildrenVector&, const QualifiedName&) const;
 
@@ -780,6 +792,9 @@ protected:
 
     bool allowsTextRanges() const;
     unsigned getLengthForTextRange() const;
+
+    String innerHTML() const override;
+    String outerHTML() const override;
 
 private:
     Optional<SimpleRange> rangeOfStringClosestToRangeInDirection(const SimpleRange&, AccessibilitySearchDirection, const Vector<String>&) const;
@@ -812,7 +827,7 @@ inline void AccessibilityObject::detachPlatformWrapper(AccessibilityDetachmentTy
 #endif
 
 #if !(ENABLE(ACCESSIBILITY) && USE(ATK))
-inline bool AccessibilityObject::allowsTextRanges() const { return isTextControl(); }
+inline bool AccessibilityObject::allowsTextRanges() const { return true; }
 inline unsigned AccessibilityObject::getLengthForTextRange() const { return text().length(); }
 #endif
 

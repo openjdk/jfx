@@ -43,7 +43,7 @@ public class TestTouchDevices {
             }
             try {
                 devices.add((TestTouchDevice)
-                                    Class.forName(selectedDeviceClass).newInstance());
+                                    Class.forName(selectedDeviceClass).getDeclaredConstructor().newInstance());
             } catch (Exception e) {
                 e.printStackTrace();
             }

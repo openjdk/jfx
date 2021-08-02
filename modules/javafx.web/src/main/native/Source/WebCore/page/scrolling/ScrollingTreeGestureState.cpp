@@ -41,7 +41,7 @@ ScrollingTreeGestureState::ScrollingTreeGestureState(ScrollingTree& scrollingTre
 
 void ScrollingTreeGestureState::receivedWheelEvent(const PlatformWheelEvent& event)
 {
-    if (event.isGestureBegin()) {
+    if (event.isGestureStart()) {
         clearAllNodes();
         return;
     }
@@ -51,7 +51,7 @@ bool ScrollingTreeGestureState::handleGestureCancel(const PlatformWheelEvent& ev
 {
     if (event.isGestureCancel()) {
         if (m_mayBeginNodeID)
-            m_scrollingTree.handleWheelEventPhase(*m_mayBeginNodeID, PlatformWheelEventPhaseCancelled);
+            m_scrollingTree.handleWheelEventPhase(*m_mayBeginNodeID, PlatformWheelEventPhase::Cancelled);
         return true;
     }
 
@@ -61,44 +61,44 @@ bool ScrollingTreeGestureState::handleGestureCancel(const PlatformWheelEvent& ev
 void ScrollingTreeGestureState::nodeDidHandleEvent(ScrollingNodeID nodeID, const PlatformWheelEvent& event)
 {
     switch (event.phase()) {
-    case PlatformWheelEventPhaseMayBegin:
+    case PlatformWheelEventPhase::MayBegin:
         m_mayBeginNodeID = nodeID;
         m_scrollingTree.handleWheelEventPhase(nodeID, event.phase());
         break;
-    case PlatformWheelEventPhaseCancelled:
+    case PlatformWheelEventPhase::Cancelled:
         // handleGestureCancel() should have been called first.
         ASSERT_NOT_REACHED();
         break;
-    case PlatformWheelEventPhaseBegan:
+    case PlatformWheelEventPhase::Began:
         m_activeNodeID = nodeID;
         m_scrollingTree.handleWheelEventPhase(nodeID, event.phase());
         break;
-    case PlatformWheelEventPhaseEnded:
+    case PlatformWheelEventPhase::Ended:
         if (m_activeNodeID)
             m_scrollingTree.handleWheelEventPhase(*m_activeNodeID, event.phase());
         break;
-    case PlatformWheelEventPhaseChanged:
-    case PlatformWheelEventPhaseStationary:
-    case PlatformWheelEventPhaseNone:
+    case PlatformWheelEventPhase::Changed:
+    case PlatformWheelEventPhase::Stationary:
+    case PlatformWheelEventPhase::None:
         break;
     }
 
     switch (event.momentumPhase()) {
-    case PlatformWheelEventPhaseMayBegin:
-    case PlatformWheelEventPhaseCancelled:
+    case PlatformWheelEventPhase::MayBegin:
+    case PlatformWheelEventPhase::Cancelled:
         ASSERT_NOT_REACHED();
         break;
-    case PlatformWheelEventPhaseBegan:
+    case PlatformWheelEventPhase::Began:
         m_activeNodeID = nodeID;
         m_scrollingTree.handleWheelEventPhase(nodeID, event.momentumPhase());
         break;
-    case PlatformWheelEventPhaseEnded:
+    case PlatformWheelEventPhase::Ended:
         if (m_activeNodeID)
             m_scrollingTree.handleWheelEventPhase(*m_activeNodeID, event.momentumPhase());
         break;
-    case PlatformWheelEventPhaseChanged:
-    case PlatformWheelEventPhaseStationary:
-    case PlatformWheelEventPhaseNone:
+    case PlatformWheelEventPhase::Changed:
+    case PlatformWheelEventPhase::Stationary:
+    case PlatformWheelEventPhase::None:
         break;
     }
 }

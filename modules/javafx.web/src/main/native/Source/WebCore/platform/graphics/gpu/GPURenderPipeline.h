@@ -28,25 +28,17 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUPipeline.h"
+#include "GPUPlatformTypes.h"
 #include "GPUProgrammableStageDescriptor.h"
 #include "GPURenderPipelineDescriptor.h"
 #include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
-
-#if USE(METAL)
-OBJC_PROTOCOL(MTLDepthStencilState);
-OBJC_PROTOCOL(MTLRenderPipelineState);
-#endif // USE(METAL)
 
 namespace WebCore {
 
 class GPUDevice;
 class GPUErrorScopes;
-
-using PlatformRenderPipeline = MTLRenderPipelineState;
-using PlatformRenderPipelineSmartPtr = RetainPtr<MTLRenderPipelineState>;
 
 class GPURenderPipeline final : public GPUPipeline {
 public:

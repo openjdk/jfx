@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,13 +57,13 @@ JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, Ref<W
         new (this->instance().importFunction<WriteBarrier<JSObject>>(i)) WriteBarrier<JSObject>();
 }
 
-void JSWebAssemblyInstance::finishCreation(VM& vm, JSWebAssemblyModule* module, JSModuleNamespaceObject* moduleNamespaceObject)
+void JSWebAssemblyInstance::finishCreation(VM& vm, JSWebAssemblyModule* module, WebAssemblyModuleRecord* moduleRecord)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
 
     m_module.set(vm, this, module);
-    m_moduleNamespaceObject.set(vm, this, moduleNamespaceObject);
+    m_moduleRecord.set(vm, this, moduleRecord);
 
     vm.heap.reportExtraMemoryAllocated(m_instance->extraMemoryAllocated());
 }
@@ -73,7 +73,8 @@ void JSWebAssemblyInstance::destroy(JSCell* cell)
     static_cast<JSWebAssemblyInstance*>(cell)->JSWebAssemblyInstance::~JSWebAssemblyInstance();
 }
 
-void JSWebAssemblyInstance::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWebAssemblyInstance::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<JSWebAssemblyInstance*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -81,7 +82,7 @@ void JSWebAssemblyInstance::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_module);
     visitor.append(thisObject->m_codeBlock);
-    visitor.append(thisObject->m_moduleNamespaceObject);
+    visitor.append(thisObject->m_moduleRecord);
     visitor.append(thisObject->m_memory);
     for (unsigned i = 0; i < thisObject->instance().module().moduleInformation().tableCount(); ++i)
         visitor.append(thisObject->m_tables[i]);
@@ -101,6 +102,8 @@ void JSWebAssemblyInstance::visitChildren(JSCell* cell, SlotVisitor& visitor)
     for (auto& wrapper : thisObject->instance().functionWrappers())
         visitor.appendUnbarriered(wrapper.get());
 }
+
+DEFINE_VISIT_CHILDREN(JSWebAssemblyInstance);
 
 void JSWebAssemblyInstance::finalizeCreation(VM& vm, JSGlobalObject* globalObject, Ref<Wasm::CodeBlock>&& wasmCodeBlock, JSObject* importObject, Wasm::CreationMode creationMode)
 {
@@ -137,14 +140,13 @@ void JSWebAssemblyInstance::finalizeCreation(VM& vm, JSGlobalObject* globalObjec
         info->wasmToEmbedderStub = m_codeBlock->wasmToEmbedderStub(importFunctionNum);
     }
 
-    auto* moduleRecord = jsCast<WebAssemblyModuleRecord*>(m_moduleNamespaceObject->moduleRecord());
-    moduleRecord->prepareLink(vm, this);
+    m_moduleRecord->prepareLink(vm, this);
 
     if (creationMode == Wasm::CreationMode::FromJS) {
-        moduleRecord->link(globalObject, jsNull(), importObject, creationMode);
+        m_moduleRecord->link(globalObject, jsNull(), importObject, creationMode);
         RETURN_IF_EXCEPTION(scope, void());
 
-        JSValue startResult = moduleRecord->evaluate(globalObject);
+        JSValue startResult = m_moduleRecord->evaluate(globalObject);
         UNUSED_PARAM(startResult);
         RETURN_IF_EXCEPTION(scope, void());
     }
@@ -176,8 +178,6 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
     WebAssemblyModuleRecord* moduleRecord = WebAssemblyModuleRecord::create(globalObject, vm, globalObject->webAssemblyModuleRecordStructure(), moduleKey, moduleInformation);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
-    JSModuleNamespaceObject* moduleNamespace = moduleRecord->getModuleNamespace(globalObject);
-
     auto storeTopCallFrame = [&vm] (void* topCallFrame) {
         vm.topCallFrame = bitwise_cast<CallFrame*>(topCallFrame);
     };
@@ -185,7 +185,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
     // FIXME: These objects could be pretty big we should try to throw OOM here.
     auto* jsInstance = new (NotNull, allocateCell<JSWebAssemblyInstance>(vm.heap)) JSWebAssemblyInstance(vm, instanceStructure,
         Wasm::Instance::create(&vm.wasmContext, WTFMove(module), &vm.topEntryFrame, vm.addressOfSoftStackLimit(), WTFMove(storeTopCallFrame)));
-    jsInstance->finishCreation(vm, jsModule, moduleNamespace);
+    jsInstance->finishCreation(vm, jsModule, moduleRecord);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
     // Let funcs, memories and tables be initially-empty lists of callable JavaScript objects, WebAssembly.Memory objects and WebAssembly.Table objects, respectively.
@@ -268,6 +268,9 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
                     return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "Memory import", "provided a 'maximum' that is larger than the module's declared 'maximum' import memory size")));
             }
 
+            if ((memory->memory().sharingMode() == Wasm::MemorySharingMode::Shared) != moduleInformation.memory.isShared())
+                return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "Memory import", "provided a 'shared' that is differnt from the module's declared 'shared' import memory attribute")));
+
             // ii. Append v to memories.
             // iii. Append v.[[Memory]] to imports.
             jsInstance->setMemory(vm, memory);
@@ -291,7 +294,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
             auto* jsMemory = JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
             RETURN_IF_EXCEPTION(throwScope, nullptr);
 
-            RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(moduleInformation.memory.initial(), moduleInformation.memory.maximum(),
+            RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(moduleInformation.memory.initial(), moduleInformation.memory.maximum(), moduleInformation.memory.isShared() ? Wasm::MemorySharingMode::Shared: Wasm::MemorySharingMode::Default,
                 [&vm] (Wasm::Memory::NotifyPressure) { vm.heap.collectAsync(CollectionScope::Full); },
                 [&vm] (Wasm::Memory::SyncTryToReclaim) { vm.heap.collectSync(CollectionScope::Full); },
                 [&vm, jsMemory] (Wasm::Memory::GrowSuccess, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); });

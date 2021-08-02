@@ -669,6 +669,7 @@ public class Utils {
     }
 
     public static boolean hasFullScreenStage(final Screen screen) {
+        @SuppressWarnings("removal")
         final List<Window> allWindows = AccessController.doPrivileged(
                 (PrivilegedAction<List<Window>>) () -> Window.getWindows(),
                 null,
@@ -974,6 +975,7 @@ public class Utils {
         return new String(dst, 0, dstIndex);
     }
 
+    @SuppressWarnings("removal")
     public static synchronized void loadNativeSwingLibrary() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String libName = "prism_common";

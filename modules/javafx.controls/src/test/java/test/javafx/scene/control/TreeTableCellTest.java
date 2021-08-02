@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,19 +28,29 @@ package test.javafx.scene.control;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableColumn.CellEditEvent;
+import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-import javafx.util.Callback;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.sun.javafx.tk.Toolkit;
+
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
@@ -58,6 +68,9 @@ public class TreeTableCellTest {
     private TreeItem<String> apples;
     private TreeItem<String> oranges;
     private TreeItem<String> pears;
+    private StageLoader stageLoader;
+
+    private TreeTableColumn<String, String> editingColumn;
 
     @Before public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
@@ -78,12 +91,14 @@ public class TreeTableCellTest {
 
         tree = new TreeTableView<String>(root);
         root.setExpanded(true);
+        editingColumn = new TreeTableColumn<>("TEST");
 
         row = new TreeTableRow<>();
     }
 
     @After
     public void cleanup() {
+        if (stageLoader != null) stageLoader.dispose();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
@@ -111,10 +126,10 @@ public class TreeTableCellTest {
         cell.updateIndex(0);
         cell.updateTreeTableView(tree);
         assertSame(ROOT, cell.getItem());
-        assertSame(root, cell.getTreeTableRow().getTreeItem());
+        assertSame(root, cell.getTableRow().getTreeItem());
         cell.updateIndex(1);
         assertSame(APPLES, cell.getItem());
-        assertSame(apples, cell.getTreeTableRow().getTreeItem());
+        assertSame(apples, cell.getTableRow().getTreeItem());
     }
 
     @Ignore // TODO file bug!
@@ -122,10 +137,10 @@ public class TreeTableCellTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
         assertSame(ROOT, cell.getItem());
-        assertSame(root, cell.getTreeTableRow().getTreeItem());
+        assertSame(root, cell.getTableRow().getTreeItem());
         cell.updateIndex(1);
         assertSame(APPLES, cell.getItem());
-        assertSame(apples, cell.getTreeTableRow().getTreeItem());
+        assertSame(apples, cell.getTableRow().getTreeItem());
     }
 
     @Test public void itemIsNullWhenIndexIsOutOfRange() {
@@ -136,9 +151,9 @@ public class TreeTableCellTest {
 
     @Test public void treeItemIsNullWhenIndexIsOutOfRange() {
         cell.updateIndex(50);
-        cell.updateTreeTableRow(row);
+        cell.updateTableRow(row);
         cell.updateTreeTableView(tree);
-        assertNull(cell.getTreeTableRow().getTreeItem());
+        assertNull(cell.getTableRow().getTreeItem());
     }
 
     @Test public void itemIsNullWhenIndexIsOutOfRange2() {
@@ -164,7 +179,7 @@ public class TreeTableCellTest {
         cell.updateTreeTableView(tree);
         assertSame(ORANGES, cell.getItem());
         root.getChildren().remove(oranges);
-        assertNull(cell.getTreeTableRow().getTreeItem());
+        assertNull(cell.getTableRow().getTreeItem());
         assertNull(cell.getItem());
     }
 
@@ -174,7 +189,7 @@ public class TreeTableCellTest {
         cell.updateIndex(1);
         cell.updateTreeTableView(tree);
         assertSame(APPLES, cell.getItem());
-        assertSame(apples, cell.getTreeTableRow().getTreeItem());
+        assertSame(apples, cell.getTableRow().getTreeItem());
 
         // then update the root children list so that the 1st item (including root),
         // is no longer 'Apples', but 'Lime'
@@ -187,7 +202,7 @@ public class TreeTableCellTest {
         cell.updateIndex(2);
         cell.updateTreeTableView(tree);
         assertSame(ORANGES, cell.getItem());
-        assertSame(oranges, cell.getTreeTableRow().getTreeItem());
+        assertSame(oranges, cell.getTableRow().getTreeItem());
         String previous = APPLES;
         root.getChildren().add(0, new TreeItem<>("Lime"));
         assertEquals(previous, cell.getItem());
@@ -481,6 +496,31 @@ public class TreeTableCellTest {
         assertEquals("treeTableView", cell.treeTableViewProperty().getName());
     }
 
+    @Test public void checkTableRowPropertyName() {
+        assertEquals("tableRow", cell.tableRowProperty().getName());
+    }
+
+    @Test public void checkTableColumnPropertyName() {
+        assertEquals("tableColumn", cell.tableColumnProperty().getName());
+    }
+
+    @Test public void checkTableRowProperty() {
+        cell.updateTreeTableView(tree);
+        cell.updateTableRow(row);
+        assertSame(row, cell.getTableRow());
+        assertSame(row, cell.tableRowProperty().get());
+        assertFalse(cell.tableRowProperty() instanceof ObjectProperty);
+    }
+
+    @Test public void checkTableColumnProperty() {
+        TreeTableColumn<String, String> column = new TreeTableColumn<>();
+        cell.updateTreeTableView(tree);
+        cell.updateTableColumn(column);
+        assertSame(column, cell.getTableColumn());
+        assertSame(column, cell.tableColumnProperty().get());
+        assertFalse(cell.tableColumnProperty() instanceof ObjectProperty);
+    }
+
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
@@ -493,7 +533,7 @@ public class TreeTableCellTest {
         TreeTableColumn col = new TreeTableColumn("TEST");
         col.setCellValueFactory(param -> null);
         tree.getColumns().add(col);
-        cell.updateTreeTableColumn(col);
+        cell.updateTableColumn(col);
         cell.updateTreeTableView(tree);
 
         // set index to 0, which results in the cell value factory returning
@@ -634,6 +674,210 @@ public class TreeTableCellTest {
     }
 
     /**
+     * Table: Editable<br>
+     * Row: Not editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the row is not editable.
+     */
+    @Test
+    public void testCellInUneditableRowIsNotEditable() {
+        tree.setEditable(true);
+        row.setEditable(false);
+
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setEditable(true);
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Not editable<br>
+     * Row: Editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the table is not editable.
+     */
+    @Test
+    public void testCellInUneditableTableIsNotEditable() {
+        tree.setEditable(false);
+        row.setEditable(true);
+
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setEditable(true);
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Editable<br>
+     * Column: Not editable<br>
+     * Expected: Cell can not be edited because the column is not editable.
+     */
+    @Test
+    public void testCellInUneditableColumnIsNotEditable() {
+        tree.setEditable(true);
+        row.setEditable(true);
+
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setEditable(false);
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Basic config of treeTable-/cell to allow testing of editEvents:
+     * table is editable, has editingColumn and cell is configured with table and column.
+     */
+    private void setupForEditing() {
+        tree.setEditable(true);
+        tree.getColumns().add(editingColumn);
+        // FIXME: default cell (of tableColumn) needs not-null value for firing cancel
+        editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(""));
+
+        cell.updateTreeTableView(tree);
+        cell.updateTableColumn(editingColumn);
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnCell() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        tree.edit(editingIndex, editingColumn);
+        TreeTablePosition<?,?> editingPosition = tree.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        cell.cancelEdit();
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnTreeTable() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        tree.edit(editingIndex, editingColumn);
+        TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        tree.edit(-1, null);
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCellReuse() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        tree.edit(editingIndex, editingColumn);
+        TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        cell.updateIndex(0);
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCollapse() {
+        setupForEditing();
+        stageLoader = new StageLoader(tree);
+        int editingIndex = 1;
+        tree.edit(editingIndex, editingColumn);
+        TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        root.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterModifyItems() {
+        setupForEditing();
+        stageLoader = new StageLoader(tree);
+        int editingIndex = 2;
+        tree.edit(editingIndex, editingColumn);
+        TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        root.getChildren().add(0, new TreeItem<>("added"));
+        Toolkit.getToolkit().firePulse();
+        assertNull("sanity: editing terminated on items modification", tree.getEditingCell());
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
+    }
+
+    /**
+     * Test that removing the editing item implicitly cancels an ongoing
+     * edit and fires a correct cancel event.
+     */
+    @Test
+    public void testEditCancelEventAfterRemoveEditingItem() {
+        setupForEditing();
+        stageLoader = new StageLoader(tree);
+        int editingIndex = 1;
+        tree.edit(editingIndex, editingColumn);
+        TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        root.getChildren().remove(editingIndex - 1);
+        Toolkit.getToolkit().firePulse();
+        assertNull("sanity: editing terminated on items modification", tree.getEditingCell());
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
+    }
+
+    /**
+     * Test that removing the editing item does not cause a memory leak.
+     */
+    @Test
+    public void testEditCancelMemoryLeakAfterRemoveEditingItem() {
+        setupForEditing();
+        stageLoader = new StageLoader(tree);
+        // the item to test for being gc'ed
+        TreeItem<String> editingItem = new TreeItem<>("added");
+        WeakReference<TreeItem<?>> itemRef = new WeakReference<>(editingItem);
+        root.getChildren().add(0, editingItem);
+        Toolkit.getToolkit().firePulse();
+        int editingIndex = tree.getRow(editingItem);
+        tree.edit(editingIndex, editingColumn);
+        root.getChildren().remove(editingItem);
+        Toolkit.getToolkit().firePulse();
+        editingItem = null;
+        attemptGC(itemRef);
+        assertEquals("treeItem must be gc'ed", null, itemRef.get());
+    }
+
+
+    /**
      * Test that cell.cancelEdit can switch table editing off
      * even if a subclass violates its contract.
      *
@@ -649,7 +893,7 @@ public class TreeTableCellTest {
         editingColumn.setCellValueFactory(param -> null);
         tree.getColumns().add(editingColumn);
         cell.updateTreeTableView(tree);
-        cell.updateTreeTableColumn(editingColumn);
+        cell.updateTableColumn(editingColumn);
         // test editing: first round
         // switch cell off editing by table api
         int editingIndex = 1;

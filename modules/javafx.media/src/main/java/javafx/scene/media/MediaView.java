@@ -178,7 +178,7 @@ public class MediaView extends Node {
         }
     }
 
-    /***************************************** Media Player Overlay support ***************************/
+    /* *************************************** Media Player Overlay support ************************* */
 
     private MediaPlayerOverlay mediaPlayerOverlay = null;
 
@@ -287,7 +287,7 @@ public class MediaView extends Node {
         }
     }
 
-    /******************************************* End of iOS specific stuff ***************************/
+    /* ***************************************** End of iOS specific stuff ************************* */
 
     /**
      * @return reference to MediaView

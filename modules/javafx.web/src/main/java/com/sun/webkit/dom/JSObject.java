@@ -84,6 +84,7 @@ class JSObject extends netscape.javascript.JSObject {
     private static native Object getMemberImpl(long peer, int peer_type,
                                                String name);
 
+    @SuppressWarnings("removal")
     @Override
     public void setMember(String name, Object value) throws JSException {
         Invoker.getInvoker().checkEventThread();
@@ -92,7 +93,7 @@ class JSObject extends netscape.javascript.JSObject {
     }
     private static native void setMemberImpl(long peer, int peer_type,
                                              String name, Object value,
-                                             AccessControlContext acc);
+                                             @SuppressWarnings("removal") AccessControlContext acc);
 
     @Override
     public void removeMember(String name) throws JSException {
@@ -110,6 +111,7 @@ class JSObject extends netscape.javascript.JSObject {
     private static native Object getSlotImpl(long peer, int peer_type,
                                              int index);
 
+    @SuppressWarnings("removal")
     @Override
     public void setSlot(int index, Object value) throws JSException {
         Invoker.getInvoker().checkEventThread();
@@ -118,8 +120,9 @@ class JSObject extends netscape.javascript.JSObject {
     }
     private static native void setSlotImpl(long peer, int peer_type,
                                            int index, Object value,
-                                           AccessControlContext acc);
+                                           @SuppressWarnings("removal") AccessControlContext acc);
 
+    @SuppressWarnings("removal")
     @Override
     public Object call(String methodName, Object... args) throws JSException {
         Invoker.getInvoker().checkEventThread();
@@ -128,7 +131,7 @@ class JSObject extends netscape.javascript.JSObject {
     }
     private static native Object callImpl(long peer, int peer_type,
                                           String methodName, Object[] args,
-                                          AccessControlContext acc);
+                                          @SuppressWarnings("removal") AccessControlContext acc);
 
     @Override
     public String toString() {

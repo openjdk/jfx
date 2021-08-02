@@ -39,12 +39,11 @@ dictionary FetchResponseInit {
 
 [
     ActiveDOMObject,
-    EnabledAtRuntime=FetchAPI,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=(Window,Worker),
     InterfaceName=Response,
 ] interface FetchResponse {
-    [CallWith=ScriptExecutionContext, MayThrowException] constructor(optional BodyInit? body = null, optional FetchResponseInit init);
+    [CallWith=ScriptExecutionContext] constructor(optional BodyInit? body = null, optional FetchResponseInit init);
 
     [CallWith=ScriptExecutionContext, NewObject] static FetchResponse error();
     [CallWith=ScriptExecutionContext, MayThrowException, NewObject] static FetchResponse redirect(USVString url, optional unsigned short status = 302);
@@ -56,11 +55,9 @@ dictionary FetchResponseInit {
     readonly attribute unsigned short status;
     readonly attribute boolean ok;
     readonly attribute ByteString statusText;
-    readonly attribute FetchHeaders headers; // FIXME: Should be [SameObject].
-    // FIXME: Add support for trailers.
-    // readonly attribute Promise<Headers> trailer;
+    [SameObject] readonly attribute FetchHeaders headers;
 
     [CallWith=ScriptExecutionContext, MayThrowException, NewObject] FetchResponse clone();
 };
 
-FetchResponse implements FetchBody;
+FetchResponse includes FetchBody;

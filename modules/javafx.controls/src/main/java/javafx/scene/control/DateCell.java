@@ -56,7 +56,7 @@ public class DateCell extends Cell<LocalDate> {
         return new DateCellSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -64,7 +64,7 @@ public class DateCell extends Cell<LocalDate> {
 
     private static final String DEFAULT_STYLE_CLASS = "date-cell";
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

@@ -120,7 +120,8 @@ public class SwingNode extends Node {
     private static boolean isThreadMerged;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 isThreadMerged = Boolean.valueOf(
                         System.getProperty("javafx.embed.singleThread"));
@@ -554,6 +555,7 @@ public class SwingNode extends Node {
         locateLwFrame();
     };
 
+    @SuppressWarnings("removal")
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
         if (!skipBackwardUnrgabNotification) {
             if (lwFrame != null) {
@@ -881,7 +883,8 @@ public class SwingNode extends Node {
                         frame, swingID, swingWhen, swingModifiers,
                         relX, relY, absX, absY,
                         event.getClickCount(), swingPopupTrigger, swingButton);
-            AccessController.doPrivileged(new PostEventAction(mouseEvent));
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(new PostEventAction(mouseEvent));
         }
     }
 
@@ -922,7 +925,8 @@ public class SwingNode extends Node {
             int y = (int) Math.round(fxY);
             MouseWheelEvent mouseWheelEvent =
                 swNodeIOP.createMouseWheelEvent(source, swingModifiers, x, y, -wheelRotation);
-            AccessController.doPrivileged(new PostEventAction(mouseWheelEvent));
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(new PostEventAction(mouseWheelEvent));
         }
     }
 
@@ -967,7 +971,8 @@ public class SwingNode extends Node {
             java.awt.event.KeyEvent keyEvent = swNodeIOP.createKeyEvent(frame,
                 swingID, swingWhen, swingModifiers, swingKeyCode,
                 swingChar);
-            AccessController.doPrivileged(new PostEventAction(keyEvent));
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(new PostEventAction(keyEvent));
         }
     }
 }

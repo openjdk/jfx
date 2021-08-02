@@ -212,6 +212,7 @@ public class JFXPanel extends JComponent {
         if (fxInitialized) {
             return;
         }
+        @SuppressWarnings("removal")
         EventQueue eventQueue = AccessController.doPrivileged(
                                 (PrivilegedAction<EventQueue>) java.awt.Toolkit
                                 .getDefaultToolkit()::getSystemEventQueue);
@@ -295,6 +296,7 @@ public class JFXPanel extends JComponent {
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
+            @SuppressWarnings("removal")
             EventQueue eventQueue = AccessController.doPrivileged(
                     (PrivilegedAction<EventQueue>) java.awt.Toolkit
                             .getDefaultToolkit()::getSystemEventQueue);
@@ -872,6 +874,7 @@ public class JFXPanel extends JComponent {
      * method is invoked, the chain of parent components is set up with
      * KeyboardAction event listeners.
      */
+    @SuppressWarnings("removal")
     @Override
     public void addNotify() {
         super.addNotify();
@@ -906,6 +909,7 @@ public class JFXPanel extends JComponent {
      * When this method is invoked, any KeyboardActions set up in the the
      * chain of parent components are removed.
      */
+    @SuppressWarnings("removal")
     @Override public void removeNotify() {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && stage.isShowing()) {

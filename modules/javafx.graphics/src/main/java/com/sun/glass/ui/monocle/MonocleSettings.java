@@ -30,6 +30,7 @@ import java.security.PrivilegedAction;
 
 class MonocleSettings {
 
+    @SuppressWarnings("removal")
     static final MonocleSettings settings = AccessController.doPrivileged(
             (PrivilegedAction<MonocleSettings>) () -> new MonocleSettings());
 

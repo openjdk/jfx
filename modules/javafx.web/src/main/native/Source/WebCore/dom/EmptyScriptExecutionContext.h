@@ -75,12 +75,15 @@ public:
     bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { return false; }
 #endif
 
+    JSC::VM& vm() final { return m_vm; }
+
     using RefCounted::ref;
     using RefCounted::deref;
 
 private:
     EmptyScriptExecutionContext(JSC::VM& vm)
-        : m_origin(SecurityOrigin::createUnique())
+        : m_vm(vm)
+        , m_origin(SecurityOrigin::createUnique())
         , m_eventLoop(EmptyEventLoop::create(vm))
         , m_eventLoopTaskGroup(makeUnique<EventLoopTaskGroup>(m_eventLoop))
     {
@@ -90,6 +93,8 @@ private:
     void logExceptionToConsole(const String&, const String&, int, int, RefPtr<Inspector::ScriptCallStack>&&) final { };
     void refScriptExecutionContext() final { ref(); };
     void derefScriptExecutionContext() final { deref(); };
+
+    const Settings::Values& settingsValues() const final { return m_settingsValues; }
 
     class EmptyEventLoop final : public EventLoop {
     public:
@@ -101,21 +106,23 @@ private:
         MicrotaskQueue& microtaskQueue() final { return m_queue; };
 
     private:
-        EmptyEventLoop(JSC::VM& vm)
+        explicit EmptyEventLoop(JSC::VM& vm)
             : m_queue(MicrotaskQueue(vm))
         {
         }
 
-        void scheduleToRun() final { ASSERT_NOT_REACHED(); };
-        bool isContextThread() const final { return false; };
+        void scheduleToRun() final { ASSERT_NOT_REACHED(); }
+        bool isContextThread() const final { return true; }
 
         MicrotaskQueue m_queue;
     };
 
+    Ref<JSC::VM> m_vm;
     Ref<SecurityOrigin> m_origin;
     URL m_url;
     Ref<EmptyEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_eventLoopTaskGroup;
+    Settings::Values m_settingsValues;
 };
 
 } // namespace WebCore

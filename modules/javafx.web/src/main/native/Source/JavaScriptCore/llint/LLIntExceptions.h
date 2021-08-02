@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "JSCPtrTag.h"
+#include "OpcodeSize.h"
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -32,6 +34,7 @@ namespace JSC {
 class CallFrame;
 class VM;
 struct Instruction;
+template<PtrTag> class MacroAssemblerCodeRef;
 
 namespace LLInt {
 
@@ -41,6 +44,9 @@ namespace LLInt {
 Instruction* returnToThrow(VM&);
 
 // Use this when you're throwing to a call thunk.
-void* callToThrow(VM&);
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrow(VM&);
+
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleUncaughtException(VM&);
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatch(OpcodeSize);
 
 } } // namespace JSC::LLInt

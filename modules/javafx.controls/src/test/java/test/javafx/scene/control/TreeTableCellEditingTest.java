@@ -176,7 +176,7 @@ public class TreeTableCellEditingTest {
         editingColumn.setCellValueFactory(param -> null);
         table.getColumns().add(editingColumn);
         cell.updateTreeTableView(table);
-        cell.updateTreeTableColumn(editingColumn);
+        cell.updateTableColumn(editingColumn);
         // make sure that focus change doesn't interfere with tests
         // (editing cell loosing focus will be canceled from focusListener in Cell)
         // Note: not really needed for Tree/TableCell because the cell is never focused

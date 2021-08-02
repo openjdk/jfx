@@ -85,7 +85,7 @@
 #if PLATFORM(GTK)
 #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_44
 #if USE(GTK4)
-#define GDK_VERSION_MIN_REQUIRED GDK_VERSION_3_92
+#define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_0
 #else
 #define GDK_VERSION_MIN_REQUIRED GDK_VERSION_3_22
 #endif
@@ -96,7 +96,11 @@
 #endif
 
 #if USE(SOUP)
-#define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_2_42
+#if USE(SOUP2)
+#define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_2_54
+#else
+#define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_3_0
+#endif
 #endif
 
 #if PLATFORM(COCOA)
@@ -153,53 +157,11 @@
 #define USE_LIBWEBRTC 1
 #endif
 
-
-#if PLATFORM(COCOA)
-#if ENABLE(WEBGL)
-
-/* USE_ANGLE=1 uses ANGLE for the WebGL backend.
-   It replaces USE_OPENGL, USE_OPENGL_ES and USE_EGL. */
-#if PLATFORM(MAC) || (PLATFORM(MACCATALYST) && __has_include(<OpenGL/OpenGL.h>))
-#define USE_OPENGL 0
-#define USE_OPENGL_ES 0
+#if PLATFORM(COCOA) && ENABLE(WEBGL)
 #define USE_ANGLE 1
-#else
-#define USE_OPENGL 0
-#define USE_OPENGL_ES 0
-#define USE_ANGLE 1
-#endif
 #ifndef GL_SILENCE_DEPRECATION
 #define GL_SILENCE_DEPRECATION 1
 #endif
-
-#if USE(OPENGL) && !defined(HAVE_OPENGL_4)
-#define HAVE_OPENGL_4 1
-#endif
-
-#if USE(OPENGL_ES) && !defined(HAVE_OPENGL_ES_3)
-#define HAVE_OPENGL_ES_3 1
-#endif
-
-#if USE_ANGLE && (USE_OPENGL || USE_OPENGL_ES)
-#error USE_ANGLE is incompatible with USE_OPENGL and USE_OPENGL_ES
-#endif
-
-#endif /* ENABLE(WEBGL) */
-#endif /* PLATFORM(COCOA) */
-
-#if ENABLE(WEBGL)
-#if !defined(USE_ANGLE)
-#define USE_ANGLE 0
-#endif
-
-#if (USE_ANGLE && (USE_OPENGL || USE_OPENGL_ES || (defined(USE_EGL) && USE_EGL))) && !USE(TEXTURE_MAPPER)
-#error USE_ANGLE is incompatible with USE_OPENGL, USE_OPENGL_ES and USE_EGL
-#endif
-
-#endif
-
-#if USE(TEXTURE_MAPPER) && ENABLE(GRAPHICS_CONTEXT_GL) && !defined(USE_TEXTURE_MAPPER_GL)
-#define USE_TEXTURE_MAPPER_GL 1
 #endif
 
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */

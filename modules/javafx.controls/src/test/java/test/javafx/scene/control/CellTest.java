@@ -92,7 +92,7 @@ public class CellTest {
         } else if (cell instanceof TreeTableCell) {
             TreeTableRow tableRow = new TreeTableRow();
             CellShim.updateItem(tableRow, "TableRow", false);
-            ((TreeTableCell)cell).updateTreeTableRow(tableRow);
+            ((TreeTableCell)cell).updateTableRow(tableRow);
             TreeTableCellShim.set_lockItemOnEdit((TreeTableCell)cell, true);
         }
     }

@@ -452,7 +452,7 @@ GST_VIDEO_API
 gboolean       gst_video_info_from_caps   (GstVideoInfo *info, const GstCaps  * caps);
 
 GST_VIDEO_API
-GstCaps *      gst_video_info_to_caps     (GstVideoInfo *info);
+GstCaps *      gst_video_info_to_caps     (const GstVideoInfo *info);
 
 GST_VIDEO_API
 gboolean       gst_video_info_convert     (GstVideoInfo *info,

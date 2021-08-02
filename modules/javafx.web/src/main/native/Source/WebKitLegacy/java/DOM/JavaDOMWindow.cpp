@@ -27,6 +27,7 @@
 
 
 #include <JavaScriptCore/APICast.h>
+#include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/CSSStyleDeclaration.h>
 #include <WebCore/DOMException.h>
 #include <WebCore/DOMSelection.h>

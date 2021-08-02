@@ -98,6 +98,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     private ObservableValue<? extends T> observable = null;
     private ExpressionHelper<T> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanObjectProperty(PropertyDescriptor descriptor, Object bean) {
@@ -114,7 +115,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"removal","unchecked"})
     @Override
     public T get() {
         return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
@@ -135,6 +136,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final T value) {
         if (isBound()) {
