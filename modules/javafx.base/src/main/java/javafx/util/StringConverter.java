@@ -43,7 +43,7 @@ public abstract class StringConverter<T> {
     * Converts the object provided into its string form.
     * Format of the returned string is defined by the specific converter.
     * @param object the object of type {@code T} to convert
-    * @return a string representation of the object passed in.
+    * @return a string representation of the object passed in
     */
     public abstract String toString(T object);
 
