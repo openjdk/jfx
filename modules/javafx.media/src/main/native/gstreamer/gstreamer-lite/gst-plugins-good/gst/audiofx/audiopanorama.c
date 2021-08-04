@@ -21,19 +21,19 @@
 
 /**
  * SECTION:element-audiopanorama
+ * @title: audiopanorama
  *
  * Stereo panorama effect with controllable pan position. One can choose between the default psychoacoustic panning method,
  * which keeps the same perceived loudness, and a simple panning method that just controls the volume on one channel.
  *
- * <refsect2>
- * <title>Example launch line</title>
+ * ## Example launch line
  * |[
  * gst-launch-1.0 audiotestsrc wave=saw ! audiopanorama panorama=-1.00 ! alsasink
  * gst-launch-1.0 filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiopanorama panorama=-1.00 ! alsasink
  * gst-launch-1.0 audiotestsrc wave=saw ! audioconvert ! audiopanorama panorama=-1.00 ! audioconvert ! alsasink
  * gst-launch-1.0 audiotestsrc wave=saw ! audioconvert ! audiopanorama method=simple panorama=-0.50 ! audioconvert ! alsasink
  * ]|
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -210,6 +210,8 @@ gst_audio_panorama_class_init (GstAudioPanoramaClass * klass)
       GST_DEBUG_FUNCPTR (gst_audio_panorama_set_caps);
   GST_BASE_TRANSFORM_CLASS (klass)->transform =
       GST_DEBUG_FUNCPTR (gst_audio_panorama_transform);
+
+  gst_type_mark_as_plugin_api (GST_TYPE_AUDIO_PANORAMA_METHOD, 0);
 }
 
 static void

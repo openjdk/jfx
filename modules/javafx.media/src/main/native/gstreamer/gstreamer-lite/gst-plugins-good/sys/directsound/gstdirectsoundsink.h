@@ -92,6 +92,11 @@ struct _GstDirectSoundSink
 #ifdef GSTREAMER_LITE
   gfloat panorama;
   guint rate;
+  DSBUFFERDESC descSecondary;
+  WAVEFORMATEX wfx;
+  void *gst_ds_notifier;
+  gboolean reload;
+  gboolean need_reload;
 #endif // GSTREAMER_LITE
 };
 

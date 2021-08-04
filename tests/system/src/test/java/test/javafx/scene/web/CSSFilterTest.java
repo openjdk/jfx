@@ -122,7 +122,7 @@ public class CSSFilterTest {
         });
     }
 
-    @Ignore("JDK-8260165")
+    @Ignore("JDK-8269067")
     @Test public void testCSSFilterRendering() {
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 

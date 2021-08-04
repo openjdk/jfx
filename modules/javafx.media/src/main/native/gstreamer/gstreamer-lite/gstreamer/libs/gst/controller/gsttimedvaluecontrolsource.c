@@ -81,6 +81,14 @@ gst_control_point_free (GstControlPoint * cp)
   g_slice_free (GstControlPoint, cp);
 }
 
+/**
+ * gst_control_point_copy:
+ * @cp: The control point to copy
+ *
+ * Copies a #GstControlPoint
+ *
+ * Returns: A copy of @cp
+ */
 GstControlPoint *
 gst_control_point_copy (GstControlPoint * cp)
 {
@@ -473,8 +481,7 @@ gst_timed_value_control_source_class_init (GstTimedValueControlSourceClass
   gst_timed_value_control_source_signals[VALUE_CHANGED_SIGNAL] =
       g_signal_new ("value-changed", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_FIRST, 0, NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1,
-      gst_control_point_get_type ());
+      NULL, NULL, G_TYPE_NONE, 1, gst_control_point_get_type ());
 
   /**
    * GstTimedValueControlSource::value-added
@@ -489,8 +496,7 @@ gst_timed_value_control_source_class_init (GstTimedValueControlSourceClass
   gst_timed_value_control_source_signals[VALUE_ADDED_SIGNAL] =
       g_signal_new ("value-added", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_FIRST, 0, NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1,
-      gst_control_point_get_type ());
+      NULL, NULL, G_TYPE_NONE, 1, gst_control_point_get_type ());
 
   /**
    * GstTimedValueControlSource::value-removed
@@ -505,8 +511,7 @@ gst_timed_value_control_source_class_init (GstTimedValueControlSourceClass
   gst_timed_value_control_source_signals[VALUE_REMOVED_SIGNAL] =
       g_signal_new ("value-removed", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_FIRST, 0, NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1,
-      gst_control_point_get_type ());
+      NULL, NULL, G_TYPE_NONE, 1, gst_control_point_get_type ());
 
 
   gobject_class->finalize = gst_timed_value_control_source_finalize;

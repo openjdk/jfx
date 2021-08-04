@@ -717,7 +717,7 @@ public:
     void compileMovHint(Node*);
     void compileMovHintAndCheck(Node*);
 
-    void compileCheckNeutered(Node*);
+    void compileCheckDetached(Node*);
 
     void cachedGetById(CodeOrigin, JSValueRegs base, JSValueRegs result, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
     void cachedPutById(CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg scratchGPR, CacheableIdentifier, PutKind, ECMAMode, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
@@ -984,6 +984,13 @@ public:
         prepareForExternalCall();
         m_jit.emitStoreCodeOrigin(m_currentNode->origin.semantic);
         return m_jit.appendCall(function);
+    }
+
+    JITCompiler::Call appendOperationCall(const FunctionPtr<OperationPtrTag> function)
+    {
+        prepareForExternalCall();
+        m_jit.emitStoreCodeOrigin(m_currentNode->origin.semantic);
+        return m_jit.appendOperationCall(function);
     }
 
     JITCompiler::Call appendCallWithCallFrameRollbackOnException(const FunctionPtr<CFunctionPtrTag> function)
@@ -1283,6 +1290,10 @@ public:
     void compileGetByValOnDirectArguments(Node*);
     void compileGetByValOnScopedArguments(Node*);
 
+    void compileGetPrivateName(Node*);
+    void compileGetPrivateNameById(Node*);
+    void compileGetPrivateNameByVal(Node*, JSValueRegs base, JSValueRegs property);
+
     void compileGetScope(Node*);
     void compileSkipScope(Node*);
     void compileGetGlobalObject(Node*);
@@ -1348,7 +1359,7 @@ public:
     void compileConstantStoragePointer(Node*);
     void compileGetIndexedPropertyStorage(Node*);
     JITCompiler::Jump jumpForTypedArrayOutOfBounds(Node*, GPRReg baseGPR, GPRReg indexGPR);
-    JITCompiler::Jump jumpForTypedArrayIsNeuteredIfOutOfBounds(Node*, GPRReg baseGPR, JITCompiler::Jump outOfBounds);
+    JITCompiler::Jump jumpForTypedArrayIsDetachedIfOutOfBounds(Node*, GPRReg baseGPR, JITCompiler::Jump outOfBounds);
     void emitTypedArrayBoundsCheck(Node*, GPRReg baseGPR, GPRReg indexGPR);
     void compileGetTypedArrayByteOffset(Node*);
     void compileGetByValOnIntTypedArray(Node*, TypedArrayType);
@@ -1360,6 +1371,10 @@ public:
     void compilePutByValForCellWithString(Node*, Edge& child1, Edge& child2, Edge& child3);
     void compilePutByValForCellWithSymbol(Node*, Edge& child1, Edge& child2, Edge& child3);
     void compileGetByValWithThis(Node*);
+    void compilePutPrivateName(Node*);
+    void compilePutPrivateNameById(Node*);
+    void compileCheckPrivateBrand(Node*);
+    void compileSetPrivateBrand(Node*);
     void compileGetByOffset(Node*);
     void compilePutByOffset(Node*);
     void compileMatchStructure(Node*);
@@ -1372,8 +1387,16 @@ public:
         GPRTemporary& valueTag,
 #endif
         Edge valueUse, JITCompiler::JumpList& slowPathCases, bool isClamped = false);
+    bool getIntTypedArrayStoreOperandForAtomics(
+        GPRTemporary& value,
+        GPRReg property,
+#if USE(JSVALUE32_64)
+        GPRTemporary& propertyTag,
+        GPRTemporary& valueTag,
+#endif
+        Edge valueUse);
     void loadFromIntTypedArray(GPRReg storageReg, GPRReg propertyReg, GPRReg resultReg, TypedArrayType);
-    void setIntTypedArrayLoadResult(Node*, GPRReg resultReg, TypedArrayType, bool canSpeculate = false);
+    void setIntTypedArrayLoadResult(Node*, GPRReg resultReg, TypedArrayType, bool canSpeculate);
     template <typename ClassType> void compileNewFunctionCommon(GPRReg, RegisteredStructure, GPRReg, GPRReg, GPRReg, MacroAssembler::JumpList&, size_t, FunctionExecutable*);
     void compileNewFunction(Node*);
     void compileSetFunctionName(Node*);
@@ -1405,8 +1428,8 @@ public:
     void compileRegExpTest(Node*);
     void compileStringReplace(Node*);
     void compileIsObject(Node*);
-    void compileIsObjectOrNull(Node*);
-    void compileIsFunction(Node*);
+    void compileTypeOfIsObject(Node*);
+    void compileIsCallable(Node*, S_JITOperation_GC);
     void compileIsConstructor(Node*);
     void compileTypeOf(Node*);
     void compileCheckIsConstant(Node*);
@@ -1440,13 +1463,13 @@ public:
     void compileThrow(Node*);
     void compileThrowStaticError(Node*);
     void compileGetEnumerableLength(Node*);
-    void compileHasGenericProperty(Node*);
+    void compileHasEnumerableStructureProperty(Node*);
+    void compileHasEnumerableProperty(Node*);
     void compileToIndexString(Node*);
     void compilePutByIdFlush(Node*);
     void compilePutById(Node*);
     void compilePutByIdDirect(Node*);
     void compilePutByIdWithThis(Node*);
-    void compileHasStructureProperty(Node*);
     template <typename Function>
     void compileHasOwnStructurePropertyImpl(Node*, Function);
     void compileHasOwnStructureProperty(Node*);
@@ -1466,7 +1489,7 @@ public:
     void compileNewArrayWithSize(Node*);
     void compileNewTypedArray(Node*);
     void compileToThis(Node*);
-    void compileObjectKeys(Node*);
+    void compileObjectKeysOrObjectGetOwnPropertyNames(Node*);
     void compileObjectCreate(Node*);
     void compileCreateThis(Node*);
     void compileCreatePromise(Node*);
@@ -1482,7 +1505,7 @@ public:
     void compileCallNumberConstructor(Node*);
     void compileLogShadowChickenPrologue(Node*);
     void compileLogShadowChickenTail(Node*);
-    void compileHasIndexedProperty(Node*);
+    void compileHasIndexedProperty(Node*, S_JITOperation_GCZ);
     void compileExtractCatchLocal(Node*);
     void compileClearCatchLocals(Node*);
     void compileProfileType(Node*);

@@ -97,6 +97,7 @@ CachedImage::~CachedImage()
 
 void CachedImage::load(CachedResourceLoader& loader)
 {
+    m_skippingRevalidationDocument = makeWeakPtr(loader.document());
     if (loader.shouldPerformImageLoad(url()))
         CachedResource::load(loader);
     else
@@ -439,10 +440,10 @@ void CachedImage::CachedImageObserver::changedInRect(const Image& image, const I
         cachedImage->changedInRect(image, rect);
 }
 
-void CachedImage::CachedImageObserver::scheduleTimedRenderingUpdate(const Image& image)
+void CachedImage::CachedImageObserver::scheduleRenderingUpdate(const Image& image)
 {
     for (auto cachedImage : m_cachedImages)
-        cachedImage->scheduleTimedRenderingUpdate(image);
+        cachedImage->scheduleRenderingUpdate(image);
 }
 
 inline void CachedImage::clearImage()
@@ -695,14 +696,14 @@ void CachedImage::changedInRect(const Image& image, const IntRect* rect)
     notifyObservers(rect);
 }
 
-void CachedImage::scheduleTimedRenderingUpdate(const Image& image)
+void CachedImage::scheduleRenderingUpdate(const Image& image)
 {
     if (&image != m_image)
         return;
 
     CachedResourceClientWalker<CachedImageClient> walker(m_clients);
     while (auto* client = walker.next())
-        client->scheduleTimedRenderingUpdate();
+        client->scheduleRenderingUpdateForImage(*this);
 }
 
 bool CachedImage::currentFrameKnownToBeOpaque(const RenderElement* renderer)
@@ -730,6 +731,26 @@ CachedResource::RevalidationDecision CachedImage::makeRevalidationDecision(Cache
         return RevalidationDecision::No;
     }
     return CachedResource::makeRevalidationDecision(cachePolicy);
+}
+
+bool CachedImage::canSkipRevalidation(const CachedResourceLoader& loader, const CachedResourceRequest& request) const
+{
+    if (options().mode != request.options().mode || options().credentials != request.options().credentials || resourceRequest().allowCookies() != request.resourceRequest().allowCookies())
+        return false;
+
+    // Skip revalidation as per https://html.spec.whatwg.org/#ignore-higher-layer-caching which defines a per-document image list.
+    // This rule is loosely implemented by other browsers, we could relax it and should update it once memory cache is properly specified.
+    return m_skippingRevalidationDocument && loader.document() == m_skippingRevalidationDocument;
+}
+
+bool CachedImage::isVisibleInViewport(const Document& document) const
+{
+    CachedResourceClientWalker<CachedImageClient> walker(m_clients);
+    while (auto* client = walker.next()) {
+        if (client->imageVisibleInViewport(document) == VisibleInViewportState::Yes)
+            return true;
+    }
+    return false;
 }
 
 } // namespace WebCore

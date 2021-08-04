@@ -121,6 +121,7 @@ public class Slider extends Control {
         //Initialize the style class to be 'slider'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.SLIDER);
+        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
     }
     /**
      * The maximum value represented by this Slider. This must be a
@@ -641,7 +642,7 @@ public class Slider extends Control {
         return new SliderSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -802,7 +803,7 @@ public class Slider extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

@@ -79,7 +79,7 @@ public class CellTest {
     }
 
     @Before public void setup() throws Exception {
-        cell = (Cell<String>) type.newInstance();
+        cell = (Cell<String>) type.getDeclaredConstructor().newInstance();
 
         // Empty TableCells can be selected, as long as the row they exist in
         // is not empty, so here we set a TableRow to ensure testing works
@@ -92,7 +92,7 @@ public class CellTest {
         } else if (cell instanceof TreeTableCell) {
             TreeTableRow tableRow = new TreeTableRow();
             CellShim.updateItem(tableRow, "TableRow", false);
-            ((TreeTableCell)cell).updateTreeTableRow(tableRow);
+            ((TreeTableCell)cell).updateTableRow(tableRow);
             TreeTableCellShim.set_lockItemOnEdit((TreeTableCell)cell, true);
         }
     }

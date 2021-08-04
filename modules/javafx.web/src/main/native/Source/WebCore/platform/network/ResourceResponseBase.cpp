@@ -28,6 +28,7 @@
 #include "ResourceResponseBase.h"
 
 #include "CacheValidation.h"
+#include "DataURLDecoder.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
@@ -146,6 +147,17 @@ ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& from
     redirectResponse.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-store"_s);
 
     return redirectResponse;
+}
+
+ResourceResponse ResourceResponseBase::dataURLResponse(const URL& url, const DataURLDecoder::Result& result)
+{
+    ResourceResponse dataResponse { url, result.mimeType, static_cast<long long>(result.data.size()), result.charset };
+    dataResponse.setHTTPStatusCode(200);
+    dataResponse.setHTTPStatusText("OK"_s);
+    dataResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, result.contentType);
+    dataResponse.setSource(ResourceResponse::Source::Network);
+
+    return dataResponse;
 }
 
 ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response, PerformExposeAllHeadersCheck performCheck)
@@ -439,7 +451,10 @@ static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
 
 void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
 {
-    switch (m_tainting) {
+    // FIXME: we don't really need to construct a Tainting here, this is just a workaround
+    // for a GCC 10 bug (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97634), that will
+    // be removed once the bug is fixed.
+    switch (Tainting(m_tainting)) {
     case ResourceResponse::Tainting::Basic:
         return;
     case ResourceResponse::Tainting::Cors: {

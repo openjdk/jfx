@@ -99,17 +99,16 @@ static TransformOperation::OperationType transformOperationType(CSSValueID type)
 
 Length convertToFloatLength(const CSSPrimitiveValue* primitiveValue, const CSSToLengthConversionData& conversionData)
 {
-    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | CalculatedConversion>(conversionData) : Length(Undefined);
+    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | CalculatedConversion>(conversionData) : Length(LengthType::Undefined);
 }
 
 bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& conversionData, TransformOperations& outOperations)
 {
-    if (!is<CSSValueList>(value)) {
-        outOperations.clear();
+    ASSERT(!outOperations.size());
+    if (!is<CSSValueList>(value))
         return false;
-    }
 
-    TransformOperations operations;
+    auto& operations = outOperations.operations();
     for (auto& currentValue : downcast<CSSValueList>(value)) {
         if (!is<CSSFunctionValue>(currentValue))
             continue;
@@ -148,7 +147,7 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                         sy = sx;
                 }
             }
-            operations.operations().append(ScaleTransformOperation::create(sx, sy, 1.0, transformOperationType(transformValue.name())));
+            operations.append(ScaleTransformOperation::create(sx, sy, 1.0, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueScaleZ:
@@ -174,14 +173,14 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                         sy = sx;
                 }
             }
-            operations.operations().append(ScaleTransformOperation::create(sx, sy, sz, transformOperationType(transformValue.name())));
+            operations.append(ScaleTransformOperation::create(sx, sy, sz, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueTranslate:
         case CSSValueTranslateX:
         case CSSValueTranslateY: {
-            Length tx = Length(0, Fixed);
-            Length ty = Length(0, Fixed);
+            Length tx = Length(0, LengthType::Fixed);
+            Length ty = Length(0, LengthType::Fixed);
             if (transformValue.name() == CSSValueTranslateY)
                 ty = convertToFloatLength(&firstValue, conversionData);
             else {
@@ -194,17 +193,19 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                 }
             }
 
-            if (tx.isUndefined() || ty.isUndefined())
+            if (tx.isUndefined() || ty.isUndefined()) {
+                operations.clear();
                 return false;
+            }
 
-            operations.operations().append(TranslateTransformOperation::create(tx, ty, Length(0, Fixed), transformOperationType(transformValue.name())));
+            operations.append(TranslateTransformOperation::create(tx, ty, Length(0, LengthType::Fixed), transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueTranslateZ:
         case CSSValueTranslate3d: {
-            Length tx = Length(0, Fixed);
-            Length ty = Length(0, Fixed);
-            Length tz = Length(0, Fixed);
+            Length tx = Length(0, LengthType::Fixed);
+            Length ty = Length(0, LengthType::Fixed);
+            Length tz = Length(0, LengthType::Fixed);
             if (transformValue.name() == CSSValueTranslateZ)
                 tz = convertToFloatLength(&firstValue, conversionData);
             else if (transformValue.name() == CSSValueTranslateY)
@@ -223,15 +224,17 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                 }
             }
 
-            if (tx.isUndefined() || ty.isUndefined() || tz.isUndefined())
+            if (tx.isUndefined() || ty.isUndefined() || tz.isUndefined()) {
+                operations.clear();
                 return false;
+            }
 
-            operations.operations().append(TranslateTransformOperation::create(tx, ty, tz, transformOperationType(transformValue.name())));
+            operations.append(TranslateTransformOperation::create(tx, ty, tz, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueRotate: {
             double angle = firstValue.computeDegrees();
-            operations.operations().append(RotateTransformOperation::create(0, 0, 1, angle, transformOperationType(transformValue.name())));
+            operations.append(RotateTransformOperation::create(0, 0, 1, angle, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueRotateX:
@@ -248,7 +251,7 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                 y = 1;
             else
                 z = 1;
-            operations.operations().append(RotateTransformOperation::create(x, y, z, angle, transformOperationType(transformValue.name())));
+            operations.append(RotateTransformOperation::create(x, y, z, angle, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueRotate3d: {
@@ -261,7 +264,7 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
             double y = secondValue.doubleValue();
             double z = thirdValue.doubleValue();
             double angle = fourthValue.computeDegrees();
-            operations.operations().append(RotateTransformOperation::create(x, y, z, angle, transformOperationType(transformValue.name())));
+            operations.append(RotateTransformOperation::create(x, y, z, angle, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueSkew:
@@ -281,7 +284,7 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                     }
                 }
             }
-            operations.operations().append(SkewTransformOperation::create(angleX, angleY, transformOperationType(transformValue.name())));
+            operations.append(SkewTransformOperation::create(angleX, angleY, transformOperationType(transformValue.name())));
             break;
         }
         case CSSValueMatrix: {
@@ -293,7 +296,7 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
             double d = downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(3)).doubleValue();
             double e = conversionData.zoom() * downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(4)).doubleValue();
             double f = conversionData.zoom() * downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(5)).doubleValue();
-            operations.operations().append(MatrixTransformOperation::create(a, b, c, d, e, f));
+            operations.append(MatrixTransformOperation::create(a, b, c, d, e, f));
             break;
         }
         case CSSValueMatrix3d: {
@@ -315,23 +318,25 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                 conversionData.zoom() * downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(13)).doubleValue(),
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(14)).doubleValue(),
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(15)).doubleValue());
-            operations.operations().append(Matrix3DTransformOperation::create(matrix));
+            operations.append(Matrix3DTransformOperation::create(matrix));
             break;
         }
         case CSSValuePerspective: {
-            Length p = Length(0, Fixed);
+            Length p = Length(0, LengthType::Fixed);
             if (firstValue.isLength())
                 p = convertToFloatLength(&firstValue, conversionData);
             else {
                 // This is a quirk that should go away when 3d transforms are finalized.
                 double val = firstValue.doubleValue();
-                p = val >= 0 ? Length(clampToPositiveInteger(val), Fixed) : Length(Undefined);
+                p = val >= 0 ? Length(clampToPositiveInteger(val), LengthType::Fixed) : Length(LengthType::Undefined);
             }
 
-            if (p.isUndefined())
+            if (p.isUndefined()) {
+                operations.clear();
                 return false;
+            }
 
-            operations.operations().append(PerspectiveTransformOperation::create(p));
+            operations.append(PerspectiveTransformOperation::create(p));
             break;
         }
         default:
@@ -340,8 +345,135 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
         }
     }
 
-    outOperations = operations;
     return true;
+}
+
+RefPtr<TranslateTransformOperation> translateForValue(const CSSValue& value, const CSSToLengthConversionData& conversionData)
+{
+    if (!is<CSSValueList>(value))
+        return nullptr;
+
+    auto& valueList = downcast<CSSValueList>(value);
+    if (!valueList.length())
+        return nullptr;
+
+    auto type = TransformOperation::TRANSLATE;
+    Length tx = Length(0, LengthType::Fixed);
+    Length ty = Length(0, LengthType::Fixed);
+    Length tz = Length(0, LengthType::Fixed);
+    for (unsigned i = 0; i < valueList.length(); ++i) {
+        auto* valueItem = valueList.itemWithoutBoundsCheck(i);
+        if (!is<CSSPrimitiveValue>(valueItem))
+            return nullptr;
+        if (!i)
+            tx = convertToFloatLength(downcast<CSSPrimitiveValue>(valueItem), conversionData);
+        else if (i == 1)
+            ty = convertToFloatLength(downcast<CSSPrimitiveValue>(valueItem), conversionData);
+        else if (i == 2) {
+            type = TransformOperation::TRANSLATE_3D;
+            tz = convertToFloatLength(downcast<CSSPrimitiveValue>(valueItem), conversionData);
+        }
+    }
+
+    return TranslateTransformOperation::create(tx, ty, tz, type);
+}
+
+RefPtr<ScaleTransformOperation> scaleForValue(const CSSValue& value)
+{
+    if (!is<CSSValueList>(value))
+        return nullptr;
+
+    auto& valueList = downcast<CSSValueList>(value);
+    if (!valueList.length())
+        return nullptr;
+
+    auto type = TransformOperation::SCALE;
+    double sx = 1.0;
+    double sy = 1.0;
+    double sz = 1.0;
+    for (unsigned i = 0; i < valueList.length(); ++i) {
+        auto* valueItem = valueList.itemWithoutBoundsCheck(i);
+        if (!is<CSSPrimitiveValue>(valueItem))
+            return nullptr;
+        if (!i) {
+            sx = downcast<CSSPrimitiveValue>(*valueItem).doubleValue();
+            sy = sx;
+        } else if (i == 1)
+            sy = downcast<CSSPrimitiveValue>(*valueItem).doubleValue();
+        else if (i == 2) {
+            type = TransformOperation::SCALE_3D;
+            sz = downcast<CSSPrimitiveValue>(*valueItem).doubleValue();
+        }
+    }
+
+    return ScaleTransformOperation::create(sx, sy, sz, type);
+}
+
+RefPtr<RotateTransformOperation> rotateForValue(const CSSValue& value)
+{
+    if (!is<CSSValueList>(value))
+        return nullptr;
+
+    auto& valueList = downcast<CSSValueList>(value);
+    auto numberOfItems = valueList.length();
+
+    // There are three scenarios here since the rotation axis is defined either as:
+    //     - no value: implicit 2d rotation
+    //     - 1 value: an axis identifier (x/y/z)
+    //     - 3 values: three numbers defining an x/y/z vector
+    // The angle is specified as the last value.
+    if (numberOfItems != 1 && numberOfItems != 2 && numberOfItems != 4)
+        return nullptr;
+
+    auto* lastValue = valueList.itemWithoutBoundsCheck(numberOfItems - 1);
+    if (!is<CSSPrimitiveValue>(lastValue))
+        return nullptr;
+    auto angle = downcast<CSSPrimitiveValue>(*lastValue).computeDegrees();
+
+    if (numberOfItems == 1)
+        return RotateTransformOperation::create(angle, TransformOperation::ROTATE);
+
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    auto type = TransformOperation::ROTATE;
+
+    if (numberOfItems == 2) {
+        // An axis identifier was specified.
+        auto* axisIdentifierItem = valueList.itemWithoutBoundsCheck(0);
+        if (!is<CSSPrimitiveValue>(axisIdentifierItem))
+            return nullptr;
+        auto axisIdentifier = downcast<CSSPrimitiveValue>(*axisIdentifierItem).valueID();
+        if (axisIdentifier == CSSValueX) {
+            type = TransformOperation::ROTATE_X;
+            x = 1.0;
+        } else if (axisIdentifier == CSSValueY) {
+            type = TransformOperation::ROTATE_Y;
+            y = 1.0;
+        } else if (axisIdentifier == CSSValueZ) {
+            type = TransformOperation::ROTATE_Z;
+            z = 1.0;
+        } else
+            return nullptr;
+    } else if (numberOfItems == 4) {
+        // The axis was specified using a vector.
+        type = TransformOperation::ROTATE;
+        for (unsigned i = 0; i < 3; ++i) {
+            auto* valueItem = valueList.itemWithoutBoundsCheck(i);
+            if (!is<CSSPrimitiveValue>(valueItem))
+                return nullptr;
+            if (!i)
+                x = downcast<CSSPrimitiveValue>(*valueItem).doubleValue();
+            else if (i == 1)
+                y = downcast<CSSPrimitiveValue>(*valueItem).doubleValue();
+            else if (i == 2) {
+                type = TransformOperation::ROTATE_3D;
+                z = downcast<CSSPrimitiveValue>(*valueItem).doubleValue();
+            }
+        }
+    }
+
+    return RotateTransformOperation::create(x, y, z, angle, type);
 }
 
 }

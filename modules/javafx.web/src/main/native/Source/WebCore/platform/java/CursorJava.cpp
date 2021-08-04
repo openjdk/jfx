@@ -73,12 +73,12 @@ Cursor::Cursor(Image* image, const IntPoint& hotspot)
                                             "(Lcom/sun/webkit/graphics/WCImageFrame;II)J");
     ASSERT(mid);
 
-    RefPtr<RQRef> cursorImageFrame = image->javaImage();
+    RefPtr<NativeImage> cursorImageFrame = image->javaImage();
     if (!cursorImageFrame) {
         return;
     }
 
-    m_platformCursor = env->CallLongMethod(jCursorManager, mid, (jobject)(*cursorImageFrame),
+    m_platformCursor = env->CallLongMethod(jCursorManager, mid, (jobject)(*cursorImageFrame->platformImage()->getImage()),
                                          hotspot.x(), hotspot.y());
     WTF::CheckAndClearException(env);
 }

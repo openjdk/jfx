@@ -45,7 +45,7 @@ import java.lang.ref.WeakReference;
  */
 public abstract class TablePositionBase<TC extends TableColumnBase> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -70,7 +70,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -81,7 +81,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

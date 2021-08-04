@@ -25,28 +25,23 @@
  */
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#windoweventhandlers
-[
-    NoInterfaceObject,
-] interface WindowEventHandlers {
-    // Commented out event handlers are defined by the HTML5 specification but
-    // are not yet implemented.
-
+interface mixin WindowEventHandlers {
     [WindowEventHandler] attribute EventHandler onafterprint;
     [WindowEventHandler] attribute EventHandler onbeforeprint;
+    // FIXME: The spec says that onbeforeunload should be of type OnBeforeUnloadEventHandler, not EventHandler.
     [WindowEventHandler] attribute EventHandler onbeforeunload;
     [WindowEventHandler] attribute EventHandler onhashchange;
     [WindowEventHandler] attribute EventHandler onlanguagechange;
     [WindowEventHandler] attribute EventHandler onmessage;
+    // FIXME: Implement 'onmessageerror'
+    // attribute EventHandler onmessageerror;
     [WindowEventHandler] attribute EventHandler onoffline;
     [WindowEventHandler] attribute EventHandler ononline;
     [WindowEventHandler] attribute EventHandler onpagehide;
     [WindowEventHandler] attribute EventHandler onpageshow;
     [WindowEventHandler] attribute EventHandler onpopstate;
+    [WindowEventHandler] attribute EventHandler onrejectionhandled;
     [WindowEventHandler] attribute EventHandler onstorage;
+    [WindowEventHandler] attribute EventHandler onunhandledrejection;
     [WindowEventHandler] attribute EventHandler onunload;
-
-
-    // Additions that are not yet part of the standard.
-
-    [NotEnumerable, WindowEventHandler, Conditional=ORIENTATION_EVENTS] attribute EventHandler onorientationchange;
 };

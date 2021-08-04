@@ -62,6 +62,7 @@ public class PermissionHelper {
     }
 
     public static void checkClipboardPermission() {
+        @SuppressWarnings("removal")
         final SecurityManager securityManager = System.getSecurityManager();
 
         // Always succeed if no security manager installed
@@ -84,6 +85,7 @@ public class PermissionHelper {
         }
     }
 
+    @SuppressWarnings("removal")
     public static void checkClipboardPermission(AccessControlContext context) {
         final SecurityManager securityManager = System.getSecurityManager();
 

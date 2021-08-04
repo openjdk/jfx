@@ -32,6 +32,7 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioParam.h"
+#include "AudioUtilities.h"
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -40,14 +41,10 @@ AudioNodeOutput::AudioNodeOutput(AudioNode* node, unsigned numberOfChannels)
     : m_node(node)
     , m_numberOfChannels(numberOfChannels)
     , m_desiredNumberOfChannels(numberOfChannels)
-    , m_isInPlace(false)
-    , m_isEnabled(true)
-    , m_renderingFanOutCount(0)
-    , m_renderingParamFanOutCount(0)
 {
     ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels());
 
-    m_internalBus = AudioBus::create(numberOfChannels, AudioNode::ProcessingSizeInFrames);
+    m_internalBus = AudioBus::create(numberOfChannels, AudioUtilities::renderQuantumSize);
 }
 
 void AudioNodeOutput::setNumberOfChannels(unsigned numberOfChannels)
@@ -71,7 +68,7 @@ void AudioNodeOutput::updateInternalBus()
     if (numberOfChannels() == m_internalBus->numberOfChannels())
         return;
 
-    m_internalBus = AudioBus::create(numberOfChannels(), AudioNode::ProcessingSizeInFrames);
+    m_internalBus = AudioBus::create(numberOfChannels(), AudioUtilities::renderQuantumSize);
 }
 
 void AudioNodeOutput::updateRenderingState()
@@ -98,7 +95,7 @@ void AudioNodeOutput::propagateChannelCount()
 
     if (isChannelCountKnown()) {
         // Announce to any nodes we're connected to that we changed our channel count for its input.
-        for (auto& input : m_inputs) {
+        for (auto& input : m_inputs.keys()) {
             AudioNode* connectionNode = input->node();
             connectionNode->checkNumberOfChannelsForInput(input);
         }
@@ -160,7 +157,7 @@ void AudioNodeOutput::addInput(AudioNodeInput* input)
     if (!input)
         return;
 
-    m_inputs.add(input);
+    m_inputs.add(input, input->node());
 }
 
 void AudioNodeOutput::removeInput(AudioNodeInput* input)
@@ -180,7 +177,7 @@ void AudioNodeOutput::disconnectAllInputs()
 
     // AudioNodeInput::disconnect() changes m_inputs by calling removeInput().
     while (!m_inputs.isEmpty()) {
-        AudioNodeInput* input = *m_inputs.begin();
+        AudioNodeInput* input = m_inputs.begin()->key;
         input->disconnect(this);
     }
 }
@@ -229,7 +226,7 @@ void AudioNodeOutput::disable()
     ASSERT(context().isGraphOwner());
 
     if (m_isEnabled) {
-        for (auto& input : m_inputs)
+        for (auto& input : m_inputs.keys())
             input->disable(this);
         m_isEnabled = false;
     }
@@ -240,7 +237,7 @@ void AudioNodeOutput::enable()
     ASSERT(context().isGraphOwner());
 
     if (!m_isEnabled) {
-        for (auto& input : m_inputs)
+        for (auto& input : m_inputs.keys())
             input->enable(this);
         m_isEnabled = true;
     }

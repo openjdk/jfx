@@ -87,6 +87,7 @@ public:
     void setEnabled(bool);
 
     bool muted() const;
+    bool mutedForBindings() const;
 
     enum class State { Live, Ended };
     State readyState() const;
@@ -138,7 +139,7 @@ public:
     RealtimeMediaSource& source() const { return m_private->source(); }
     MediaStreamTrackPrivate& privateTrack() { return m_private.get(); }
 
-    AudioSourceProvider* audioSourceProvider();
+    RefPtr<WebAudioSourceProvider> createAudioSourceProvider();
 
     MediaProducer::MediaStateFlags mediaState() const;
 
@@ -201,6 +202,7 @@ private:
     MediaTrackConstraints m_constraints;
     std::unique_ptr<DOMPromiseDeferred<void>> m_promise;
 
+    bool m_muted { false };
     bool m_ended { false };
     const bool m_isCaptureTrack { false };
 };

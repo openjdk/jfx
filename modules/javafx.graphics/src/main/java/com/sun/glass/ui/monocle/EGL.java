@@ -165,6 +165,7 @@ class EGL {
     }
 
     private static void checkPermissions() {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPermission(permission);

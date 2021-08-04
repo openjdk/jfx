@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.control.CustomMenuItem;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
@@ -262,18 +261,12 @@ public class CustomMenuItemTest {
     @Test public void getUnspecifiedContentProperty1() {
         CustomMenuItem cmi2 = new CustomMenuItem();
         assertNotNull(cmi2.contentProperty());
+        assertNull(cmi2.getContent());
     }
 
     @Test public void getUnspecifiedContentProperty2() {
         CustomMenuItem cmi2 = new CustomMenuItem(null, true);
         assertNotNull(cmi2.contentProperty());
-    }
-
-    @Ignore("I'm not sure what this test was supposed to test, so ignoring for now.")
-    @Test public void unsetContentButNotNull() {
-        CustomMenuItem cmi2 = new CustomMenuItem();
-        cmi2.contentProperty(); // <-- this line is a no-op, what is it for?
-        assertNotNull(cmi2.getContent());
     }
 
     @Test public void contentCanBeBound() {

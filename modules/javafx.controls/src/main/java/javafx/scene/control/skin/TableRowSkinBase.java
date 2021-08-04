@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,7 +69,7 @@ public abstract class TableRowSkinBase<T,
                                        C extends IndexedCell/*<T>*/,
                                        R extends IndexedCell> extends CellSkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -105,7 +105,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -138,7 +138,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -182,7 +182,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -198,7 +198,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -234,7 +234,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Methods                                                          *
      *                                                                         *
@@ -542,18 +542,18 @@ public abstract class TableRowSkinBase<T,
 
         // update children of each row
         if (fixedCellSizeEnabled) {
-            // we leave the adding / removing up to the layoutChildren method mostly,
-            // but here we remove any children cells that refer to columns that are
-            // not visible
+            // we leave the adding / removing up to the layoutChildren method mostly, but here we remove any children
+            // cells that refer to columns that are removed or not visible.
             List<Node> toRemove = new ArrayList<>();
             for (Node cell : getChildren()) {
-                if (! (cell instanceof IndexedCell)) continue;
-                if (!getTableColumn((R)cell).isVisible()) {
+                if (!(cell instanceof IndexedCell)) continue;
+                TableColumnBase<T, ?> tableColumn = getTableColumn((R) cell);
+                if (!getVisibleLeafColumns().contains(tableColumn)) {
                     toRemove.add(cell);
                 }
             }
             getChildren().removeAll(toRemove);
-        } else if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
+        } else if (resetChildren || cellsEmpty) {
             getChildren().setAll(cells);
         }
     }
@@ -657,7 +657,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *

@@ -57,6 +57,10 @@ public:
 
     // Subclasses must override process() to do the processing and reset() to reset DSP state.
     virtual void process(const float* source, float* destination, size_t framesToProcess) = 0;
+
+    // Subclasses that have AudioParams must override this to process the AudioParams.
+    virtual void processOnlyAudioParams(size_t) { }
+
     virtual void reset() = 0;
 
     float sampleRate() const { return m_sampleRate; }
@@ -67,6 +71,7 @@ public:
 
     virtual double tailTime() const = 0;
     virtual double latencyTime() const = 0;
+    virtual bool requiresTailProcessing() const = 0;
 
 protected:
     AudioDSPKernelProcessor* m_kernelProcessor;

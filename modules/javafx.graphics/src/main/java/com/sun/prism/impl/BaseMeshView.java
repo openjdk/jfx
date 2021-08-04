@@ -36,4 +36,9 @@ public abstract class BaseMeshView extends BaseGraphicsResource implements MeshV
         super(disposerRecord);
     }
 
+    @Override
+    public boolean isValid() {
+        return true;
+    }
+
 }

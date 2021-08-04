@@ -1,7 +1,7 @@
 /*
  * THIS FILE WAS AUTOMATICALLY GENERATED, DO NOT EDIT.
  *
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,81 +37,82 @@ class Page;
 class Settings : public SettingsBase, public RefCounted<Settings> {
     WTF_MAKE_NONCOPYABLE(Settings); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<Settings> create(Page*);
-    ~Settings();
+    WEBCORE_EXPORT static Ref<Settings> create(Page*);
+    WEBCORE_EXPORT virtual ~Settings();
 
-<%- for @setting in @unconditionalSetting do -%>
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.settingsNeedingImplementation do -%>
     <%- if @setting.hasComplexGetter? -%>
     WEBCORE_EXPORT <%= @setting.parameterType %> <%= @setting.getterFunctionName %>() const;
     <%- else -%>
-    <%= @setting.parameterType %> <%= @setting.getterFunctionName %>() const { return m_<%= @setting.name %>; } 
+    <%= @setting.parameterType %> <%= @setting.getterFunctionName %>() const { return m_values.<%= @setting.name %>; }
     <%- end -%>
     <%- if @setting.hasComplexSetter? -%>
     WEBCORE_EXPORT void <%= @setting.setterFunctionName %>(<%= @setting.parameterType %>);
     <%- else -%>
-    void <%= @setting.setterFunctionName %>(<%= @setting.parameterType %> <%= @setting.name %>) { m_<%= @setting.name %> = <%= @setting.name %>; }
+    void <%= @setting.setterFunctionName %>(<%= @setting.parameterType %> <%= @setting.name %>) { m_values.<%= @setting.name %> = <%= @setting.name %>; }
     <%- end -%>
 <%- end -%>
-
-<%- for @conditional in @conditionals do -%>
-#if ENABLE(<%= @conditional.condition %>)
-<%- for @setting in @conditional.settings do -%>
-    <%- if @setting.hasComplexGetter? -%>
-    WEBCORE_EXPORT <%= @setting.parameterType %> <%= @setting.getterFunctionName %>() const;
-    <%- else -%>
-    <%= @setting.parameterType %> <%= @setting.getterFunctionName %>() const { return m_<%= @setting.name %>; } 
-    <%- end -%>
-    <%- if @setting.hasComplexSetter? -%>
-    WEBCORE_EXPORT void <%= @setting.setterFunctionName %>(<%= @setting.parameterType %>);
-    <%- else -%>
-    void <%= @setting.setterFunctionName %>(<%= @setting.parameterType %> <%= @setting.name %>) { m_<%= @setting.name %> = <%= @setting.name %>; }
-    <%- end -%>
-<%- end -%>
+<%- if @condition.condition -%>
 #endif
-
 <%- end -%>
-<%- for @setting in @inspectorOverrideSettings do -%>
+<%- end -%>
+
+<%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
     <%- if @setting.hasComplexSetter? -%>
     WEBCORE_EXPORT void <%= @setting.setterFunctionName %>InspectorOverride(Optional<<%= @setting.parameterType %>>);
     <%- else -%>
-    void <%= @setting.setterFunctionName %>InspectorOverride(Optional<<%= @setting.parameterType %>> <%= @setting.name %>InspectorOverride) { m_<%= @setting.name %>InspectorOverride = <%= @setting.name %>InspectorOverride; }
+    void <%= @setting.setterFunctionName %>InspectorOverride(Optional<<%= @setting.parameterType %>> <%= @setting.name %>InspectorOverride) { m_values.<%= @setting.name %>InspectorOverride = <%= @setting.name %>InspectorOverride; }
     <%- end -%>
 <%- end -%>
+    FontGenericFamilies& fontGenericFamilies() final { return m_values.fontGenericFamilies; }
+    const FontGenericFamilies& fontGenericFamilies() const final { return m_values.fontGenericFamilies; }
+
+    struct Values {
+        void initialize();
+        Values isolatedCopy() const;
+
+<%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
+        Optional<<%= @setting.type %>> <%= @setting.name %>InspectorOverride;
+<%- end -%>
+
+        FontGenericFamilies fontGenericFamilies;
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.nonBoolSettingsNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.nonBoolSettingsNeedingImplementation -%>
+        <%= @setting.type %> <%= @setting.name %>;
+<%- end -%>
+<%- if @condition.condition -%>
+#endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
+<%- for @condition in @allSettingsSet.conditions do -%>
+    <%- if @condition.settingsNeedingImplementation.length != 0 -%>
+        <%- if @condition.condition -%>
+#if <%= @condition.condition %>
+        <%- end -%>
+        <%- for @setting in @condition.boolSettingsNeedingImplementation -%>
+        <%= @setting.type %> <%= @setting.name %> : 1;
+        <%- end -%>
+        <%- if @condition.condition -%>
+#endif
+        <%- end -%>
+    <%- end -%>
+<%- end -%>
+    };
+    const Values& values() const { return m_values; }
 
 private:
-    explicit Settings(Page*);
+    WEBCORE_EXPORT explicit Settings(Page*);
 
-<%- for @setting in @inspectorOverrideSettings do -%>
-    Optional<<%= @setting.type %>> m_<%= @setting.name %>InspectorOverride;
-<%- end -%>
-
-<%- for @setting in @unconditionalNonBoolSetting do -%>
-    <%= @setting.type %> m_<%= @setting.name %>;
-<%- end -%>
-
-<%- for @conditional in @conditionals do -%>
-<%- if @conditional.nonBoolSettings.length != 0 -%>
-#if ENABLE(<%= @conditional.condition %>)
-<%- for @setting in @conditional.nonBoolSettings -%>
-    <%= @setting.type %> m_<%= @setting.name %>;
-<%- end -%>
-#endif
-<%- end -%>
-<%- end -%>
-
-<%- for @setting in @unconditionalBoolSetting do -%>
-    <%= @setting.type %> m_<%= @setting.name %> : 1;
-<%- end -%>
-
-<%- for @conditional in @conditionals do -%>
-<%- if @conditional.boolSettings.length != 0 -%>
-#if ENABLE(<%= @conditional.condition %>)
-<%- for @setting in @conditional.boolSettings -%>
-    <%= @setting.type %> m_<%= @setting.name %> : 1;
-<%- end -%>
-#endif
-<%- end -%>
-<%- end -%>
+    Values m_values;
 };
 
 }

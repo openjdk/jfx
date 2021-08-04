@@ -24,7 +24,8 @@
  */
 
 [
-    DoNotCheckConstants
+    DoNotCheckConstants,
+    Exposed=Window
 ] interface SVGFECompositeElement : SVGElement {
     // Composite Operators
     const unsigned short SVG_FECOMPOSITE_OPERATOR_UNKNOWN    = 0;
@@ -44,4 +45,4 @@
     readonly attribute SVGAnimatedNumber      k4;
 };
 
-SVGFECompositeElement implements SVGFilterPrimitiveStandardAttributes;
+SVGFECompositeElement includes SVGFilterPrimitiveStandardAttributes;

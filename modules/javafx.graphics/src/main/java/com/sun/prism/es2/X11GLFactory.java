@@ -166,8 +166,8 @@ class X11GLFactory extends GLFactory {
 
     @Override
     void updateDeviceDetails(HashMap deviceDetails) {
-        deviceDetails.put("XVisualID", new Long(nGetVisualID(nativeCtxInfo)));
-        deviceDetails.put("XDisplay", new Long(nGetDisplay(nativeCtxInfo)));
-        deviceDetails.put("XScreenID", new Integer(nGetDefaultScreen(nativeCtxInfo)));
+        deviceDetails.put("XVisualID", Long.valueOf(nGetVisualID(nativeCtxInfo)));
+        deviceDetails.put("XDisplay", Long.valueOf(nGetDisplay(nativeCtxInfo)));
+        deviceDetails.put("XScreenID", Integer.valueOf(nGetDefaultScreen(nativeCtxInfo)));
     }
 }

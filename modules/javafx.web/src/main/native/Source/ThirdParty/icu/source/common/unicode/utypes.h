@@ -385,17 +385,31 @@ typedef double UDate;
 /*===========================================================================*/
 
 /**
- * Error code to replace exception handling, so that the code is compatible with all C++ compilers,
- * and to use the same mechanism for C and C++.
+ * Standard ICU4C error code type, a substitute for exceptions.
  *
- * \par
- * ICU functions that take a reference (C++) or a pointer (C) to a UErrorCode
- * first test if(U_FAILURE(errorCode)) { return immediately; }
+ * Initialize the UErrorCode with U_ZERO_ERROR, and check for success or
+ * failure using U_SUCCESS() or U_FAILURE():
+ *
+ *     UErrorCode errorCode = U_ZERO_ERROR;
+ *     // call ICU API that needs an error code parameter.
+ *     if (U_FAILURE(errorCode)) {
+ *         // An error occurred. Handle it here.
+ *     }
+ *
+ * C++ code should use icu::ErrorCode, available in unicode/errorcode.h, or a
+ * suitable subclass.
+ *
+ * For more information, see:
+ * http://icu-project.org/userguide/conventions
+ *
+ * Note: By convention, ICU functions that take a reference (C++) or a pointer
+ * (C) to a UErrorCode first test:
+ *
+ *     if (U_FAILURE(errorCode)) { return immediately; }
+ *
  * so that in a chain of such functions the first one that sets an error code
  * causes the following ones to not perform any operations.
  *
- * \par
- * Error codes should be tested using U_FAILURE() and U_SUCCESS().
  * @stable ICU 2.0
  */
 typedef enum UErrorCode {
@@ -465,13 +479,23 @@ typedef enum UErrorCode {
     U_COLLATOR_VERSION_MISMATCH = 28,   /**< Collator version is not compatible with the base version */
     U_USELESS_COLLATOR_ERROR  = 29,     /**< Collator is options only and no base is specified */
     U_NO_WRITE_PERMISSION     = 30,     /**< Attempt to modify read-only or constant data. */
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * The input is impractically long for an operation.
+     * It is rejected because it may lead to problems such as excessive
+     * processing time, stack depth, or heap memory requirements.
+     *
+     * @draft ICU 68
+     */
+    U_INPUT_TOO_LONG_ERROR = 31,
+#endif  // U_HIDE_DRAFT_API
 
 #ifndef U_HIDE_DEPRECATED_API
     /**
      * One more than the highest standard error code.
      * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.
      */
-    U_STANDARD_ERROR_LIMIT,
+    U_STANDARD_ERROR_LIMIT = 32,
 #endif  // U_HIDE_DEPRECATED_API
 
     /*
@@ -701,7 +725,7 @@ typedef enum UErrorCode {
  * in the UErrorCode enum above.
  * @stable ICU 2.0
  */
-U_STABLE const char * U_EXPORT2
+U_CAPI const char * U_EXPORT2
 u_errorName(UErrorCode code);
 
 

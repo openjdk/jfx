@@ -228,12 +228,14 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         private static final ExecutorService BG_LOADING_EXECUTOR =
                 createExecutor();
 
+        @SuppressWarnings("removal")
         private final AccessControlContext acc;
 
         double width, height;
         boolean preserveRatio;
         boolean smooth;
 
+        @SuppressWarnings("removal")
         public AsyncImageLoader(
                 AsyncOperationListener<PrismImageLoader2> listener,
                 String url,
@@ -252,6 +254,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
             return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
         }
 
+        @SuppressWarnings("removal")
         @Override
         public PrismImageLoader2 call() throws IOException {
             try {
@@ -274,6 +277,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         }
 
         private static ExecutorService createExecutor() {
+            @SuppressWarnings("removal")
             final ThreadGroup bgLoadingThreadGroup =
                     AccessController.doPrivileged(
                             (PrivilegedAction<ThreadGroup>) () -> new ThreadGroup(
@@ -282,6 +286,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
                                 "Background image loading thread pool")
                     );
 
+            @SuppressWarnings("removal")
             final ThreadFactory bgLoadingThreadFactory =
                     runnable -> AccessController.doPrivileged(
                             (PrivilegedAction<Thread>) () -> {

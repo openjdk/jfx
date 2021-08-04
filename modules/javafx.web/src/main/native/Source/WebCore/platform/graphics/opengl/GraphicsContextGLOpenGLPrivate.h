@@ -19,6 +19,8 @@
 
 #pragma once
 
+#if PLATFORM(WIN) && USE(CA)
+
 #include "GLContext.h"
 #include "GraphicsContextGLOpenGL.h"
 
@@ -29,7 +31,7 @@ class BitmapTextureGL;
 class GraphicsContextGLOpenGLPrivate {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    GraphicsContextGLOpenGLPrivate(GraphicsContextGLOpenGL*, GraphicsContextGLOpenGL::Destination);
+    GraphicsContextGLOpenGLPrivate(GraphicsContextGLOpenGL*);
     ~GraphicsContextGLOpenGLPrivate();
     bool makeContextCurrent();
     PlatformGraphicsContextGL platformContext();
@@ -39,3 +41,5 @@ private:
 };
 
 }
+
+#endif

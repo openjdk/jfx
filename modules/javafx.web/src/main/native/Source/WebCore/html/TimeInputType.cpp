@@ -32,10 +32,13 @@
 #if ENABLE(INPUT_TYPE_TIME)
 #include "TimeInputType.h"
 
+#include "DateComponents.h"
+#include "DateTimeFieldsState.h"
 #include "Decimal.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
+#include "PlatformLocale.h"
 #include "StepRange.h"
 #include <wtf/DateMath.h>
 #include <wtf/MathExtras.h>
@@ -50,7 +53,7 @@ static const int timeStepScaleFactor = 1000;
 static const StepRange::StepDescription timeStepDescription { timeDefaultStep, timeDefaultStepBase, timeStepScaleFactor, StepRange::ScaledStepValueShouldBeInteger };
 
 TimeInputType::TimeInputType(HTMLInputElement& element)
-    : BaseChooserOnlyDateAndTimeInputType(element)
+    : BaseDateAndTimeInputType(Type::Time, element)
 {
 }
 
@@ -59,9 +62,9 @@ const AtomString& TimeInputType::formControlType() const
     return InputTypeNames::time();
 }
 
-DateComponents::Type TimeInputType::dateType() const
+DateComponentsType TimeInputType::dateType() const
 {
-    return DateComponents::Time;
+    return DateComponentsType::Time;
 }
 
 Decimal TimeInputType::defaultValueForStepUp() const
@@ -99,9 +102,42 @@ Optional<DateComponents> TimeInputType::setMillisecondToDateComponents(double va
     return DateComponents::fromMillisecondsSinceMidnight(value);
 }
 
-bool TimeInputType::isTimeField() const
+void TimeInputType::handleDOMActivateEvent(Event&)
 {
-    return true;
+}
+
+bool TimeInputType::isValidFormat(OptionSet<DateTimeFormatValidationResults> results) const
+{
+    return results.containsAll({ DateTimeFormatValidationResults::HasHour, DateTimeFormatValidationResults::HasMinute, DateTimeFormatValidationResults::HasMeridiem });
+}
+
+String TimeInputType::formatDateTimeFieldsState(const DateTimeFieldsState& state) const
+{
+    if (!state.hour || !state.minute || !state.meridiem)
+        return emptyString();
+
+    auto hourMinuteString = makeString(pad('0', 2, *state.hour23()), ':', pad('0', 2, *state.minute));
+
+    if (state.millisecond)
+        return makeString(hourMinuteString, ':', pad('0', 2, state.second ? *state.second : 0), '.', pad('0', 3, *state.millisecond));
+
+    if (state.second)
+        return makeString(hourMinuteString, ':', pad('0', 2, *state.second));
+
+    return hourMinuteString;
+}
+
+void TimeInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents& date) const
+{
+    layoutParameters.shouldHaveMillisecondField = shouldHaveMillisecondField(date);
+
+    if (layoutParameters.shouldHaveMillisecondField || shouldHaveSecondField(date)) {
+        layoutParameters.dateTimeFormat = layoutParameters.locale.timeFormat();
+        layoutParameters.fallbackDateTimeFormat = "HH:mm:ss"_s;
+    } else {
+        layoutParameters.dateTimeFormat = layoutParameters.locale.shortTimeFormat();
+        layoutParameters.fallbackDateTimeFormat = "HH:mm"_s;
+    }
 }
 
 } // namespace WebCore

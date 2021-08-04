@@ -29,7 +29,6 @@
 #include "DecodeEscapeSequences.h"
 #include "HTTPParsers.h"
 #include "ParsedContentType.h"
-#include "SharedBuffer.h"
 #include "TextEncoding.h"
 #include <wtf/MainThread.h>
 #include <wtf/Optional.h>
@@ -38,8 +37,29 @@
 #include <wtf/WorkQueue.h>
 #include <wtf/text/Base64.h>
 
+#if PLATFORM(COCOA)
+#include "VersionChecks.h"
+#endif
+
 namespace WebCore {
 namespace DataURLDecoder {
+
+static bool shouldRemoveFragmentIdentifier(const String& mediaType)
+{
+#if PLATFORM(COCOA)
+    if (!linkedOnOrAfter(SDKVersion::FirstWithDataURLFragmentRemoval))
+        return false;
+
+    // HLS uses # in the middle of the manifests.
+    return !equalLettersIgnoringASCIICase(mediaType, "video/mpegurl")
+        && !equalLettersIgnoringASCIICase(mediaType, "audio/mpegurl")
+        && !equalLettersIgnoringASCIICase(mediaType, "application/x-mpegurl")
+        && !equalLettersIgnoringASCIICase(mediaType, "vnd.apple.mpegurl");
+#else
+    UNUSED_PARAM(mediaType);
+    return true;
+#endif
+}
 
 static WorkQueue& decodeQueue()
 {
@@ -50,15 +70,15 @@ static WorkQueue& decodeQueue()
 static Result parseMediaType(const String& mediaType)
 {
     if (Optional<ParsedContentType> parsedContentType = ParsedContentType::create(mediaType))
-        return { parsedContentType->mimeType(), parsedContentType->charset(), parsedContentType->serialize(), nullptr };
-    return { "text/plain"_s, "US-ASCII"_s, "text/plain;charset=US-ASCII"_s, nullptr };
+        return { parsedContentType->mimeType(), parsedContentType->charset(), parsedContentType->serialize(), { } };
+    return { "text/plain"_s, "US-ASCII"_s, "text/plain;charset=US-ASCII"_s, { } };
 }
 
 struct DecodeTask {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    DecodeTask(const String& urlString, const ScheduleContext& scheduleContext, DecodeCompletionHandler&& completionHandler)
-        : urlString(urlString.isolatedCopy())
+    DecodeTask(const URL& url, const ScheduleContext& scheduleContext, DecodeCompletionHandler&& completionHandler)
+        : url(url.isolatedCopy())
         , scheduleContext(scheduleContext)
         , completionHandler(WTFMove(completionHandler))
     {
@@ -66,33 +86,55 @@ public:
 
     bool process()
     {
-        if (urlString.find(',') == notFound)
-            return false;
+        // Syntax:
+        //  url := data:<header>,<encodedData>
+        //  header := [<mediatype>][;base64]
+        //  mediatype := [<mimetype>][;charset=<charsettype>]
+
         const char dataString[] = "data:";
-        const char base64String[] = ";base64";
+        ASSERT(url.string().startsWith(dataString));
 
-        ASSERT(urlString.startsWith(dataString));
-
-        size_t headerEnd = urlString.find(',', strlen(dataString));
+        size_t headerStart = strlen(dataString);
+        size_t headerEnd = url.string().find(',', headerStart);
+        if (headerEnd == notFound)
+            return false;
+        if (size_t fragmentInHeader = url.string().reverseFind('#', headerEnd); fragmentInHeader != notFound)
+            return false;
         size_t encodedDataStart = headerEnd == notFound ? headerEnd : headerEnd + 1;
 
-        encodedData = StringView(urlString).substring(encodedDataStart);
-        auto header = StringView(urlString).substring(strlen(dataString), headerEnd - strlen(dataString));
-        isBase64 = header.endsWithIgnoringASCIICase(StringView(base64String));
-        auto mediaType = (isBase64 ? header.substring(0, header.length() - strlen(base64String)) : header).toString();
-        mediaType = mediaType.stripWhiteSpace();
+        auto header = StringView(url.string()).substring(headerStart, headerEnd - headerStart);
+
+        // There might one or two semicolons in the header, find the last one.
+        size_t mediaTypeEnd = header.reverseFind(';');
+        mediaTypeEnd = mediaTypeEnd == notFound ? header.length() : mediaTypeEnd;
+
+        // formatTypeStart might be at the begining of "base64" or "charset=...".
+        size_t formatTypeStart = mediaTypeEnd + 1;
+        auto formatType = header.substring(formatTypeStart, header.length() - formatTypeStart);
+        formatType = stripLeadingAndTrailingHTTPSpaces(formatType);
+
+        isBase64 = equalLettersIgnoringASCIICase(formatType, "base64");
+
+        // If header does not end with "base64", mediaType should be the whole header.
+        auto mediaType = (isBase64 ? header.substring(0, mediaTypeEnd) : header).toString();
+        mediaType = stripLeadingAndTrailingHTTPSpaces(mediaType);
         if (mediaType.startsWith(';'))
             mediaType.insert("text/plain", 0);
-        result = parseMediaType(mediaType);
 
+        if (shouldRemoveFragmentIdentifier(mediaType))
+            url.removeFragmentIdentifier();
+
+        encodedData = StringView(url.string()).substring(encodedDataStart);
+
+        result = parseMediaType(mediaType);
         return true;
     }
 
-    const String urlString;
+    URL url;
     StringView encodedData;
     bool isBase64 { false };
     const ScheduleContext scheduleContext;
-    const DecodeCompletionHandler completionHandler;
+    DecodeCompletionHandler completionHandler;
 
     Result result;
 };
@@ -100,30 +142,32 @@ public:
 static std::unique_ptr<DecodeTask> createDecodeTask(const URL& url, const ScheduleContext& scheduleContext, DecodeCompletionHandler&& completionHandler)
 {
     return makeUnique<DecodeTask>(
-        url.string(),
+        url,
         scheduleContext,
         WTFMove(completionHandler)
     );
 }
 
-static void decodeBase64(DecodeTask& task, Mode mode)
+static bool decodeBase64(DecodeTask& task, Mode mode)
 {
     Vector<char> buffer;
     if (mode == Mode::ForgivingBase64) {
         auto unescapedString = decodeURLEscapeSequences(task.encodedData.toStringWithoutCopying());
         if (!base64Decode(unescapedString, buffer, Base64ValidatePadding | Base64IgnoreSpacesAndNewLines | Base64DiscardVerticalTab))
-            return;
+            return false;
     } else {
         // First try base64url.
         if (!base64URLDecode(task.encodedData.toStringWithoutCopying(), buffer)) {
             // Didn't work, try unescaping and decoding as base64.
             auto unescapedString = decodeURLEscapeSequences(task.encodedData.toStringWithoutCopying());
             if (!base64Decode(unescapedString, buffer, Base64IgnoreSpacesAndNewLines | Base64DiscardVerticalTab))
-                return;
+                return false;
         }
     }
     buffer.shrinkToFit();
-    task.result.data = SharedBuffer::create(WTFMove(buffer));
+    task.result.data = WTFMove(buffer);
+
+    return true;
 }
 
 static void decodeEscaped(DecodeTask& task)
@@ -133,7 +177,21 @@ static void decodeEscaped(DecodeTask& task)
     auto buffer = decodeURLEscapeSequencesAsData(task.encodedData, encoding);
 
     buffer.shrinkToFit();
-    task.result.data = SharedBuffer::create(WTFMove(buffer));
+    task.result.data = WTFMove(buffer);
+}
+
+static Optional<Result> decodeSynchronously(DecodeTask& task, Mode mode)
+{
+    if (!task.process())
+        return WTF::nullopt;
+
+    if (task.isBase64) {
+        if (!decodeBase64(task, mode))
+            return WTF::nullopt;
+    } else
+        decodeEscaped(task);
+
+    return WTFMove(task.result);
 }
 
 void decode(const URL& url, const ScheduleContext& scheduleContext, Mode mode, DecodeCompletionHandler&& completionHandler)
@@ -141,23 +199,14 @@ void decode(const URL& url, const ScheduleContext& scheduleContext, Mode mode, D
     ASSERT(url.protocolIsData());
 
     decodeQueue().dispatch([decodeTask = createDecodeTask(url, scheduleContext, WTFMove(completionHandler)), mode]() mutable {
-        if (decodeTask->process()) {
-            if (decodeTask->isBase64)
-                decodeBase64(*decodeTask, mode);
-            else
-                decodeEscaped(*decodeTask);
-        }
+        auto result = decodeSynchronously(*decodeTask, mode);
 
 #if USE(COCOA_EVENT_LOOP) && !PLATFORM(JAVA)
         auto scheduledPairs = decodeTask->scheduleContext.scheduledPairs;
 #endif
 
-        auto callCompletionHandler = [decodeTask = WTFMove(decodeTask)] {
-            if (!decodeTask->result.data) {
-                decodeTask->completionHandler({ });
-                return;
-            }
-            decodeTask->completionHandler(WTFMove(decodeTask->result));
+        auto callCompletionHandler = [result = WTFMove(result), completionHandler = WTFMove(decodeTask->completionHandler)]() mutable {
+            completionHandler(WTFMove(result));
         };
 
 #if USE(COCOA_EVENT_LOOP) && !PLATFORM(JAVA)
@@ -168,5 +217,13 @@ void decode(const URL& url, const ScheduleContext& scheduleContext, Mode mode, D
     });
 }
 
+Optional<Result> decode(const URL& url, Mode mode)
+{
+    ASSERT(url.protocolIsData());
+
+    auto task = createDecodeTask(url, { }, nullptr);
+    return decodeSynchronously(*task, mode);
 }
-}
+
+} // namespace DataURLDecoder
+} // namespace WebCore

@@ -25,8 +25,10 @@
 
 [
     Conditional=TOUCH_EVENTS,
-    Constructor(DOMString type, optional TouchEventInit eventInitDict),
+    Exposed=Window
 ] interface TouchEvent : UIEvent {
+    constructor(DOMString type, optional TouchEventInit eventInitDict);
+
     readonly attribute TouchList touches;
     readonly attribute TouchList targetTouches;
     readonly attribute TouchList changedTouches;
@@ -35,11 +37,10 @@
     readonly attribute boolean altKey;
     readonly attribute boolean metaKey;
 
-    // FIXME: Using "undefined" as default parameter value is wrong.
-    void initTouchEvent(optional TouchList? touches = null,
+    undefined initTouchEvent(optional TouchList? touches = null,
                         optional TouchList? targetTouches = null,
                         optional TouchList? changedTouches = null,
-                        optional DOMString type = "undefined",
+                        optional DOMString type,
                         optional WindowProxy? view = null,
                         optional long screenX = 0,
                         optional long screenY = 0,

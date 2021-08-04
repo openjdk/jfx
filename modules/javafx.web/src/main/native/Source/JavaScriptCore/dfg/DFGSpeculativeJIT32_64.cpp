@@ -781,8 +781,8 @@ void SpeculativeJIT::emitCall(Node* node)
         isEmulatedTail ? *staticInlineCallFrame->getCallerSkippingTailCalls() : staticOrigin;
     CallSiteIndex callSite = m_jit.recordCallSiteAndGenerateExceptionHandlingOSRExitIfNeeded(dynamicOrigin, m_stream->size());
 
-    CallLinkInfo* info = m_jit.codeBlock()->addCallLinkInfo();
-    info->setUpCall(callType, node->origin.semantic, calleePayloadGPR);
+    CallLinkInfo* info = m_jit.codeBlock()->addCallLinkInfo(node->origin.semantic);
+    info->setUpCall(callType, calleePayloadGPR);
 
     auto setResultAndResetStack = [&] () {
         JSValueRegsFlushedCallResult result(this);
@@ -824,7 +824,7 @@ void SpeculativeJIT::emitCall(Node* node)
         m_jit.addPtr(TrustedImm32(requiredBytes), JITCompiler::stackPointerRegister);
         m_jit.load32(JITCompiler::calleeFrameSlot(CallFrameSlot::callee).withOffset(PayloadOffset), GPRInfo::regT0);
         m_jit.load32(JITCompiler::calleeFrameSlot(CallFrameSlot::callee).withOffset(TagOffset), GPRInfo::regT1);
-        m_jit.emitDumbVirtualCall(vm(), globalObject, info);
+        m_jit.emitVirtualCall(vm(), globalObject, info);
 
         done.link(&m_jit);
         setResultAndResetStack();
@@ -1924,12 +1924,6 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case ZombieHint: {
-        recordSetLocal(m_currentNode->unlinkedOperand(), VirtualRegister(), DataFormatDead);
-        noResult(node);
-        break;
-    }
-
     case ExitOK: {
         noResult(node);
         break;
@@ -2231,8 +2225,8 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case CheckNeutered: {
-        compileCheckNeutered(node);
+    case CheckDetached: {
+        compileCheckDetached(node);
         break;
     }
 
@@ -2244,6 +2238,12 @@ void SpeculativeJIT::compile(Node* node)
     case Arrayify:
     case ArrayifyToStructure: {
         arrayify(node);
+        break;
+    }
+
+    case GetPrivateName:
+    case GetPrivateNameById: {
+        compileGetPrivateName(node);
         break;
     }
 
@@ -2366,7 +2366,7 @@ void SpeculativeJIT::compile(Node* node)
 
                 GPRTemporary resultPayload(this);
                 if (node->arrayMode().type() == Array::Int32) {
-                    ASSERT(!node->arrayMode().isSaneChain());
+                    ASSERT(!node->arrayMode().isInBoundsSaneChain());
 
                     speculationCheck(
                         OutOfBounds, JSValueRegs(), 0,
@@ -2392,7 +2392,7 @@ void SpeculativeJIT::compile(Node* node)
                     MacroAssembler::BaseIndex(
                         storageReg, propertyReg, MacroAssembler::TimesEight, PayloadOffset),
                     resultPayload.gpr());
-                if (node->arrayMode().isSaneChain()) {
+                if (node->arrayMode().isInBoundsSaneChain()) {
                     JITCompiler::Jump notHole = m_jit.branchIfNotEmpty(resultTag.gpr());
                     m_jit.move(TrustedImm32(JSValue::UndefinedTag), resultTag.gpr());
                     m_jit.move(TrustedImm32(0), resultPayload.gpr());
@@ -2453,7 +2453,7 @@ void SpeculativeJIT::compile(Node* node)
 
                 FPRTemporary result(this);
                 m_jit.loadDouble(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), result.fpr());
-                if (!node->arrayMode().isSaneChain())
+                if (!node->arrayMode().isInBoundsSaneChain())
                     speculationCheck(LoadFromHole, JSValueRegs(), 0, m_jit.branchIfNaN(result.fpr()));
                 doubleResult(result.fpr(), node);
                 break;
@@ -2593,6 +2593,26 @@ void SpeculativeJIT::compile(Node* node)
 
     case GetByValWithThis: {
         compileGetByValWithThis(node);
+        break;
+    }
+
+    case PutPrivateName: {
+        compilePutPrivateName(node);
+        break;
+    }
+
+    case PutPrivateNameById: {
+        compilePutPrivateNameById(node);
+        break;
+    }
+
+    case CheckPrivateBrand: {
+        compileCheckPrivateBrand(node);
+        break;
+    }
+
+    case SetPrivateBrand: {
+        compileSetPrivateBrand(node);
         break;
     }
 
@@ -3232,8 +3252,9 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case ObjectKeys: {
-        compileObjectKeys(node);
+    case ObjectKeys:
+    case ObjectGetOwnPropertyNames: {
+        compileObjectKeysOrObjectGetOwnPropertyNames(node);
         break;
     }
 
@@ -3664,6 +3685,16 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case TypeOfIsObject: {
+        compileTypeOfIsObject(node);
+        break;
+    }
+
+    case TypeOfIsFunction: {
+        compileIsCallable(node, operationTypeOfIsFunction);
+        break;
+    }
+
     case IsUndefinedOrNull: {
         JSValueOperand value(this, node->child1());
         GPRTemporary result(this, Reuse, value, TagWord);
@@ -3716,13 +3747,8 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case IsObjectOrNull: {
-        compileIsObjectOrNull(node);
-        break;
-    }
-
-    case IsFunction: {
-        compileIsFunction(node);
+    case IsCallable: {
+        compileIsCallable(node, operationObjectIsCallable);
         break;
     }
 
@@ -4057,12 +4083,12 @@ void SpeculativeJIT::compile(Node* node)
         compileGetEnumerableLength(node);
         break;
     }
-    case HasGenericProperty: {
-        compileHasGenericProperty(node);
+    case HasEnumerableStructureProperty: {
+        compileHasEnumerableStructureProperty(node);
         break;
     }
-    case HasStructureProperty: {
-        compileHasStructureProperty(node);
+    case HasEnumerableProperty: {
+        compileHasEnumerableProperty(node);
         break;
     }
     case HasOwnStructureProperty: {
@@ -4074,7 +4100,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
     case HasIndexedProperty: {
-        compileHasIndexedProperty(node);
+        compileHasIndexedProperty(node, operationHasIndexedProperty);
+        break;
+    }
+    case HasEnumerableIndexedProperty: {
+        compileHasIndexedProperty(node, operationHasEnumerableIndexedProperty);
         break;
     }
     case GetDirectPname: {
@@ -4221,6 +4251,8 @@ void SpeculativeJIT::compile(Node* node)
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
         m_interpreter.filterICStatus(node);
         noResult(node);
         break;
@@ -4235,6 +4267,7 @@ void SpeculativeJIT::compile(Node* node)
     case Int52Rep:
     case FiatInt52:
     case Int52Constant:
+    case AssertInBounds:
     case CheckInBounds:
     case ArithIMul:
     case MultiGetByOffset:

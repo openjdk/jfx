@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ ProxyRevoke* ProxyRevoke::create(VM& vm, Structure* structure, ProxyObject* prox
     return revoke;
 }
 
-static EncodedJSValue JSC_HOST_CALL performProxyRevoke(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(performProxyRevoke);
 
 ProxyRevoke::ProxyRevoke(VM& vm, Structure* structure)
     : Base(vm, structure, performProxyRevoke, nullptr)
@@ -51,13 +51,11 @@ ProxyRevoke::ProxyRevoke(VM& vm, Structure* structure)
 
 void ProxyRevoke::finishCreation(VM& vm, ProxyObject* proxy)
 {
-    Base::finishCreation(vm, emptyString());
+    Base::finishCreation(vm, 0, emptyString());
     m_proxy.set(vm, this, proxy);
-
-    putDirect(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
-static EncodedJSValue JSC_HOST_CALL performProxyRevoke(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(performProxyRevoke, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ProxyRevoke* proxyRevoke = jsCast<ProxyRevoke*>(callFrame->jsCallee());
     JSValue proxyValue = proxyRevoke->proxy();
@@ -71,7 +69,8 @@ static EncodedJSValue JSC_HOST_CALL performProxyRevoke(JSGlobalObject* globalObj
     return JSValue::encode(jsUndefined());
 }
 
-void ProxyRevoke::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ProxyRevoke::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     ProxyRevoke* thisObject = jsCast<ProxyRevoke*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -79,5 +78,7 @@ void ProxyRevoke::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     visitor.append(thisObject->m_proxy);
 }
+
+DEFINE_VISIT_CHILDREN(ProxyRevoke);
 
 } // namespace JSC

@@ -141,7 +141,7 @@ gst_video_sink_init (GstVideoSink * videosink)
   videosink->width = 0;
   videosink->height = 0;
 
-  /* 20ms is more than enough, 80-130ms is noticable */
+  /* 20ms is more than enough, 80-130ms is noticeable */
   gst_base_sink_set_processing_deadline (GST_BASE_SINK (videosink),
       15 * GST_MSECOND);
   gst_base_sink_set_max_lateness (GST_BASE_SINK (videosink), 5 * GST_MSECOND);

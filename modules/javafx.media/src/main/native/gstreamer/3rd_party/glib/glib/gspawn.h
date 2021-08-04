@@ -157,7 +157,7 @@ typedef void (* GSpawnChildSetupFunc) (gpointer user_data);
  *     execute, while the remaining elements are the actual argument vector
  *     to pass to the file. Normally g_spawn_async_with_pipes() uses `argv[0]`
  *     as the file to execute, and passes all of `argv` to the child.
- * @G_SPAWN_SEARCH_PATH_FROM_ENVP: if `argv[0]` is not an abolute path,
+ * @G_SPAWN_SEARCH_PATH_FROM_ENVP: if `argv[0]` is not an absolute path,
  *     it will be looked for in the `PATH` from the passed child environment.
  *     Since: 2.34
  * @G_SPAWN_CLOEXEC_PIPES: create all pipes with the `O_CLOEXEC` flag set.

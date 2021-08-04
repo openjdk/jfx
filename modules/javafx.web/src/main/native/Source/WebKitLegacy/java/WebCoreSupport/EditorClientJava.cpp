@@ -420,7 +420,7 @@ bool EditorClientJava::shouldInsertText(const String&, const Optional<SimpleRang
     return true;
 }
 
-bool EditorClientJava::shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, EAffinity, bool)
+bool EditorClientJava::shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, Affinity, bool)
 {
     return true;
 }

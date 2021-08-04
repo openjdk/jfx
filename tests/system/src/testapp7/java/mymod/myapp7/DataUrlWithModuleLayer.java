@@ -96,7 +96,7 @@ public class DataUrlWithModuleLayer extends Application {
                 new ChangeListener<State>() {
                     public void changed(ObservableValue ov, State oldState, State newState) {
                         if (newState == State.SUCCEEDED) {
-                            String title = webview.getEngine().getTitle();
+                            String title = (String) webview.getEngine().executeScript("document.title");
                             if ("Executed".equals(title)) {
                                 System.exit(ERROR_OK);
                             } else {

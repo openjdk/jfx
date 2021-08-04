@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -640,7 +640,7 @@ public class ComboBoxTest {
     @Test public void defaultConverterCanHandleIncorrectType_1() {
         ComboBox cb = new ComboBox();
         StringConverter sc = cb.getConverter();
-        assertEquals("42", sc.toString(new Integer(42)));
+        assertEquals("42", sc.toString(Integer.valueOf(42)));
     }
 
     @Test(expected=ClassCastException.class)
@@ -1306,6 +1306,27 @@ public class ComboBoxTest {
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
+    }
+
+    @Test public void testEditorKeyInputsWhenPopupIsNotShowing() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b"));
+        sl = new StageLoader(cb);
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+        cb.requestFocus();
+
+        // Sanity
+        assertFalse(cb.isShowing());
+        assertEquals(null, cb.getValue());
+
+        // Test DOWN and UP key
+        keyboard.doKeyPress(KeyCode.DOWN);
+        assertEquals("a", cb.getValue());
+        keyboard.doKeyPress(KeyCode.DOWN);
+        assertEquals("b", cb.getValue());
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals("a", cb.getValue());
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals("a", cb.getValue());
     }
 
     @Test public void testEditorKeyInputsWhenPopupIsShowing() {

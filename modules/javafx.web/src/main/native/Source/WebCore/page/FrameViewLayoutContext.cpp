@@ -26,7 +26,6 @@
 #include "config.h"
 #include "FrameViewLayoutContext.h"
 
-#include "CSSAnimationController.h"
 #include "DebugPageOverlays.h"
 #include "Document.h"
 #include "FrameView.h"
@@ -40,9 +39,9 @@
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-#include "DisplayBox.h"
 #include "InvalidationContext.h"
 #include "InvalidationState.h"
+#include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"
 #include "LayoutState.h"
 #include "LayoutTreeBuilder.h"
@@ -60,20 +59,13 @@ void FrameViewLayoutContext::layoutUsingFormattingContext()
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled())
         return;
-
     // FrameView::setContentsSize temporary disables layout.
     if (m_disableSetNeedsLayoutCount)
         return;
 
     auto& renderView = *this->renderView();
-    if (!m_layoutTreeContent) {
-        m_layoutTreeContent = Layout::TreeBuilder::buildLayoutTree(renderView);
-        // FIXME: New layout tree requires a new state for now.
-        m_layoutState = nullptr;
-    }
-    if (!m_layoutState)
-        m_layoutState = makeUnique<Layout::LayoutState>(*document(), m_layoutTreeContent->rootLayoutBox());
-
+    m_layoutTree = Layout::TreeBuilder::buildLayoutTree(renderView);
+    m_layoutState = makeUnique<Layout::LayoutState>(*document(), m_layoutTree->root());
     // FIXME: This is not the real invalidation yet.
     auto invalidationState = Layout::InvalidationState { };
     auto layoutContext = Layout::LayoutContext { *m_layoutState };
@@ -81,7 +73,7 @@ void FrameViewLayoutContext::layoutUsingFormattingContext()
 
     // Clean up the render tree state when we don't run RenderView::layout.
     if (renderView.needsLayout()) {
-        auto contentSize = m_layoutState->displayBoxForLayoutBox(*m_layoutState->root().firstChild()).size();
+        auto contentSize = Layout::BoxGeometry::marginBoxRect(m_layoutState->geometryForBox(*m_layoutState->root().firstChild())).size();
         renderView.setSize(contentSize);
         renderView.repaintViewRectangle({ 0, 0, contentSize.width(), contentSize.height() });
 
@@ -89,20 +81,9 @@ void FrameViewLayoutContext::layoutUsingFormattingContext()
             descendant.clearNeedsLayout();
         renderView.clearNeedsLayout();
     }
-
 #ifndef NDEBUG
     Layout::LayoutContext::verifyAndOutputMismatchingLayoutTree(*m_layoutState, renderView);
 #endif
-}
-
-void FrameViewLayoutContext::invalidateLayoutTreeContent()
-{
-    m_layoutTreeContent = nullptr;
-}
-
-void FrameViewLayoutContext::invalidateLayoutState()
-{
-    m_layoutState = nullptr;
 }
 #endif
 
@@ -204,7 +185,6 @@ void FrameViewLayoutContext::layout()
     LayoutScope layoutScope(*this);
     TraceScope tracingScope(LayoutStart, LayoutEnd);
     InspectorInstrumentation::willLayout(view().frame());
-    AnimationUpdateBlock animationUpdateBlock(&view().frame().legacyAnimation());
     WeakPtr<RenderElement> layoutRoot;
 
     m_layoutTimer.stop();
@@ -533,7 +513,7 @@ void FrameViewLayoutContext::applyTextSizingIfNeeded(RenderElement& layoutRoot)
     if (!idempotentMode && !minimumZoomFontSize)
         return;
     auto textAutosizingWidth = layoutRoot.page().textAutosizingWidth();
-    if (auto overrideWidth = settings.textAutosizingWindowSizeOverride().width())
+    if (auto overrideWidth = settings.textAutosizingWindowSizeOverrideWidth())
         textAutosizingWidth = overrideWidth;
     if (!idempotentMode && !textAutosizingWidth)
         return;

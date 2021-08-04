@@ -41,6 +41,7 @@
 #include "gmain.h"
 #include "gmem.h"               /* gslice.h */
 #include "gstrfuncs.h"
+#include "gstrfuncsprivate.h"
 #include "gutils.h"
 #include "gtrashstack.h"
 #include "gtestutils.h"
@@ -141,10 +142,10 @@
  * - the thread magazines. for each (aligned) chunk size, a magazine (a list)
  *   of recently freed and soon to be allocated chunks is maintained per thread.
  *   this way, most alloc/free requests can be quickly satisfied from per-thread
- *   free lists which only require one g_private_get() call to retrive the
+ *   free lists which only require one g_private_get() call to retrieve the
  *   thread handle.
  * - the magazine cache. allocating and freeing chunks to/from threads only
- *   occours at magazine sizes from a global depot of magazines. the depot
+ *   occurs at magazine sizes from a global depot of magazines. the depot
  *   maintaines a 15 second working set of allocated magazines, so full
  *   magazines are not allocated and released too often.
  *   the chunk size dependent magazine sizes automatically adapt (within limits,
@@ -291,7 +292,7 @@ static SliceConfig slice_config = {
 };
 static GMutex      smc_tree_mutex; /* mutex for G_SLICE=debug-blocks */
 
-/* --- auxiliary funcitons --- */
+/* --- auxiliary functions --- */
 void
 g_slice_set_config (GSliceConfig ckey,
                     gint64       value)
@@ -310,6 +311,7 @@ g_slice_set_config (GSliceConfig ckey,
       break;
     case G_SLICE_CONFIG_COLOR_INCREMENT:
       slice_config.color_increment = value;
+      break;
     default: ;
     }
 }
@@ -350,7 +352,7 @@ g_slice_get_config_state (GSliceConfig ckey,
       array[i++] = allocator->contention_counters[address];
       array[i++] = allocator_get_magazine_threshold (allocator, address);
       *n_values = i;
-      return g_memdup (array, sizeof (array[0]) * *n_values);
+      return g_memdup2 (array, sizeof (array[0]) * *n_values);
     default:
       return NULL;
     }
@@ -361,10 +363,52 @@ slice_config_init (SliceConfig *config)
 {
 #ifndef GSTREAMER_LITE
   const gchar *val;
+  gchar *val_allocated = NULL;
 
   *config = slice_config;
 
-  val = getenv ("G_SLICE");
+  /* Note that the empty string (`G_SLICE=""`) is treated differently from the
+   * envvar being unset. In the latter case, we also check whether running under
+   * valgrind. */
+#ifndef G_OS_WIN32
+  val = g_getenv ("G_SLICE");
+#else
+  /* The win32 implementation of g_getenv() has to do UTF-8 ↔ UTF-16 conversions
+   * which use the slice allocator, leading to deadlock. Use a simple in-place
+   * implementation here instead.
+   *
+   * Ignore references to other environment variables: only support values which
+   * are a combination of always-malloc and debug-blocks. */
+  {
+
+  wchar_t wvalue[128];  /* at least big enough for `always-malloc,debug-blocks` */
+  int len;
+
+  len = GetEnvironmentVariableW (L"G_SLICE", wvalue, G_N_ELEMENTS (wvalue));
+
+  if (len == 0)
+    {
+      if (GetLastError () == ERROR_ENVVAR_NOT_FOUND)
+        val = NULL;
+      else
+        val = "";
+    }
+  else if (len >= G_N_ELEMENTS (wvalue))
+    {
+      /* @wvalue isn’t big enough. Give up. */
+      g_warning ("Unsupported G_SLICE value");
+      val = NULL;
+    }
+  else
+    {
+      /* it’s safe to use g_utf16_to_utf8() here as it only allocates using
+       * malloc() rather than GSlice */
+      val = val_allocated = g_utf16_to_utf8 (wvalue, -1, NULL, NULL, NULL);
+    }
+
+  }
+#endif  /* G_OS_WIN32 */
+
   if (val != NULL)
     {
       gint flags;
@@ -392,6 +436,8 @@ slice_config_init (SliceConfig *config)
         config->always_malloc = TRUE;
 #endif
     }
+
+  g_free (val_allocated);
 #else // GSTREAMER_LITE
   *config = slice_config;
   config->always_malloc = TRUE;
@@ -1010,8 +1056,8 @@ g_slice_alloc (gsize mem_size)
    */
   tmem = thread_memory_from_self ();
 #ifdef GSTREAMER_LITE
-      if (tmem == NULL)
-          return NULL;
+  if (tmem == NULL)
+    return NULL;
 #endif // GSTREAMER_LITE
 
   chunk_size = P2ALIGN (mem_size);
@@ -1125,7 +1171,7 @@ g_slice_free1 (gsize    mem_size,
       guint ix = SLAB_INDEX (allocator, chunk_size);
 #ifdef GSTREAMER_LITE
       if (tmem == NULL)
-          return; // Nothing to free
+        return; // Nothing to free
 #endif // GSTREAMER_LITE
       if (G_UNLIKELY (thread_memory_magazine2_is_full (tmem, ix)))
         {
@@ -1203,7 +1249,7 @@ g_slice_free_chain_with_offset (gsize    mem_size,
       guint ix = SLAB_INDEX (allocator, chunk_size);
 #ifdef GSTREAMER_LITE
       if (tmem == NULL)
-          return; // Nothing to free
+        return; // Nothing to free
 #endif // GSTREAMER_LITE
       while (slice)
         {

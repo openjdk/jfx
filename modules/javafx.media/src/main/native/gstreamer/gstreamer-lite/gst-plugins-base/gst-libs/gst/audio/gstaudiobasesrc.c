@@ -1134,7 +1134,7 @@ gst_audio_base_src_change_state (GstElement * element,
       gst_audio_ring_buffer_set_flushing (src->ringbuffer, FALSE);
       gst_audio_ring_buffer_may_start (src->ringbuffer, FALSE);
       /* Only post clock-provide messages if this is the clock that
-       * we've created. If the subclass has overriden it the subclass
+       * we've created. If the subclass has overridden it the subclass
        * should post this messages whenever necessary */
       if (src->clock && GST_IS_AUDIO_CLOCK (src->clock) &&
           GST_AUDIO_CLOCK_CAST (src->clock)->func ==
@@ -1155,7 +1155,7 @@ gst_audio_base_src_change_state (GstElement * element,
     case GST_STATE_CHANGE_PAUSED_TO_READY:
       GST_DEBUG_OBJECT (src, "PAUSED->READY");
       /* Only post clock-lost messages if this is the clock that
-       * we've created. If the subclass has overriden it the subclass
+       * we've created. If the subclass has overridden it the subclass
        * should post this messages whenever necessary */
       if (src->clock && GST_IS_AUDIO_CLOCK (src->clock) &&
           GST_AUDIO_CLOCK_CAST (src->clock)->func ==

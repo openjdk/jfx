@@ -1,3 +1,11 @@
+/*
+ *  Copyright (c) 2003-2010, Mark Borgerding. All rights reserved.
+ *  This file is part of KISS FFT - https://github.com/mborgerding/kissfft
+ *
+ *  SPDX-License-Identifier: BSD-3-Clause
+ *  See COPYING file for more information.
+ */
+
 #ifndef KISS_FFT_F32_H
 #define KISS_FFT_F32_H
 
@@ -5,6 +13,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
 #include <glib.h>
 
 #ifdef __cplusplus
@@ -20,11 +29,12 @@ extern "C" {
  -- a command-line utility to perform ffts
  -- a command-line utility to perform fast-convolution filtering
 
- Then see kfc.h kiss_fftr.h kiss_fftnd.h fftutil.c kiss_fastfir.c
+ Then see kfc.h kiss_fftr_f32.h kiss_fft_f32nd.h fftutil.c kiss_fastfir.c
   in the tools/ directory.
 */
 
 #define KISS_FFT_F32_MALLOC g_malloc
+#define KISS_FFT_F32_FREE g_free
 #define kiss_fft_f32_scalar float
 
 typedef struct {
@@ -60,7 +70,7 @@ typedef struct kiss_fft_f32_state* kiss_fft_f32_cfg;
 kiss_fft_f32_cfg kiss_fft_f32_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem);
 
 /*
- * kiss_fft(cfg,in_out_buf)
+ * kiss_fft_f32(cfg,in_out_buf)
  *
  * Perform an FFT on a complex input buffer.
  * for a forward FFT,
@@ -78,7 +88,7 @@ void kiss_fft_f32_stride(kiss_fft_f32_cfg cfg,const kiss_fft_f32_cpx *fin,kiss_f
 
 /* If kiss_fft_f32_alloc allocated a buffer, it is one contiguous
    buffer and can be simply free()d when no longer needed*/
-#define kiss_fft_f32_free g_free
+#define kiss_fft_f32_free KISS_FFT_F32_FREE
 
 /*
  Cleans up some memory that gets managed internally. Not necessary to call, but it might clean up
@@ -93,8 +103,8 @@ void kiss_fft_f32_cleanup(void);
 int kiss_fft_f32_next_fast_size(int n);
 
 /* for real ffts, we need an even size */
-#define kiss_fftr_next_fast_size_real(n) \
-        (kiss_fft_next_fast_size( ((n)+1)>>1)<<1)
+#define kiss_fftr_f32_next_fast_size_real(n) \
+        (kiss_fft_f32_next_fast_size( ((n)+1)>>1)<<1)
 
 #ifdef __cplusplus
 }

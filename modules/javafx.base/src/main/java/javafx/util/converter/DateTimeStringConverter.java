@@ -43,19 +43,16 @@ import javafx.util.StringConverter;
 public class DateTimeStringConverter extends StringConverter<Date> {
 
     // ------------------------------------------------------ Private properties
-    protected final Locale locale;
-    protected final String pattern;
-    protected final DateFormat dateFormat;
 
-    /**
-     * @since JavaFX 8u40
-     */
-    protected final int dateStyle;
+    final Locale locale;
 
-    /**
-     * @since JavaFX 8u40
-     */
-    protected final int timeStyle;
+    final String pattern;
+
+    final DateFormat dateFormat;
+
+    final int dateStyle;
+
+    final int timeStyle;
 
 
     // ------------------------------------------------------------ Constructors
@@ -200,7 +197,7 @@ public class DateTimeStringConverter extends StringConverter<Date> {
      * @return a {@code DateFormat} instance for formatting and parsing in this
      * {@link StringConverter}
      */
-    protected DateFormat getDateFormat() {
+    DateFormat getDateFormat() {
         DateFormat df = null;
 
         if (dateFormat != null) {

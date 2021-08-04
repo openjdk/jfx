@@ -73,7 +73,7 @@ import java.util.function.Consumer;
  * @since 9
  */
 public class ScrollPaneSkin extends SkinBase<ScrollPane> {
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -90,7 +90,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -148,7 +148,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -243,7 +243,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -318,7 +318,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -376,7 +376,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -613,7 +613,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -684,7 +684,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                     computeScrollNodeSize(getWidth(),getHeight());
                 }
                 if (scrollNode != null && scrollNode.isResizable()) {
-                    scrollNode.resize(snapSize(nodeWidth), snapSize(nodeHeight));
+                    scrollNode.resize(snapSizeX(nodeWidth), snapSizeY(nodeHeight));
                     if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
                         getSkinnable().requestLayout();
                     }

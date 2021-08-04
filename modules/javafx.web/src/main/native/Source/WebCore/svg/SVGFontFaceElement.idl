@@ -24,7 +24,7 @@
  */
 
 [
-    Conditional=SVG_FONTS
+    Exposed=Window
 ] interface SVGFontFaceElement : SVGElement {
 };
 

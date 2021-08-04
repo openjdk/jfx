@@ -23,10 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGFEOffsetElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGFEOffsetElement : SVGElement {
     readonly attribute SVGAnimatedString in1;
     readonly attribute SVGAnimatedNumber dx;
     readonly attribute SVGAnimatedNumber dy;
 };
 
-SVGFEOffsetElement implements SVGFilterPrimitiveStandardAttributes;
+SVGFEOffsetElement includes SVGFilterPrimitiveStandardAttributes;

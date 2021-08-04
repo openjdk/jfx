@@ -218,8 +218,8 @@ public class SwingInterop extends JPanel {
     }
 
     private Pane createBrowser() {
-        Double widthDouble = new Integer(PANEL_WIDTH).doubleValue();
-        Double heightDouble = new Integer(PANEL_HEIGHT).doubleValue();
+        Double widthDouble = Double.valueOf(PANEL_WIDTH);
+        Double heightDouble = Double.valueOf(PANEL_HEIGHT);
         WebView view = new WebView();
         view.setMinSize(widthDouble, heightDouble);
         view.setPrefSize(widthDouble, heightDouble);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -589,6 +589,11 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
+                node.recalculateRelativeSizeProperties(fontForRelativeSizes);
+            }
+
+            @Override
             public boolean isTreeVisible(Node node) {
                 return node.isTreeVisible();
             }
@@ -601,11 +606,6 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public boolean isTreeShowing(Node node) {
                 return node.isTreeShowing();
-            }
-
-            @Override
-            public BooleanExpression treeShowingProperty(Node node) {
-                return node.treeShowingProperty();
             }
 
             @Override
@@ -622,7 +622,7 @@ public abstract class Node implements EventTarget, Styleable {
         });
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      * Methods and state for managing the dirty bits of a Node. The dirty     *
      * bits are flags used to keep track of what things are dirty on the      *
@@ -692,7 +692,7 @@ public abstract class Node implements EventTarget, Styleable {
         return dirtyBits.isEmpty();
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      * Methods for synchronizing state from this Node to its PG peer. This    *
      * should only *ever* be called during synchronization initialized as a   *
@@ -860,7 +860,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /*************************************************************************
+    /* ***********************************************************************
     *                                                                        *
     *                                                                        *
     *                                                                        *
@@ -917,7 +917,7 @@ public abstract class Node implements EventTarget, Styleable {
         return getProperties().get(USER_DATA_KEY);
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      *
      *                                                                        *
@@ -1006,20 +1006,6 @@ public abstract class Node implements EventTarget, Styleable {
 
     private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
-    private final ChangeListener<Boolean> windowShowingChangedListener
-            = (win, oldVal, newVal) -> updateTreeShowing();
-
-    private final ChangeListener<Window> sceneWindowChangedListener = (scene, oldWindow, newWindow) -> {
-        // Replace the windowShowingListener and call updateTreeShowing()
-        if (oldWindow != null) {
-            oldWindow.showingProperty().removeListener(windowShowingChangedListener);
-        }
-        if (newWindow != null) {
-            newWindow.showingProperty().addListener(windowShowingChangedListener);
-        }
-        updateTreeShowing();
-    };
-
     private SubScene subScene = null;
 
     /**
@@ -1080,26 +1066,6 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-
-        // isTreeShowing needs to take into account of Window's showing
-        if (oldScene != null) {
-            oldScene.windowProperty().removeListener(sceneWindowChangedListener);
-
-            Window window = oldScene.windowProperty().get();
-            if (window != null) {
-                window.showingProperty().removeListener(windowShowingChangedListener);
-            }
-        }
-        if (newScene != null) {
-            newScene.windowProperty().addListener(sceneWindowChangedListener);
-
-            Window window = newScene.windowProperty().get();
-            if (window != null) {
-                window.showingProperty().addListener(windowShowingChangedListener);
-            }
-
-        }
-        updateTreeShowing();
 
         if (sceneChanged) reapplyCSS();
 
@@ -1865,7 +1831,7 @@ public abstract class Node implements EventTarget, Styleable {
 //    private ObjectProperty<InputMap<?>> inputMap;
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      *
      *                                                                        *
@@ -2611,7 +2577,7 @@ public abstract class Node implements EventTarget, Styleable {
         return (P) peer;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                              Initialization                             *
      *                                                                         *
@@ -2634,7 +2600,7 @@ public abstract class Node implements EventTarget, Styleable {
         //}
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Layout related APIs.                                                    *
      *                                                                         *
@@ -4105,7 +4071,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Geometry and coordinate system related APIs. For example, methods       *
      * related to containment, intersection, coordinate space conversion, etc. *
@@ -5139,7 +5105,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Mouse event related APIs                                                *
      *                                                                         *
@@ -5467,7 +5433,7 @@ public abstract class Node implements EventTarget, Styleable {
         return ((a < EPSILON_ABSOLUTE) && (a > -EPSILON_ABSOLUTE));
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                      viewOrder property handling                        *
      *                                                                         *
@@ -5516,7 +5482,7 @@ public abstract class Node implements EventTarget, Styleable {
                 : miscProperties.getViewOrder();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                             Transformations                             *
      *                                                                         *
@@ -6410,7 +6376,7 @@ public abstract class Node implements EventTarget, Styleable {
     //  Private Implementation
     ////////////////////////////
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                        Event Handler Properties                         *
      *                                                                         *
@@ -6429,7 +6395,7 @@ public abstract class Node implements EventTarget, Styleable {
         return eventHandlerProperties;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                       Component Orientation Properties                  *
      *                                                                         *
@@ -6707,7 +6673,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                       Misc Seldom Used Properties                       *
      *                                                                         *
@@ -8123,7 +8089,7 @@ public abstract class Node implements EventTarget, Styleable {
         return getMiscProperties().inputMethodRequestsProperty();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                             Focus Traversal                             *
      *                                                                         *
@@ -8423,69 +8389,8 @@ public abstract class Node implements EventTarget, Styleable {
         return w != null && w.isShowing();
     }
 
-    private void updateTreeShowing() {
-        setTreeShowing(isTreeVisible() && isWindowShowing());
-    }
-
-    private boolean treeShowing;
-    private TreeShowingPropertyReadOnly treeShowingRO;
-
-    final void setTreeShowing(boolean value) {
-        if (treeShowing != value) {
-            treeShowing = value;
-            ((TreeShowingPropertyReadOnly) treeShowingProperty()).invalidate();
-        }
-    }
-
     final boolean isTreeShowing() {
-        return treeShowingProperty().get();
-    }
-
-    final BooleanExpression treeShowingProperty() {
-        if (treeShowingRO == null) {
-            treeShowingRO = new TreeShowingPropertyReadOnly();
-        }
-        return treeShowingRO;
-    }
-
-    class TreeShowingPropertyReadOnly extends BooleanExpression {
-
-        private ExpressionHelper<Boolean> helper;
-        private boolean valid;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        protected void invalidate() {
-            if (valid) {
-                valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
-            }
-        }
-
-        @Override
-        public boolean get() {
-            valid = true;
-            return Node.this.treeShowing;
-        }
-
+        return isTreeVisible() && isWindowShowing();
     }
 
     private void updateTreeVisible(boolean parentChanged) {
@@ -8504,8 +8409,6 @@ public abstract class Node implements EventTarget, Styleable {
             addToSceneDirtyList();
         }
         setTreeVisible(isTreeVisible);
-
-        updateTreeShowing();
     }
 
     private boolean treeVisible;
@@ -8656,7 +8559,7 @@ public abstract class Node implements EventTarget, Styleable {
     private Node labeledBy = null;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
      *                                                                         *
@@ -8889,7 +8792,7 @@ public abstract class Node implements EventTarget, Styleable {
         Event.fireEvent(this, event);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -9411,6 +9314,12 @@ public abstract class Node implements EventTarget, Styleable {
             } else {
                 _parent = null;
             }
+        }
+    }
+
+    final void recalculateRelativeSizeProperties(Font fontForRelativeSizes) {
+        if (styleHelper != null) {
+            styleHelper.recalculateRelativeSizeProperties(this, fontForRelativeSizes);
         }
     }
 
@@ -10057,7 +9966,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("deprecation")
+                @SuppressWarnings("removal")
                 @Override public AccessControlContext getAccessControlContext() {
                     Scene scene = getScene();
                     if (scene == null) {

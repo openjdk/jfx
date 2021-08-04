@@ -57,7 +57,7 @@ import javafx.geometry.Orientation;
 public class ProgressBar extends ProgressIndicator {
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -84,7 +84,7 @@ public class ProgressBar extends ProgressIndicator {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -95,7 +95,7 @@ public class ProgressBar extends ProgressIndicator {
         return new ProgressBarSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -122,7 +122,7 @@ public class ProgressBar extends ProgressIndicator {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

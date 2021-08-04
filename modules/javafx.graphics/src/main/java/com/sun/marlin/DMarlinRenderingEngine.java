@@ -74,6 +74,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
         USE_THREAD_LOCAL = MarlinProperties.isUseThreadLocal();
 
         // Soft reference by default:
+        @SuppressWarnings("removal")
         final String refType = AccessController.doPrivileged(
             (PrivilegedAction<String>) () -> {
                 String value = System.getProperty("prism.marlin.useRef");

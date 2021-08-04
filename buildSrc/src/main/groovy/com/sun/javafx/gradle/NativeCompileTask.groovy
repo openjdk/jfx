@@ -24,6 +24,7 @@
  */
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
@@ -38,9 +39,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 class NativeCompileTask extends DefaultTask {
-    @Optional String matches; // regex for matching input files
-    List<String> params = new ArrayList<String>();
-    List sourceRoots = new ArrayList();
+    @Optional @Input String matches; // regex for matching input files
+    @Input List<String> params = new ArrayList<String>();
+    @Input List sourceRoots = new ArrayList();
     @OutputDirectory File output;
     @InputFiles List<File> allFiles = [];
     private final PatternFilterable patternSet = new PatternSet();

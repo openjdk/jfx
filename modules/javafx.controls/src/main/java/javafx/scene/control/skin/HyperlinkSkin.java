@@ -42,7 +42,7 @@ import com.sun.javafx.scene.control.behavior.ButtonBehavior;
  */
 public class HyperlinkSkin extends LabeledSkinBase<Hyperlink> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -52,7 +52,7 @@ public class HyperlinkSkin extends LabeledSkinBase<Hyperlink> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -75,7 +75,7 @@ public class HyperlinkSkin extends LabeledSkinBase<Hyperlink> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

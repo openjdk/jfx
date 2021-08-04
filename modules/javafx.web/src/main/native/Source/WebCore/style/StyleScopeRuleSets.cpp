@@ -91,6 +91,7 @@ void ScopeRuleSets::initializeUserStyle()
     auto tempUserStyle = RuleSet::create();
     if (CSSStyleSheet* pageUserSheet = extensionStyleSheets.pageUserSheet())
         tempUserStyle->addRulesFromSheet(pageUserSheet->contents(), nullptr, mediaQueryEvaluator, m_styleResolver);
+#if ENABLE(APP_BOUND_DOMAINS)
     auto* page = m_styleResolver.document().page();
     if (!extensionStyleSheets.injectedUserStyleSheets().isEmpty() && page && page->mainFrame().loader().client().shouldEnableInAppBrowserPrivacyProtections())
         m_styleResolver.document().addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user style sheet for non-app bound domain."_s);
@@ -99,6 +100,9 @@ void ScopeRuleSets::initializeUserStyle()
         if (page && !extensionStyleSheets.injectedUserStyleSheets().isEmpty())
             page->mainFrame().loader().client().notifyPageOfAppBoundBehavior();
     }
+#else
+    collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), tempUserStyle.get(), mediaQueryEvaluator);
+#endif
     collectRulesFromUserStyleSheets(extensionStyleSheets.documentUserStyleSheets(), tempUserStyle.get(), mediaQueryEvaluator);
     if (tempUserStyle->ruleCount() > 0 || tempUserStyle->pageRules().size() > 0)
         m_userStyle = WTFMove(tempUserStyle);
@@ -230,10 +234,41 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& ke
             if (!ruleSet)
                 ruleSet = RuleSet::create();
             ruleSet->addRule(*feature.styleRule, feature.selectorIndex, feature.selectorListIndex);
-            if constexpr (std::is_same<RuleFeatureType, RuleFeatureWithInvalidationSelector>::value) {
+            /*if constexpr (std::is_same<RuleFeatureType, RuleFeatureWithInvalidationSelector>::value) {
                 if (feature.invalidationSelector)
                     invalidationSelectorArray[arrayIndex].append(feature.invalidationSelector);
+            }*/
             }
+        auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
+        for (unsigned i = 0; i < matchElementArray.size(); ++i) {
+            if (matchElementArray[i])
+                invalidationRuleSets->append({ static_cast<MatchElement>(i), *matchElementArray[i], WTFMove(invalidationSelectorArray[i]) });
+        }
+        return invalidationRuleSets;
+    }).iterator->value.get();
+}
+
+template<typename KeyType, typename Hash, typename HashTraits>
+static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& key, HashMap<KeyType, std::unique_ptr<Vector<InvalidationRuleSet>>, Hash, HashTraits>& ruleSetMap, const HashMap<KeyType, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>, Hash, HashTraits>& ruleFeatures)
+{
+    return ruleSetMap.ensure(key, [&]() -> std::unique_ptr<Vector<InvalidationRuleSet>> {
+        auto* features = ruleFeatures.get(key);
+        if (!features)
+            return nullptr;
+
+        std::array<RefPtr<RuleSet>, matchElementCount> matchElementArray;
+        std::array<Vector<const CSSSelector*>, matchElementCount> invalidationSelectorArray;
+        for (auto& feature : *features) {
+            auto arrayIndex = static_cast<unsigned>(*feature.matchElement);
+            auto& ruleSet = matchElementArray[arrayIndex];
+            if (!ruleSet)
+                ruleSet = RuleSet::create();
+            ruleSet->addRule(*feature.styleRule, feature.selectorIndex, feature.selectorListIndex);
+            // TODO : Visual studio 2017 doesn't support if constexpr in lamda, once updated to 2019, remove this function and uncomment above function's code
+            //if constexpr (std::is_same<RuleFeatureType, RuleFeatureWithInvalidationSelector>::value) {
+                if (feature.invalidationSelector)
+                    invalidationSelectorArray[arrayIndex].append(feature.invalidationSelector);
+            //}
         }
         auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
         for (unsigned i = 0; i < matchElementArray.size(); ++i) {

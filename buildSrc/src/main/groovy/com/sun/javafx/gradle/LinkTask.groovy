@@ -24,24 +24,31 @@
  */
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 
 class LinkTask extends DefaultTask {
-    List<String> linkParams = new ArrayList<String>();
+    @Input List<String> linkParams = new ArrayList<String>();
     @InputDirectory File objectDir;
     @OutputFile File lib;
-    String linker;
+    @Input String linker;
+
     @TaskAction void compile() {
         // Link & generate the library (.dll, .so, .dylib)
         lib.getParentFile().mkdirs();
         project.exec({
             commandLine(linker);
             if ((project.IS_LINUX) && (project.IS_STATIC_BUILD)) {
-              args("rcs");
-              args("$lib");
+                if (linker.equals("ld")) {
+                    args("-r");
+                    args("-o");
+                } else {
+                    args("rcs");
+                }
+                args("$lib");
             }
             // Exclude parfait files (.bc)
             args(objectDir.listFiles().findAll{ !it.getAbsolutePath().endsWith(".bc") });

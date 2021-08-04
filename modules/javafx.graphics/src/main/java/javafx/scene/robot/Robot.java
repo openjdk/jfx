@@ -70,6 +70,7 @@ public final class Robot {
         Application.checkEventThread();
 
         // Ensure we have proper permission for creating a robot.
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
             sm.checkPermission(CREATE_ROBOT_PERMISSION);

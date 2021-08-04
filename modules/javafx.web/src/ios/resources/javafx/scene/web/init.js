@@ -39,7 +39,10 @@ var JavaBridge = {
         },
         call: function(method, args) {
             var cbId = cbId = ++JavaBridge.callbackCnt;
-            JavaBridge.callbacks[cbId] = {'success': false, 'result': null};
+            // TODO: set 'success': false, and process callBack, but so far it happens
+            // too late. As an alternative, use JSObject::call to send values from the
+            // Java class back to JavaScript.
+            JavaBridge.callbacks[cbId] = {'success': true, 'result': null};
 
             if (args !== null && args instanceof Array) {//we always encode args as an Array ...
                 for (var i = 0; i < args.length; i++) {

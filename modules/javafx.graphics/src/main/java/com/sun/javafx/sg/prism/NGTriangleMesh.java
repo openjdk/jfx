@@ -59,6 +59,13 @@ public class NGTriangleMesh {
     private int[] faceSmoothingGroupsFromAndLengthIndices = new int[2];
 
     Mesh createMesh(ResourceFactory rf) {
+
+        // Check whether the mesh is valid; dispose and recreate if needed
+        if (mesh != null && !mesh.isValid()) {
+            mesh.dispose();
+            mesh = null;
+        }
+
         if (mesh == null) {
             mesh = rf.createMesh();
             meshDirty = true;

@@ -53,7 +53,7 @@ public:
         FINISHED_STATE = 3
     };
 
-    explicit AudioScheduledSourceNode(BaseAudioContext&);
+    AudioScheduledSourceNode(BaseAudioContext&, NodeType);
 
     ExceptionOr<void> startLater(double when);
     ExceptionOr<void> stopLater(double when);
@@ -71,10 +71,15 @@ protected:
     // Each frame time is relative to the context's currentSampleFrame().
     // quantumFrameOffset: Offset frame in this time quantum to start rendering.
     // nonSilentFramesToProcess: Number of frames rendering non-silence (will be <= quantumFrameSize).
-    void updateSchedulingInfo(size_t quantumFrameSize, AudioBus& outputBus, size_t& quantumFrameOffset, size_t& nonSilentFramesToProcess);
+    // startFrameOffset : The fractional frame offset from quantumFrameOffset and the actual starting
+    //                    time of the source. This is non-zero only when transitioning from the
+    //                    SCHEDULED_STATE to the PLAYING_STATE.
+    void updateSchedulingInfo(size_t quantumFrameSize, AudioBus& outputBus, size_t& quantumFrameOffset, size_t& nonSilentFramesToProcess, double& startFrameOffset);
 
     // Called when we have no more sound to play or the noteOff() time has been reached.
     virtual void finish();
+
+    bool requiresTailProcessing() const final { return false; }
 
     PlaybackState m_playbackState { UNSCHEDULED_STATE };
 
@@ -85,9 +90,7 @@ protected:
     // m_endTime is the time to stop playing based on the context's timeline (0 or a time less than the context's current time means "now").
     // If it hasn't been set explicitly, then the sound will not stop playing (if looping) or will stop when the end of the AudioBuffer
     // has been reached.
-    double m_endTime; // in seconds
-
-    static const double UnknownTime;
+    Optional<double> m_endTime; // in seconds
 };
 
 } // namespace WebCore

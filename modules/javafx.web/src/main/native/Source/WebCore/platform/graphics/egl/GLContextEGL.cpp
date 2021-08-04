@@ -21,7 +21,7 @@
 
 #if USE(EGL)
 
-#include "GraphicsContextGLOpenGL.h"
+#include "GraphicsContextGL.h"
 #include "Logging.h"
 #include "PlatformDisplay.h"
 
@@ -43,14 +43,6 @@
 #include <GLES2/gl2ext.h>
 #else
 #include "OpenGLShims.h"
-#endif
-
-#if ENABLE(ACCELERATED_2D_CANVAS)
-// cairo-gl.h includes some definitions from GLX that conflict with
-// the ones provided by us. Since GLContextEGL doesn't use any GLX
-// functions we can safely disable them.
-#undef CAIRO_HAS_GLX_FUNCTIONS
-#include <cairo-gl.h>
 #endif
 
 #include <wtf/Vector.h>
@@ -118,6 +110,7 @@ bool GLContextEGL::getEGLConfig(EGLDisplay display, EGLConfig* config, EGLSurfac
         EGL_ALPHA_SIZE, rgbaSize[3],
         EGL_STENCIL_SIZE, 8,
         EGL_SURFACE_TYPE, EGL_NONE,
+        EGL_DEPTH_SIZE, 8,
         EGL_NONE
     };
 
@@ -374,11 +367,6 @@ GLContextEGL::GLContextEGL(PlatformDisplay& display, EGLContext context, EGLSurf
 
 GLContextEGL::~GLContextEGL()
 {
-#if USE(CAIRO)
-    if (m_cairoDevice)
-        cairo_device_destroy(m_cairoDevice);
-#endif
-
     EGLDisplay display = m_display.eglDisplay();
     if (m_context) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -503,21 +491,7 @@ void GLContextEGL::swapInterval(int interval)
     eglSwapInterval(m_display.eglDisplay(), interval);
 }
 
-#if USE(CAIRO)
-cairo_device_t* GLContextEGL::cairoDevice()
-{
-    if (m_cairoDevice)
-        return m_cairoDevice;
-
-#if ENABLE(ACCELERATED_2D_CANVAS)
-    m_cairoDevice = cairo_egl_device_create(m_display.eglDisplay(), m_context);
-#endif
-
-    return m_cairoDevice;
-}
-#endif
-
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL)
 PlatformGraphicsContextGL GLContextEGL::platformContext()
 {
     return m_context;

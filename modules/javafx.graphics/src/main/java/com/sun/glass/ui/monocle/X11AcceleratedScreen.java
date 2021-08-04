@@ -51,6 +51,7 @@ class X11AcceleratedScreen extends AcceleratedScreen {
          * This workaround can be removed when the bug in the drivers is fixed.
          */
         if (nativeDisplay == null) {
+            @SuppressWarnings("removal")
             boolean doMaliWorkaround =
                     AccessController.doPrivileged(
                             (PrivilegedAction<Boolean>) () ->

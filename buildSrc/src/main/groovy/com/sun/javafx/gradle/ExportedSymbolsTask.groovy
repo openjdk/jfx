@@ -24,6 +24,7 @@
  */
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
@@ -32,7 +33,7 @@ import org.gradle.api.tasks.TaskAction
 class ExportedSymbolsTask extends DefaultTask {
     @OutputFile File outputFile;
     @InputDirectory File libDir;
-    @Optional List<String> excludes;
+    @Optional @Input List<String> excludes;
 
 
     @TaskAction void generateExportedSymbols() {

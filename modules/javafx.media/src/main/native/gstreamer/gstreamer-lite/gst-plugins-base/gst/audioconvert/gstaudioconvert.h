@@ -26,14 +26,9 @@
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 
-#define GST_TYPE_AUDIO_CONVERT            (gst_audio_convert_get_type())
-#define GST_AUDIO_CONVERT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_AUDIO_CONVERT,GstAudioConvert))
-#define GST_AUDIO_CONVERT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_AUDIO_CONVERT,GstAudioConvertClass))
-#define GST_IS_AUDIO_CONVERT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_AUDIO_CONVERT))
-#define GST_IS_AUDIO_CONVERT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_AUDIO_CONVERT))
-
-typedef struct _GstAudioConvert GstAudioConvert;
-typedef struct _GstAudioConvertClass GstAudioConvertClass;
+#define GST_TYPE_AUDIO_CONVERT (gst_audio_convert_get_type())
+G_DECLARE_FINAL_TYPE (GstAudioConvert, gst_audio_convert,
+    GST, AUDIO_CONVERT, GstBaseTransform)
 
 /**
  * GstAudioConvert:
@@ -48,16 +43,11 @@ struct _GstAudioConvert
   GstAudioDitherMethod dither;
   GstAudioNoiseShapingMethod ns;
   GValue mix_matrix;
-  gboolean mix_matrix_was_set;
+  gboolean mix_matrix_is_set;
 
   GstAudioInfo in_info;
   GstAudioInfo out_info;
   GstAudioConverter *convert;
-};
-
-struct _GstAudioConvertClass
-{
-  GstBaseTransformClass parent_class;
 };
 
 #endif /* __GST_AUDIO_CONVERT_H__ */

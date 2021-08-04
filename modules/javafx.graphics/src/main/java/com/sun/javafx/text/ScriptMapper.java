@@ -142,6 +142,9 @@ public class ScriptMapper {
         else if (code <= 0x0fff) { // U+0F00 - U+0FFF Tibetan
             return true;
         }
+        else if (code <= 0x109f) { // U+1000 - U+109F Myanmar
+            return true;
+        }
         else if (code < 0x1100) {
             return false;
         }

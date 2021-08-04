@@ -20,6 +20,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 /**
  * \file
  * \brief C++ API: NumberingSystem object
@@ -72,6 +74,12 @@ public:
     NumberingSystem(const NumberingSystem& other);
 
     /**
+     * Copy assignment.
+     * @stable ICU 4.2
+     */
+    NumberingSystem& operator=(const NumberingSystem& other) = default;
+
+    /**
      * Destructor.
      * @stable ICU 4.2
      */
@@ -94,7 +102,7 @@ public:
     /**
      * Create a numbering system using the specified radix, type, and description.
      * @param radix         The radix (base) for this numbering system.
-     * @param isAlgorithmic TRUE if the numbering system is algorithmic rather than numeric.
+     * @param isAlgorithmic true if the numbering system is algorithmic rather than numeric.
      * @param description   The string representing the set of digits used in a numeric system, or the name of the RBNF
      *                      ruleset to be used in an algorithmic system.
      * @param status ICU status
@@ -163,10 +171,10 @@ public:
 
 
     /**
-     * Returns TRUE if the given numbering system is algorithmic
+     * Returns true if the given numbering system is algorithmic
      *
-     * @return         TRUE if the numbering system is algorithmic.
-     *                 Otherwise, return FALSE.
+     * @return         true if the numbering system is algorithmic.
+     *                 Otherwise, return false.
      * @stable ICU 4.2
      */
     UBool isAlgorithmic() const;
@@ -209,6 +217,8 @@ private:
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif // _NUMSYS
 //eof

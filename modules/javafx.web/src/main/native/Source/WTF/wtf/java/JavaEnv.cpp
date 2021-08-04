@@ -30,6 +30,7 @@
 JavaVM* jvm = 0;
 
 namespace WTF {
+JGClass comSunWebkitFileSystem;
 
 bool CheckAndClearException(JNIEnv* env)
 {
@@ -131,6 +132,21 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
     _CrtSetDbgFlag( tmpFlag );
 #endif
     jvm = vm;
+
+    JNIEnv* env = WTF::GetJavaEnv();
+
+    // Class com.sun.webkit.FileSystem is accessed from a newly created native
+    // thread from FileSystemJava. The class is resolved at initialization time
+    // as in the JNI_OnLoad callback the classloader used to load the native
+    // library is also used to load the target class, which is by construction
+    // the right one
+    static jclass fileSystemClass = env->FindClass("com/sun/webkit/FileSystem");
+
+    ASSERT(fileSystemClass);
+
+    static JGClass fileSystemRef(fileSystemClass);
+    WTF::comSunWebkitFileSystem = fileSystemRef;
+
     return JNI_VERSION_1_2;
 }
 

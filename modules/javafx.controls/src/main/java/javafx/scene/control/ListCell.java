@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ import javafx.scene.control.skin.ListCellSkin;
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -87,7 +87,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *     We have to listen to a number of properties on the ListView itself  *
@@ -228,7 +228,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -315,7 +315,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -337,6 +337,7 @@ public class ListCell<T> extends IndexedCell<T> {
             updateItem(oldIndex);
             updateSelection();
             updateFocus();
+            updateEditing();
         }
     }
 
@@ -346,14 +347,17 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
+    // index at time of startEdit - fix for JDK-8165214
+    private int indexAtStartEdit;
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final ListView<T> list = getListView();
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
@@ -373,6 +377,8 @@ public class ListCell<T> extends IndexedCell<T> {
             list.edit(getIndex());
             list.requestFocus();
         }
+
+        indexAtStartEdit = getIndex();
     }
 
     /** {@inheritDoc} */
@@ -417,13 +423,11 @@ public class ListCell<T> extends IndexedCell<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
 
-         // Inform the ListView of the edit being cancelled.
-        ListView<T> list = getListView();
-
         super.cancelEdit();
 
+        // Inform the ListView of the edit being cancelled.
+        ListView<T> list = getListView();
         if (list != null) {
-            int editingIndex = list.getEditingIndex();
 
             // reset the editing index on the ListView
             if (updateEditingIndex) list.edit(-1);
@@ -437,7 +441,7 @@ public class ListCell<T> extends IndexedCell<T> {
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editCancelEvent(),
                     null,
-                    editingIndex));
+                    indexAtStartEdit));
         }
     }
 
@@ -539,22 +543,22 @@ public class ListCell<T> extends IndexedCell<T> {
         final ListView<T> list = getListView();
         final int editIndex = list == null ? -1 : list.getEditingIndex();
         final boolean editing = isEditing();
+        final boolean match = (list != null) && (index != -1) && (index == editIndex);
 
-        // Check that the list is specified, and my index is not -1
-        if (index != -1 && list != null) {
-            // If my index is the index being edited and I'm not currently in
-            // the edit mode, then I need to enter the edit mode
-            if (index == editIndex && !editing) {
-                startEdit();
-            } else if (index != editIndex && editing) {
-                // If my index is not the one being edited then I need to cancel
-                // the edit. The tricky thing here is that as part of this call
-                // I cannot end up calling list.edit(-1) the way that the standard
-                // cancelEdit method would do. Yet, I need to call cancelEdit
-                // so that subclasses which override cancelEdit can execute. So,
-                // I have to use a kind of hacky flag workaround.
+        if (match && !editing) {
+            startEdit();
+        } else if (!match && editing) {
+            // If my index is not the one being edited then I need to cancel
+            // the edit. The tricky thing here is that as part of this call
+            // I cannot end up calling list.edit(-1) the way that the standard
+            // cancelEdit method would do. Yet, I need to call cancelEdit
+            // so that subclasses which override cancelEdit can execute. So,
+            // I have to use a kind of hacky flag workaround.
+            try {
+                // try-finally to make certain that the flag is reliably reset to true
                 updateEditingIndex = false;
                 cancelEdit();
+            } finally {
                 updateEditingIndex = true;
             }
         }
@@ -562,7 +566,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -572,7 +576,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

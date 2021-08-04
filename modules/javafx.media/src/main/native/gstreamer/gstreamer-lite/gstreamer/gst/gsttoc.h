@@ -236,7 +236,6 @@ GstTocEntry *      gst_toc_entry_get_parent              (GstTocEntry *entry);
 GST_API
 const gchar *      gst_toc_entry_type_get_nick     (GstTocEntryType type);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 static inline void
 _gst_autoptr_toc_unref (GstToc *toc)
 {
@@ -251,7 +250,6 @@ _gst_autoptr_toc_entry_unref (GstTocEntry *entry)
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstToc, _gst_autoptr_toc_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTocEntry, _gst_autoptr_toc_entry_unref)
-#endif
 
 G_END_DECLS
 

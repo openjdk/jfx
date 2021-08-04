@@ -24,17 +24,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGAnimationElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGAnimationElement : SVGElement {
     readonly attribute SVGElement targetElement;
 
     unrestricted float getStartTime();
     unrestricted float getCurrentTime();
     unrestricted float getSimpleDuration();
 
-    void beginElement();
-    void beginElementAt(optional unrestricted float offset = NaN);
-    void endElement();
-    void endElementAt(optional unrestricted float offset = NaN);
+    undefined beginElement();
+    undefined beginElementAt(optional unrestricted float offset = NaN);
+    undefined endElement();
+    undefined endElementAt(optional unrestricted float offset = NaN);
 };
 
-SVGAnimationElement implements SVGTests;
+SVGAnimationElement includes SVGTests;

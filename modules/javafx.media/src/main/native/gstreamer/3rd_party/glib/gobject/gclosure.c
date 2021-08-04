@@ -86,13 +86,13 @@
  *   automatically removed when the objects they point to go away.
  */
 
-#define CLOSURE_MAX_REF_COUNT   ((1 << 15) - 1)
-#define CLOSURE_MAX_N_GUARDS    ((1 << 1) - 1)
-#define CLOSURE_MAX_N_FNOTIFIERS  ((1 << 2) - 1)
-#define CLOSURE_MAX_N_INOTIFIERS  ((1 << 8) - 1)
-#define CLOSURE_N_MFUNCS(cl)    (((cl)->n_guards << 1L))
+#define CLOSURE_MAX_REF_COUNT       ((1 << 15) - 1)
+#define CLOSURE_MAX_N_GUARDS        ((1 << 1) - 1)
+#define CLOSURE_MAX_N_FNOTIFIERS    ((1 << 2) - 1)
+#define CLOSURE_MAX_N_INOTIFIERS    ((1 << 8) - 1)
+#define CLOSURE_N_MFUNCS(cl)        (((cl)->n_guards << 1L))
 /* same as G_CLOSURE_N_NOTIFIERS() (keep in sync) */
-#define CLOSURE_N_NOTIFIERS(cl)   (CLOSURE_N_MFUNCS (cl) + \
+#define CLOSURE_N_NOTIFIERS(cl)     (CLOSURE_N_MFUNCS (cl) + \
                                          (cl)->n_fnotifiers + \
                                          (cl)->n_inotifiers)
 
@@ -103,18 +103,18 @@ typedef union {
 
 #define CHANGE_FIELD(_closure, _field, _OP, _value, _must_set, _SET_OLD, _SET_NEW)      \
 G_STMT_START {                                                                          \
-  ClosureInt *cunion = (ClosureInt*) _closure;                                    \
-  gint new_int, old_int, success;                                                 \
-  do                                                                        \
-    {                                                                       \
-      ClosureInt tmp;                                                       \
-      tmp.vint = old_int = cunion->vint;                                    \
+  ClosureInt *cunion = (ClosureInt*) _closure;                                      \
+  gint new_int, old_int, success;                                                   \
+  do                                                                            \
+    {                                                                           \
+      ClosureInt tmp;                                                           \
+      tmp.vint = old_int = cunion->vint;                                        \
       _SET_OLD tmp.closure._field;                                                      \
-      tmp.closure._field _OP _value;                                          \
+      tmp.closure._field _OP _value;                                            \
       _SET_NEW tmp.closure._field;                                                      \
-      new_int = tmp.vint;                                                   \
+      new_int = tmp.vint;                                                       \
       success = g_atomic_int_compare_and_exchange (&cunion->vint, old_int, new_int);    \
-    }                                                                       \
+    }                                                                           \
   while (!success && _must_set);                                                        \
 } G_STMT_END
 
@@ -623,7 +623,6 @@ g_closure_unref (GClosure *closure)
       closure_invoke_notifiers (closure, FNOTIFY);
       g_free (closure->notifiers);
 
-#ifdef GSTREAMER_LITE
 #ifdef ENABLE_VALGRIND
       /* See comments in gtype.c about what's going on here... */
       if (RUNNING_ON_VALGRIND)
@@ -639,27 +638,8 @@ g_closure_unref (GClosure *closure)
           VALGRIND_FREELIKE_BLOCK (closure, 0);
         }
       else
+#endif
         g_free (G_REAL_CLOSURE (closure));
-#endif // ENABLE_VALGRIND
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
-      /* See comments in gtype.c about what's going on here... */
-      if (RUNNING_ON_VALGRIND)
-        {
-          gchar *allocated;
-
-          allocated = (gchar *) G_REAL_CLOSURE (closure);
-          allocated -= sizeof (gpointer);
-
-          g_free (allocated);
-
-          VALGRIND_FREELIKE_BLOCK (allocated + sizeof (gpointer), 0);
-          VALGRIND_FREELIKE_BLOCK (closure, 0);
-        }
-      else
-        g_free (G_REAL_CLOSURE (closure));
-#endif // GSTREAMER_LITE
     }
 }
 
@@ -687,7 +667,7 @@ g_closure_unref (GClosure *closure)
  * g_source_set_closure (source, g_cclosure_new (cb_func, cb_data));
  * ]|
  *
- * Generally, this function is used together with g_closure_ref(). Ane example
+ * Generally, this function is used together with g_closure_ref(). An example
  * of storing a closure for later notification looks like:
  * |[<!-- language="C" -->
  * static GClosure *notify_closure = NULL;
@@ -718,7 +698,7 @@ g_closure_sink (GClosure *closure)
   /* floating is basically a kludge to avoid creating closures
    * with a ref_count of 0. so the initial ref_count a closure has
    * is unowned. with invoking g_closure_sink() code may
-   * indicate that it takes over that intiial ref_count.
+   * indicate that it takes over that initial ref_count.
    */
   if (closure->floating)
     {

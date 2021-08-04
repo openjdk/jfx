@@ -26,15 +26,16 @@
 [
     ActiveDOMObject,
     Conditional=LEGACY_ENCRYPTED_MEDIA,
-    EnabledAtRuntime=LegacyEncryptedMediaAPI,
+    EnabledBySetting=LegacyEncryptedMediaAPI,
+    Exposed=Window
 ] interface WebKitMediaKeySession : EventTarget {
     readonly attribute WebKitMediaKeyError error;
 
     readonly attribute DOMString keySystem;
     readonly attribute DOMString sessionId;
 
-    [MayThrowException] void update(Uint8Array key);
-    void close();
+    [MayThrowException] undefined update(Uint8Array key);
+    undefined close();
     
     attribute EventHandler onwebkitkeyadded;
     attribute EventHandler onwebkitkeyerror;

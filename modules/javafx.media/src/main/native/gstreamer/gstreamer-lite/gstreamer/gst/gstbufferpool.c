@@ -817,7 +817,7 @@ gst_buffer_pool_has_option (GstBufferPool * pool, const gchar * option)
 /**
  * gst_buffer_pool_config_set_params:
  * @config: a #GstBufferPool configuration
- * @caps: caps for the buffers
+ * @caps: (nullable): caps for the buffers
  * @size: the size of each buffer, not including prefix and padding
  * @min_buffers: the minimum amount of buffers to allocate.
  * @max_buffers: the maximum amount of buffers to allocate or 0 for unlimited.
@@ -842,8 +842,8 @@ gst_buffer_pool_config_set_params (GstStructure * config, GstCaps * caps,
 /**
  * gst_buffer_pool_config_set_allocator:
  * @config: a #GstBufferPool configuration
- * @allocator: (allow-none): a #GstAllocator
- * @params: (allow-none): #GstAllocationParams
+ * @allocator: (nullable): a #GstAllocator
+ * @params: (nullable): #GstAllocationParams
  *
  * Set the @allocator and @params on @config.
  *
@@ -942,7 +942,7 @@ gst_buffer_pool_config_n_options (GstStructure * config)
  * Parse an available @config and get the option at @index of the options API
  * array.
  *
- * Returns: a #gchar of the option at @index.
+ * Returns: (nullable): a #gchar of the option at @index.
  */
 const gchar *
 gst_buffer_pool_config_get_option (GstStructure * config, guint index)
@@ -996,10 +996,10 @@ gst_buffer_pool_config_has_option (GstStructure * config, const gchar * option)
 /**
  * gst_buffer_pool_config_get_params:
  * @config: (transfer none): a #GstBufferPool configuration
- * @caps: (out) (transfer none) (allow-none): the caps of buffers
- * @size: (out) (allow-none): the size of each buffer, not including prefix and padding
- * @min_buffers: (out) (allow-none): the minimum amount of buffers to allocate.
- * @max_buffers: (out) (allow-none): the maximum amount of buffers to allocate or 0 for unlimited.
+ * @caps: (out) (transfer none) (optional) (nullable): the caps of buffers
+ * @size: (out) (optional): the size of each buffer, not including prefix and padding
+ * @min_buffers: (out) (optional): the minimum amount of buffers to allocate.
+ * @max_buffers: (out) (optional): the maximum amount of buffers to allocate or 0 for unlimited.
  *
  * Get the configuration values from @config.
  *
@@ -1024,8 +1024,8 @@ gst_buffer_pool_config_get_params (GstStructure * config, GstCaps ** caps,
 /**
  * gst_buffer_pool_config_get_allocator:
  * @config: (transfer none): a #GstBufferPool configuration
- * @allocator: (out) (allow-none) (transfer none): a #GstAllocator, or %NULL
- * @params: (out) (allow-none): #GstAllocationParams, or %NULL
+ * @allocator: (out) (optional) (nullable) (transfer none): a #GstAllocator, or %NULL
+ * @params: (out caller-allocates) (optional): #GstAllocationParams, or %NULL
  *
  * Get the @allocator and @params from @config.
  *
@@ -1057,7 +1057,7 @@ gst_buffer_pool_config_get_allocator (GstStructure * config,
 /**
  * gst_buffer_pool_config_validate_params:
  * @config: (transfer none): a #GstBufferPool configuration
- * @caps: (transfer none): the excepted caps of buffers
+ * @caps: (nullable) (transfer none): the excepted caps of buffers
  * @size: the expected size of each buffer, not including prefix and padding
  * @min_buffers: the expected minimum amount of buffers to allocate.
  * @max_buffers: the expect maximum amount of buffers to allocate or 0 for unlimited.
@@ -1223,9 +1223,21 @@ default_reset_buffer (GstBufferPool * pool, GstBuffer * buffer)
 
   /* if the memory is intact reset the size to the full size */
   if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_TAG_MEMORY)) {
-    gsize offset;
-    gst_buffer_get_sizes (buffer, &offset, NULL);
-    gst_buffer_resize (buffer, -offset, pool->priv->size);
+    gsize offset, maxsize;
+    gst_buffer_get_sizes (buffer, &offset, &maxsize);
+    /* check if we can resize to at least the pool configured size.  If not,
+     * then this will fail internally in gst_buffer_resize().
+     * default_release_buffer() will drop the buffer from the pool if the
+     * sizes don't match */
+    if (maxsize >= pool->priv->size) {
+      gst_buffer_resize (buffer, -offset, pool->priv->size);
+    } else {
+      GST_WARNING_OBJECT (pool, "Buffer %p without the memory tag has "
+          "maxsize (%" G_GSIZE_FORMAT ") that is smaller than the "
+          "configured buffer pool size (%u). The buffer will be not be "
+          "reused. This is most likely a bug in this GstBufferPool subclass",
+          buffer, maxsize, pool->priv->size);
+    }
   }
 
   /* remove all metadata without the POOLED flag */
@@ -1326,6 +1338,7 @@ not_writable:
 discard:
   {
     do_free_buffer (pool, buffer);
+    gst_poll_write_control (pool->priv->poll);
     return;
   }
 }

@@ -26,10 +26,10 @@
 #include "config.h"
 #include "InspectorAuditAgent.h"
 
+#include "Debugger.h"
 #include "InjectedScript.h"
 #include "JSLock.h"
 #include "ObjectConstructor.h"
-#include "ScriptDebugServer.h"
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
@@ -43,7 +43,7 @@ InspectorAuditAgent::InspectorAuditAgent(AgentContext& context)
     : InspectorAgentBase("Audit"_s)
     , m_backendDispatcher(AuditBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_scriptDebugServer(context.environment.scriptDebugServer())
+    , m_debugger(context.environment.debugger())
 {
 }
 
@@ -57,41 +57,41 @@ void InspectorAuditAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
 }
 
-void InspectorAuditAgent::setup(ErrorString& errorString, const int* executionContextId)
+Protocol::ErrorStringOr<void> InspectorAuditAgent::setup(Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
-    if (hasActiveAudit()) {
-        errorString = "Must call teardown before calling setup again"_s;
-        return;
-    }
+    Protocol::ErrorString errorString;
 
-    InjectedScript injectedScript = injectedScriptForEval(errorString, executionContextId);
+    if (hasActiveAudit())
+        return makeUnexpected("Must call teardown before calling setup again"_s);
+
+    InjectedScript injectedScript = injectedScriptForEval(errorString, WTFMove(executionContextId));
     if (injectedScript.hasNoValue())
-        return;
+        return makeUnexpected(errorString);
 
     JSC::JSGlobalObject* globalObject = injectedScript.globalObject();
-    if (!globalObject) {
-        errorString = "Missing execution state of injected script for given executionContextId"_s;
-        return;
-    }
+    if (!globalObject)
+        return makeUnexpected("Missing execution state of injected script for given executionContextId"_s);
 
     VM& vm = globalObject->vm();
 
     JSC::JSLockHolder lock(globalObject);
 
     m_injectedWebInspectorAuditValue.set(vm, constructEmptyObject(globalObject));
-    if (!m_injectedWebInspectorAuditValue) {
-        errorString = "Unable to construct injected WebInspectorAudit object."_s;
-        return;
-    }
+    if (!m_injectedWebInspectorAuditValue)
+        return makeUnexpected("Unable to construct injected WebInspectorAudit object."_s);
 
     populateAuditObject(globalObject, m_injectedWebInspectorAuditValue);
+
+    return { };
 }
 
-void InspectorAuditAgent::run(ErrorString& errorString, const String& test, const int* executionContextId, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown)
+Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, Optional<bool> /* wasThrown */>> InspectorAuditAgent::run(const String& test, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
-    InjectedScript injectedScript = injectedScriptForEval(errorString, executionContextId);
+    Protocol::ErrorString errorString;
+
+    InjectedScript injectedScript = injectedScriptForEval(errorString, WTFMove(executionContextId));
     if (injectedScript.hasNoValue())
-        return;
+        return makeUnexpected(errorString);
 
     StringBuilder functionString;
     functionString.appendLiteral("(function(WebInspectorAudit) { \"use strict\"; return eval(`(");
@@ -103,27 +103,33 @@ void InspectorAuditAgent::run(ErrorString& errorString, const String& test, cons
     if (m_injectedWebInspectorAuditValue)
         options.args = { m_injectedWebInspectorAuditValue.get() };
 
+    RefPtr<Protocol::Runtime::RemoteObject> result;
+    Optional<bool> wasThrown;
     Optional<int> savedResultIndex;
 
-    ScriptDebugServer::PauseOnExceptionsState previousPauseOnExceptionsState = m_scriptDebugServer.pauseOnExceptionsState();
+    JSC::Debugger::TemporarilyDisableExceptionBreakpoints temporarilyDisableExceptionBreakpoints(m_debugger);
+    temporarilyDisableExceptionBreakpoints.replace();
 
-    m_scriptDebugServer.setPauseOnExceptionsState(ScriptDebugServer::DontPauseOnExceptions);
     muteConsole();
 
     injectedScript.execute(errorString, functionString.toString(), WTFMove(options), result, wasThrown, savedResultIndex);
 
     unmuteConsole();
-    m_scriptDebugServer.setPauseOnExceptionsState(previousPauseOnExceptionsState);
+
+    if (!result)
+        return makeUnexpected(errorString);
+
+    return { { result.releaseNonNull(), WTFMove(wasThrown) } };
 }
 
-void InspectorAuditAgent::teardown(ErrorString& errorString)
+Protocol::ErrorStringOr<void> InspectorAuditAgent::teardown()
 {
-    if (!hasActiveAudit()) {
-        errorString = "Must call setup before calling teardown"_s;
-        return;
-    }
+    if (!hasActiveAudit())
+        return makeUnexpected("Must call setup before calling teardown"_s);
 
     m_injectedWebInspectorAuditValue.clear();
+
+    return { };
 }
 
 bool InspectorAuditAgent::hasActiveAudit() const
@@ -140,7 +146,7 @@ void InspectorAuditAgent::populateAuditObject(JSC::JSGlobalObject* globalObject,
     JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder lock(vm);
 
-    auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Version"), JSC::JSValue(Inspector::Protocol::Audit::VERSION));
+    auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Version"), JSC::JSValue(Protocol::Audit::VERSION));
 }
 
 } // namespace Inspector

@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Concurrency.h"
 #include "ECMAMode.h"
 #include "JSExportMacros.h"
 #include "PureNaN.h"
@@ -78,7 +79,7 @@ enum class Unknown { };
 template <class T, typename Traits> class WriteBarrierBase;
 template<class T>
 using WriteBarrierTraitsSelect = typename std::conditional<std::is_same<T, Unknown>::value,
-    DumbValueTraits<T>, DumbPtrTraits<T>
+    RawValueTraits<T>, RawPtrTraits<T>
 >::type;
 
 enum PreferredPrimitiveType : uint8_t { NoPreference, PreferNumber, PreferString };
@@ -233,7 +234,9 @@ public:
     // Querying the type.
     bool isEmpty() const;
     bool isCallable(VM&) const;
+    template<Concurrency> TriState isCallableWithConcurrency(VM&) const;
     bool isConstructor(VM&) const;
+    template<Concurrency> TriState isConstructorWithConcurrency(VM&) const;
     bool isUndefined() const;
     bool isNull() const;
     bool isUndefinedOrNull() const;
@@ -265,8 +268,6 @@ public:
 
     // Basic conversions.
     JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType = NoPreference) const;
-    bool getPrimitiveNumber(JSGlobalObject*, double& number, JSValue&);
-
     bool toBoolean(JSGlobalObject*) const;
     TriState pureToBoolean() const;
 
@@ -289,12 +290,16 @@ public:
     JSObject* toObject(JSGlobalObject*) const;
 
     // Integer conversions.
-    JS_EXPORT_PRIVATE double toInteger(JSGlobalObject*) const;
     JS_EXPORT_PRIVATE double toIntegerPreserveNaN(JSGlobalObject*) const;
+    double toIntegerOrInfinity(JSGlobalObject*) const;
     int32_t toInt32(JSGlobalObject*) const;
     uint32_t toUInt32(JSGlobalObject*) const;
     uint32_t toIndex(JSGlobalObject*, const char* errorName) const;
     double toLength(JSGlobalObject*) const;
+
+    JS_EXPORT_PRIVATE JSValue toBigInt(JSGlobalObject*) const;
+    int64_t toBigInt64(JSGlobalObject*) const;
+    uint64_t toBigUInt64(JSGlobalObject*) const;
 
     Optional<uint32_t> toUInt32AfterToNumeric(JSGlobalObject*) const;
 
@@ -335,8 +340,7 @@ public:
     JSCell* asCell() const;
     JS_EXPORT_PRIVATE bool isValidCallee();
 
-    Structure* structureOrNull() const;
-    JSValue structureOrUndefined() const;
+    Structure* structureOrNull(VM&) const;
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;

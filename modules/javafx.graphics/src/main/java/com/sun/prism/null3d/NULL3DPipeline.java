@@ -69,7 +69,7 @@ public class NULL3DPipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
-        Integer index = new Integer(screen.getAdapterOrdinal());
+        Integer index = Integer.valueOf(screen.getAdapterOrdinal());
         DummyResourceFactory factory = factories.get(index);
         if (factory == null) {
             factory = new DummyResourceFactory(screen);

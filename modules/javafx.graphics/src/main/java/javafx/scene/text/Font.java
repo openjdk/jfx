@@ -473,6 +473,7 @@ public final class Font {
             // Getting the path from a File fixes this.
             path = new java.io.File(path).getPath();
             try {
+                @SuppressWarnings("removal")
                 SecurityManager sm = System.getSecurityManager();
                 if (sm != null) {
                     FilePermission filePermission =

@@ -24,6 +24,7 @@
 #include "DOMWrapperWorld.h"
 #include "WebCoreBuiltinNames.h"
 #include "WebCoreJSBuiltins.h"
+#include "WorkerThreadType.h"
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 
@@ -40,7 +41,7 @@ public:
 
     virtual ~JSVMClientData();
 
-    WEBCORE_EXPORT static void initNormalWorld(JSC::VM*);
+    WEBCORE_EXPORT static void initNormalWorld(JSC::VM*, WorkerThreadType);
 
     DOMWrapperWorld& normalWorld() { return *m_normalWorld; }
 
@@ -101,9 +102,12 @@ public:
 #if ENABLE(SERVICE_WORKER)
     std::unique_ptr<JSC::HeapCellType> m_heapCellTypeForJSServiceWorkerGlobalScope;
 #endif
+    std::unique_ptr<JSC::HeapCellType> m_heapCellTypeForJSWorkletGlobalScope;
 #if ENABLE(CSS_PAINTING_API)
     std::unique_ptr<JSC::HeapCellType> m_heapCellTypeForJSPaintWorkletGlobalScope;
-    std::unique_ptr<JSC::HeapCellType> m_heapCellTypeForJSWorkletGlobalScope;
+#endif
+#if ENABLE(WEB_AUDIO)
+    std::unique_ptr<JSC::HeapCellType> m_heapCellTypeForJSAudioWorkletGlobalScope;
 #endif
 #if ENABLE(INDEXED_DATABASE)
     std::unique_ptr<JSC::HeapCellType> m_heapCellTypeForJSIDBSerializationGlobalObject;

@@ -92,7 +92,7 @@ public class EventAnyTest {
 
     @Test
     public void testEventDelivery() throws Exception {
-        Node n = (Node) target.newInstance();
+        Node n = (Node) target.getDeclaredConstructor().newInstance();
         delivered = false;
 
         n.addEventHandler(type, event1 -> {

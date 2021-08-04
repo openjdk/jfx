@@ -27,6 +27,7 @@
     Conditional=WEB_RTC,
     EnabledAtRuntime=PeerConnection,
     ImplementationLacksVTable,
+    Exposed=Window
 ] interface RTCStatsReport {
     readonly maplike<DOMString, object>;
 };
@@ -273,13 +274,6 @@ dictionary RTCIceCandidatePairStats : RTCStats {
     unsigned long long responsesReceived;
     unsigned long long responsesSent;
     // FIXME: Expose other fields once libwebrtc support them.
-};
-
-enum RTCIceCandidateType {
-    "host",
-    "srflx",
-    "prflx",
-    "relay"
 };
 
 [ JSGenerateToJSObject ]

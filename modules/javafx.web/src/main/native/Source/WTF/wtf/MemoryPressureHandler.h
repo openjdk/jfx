@@ -51,14 +51,14 @@ enum class WebsamProcessState : uint8_t {
     Inactive,
 };
 
-enum class Critical { No, Yes };
-enum class Synchronous { No, Yes };
+enum class Critical : uint8_t { No, Yes };
+enum class Synchronous : uint8_t { No, Yes };
 
 typedef WTF::Function<void(Critical, Synchronous)> LowMemoryHandler;
 
 class MemoryPressureHandler {
     WTF_MAKE_FAST_ALLOCATED;
-    friend class WTF::NeverDestroyed<MemoryPressureHandler>;
+    friend class WTF::LazyNeverDestroyed<MemoryPressureHandler>;
 public:
     WTF_EXPORT_PRIVATE static MemoryPressureHandler& singleton();
 
@@ -156,7 +156,7 @@ public:
     void setShouldLogMemoryMemoryPressureEvents(bool shouldLog) { m_shouldLogMemoryMemoryPressureEvents = shouldLog; }
 
 private:
-    size_t thresholdForMemoryKill();
+    Optional<size_t> thresholdForMemoryKill();
     void memoryPressureStatusChanged();
 
     void uninstall();
@@ -171,7 +171,7 @@ private:
     void platformInitialize();
 
     void measurementTimerFired();
-    void shrinkOrDie();
+    void shrinkOrDie(size_t killThreshold);
     void setMemoryUsagePolicyBasedOnFootprint(size_t);
     void doesExceedInactiveLimitWhileActive();
     void doesNotExceedInactiveLimitWhileActive();

@@ -6,9 +6,11 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     )
 
     list(APPEND WebCore_SOURCES
+        Modules/webaudio/MediaStreamAudioSourceGStreamer.cpp
         platform/graphics/gstreamer/AudioTrackPrivateGStreamer.cpp
         platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
         platform/graphics/gstreamer/GRefPtrGStreamer.cpp
+        platform/graphics/gstreamer/GStreamerAudioMixer.cpp
         platform/graphics/gstreamer/GStreamerCommon.cpp
         platform/graphics/gstreamer/GstAllocatorFastMalloc.cpp
         platform/graphics/gstreamer/GStreamerRegistryScanner.cpp
@@ -19,10 +21,12 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
         platform/graphics/gstreamer/MediaSampleGStreamer.cpp
         platform/graphics/gstreamer/TextCombinerGStreamer.cpp
+        platform/graphics/gstreamer/TextCombinerPadGStreamer.cpp
         platform/graphics/gstreamer/TextSinkGStreamer.cpp
         platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
         platform/graphics/gstreamer/VideoSinkGStreamer.cpp
         platform/graphics/gstreamer/VideoTrackPrivateGStreamer.cpp
+        platform/graphics/gstreamer/WebKitAudioSinkGStreamer.cpp
         platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp
 
         platform/graphics/gstreamer/eme/WebKitClearKeyDecryptorGStreamer.cpp
@@ -37,6 +41,7 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/mse/SourceBufferPrivateGStreamer.cpp
         platform/graphics/gstreamer/mse/WebKitMediaSourceGStreamer.cpp
 
+        platform/mediastream/libwebrtc/GStreamerVideoCommon.cpp
         platform/mediastream/libwebrtc/GStreamerVideoDecoderFactory.cpp
         platform/mediastream/libwebrtc/GStreamerVideoEncoder.cpp
         platform/mediastream/libwebrtc/GStreamerVideoEncoderFactory.cpp
@@ -137,17 +142,13 @@ if (ENABLE_VIDEO)
     endif ()
 
     if (ENABLE_MEDIA_STREAM OR ENABLE_WEB_RTC)
-        if (PC_GSTREAMER_VERSION VERSION_LESS "1.10")
-            message(FATAL_ERROR "GStreamer 1.10 is needed for ENABLE_MEDIA_STREAM or ENABLE_WEB_RTC")
-        else ()
-            list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-                ${GSTREAMER_CODECPARSERS_INCLUDE_DIRS}
+        list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
+            ${GSTREAMER_CODECPARSERS_INCLUDE_DIRS}
+        )
+        if (NOT USE_GSTREAMER_FULL)
+            list(APPEND WebCore_LIBRARIES
+                ${GSTREAMER_CODECPARSERS_LIBRARIES}
             )
-            if (NOT USE_GSTREAMER_FULL)
-                list(APPEND WebCore_LIBRARIES
-                    ${GSTREAMER_CODECPARSERS_LIBRARIES}
-                )
-            endif ()
         endif ()
     endif ()
 endif ()
@@ -178,14 +179,7 @@ if (ENABLE_WEB_AUDIO)
 endif ()
 
 if (ENABLE_ENCRYPTED_MEDIA)
-    list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-        "${WEBCORE_DIR}/platform/encryptedmedia/clearkey"
-    )
-
     list(APPEND WebCore_SOURCES
-        platform/encryptedmedia/CDMProxy.cpp
-        platform/encryptedmedia/CDMUtilities.cpp
-        platform/encryptedmedia/clearkey/CDMClearKey.cpp
         platform/graphics/gstreamer/eme/CDMFactoryGStreamer.cpp
         platform/graphics/gstreamer/eme/CDMProxyClearKey.cpp
     )
@@ -199,10 +193,6 @@ if (ENABLE_ENCRYPTED_MEDIA)
     )
 
     if (ENABLE_THUNDER)
-        list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-            "${WEBCORE_DIR}/platform/encryptedmedia/opencdm"
-        )
-
         list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
             ${THUNDER_INCLUDE_DIRS}
         )
@@ -217,7 +207,6 @@ if (ENABLE_ENCRYPTED_MEDIA)
             platform/graphics/gstreamer/eme/WebKitThunderDecryptorGStreamer.cpp
         )
     endif ()
-
 endif ()
 
 if (USE_CAIRO)

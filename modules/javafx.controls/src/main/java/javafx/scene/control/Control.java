@@ -155,7 +155,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -176,7 +176,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     private SkinBase<?> skinBase;
 
-    /***************************************************************************
+    /* *************************************************************************
     *                                                                         *
     * Event Handlers / Listeners                                              *
     *                                                                         *
@@ -204,7 +204,7 @@ public abstract class Control extends Region implements Skinnable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -415,7 +415,7 @@ public abstract class Control extends Region implements Skinnable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -449,7 +449,7 @@ public abstract class Control extends Region implements Skinnable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -584,7 +584,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      * Implementation of layout bounds for the Control. We want to preserve    *
      * the lazy semantics of layout bounds. So whenever the width/height       *
      * changes on the node, we end up invalidating layout bounds. We then      *
@@ -607,7 +607,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      * Forward the following to the skin                                       *
      **************************************************************************/
 
@@ -623,7 +623,7 @@ public abstract class Control extends Region implements Skinnable {
         return null;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Package API for SkinBase                                                *
      *                                                                         *
@@ -635,7 +635,7 @@ public abstract class Control extends Region implements Skinnable {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -777,7 +777,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * StyleSheet Handling                                                     *
      *                                                                         *
@@ -928,7 +928,7 @@ public abstract class Control extends Region implements Skinnable {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

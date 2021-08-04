@@ -42,7 +42,7 @@ import javafx.scene.layout.Region;
  */
 public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -50,7 +50,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
     private final BehaviorBase<ListCell<T>> behavior;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -71,7 +71,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 //        control.setInputMap(behavior.getInputMap());
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

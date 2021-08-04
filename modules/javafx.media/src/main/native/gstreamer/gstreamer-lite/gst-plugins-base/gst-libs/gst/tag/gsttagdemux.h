@@ -87,7 +87,7 @@ struct _GstTagDemux
  * @merge_tags: merge start and end tags. Subclasses may want to override this
  * vfunc to allow prioritising of start or end tag according to user
  * preference.  Note that both start_tags and end_tags may be NULL. By default
- * start tags are prefered over end tags.
+ * start tags are preferred over end tags.
  *
  * The #GstTagDemuxClass structure.  See documentation at beginning of section
  * for details about what subclasses need to override and do.
@@ -131,9 +131,7 @@ struct _GstTagDemuxClass
 GST_TAG_API
 GType     gst_tag_demux_get_type (void);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTagDemux, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -65,11 +65,11 @@
 #include "PageAuditAgent.h"
 #include "PageConsoleAgent.h"
 #include "PageDOMDebuggerAgent.h"
+#include "PageDebugger.h"
 #include "PageDebuggerAgent.h"
 #include "PageHeapAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
-#include "PageScriptDebugServer.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "WebInjectedScriptHost.h"
@@ -100,7 +100,7 @@ InspectorController::InspectorController(Page& page, InspectorClient* inspectorC
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
     , m_overlay(makeUnique<InspectorOverlay>(page, inspectorClient))
     , m_executionStopwatch(Stopwatch::create())
-    , m_scriptDebugServer(page)
+    , m_debugger(page)
     , m_page(page)
     , m_inspectorClient(inspectorClient)
 {
@@ -356,9 +356,14 @@ void InspectorController::drawHighlight(GraphicsContext& context) const
     m_overlay->paint(context);
 }
 
-void InspectorController::getHighlight(Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem) const
+void InspectorController::getHighlight(InspectorOverlay::Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem) const
 {
     m_overlay->getHighlight(highlight, coordinateSystem);
+}
+
+unsigned InspectorController::gridOverlayCount() const
+{
+    return m_overlay->gridOverlayCount();
 }
 
 bool InspectorController::shouldShowOverlay() const
@@ -478,10 +483,8 @@ void InspectorController::frontendInitialized()
 {
     if (m_pauseAfterInitialization) {
         m_pauseAfterInitialization = false;
-        if (auto* debuggerAgent = m_instrumentingAgents->enabledPageDebuggerAgent()) {
-            ErrorString ignored;
-            debuggerAgent->pause(ignored);
-        }
+        if (auto* debuggerAgent = m_instrumentingAgents->enabledPageDebuggerAgent())
+            debuggerAgent->pause();
     }
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -495,9 +498,9 @@ Stopwatch& InspectorController::executionStopwatch() const
     return m_executionStopwatch;
 }
 
-PageScriptDebugServer& InspectorController::scriptDebugServer()
+PageDebugger& InspectorController::debugger()
 {
-    return m_scriptDebugServer;
+    return m_debugger;
 }
 
 JSC::VM& InspectorController::vm()

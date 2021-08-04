@@ -783,7 +783,7 @@ gst_video_time_code_new_from_date_time_full (guint fps_n, guint fps_d,
  * @tc: a #GstVideoTimeCode
  * @fps_n: Numerator of the frame rate
  * @fps_d: Denominator of the frame rate
- * @latest_daily_jam: The latest daily jam of the #GstVideoTimeCode
+ * @latest_daily_jam: (allow-none): The latest daily jam of the #GstVideoTimeCode
  * @flags: #GstVideoTimeCodeFlags
  * @hours: the hours field of #GstVideoTimeCode
  * @minutes: the minutes field of #GstVideoTimeCode

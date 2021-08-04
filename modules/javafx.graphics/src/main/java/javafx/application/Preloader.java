@@ -110,6 +110,7 @@ public abstract class Preloader extends Application {
     private static final String lineSeparator;
 
     static {
+        @SuppressWarnings("removal")
         String prop = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("line.separator"));
         lineSeparator = prop != null ? prop : "\n";
     }

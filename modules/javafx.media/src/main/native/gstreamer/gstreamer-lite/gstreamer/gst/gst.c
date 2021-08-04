@@ -36,7 +36,7 @@
  * GStreamer covers a wide range of use cases including: playback, recording,
  * editing, serving streams, voice over ip and video calls.
  *
- * The <application>GStreamer</application> library should be initialized with
+ * The `GStreamer` library should be initialized with
  * gst_init() before it can be used. You should pass pointers to the main argc
  * and argv variables so that GStreamer can process its own command line
  * options, as shown in the following example.
@@ -857,6 +857,10 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
       GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
   GST_INFO ("initialized GStreamer successfully");
 
+  /* Adjust initial plugin rank based on the GST_PLUGIN_FEATURE_RANK
+   * environment variable */
+  _priv_gst_plugin_feature_rank_initialize ();
+
 #ifndef GST_DISABLE_GST_DEBUG
   _priv_gst_tracing_init ();
 #endif
@@ -1173,7 +1177,6 @@ gst_deinit (void)
 
   _priv_gst_caps_features_cleanup ();
   _priv_gst_caps_cleanup ();
-  _priv_gst_debug_cleanup ();
 
   g_type_class_unref (g_type_class_peek (gst_object_get_type ()));
   g_type_class_unref (g_type_class_peek (gst_pad_get_type ()));
@@ -1280,6 +1283,11 @@ gst_deinit (void)
 
   gst_deinitialized = TRUE;
   GST_INFO ("deinitialized GStreamer");
+
+  /* Doing this as the very last step to allow the above GST_INFO() to work
+   * correctly. It's of course making the above statement a lie: for a short
+   * while we're not deinitialized yet */
+  _priv_gst_debug_cleanup ();
 }
 
 /**

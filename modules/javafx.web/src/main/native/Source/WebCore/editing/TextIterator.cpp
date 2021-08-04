@@ -54,9 +54,6 @@
 #include "RenderTextControl.h"
 #include "RenderTextFragment.h"
 #include "ShadowRoot.h"
-#include "SimpleLineLayout.h"
-#include "SimpleLineLayoutFunctions.h"
-#include "SimpleLineLayoutResolver.h"
 #include "TextBoundaries.h"
 #include "TextControlInnerElements.h"
 #include "TextPlaceholderElement.h"
@@ -440,15 +437,15 @@ void TextIterator::advance()
         return;
     }
 
-    if (!m_textBox && m_remainingTextBox) {
-        m_textBox = m_remainingTextBox;
-        m_remainingTextBox = { };
+    if (!m_textRun && m_remainingTextRun) {
+        m_textRun = m_remainingTextRun;
+        m_remainingTextRun = { };
         m_firstLetterText = { };
         m_offset = 0;
     }
     // handle remembered text box
-    if (m_textBox) {
-        handleTextBox();
+    if (m_textRun) {
+        handleTextRun();
         if (m_positionNode)
             return;
     }
@@ -566,7 +563,7 @@ bool TextIterator::handleTextNode()
                 String firstLetter = m_firstLetterText->text();
                 emitText(textNode, *m_firstLetterText, m_offset, m_offset + firstLetter.length());
                 m_firstLetterText = nullptr;
-                m_textBox = { };
+                m_textRun = { };
                 return false;
             }
         }
@@ -583,44 +580,44 @@ bool TextIterator::handleTextNode()
         return true;
     }
 
-    m_textBox = LineLayoutTraversal::firstTextBoxInTextOrderFor(renderer);
+    m_textRun = LayoutIntegration::firstTextRunInTextOrderFor(renderer);
 
     bool shouldHandleFirstLetter = !m_handledFirstLetter && is<RenderTextFragment>(renderer) && !m_offset;
     if (shouldHandleFirstLetter)
         handleTextNodeFirstLetter(downcast<RenderTextFragment>(renderer));
 
-    if (!m_textBox && rendererText.length() && !shouldHandleFirstLetter) {
+    if (!m_textRun && rendererText.length() && !shouldHandleFirstLetter) {
         if (renderer.style().visibility() != Visibility::Visible && !(m_behavior & TextIteratorIgnoresStyleVisibility))
             return false;
         m_lastTextNodeEndedWithCollapsedSpace = true; // entire block is collapsed space
         return true;
     }
 
-    handleTextBox();
+    handleTextRun();
     return true;
 }
 
-void TextIterator::handleTextBox()
+void TextIterator::handleTextRun()
 {
     Text& textNode = downcast<Text>(*m_node);
 
     auto& renderer = m_firstLetterText ? *m_firstLetterText : *textNode.renderer();
     if (renderer.style().visibility() != Visibility::Visible && !(m_behavior & TextIteratorIgnoresStyleVisibility)) {
-        m_textBox = { };
+        m_textRun = { };
         return;
     }
 
-    auto firstTextBox = LineLayoutTraversal::firstTextBoxInTextOrderFor(renderer);
+    auto firstTextRun = LayoutIntegration::firstTextRunInTextOrderFor(renderer);
 
     String rendererText = renderer.text();
     unsigned start = m_offset;
     unsigned end = (&textNode == m_endContainer) ? static_cast<unsigned>(m_endOffset) : UINT_MAX;
-    while (m_textBox) {
-        unsigned textBoxStart = m_textBox->localStartOffset();
-        unsigned runStart = std::max(textBoxStart, start);
+    while (m_textRun) {
+        unsigned textRunStart = m_textRun->start();
+        unsigned runStart = std::max(textRunStart, start);
 
         // Check for collapsed space at the start of this run.
-        bool needSpace = m_lastTextNodeEndedWithCollapsedSpace || (m_textBox == firstTextBox && textBoxStart == runStart && runStart);
+        bool needSpace = m_lastTextNodeEndedWithCollapsedSpace || (m_textRun == firstTextRun && textRunStart == runStart && runStart);
         if (needSpace && !renderer.style().isCollapsibleWhiteSpace(m_lastCharacter) && m_lastCharacter) {
             if (m_lastTextNode == &textNode && runStart && rendererText[runStart - 1] == ' ') {
                 unsigned spaceRunStart = runStart - 1;
@@ -631,12 +628,12 @@ void TextIterator::handleTextBox()
                 emitCharacter(' ', textNode, nullptr, runStart, runStart);
             return;
         }
-        unsigned textBoxEnd = textBoxStart + m_textBox->length();
-        unsigned runEnd = std::min(textBoxEnd, end);
+        unsigned textRunEnd = textRunStart + m_textRun->length();
+        unsigned runEnd = std::min(textRunEnd, end);
 
-        // Determine what the next text box will be, but don't advance yet
-        auto nextTextBox = m_textBox;
-        nextTextBox.traverseNextInTextOrder();
+        // Determine what the next text run will be, but don't advance yet
+        auto nextTextRun = m_textRun;
+        nextTextRun.traverseNextTextRunInTextOrder();
 
         if (runStart < runEnd) {
             auto isNewlineOrTab = [&](UChar character) {
@@ -655,8 +652,8 @@ void TextIterator::handleTextBox()
                         break;
                 }
                 if (subrunEnd == runEnd && (m_behavior & TextIteratorBehavesAsIfNodesFollowing)) {
-                    bool lastSpaceCollapsedByNextNonTextBox = !nextTextBox && rendererText.length() > subrunEnd && rendererText[subrunEnd] == ' ';
-                    if (lastSpaceCollapsedByNextNonTextBox)
+                    bool lastSpaceCollapsedByNextNonTextRun = !nextTextRun && rendererText.length() > subrunEnd && rendererText[subrunEnd] == ' ';
+                    if (lastSpaceCollapsedByNextNonTextRun)
                         ++subrunEnd; // runEnd stopped before last space. Increment by one to restore the space.
                 }
                 m_offset = subrunEnd;
@@ -665,25 +662,25 @@ void TextIterator::handleTextBox()
 
             // If we are doing a subrun that doesn't go to the end of the text box,
             // come back again to finish handling this text box; don't advance to the next one.
-            if (static_cast<unsigned>(m_positionEndOffset) < textBoxEnd)
+            if (static_cast<unsigned>(m_positionEndOffset) < textRunEnd)
                 return;
 
             // Advance and return
-            unsigned nextRunStart = nextTextBox ? nextTextBox->localStartOffset() : rendererText.length();
+            unsigned nextRunStart = nextTextRun ? nextTextRun->start() : rendererText.length();
             if (nextRunStart > runEnd)
                 m_lastTextNodeEndedWithCollapsedSpace = true; // collapsed space between runs or at the end
-            m_textBox = nextTextBox;
+            m_textRun = nextTextRun;
             return;
         }
         // Advance and continue
-        m_textBox = nextTextBox;
+        m_textRun = nextTextRun;
     }
-    if (!m_textBox && m_remainingTextBox) {
-        m_textBox = m_remainingTextBox;
-        m_remainingTextBox = { };
+    if (!m_textRun && m_remainingTextRun) {
+        m_textRun = m_remainingTextRun;
+        m_remainingTextRun = { };
         m_firstLetterText = { };
         m_offset = 0;
-        handleTextBox();
+        handleTextRun();
     }
 }
 
@@ -703,8 +700,8 @@ void TextIterator::handleTextNodeFirstLetter(RenderTextFragment& renderer)
             return;
         if (auto* firstLetterText = firstRenderTextInFirstLetter(firstLetter)) {
             m_handledFirstLetter = true;
-            m_remainingTextBox = m_textBox;
-            m_textBox = LineLayoutTraversal::firstTextBoxInTextOrderFor(*firstLetterText);
+            m_remainingTextRun = m_textRun;
+            m_textRun = LayoutIntegration::firstTextRunInTextOrderFor(*firstLetterText);
             m_firstLetterText = firstLetterText;
         }
     }
@@ -983,8 +980,8 @@ bool TextIterator::shouldRepresentNodeOffsetZero()
     // and in that case we'll get null. We don't want to put in newlines at the start in that case.
     // The currPos.isNotNull() check is needed because positions in non-HTML content
     // (like SVG) do not have visible positions, and we don't want to emit for them either.
-    VisiblePosition startPos = VisiblePosition(Position(m_startContainer, m_startOffset, Position::PositionIsOffsetInAnchor), DOWNSTREAM);
-    VisiblePosition currPos = VisiblePosition(positionBeforeNode(m_node), DOWNSTREAM);
+    VisiblePosition startPos = VisiblePosition(Position(m_startContainer, m_startOffset, Position::PositionIsOffsetInAnchor));
+    VisiblePosition currPos = VisiblePosition(positionBeforeNode(m_node));
     return startPos.isNotNull() && currPos.isNotNull() && !inSameLine(startPos, currPos);
 }
 
@@ -1563,7 +1560,7 @@ void WordAwareIterator::advance()
         }
 
         if (m_buffer.isEmpty()) {
-            // Start gobbling chunks until we get to a suitable stopping point
+            // Start gobbling chunks until we get to a suitable stopping point.
             append(m_buffer, m_previousText.text());
             m_previousText.reset();
         }
@@ -2090,10 +2087,10 @@ inline bool SearchBuffer::isWordEndMatch(size_t start, size_t length) const
     ASSERT(length);
     ASSERT(m_options.contains(AtWordEnds));
 
-    int endWord;
     // Start searching at the end of matched search, so that multiple word matches succeed.
+    int endWord;
     findEndWordBoundary(StringView(m_buffer.data(), m_buffer.size()), start + length - 1, &endWord);
-    return static_cast<size_t>(endWord) == (start + length);
+    return static_cast<size_t>(endWord) == start + length;
 }
 
 inline bool SearchBuffer::isWordStartMatch(size_t start, size_t length) const
@@ -2333,14 +2330,12 @@ size_t SearchBuffer::length() const
 
 uint64_t characterCount(const SimpleRange& range, TextIteratorBehavior behavior)
 {
-    auto comparisonResult = Range::compareBoundaryPoints(&range.startContainer(), range.startOffset(), &range.endContainer(), range.endOffset());
-    if (comparisonResult.hasException())
-        return 0;
-
-    auto adjustedRange(range);
-    if (comparisonResult.releaseReturnValue() > 0)
+    auto adjustedRange = range;
+    auto ordering = treeOrder<ComposedTree>(range.start, range.end);
+    if (is_gt(ordering))
         std::swap(adjustedRange.start, adjustedRange.end);
-
+    else if (!is_lt(ordering))
+        return 0;
     uint64_t length = 0;
     for (TextIterator it(adjustedRange, behavior); !it.atEnd(); it.advance())
         length += it.text().length();
@@ -2384,7 +2379,7 @@ SimpleRange resolveCharacterRange(const SimpleRange& scope, CharacterRange range
                 if (!it.atEnd())
                     textRunRange.end = it.range().start;
                 else {
-                    if (auto end = makeBoundaryPoint(VisiblePosition(createLegacyEditingPosition(textRunRange.start)).next().deepEquivalent()))
+                    if (auto end = makeBoundaryPoint(VisiblePosition(makeDeprecatedLegacyPosition(textRunRange.start)).next().deepEquivalent()))
                         textRunRange.end = *end;
                 }
             }

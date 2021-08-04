@@ -56,7 +56,7 @@ public:
     bool shouldEndEditing(const SimpleRange&) override;
     bool shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction) override;
     bool shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction) override;
-    bool shouldChangeSelectedRange(const Optional<SimpleRange>& fromRange, const Optional<SimpleRange>& toRange, EAffinity, bool stillSelecting) override;
+    bool shouldChangeSelectedRange(const Optional<SimpleRange>& fromRange, const Optional<SimpleRange>& toRange, Affinity, bool stillSelecting) override;
 
     bool shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&) override;
     void didApplyStyle() override;

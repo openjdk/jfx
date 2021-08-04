@@ -34,7 +34,7 @@ namespace Inspector {
 
 class RemoteInspectorServer final : public RemoteInspectorSocketEndpoint::Listener {
 public:
-    ~RemoteInspectorServer();
+    ~RemoteInspectorServer() final;
 
     JS_EXPORT_PRIVATE static RemoteInspectorServer& singleton();
 
@@ -46,8 +46,8 @@ private:
     friend class LazyNeverDestroyed<RemoteInspectorServer>;
     RemoteInspectorServer() { Socket::init(); }
 
-    bool didAccept(ConnectionID acceptedID, ConnectionID listenerID, Socket::Domain) final;
-    void didClose(ConnectionID) final { }
+    Optional<ConnectionID> doAccept(RemoteInspectorSocketEndpoint&, PlatformSocketType) final;
+    void didChangeStatus(RemoteInspectorSocketEndpoint&, ConnectionID, RemoteInspectorSocketEndpoint::Listener::Status) final { };
 
     Optional<ConnectionID> m_server;
 };

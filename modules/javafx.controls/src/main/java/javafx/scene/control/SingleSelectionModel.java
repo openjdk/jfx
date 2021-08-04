@@ -44,7 +44,7 @@ package javafx.scene.control;
  */
 public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -57,7 +57,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Selection API                                                           *
      *                                                                         *

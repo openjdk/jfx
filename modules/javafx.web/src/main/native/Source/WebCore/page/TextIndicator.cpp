@@ -146,7 +146,7 @@ static SnapshotOptions snapshotOptionsForTextIndicatorOptions(OptionSet<TextIndi
 
 static RefPtr<Image> takeSnapshot(Frame& frame, IntRect rect, SnapshotOptions options, float& scaleFactor, const Vector<FloatRect>& clipRectsInDocumentCoordinates)
 {
-    std::unique_ptr<ImageBuffer> buffer = snapshotFrameRectWithClip(frame, rect, clipRectsInDocumentCoordinates, options);
+    auto buffer = snapshotFrameRectWithClip(frame, rect, clipRectsInDocumentCoordinates, options);
     if (!buffer)
         return nullptr;
     scaleFactor = buffer->resolutionScale();
@@ -198,11 +198,11 @@ static HashSet<Color> estimatedTextColorsForRange(const SimpleRange& range)
 
 static FloatRect absoluteBoundingRectForRange(const SimpleRange& range)
 {
-    return createLiveRange(range)->absoluteBoundingRect({
-        Range::BoundingRectBehavior::RespectClipping,
-        Range::BoundingRectBehavior::UseVisibleBounds,
-        Range::BoundingRectBehavior::IgnoreTinyRects,
-    });
+    return unionRectIgnoringZeroRects(RenderObject::absoluteBorderAndTextRects(range, {
+        RenderObject::BoundingRectBehavior::RespectClipping,
+        RenderObject::BoundingRectBehavior::UseVisibleBounds,
+        RenderObject::BoundingRectBehavior::IgnoreTinyRects,
+    }));
 }
 
 static Color estimatedBackgroundColorForRange(const SimpleRange& range, const Frame& frame)
@@ -210,7 +210,7 @@ static Color estimatedBackgroundColorForRange(const SimpleRange& range, const Fr
     auto estimatedBackgroundColor = frame.view() ? frame.view()->documentBackgroundColor() : Color::transparentBlack;
 
     RenderElement* renderer = nullptr;
-    auto commonAncestor = commonInclusiveAncestor(range);
+    auto commonAncestor = commonInclusiveAncestor<ComposedTree>(range);
     while (commonAncestor) {
         if (is<RenderElement>(commonAncestor->renderer())) {
             renderer = downcast<RenderElement>(commonAncestor->renderer());
@@ -295,7 +295,7 @@ static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const Sim
 
     bool useBoundingRectAndPaintAllContentForComplexRanges = data.options.contains(TextIndicatorOption::UseBoundingRectAndPaintAllContentForComplexRanges);
     if (useBoundingRectAndPaintAllContentForComplexRanges && containsOnlyWhiteSpaceText(range)) {
-        if (auto* containerRenderer = commonInclusiveAncestor(range)->renderer()) {
+        if (auto* containerRenderer = commonInclusiveAncestor<ComposedTree>(range)->renderer()) {
             data.options.add(TextIndicatorOption::PaintAllContent);
             textRects.append(containerRenderer->absoluteBoundingBoxRect());
         }
@@ -303,18 +303,18 @@ static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const Sim
         data.options.add(TextIndicatorOption::PaintAllContent);
 #if PLATFORM(IOS_FAMILY)
     else if (data.options.contains(TextIndicatorOption::UseSelectionRectForSizing)) {
-        textRects = RenderObject::collectSelectionRects(range).map([&](const auto& rect) -> FloatRect {
+        textRects = RenderObject::collectSelectionRects(range).map([&](auto& rect) -> FloatRect {
             return rect.rect();
         });
     }
 #endif
     else {
-        auto textRectHeight = data.options.contains(TextIndicatorOption::TightlyFitContent) ? FrameSelection::TextRectangleHeight::TextHeight : FrameSelection::TextRectangleHeight::SelectionHeight;
-        Vector<IntRect> intRects;
-        createLiveRange(range)->absoluteTextRects(intRects, textRectHeight == FrameSelection::TextRectangleHeight::SelectionHeight, Range::BoundingRectBehavior::RespectClipping);
-        textRects.reserveInitialCapacity(intRects.size());
-        for (auto& intRect : intRects)
-            textRects.uncheckedAppend(intRect);
+        OptionSet<RenderObject::BoundingRectBehavior> behavior { RenderObject::BoundingRectBehavior::RespectClipping };
+        if (!data.options.contains(TextIndicatorOption::TightlyFitContent))
+            behavior.add(RenderObject::BoundingRectBehavior::UseSelectionHeight);
+        textRects = RenderObject::absoluteTextRects(range, behavior).map([&](auto& rect) -> FloatRect {
+            return rect;
+        });
     }
 
     if (textRects.isEmpty())
