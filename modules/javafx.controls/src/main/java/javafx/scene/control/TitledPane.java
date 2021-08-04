@@ -77,7 +77,7 @@ import javafx.css.StyleableProperty;
 @DefaultProperty("content")
 public class TitledPane extends Labeled {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -106,7 +106,7 @@ public class TitledPane extends Labeled {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -271,7 +271,7 @@ public class TitledPane extends Labeled {
      */
     public final BooleanProperty collapsibleProperty() { return collapsible; }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -282,7 +282,7 @@ public class TitledPane extends Labeled {
         return new TitledPaneSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -363,7 +363,7 @@ public class TitledPane extends Labeled {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

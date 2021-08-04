@@ -89,7 +89,7 @@ import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortTyp
  */
 public class TableColumnHeader extends Region {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -103,7 +103,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -143,7 +143,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -197,7 +197,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -294,7 +294,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -357,7 +357,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -439,7 +439,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -725,9 +725,9 @@ public class TableColumnHeader extends Region {
             treeTableRow.updateIndex(row);
             treeTableRow.updateTreeItem(ttv.getTreeItem(row));
 
-            cell.updateTreeTableColumn(tc);
+            cell.updateTableColumn(tc);
             cell.updateTreeTableView(ttv);
-            cell.updateTreeTableRow(treeTableRow);
+            cell.updateTableRow(treeTableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
@@ -1104,7 +1104,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation: Column Reordering                               *
      *                                                                         *
@@ -1240,7 +1240,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

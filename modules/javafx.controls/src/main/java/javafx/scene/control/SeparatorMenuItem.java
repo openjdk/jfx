@@ -56,7 +56,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
  */
 public class SeparatorMenuItem extends CustomMenuItem {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -72,7 +72,7 @@ public class SeparatorMenuItem extends CustomMenuItem {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

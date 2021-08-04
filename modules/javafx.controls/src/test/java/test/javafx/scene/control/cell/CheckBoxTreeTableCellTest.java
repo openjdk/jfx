@@ -69,7 +69,7 @@ public class CheckBoxTreeTableCellTest {
 
     private void setTableViewAndTableColumn(TreeTableCell cell) {
         cell.updateTreeTableView(tableView);
-        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTableColumn(tableColumn);
     }
 
 

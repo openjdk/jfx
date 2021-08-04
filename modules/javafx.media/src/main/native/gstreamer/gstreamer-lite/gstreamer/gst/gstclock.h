@@ -642,6 +642,7 @@ gboolean                gst_clock_periodic_id_reinit    (GstClock * clock,
                                                          GstClockTime interval);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstClock, gst_object_unref)
+G_DEFINE_AUTO_CLEANUP_FREE_FUNC(GstClockID, gst_clock_id_unref, 0)
 
 G_END_DECLS
 

@@ -45,11 +45,6 @@ public:
 
     virtual ~ScrollingStatePositionedNode();
 
-    enum {
-        RelatedOverflowScrollingNodes = NumStateNodeBits,
-        LayoutConstraintData,
-    };
-
     // These are the overflow scrolling nodes whose scroll position affects the layers in this node.
     const Vector<ScrollingNodeID>& relatedOverflowScrollingNodes() const { return m_relatedOverflowScrollingNodes; }
     WEBCORE_EXPORT void setRelatedOverflowScrollingNodes(Vector<ScrollingNodeID>&&);
@@ -61,9 +56,8 @@ private:
     ScrollingStatePositionedNode(ScrollingStateTree&, ScrollingNodeID);
     ScrollingStatePositionedNode(const ScrollingStatePositionedNode&, ScrollingStateTree&);
 
-    void setPropertyChangedBitsAfterReattach() override;
-
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const final;
+    OptionSet<ScrollingStateNode::Property> applicableProperties() const final;
 
     Vector<ScrollingNodeID> m_relatedOverflowScrollingNodes;
     AbsolutePositionConstraints m_constraints;

@@ -242,8 +242,8 @@ abstract class GlassScene implements TKScene {
 
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
-        @SuppressWarnings("removal")
         ClipboardAssistance assistant = new ClipboardAssistance(Clipboard.DND) {
+            @SuppressWarnings("removal")
             @Override
             public void actionPerformed(final int performedAction) {
                 super.actionPerformed(performedAction);

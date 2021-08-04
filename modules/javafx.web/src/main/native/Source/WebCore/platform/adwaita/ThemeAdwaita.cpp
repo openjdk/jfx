@@ -159,17 +159,17 @@ LengthSize ThemeAdwaita::controlSize(ControlPart part, const FontCascade& fontCa
     case RadioPart: {
         LengthSize buttonSize = zoomedSize;
         if (buttonSize.width.isIntrinsicOrAuto())
-            buttonSize.width = Length(12, Fixed);
+            buttonSize.width = Length(12, LengthType::Fixed);
         if (buttonSize.height.isIntrinsicOrAuto())
-            buttonSize.height = Length(12, Fixed);
+            buttonSize.height = Length(12, LengthType::Fixed);
         return buttonSize;
     }
     case InnerSpinButtonPart: {
         LengthSize spinButtonSize = zoomedSize;
         if (spinButtonSize.width.isIntrinsicOrAuto())
-            spinButtonSize.width = Length(static_cast<int>(arrowSize), Fixed);
+            spinButtonSize.width = Length(static_cast<int>(arrowSize), LengthType::Fixed);
         if (spinButtonSize.height.isIntrinsicOrAuto() || fontCascade.pixelSize() > static_cast<int>(arrowSize))
-            spinButtonSize.height = Length(fontCascade.pixelSize(), Fixed);
+            spinButtonSize.height = Length(fontCascade.pixelSize(), LengthType::Fixed);
         return spinButtonSize;
     }
     default:
@@ -186,9 +186,9 @@ LengthSize ThemeAdwaita::minimumControlSize(ControlPart, const FontCascade&, con
 
     LengthSize minSize = zoomedSize;
     if (minSize.width.isIntrinsicOrAuto())
-        minSize.width = Length(0, Fixed);
+        minSize.width = Length(0, LengthType::Fixed);
     if (minSize.height.isIntrinsicOrAuto())
-        minSize.height = Length(0, Fixed);
+        minSize.height = Length(0, LengthType::Fixed);
     return minSize;
 }
 
@@ -248,6 +248,7 @@ void ThemeAdwaita::paintCheckbox(ControlStates& states, GraphicsContext& graphic
     Path path;
     path.addRoundedRect(fieldRect, corner);
     fieldRect.inflate(-buttonBorderSize);
+    corner.expand(-buttonBorderSize, -buttonBorderSize);
     path.addRoundedRect(fieldRect, corner);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     graphicsContext.setFillColor(buttonBorderColor);
@@ -349,6 +350,7 @@ void ThemeAdwaita::paintButton(ControlStates& states, GraphicsContext& graphicsC
     Path path;
     path.addRoundedRect(fieldRect, corner);
     fieldRect.inflate(-buttonBorderSize);
+    corner.expand(-buttonBorderSize, -buttonBorderSize);
     path.addRoundedRect(fieldRect, corner);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     graphicsContext.setFillColor(buttonBorderColor);
@@ -380,6 +382,7 @@ void ThemeAdwaita::paintSpinButton(ControlStates& states, GraphicsContext& graph
     Path path;
     path.addRoundedRect(fieldRect, corner);
     fieldRect.inflate(-buttonBorderSize);
+    corner.expand(-buttonBorderSize, -buttonBorderSize);
     path.addRoundedRect(fieldRect, corner);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     graphicsContext.setFillColor(spinButtonBorderColor);

@@ -313,7 +313,7 @@ void ChromeClientJava::takeFocus(FocusDirection direction)
 
     ASSERT(m_webPage);
 
-    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirectionForward);
+    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirection::Forward);
     WTF::CheckAndClearException(env);
 }
 
@@ -629,7 +629,7 @@ void ChromeClientJava::setToolTip(const String& toolTip)
     WTF::CheckAndClearException(env);
 }
 
-void ChromeClientJava::print(Frame&)
+void ChromeClientJava::print(Frame&, const StringWithDirection&)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -671,7 +671,7 @@ void ChromeClientJava::setNeedsOneShotDrawingSynchronization()
             ->setNeedsOneShotDrawingSynchronization();
 }
 
-void ChromeClientJava::scheduleRenderingUpdate()
+void ChromeClientJava::triggerRenderingUpdate()
 {
     WebPage::webPageFromJObject(m_webPage)->scheduleRenderingUpdate();
 }

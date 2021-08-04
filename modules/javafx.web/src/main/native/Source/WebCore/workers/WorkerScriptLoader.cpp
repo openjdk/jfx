@@ -107,7 +107,7 @@ Optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionContext
     return WTF::nullopt;
 }
 
-void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecutionContext, ResourceRequest&& scriptRequest, FetchOptions&& fetchOptions, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, ServiceWorkersMode serviceWorkerMode, WorkerScriptLoaderClient& client)
+void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecutionContext, ResourceRequest&& scriptRequest, FetchOptions&& fetchOptions, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, ServiceWorkersMode serviceWorkerMode, WorkerScriptLoaderClient& client, String&& taskMode)
 {
     m_client = &client;
     m_url = scriptRequest.url();
@@ -119,16 +119,16 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
     if (!request)
         return;
 
-    // Only used for loading worker scripts in classic mode.
-    // FIXME: We should add an option to set credential mode.
-    ASSERT(fetchOptions.mode == FetchOptions::Mode::SameOrigin);
-
     ThreadableLoaderOptions options { WTFMove(fetchOptions) };
-    options.credentials = FetchOptions::Credentials::SameOrigin;
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.contentSecurityPolicyEnforcement = contentSecurityPolicyEnforcement;
     if (fetchOptions.destination == FetchOptions::Destination::Serviceworker)
         options.certificateInfoPolicy = CertificateInfoPolicy::IncludeCertificateInfo;
+
+    // FIXME: We should drop the sameOriginDataURLFlag flag and implement the latest Fetch specification.
+    if (fetchOptions.destination != FetchOptions::Destination::Worker)
+        options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
+
     // A service worker job can be executed from a worker context or a document context.
     options.serviceWorkersMode = serviceWorkerMode;
 #if ENABLE(SERVICE_WORKER)
@@ -138,7 +138,7 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
 
     // During create, callbacks may happen which remove the last reference to this object.
     Ref<WorkerScriptLoader> protectedThis(*this);
-    m_threadableLoader = ThreadableLoader::create(scriptExecutionContext, *this, WTFMove(*request), options);
+    m_threadableLoader = ThreadableLoader::create(scriptExecutionContext, *this, WTFMove(*request), options, { }, WTFMove(taskMode));
 }
 
 const URL& WorkerScriptLoader::responseURL() const
@@ -185,6 +185,8 @@ void WorkerScriptLoader::didReceiveResponse(unsigned long identifier, const Reso
     m_certificateInfo = response.certificateInfo() ? *response.certificateInfo() : CertificateInfo();
     m_responseMIMEType = response.mimeType();
     m_responseEncoding = response.textEncodingName();
+    m_responseSource = response.source();
+    m_isRedirected = response.isRedirected();
     m_contentSecurityPolicy = ContentSecurityPolicyResponseHeaders { response };
     m_referrerPolicy = response.httpHeaderField(HTTPHeaderName::ReferrerPolicy);
     if (m_client)

@@ -1,4 +1,4 @@
-## xmlsoft.org: libxml2 v2.9.10
+## xmlsoft.org: libxml2 v2.9.12
 
 ### libxml2 License
 ```
@@ -26,5 +26,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+=== copyright notices for hash.c, list.c, and the trio files ===
+hash.c:
+ * Copyright (C) 2000,2012 Bjorn Reese and Daniel Veillard.
+list.c:
+ * Copyright (C) 2000 Gary Pennington and Daniel Veillard.
+the trio files:
+ * Copyright (C) 1998 Bjorn Reese and Daniel Stenberg.
+=== license text for hash.c, list.c, and the trio files ===
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS AND
+ * CONTRIBUTORS ACCEPT NO RESPONSIBILITY IN ANY CONCEIVABLE MANNER.
+ *
 
 ```

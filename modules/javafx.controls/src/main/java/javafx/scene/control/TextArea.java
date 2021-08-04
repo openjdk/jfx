@@ -479,7 +479,7 @@ public class TextArea extends TextInputControl {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -609,7 +609,7 @@ public class TextArea extends TextInputControl {
     public final void setScrollLeft(double value) { scrollLeft.setValue(value); }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -625,7 +625,7 @@ public class TextArea extends TextInputControl {
         return TextInputControl.filterInput(text, false, false);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

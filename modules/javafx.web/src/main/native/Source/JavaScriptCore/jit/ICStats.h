@@ -53,7 +53,6 @@ namespace JSC {
     macro(OperationGetByIdWithThisOptimize) \
     macro(OperationGenericIn) \
     macro(OperationInById) \
-    macro(OperationInByIdGeneric) \
     macro(OperationInByIdOptimize) \
     macro(OperationPutByIdStrict) \
     macro(OperationPutByIdNonStrict) \
@@ -65,8 +64,6 @@ namespace JSC {
     macro(OperationPutByIdDirectNonStrictOptimize) \
     macro(OperationPutByIdStrictBuildList) \
     macro(OperationPutByIdNonStrictBuildList) \
-    macro(OperationPutByIdDirectStrictBuildList) \
-    macro(OperationPutByIdDirectNonStrictBuildList) \
     macro(OperationPutByIdDefinePrivateFieldFieldStrictOptimize) \
     macro(OperationPutByIdPutPrivateFieldFieldStrictOptimize) \
     macro(PutByIdAddAccessCase) \
@@ -75,7 +72,14 @@ namespace JSC {
     macro(InByIdSelfPatch) \
     macro(DelByReplaceWithJump) \
     macro(DelByReplaceWithGeneric) \
-    macro(OperationGetPrivateNameOptimize)
+    macro(OperationGetPrivateNameOptimize) \
+    macro(OperationGetPrivateNameById) \
+    macro(OperationGetPrivateNameByIdOptimize) \
+    macro(OperationGetPrivateNameByIdGeneric) \
+    macro(CheckPrivateBrandAddAccessCase) \
+    macro(SetPrivateBrandAddAccessCase) \
+    macro(CheckPrivateBrandReplaceWithJump) \
+    macro(SetPrivateBrandReplaceWithJump)
 
 class ICEvent {
 public:

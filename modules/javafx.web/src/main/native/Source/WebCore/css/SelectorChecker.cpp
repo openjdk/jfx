@@ -958,6 +958,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             return element.isBeingDragged();
         case CSSSelector::PseudoClassFocus:
             return matchesFocusPseudoClass(element);
+        case CSSSelector::PseudoClassFocusVisible:
+            return matchesFocusVisiblePseudoClass(element);
         case CSSSelector::PseudoClassFocusWithin:
             return element.hasFocusWithin();
         case CSSSelector::PseudoClassHover:
@@ -1143,7 +1145,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             // Always matches when not specifically requested so it gets added to the pseudoIdSet.
             if (checkingContext.pseudoId == PseudoId::None)
                 return true;
-            if (checkingContext.pseudoId != PseudoId::Highlight)
+            if (checkingContext.pseudoId != PseudoId::Highlight || !selector.argumentList())
                 return false;
             return selector.argumentList()->first() == checkingContext.nameForHightlightPseudoElement;
 
@@ -1243,35 +1245,6 @@ unsigned SelectorChecker::determineLinkMatchType(const CSSSelector* selector)
             return linkMatchType;
     }
     return linkMatchType;
-}
-
-static bool isFrameFocused(const Element& element)
-{
-    return element.document().frame() && element.document().frame()->selection().isFocusedAndActive();
-}
-
-static bool doesShadowTreeContainFocusedElement(const Element& element)
-{
-    auto* shadowRoot = element.shadowRoot();
-    return shadowRoot && shadowRoot->containsFocusedElement();
-}
-
-bool SelectorChecker::matchesFocusPseudoClass(const Element& element)
-{
-    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocus))
-        return true;
-
-    return (element.focused() || doesShadowTreeContainFocusedElement(element)) && isFrameFocused(element);
-}
-
-// This needs to match a subset of elements matchesFocusPseudoClass match since direct focus is treated
-// as a part of focus pseudo class selectors in ElementRuleCollector::collectMatchingRules.
-bool SelectorChecker::matchesDirectFocusPseudoClass(const Element& element)
-{
-    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocus))
-        return true;
-
-    return element.focused() && isFrameFocused(element);
 }
 
 }

@@ -66,10 +66,12 @@ public:
     void takeSource(LibWebRTCRtpSenderBackend&);
 
 private:
-    void replaceTrack(ScriptExecutionContext&, RTCRtpSender&, RefPtr<MediaStreamTrack>&&, DOMPromiseDeferred<void>&&) final;
+    bool replaceTrack(RTCRtpSender&, MediaStreamTrack*) final;
     RTCRtpSendParameters getParameters() const final;
     void setParameters(const RTCRtpSendParameters&, DOMPromiseDeferred<void>&&) final;
     std::unique_ptr<RTCDTMFSenderBackend> createDTMFBackend() final;
+    Ref<RTCRtpTransformBackend> createRTCRtpTransformBackend() final;
+    void setMediaStreamIds(const Vector<String>&) final;
 
     void startSource();
     void stopSource();

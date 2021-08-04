@@ -137,6 +137,7 @@ public:
 
     JS_EXPORT_PRIVATE RefPtr<ArrayBuffer> slice(double begin, double end) const;
     JS_EXPORT_PRIVATE RefPtr<ArrayBuffer> slice(double begin) const;
+    JS_EXPORT_PRIVATE RefPtr<ArrayBuffer> sliceWithClampedIndex(unsigned begin, unsigned end) const;
 
     inline void pin();
     inline void unpin();
@@ -149,9 +150,9 @@ public:
     JS_EXPORT_PRIVATE bool transferTo(VM&, ArrayBufferContents&);
     JS_EXPORT_PRIVATE bool shareWith(ArrayBufferContents&);
 
-    void neuter(VM&);
-    bool isNeutered() { return !m_contents.m_data; }
-    InlineWatchpointSet& neuteringWatchpointSet() { return m_neuteringWatchpointSet; }
+    void detach(VM&);
+    bool isDetached() { return !m_contents.m_data; }
+    InlineWatchpointSet& detachingWatchpointSet() { return m_detachingWatchpointSet; }
 
     static ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_data); }
 
@@ -164,14 +165,13 @@ private:
     static Ref<ArrayBuffer> createInternal(ArrayBufferContents&&, const void*, unsigned);
     static RefPtr<ArrayBuffer> tryCreate(unsigned numElements, unsigned elementByteSize, ArrayBufferContents::InitializationPolicy);
     ArrayBuffer(ArrayBufferContents&&);
-    RefPtr<ArrayBuffer> sliceImpl(unsigned begin, unsigned end) const;
     inline unsigned clampIndex(double index) const;
     static inline unsigned clampValue(double x, unsigned left, unsigned right);
 
-    void notifyNeutering(VM&);
+    void notifyDetaching(VM&);
 
     ArrayBufferContents m_contents;
-    InlineWatchpointSet m_neuteringWatchpointSet { IsWatched };
+    InlineWatchpointSet m_detachingWatchpointSet { IsWatched };
 public:
     Weak<JSArrayBuffer> m_wrapper;
 private:

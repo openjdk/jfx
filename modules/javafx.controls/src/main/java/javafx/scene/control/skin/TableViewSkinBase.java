@@ -79,7 +79,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class TableViewSkinBase<M, S, C extends Control, I extends IndexedCell<M>, TC extends TableColumnBase<S,?>> extends VirtualContainerBase<C, I> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -98,7 +98,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Internal Fields                                                         *
      *                                                                         *
@@ -155,7 +155,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -242,7 +242,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -340,7 +340,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -350,7 +350,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -502,7 +502,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -1002,7 +1002,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * A11y                                                                    *
      *                                                                         *

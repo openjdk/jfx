@@ -93,7 +93,7 @@ struct IDLAny : IDLType<JSC::Strong<JSC::Unknown>> {
     template<typename U> static inline U&& extractValueFromNullable(U&& value) { return std::forward<U>(value); }
 };
 
-struct IDLVoid : IDLType<void> { };
+struct IDLUndefined : IDLType<void> { };
 
 struct IDLBoolean : IDLType<bool> { };
 
@@ -139,7 +139,7 @@ struct IDLDOMString : IDLString<String> { };
 struct IDLByteString : IDLString<String> { };
 struct IDLUSVString : IDLString<String> { };
 
-template<typename T> struct IDLTreatNullAsEmptyAdaptor : IDLString<String> {
+template<typename T> struct IDLLegacyNullToEmptyStringAdaptor : IDLString<String> {
     using InnerType = T;
 };
 
@@ -148,6 +148,10 @@ template<typename T> struct IDLAtomStringAdaptor : IDLString<AtomString> {
 };
 
 template<typename T> struct IDLRequiresExistingAtomStringAdaptor : IDLString<AtomString> {
+    using InnerType = T;
+};
+
+template<typename T> struct IDLAllowSharedAdaptor : T {
     using InnerType = T;
 };
 
@@ -322,5 +326,18 @@ struct IsIDLFloatingPoint : public std::integral_constant<bool, WTF::IsBaseOfTem
 
 template<typename T>
 struct IsIDLTypedArray : public std::integral_constant<bool, WTF::IsBaseOfTemplate<IDLTypedArray, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBuffer : public std::integral_constant<bool, std::is_base_of<IDLArrayBuffer, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBufferView : public std::integral_constant<bool, std::is_base_of<IDLArrayBufferView, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBufferAllowShared : public std::integral_constant<bool, std::is_base_of<IDLAllowSharedAdaptor<IDLArrayBuffer>, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBufferViewAllowShared : public std::integral_constant<bool, std::is_base_of<IDLAllowSharedAdaptor<IDLArrayBufferView>, T>::value> { };
+
 
 } // namespace WebCore

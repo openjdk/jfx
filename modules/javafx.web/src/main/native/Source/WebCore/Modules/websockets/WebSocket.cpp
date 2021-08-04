@@ -45,6 +45,7 @@
 #include "FrameLoaderClient.h"
 #include "Logging.h"
 #include "MessageEvent.h"
+#include "MixedContentChecker.h"
 #include "ResourceLoadObserver.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
@@ -261,8 +262,8 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         else
             message = "WebSocket without port blocked"_s;
         context.addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
-        m_state = CLOSED;
-        return Exception { SecurityError };
+        failAsynchronously();
+        return { };
     }
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
@@ -310,7 +311,7 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         Document& document = downcast<Document>(context);
         RefPtr<Frame> frame = document.frame();
         // FIXME: make the mixed content check equivalent to the non-document mixed content check currently in WorkerThreadableWebSocketChannel::Bridge::connect()
-        if (!frame || !frame->loader().mixedContentChecker().canRunInsecureContent(document.securityOrigin(), m_url)) {
+        if (!frame || !MixedContentChecker::canRunInsecureContent(*frame, document.securityOrigin(), m_url)) {
             failAsynchronously();
             return { };
         }
@@ -530,7 +531,8 @@ void WebSocket::resume()
 {
     if (m_channel)
         m_channel->resume();
-    else if (!m_pendingEvents.isEmpty() && !m_resumeTimer.isActive()) {
+
+    if (!m_pendingEvents.isEmpty() && !m_resumeTimer.isActive()) {
         // Fire the pending events in a timer as we are not allowed to execute arbitrary JS from resume().
         m_resumeTimer.startOneShot(0_s);
     }
@@ -595,7 +597,7 @@ void WebSocket::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
     switch (m_binaryType) {
     case BinaryType::Blob:
         // FIXME: We just received the data from NetworkProcess, and are sending it back. This is inefficient.
-        dispatchEvent(MessageEvent::create(Blob::create(WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
+        dispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
         break;
     case BinaryType::ArrayBuffer:
         dispatchEvent(MessageEvent::create(ArrayBuffer::create(binaryData.data(), binaryData.size()), SecurityOrigin::create(m_url)->toString()));

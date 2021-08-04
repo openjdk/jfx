@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -257,14 +257,15 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case OverridesHasInstance:
     case IsEmpty:
     case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
     case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
     case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
@@ -280,6 +281,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringFromCharCode:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
+    case AssertInBounds:
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
@@ -290,6 +292,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case BooleanToNumber:
     case FiatInt52:
     case HasIndexedProperty:
+    case HasEnumerableIndexedProperty:
     case GetEnumeratorStructurePname:
     case GetEnumeratorGenericPname:
     case ToIndexString:
@@ -359,6 +362,8 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
         // We don't want these to be moved anywhere other than where we put them, since we want them
         // to capture "profiling" at the point in control flow here the user put them.
         return false;
@@ -376,7 +381,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArrayPush:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.varArgChild(node, 1)));
 
-    case CheckNeutered:
+    case CheckDetached:
     case GetTypedArrayByteOffset:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
 
@@ -494,12 +499,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CreateAsyncGenerator:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case SetLocal:
     case SetCallee:
     case PutStack:
     case KillStack:
     case MovHint:
-    case ZombieHint:
     case Upsilon:
     case Phi:
     case Flush:
@@ -525,6 +530,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PutGetterSetterById:
     case PutGetterByVal:
     case PutSetterByVal:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case DefineDataProperty:
     case DefineAccessorProperty:
     case Arrayify:
@@ -622,8 +633,8 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case MultiPutByOffset:
     case MultiDeleteByOffset:
     case GetEnumerableLength:
-    case HasGenericProperty:
-    case HasStructureProperty:
+    case HasEnumerableStructureProperty:
+    case HasEnumerableProperty:
     case HasOwnStructureProperty:
     case InStructureProperty:
     case GetDirectPname:

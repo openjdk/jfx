@@ -76,7 +76,7 @@ import javafx.scene.control.TableColumn.CellEditEvent;
  */
 public class TableCell<S,T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -94,7 +94,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -104,7 +104,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     boolean lockItemOnEdit = false;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -187,7 +187,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             new WeakListChangeListener<String>(columnStyleClassListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -293,14 +293,18 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
 
+    // editing location at start of edit - fix for JDK-8187229
+    private TablePosition<S, T> editingCellAtStartEdit;
+
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final TableView<S> table = getTableView();
         final TableColumn<S,T> column = getTableColumn();
         final TableRow<S> row = getTableRow();
@@ -333,6 +337,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             Event.fireEvent(column, editEvent);
         }
+        editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
@@ -384,7 +389,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
         // reset the editing index on the TableView
         if (table != null) {
-            TablePosition<S,?> editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
@@ -395,7 +399,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
-                editingCell,
+                editingCellAtStartEdit,
                 TableColumn.editCancelEvent(),
                 null
             );
@@ -704,10 +708,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         super.layoutChildren();
     }
 
-
-
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                              Expert API                                 *
      *                                                                         *
@@ -782,7 +783,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -806,7 +807,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

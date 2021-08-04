@@ -28,6 +28,7 @@
 #if ENABLE(VIDEO)
 
 #include "MediaPlayer.h"
+#include "MediaPlayerIdentifier.h"
 #include "PlatformTimeRanges.h"
 
 namespace WebCore {
@@ -42,7 +43,7 @@ public:
     virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
 
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const String& url, MediaSourcePrivateClient*) = 0;
+    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient*) = 0;
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;
@@ -95,6 +96,7 @@ public:
     virtual bool hasAudio() const = 0;
 
     virtual void setVisible(bool) = 0;
+    virtual void setVisibleForCanvas(bool visible) { setVisible(visible); }
 
     virtual float duration() const { return 0; }
     virtual double durationDouble() const { return duration(); }
@@ -121,6 +123,7 @@ public:
     virtual double rate() const { return 0; }
 
     virtual void setPreservesPitch(bool) { }
+    virtual void setPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm) { }
 
     virtual bool paused() const = 0;
 
@@ -158,8 +161,12 @@ public:
     virtual void paint(GraphicsContext&, const FloatRect&) = 0;
 
     virtual void paintCurrentFrameInContext(GraphicsContext& c, const FloatRect& r) { paint(c, r); }
-    virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGLOpenGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
-    virtual NativeImagePtr nativeImageForCurrentTime() { return nullptr; }
+#if !USE(AVFOUNDATION)
+    virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
+#else
+    virtual CVPixelBufferRef pixelBufferForCurrentTime() { return nullptr; }
+#endif
+    virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
 
     virtual void setPreload(MediaPlayer::Preload) { }
 
@@ -289,6 +296,10 @@ public:
     virtual bool shouldIgnoreIntrinsicSize() { return false; }
 
     virtual void setPreferredDynamicRangeMode(DynamicRangeMode) { }
+
+    virtual void audioOutputDeviceChanged() { }
+
+    virtual MediaPlayerIdentifier identifier() const { return { }; }
 };
 
 }

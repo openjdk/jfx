@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "IntlPluralRules.h"
 
+#include "IntlNumberFormatInlines.h"
 #include "IntlObjectInlines.h"
 #include "JSCInlines.h"
 #include "ObjectConstructor.h"
@@ -35,25 +36,7 @@ namespace JSC {
 
 const ClassInfo IntlPluralRules::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlPluralRules) };
 
-void IntlPluralRules::UPluralRulesDeleter::operator()(UPluralRules* pluralRules) const
-{
-    if (pluralRules)
-        uplrules_close(pluralRules);
-}
-
-void IntlPluralRules::UNumberFormatDeleter::operator()(UNumberFormat* numberFormat) const
-{
-    if (numberFormat)
-        unum_close(numberFormat);
-}
-
-struct UEnumerationDeleter {
-    void operator()(UEnumeration* enumeration) const
-    {
-        if (enumeration)
-            uenum_close(enumeration);
-    }
-};
+using UEnumerationDeleter = ICUDeleter<uenum_close>;
 
 IntlPluralRules* IntlPluralRules::create(VM& vm, Structure* structure)
 {
@@ -78,13 +61,16 @@ void IntlPluralRules::finishCreation(VM& vm)
     ASSERT(inherits(vm, info()));
 }
 
-void IntlPluralRules::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void IntlPluralRules::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     IntlPluralRules* thisObject = jsCast<IntlPluralRules*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
     Base::visitChildren(thisObject, visitor);
 }
+
+DEFINE_VISIT_CHILDREN(IntlPluralRules);
 
 Vector<String> IntlPluralRules::localeData(const String&, RelevantExtensionKey)
 {
@@ -100,13 +86,8 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, locales);
     RETURN_IF_EXCEPTION(scope, void());
 
-    JSObject* options;
-    if (optionsValue.isUndefined())
-        options = constructEmptyObject(vm, globalObject->nullPrototypeObjectStructure());
-    else {
-        options = optionsValue.toObject(globalObject);
-        RETURN_IF_EXCEPTION(scope, void());
-    }
+    Optional<JSObject&> options = intlCoerceOptionsToObject(globalObject, optionsValue);
+    RETURN_IF_EXCEPTION(scope, void());
 
     ResolveLocaleOptions localeOptions;
     LocaleMatcher localeMatcher = intlOption<LocaleMatcher>(globalObject, options, vm.propertyNames->localeMatcher, { { "lookup"_s, LocaleMatcher::Lookup }, { "best fit"_s, LocaleMatcher::BestFit } }, "localeMatcher must be either \"lookup\" or \"best fit\""_s, LocaleMatcher::BestFit);
@@ -123,34 +104,8 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     m_type = intlOption<Type>(globalObject, options, vm.propertyNames->type, { { "cardinal"_s, Type::Cardinal }, { "ordinal"_s, Type::Ordinal } }, "type must be \"cardinal\" or \"ordinal\""_s, Type::Cardinal);
     RETURN_IF_EXCEPTION(scope, void());
 
-    unsigned minimumIntegerDigits = intlNumberOption(globalObject, options, Identifier::fromString(vm, "minimumIntegerDigits"), 1, 21, 1);
+    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, IntlNotation::Standard);
     RETURN_IF_EXCEPTION(scope, void());
-    m_minimumIntegerDigits = minimumIntegerDigits;
-
-    unsigned minimumFractionDigitsDefault = 0;
-    unsigned minimumFractionDigits = intlNumberOption(globalObject, options, Identifier::fromString(vm, "minimumFractionDigits"), 0, 20, minimumFractionDigitsDefault);
-    RETURN_IF_EXCEPTION(scope, void());
-    m_minimumFractionDigits = minimumFractionDigits;
-
-    unsigned maximumFractionDigitsDefault = std::max(minimumFractionDigits, 3u);
-    unsigned maximumFractionDigits = intlNumberOption(globalObject, options, Identifier::fromString(vm, "maximumFractionDigits"), minimumFractionDigits, 20, maximumFractionDigitsDefault);
-    RETURN_IF_EXCEPTION(scope, void());
-    m_maximumFractionDigits = maximumFractionDigits;
-
-    JSValue minimumSignificantDigitsValue = options->get(globalObject, Identifier::fromString(vm, "minimumSignificantDigits"));
-    RETURN_IF_EXCEPTION(scope, void());
-
-    JSValue maximumSignificantDigitsValue = options->get(globalObject, Identifier::fromString(vm, "maximumSignificantDigits"));
-    RETURN_IF_EXCEPTION(scope, void());
-
-    if (!minimumSignificantDigitsValue.isUndefined() || !maximumSignificantDigitsValue.isUndefined()) {
-        unsigned minimumSignificantDigits = intlNumberOption(globalObject, options, Identifier::fromString(vm, "minimumSignificantDigits"), 1, 21, 1);
-        RETURN_IF_EXCEPTION(scope, void());
-        unsigned maximumSignificantDigits = intlNumberOption(globalObject, options, Identifier::fromString(vm, "maximumSignificantDigits"), minimumSignificantDigits, 21, 21);
-        RETURN_IF_EXCEPTION(scope, void());
-        m_minimumSignificantDigits = minimumSignificantDigits;
-        m_maximumSignificantDigits = maximumSignificantDigits;
-    }
 
     UErrorCode status = U_ZERO_ERROR;
     m_numberFormat = std::unique_ptr<UNumberFormat, UNumberFormatDeleter>(unum_open(UNUM_DECIMAL, nullptr, 0, m_locale.utf8().data(), nullptr, &status));
@@ -159,14 +114,20 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
         return;
     }
 
-    if (m_minimumSignificantDigits) {
-        unum_setAttribute(m_numberFormat.get(), UNUM_SIGNIFICANT_DIGITS_USED, true);
-        unum_setAttribute(m_numberFormat.get(), UNUM_MIN_SIGNIFICANT_DIGITS, m_minimumSignificantDigits.value());
-        unum_setAttribute(m_numberFormat.get(), UNUM_MAX_SIGNIFICANT_DIGITS, m_maximumSignificantDigits.value());
-    } else {
+    switch (m_roundingType) {
+    case IntlRoundingType::FractionDigits:
         unum_setAttribute(m_numberFormat.get(), UNUM_MIN_INTEGER_DIGITS, m_minimumIntegerDigits);
         unum_setAttribute(m_numberFormat.get(), UNUM_MIN_FRACTION_DIGITS, m_minimumFractionDigits);
         unum_setAttribute(m_numberFormat.get(), UNUM_MAX_FRACTION_DIGITS, m_maximumFractionDigits);
+        break;
+    case IntlRoundingType::SignificantDigits:
+        unum_setAttribute(m_numberFormat.get(), UNUM_SIGNIFICANT_DIGITS_USED, true);
+        unum_setAttribute(m_numberFormat.get(), UNUM_MIN_SIGNIFICANT_DIGITS, m_minimumSignificantDigits);
+        unum_setAttribute(m_numberFormat.get(), UNUM_MAX_SIGNIFICANT_DIGITS, m_maximumSignificantDigits);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
     }
 
     status = U_ZERO_ERROR;
@@ -188,12 +149,19 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     JSObject* options = constructEmptyObject(globalObject);
     options->putDirect(vm, vm.propertyNames->locale, jsNontrivialString(vm, m_locale));
     options->putDirect(vm, vm.propertyNames->type, jsNontrivialString(vm, m_type == Type::Ordinal ? "ordinal"_s : "cardinal"_s));
-    options->putDirect(vm, Identifier::fromString(vm, "minimumIntegerDigits"), jsNumber(m_minimumIntegerDigits));
-    options->putDirect(vm, Identifier::fromString(vm, "minimumFractionDigits"), jsNumber(m_minimumFractionDigits));
-    options->putDirect(vm, Identifier::fromString(vm, "maximumFractionDigits"), jsNumber(m_maximumFractionDigits));
-    if (m_minimumSignificantDigits) {
-        options->putDirect(vm, Identifier::fromString(vm, "minimumSignificantDigits"), jsNumber(m_minimumSignificantDigits.value()));
-        options->putDirect(vm, Identifier::fromString(vm, "maximumSignificantDigits"), jsNumber(m_maximumSignificantDigits.value()));
+    options->putDirect(vm, vm.propertyNames->minimumIntegerDigits, jsNumber(m_minimumIntegerDigits));
+    switch (m_roundingType) {
+    case IntlRoundingType::FractionDigits:
+        options->putDirect(vm, vm.propertyNames->minimumFractionDigits, jsNumber(m_minimumFractionDigits));
+        options->putDirect(vm, vm.propertyNames->maximumFractionDigits, jsNumber(m_maximumFractionDigits));
+        break;
+    case IntlRoundingType::SignificantDigits:
+        options->putDirect(vm, vm.propertyNames->minimumSignificantDigits, jsNumber(m_minimumSignificantDigits));
+        options->putDirect(vm, vm.propertyNames->maximumSignificantDigits, jsNumber(m_maximumSignificantDigits));
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
     }
 
     JSArray* categories = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);

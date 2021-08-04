@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,12 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import java.util.List;
+
+import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
@@ -44,8 +47,6 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.PasswordField;
@@ -57,11 +58,8 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Text;
 import javafx.scene.text.HitInfo;
-import java.util.List;
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
+import javafx.scene.text.Text;
 
 /**
  * Default skin implementation for the {@link TextField} control.
@@ -71,7 +69,7 @@ import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
  */
 public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -131,7 +129,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -154,7 +152,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         this.behavior.setTextFieldSkin(this);
 //        control.setInputMap(behavior.getInputMap());
 
-        control.caretPositionProperty().addListener((observable, oldValue, newValue) -> {
+        registerChangeListener(control.caretPositionProperty(), e -> {
             if (control.getWidth() > 0) {
                 updateTextNodeCaretPos(control.getCaretPosition());
                 if (!isForwardBias()) {
@@ -219,9 +217,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         });
         // updated by listener on caretPosition to ensure order
         updateTextNodeCaretPos(control.getCaretPosition());
-        control.selectionProperty().addListener(observable -> {
-            updateSelection();
-        });
+        registerInvalidationListener(control.selectionProperty(), e -> updateSelection());
 
         // Add selection
         selectionHighlightPath.setManaged(false);
@@ -229,9 +225,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         selectionHighlightPath.layoutXProperty().bind(textTranslateX);
         selectionHighlightPath.visibleProperty().bind(control.anchorProperty().isNotEqualTo(control.caretPositionProperty()).and(control.focusedProperty()));
         selectionHighlightPath.fillProperty().bind(highlightFillProperty());
-        textNode.selectionShapeProperty().addListener(observable -> {
-            updateSelection();
-        });
+
+        registerInvalidationListener(textNode.selectionShapeProperty(), e -> updateSelection());
 
         // Add caret
         caretPath.setManaged(false);
@@ -262,7 +257,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
         // Be sure to get the control to request layout when the font changes,
         // since this will affect the pref height and pref width.
-        control.fontProperty().addListener(observable -> {
+        registerInvalidationListener(control.fontProperty(), e -> {
             // I do both so that any cached values for prefWidth/height are cleared.
             // The problem is that the skin is unmanaged and so calling request layout
             // doesn't walk up the tree all the way. I think....
@@ -273,7 +268,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         registerChangeListener(control.prefColumnCountProperty(), e -> getSkinnable().requestLayout());
         if (control.isFocused()) setCaretAnimating(true);
 
-        control.alignmentProperty().addListener(observable -> {
+        registerInvalidationListener(control.alignmentProperty(), e -> {
             if (control.getWidth() > 0) {
                 updateTextPos();
                 updateCaretOff();
@@ -298,7 +293,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             updateTextPos();
         });
 
-        control.textProperty().addListener(observable -> {
+        registerInvalidationListener(control.textProperty(), e -> {
             if (!behavior.isEditing()) {
                 // Text changed, but not by user action
                 updateTextPos();
@@ -309,7 +304,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             createPromptNode();
         }
 
-        usePromptText.addListener(observable -> {
+        registerInvalidationListener(usePromptText, e -> {
             createPromptNode();
             control.requestLayout();
         });
@@ -383,7 +378,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -391,6 +386,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getChildren().removeAll(textGroup, handleGroup);
         super.dispose();
 
         if (behavior != null) {
@@ -701,7 +698,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -921,4 +918,20 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
         updateCaretOff();
     }
+
+    // for testing only!
+    Text getTextNode() {
+        return textNode;
+    }
+
+    // for testing only!
+    Text getPromptNode() {
+        return promptNode;
+    }
+
+    // for testing only!
+    double getTextTranslateX() {
+        return textTranslateX.get();
+    }
+
 }

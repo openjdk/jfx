@@ -37,7 +37,7 @@ import javafx.scene.control.Label;
  */
 public class LabelSkin extends LabeledSkinBase<Label> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *

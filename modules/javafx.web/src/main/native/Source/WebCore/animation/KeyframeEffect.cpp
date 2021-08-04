@@ -52,7 +52,7 @@
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include "StyleAdjuster.h"
 #include "StylePendingResources.h"
 #include "StyleResolver.h"
@@ -66,10 +66,25 @@
 namespace WebCore {
 using namespace JSC;
 
-static inline void invalidateElement(Element* element)
+static Element* elementOrPseudoElementForStyleable(const Optional<const Styleable>& styleable)
 {
-    if (element)
-        element->invalidateStyle();
+    if (!styleable)
+        return nullptr;
+
+    switch (styleable->pseudoId) {
+    case PseudoId::Before:
+        return styleable->element.beforePseudoElement();
+    case PseudoId::After:
+        return styleable->element.afterPseudoElement();
+    default:
+        return &styleable->element;
+    }
+}
+
+static inline void invalidateElement(const Optional<const Styleable>& styleable)
+{
+    if (auto* elementOrPseudoElement = elementOrPseudoElementForStyleable(styleable))
+        elementOrPseudoElement->invalidateStyleInternal();
 }
 
 static inline String CSSPropertyIDToIDLAttributeName(CSSPropertyID cssPropertyId)
@@ -202,8 +217,12 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
         else
             baseProperties.offset = nullptr;
         baseProperties.easing = baseKeyframe.easing;
-        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCompositeOperationsEnabled())
-            baseProperties.composite = baseKeyframe.composite;
+
+        auto* scriptExecutionContext = jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext();
+        if (is<Document>(scriptExecutionContext)) {
+            if (downcast<Document>(*scriptExecutionContext).settings().webAnimationsCompositeOperationsEnabled())
+                baseProperties.composite = baseKeyframe.composite;
+        }
     }
     RETURN_IF_EXCEPTION(scope, Exception { TypeError });
 
@@ -219,7 +238,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
 
     // 3. Let input properties be the result of calling the EnumerableOwnNames operation with keyframe input as the object.
     PropertyNameArray inputProperties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-    JSObject::getOwnPropertyNames(keyframesInput.get(), &lexicalGlobalObject, inputProperties, EnumerationMode());
+    JSObject::getOwnPropertyNames(keyframesInput.get(), &lexicalGlobalObject, inputProperties, DontEnumPropertiesMode::Exclude);
 
     // 4. Make up a new list animation properties that consists of all of the properties that are in both input properties and animatable
     //    properties, or which are in input properties and conform to the <custom-property-name> production.
@@ -277,8 +296,14 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
 
 static inline ExceptionOr<void> processIterableKeyframes(JSGlobalObject& lexicalGlobalObject, Strong<JSObject>&& keyframesInput, JSValue method, Vector<KeyframeEffect::ParsedKeyframe>& parsedKeyframes)
 {
+    auto* scriptExecutionContext = jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext();
+    if (!is<Document>(scriptExecutionContext))
+        return { };
+    auto& document = downcast<Document>(*scriptExecutionContext);
+    CSSParserContext parserContext(document);
+
     // 1. Let iter be GetIterator(object, method).
-    forEachInIterable(lexicalGlobalObject, keyframesInput.get(), method, [&parsedKeyframes](VM& vm, JSGlobalObject& lexicalGlobalObject, JSValue nextValue) -> ExceptionOr<void> {
+    forEachInIterable(lexicalGlobalObject, keyframesInput.get(), method, [&parsedKeyframes, &document, &parserContext](VM& vm, JSGlobalObject& lexicalGlobalObject, JSValue nextValue) -> ExceptionOr<void> {
         // Steps 2 through 6 are already implemented by forEachInIterable().
         auto scope = DECLARE_THROW_SCOPE(vm);
         if (!nextValue || !nextValue.isObject()) {
@@ -309,7 +334,7 @@ static inline ExceptionOr<void> processIterableKeyframes(JSGlobalObject& lexical
 
         // When calling processKeyframeLikeObject() with the "allow lists" flag set to false, the only composite
         // alternatives we should expect is CompositeOperationAuto.
-        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCompositeOperationsEnabled()) {
+        if (document.settings().webAnimationsCompositeOperationsEnabled()) {
             ASSERT(WTF::holds_alternative<CompositeOperationOrAuto>(keyframeLikeObject.baseProperties.composite));
             keyframeOutput.composite = WTF::get<CompositeOperationOrAuto>(keyframeLikeObject.baseProperties.composite);
         }
@@ -320,7 +345,7 @@ static inline ExceptionOr<void> processIterableKeyframes(JSGlobalObject& lexical
             // there should only ever be a single value for a given property.
             ASSERT(propertyAndValue.values.size() == 1);
             auto stringValue = propertyAndValue.values[0];
-            if (keyframeOutput.style->setProperty(cssPropertyId, stringValue))
+            if (keyframeOutput.style->setProperty(cssPropertyId, stringValue, false, parserContext))
                 keyframeOutput.unparsedStyle.set(cssPropertyId, stringValue);
         }
 
@@ -340,6 +365,12 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
         return processKeyframeLikeObjectResult.releaseException();
     auto propertyIndexedKeyframe = processKeyframeLikeObjectResult.returnValue();
 
+    auto* scriptExecutionContext = jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext();
+    if (!is<Document>(scriptExecutionContext))
+        return { };
+    auto& document = downcast<Document>(*scriptExecutionContext);
+    CSSParserContext parserContext(document);
+
     // 2. For each member, m, in property-indexed keyframe, perform the following steps:
     for (auto& m : propertyIndexedKeyframe.propertiesAndValues) {
         // 1. Let property name be the key for m.
@@ -356,7 +387,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
             // 1. Let k be a new keyframe with a null keyframe offset.
             KeyframeEffect::ParsedKeyframe k;
             // 2. Add the property-value pair, property name → v, to k.
-            if (k.style->setProperty(propertyName, v))
+            if (k.style->setProperty(propertyName, v, false, parserContext))
                 k.unparsedStyle.set(propertyName, v);
             // 3. Append k to property keyframes.
             propertyKeyframes.append(WTFMove(k));
@@ -447,7 +478,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
         parsedKeyframes[i].easing = easings[i];
 
     // 12. If the “composite” member of the property-indexed keyframe is not an empty sequence:
-    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCompositeOperationsEnabled()) {
+    if (document.settings().webAnimationsCompositeOperationsEnabled()) {
         Vector<CompositeOperationOrAuto> compositeModes;
         if (WTF::holds_alternative<Vector<CompositeOperationOrAuto>>(propertyIndexedKeyframe.baseProperties.composite))
             compositeModes = WTF::get<Vector<CompositeOperationOrAuto>>(propertyIndexedKeyframe.baseProperties.composite);
@@ -659,8 +690,12 @@ Vector<Strong<JSObject>> KeyframeEffect::getKeyframes(JSGlobalObject& lexicalGlo
             computedKeyframe.offset = parsedKeyframe.offset;
             computedKeyframe.computedOffset = parsedKeyframe.computedOffset;
             computedKeyframe.easing = timingFunctionForKeyframeAtIndex(i)->cssText();
-            if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCompositeOperationsEnabled())
-                computedKeyframe.composite = parsedKeyframe.composite;
+
+            auto* scriptExecutionContext = jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext();
+            if (is<Document>(scriptExecutionContext)) {
+                if (downcast<Document>(*scriptExecutionContext).settings().webAnimationsCompositeOperationsEnabled())
+                    computedKeyframe.composite = parsedKeyframe.composite;
+            }
 
             auto outputKeyframe = convertDictionaryToJS(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), computedKeyframe);
 
@@ -775,7 +810,7 @@ ExceptionOr<void> KeyframeEffect::processKeyframes(JSGlobalObject& lexicalGlobal
     return { };
 }
 
-void KeyframeEffect::updateBlendingKeyframes(RenderStyle& elementStyle)
+void KeyframeEffect::updateBlendingKeyframes(RenderStyle& elementStyle, const RenderStyle* parentElementStyle)
 {
     if (!m_blendingKeyframes.isEmpty() || !m_target)
         return;
@@ -792,7 +827,7 @@ void KeyframeEffect::updateBlendingKeyframes(RenderStyle& elementStyle)
             keyframeList.addProperty(styleProperties->propertyAt(i).id());
 
         auto keyframeRule = StyleRuleKeyframe::create(WTFMove(styleProperties));
-        keyframeValue.setStyle(styleResolver.styleForKeyframe(*m_target, &elementStyle, keyframeRule.ptr(), keyframeValue));
+        keyframeValue.setStyle(styleResolver.styleForKeyframe(*m_target, &elementStyle, parentElementStyle, keyframeRule.ptr(), keyframeValue));
         keyframeList.insert(WTFMove(keyframeValue));
     }
 
@@ -950,16 +985,16 @@ void KeyframeEffect::checkForMatchingColorFilterFunctionLists()
     });
 }
 
-void KeyframeEffect::computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle)
+void KeyframeEffect::computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const RenderStyle* parentElementStyle)
 {
     ASSERT(is<DeclarativeAnimation>(animation()));
     if (is<CSSAnimation>(animation()))
-        computeCSSAnimationBlendingKeyframes(newStyle);
+        computeCSSAnimationBlendingKeyframes(newStyle, parentElementStyle);
     else if (is<CSSTransition>(animation()))
         computeCSSTransitionBlendingKeyframes(oldStyle, newStyle);
 }
 
-void KeyframeEffect::computeCSSAnimationBlendingKeyframes(const RenderStyle& unanimatedStyle)
+void KeyframeEffect::computeCSSAnimationBlendingKeyframes(const RenderStyle& unanimatedStyle, const RenderStyle* parentElementStyle)
 {
     ASSERT(is<CSSAnimation>(animation()));
     ASSERT(document());
@@ -969,7 +1004,7 @@ void KeyframeEffect::computeCSSAnimationBlendingKeyframes(const RenderStyle& una
 
     KeyframeList keyframeList(backingAnimation.name());
     if (auto* styleScope = Style::Scope::forOrdinal(*m_target, backingAnimation.nameStyleScopeOrdinal()))
-        styleScope->resolver().keyframeStylesForAnimation(*m_target, &unanimatedStyle, keyframeList);
+        styleScope->resolver().keyframeStylesForAnimation(*m_target, &unanimatedStyle, parentElementStyle, keyframeList);
 
     // Ensure resource loads for all the frames.
     for (auto& keyframe : keyframeList.keyframes()) {
@@ -1051,13 +1086,14 @@ void KeyframeEffect::computeStackingContextImpact()
 
 void KeyframeEffect::animationTimelineDidChange(AnimationTimeline* timeline)
 {
-    if (!targetElementOrPseudoElement())
+    auto target = targetStyleable();
+    if (!target)
         return;
 
     if (timeline)
-        m_inTargetEffectStack = targetElementOrPseudoElement()->ensureKeyframeEffectStack().addEffect(*this);
+        m_inTargetEffectStack = target->ensureKeyframeEffectStack().addEffect(*this);
     else {
-        targetElementOrPseudoElement()->ensureKeyframeEffectStack().removeEffect(*this);
+        target->ensureKeyframeEffectStack().removeEffect(*this);
         m_inTargetEffectStack = false;
     }
 }
@@ -1069,14 +1105,15 @@ void KeyframeEffect::animationTimingDidChange()
 
 void KeyframeEffect::updateEffectStackMembership()
 {
-    if (!targetElementOrPseudoElement())
+    auto target = targetStyleable();
+    if (!target)
         return;
 
     bool isRelevant = animation() && animation()->isRelevant();
     if (isRelevant && !m_inTargetEffectStack)
-        m_inTargetEffectStack = targetElementOrPseudoElement()->ensureKeyframeEffectStack().addEffect(*this);
+        m_inTargetEffectStack = target->ensureKeyframeEffectStack().addEffect(*this);
     else if (!isRelevant && m_inTargetEffectStack) {
-        targetElementOrPseudoElement()->ensureKeyframeEffectStack().removeEffect(*this);
+        target->ensureKeyframeEffectStack().removeEffect(*this);
         m_inTargetEffectStack = false;
     }
 }
@@ -1094,6 +1131,13 @@ void KeyframeEffect::setAnimation(WebAnimation* animation)
     updateEffectStackMembership();
 }
 
+const Optional<const Styleable> KeyframeEffect::targetStyleable() const
+{
+    if (m_target)
+        return Styleable(*m_target, m_pseudoId);
+    return WTF::nullopt;
+}
+
 bool KeyframeEffect::targetsPseudoElement() const
 {
     return m_target.get() && m_pseudoId != PseudoId::None;
@@ -1101,17 +1145,15 @@ bool KeyframeEffect::targetsPseudoElement() const
 
 Element* KeyframeEffect::targetElementOrPseudoElement() const
 {
-    if (!targetsPseudoElement())
-        return m_target.get();
+    if (m_target) {
+        if (m_pseudoId == PseudoId::Before)
+            return m_target->beforePseudoElement();
 
-    if (m_pseudoId == PseudoId::Before)
-        return m_target->beforePseudoElement();
+        if (m_pseudoId == PseudoId::After)
+            return m_target->afterPseudoElement();
+    }
 
-    if (m_pseudoId == PseudoId::After)
-        return m_target->afterPseudoElement();
-
-    // We only support targeting ::before and ::after pseudo-elements at the moment.
-    return nullptr;
+    return m_target.get();
 }
 
 void KeyframeEffect::setTarget(RefPtr<Element>&& newTarget)
@@ -1119,9 +1161,9 @@ void KeyframeEffect::setTarget(RefPtr<Element>&& newTarget)
     if (m_target == newTarget)
         return;
 
-    auto* previousTargetElementOrPseudoElement = targetElementOrPseudoElement();
+    auto& previousTargetStyleable = targetStyleable();
     m_target = WTFMove(newTarget);
-    didChangeTargetElementOrPseudoElement(previousTargetElementOrPseudoElement);
+    didChangeTargetStyleable(previousTargetStyleable);
 }
 
 const String KeyframeEffect::pseudoElement() const
@@ -1131,7 +1173,7 @@ const String KeyframeEffect::pseudoElement() const
     // The target pseudo-selector. null if this effect has no effect target or if the effect target is an element (i.e. not a pseudo-element).
     // When the effect target is a pseudo-element, this specifies the pseudo-element selector (e.g. ::before).
     if (targetsPseudoElement())
-        return PseudoElement::pseudoElementNameForEvents(m_pseudoId);
+        return pseudoIdAsString(m_pseudoId);
     return { };
 }
 
@@ -1161,26 +1203,28 @@ ExceptionOr<void> KeyframeEffect::setPseudoElement(const String& pseudoElement)
     if (pseudoId == m_pseudoId)
         return { };
 
-    auto* previousTargetElementOrPseudoElement = targetElementOrPseudoElement();
+    auto& previousTargetStyleable = targetStyleable();
     m_pseudoId = pseudoId;
-    didChangeTargetElementOrPseudoElement(previousTargetElementOrPseudoElement);
+    didChangeTargetStyleable(previousTargetStyleable);
 
     return { };
 }
 
-void KeyframeEffect::didChangeTargetElementOrPseudoElement(Element* previousTargetElementOrPseudoElement)
+void KeyframeEffect::didChangeTargetStyleable(const Optional<const Styleable>& previousTargetStyleable)
 {
-    auto* newTargetElementOrPseudoElement = targetElementOrPseudoElement();
+    auto newTargetStyleable = targetStyleable();
 
     // We must ensure a PseudoElement exists for this m_target / m_pseudoId pair if both are specified.
+    // FIXME: Ideally this wouldn't be necessary.
+    auto* newTargetElementOrPseudoElement = elementOrPseudoElementForStyleable(newTargetStyleable);
     if (!newTargetElementOrPseudoElement && m_target.get() && m_pseudoId != PseudoId::None) {
-        // We only support targeting ::before and ::after pseudo-elements at the moment.
+        // FIXME: We only support targeting ::before and ::after pseudo-elements at the moment.
         if (m_pseudoId == PseudoId::Before || m_pseudoId == PseudoId::After)
             newTargetElementOrPseudoElement = &m_target->ensurePseudoElement(m_pseudoId);
     }
 
     if (auto* effectAnimation = animation())
-        effectAnimation->effectTargetDidChange(previousTargetElementOrPseudoElement, newTargetElementOrPseudoElement);
+        effectAnimation->effectTargetDidChange(previousTargetStyleable, newTargetStyleable);
 
     clearBlendingKeyframes();
 
@@ -1190,27 +1234,29 @@ void KeyframeEffect::didChangeTargetElementOrPseudoElement(Element* previousTarg
 
     // Likewise, we need to invalidate styles on the previous target so that
     // any animated styles are removed immediately.
-    invalidateElement(previousTargetElementOrPseudoElement);
+    invalidateElement(previousTargetStyleable);
 
-    if (previousTargetElementOrPseudoElement) {
-        previousTargetElementOrPseudoElement->ensureKeyframeEffectStack().removeEffect(*this);
+    if (previousTargetStyleable) {
+        previousTargetStyleable->ensureKeyframeEffectStack().removeEffect(*this);
         m_inTargetEffectStack = false;
     }
-    if (newTargetElementOrPseudoElement)
-        m_inTargetEffectStack = newTargetElementOrPseudoElement->ensureKeyframeEffectStack().addEffect(*this);
+
+    if (newTargetStyleable)
+        m_inTargetEffectStack = newTargetStyleable->ensureKeyframeEffectStack().addEffect(*this);
 }
 
-void KeyframeEffect::apply(RenderStyle& targetStyle, Optional<Seconds> startTime)
+void KeyframeEffect::apply(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, Optional<Seconds> startTime)
 {
     if (!m_target)
         return;
 
-    updateBlendingKeyframes(targetStyle);
+    updateBlendingKeyframes(targetStyle, parentElementStyle);
 
     auto computedTiming = getComputedTiming(startTime);
     if (!startTime) {
         m_phaseAtLastApplication = computedTiming.phase;
-        InspectorInstrumentation::willApplyKeyframeEffect(*targetElementOrPseudoElement(), *this, computedTiming);
+        if (auto* target = targetElementOrPseudoElement())
+            InspectorInstrumentation::willApplyKeyframeEffect(*target, *this, computedTiming);
     }
 
     if (!computedTiming.progress)
@@ -1235,10 +1281,23 @@ bool KeyframeEffect::isRunningAcceleratedAnimationForProperty(CSSPropertyID prop
     return isRunningAccelerated() && CSSPropertyAnimation::animationOfPropertyIsAccelerated(property) && m_blendingKeyframes.properties().contains(property);
 }
 
+bool KeyframeEffect::isTargetingTransformRelatedProperty() const
+{
+    return m_blendingKeyframes.properties().contains(CSSPropertyTranslate)
+        || m_blendingKeyframes.properties().contains(CSSPropertyScale)
+        || m_blendingKeyframes.properties().contains(CSSPropertyRotate)
+        || m_blendingKeyframes.properties().contains(CSSPropertyTransform);
+}
+
+bool KeyframeEffect::isRunningAcceleratedTransformRelatedAnimation() const
+{
+    return isRunningAccelerated() && isTargetingTransformRelatedProperty();
+}
+
 void KeyframeEffect::invalidate()
 {
     LOG_WITH_STREAM(Animations, stream << "KeyframeEffect::invalidate on element " << ValueOrNull(targetElementOrPseudoElement()));
-    invalidateElement(targetElementOrPseudoElement());
+    invalidateElement(targetStyleable());
 }
 
 void KeyframeEffect::computeAcceleratedPropertiesState()
@@ -1294,6 +1353,23 @@ void KeyframeEffect::computeSomeKeyframesUseStepsTimingFunction()
     }
 }
 
+bool KeyframeEffect::hasImplicitKeyframes() const
+{
+    auto numberOfKeyframes = m_parsedKeyframes.size();
+
+    // If we have no keyframes, then there cannot be any implicit keyframes.
+    if (!numberOfKeyframes)
+        return false;
+
+    // If we have a single keyframe, then there has to be at least one implicit keyframe.
+    if (numberOfKeyframes == 1)
+        return true;
+
+    // If we have two or more keyframes, then we have implicit keyframes if the first and last
+    // keyframes don't have 0 and 1 respectively as their computed offset.
+    return m_parsedKeyframes[0].computedOffset || m_parsedKeyframes[numberOfKeyframes - 1].computedOffset != 1;
+}
+
 void KeyframeEffect::getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle)
 {
     if (!renderer() || !animation())
@@ -1304,8 +1380,12 @@ void KeyframeEffect::getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyl
     if (!progress)
         return;
 
-    if (!animatedStyle)
-        animatedStyle = RenderStyle::clonePtr(renderer()->style());
+    if (!animatedStyle) {
+        if (auto* style = targetStyleable()->lastStyleChangeEventStyle())
+            animatedStyle = RenderStyle::clonePtr(*style);
+        else
+            animatedStyle = RenderStyle::clonePtr(renderer()->style());
+    }
 
     setAnimatedPropertiesInStyle(*animatedStyle.get(), progress.value());
 }
@@ -1329,7 +1409,7 @@ void KeyframeEffect::setAnimatedPropertiesInStyle(RenderStyle& targetStyle, doub
     // The effect value of a single property referenced by a keyframe effect as one of its target properties,
     // for a given iteration progress, current iteration and underlying value is calculated as follows.
 
-    updateBlendingKeyframes(targetStyle);
+    updateBlendingKeyframes(targetStyle, nullptr);
     if (m_blendingKeyframes.isEmpty())
         return;
 
@@ -1493,10 +1573,26 @@ TimingFunction* KeyframeEffect::timingFunctionForKeyframeAtIndex(size_t index) c
     return nullptr;
 }
 
+bool KeyframeEffect::canBeAccelerated() const
+{
+    return m_acceleratedPropertiesState != AcceleratedProperties::None && !m_someKeyframesUseStepsTimingFunction && !is<StepsTimingFunction>(timingFunction());
+}
+
 void KeyframeEffect::updateAcceleratedActions()
 {
-    if (m_acceleratedPropertiesState == AcceleratedProperties::None)
+    if (!canBeAccelerated()) {
+        // In the case where this animation is actively targeting a transform-related property and yet
+        // cannot be accelerated, we must notify the effect stack such that any running accelerated
+        // transform-related animation targeting this element reverts to running non-accelerated.
+        if (isTargetingTransformRelatedProperty()
+            && animation()->playState() == WebAnimation::PlayState::Running
+            && getComputedTiming().phase == AnimationEffectPhase::Active) {
+            ASSERT(targetStyleable());
+            ASSERT(targetStyleable()->keyframeEffectStack());
+            targetStyleable()->keyframeEffectStack()->stopAcceleratingTransformRelatedProperties(UseAcceleratedAction::Yes);
+        }
         return;
+    }
 
     auto computedTiming = getComputedTiming();
 
@@ -1537,7 +1633,7 @@ void KeyframeEffect::addPendingAcceleratedAction(AcceleratedAction action)
     if (action == AcceleratedAction::Stop)
         m_pendingAcceleratedActions.clear();
     m_pendingAcceleratedActions.append(action);
-    if (action != AcceleratedAction::UpdateTiming)
+    if (action != AcceleratedAction::UpdateTiming && action != AcceleratedAction::TransformChange)
         m_lastRecordedAcceleratedAction = action;
     animation()->acceleratedStateDidChange();
 }
@@ -1557,13 +1653,17 @@ void KeyframeEffect::animationDidPlay()
 void KeyframeEffect::animationDidChangeTimingProperties()
 {
     computeSomeKeyframesUseStepsTimingFunction();
-    // The timing function can affect whether the platform can run this as an accelerated animation.
-    m_runningAccelerated = RunningAccelerated::NotStarted;
 
-    // There is no need to update the animation if we're not playing already. If updating timing
-    // means we're moving into an active lexicalGlobalObject, we'll pick this up in apply().
-    if (isAboutToRunAccelerated())
-        addPendingAcceleratedAction(AcceleratedAction::UpdateTiming);
+    if (isRunningAccelerated() || isAboutToRunAccelerated())
+        addPendingAcceleratedAction(canBeAccelerated() ? AcceleratedAction::UpdateTiming : AcceleratedAction::Stop);
+    else if (canBeAccelerated())
+        m_runningAccelerated = RunningAccelerated::NotStarted;
+}
+
+void KeyframeEffect::transformRelatedPropertyDidChange()
+{
+    ASSERT(isRunningAcceleratedTransformRelatedAnimation());
+    addPendingAcceleratedAction(AcceleratedAction::TransformChange);
 }
 
 void KeyframeEffect::animationWasCanceled()
@@ -1584,15 +1684,17 @@ void KeyframeEffect::animationSuspensionStateDidChange(bool animationIsSuspended
         addPendingAcceleratedAction(animationIsSuspended ? AcceleratedAction::Pause : AcceleratedAction::Play);
 }
 
-void KeyframeEffect::applyPendingAcceleratedActions()
+OptionSet<AcceleratedActionApplicationResult> KeyframeEffect::applyPendingAcceleratedActions()
 {
+    OptionSet<AcceleratedActionApplicationResult> result;
+
     // Once an accelerated animation has been committed, we no longer want to force a layout.
     // This should have been performed by a call to forceLayoutIfNeeded() prior to applying
     // pending accelerated actions.
     m_needsForcedLayout = false;
 
     if (m_pendingAcceleratedActions.isEmpty())
-        return;
+        return result;
 
     auto* renderer = this->renderer();
     if (!renderer || !renderer->isComposited()) {
@@ -1602,7 +1704,7 @@ void KeyframeEffect::applyPendingAcceleratedActions()
             m_pendingAcceleratedActions.clear();
             m_runningAccelerated = RunningAccelerated::NotStarted;
         }
-        return;
+        return result;
     }
 
     auto pendingAcceleratedActions = m_pendingAcceleratedActions;
@@ -1620,12 +1722,12 @@ void KeyframeEffect::applyPendingAcceleratedActions()
 
         ASSERT(m_target);
 
-        auto* lastStyleChangeEventStyle = m_target->lastStyleChangeEventStyle();
+        auto* lastStyleChangeEventStyle = m_target->lastStyleChangeEventStyle(m_pseudoId);
         ASSERT(lastStyleChangeEventStyle);
 
         KeyframeList explicitKeyframes(m_blendingKeyframes.animationName());
         explicitKeyframes.copyKeyframes(m_blendingKeyframes);
-        explicitKeyframes.fillImplicitKeyframes(*m_target, m_target->styleResolver(), lastStyleChangeEventStyle);
+        explicitKeyframes.fillImplicitKeyframes(*m_target, m_target->styleResolver(), lastStyleChangeEventStyle, nullptr);
         return renderer->startAnimation(timeOffset, backingAnimationForCompositedRenderer(), explicitKeyframes) ? RunningAccelerated::Yes : RunningAccelerated::No;
     };
 
@@ -1636,7 +1738,9 @@ void KeyframeEffect::applyPendingAcceleratedActions()
             LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " applyPendingAcceleratedActions " << m_blendingKeyframes.animationName() << " Play, started accelerated: " << (m_runningAccelerated == RunningAccelerated::Yes));
             if (m_runningAccelerated == RunningAccelerated::No) {
                 m_lastRecordedAcceleratedAction = AcceleratedAction::Stop;
-                return;
+                if (isTargetingTransformRelatedProperty())
+                    result.add(AcceleratedActionApplicationResult::TransformRelatedAnimationCannotBeAccelerated);
+                return result;
             }
             break;
         case AcceleratedAction::Pause:
@@ -1653,17 +1757,45 @@ void KeyframeEffect::applyPendingAcceleratedActions()
             renderer->animationFinished(m_blendingKeyframes.animationName());
             if (!document()->renderTreeBeingDestroyed())
                 m_target->invalidateStyleAndLayerComposition();
-            m_runningAccelerated = RunningAccelerated::NotStarted;
+            m_runningAccelerated = canBeAccelerated() ? RunningAccelerated::NotStarted : RunningAccelerated::No;
+            break;
+        case AcceleratedAction::TransformChange:
+            renderer->transformRelatedPropertyDidChange();
             break;
         }
     }
+
+    if (m_runningAccelerated == RunningAccelerated::No && isTargetingTransformRelatedProperty())
+        result.add(AcceleratedActionApplicationResult::TransformRelatedAnimationCannotBeAccelerated);
+
+    return result;
+}
+
+void KeyframeEffect::stopAcceleratingTransformRelatedProperties(UseAcceleratedAction useAcceleratedAction)
+{
+    if (!isRunningAcceleratedTransformRelatedAnimation())
+        return;
+
+    if (useAcceleratedAction == UseAcceleratedAction::Yes) {
+        addPendingAcceleratedAction(AcceleratedAction::Stop);
+        return;
+    }
+
+    auto* renderer = this->renderer();
+    if (!renderer || !renderer->isComposited())
+        return;
+
+    ASSERT(document());
+    renderer->animationFinished(m_blendingKeyframes.animationName());
+    if (!document()->renderTreeBeingDestroyed())
+        m_target->invalidateStyleAndLayerComposition();
+
+    m_runningAccelerated = RunningAccelerated::No;
 }
 
 Ref<const Animation> KeyframeEffect::backingAnimationForCompositedRenderer() const
 {
     auto effectAnimation = animation();
-    if (is<DeclarativeAnimation>(effectAnimation))
-        return downcast<DeclarativeAnimation>(effectAnimation)->backingAnimation();
 
     // FIXME: The iterationStart and endDelay AnimationEffectTiming properties do not have
     // corresponding Animation properties.
@@ -1673,6 +1805,13 @@ Ref<const Animation> KeyframeEffect::backingAnimationForCompositedRenderer() con
     animation->setIterationCount(iterations());
     animation->setTimingFunction(timingFunction()->clone());
     animation->setPlaybackRate(effectAnimation->playbackRate());
+
+    if (m_blendingKeyframesSource == BlendingKeyframesSource::CSSTransition && is<CubicBezierTimingFunction>(timingFunction())) {
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=215918
+        // If we are dealing with a CSS Transition and using a cubic bezier timing function, we set up
+        // the Animation object so that GraphicsLayerCA can work around a Core Animation limitation.
+        animation->setProperty({ Animation::TransitionMode::SingleProperty, *m_blendingKeyframes.properties().begin() });
+    }
 
     switch (fill()) {
     case FillMode::None:
@@ -1704,6 +1843,12 @@ Ref<const Animation> KeyframeEffect::backingAnimationForCompositedRenderer() con
         animation->setDirection(Animation::AnimationDirectionAlternateReverse);
         break;
     }
+
+    // In the case of CSS Animations, we must set the default timing function for keyframes to match
+    // the current value set for animation-timing-function on the target element which affects only
+    // keyframes and not the animation-wide timing.
+    if (is<CSSAnimation>(effectAnimation))
+        animation->setDefaultTimingFunctionForKeyframes(downcast<CSSAnimation>(effectAnimation)->backingAnimation().timingFunction());
 
     return animation;
 }
@@ -1820,7 +1965,7 @@ bool KeyframeEffect::computeTransformedExtentViaTransformList(const FloatRect& r
 bool KeyframeEffect::computeTransformedExtentViaMatrix(const FloatRect& rendererBox, const RenderStyle& style, LayoutRect& bounds) const
 {
     TransformationMatrix transform;
-    style.applyTransform(transform, rendererBox, RenderStyle::IncludeTransformOrigin);
+    style.applyTransform(transform, rendererBox);
     if (!transform.isAffine())
         return false;
 
@@ -1890,6 +2035,47 @@ Optional<double> KeyframeEffect::progressUntilNextStep(double iterationProgress)
 
     // In any other case, we are not dealing with an interval with a steps() timing function.
     return WTF::nullopt;
+}
+
+Seconds KeyframeEffect::timeToNextTick() const
+{
+    auto timing = getBasicTiming();
+    switch (timing.phase) {
+    case AnimationEffectPhase::Before:
+        // The effect is in its "before" phase, in this case we can wait until it enters its "active" phase.
+        return delay() - *timing.localTime;
+    case AnimationEffectPhase::Active: {
+        auto doesNotAffectStyles = m_blendingKeyframes.isEmpty() || m_blendingKeyframes.properties().isEmpty();
+        auto completelyAcceleratedAndRunning = isCompletelyAccelerated() && isRunningAccelerated();
+        if (doesNotAffectStyles || completelyAcceleratedAndRunning) {
+            // In the case of fully accelerated running effects and effects that don't actually target any CSS property,
+            // we do not have a need to invalidate styles.
+            if (is<CSSAnimation>(animation())) {
+                // However, CSS Animations need to trigger "animationiteration" events, in this case we must wait until the next iteration.
+                if (auto iterationProgress = getComputedTiming().simpleIterationProgress)
+                    return iterationDuration() * (1 - *iterationProgress);
+            }
+            // Other running effects in the "active" phase can wait until they end.
+            return endTime() - *timing.localTime;
+        }
+        if (auto iterationProgress = getComputedTiming().simpleIterationProgress) {
+            // In case we're in a range that uses a steps() timing function, we can compute the time until the next step starts.
+            if (auto progressUntilNextStep = this->progressUntilNextStep(*iterationProgress))
+                return iterationDuration() * *progressUntilNextStep;
+        }
+        // Other effects in the "active" phase will need to update their animated value at the immediate next opportunity.
+        return 0_s;
+    }
+    case AnimationEffectPhase::After:
+        // The effect is in its after phase, which means it will no longer update its value, so it doens't need a tick.
+        return Seconds::infinity();
+    case AnimationEffectPhase::Idle:
+        ASSERT_NOT_REACHED();
+        return Seconds::infinity();
+    }
+
+    ASSERT_NOT_REACHED();
+    return Seconds::infinity();
 }
 
 } // namespace WebCore

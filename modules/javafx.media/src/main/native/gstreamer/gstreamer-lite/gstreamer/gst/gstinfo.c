@@ -2370,6 +2370,8 @@ void
 gst_debug_add_log_function (GstLogFunction func, gpointer user_data,
     GDestroyNotify notify)
 {
+  if (notify)
+    notify (user_data);
 }
 
 guint

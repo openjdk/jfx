@@ -51,6 +51,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include "LocalizedStrings.h"
+#include "RenderThemeIOS.h"
 #endif
 
 namespace WebCore {
@@ -113,7 +114,7 @@ void RenderMenuList::adjustInnerStyle()
     innerStyle.setFlexGrow(1);
     innerStyle.setFlexShrink(1);
     // min-width: 0; is needed for correct shrinking.
-    innerStyle.setMinWidth(Length(0, Fixed));
+    innerStyle.setMinWidth(Length(0, LengthType::Fixed));
     // Use margin:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
     // But we only do that for the cases where html.css would otherwise use center.
@@ -123,7 +124,7 @@ void RenderMenuList::adjustInnerStyle()
         innerStyle.setAlignSelfPosition(ItemPosition::FlexStart);
     }
 
-    innerStyle.setPaddingBox(theme().popupInternalPaddingBox(style()));
+    innerStyle.setPaddingBox(theme().popupInternalPaddingBox(style(), document().settings()));
 
     if (document().page()->chrome().selectItemWritingDirectionIsNatural()) {
         // Items in the popup will not respect the CSS text-align and direction properties,
@@ -273,9 +274,10 @@ void RenderMenuList::setText(const String& s)
 {
     String textToUse = s.isEmpty() ? "\n"_str : s;
 
-    if (m_buttonText)
+    if (m_buttonText) {
         m_buttonText->setText(textToUse.impl(), true);
-    else {
+        m_buttonText->dirtyLineBoxes(false);
+    } else {
         auto newButtonText = createRenderer<RenderText>(document(), textToUse);
         m_buttonText = makeWeakPtr(*newButtonText);
         // FIXME: This mutation should go through the normal RenderTreeBuilder path.
@@ -324,23 +326,11 @@ void RenderMenuList::computePreferredLogicalWidths()
     m_maxPreferredLogicalWidth = 0;
 
     if (style().width().isFixed() && style().width().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width().value());
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width());
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    if (style().minWidth().isFixed() && style().minWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().minWidth().value()));
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().minWidth().value()));
-    }
-
-    if (style().maxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().maxWidth().value()));
-        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().maxWidth().value()));
-    }
-
-    LayoutUnit toAdd = horizontalBorderAndPaddingExtent();
-    m_minPreferredLogicalWidth += toAdd;
-    m_maxPreferredLogicalWidth += toAdd;
+    RenderBox::computePreferredLogicalWidths(style().minWidth(), style().maxWidth(), horizontalBorderAndPaddingExtent());
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -649,5 +639,27 @@ FontSelector* RenderMenuList::fontSelector() const
 {
     return &document().fontSelector();
 }
+
+#if PLATFORM(IOS_FAMILY)
+void RenderMenuList::layout()
+{
+    RenderFlexibleBox::layout();
+
+    // Ideally, we should not be adjusting styles during layout. However, for a
+    // pill-shaped appearance, the horizontal border radius is dependent on the
+    // computed height of the box. This means that the appearance cannot be declared
+    // prior to layout, since CSS only allows the horizontal border radius to be
+    // dependent on the computed width of the box.
+    //
+    // Ignoring the style's border radius and forcing a pill-shaped appearance at
+    // paint time is not an option, since focus rings and tap highlights will not
+    // use the correct border radius. Consequently, we need to adjust the border
+    // radius here.
+    //
+    // Note that similar adjustments are made in RenderSliderThumb, RenderButton
+    // and RenderTextControlSingleLine.
+    RenderThemeIOS::adjustRoundBorderRadius(mutableStyle(), *this);
+}
+#endif
 
 }

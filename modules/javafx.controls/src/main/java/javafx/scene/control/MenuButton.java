@@ -80,7 +80,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 public class MenuButton extends ButtonBase {
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -116,7 +116,7 @@ public class MenuButton extends ButtonBase {
             new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_HIDDEN");
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -181,7 +181,7 @@ public class MenuButton extends ButtonBase {
         pseudoClassStateChanged(PSEUDO_CLASS_OPENVERTICALLY, true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -359,7 +359,7 @@ public class MenuButton extends ButtonBase {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Control methods                                                         *
      *                                                                         *
@@ -405,7 +405,7 @@ public class MenuButton extends ButtonBase {
         return new MenuButtonSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -417,7 +417,7 @@ public class MenuButton extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_SHOWING =
             PseudoClass.getPseudoClass("showing");
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

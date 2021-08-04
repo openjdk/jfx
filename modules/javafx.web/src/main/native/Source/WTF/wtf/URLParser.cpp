@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include <array>
 #include <mutex>
 #include <unicode/uidna.h>
-#include <unicode/utypes.h>
+#include <wtf/text/CodePointIterator.h>
 
 namespace WTF {
 
@@ -40,88 +40,6 @@ namespace WTF {
 #else
 #define URL_PARSER_LOG(...)
 #endif
-
-template<typename CharacterType>
-class CodePointIterator {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    ALWAYS_INLINE CodePointIterator() { }
-    ALWAYS_INLINE CodePointIterator(const CharacterType* begin, const CharacterType* end)
-        : m_begin(begin)
-        , m_end(end)
-    {
-    }
-
-    ALWAYS_INLINE CodePointIterator(const CodePointIterator& begin, const CodePointIterator& end)
-        : CodePointIterator(begin.m_begin, end.m_begin)
-    {
-        ASSERT(end.m_begin >= begin.m_begin);
-    }
-
-    ALWAYS_INLINE UChar32 operator*() const;
-    ALWAYS_INLINE CodePointIterator& operator++();
-
-    ALWAYS_INLINE bool operator==(const CodePointIterator& other) const
-    {
-        return m_begin == other.m_begin
-            && m_end == other.m_end;
-    }
-    ALWAYS_INLINE bool operator!=(const CodePointIterator& other) const { return !(*this == other); }
-
-    ALWAYS_INLINE bool atEnd() const
-    {
-        ASSERT(m_begin <= m_end);
-        return m_begin >= m_end;
-    }
-
-    ALWAYS_INLINE size_t codeUnitsSince(const CharacterType* reference) const
-    {
-        ASSERT(m_begin >= reference);
-        return m_begin - reference;
-    }
-
-    ALWAYS_INLINE size_t codeUnitsSince(const CodePointIterator& other) const
-    {
-        return codeUnitsSince(other.m_begin);
-    }
-
-private:
-    const CharacterType* m_begin { nullptr };
-    const CharacterType* m_end { nullptr };
-};
-
-template<>
-ALWAYS_INLINE UChar32 CodePointIterator<LChar>::operator*() const
-{
-    ASSERT(!atEnd());
-    return *m_begin;
-}
-
-template<>
-ALWAYS_INLINE auto CodePointIterator<LChar>::operator++() -> CodePointIterator&
-{
-    m_begin++;
-    return *this;
-}
-
-template<>
-ALWAYS_INLINE UChar32 CodePointIterator<UChar>::operator*() const
-{
-    ASSERT(!atEnd());
-    UChar32 c;
-    U16_GET(m_begin, 0, 0, m_end - m_begin, c);
-    return c;
-}
-
-template<>
-ALWAYS_INLINE auto CodePointIterator<UChar>::operator++() -> CodePointIterator&
-{
-    unsigned i = 0;
-    size_t length = m_end - m_begin;
-    U16_FWD_1(m_begin, i, length);
-    m_begin += i;
-    return *this;
-}
 
 ALWAYS_INLINE static void appendCodePoint(Vector<UChar>& destination, UChar32 codePoint)
 {
@@ -268,7 +186,7 @@ static const uint8_t characterClassTable[256] = {
     ValidScheme, // 'y'
     ValidScheme, // 'z'
     UserInfo | Default, // '{'
-    UserInfo, // '|'
+    UserInfo | ForbiddenHost, // '|'
     UserInfo | Default, // '}'
     0, // '~'
     QueryPercent, // 0x7F
@@ -406,12 +324,13 @@ template<typename CharacterType> ALWAYS_INLINE static bool isC0Control(Character
 template<typename CharacterType> ALWAYS_INLINE static bool isC0ControlOrSpace(CharacterType character) { return character <= 0x20; }
 template<typename CharacterType> ALWAYS_INLINE static bool isTabOrNewline(CharacterType character) { return character <= 0xD && character >= 0x9 && character != 0xB && character != 0xC; }
 template<typename CharacterType> ALWAYS_INLINE static bool isInSimpleEncodeSet(CharacterType character) { return character > 0x7E || isC0Control(character); }
+template<typename CharacterType> ALWAYS_INLINE static bool isInFragmentEncodeSet(CharacterType character) { return character > 0x7E || character == '`' || ((characterClassTable[character] & QueryPercent) && character != '#'); }
 template<typename CharacterType> ALWAYS_INLINE static bool isInDefaultEncodeSet(CharacterType character) { return character > 0x7E || characterClassTable[character] & Default; }
 template<typename CharacterType> ALWAYS_INLINE static bool isInUserInfoEncodeSet(CharacterType character) { return character > 0x7E || characterClassTable[character] & UserInfo; }
 template<typename CharacterType> ALWAYS_INLINE static bool isPercentOrNonASCII(CharacterType character) { return !isASCII(character) || character == '%'; }
 template<typename CharacterType> ALWAYS_INLINE static bool isSlashQuestionOrHash(CharacterType character) { return character <= '\\' && characterClassTable[character] & SlashQuestionOrHash; }
 template<typename CharacterType> ALWAYS_INLINE static bool isValidSchemeCharacter(CharacterType character) { return character <= 'z' && characterClassTable[character] & ValidScheme; }
-template<typename CharacterType> ALWAYS_INLINE static bool isForbiddenHostCodePoint(CharacterType character) { return character <= '^' && characterClassTable[character] & ForbiddenHost; }
+template<typename CharacterType> ALWAYS_INLINE static bool isForbiddenHostCodePoint(CharacterType character) { return character <= '|' && characterClassTable[character] & ForbiddenHost; }
 ALWAYS_INLINE static bool shouldPercentEncodeQueryByte(uint8_t byte, const bool& urlIsSpecial)
 {
     if (characterClassTable[byte] & QueryPercent)
@@ -452,16 +371,16 @@ bool URLParser::takesTwoAdvancesUntilEnd(CodePointIterator<CharacterType> iterat
 template<typename CharacterType>
 ALWAYS_INLINE bool URLParser::isWindowsDriveLetter(CodePointIterator<CharacterType> iterator)
 {
+    // https://url.spec.whatwg.org/#start-with-a-windows-drive-letter
     if (iterator.atEnd() || !isASCIIAlpha(*iterator))
         return false;
     advance<CharacterType, ReportSyntaxViolation::No>(iterator);
     if (iterator.atEnd())
         return false;
-    if (*iterator == ':')
-        return true;
-    if (UNLIKELY(*iterator == '|'))
-        return true;
-    return false;
+    if (*iterator != ':' && *iterator != '|')
+        return false;
+    advance<CharacterType, ReportSyntaxViolation::No>(iterator);
+    return iterator.atEnd() || *iterator == '/' || *iterator == '\\' || *iterator == '?' || *iterator == '#';
 }
 
 ALWAYS_INLINE void URLParser::appendToASCIIBuffer(UChar32 codePoint)
@@ -480,6 +399,12 @@ ALWAYS_INLINE void URLParser::appendToASCIIBuffer(const char* characters, size_t
 template<typename CharacterType>
 void URLParser::appendWindowsDriveLetter(CodePointIterator<CharacterType>& iterator)
 {
+    auto lengthWithOnlyOneSlashInPath = m_url.m_hostEnd + m_url.m_portLength + 1;
+    if (m_url.m_pathAfterLastSlash > lengthWithOnlyOneSlashInPath) {
+        syntaxViolation(iterator);
+        m_url.m_pathAfterLastSlash = lengthWithOnlyOneSlashInPath;
+        m_asciiBuffer.resize(lengthWithOnlyOneSlashInPath);
+    }
     ASSERT(isWindowsDriveLetter(iterator));
     appendToASCIIBuffer(*iterator);
     advance(iterator);
@@ -564,14 +489,14 @@ ALWAYS_INLINE void URLParser::utf8PercentEncode(const CodePointIterator<Characte
     ASSERT_WITH_MESSAGE(isInCodeSet(codePoint), "isInCodeSet should always return true for non-ASCII characters");
     syntaxViolation(iterator);
 
-    if (!U_IS_UNICODE_CHAR(codePoint)) {
+    uint8_t buffer[U8_MAX_LENGTH];
+    int32_t offset = 0;
+    UBool isError = false;
+    U8_APPEND(buffer, offset, U8_MAX_LENGTH, codePoint, isError);
+    if (isError) {
         appendToASCIIBuffer(replacementCharacterUTF8PercentEncoded, replacementCharacterUTF8PercentEncodedLength);
         return;
     }
-
-    uint8_t buffer[U8_MAX_LENGTH];
-    int32_t offset = 0;
-    U8_APPEND_UNSAFE(buffer, offset, codePoint);
     for (int32_t i = 0; i < offset; ++i)
         percentEncodeByte(buffer[i]);
 }
@@ -592,14 +517,14 @@ ALWAYS_INLINE void URLParser::utf8QueryEncode(const CodePointIterator<CharacterT
 
     syntaxViolation(iterator);
 
-    if (!U_IS_UNICODE_CHAR(codePoint)) {
+    uint8_t buffer[U8_MAX_LENGTH];
+    int32_t offset = 0;
+    UBool isError = false;
+    U8_APPEND(buffer, offset, U8_MAX_LENGTH, codePoint, isError);
+    if (isError) {
         appendToASCIIBuffer(replacementCharacterUTF8PercentEncoded, replacementCharacterUTF8PercentEncodedLength);
         return;
     }
-
-    uint8_t buffer[U8_MAX_LENGTH];
-    int32_t offset = 0;
-    U8_APPEND_UNSAFE(buffer, offset, codePoint);
     for (int32_t i = 0; i < offset; ++i) {
         auto byte = buffer[i];
         if (shouldPercentEncodeQueryByte(byte, m_urlIsSpecial))
@@ -897,6 +822,7 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
         m_url.m_protocolIsInHTTPFamily = base.m_protocolIsInHTTPFamily;
         m_url.m_schemeEnd = base.m_schemeEnd;
     }
+
     switch (scheme(StringView(m_asciiBuffer.data(), m_url.m_schemeEnd))) {
 #if PLATFORM(JAVA)
     case Scheme::JAR:
@@ -918,6 +844,16 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
     case Scheme::NonSpecial:
         m_urlIsSpecial = false;
         nonUTF8QueryEncoding = nullptr;
+        auto pathStart = m_url.m_hostEnd + m_url.m_portLength;
+        if (pathStart + 2 < m_asciiBuffer.size()
+            && m_asciiBuffer[pathStart] == '/'
+            && m_asciiBuffer[pathStart + 1] == '.'
+            && m_asciiBuffer[pathStart + 2] == '/') {
+            m_asciiBuffer.remove(pathStart + 1, 2);
+            m_url.m_pathAfterLastSlash = std::max(2u, m_url.m_pathAfterLastSlash) - 2;
+            m_url.m_pathEnd = std::max(2u, m_url.m_pathEnd) - 2;
+            m_url.m_queryEnd = std::max(2u, m_url.m_queryEnd) - 2;
+        }
         return;
     }
     ASSERT_NOT_REACHED();
@@ -1157,8 +1093,8 @@ URLParser::URLParser(const String& input, const URL& base, const URLTextEncoding
 
     ASSERT(!m_url.m_isValid
         || m_didSeeSyntaxViolation == (m_url.string() != input)
-        || (input.isAllSpecialCharacters<isC0ControlOrSpace>()
-            && m_url.m_string == base.m_string.left(base.m_queryEnd)));
+        || (input.isAllSpecialCharacters<isC0ControlOrSpace>() && m_url.m_string == base.m_string.left(base.m_queryEnd))
+        || (base.isValid() && base.protocolIs("file")));
     ASSERT(internalValuesConsistent(m_url));
 #if ASSERT_ENABLED
     if (!m_didSeeSyntaxViolation) {
@@ -1169,6 +1105,9 @@ URLParser::URLParser(const String& input, const URL& base, const URLTextEncoding
             ASSERT(allValuesEqual(parser.result(), m_url));
     }
 #endif // ASSERT_ENABLED
+
+    if (UNLIKELY(needsNonSpecialDotSlash()))
+        addNonSpecialDotSlash();
 }
 
 template<typename CharacterType>
@@ -1353,8 +1292,6 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                 state = State::Relative;
                 break;
             }
-            copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
-            appendToASCIIBuffer(':');
             state = State::File;
             break;
         case State::SpecialRelativeOrAuthority:
@@ -1420,7 +1357,8 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                 break;
             default:
                 copyURLPartsUntil(base, URLPart::PathAfterLastSlash, c, nonUTF8QueryEncoding);
-                if (currentPosition(c) && parsedDataView(currentPosition(c) - 1) != '/') {
+                if ((currentPosition(c) && parsedDataView(currentPosition(c) - 1) != '/')
+                    || (base.host().isEmpty() && base.path().isEmpty())) {
                     appendToASCIIBuffer('/');
                     m_url.m_pathAfterLastSlash = currentPosition(c);
                 }
@@ -1617,16 +1555,29 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                 if (base.isValid() && base.protocolIs("file") && shouldCopyFileURL(c))
                     copyURLPartsUntil(base, URLPart::PathAfterLastSlash, c, nonUTF8QueryEncoding);
                 else {
-                    appendToASCIIBuffer("///", 3);
-                    m_url.m_userStart = currentPosition(c) - 1;
-                    m_url.m_userEnd = m_url.m_userStart;
-                    m_url.m_passwordEnd = m_url.m_userStart;
-                    m_url.m_hostEnd = m_url.m_userStart;
-                    m_url.m_portLength = 0;
-                    m_url.m_pathAfterLastSlash = m_url.m_userStart + 1;
-                    if (isWindowsDriveLetter(c))
-                        appendWindowsDriveLetter(c);
+                    bool copiedHost = false;
+                    if (base.isValid() && base.protocolIs("file")) {
+                        if (base.host().isEmpty()) {
+                            copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
+                            appendToASCIIBuffer(":///", 4);
+                        } else {
+                            copyURLPartsUntil(base, URLPart::PortEnd, c, nonUTF8QueryEncoding);
+                            appendToASCIIBuffer('/');
+                            copiedHost = true;
+                        }
+                    } else
+                        appendToASCIIBuffer("///", 3);
+                    if (!copiedHost) {
+                        m_url.m_userStart = currentPosition(c) - 1;
+                        m_url.m_userEnd = m_url.m_userStart;
+                        m_url.m_passwordEnd = m_url.m_userStart;
+                        m_url.m_hostEnd = m_url.m_userStart;
+                        m_url.m_portLength = 0;
+                    }
+                    m_url.m_pathAfterLastSlash = m_url.m_hostEnd + 1;
                 }
+                if (isWindowsDriveLetter(c))
+                    appendWindowsDriveLetter(c);
                 state = State::Path;
                 break;
             }
@@ -1636,6 +1587,10 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             if (LIKELY(*c == '/' || *c == '\\')) {
                 if (UNLIKELY(*c == '\\'))
                     syntaxViolation(c);
+                if (base.isValid() && base.protocolIs("file")) {
+                    copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
+                    appendToASCIIBuffer(":/", 2);
+                }
                 appendToASCIIBuffer('/');
                 advance(c);
                 m_url.m_userStart = currentPosition(c);
@@ -1647,21 +1602,37 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                 state = State::FileHost;
                 break;
             }
-            syntaxViolation(c);
-            appendToASCIIBuffer("//", 2);
-            m_url.m_userStart = currentPosition(c) - 1;
-            m_url.m_userEnd = m_url.m_userStart;
-            m_url.m_passwordEnd = m_url.m_userStart;
-            m_url.m_hostEnd = m_url.m_userStart;
-            m_url.m_portLength = 0;
+            {
+                bool copiedHost = false;
+                if (base.isValid() && base.protocolIs("file")) {
+                    if (base.host().isEmpty()) {
+                        copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
+                        appendToASCIIBuffer(":///", 4);
+                    } else {
+                        copyURLPartsUntil(base, URLPart::PortEnd, c, nonUTF8QueryEncoding);
+                        appendToASCIIBuffer('/');
+                        copiedHost = true;
+                    }
+                } else {
+                    syntaxViolation(c);
+                    appendToASCIIBuffer("//", 2);
+                }
+                if (!copiedHost) {
+                    m_url.m_userStart = currentPosition(c) - 1;
+                    m_url.m_userEnd = m_url.m_userStart;
+                    m_url.m_passwordEnd = m_url.m_userStart;
+                    m_url.m_hostEnd = m_url.m_userStart;
+                    m_url.m_portLength = 0;
+                }
+            }
             if (isWindowsDriveLetter(c)) {
                 appendWindowsDriveLetter(c);
-                m_url.m_pathAfterLastSlash = m_url.m_userStart + 1;
+                m_url.m_pathAfterLastSlash = m_url.m_hostEnd + 1;
             } else if (copyBaseWindowsDriveLetter(base)) {
                 appendToASCIIBuffer('/');
-                m_url.m_pathAfterLastSlash = m_url.m_userStart + 4;
+                m_url.m_pathAfterLastSlash = m_url.m_hostEnd + 4;
             } else
-                m_url.m_pathAfterLastSlash = m_url.m_userStart + 1;
+                m_url.m_pathAfterLastSlash = m_url.m_hostEnd + 1;
             state = State::Path;
             break;
         case State::FileHost:
@@ -1826,7 +1797,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             break;
         case State::Fragment:
             URL_PARSER_LOG("State Fragment");
-            utf8PercentEncode<isInSimpleEncodeSet>(c);
+            utf8PercentEncode<isInFragmentEncodeSet>(c);
             ++c;
             break;
         }
@@ -1880,15 +1851,8 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
         break;
     case State::SpecialAuthoritySlashes:
         LOG_FINAL_STATE("SpecialAuthoritySlashes");
-        m_url.m_userStart = currentPosition(c);
-        m_url.m_userEnd = m_url.m_userStart;
-        m_url.m_passwordEnd = m_url.m_userStart;
-        m_url.m_hostEnd = m_url.m_userStart;
-        m_url.m_portLength = 0;
-        m_url.m_pathAfterLastSlash = m_url.m_userStart;
-        m_url.m_pathEnd = m_url.m_userStart;
-        m_url.m_queryEnd = m_url.m_userStart;
-        break;
+        failure();
+        return;
     case State::SpecialAuthorityIgnoreSlashes:
         LOG_FINAL_STATE("SpecialAuthorityIgnoreSlashes");
         failure();
@@ -1952,17 +1916,32 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
     case State::FileSlash:
         LOG_FINAL_STATE("FileSlash");
         syntaxViolation(c);
-        m_url.m_userStart = currentPosition(c) + 1;
-        appendToASCIIBuffer("//", 2);
-        m_url.m_userEnd = m_url.m_userStart;
-        m_url.m_passwordEnd = m_url.m_userStart;
-        m_url.m_hostEnd = m_url.m_userStart;
-        m_url.m_portLength = 0;
+        {
+            bool copiedHost = false;
+            if (base.isValid() && base.protocolIs("file")) {
+                if (base.host().isEmpty()) {
+                    copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
+                    appendToASCIIBuffer(":/", 2);
+                } else {
+                    copyURLPartsUntil(base, URLPart::PortEnd, c, nonUTF8QueryEncoding);
+                    appendToASCIIBuffer('/');
+                    copiedHost = true;
+                }
+            }
+            if (!copiedHost) {
+                m_url.m_userStart = currentPosition(c) + 1;
+                appendToASCIIBuffer("//", 2);
+                m_url.m_userEnd = m_url.m_userStart;
+                m_url.m_passwordEnd = m_url.m_userStart;
+                m_url.m_hostEnd = m_url.m_userStart;
+                m_url.m_portLength = 0;
+            }
+        }
         if (copyBaseWindowsDriveLetter(base)) {
             appendToASCIIBuffer('/');
-            m_url.m_pathAfterLastSlash = m_url.m_userStart + 4;
+            m_url.m_pathAfterLastSlash = m_url.m_hostEnd + 4;
         } else
-            m_url.m_pathAfterLastSlash = m_url.m_userStart + 1;
+            m_url.m_pathAfterLastSlash = m_url.m_hostEnd + 1;
         m_url.m_pathEnd = m_url.m_pathAfterLastSlash;
         m_url.m_queryEnd = m_url.m_pathAfterLastSlash;
         break;
@@ -2044,7 +2023,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
     } else
         m_url.m_string = String::adopt(WTFMove(m_asciiBuffer));
     m_url.m_isValid = true;
-    URL_PARSER_LOG("Parsed URL <%s>", m_url.m_string.utf8().data());
+    URL_PARSER_LOG("Parsed URL <%s>\n\n", m_url.m_string.utf8().data());
 }
 
 template<typename CharacterType>
@@ -2536,10 +2515,30 @@ URLParser::LCharBuffer URLParser::percentDecode(const LChar* input, size_t lengt
     return output;
 }
 
+bool URLParser::needsNonSpecialDotSlash() const
+{
+    auto pathStart = m_url.m_hostEnd + m_url.m_portLength;
+    return !m_urlIsSpecial
+        && pathStart == m_url.m_schemeEnd + 1U
+        && pathStart + 1 < m_url.m_string.length()
+        && m_url.m_string[pathStart] == '/'
+        && m_url.m_string[pathStart + 1] == '/';
+}
+
+void URLParser::addNonSpecialDotSlash()
+{
+    auto oldPathStart = m_url.m_hostEnd + m_url.m_portLength;
+    auto& oldString = m_url.m_string;
+    m_url.m_string = makeString(oldString.substring(0, oldPathStart + 1), "./", oldString.substring(oldPathStart + 1));
+    m_url.m_pathAfterLastSlash += 2;
+    m_url.m_pathEnd += 2;
+    m_url.m_queryEnd += 2;
+}
+
 template<typename CharacterType> Optional<URLParser::LCharBuffer> URLParser::domainToASCII(StringImpl& domain, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition)
 {
     LCharBuffer ascii;
-    if (domain.isAllASCII()) {
+    if (domain.isAllASCII() && !startsWithLettersIgnoringASCIICase(domain, "xn--")) {
         size_t length = domain.length();
         if (domain.is8Bit()) {
             const LChar* characters = domain.characters8();
@@ -2596,6 +2595,9 @@ bool URLParser::hasForbiddenHostCodePoint(const URLParser::LCharBuffer& asciiDom
 template<typename CharacterType>
 bool URLParser::parsePort(CodePointIterator<CharacterType>& iterator)
 {
+    if (UNLIKELY(m_urlIsFile))
+        return false;
+
     ASSERT(*iterator == ':');
     auto colonIterator = iterator;
     advance(iterator, colonIterator);
@@ -2643,6 +2645,23 @@ bool URLParser::parsePort(CodePointIterator<CharacterType>& iterator)
     unsigned portLength = currentPosition(iterator) - m_url.m_hostEnd;
     RELEASE_ASSERT(portLength <= URL::maxPortLength);
     m_url.m_portLength = portLength;
+    return true;
+}
+
+template<typename CharacterType>
+bool URLParser::startsWithXNDashDash(CodePointIterator<CharacterType> iterator)
+{
+    if (iterator.atEnd() || (*iterator != 'x' && *iterator != 'X'))
+        return false;
+    advance<CharacterType, ReportSyntaxViolation::No>(iterator);
+    if (iterator.atEnd() || (*iterator != 'n' && *iterator != 'N'))
+        return false;
+    advance<CharacterType, ReportSyntaxViolation::No>(iterator);
+    if (iterator.atEnd() || *iterator != '-')
+        return false;
+    advance<CharacterType, ReportSyntaxViolation::No>(iterator);
+    if (iterator.atEnd() || *iterator != '-')
+        return false;
     return true;
 }
 
@@ -2695,7 +2714,7 @@ bool URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator)
         return parsePort(iterator);
     }
 
-    if (LIKELY(!m_hostHasPercentOrNonASCII)) {
+    if (LIKELY(!m_hostHasPercentOrNonASCII && !startsWithXNDashDash(iterator))) {
         auto hostIterator = iterator;
         for (; !iterator.atEnd(); ++iterator) {
             if (isTabOrNewline(*iterator))
@@ -2748,11 +2767,12 @@ bool URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator)
         if (UNLIKELY(!isASCII(*iterator)))
             syntaxViolation(hostBegin);
 
-        if (!U_IS_UNICODE_CHAR(*iterator))
-            return false;
         uint8_t buffer[U8_MAX_LENGTH];
         int32_t offset = 0;
-        U8_APPEND_UNSAFE(buffer, offset, *iterator);
+        UBool isError = false;
+        U8_APPEND(buffer, offset, U8_MAX_LENGTH, *iterator, isError);
+        if (isError)
+            return false;
         utf8Encoded.append(buffer, offset);
     }
     LCharBuffer percentDecoded = percentDecode(utf8Encoded.data(), utf8Encoded.size(), hostBegin);
@@ -2794,7 +2814,7 @@ Optional<String> URLParser::formURLDecode(StringView input)
     if (utf8.isNull())
         return WTF::nullopt;
     auto percentDecoded = percentDecode(reinterpret_cast<const LChar*>(utf8.data()), utf8.length());
-    return String::fromUTF8(percentDecoded.data(), percentDecoded.size());
+    return String::fromUTF8ReplacingInvalidSequences(percentDecoded.data(), percentDecoded.size());
 }
 
 // https://url.spec.whatwg.org/#concept-urlencoded-parser
@@ -2861,7 +2881,8 @@ const UIDNA& URLParser::internationalDomainNameTranscoder()
     std::call_once(onceFlag, [] {
         UErrorCode error = U_ZERO_ERROR;
         encoder = uidna_openUTS46(UIDNA_CHECK_BIDI | UIDNA_CHECK_CONTEXTJ | UIDNA_NONTRANSITIONAL_TO_UNICODE | UIDNA_NONTRANSITIONAL_TO_ASCII, &error);
-        RELEASE_ASSERT(U_SUCCESS(error));
+        if (UNLIKELY(U_FAILURE(error)))
+            CRASH_WITH_INFO(error);
         RELEASE_ASSERT(encoder);
     });
     return *encoder;

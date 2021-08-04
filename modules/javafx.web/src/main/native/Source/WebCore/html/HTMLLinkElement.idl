@@ -22,6 +22,7 @@
 [
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToNativeObject,
+    Exposed=Window
 ] interface HTMLLinkElement : HTMLElement {
     [Reflect] attribute boolean disabled;
     [CEReactions=NotNeeded, Reflect] attribute DOMString charset;
@@ -35,8 +36,9 @@
     [CEReactions=NotNeeded, Reflect] attribute DOMString type;
     [CEReactions=NotNeeded] attribute DOMString as;
     [CEReactions=NotNeeded] attribute DOMString? crossOrigin;
-    [CEReactions=NotNeeded, Reflect, EnabledAtRuntime=LinkPreloadResponsiveImages] attribute DOMString imageSrcset;
-    [CEReactions=NotNeeded, Reflect, EnabledAtRuntime=LinkPreloadResponsiveImages] attribute DOMString imageSizes;
+    [CEReactions=NotNeeded, Reflect, EnabledBySetting=LinkPreloadResponsiveImages] attribute DOMString imageSrcset;
+    [CEReactions=NotNeeded, Reflect, EnabledBySetting=LinkPreloadResponsiveImages] attribute DOMString imageSizes;
+    [EnabledBySetting=ReferrerPolicyAttribute, ImplementedAs=referrerPolicyForBindings, CEReactions=NotNeeded] attribute DOMString referrerPolicy;
 
     // DOM Level 2 Style
     readonly attribute StyleSheet sheet;

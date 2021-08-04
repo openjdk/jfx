@@ -201,7 +201,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [GlassTouches stopTracking:self];
 
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
+
     if (env != NULL)
     {
         (*env)->DeleteGlobalRef(env, self->jView);

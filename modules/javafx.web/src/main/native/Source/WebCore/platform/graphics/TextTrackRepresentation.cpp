@@ -24,10 +24,9 @@
  */
 
 #include "config.h"
+#include "TextTrackRepresentation.h"
 
 #if ENABLE(VIDEO)
-
-#include "TextTrackRepresentation.h"
 
 #include "IntRect.h"
 

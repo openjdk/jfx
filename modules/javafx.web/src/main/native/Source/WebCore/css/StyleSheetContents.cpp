@@ -24,6 +24,7 @@
 #include "CSSImportRule.h"
 #include "CSSParser.h"
 #include "CSSStyleSheet.h"
+#include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
 #include "ContentRuleListResults.h"
 #include "Document.h"
@@ -152,7 +153,7 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
     }
 
     if (is<StyleRuleMedia>(rule))
-        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), downcast<StyleRuleMedia>(rule.get()).mediaQueries());
+        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), &downcast<StyleRuleMedia>(rule.get()).mediaQueries());
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
@@ -507,7 +508,7 @@ bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLo
         auto* documentLoader = loader.documentLoader();
         if (page && documentLoader) {
             const auto& request = resource.resourceRequest();
-            auto results = page->userContentProvider().processContentRuleListsForLoad(request.url(), ContentExtensions::toResourceType(resource.type()), *documentLoader);
+            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type()), *documentLoader);
             if (results.summary.blockedLoad || results.summary.madeHTTPS)
                 return true;
         }

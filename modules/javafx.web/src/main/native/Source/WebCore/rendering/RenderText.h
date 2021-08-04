@@ -24,7 +24,6 @@
 
 #include "RenderElement.h"
 #include "RenderTextLineBoxes.h"
-#include "SimpleLineLayout.h"
 #include "Text.h"
 #include <wtf/Forward.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -168,16 +167,9 @@ public:
     void setCandidateComputedTextSize(float size) { m_candidateComputedTextSize = size; }
 #endif
 
-    void ensureLineBoxes();
-    const SimpleLineLayout::Layout* simpleLineLayout() const;
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    const LayoutIntegration::LineLayout* layoutFormattingContextLineLayout() const;
-#endif
     bool usesComplexLineLayoutPath() const;
 
     StringView stringView(unsigned start = 0, Optional<unsigned> stop = WTF::nullopt) const;
-
-    LayoutUnit topOfFirstText() const;
 
     bool containsOnlyHTMLWhitespace(unsigned from, unsigned length) const;
 
@@ -210,7 +202,6 @@ private:
 
     void setSelectionState(HighlightState) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
-    LayoutRect localCaretRect(InlineBox*, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine = nullptr) override;
     LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const final;
 
     void computePreferredLogicalWidths(float leadWidth, HashSet<const Font*>& fallbackFonts, GlyphOverflow&);

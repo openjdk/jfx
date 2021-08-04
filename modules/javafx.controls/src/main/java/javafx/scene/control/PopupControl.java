@@ -997,7 +997,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         return null;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         StyleSheet Handling                             *
      *                                                                         *

@@ -55,7 +55,7 @@ import javafx.scene.control.SkinBase;
  */
 public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -81,7 +81,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -144,7 +144,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

@@ -220,7 +220,7 @@ gst_memory_resize (GstMemory * mem, gssize offset, gsize size)
 /**
  * gst_memory_make_mapped:
  * @mem: (transfer full): a #GstMemory
- * @info: (out): pointer for info
+ * @info: (out caller-allocates): pointer for info
  * @flags: mapping flags
  *
  * Create a #GstMemory object that is mapped with @flags. If @mem is mappable
@@ -270,7 +270,7 @@ cannot_map:
 /**
  * gst_memory_map:
  * @mem: a #GstMemory
- * @info: (out): pointer for info
+ * @info: (out caller-allocates): pointer for info
  * @flags: mapping flags
  *
  * Fill @info with the pointer and sizes of the memory in @mem that can be

@@ -32,7 +32,16 @@ Recreate the dependency verification file as follows:
    builds to pick up the internal tools and development kits in the
    'javafx' component group.
 
-6. Commit the final version of the file to the repository.
+6. Add the following entry inside the <configuration> section:
+
+   <trusted-artifacts>
+      <trust file=".*-sources[.]jar" regex="true"/>
+   </trusted-artifacts>
+
+   This configures Gradle to trust automatically all sources.
+   See also: https://docs.gradle.org/current/userguide/dependency_verification.html#sec:skipping-javadocs
+
+7. Commit the final version of the file to the repository.
 
 These commands will cause Gradle to compute the requested checksums
 directly from the newly downloaded artifacts and add them to the file.

@@ -35,7 +35,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBitmapRenderingContext);
 
-#if USE(IOSURFACE_CANVAS_BACKING_STORE) || ENABLE(ACCELERATED_2D_CANVAS)
+#if USE(IOSURFACE_CANVAS_BACKING_STORE)
 static RenderingMode bufferRenderingMode = RenderingMode::Accelerated;
 #else
 static RenderingMode bufferRenderingMode = RenderingMode::Unaccelerated;
@@ -117,7 +117,7 @@ void ImageBitmapRenderingContext::setOutputBitmap(RefPtr<ImageBitmap> imageBitma
         canvas()->setOriginClean();
     else
         canvas()->setOriginTainted();
-    canvas()->setImageBufferAndMarkDirty(imageBitmap->transferOwnershipAndClose());
+    canvas()->setImageBufferAndMarkDirty(imageBitmap->takeImageBuffer());
 }
 
 ExceptionOr<void> ImageBitmapRenderingContext::transferFromImageBitmap(RefPtr<ImageBitmap> imageBitmap)

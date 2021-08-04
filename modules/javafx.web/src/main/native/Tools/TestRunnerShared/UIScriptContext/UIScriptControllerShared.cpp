@@ -26,6 +26,7 @@
 #include "config.h"
 #include "UIScriptController.h"
 
+#include "JSBasics.h"
 #include "JSUIScriptController.h"
 #include "UIScriptContext.h"
 #include <JavaScriptCore/JSValueRef.h>
@@ -41,29 +42,27 @@ DeviceOrientation* toDeviceOrientation(JSContextRef context, JSValueRef value)
         DeviceOrientation::LandscapeLeft,
         DeviceOrientation::LandscapeRight
     };
-
-    auto option = adopt(JSValueToStringCopy(context, value, nullptr));
-    if (option->string() == "portrait")
+    auto option = createJSString(context, value);
+    if (JSStringIsEqualToUTF8CString(option.get(), "portrait"))
         return &values[0];
-
-    if (option->string() == "portrait-upsidedown")
+    if (JSStringIsEqualToUTF8CString(option.get(), "portrait-upsidedown"))
         return &values[1];
-
-    if (option->string() == "landscape-left")
+    if (JSStringIsEqualToUTF8CString(option.get(), "landscape-left"))
         return &values[2];
-
-    if (option->string() == "landscape-right")
+    if (JSStringIsEqualToUTF8CString(option.get(), "landscape-right"))
         return &values[3];
-
     return nullptr;
 }
 
-#if !PLATFORM(GTK) && !PLATFORM(COCOA) && !PLATFORM(WIN) && !PLATFORM(WPE)
-Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
+ScrollToOptions* toScrollToOptions(JSContextRef context, JSValueRef argument)
 {
-    return adoptRef(*new UIScriptController(context));
+    if (!JSValueIsObject(context, argument))
+        return nullptr;
+
+    static ScrollToOptions options;
+    options.unconstrained = booleanProperty(context, (JSObjectRef)argument, "unconstrained", false);
+    return &options;
 }
-#endif
 
 UIScriptController::UIScriptController(UIScriptContext& context)
     : m_context(&context)
@@ -75,9 +74,9 @@ void UIScriptController::contextDestroyed()
     m_context = nullptr;
 }
 
-void UIScriptController::makeWindowObject(JSContextRef context, JSObjectRef windowObject, JSValueRef* exception)
+void UIScriptController::makeWindowObject(JSContextRef context)
 {
-    setProperty(context, windowObject, "uiController", this, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete, exception);
+    setGlobalObjectProperty(context, "uiController", this);
 }
 
 JSClassRef UIScriptController::wrapperClass()
@@ -223,6 +222,26 @@ void UIScriptController::setDidDismissPopoverCallback(JSValueRef callback)
 JSValueRef UIScriptController::didDismissPopoverCallback() const
 {
     return m_context->callbackWithID(CallbackTypeDidDismissPopover);
+}
+
+void UIScriptController::setDidShowContactPickerCallback(JSValueRef callback)
+{
+    m_context->registerCallback(callback, CallbackTypeDidShowContactPicker);
+}
+
+JSValueRef UIScriptController::didShowContactPickerCallback() const
+{
+    return m_context->callbackWithID(CallbackTypeDidShowContactPicker);
+}
+
+void UIScriptController::setDidHideContactPickerCallback(JSValueRef callback)
+{
+    m_context->registerCallback(callback, CallbackTypeDidHideContactPicker);
+}
+
+JSValueRef UIScriptController::didHideContactPickerCallback() const
+{
+    return m_context->callbackWithID(CallbackTypeDidHideContactPicker);
 }
 
 void UIScriptController::uiScriptComplete(JSStringRef result)

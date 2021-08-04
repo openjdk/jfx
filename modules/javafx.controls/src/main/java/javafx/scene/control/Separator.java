@@ -82,7 +82,7 @@ import javafx.css.StyleableProperty;
  */
 public class Separator extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -121,7 +121,7 @@ public class Separator extends Control {
                 .applyStyle(null, orientation != null ? orientation : Orientation.HORIZONTAL);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -241,7 +241,7 @@ public class Separator extends Control {
         return new SeparatorSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

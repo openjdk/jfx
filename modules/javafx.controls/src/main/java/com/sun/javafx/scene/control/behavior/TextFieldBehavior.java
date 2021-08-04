@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,10 @@
 package com.sun.javafx.scene.control.behavior;
 
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.stage.WindowHelper;
 
 import static com.sun.javafx.PlatformUtil.*;
 
@@ -39,7 +37,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
@@ -59,8 +56,14 @@ import javafx.stage.Window;
 public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private TextFieldSkin skin;
     private TwoLevelFocusBehavior tlFocus;
+
+    // listeners to focus-related state
+    private ChangeListener<Boolean> focusListener;
     private ChangeListener<Scene> sceneListener;
+    private WeakChangeListener<Scene> weakSceneListener;
     private ChangeListener<Node> focusOwnerListener;
+    private WeakChangeListener<Node> weakFocusOwnerListener;
+
 
     public TextFieldBehavior(final TextField textField) {
         super(textField);
@@ -69,12 +72,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
 
-        handleFocusChange();
-
-        // Register for change events
-        textField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+        focusListener = (observable, oldValue, newValue) -> {
             handleFocusChange();
-        });
+        };
+        textField.focusedProperty().addListener(focusListener);
+        handleFocusChange();
 
         focusOwnerListener = (observable, oldValue, newValue) -> {
             // RT-23699: The selection is now only affected when the TextField
@@ -88,9 +90,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 textField.selectRange(0, 0);
             }
         };
+        weakFocusOwnerListener = new WeakChangeListener<Node>(focusOwnerListener);
 
-        final WeakChangeListener<Node> weakFocusOwnerListener =
-                                new WeakChangeListener<Node>(focusOwnerListener);
         sceneListener = (observable, oldValue, newValue) -> {
             if (oldValue != null) {
                 oldValue.focusOwnerProperty().removeListener(weakFocusOwnerListener);
@@ -99,8 +100,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
             }
         };
-        textField.sceneProperty().addListener(new WeakChangeListener<Scene>(sceneListener));
+        weakSceneListener = new WeakChangeListener<Scene>(sceneListener);
 
+        textField.sceneProperty().addListener(weakSceneListener);
         if (textField.getScene() != null) {
             textField.getScene().focusOwnerProperty().addListener(weakFocusOwnerListener);
         }
@@ -112,6 +114,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override public void dispose() {
+        getNode().focusedProperty().removeListener(focusListener);
+        getNode().sceneProperty().removeListener(weakSceneListener);
+        if (getNode().getScene() != null) {
+            getNode().getScene().focusOwnerProperty().removeListener(weakFocusOwnerListener);
+        }
         if (tlFocus != null) tlFocus.dispose();
         super.dispose();
     }

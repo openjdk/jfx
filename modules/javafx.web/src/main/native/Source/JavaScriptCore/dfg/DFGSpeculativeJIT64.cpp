@@ -787,8 +787,8 @@ void SpeculativeJIT::emitCall(Node* node)
         m_jit.addPtr(TrustedImm32(m_jit.graph().stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, JITCompiler::stackPointerRegister);
     };
 
-    CallLinkInfo* callLinkInfo = m_jit.codeBlock()->addCallLinkInfo();
-    callLinkInfo->setUpCall(callType, m_currentNode->origin.semantic, calleeGPR);
+    CallLinkInfo* callLinkInfo = m_jit.codeBlock()->addCallLinkInfo(m_currentNode->origin.semantic);
+    callLinkInfo->setUpCall(callType, calleeGPR);
 
     if (node->op() == CallEval) {
         // We want to call operationCallEval but we don't want to overwrite the parameter area in
@@ -816,7 +816,7 @@ void SpeculativeJIT::emitCall(Node* node)
         // This is the part where we meant to make a normal call. Oops.
         m_jit.addPtr(TrustedImm32(requiredBytes), JITCompiler::stackPointerRegister);
         m_jit.load64(JITCompiler::calleeFrameSlot(CallFrameSlot::callee), GPRInfo::regT0);
-        m_jit.emitDumbVirtualCall(vm(), globalObject, callLinkInfo);
+        m_jit.emitVirtualCall(vm(), globalObject, callLinkInfo);
 
         done.link(&m_jit);
         setResultAndResetStack();
@@ -2241,12 +2241,6 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case ZombieHint: {
-        recordSetLocal(m_currentNode->unlinkedOperand(), VirtualRegister(), DataFormatDead);
-        noResult(node);
-        break;
-    }
-
     case ExitOK: {
         noResult(node);
         break;
@@ -2606,8 +2600,8 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case CheckNeutered: {
-        compileCheckNeutered(node);
+    case CheckDetached: {
+        compileCheckDetached(node);
         break;
     }
 
@@ -2620,6 +2614,12 @@ void SpeculativeJIT::compile(Node* node)
     case Arrayify:
     case ArrayifyToStructure: {
         arrayify(node);
+        break;
+    }
+
+    case GetPrivateName:
+    case GetPrivateNameById: {
+        compileGetPrivateName(node);
         break;
     }
 
@@ -2648,6 +2648,8 @@ void SpeculativeJIT::compile(Node* node)
             jsValueResult(resultGPR, node, UseChildrenCalledExplicitly);
             break;
         }
+        case Array::BigInt64Array:
+        case Array::BigUint64Array:
         case Array::Generic: {
             if (m_graph.m_slowGetByVal.contains(node)) {
                 if (m_graph.varArgChild(node, 0).useKind() == ObjectUse) {
@@ -2736,7 +2738,7 @@ void SpeculativeJIT::compile(Node* node)
                 GPRTemporary result(this);
 
                 m_jit.load64(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), result.gpr());
-                if (node->arrayMode().isSaneChain()) {
+                if (node->arrayMode().isInBoundsSaneChain()) {
                     ASSERT(node->arrayMode().type() == Array::Contiguous);
                     JITCompiler::Jump notHole = m_jit.branchIfNotEmpty(result.gpr());
                     m_jit.move(TrustedImm64(JSValue::encode(jsUndefined())), result.gpr());
@@ -2769,12 +2771,21 @@ void SpeculativeJIT::compile(Node* node)
             slowCases.append(m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength())));
 
             m_jit.load64(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), resultReg);
-            slowCases.append(m_jit.branchIfEmpty(resultReg));
 
-            addSlowPathGenerator(
-                slowPathCall(
-                    slowCases, this, operationGetByValObjectInt,
-                    result.gpr(), TrustedImmPtr::weakPointer(m_graph, m_graph.globalObjectFor(node->origin.semantic)), baseReg, propertyReg));
+            if (node->arrayMode().isOutOfBoundsSaneChain()) {
+                auto done = m_jit.branchIfNotEmpty(resultReg);
+                slowCases.link(&m_jit);
+                speculationCheck(NegativeIndex, JSValueRegs(), nullptr, m_jit.branch32(MacroAssembler::LessThan, propertyReg, CCallHelpers::TrustedImm32(0)));
+                m_jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), resultReg);
+                done.link(&m_jit);
+            } else {
+                slowCases.append(m_jit.branchIfEmpty(resultReg));
+                addSlowPathGenerator(
+                    slowPathCall(
+                        slowCases, this, operationGetByValObjectInt,
+                        result.gpr(), TrustedImmPtr::weakPointer(m_graph, m_graph.globalObjectFor(node->origin.semantic)), baseReg, propertyReg));
+            }
+
 
             jsValueResult(resultReg, node);
             break;
@@ -2797,11 +2808,13 @@ void SpeculativeJIT::compile(Node* node)
                 speculationCheck(OutOfBounds, JSValueRegs(), nullptr, m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength())));
 
                 m_jit.loadDouble(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), resultReg);
-                if (!node->arrayMode().isSaneChain())
+                if (!node->arrayMode().isInBoundsSaneChain())
                     speculationCheck(LoadFromHole, JSValueRegs(), nullptr, m_jit.branchIfNaN(resultReg));
                 doubleResult(resultReg, node);
                 break;
             }
+
+            bool resultIsUnboxed = node->arrayMode().isOutOfBoundsSaneChain() && !(node->flags() & NodeBytecodeUsesAsOther);
 
             SpeculateCellOperand base(this, m_graph.varArgChild(node, 0));
             SpeculateStrictInt32Operand property(this, m_graph.varArgChild(node, 1));
@@ -2814,9 +2827,13 @@ void SpeculativeJIT::compile(Node* node)
             if (!m_compileOkay)
                 return;
 
-            GPRTemporary result(this);
+            Optional<GPRTemporary> result;
+            Optional<GPRReg> resultReg;
+            if (!resultIsUnboxed) {
+                result.emplace(this);
+                resultReg = result->gpr();
+            }
             FPRTemporary temp(this);
-            GPRReg resultReg = result.gpr();
             FPRReg tempReg = temp.fpr();
 
             MacroAssembler::JumpList slowCases;
@@ -2824,15 +2841,35 @@ void SpeculativeJIT::compile(Node* node)
             slowCases.append(m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength())));
 
             m_jit.loadDouble(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), tempReg);
-            slowCases.append(m_jit.branchIfNaN(tempReg));
-            boxDouble(tempReg, resultReg);
+            if (node->arrayMode().isOutOfBoundsSaneChain()) {
+                if (resultIsUnboxed) {
+                    auto done = m_jit.jump();
+                    slowCases.link(&m_jit);
+                    speculationCheck(NegativeIndex, JSValueRegs(), nullptr, m_jit.branch32(MacroAssembler::LessThan, propertyReg, CCallHelpers::TrustedImm32(0)));
+                    static const double NaN = PNaN;
+                    m_jit.loadDouble(TrustedImmPtr(&NaN), tempReg);
+                    done.link(&m_jit);
+                    doubleResult(tempReg, node);
+                } else {
+                    slowCases.append(m_jit.branchIfNaN(tempReg));
+                    boxDouble(tempReg, *resultReg);
+                    auto done = m_jit.jump();
+                    slowCases.link(&m_jit);
+                    speculationCheck(NegativeIndex, JSValueRegs(), nullptr, m_jit.branch32(MacroAssembler::LessThan, propertyReg, CCallHelpers::TrustedImm32(0)));
+                    m_jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), *resultReg);
+                    done.link(&m_jit);
+                    jsValueResult(*resultReg, node);
+                }
+            } else {
+                slowCases.append(m_jit.branchIfNaN(tempReg));
+                boxDouble(tempReg, *resultReg);
+                addSlowPathGenerator(
+                    slowPathCall(
+                        slowCases, this, operationGetByValObjectInt,
+                        *resultReg, TrustedImmPtr::weakPointer(m_graph, m_graph.globalObjectFor(node->origin.semantic)), baseReg, propertyReg));
+                jsValueResult(*resultReg, node);
+            }
 
-            addSlowPathGenerator(
-                slowPathCall(
-                    slowCases, this, operationGetByValObjectInt,
-                    result.gpr(), TrustedImmPtr::weakPointer(m_graph, m_graph.globalObjectFor(node->origin.semantic)), baseReg, propertyReg));
-
-            jsValueResult(resultReg, node);
             break;
         }
 
@@ -2919,6 +2956,26 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case PutPrivateName: {
+        compilePutPrivateName(node);
+        break;
+    }
+
+    case PutPrivateNameById: {
+        compilePutPrivateNameById(node);
+        break;
+    }
+
+    case CheckPrivateBrand: {
+        compileCheckPrivateBrand(node);
+        break;
+    }
+
+    case SetPrivateBrand: {
+        compileSetPrivateBrand(node);
+        break;
+    }
+
     case PutByValDirect:
     case PutByVal:
     case PutByValAlias: {
@@ -2935,6 +2992,8 @@ void SpeculativeJIT::compile(Node* node)
         case Array::ForceExit:
             DFG_CRASH(m_jit.graph(), node, "Bad array mode type");
             break;
+        case Array::BigInt64Array:
+        case Array::BigUint64Array:
         case Array::Generic: {
             DFG_ASSERT(m_jit.graph(), node, node->op() == PutByVal || node->op() == PutByValDirect, node->op());
 
@@ -3165,6 +3224,8 @@ void SpeculativeJIT::compile(Node* node)
         case Array::SelectUsingPredictions:
         case Array::Undecided:
         case Array::Unprofiled:
+        case Array::BigInt64Array:
+        case Array::BigUint64Array:
             RELEASE_ASSERT_NOT_REACHED();
         }
         break;
@@ -3192,43 +3253,43 @@ void SpeculativeJIT::compile(Node* node)
         GPRReg argGPRs[2];
         GPRReg resultGPR;
 
-        auto callSlowPath = [&] () {
-            auto globalObjectImmPtr = TrustedImmPtr::weakPointer(m_graph, m_graph.globalObjectFor(node->origin.semantic));
-            switch (node->op()) {
-            case AtomicsAdd:
-                callOperation(operationAtomicsAdd, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            case AtomicsAnd:
-                callOperation(operationAtomicsAnd, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            case AtomicsCompareExchange:
-                callOperation(operationAtomicsCompareExchange, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0], argGPRs[1]);
-                break;
-            case AtomicsExchange:
-                callOperation(operationAtomicsExchange, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            case AtomicsLoad:
-                callOperation(operationAtomicsLoad, resultGPR, globalObjectImmPtr, baseGPR, indexGPR);
-                break;
-            case AtomicsOr:
-                callOperation(operationAtomicsOr, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            case AtomicsStore:
-                callOperation(operationAtomicsStore, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            case AtomicsSub:
-                callOperation(operationAtomicsSub, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            case AtomicsXor:
-                callOperation(operationAtomicsXor, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
-                break;
-            default:
-                RELEASE_ASSERT_NOT_REACHED();
-                break;
-            }
-        };
-
         if (!storageEdge) {
+            auto callSlowPath = [&] () {
+                auto globalObjectImmPtr = TrustedImmPtr::weakPointer(m_graph, m_graph.globalObjectFor(node->origin.semantic));
+                switch (node->op()) {
+                case AtomicsAdd:
+                    callOperation(operationAtomicsAdd, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                case AtomicsAnd:
+                    callOperation(operationAtomicsAnd, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                case AtomicsCompareExchange:
+                    callOperation(operationAtomicsCompareExchange, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0], argGPRs[1]);
+                    break;
+                case AtomicsExchange:
+                    callOperation(operationAtomicsExchange, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                case AtomicsLoad:
+                    callOperation(operationAtomicsLoad, resultGPR, globalObjectImmPtr, baseGPR, indexGPR);
+                    break;
+                case AtomicsOr:
+                    callOperation(operationAtomicsOr, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                case AtomicsStore:
+                    callOperation(operationAtomicsStore, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                case AtomicsSub:
+                    callOperation(operationAtomicsSub, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                case AtomicsXor:
+                    callOperation(operationAtomicsXor, resultGPR, globalObjectImmPtr, baseGPR, indexGPR, argGPRs[0]);
+                    break;
+                default:
+                    RELEASE_ASSERT_NOT_REACHED();
+                    break;
+                }
+            };
+
             // We are in generic mode!
             JSValueOperand base(this, baseEdge);
             JSValueOperand index(this, indexEdge);
@@ -3262,11 +3323,9 @@ void SpeculativeJIT::compile(Node* node)
 
         GPRTemporary args[2];
 
-        JITCompiler::JumpList slowPathCases;
-
         bool ok = true;
         for (unsigned i = numExtraArgs; i--;) {
-            if (!getIntTypedArrayStoreOperand(args[i], indexGPR, argEdges[i], slowPathCases)) {
+            if (!getIntTypedArrayStoreOperandForAtomics(args[i], indexGPR, argEdges[i])) {
                 noResult(node);
                 ok = false;
             }
@@ -3366,27 +3425,33 @@ void SpeculativeJIT::compile(Node* node)
         }
         m_jit.jump().linkTo(loop, &m_jit);
 
-        if (!slowPathCases.empty()) {
-            slowPathCases.link(&m_jit);
-            silentSpillAllRegisters(resultGPR);
-            // Since we spilled, we can do things to registers.
-            m_jit.boxCell(baseGPR, JSValueRegs(baseGPR));
-            m_jit.boxInt32(indexGPR, JSValueRegs(indexGPR));
-            for (unsigned i = numExtraArgs; i--;)
-                m_jit.boxInt32(argGPRs[i], JSValueRegs(argGPRs[i]));
-            callSlowPath();
-            silentFillAllRegisters();
-            m_jit.exceptionCheck();
-        }
-
         success.link(&m_jit);
-        setIntTypedArrayLoadResult(node, resultGPR, type);
+
+        if (node->op() == AtomicsStore) {
+            Edge operand = argEdges[0];
+            switch (operand.useKind()) {
+            case Int32Use:
+                m_jit.zeroExtend32ToWord(resultGPR, resultGPR);
+                strictInt32Result(resultGPR, node);
+                break;
+            case Int52RepUse:
+                strictInt52Result(resultGPR, node);
+                break;
+            default:
+                DFG_CRASH(m_graph, node, "Bad result type");
+                break;
+            }
+            break;
+        }
+        constexpr bool canSpeculate = false;
+        setIntTypedArrayLoadResult(node, resultGPR, type, canSpeculate);
         break;
     }
 
     case AtomicsIsLockFree: {
-        if (node->child1().useKind() != Int32Use) {
-            JSValueOperand operand(this, node->child1());
+        Edge child1 = m_graph.child(node, 0);
+        if (child1.useKind() != Int32Use) {
+            JSValueOperand operand(this, child1);
             GPRReg operandGPR = operand.gpr();
             flushRegisters();
             GPRFlushedCallResult result(this);
@@ -3397,12 +3462,13 @@ void SpeculativeJIT::compile(Node* node)
             break;
         }
 
-        SpeculateInt32Operand operand(this, node->child1());
+        SpeculateInt32Operand operand(this, child1);
         GPRTemporary result(this);
         GPRReg operandGPR = operand.gpr();
         GPRReg resultGPR = result.gpr();
         m_jit.move(TrustedImm32(JSValue::ValueTrue), resultGPR);
         JITCompiler::JumpList done;
+        done.append(m_jit.branch32(JITCompiler::Equal, operandGPR, TrustedImm32(8)));
         done.append(m_jit.branch32(JITCompiler::Equal, operandGPR, TrustedImm32(4)));
         done.append(m_jit.branch32(JITCompiler::Equal, operandGPR, TrustedImm32(1)));
         done.append(m_jit.branch32(JITCompiler::Equal, operandGPR, TrustedImm32(2)));
@@ -3783,8 +3849,9 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case ObjectKeys: {
-        compileObjectKeys(node);
+    case ObjectKeys:
+    case ObjectGetOwnPropertyNames: {
+        compileObjectKeysOrObjectGetOwnPropertyNames(node);
         break;
     }
 
@@ -4283,6 +4350,16 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case TypeOfIsObject: {
+        compileTypeOfIsObject(node);
+        break;
+    }
+
+    case TypeOfIsFunction: {
+        compileIsCallable(node, operationTypeOfIsFunction);
+        break;
+    }
+
     case IsUndefinedOrNull: {
         JSValueOperand value(this, node->child1());
         GPRTemporary result(this, Reuse, value);
@@ -4391,6 +4468,9 @@ void SpeculativeJIT::compile(Node* node)
 
     case MapHash: {
         switch (node->child1().useKind()) {
+#if USE(BIGINT32)
+        case BigInt32Use:
+#endif
         case BooleanUse:
         case Int32Use:
         case SymbolUse:
@@ -4407,6 +4487,19 @@ void SpeculativeJIT::compile(Node* node)
 
             m_jit.move(inputGPR, resultGPR);
             m_jit.wangsInt64Hash(resultGPR, tempGPR);
+            strictInt32Result(resultGPR, node);
+            break;
+        }
+        case HeapBigIntUse: {
+            SpeculateCellOperand input(this, node->child1());
+            GPRReg inputGPR = input.gpr();
+
+            speculateHeapBigInt(node->child1(), inputGPR);
+
+            flushRegisters();
+            GPRFlushedCallResult result(this);
+            GPRReg resultGPR = result.gpr();
+            callOperation(operationMapHashHeapBigInt, resultGPR, &vm(), inputGPR);
             strictInt32Result(resultGPR, node);
             break;
         }
@@ -4432,8 +4525,10 @@ void SpeculativeJIT::compile(Node* node)
                 speculateString(node->child1(), inputGPR);
             else {
                 auto isString = m_jit.branchIfString(inputGPR);
+                auto isHeapBigInt = m_jit.branchIfHeapBigInt(inputGPR);
                 m_jit.move(inputGPR, resultGPR);
                 m_jit.wangsInt64Hash(resultGPR, tempGPR);
+                addSlowPathGenerator(slowPathCall(isHeapBigInt, this, operationMapHashHeapBigInt, NeedToSpill, ExceptionCheckRequirement::CheckNotNeeded, resultGPR, &vm(), inputGPR));
                 done.append(m_jit.jump());
                 isString.link(&m_jit);
             }
@@ -4475,6 +4570,7 @@ void SpeculativeJIT::compile(Node* node)
         MacroAssembler::JumpList done;
         straightHash.append(m_jit.branchIfNotCell(inputGPR));
         MacroAssembler::JumpList slowPath;
+        auto isHeapBigInt = m_jit.branchIfHeapBigInt(inputGPR);
         straightHash.append(m_jit.branchIfNotString(inputGPR));
         m_jit.loadPtr(MacroAssembler::Address(inputGPR, JSString::offsetOfValue()), resultGPR);
         slowPath.append(m_jit.branchIfRopeStringImpl(resultGPR));
@@ -4486,6 +4582,7 @@ void SpeculativeJIT::compile(Node* node)
         straightHash.link(&m_jit);
         m_jit.move(inputGPR, resultGPR);
         m_jit.wangsInt64Hash(resultGPR, tempGPR);
+        addSlowPathGenerator(slowPathCall(isHeapBigInt, this, operationMapHashHeapBigInt, NeedToSpill, ExceptionCheckRequirement::CheckNotNeeded, resultGPR, &vm(), inputGPR));
         done.append(m_jit.jump());
 
         slowPath.link(&m_jit);
@@ -4556,6 +4653,9 @@ void SpeculativeJIT::compile(Node* node)
         // Perform Object.is()
         switch (node->child2().useKind()) {
         case BooleanUse:
+#if USE(BIGINT32)
+        case BigInt32Use:
+#endif
         case Int32Use:
         case SymbolUse:
         case ObjectUse: {
@@ -4564,11 +4664,26 @@ void SpeculativeJIT::compile(Node* node)
             break;
         }
         case CellUse: {
+            // if (bucket.isString()) {
+            //     if (key.isString())
+            //         => slow path
+            // } else if (bucket.isHeapBigInt()) {
+            //     if (key.isHeapBigInt())
+            //         => slow path
+            // }
             done.append(m_jit.branch64(MacroAssembler::Equal, bucketGPR, keyGPR));
             loopAround.append(m_jit.branchIfNotCell(JSValueRegs(bucketGPR)));
-            loopAround.append(m_jit.branchIfNotString(bucketGPR));
+
+            auto bucketIsString = m_jit.branchIfString(bucketGPR);
+            loopAround.append(m_jit.branchIfNotHeapBigInt(bucketGPR));
+
+            // bucket is HeapBigInt.
+            slowPathCases.append(m_jit.branchIfHeapBigInt(keyGPR));
+            loopAround.append(m_jit.jump());
+
+            // bucket is String.
+            bucketIsString.link(&m_jit);
             loopAround.append(m_jit.branchIfNotString(keyGPR));
-            // They're both strings.
             slowPathCases.append(m_jit.jump());
             break;
         }
@@ -4579,6 +4694,13 @@ void SpeculativeJIT::compile(Node* node)
             slowPathCases.append(m_jit.jump());
             break;
         }
+        case HeapBigIntUse: {
+            done.append(m_jit.branch64(MacroAssembler::Equal, bucketGPR, keyGPR)); // They're definitely the same value, we found the bucket we were looking for!
+            loopAround.append(m_jit.branchIfNotCell(JSValueRegs(bucketGPR)));
+            loopAround.append(m_jit.branchIfNotHeapBigInt(bucketGPR));
+            slowPathCases.append(m_jit.jump());
+            break;
+        }
         case UntypedUse: {
             done.append(m_jit.branch64(MacroAssembler::Equal, bucketGPR, keyGPR)); // They're definitely the same value, we found the bucket we were looking for!
             // The input key and bucket's key are already normalized. So if 64-bit compare fails and one is not a cell, they're definitely not equal.
@@ -4586,11 +4708,16 @@ void SpeculativeJIT::compile(Node* node)
             // first is a cell here.
             loopAround.append(m_jit.branchIfNotCell(JSValueRegs(keyGPR)));
             // Both are cells here.
-            loopAround.append(m_jit.branchIfNotString(bucketGPR));
-            // The first is a string here.
-            slowPathCases.append(m_jit.branchIfString(keyGPR));
-            // The first is a string, but the second is not, we continue to loop around.
+            auto bucketIsString = m_jit.branchIfString(bucketGPR);
+            // bucket is not String.
+            loopAround.append(m_jit.branchIfNotHeapBigInt(bucketGPR));
+            // bucket is HeapBigInt.
+            slowPathCases.append(m_jit.branchIfHeapBigInt(keyGPR));
             loopAround.append(m_jit.jump());
+            // bucket is String.
+            bucketIsString.link(&m_jit);
+            loopAround.append(m_jit.branchIfNotString(keyGPR));
+            slowPathCases.append(m_jit.jump());
             break;
         }
         default:
@@ -4691,13 +4818,8 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case IsObjectOrNull: {
-        compileIsObjectOrNull(node);
-        break;
-    }
-
-    case IsFunction: {
-        compileIsFunction(node);
+    case IsCallable: {
+        compileIsCallable(node, operationObjectIsCallable);
         break;
     }
 
@@ -4968,9 +5090,15 @@ void SpeculativeJIT::compile(Node* node)
         break;
 
     case LoopHint:
-        if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) {
-            CodeBlock* baselineCodeBlock = m_jit.graph().baselineCodeBlockFor(node->origin.semantic);
-            if (baselineCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn()) {
+        if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing())) {
+            bool emitEarlyReturn = true;
+            node->origin.semantic.walkUpInlineStack([&](CodeOrigin origin) {
+                CodeBlock* baselineCodeBlock = m_jit.graph().baselineCodeBlockFor(origin);
+                if (!baselineCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn())
+                    emitEarlyReturn = false;
+            });
+            if (emitEarlyReturn) {
+                CodeBlock* baselineCodeBlock = m_jit.graph().baselineCodeBlockFor(node->origin.semantic);
                 BytecodeIndex bytecodeIndex = node->origin.semantic.bytecodeIndex();
                 const Instruction* instruction = baselineCodeBlock->instructions().at(bytecodeIndex.offset()).ptr();
 
@@ -4988,7 +5116,7 @@ void SpeculativeJIT::compile(Node* node)
                 }
 
                 m_jit.popToRestore(GPRInfo::regT0);
-                m_jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::returnValueGPR);
+                m_jit.moveValue(baselineCodeBlock->globalObject(), JSValueRegs { GPRInfo::returnValueGPR });
                 m_jit.emitRestoreCalleeSaves();
                 m_jit.emitFunctionEpilogue();
                 m_jit.ret();
@@ -5018,12 +5146,12 @@ void SpeculativeJIT::compile(Node* node)
         compileGetEnumerableLength(node);
         break;
     }
-    case HasGenericProperty: {
-        compileHasGenericProperty(node);
+    case HasEnumerableStructureProperty: {
+        compileHasEnumerableStructureProperty(node);
         break;
     }
-    case HasStructureProperty: {
-        compileHasStructureProperty(node);
+    case HasEnumerableProperty: {
+        compileHasEnumerableProperty(node);
         break;
     }
     case HasOwnStructureProperty: {
@@ -5035,7 +5163,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
     case HasIndexedProperty: {
-        compileHasIndexedProperty(node);
+        compileHasIndexedProperty(node, operationHasIndexedProperty);
+        break;
+    }
+    case HasEnumerableIndexedProperty: {
+        compileHasIndexedProperty(node, operationHasEnumerableIndexedProperty);
         break;
     }
     case GetDirectPname: {
@@ -5565,6 +5697,8 @@ void SpeculativeJIT::compile(Node* node)
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
         m_interpreter.filterICStatus(node);
         noResult(node);
         break;
@@ -5575,6 +5709,7 @@ void SpeculativeJIT::compile(Node* node)
     case Phi:
     case Upsilon:
     case ExtractOSREntryLocal:
+    case AssertInBounds:
     case CheckInBounds:
     case ArithIMul:
     case MultiGetByOffset:

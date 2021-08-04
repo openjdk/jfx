@@ -595,12 +595,22 @@ private:
                     return false;
                 }
 
-                if ((m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky) && regExp->hasNamedCaptures()) {
-                    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
-                    // Implement strength reduction optimization for named capture groups.
-                    if (verbose)
-                        dataLog("Giving up because of named capture groups.\n");
-                    return false;
+                if ((m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky)) {
+                    if (regExp->hasNamedCaptures()) {
+                        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
+                        // Implement strength reduction optimization for named capture groups.
+                        if (verbose)
+                            dataLog("Giving up because of named capture groups.\n");
+                        return false;
+                    }
+
+                    if (regExp->hasIndices()) {
+                        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=220930
+                        // Implement strength reduction optimization for RegExp with match indices.
+                        if (verbose)
+                            dataLog("Giving up because of match indices.\n");
+                        return false;
+                    }
                 }
 
                 m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpoint());
@@ -926,6 +936,12 @@ private:
             }
 
             if (!executable)
+                break;
+
+            // FIXME: Support wasm IC.
+            // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
+            // https://bugs.webkit.org/show_bug.cgi?id=220339
+            if (executable->intrinsic() == WasmFunctionIntrinsic)
                 break;
 
             if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(vm(), executable)) {
