@@ -1388,6 +1388,8 @@ void WindowContextTop::set_alpha(double alpha) {
 }
 
 void WindowContextTop::set_enabled(bool enabled) {
+    gtk_window_set_accept_focus(GTK_WINDOW(gtk_widget), (enabled) ? TRUE : FALSE);
+
     if (enabled) {
         if (resizable.prev) {
             set_window_resizable(true);
