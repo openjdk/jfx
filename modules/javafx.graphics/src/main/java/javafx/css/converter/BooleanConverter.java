@@ -30,6 +30,7 @@ import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 /**
+ * Converter to convert a {@code String} to a {@code Boolean}.
  * @since 9
  */
 public final class BooleanConverter extends StyleConverter<String, Boolean> {
@@ -39,6 +40,10 @@ public final class BooleanConverter extends StyleConverter<String, Boolean> {
         static final BooleanConverter INSTANCE = new BooleanConverter();
     }
 
+    /**
+     * Get the {@code BooleanConverter} instance.
+     * @return the {@code BooleanConverter} instance
+     */
     public static StyleConverter<String, Boolean> getInstance() {
         return Holder.INSTANCE;
     }

@@ -32,7 +32,7 @@ import javafx.geometry.Insets;
 import javafx.scene.text.Font;
 
 /**
- * Converts a parsed value array of 1 to 4 size components to an Insets.
+ * Converter to convert a parsed value array of 1 to 4 size components to an {@code Insets}.
  * The size values are interpreted as
  * top, right, bottom, left.
  * If only top is given, that value is used on all sides.
@@ -49,6 +49,10 @@ public final class InsetsConverter extends StyleConverter<ParsedValue[], Insets>
         static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
+    /**
+     * Gets the {@code InsetsConverter} instance.
+     * @return the {@code InsetsConverter} instance
+     */
     public static StyleConverter<ParsedValue[], Insets> getInstance() {
         return Holder.INSTANCE;
     }
@@ -73,11 +77,16 @@ public final class InsetsConverter extends StyleConverter<ParsedValue[], Insets>
     }
 
     /**
-     * Converts an array of parsed values, each of which is an array
-     * of 1 to 4 size components, to an array of Insets objects.
+     * Converter to convert an array of parsed values, each of which is an array
+     * of 1 to 4 size components, to an array of {@code Insets} objects.
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], Insets>[], Insets[]> {
 
+        /**
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
+         */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
         }

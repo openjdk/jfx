@@ -47,8 +47,9 @@ public class ParsedValue<V, T> {
     final protected V value;
 
     /**
-     * @return The CSS property value as created by the parser, which may be null
+     * Gets the CSS property value as created by the parser, which may be null
      * or otherwise incomprehensible.
+     * @return the CSS property value
      */
     public final V getValue() { return value; }
 
