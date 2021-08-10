@@ -52,6 +52,11 @@ final public class Style {
         return declaration;
     }
 
+    /**
+     * Constructs a {@code Style} object.
+     * @param selector selector for this {@code Style}
+     * @param declaration declaration for this {@code Style}
+     */
     public Style(Selector selector, Declaration declaration) {
         this.selector = selector;
         this.declaration = declaration;
