@@ -327,17 +327,17 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TableColumn.editStartEvent(),
                 null
             );
 
             Event.fireEvent(column, editEvent);
         }
-        editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
