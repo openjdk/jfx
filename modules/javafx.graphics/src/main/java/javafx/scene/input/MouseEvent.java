@@ -106,7 +106,7 @@ import java.io.IOException;
  * go through capturing/bubbling phases normally. This means that parent may
  * receive the {@code MOUSE_ENTERED_TARGET} event when the mouse entered
  * either the parent itself or some of its children. To distinguish between
- * these two cases event target can be tested on equality with the node.
+ * these two cases, the event target can be tested on equality with the node.
  * <p>
  * These two types are closely connected:
  * {@code MOUSE_ENTERED}/{@code MOUSE_EXITED} are subtypes
