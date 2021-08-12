@@ -1894,6 +1894,14 @@ public class NodeTest {
         assertEquals(100.0, scene.getWidth(), 0.00001);
     }
 
+    @Test public void managedSetFromCSS() {
+        final AnchorPane node = new AnchorPane();
+        node.setStyle("-fx-managed: false");
+        Scene s = new Scene(node);
+        node.applyCss();
+        assertFalse(node.isManaged());
+    }
+
     private Node createTestRect() {
         final Rectangle rect = new StubRect();
         Scene scene = new Scene(new Group(rect));
