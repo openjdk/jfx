@@ -43,7 +43,6 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactor
 import javafx.scene.control.Control;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeTableView;
 
 /**
@@ -82,7 +81,6 @@ public class BehaviorMemoryLeakTest {
         List<Class<? extends Control>> leakingClasses = List.of(
                 PasswordField.class,
                 TableView.class,
-                TextArea.class,
                 TreeTableView.class
          );
         // remove the known issues to make the test pass

@@ -54,11 +54,8 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TabPane;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 
@@ -115,8 +112,6 @@ public class SkinMemoryLeakTest {
                 SplitPane.class,
                 TableRow.class,
                 TableView.class,
-                // @Ignore("8244419")
-                TextArea.class,
                 TreeTableRow.class,
                 TreeTableView.class
         );
