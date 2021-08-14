@@ -49,7 +49,7 @@ import javafx.scene.paint.PhongMaterial;
  * cannot be attenuated. A decrease in intensity can be achieved by using a darker color. The sun is a common light
  * source that can be simulated with this light type.
  *
- * @since 17
+ * @since 18
  * @see PhongMaterial
  */
 public class DirectionalLight extends LightBase {
