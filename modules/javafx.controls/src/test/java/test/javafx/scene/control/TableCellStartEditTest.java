@@ -43,6 +43,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -50,8 +51,7 @@ import static org.junit.Assert.assertFalse;
 
 /**
  * Parameterized tests for the {@link TableCell#startEdit()} method of {@link TableCell} and all sub implementations.
- * The {@link CheckBoxTableCell} is special as in there the checkbox will be disabled
- * based of the editability.
+ * The {@link CheckBoxTableCell} is special as in there the checkbox will be disabled based of the editability.
  */
 @RunWith(Parameterized.class)
 public class TableCellStartEditTest {
@@ -62,20 +62,20 @@ public class TableCellStartEditTest {
     private TableRow<String> tableRow;
     private TableColumn<String, ?> tableColumn;
 
-    private final TableCell<String, ?> tableCell;
+    private final Supplier<TableCell<String, ?>> tableCellSupplier;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        return wrapAsObjectArray(List.of(new TableCell<>(), new ComboBoxTableCell<>(), new TextFieldTableCell<>(),
-                new ChoiceBoxTableCell<>(), new CheckBoxTableCell<>(), new ProgressBarTableCell<>()));
+        return wrapAsObjectArray(List.of(TableCell::new, ComboBoxTableCell::new, TextFieldTableCell::new,
+                ChoiceBoxTableCell::new, CheckBoxTableCell::new, ProgressBarTableCell::new));
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<TableCell<Object, ?>> tableCells) {
+    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TableCell<Object, ?>>> tableCells) {
         return tableCells.stream().map(tc -> new Object[] { tc }).collect(toList());
     }
 
-    public TableCellStartEditTest(TableCell<String, ?> tableCell) {
-        this.tableCell = tableCell;
+    public TableCellStartEditTest(Supplier<TableCell<String, ?>> tableCellSupplier) {
+        this.tableCellSupplier = tableCellSupplier;
     }
 
     @Before
@@ -90,10 +90,15 @@ public class TableCellStartEditTest {
     }
 
     @Test
-    public void testStartEdit() {
-        // First test startEdit() without anything set yet.
+    public void testStartEditMustNotThrowNPE() {
+        TableCell<String, ?> tableCell = tableCellSupplier.get();
+        // A table cell without anything attached should not throw a NPE.
         tableCell.startEdit();
+    }
 
+    @Test
+    public void testStartEditRespectsEditable() {
+        TableCell<String, ?> tableCell = tableCellSupplier.get();
         tableCell.updateIndex(0);
 
         tableCell.updateTableColumn(tableColumn);
@@ -104,7 +109,7 @@ public class TableCellStartEditTest {
             for (boolean isColumnEditable : EDITABLE_STATES) {
                 for (boolean isRowEditable : EDITABLE_STATES) {
                     for (boolean isCellEditable : EDITABLE_STATES) {
-                        testStartEditImpl(isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
+                        testStartEditImpl(tableCell, isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
                     }
                 }
             }
@@ -115,12 +120,13 @@ public class TableCellStartEditTest {
      * A {@link TableCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding table, column, row  and cell is editable.
      *
+     * @param tableCell the {@link TableCell} where the <code>startEdit</code> method is tested
      * @param isTableEditable true, when the table should be editable, false otherwise
      * @param isColumnEditable true, when the column should be editable, false otherwise
      * @param isRowEditable true, when the row should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(boolean isTableEditable, boolean isColumnEditable, boolean isRowEditable,
+    private void testStartEditImpl(TableCell<String, ?> tableCell, boolean isTableEditable, boolean isColumnEditable, boolean isRowEditable,
             boolean isCellEditable) {
         assertFalse(tableCell.isEditing());
 

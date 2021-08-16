@@ -41,6 +41,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -48,8 +49,7 @@ import static org.junit.Assert.assertFalse;
 
 /**
  * Parameterized tests for the {@link ListCell#startEdit()} method of {@link ListCell} and all sub implementations.
- * The {@link CheckBoxListCell} is special as in there the checkbox will be disabled
- * based of the editability.
+ * The {@link CheckBoxListCell} is special as in there the checkbox will be disabled based of the editability.
  */
 @RunWith(Parameterized.class)
 public class ListCellStartEditTest {
@@ -57,20 +57,20 @@ public class ListCellStartEditTest {
     private static final boolean[] EDITABLE_STATES = { true, false };
 
     private ListView<String> listView;
-    private final ListCell<String> listCell;
+    private final Supplier<ListCell<String>> listCellSupplier;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        return wrapAsObjectArray(List.of(new ListCell<>(), new ComboBoxListCell<>(), new TextFieldListCell<>(),
-                new ChoiceBoxListCell<>(), new CheckBoxListCell<>(obj -> new SimpleBooleanProperty())));
+        return wrapAsObjectArray(List.of(ListCell::new, ComboBoxListCell::new, TextFieldListCell::new,
+                ChoiceBoxListCell::new, () -> new CheckBoxListCell<>(obj -> new SimpleBooleanProperty())));
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<ListCell<?>> listCells) {
+    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<ListCell<?>>> listCells) {
         return listCells.stream().map(tc -> new Object[] { tc }).collect(toList());
     }
 
-    public ListCellStartEditTest(ListCell<String> listCell) {
-        this.listCell = listCell;
+    public ListCellStartEditTest(Supplier<ListCell<String>> listCellSupplier) {
+        this.listCellSupplier = listCellSupplier;
     }
 
     @Before
@@ -80,17 +80,21 @@ public class ListCellStartEditTest {
     }
 
     @Test
-    public void testStartEdit() {
-        // First test startEdit() without anything set yet.
+    public void testStartEditMustNotThrowNPE() {
+        ListCell<String> listCell = listCellSupplier.get();
+        // A list cell without anything attached should not throw a NPE.
         listCell.startEdit();
+    }
 
+    @Test
+    public void testStartEditRespectsEditable() {
+        ListCell<String> listCell = listCellSupplier.get();
         listCell.updateIndex(0);
-
         listCell.updateListView(listView);
 
         for (boolean isListViewEditable : EDITABLE_STATES) {
             for (boolean isCellEditable : EDITABLE_STATES) {
-                testStartEditImpl(isListViewEditable, isCellEditable);
+                testStartEditImpl(listCell, isListViewEditable, isCellEditable);
             }
         }
     }
@@ -99,10 +103,11 @@ public class ListCellStartEditTest {
      * A {@link ListCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding list view and cell is editable.
      *
+     * @param listCell the {@link ListCell} where the <code>startEdit</code> method is tested
      * @param isListViewEditable true, when the list view should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(boolean isListViewEditable, boolean isCellEditable) {
+    private void testStartEditImpl(ListCell<String> listCell, boolean isListViewEditable, boolean isCellEditable) {
         assertFalse(listCell.isEditing());
 
         listView.setEditable(isListViewEditable);

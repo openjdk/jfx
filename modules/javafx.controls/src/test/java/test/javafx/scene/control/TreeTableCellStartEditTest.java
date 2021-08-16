@@ -42,6 +42,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -49,8 +50,8 @@ import static org.junit.Assert.assertFalse;
 
 /**
  * Parameterized tests for the {@link TreeTableCell#startEdit()} method of {@link TreeTableCell} and all sub
- * implementations. The {@link CheckBoxTreeTableCell} is special as in there the checkbox will be disabled
- * based of the editability.
+ * implementations. The {@link CheckBoxTreeTableCell} is special as in there the checkbox will be disabled based of the
+ * editability.
  */
 @RunWith(Parameterized.class)
 public class TreeTableCellStartEditTest {
@@ -61,22 +62,21 @@ public class TreeTableCellStartEditTest {
     private TreeTableRow<String> treeTableRow;
     private TreeTableColumn<String, ?> treeTableColumn;
 
-    private final TreeTableCell<String, ?> treeTableCell;
+    private final Supplier<TreeTableCell<String, ?>> treeTableCellSupplier;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return wrapAsObjectArray(
-                List.of(new TreeTableCell<>(), new ComboBoxTreeTableCell<>(), new TextFieldTreeTableCell<>(),
-                        new ChoiceBoxTreeTableCell<>(), new CheckBoxTreeTableCell<>(),
-                        new ProgressBarTreeTableCell<>()));
+                List.of(TreeTableCell::new , ComboBoxTreeTableCell::new, TextFieldTreeTableCell::new,
+                        ChoiceBoxTreeTableCell::new, CheckBoxTreeTableCell::new, ProgressBarTreeTableCell::new));
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<TreeTableCell<Object, ?>> treeTableCells) {
+    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TreeTableCell<Object, ?>>> treeTableCells) {
         return treeTableCells.stream().map(tc -> new Object[] { tc }).collect(toList());
     }
 
-    public TreeTableCellStartEditTest(TreeTableCell<String, ?> treeTableCell) {
-        this.treeTableCell = treeTableCell;
+    public TreeTableCellStartEditTest(Supplier<TreeTableCell<String, ?>> treeTableCellSupplier) {
+        this.treeTableCellSupplier = treeTableCellSupplier;
     }
 
     @Before
@@ -92,10 +92,15 @@ public class TreeTableCellStartEditTest {
     }
 
     @Test
-    public void testStartEdit() {
-        // First test startEdit() without anything set yet.
+    public void testStartEditMustNotThrowNPE() {
+        TreeTableCell<String, ?> treeTableCell = treeTableCellSupplier.get();
+        // A tree table cell without anything attached should not throw a NPE.
         treeTableCell.startEdit();
+    }
 
+    @Test
+    public void testStartEditRespectsEditable() {
+        TreeTableCell<String, ?> treeTableCell = treeTableCellSupplier.get();
         treeTableCell.updateIndex(0);
 
         treeTableCell.updateTreeTableColumn((TreeTableColumn) treeTableColumn);
@@ -106,7 +111,7 @@ public class TreeTableCellStartEditTest {
             for (boolean isColumnEditable : EDITABLE_STATES) {
                 for (boolean isRowEditable : EDITABLE_STATES) {
                     for (boolean isCellEditable : EDITABLE_STATES) {
-                        testStartEditImpl(isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
+                        testStartEditImpl(treeTableCell, isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
                     }
                 }
             }
@@ -117,12 +122,13 @@ public class TreeTableCellStartEditTest {
      * A {@link TreeTableCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding tree table, column, row and cell is editable.
      *
+     * @param treeTableCell the {@link TreeTableCell} where the <code>startEdit</code> method is tested
      * @param isTreeTableEditable true, when the tree table should be editable, false otherwise
      * @param isColumnEditable true, when the column should be editable, false otherwise
      * @param isRowEditable true, when the row should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(boolean isTreeTableEditable, boolean isColumnEditable, boolean isRowEditable,
+    private void testStartEditImpl(TreeTableCell<String, ?> treeTableCell, boolean isTreeTableEditable, boolean isColumnEditable, boolean isRowEditable,
             boolean isCellEditable) {
         assertFalse(treeTableCell.isEditing());
 

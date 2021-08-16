@@ -40,6 +40,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -47,8 +48,7 @@ import static org.junit.Assert.assertFalse;
 
 /**
  * Parameterized tests for the {@link TreeCell#startEdit()} method of {@link TreeCell} and all sub implementations.
- * The {@link CheckBoxTreeCell} is special as in there the checkbox will be disabled
- * based of the editability.
+ * The {@link CheckBoxTreeCell} is special as in there the checkbox will be disabled based of the editability.
  */
 @RunWith(Parameterized.class)
 public class TreeCellStartEditTest {
@@ -56,20 +56,20 @@ public class TreeCellStartEditTest {
     private static final boolean[] EDITABLE_STATES = { true, false };
 
     private TreeView<String> treeView;
-    private final TreeCell<String> treeCell;
+    private final Supplier<TreeCell<String>> treeCellSupplier;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        return wrapAsObjectArray(List.of(new TreeCell<>(), new ComboBoxTreeCell<>(), new TextFieldTreeCell<>(),
-                new ChoiceBoxTreeCell<>(), new CheckBoxTreeCell<>(obj -> new SimpleBooleanProperty())));
+        return wrapAsObjectArray(List.of(TreeCell::new, ComboBoxTreeCell::new, TextFieldTreeCell::new,
+                ChoiceBoxTreeCell::new,() ->  new CheckBoxTreeCell<>(obj -> new SimpleBooleanProperty())));
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<TreeCell<String>> treeCells) {
+    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TreeCell<String>>> treeCells) {
         return treeCells.stream().map(tc -> new Object[] { tc }).collect(toList());
     }
 
-    public TreeCellStartEditTest(TreeCell<String> treeCell) {
-        this.treeCell = treeCell;
+    public TreeCellStartEditTest(Supplier<TreeCell<String>> treeCellSupplier) {
+        this.treeCellSupplier = treeCellSupplier;
     }
 
     @Before
@@ -80,17 +80,22 @@ public class TreeCellStartEditTest {
     }
 
     @Test
-    public void testStartEdit() {
-        // First test startEdit() without anything set yet.
+    public void testStartEditMustNotThrowNPE() {
+        TreeCell<String> treeCell = treeCellSupplier.get();
+        // A tree cell without anything attached should not throw a NPE.
         treeCell.startEdit();
+    }
 
+    @Test
+    public void testStartEditRespectsEditable() {
+        TreeCell<String> treeCell = treeCellSupplier.get();
         treeCell.updateIndex(0);
 
         treeCell.updateTreeView(treeView);
 
         for (boolean isTreeViewEditable : EDITABLE_STATES) {
             for (boolean isCellEditable : EDITABLE_STATES) {
-                testStartEditImpl(isTreeViewEditable, isCellEditable);
+                testStartEditImpl(treeCell, isTreeViewEditable, isCellEditable);
             }
         }
     }
@@ -99,10 +104,11 @@ public class TreeCellStartEditTest {
      * A {@link TreeCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding tree view and cell is editable.
      *
+     * @param treeCell the {@link TreeCell} where the <code>startEdit</code> method is tested
      * @param isTreeViewEditable true, when the tree view should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(boolean isTreeViewEditable, boolean isCellEditable) {
+    private void testStartEditImpl(TreeCell<String> treeCell, boolean isTreeViewEditable, boolean isCellEditable) {
         assertFalse(treeCell.isEditing());
 
         treeView.setEditable(isTreeViewEditable);
