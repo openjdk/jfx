@@ -57,7 +57,7 @@ import com.sun.javafx.tk.Toolkit;
  * @param <T> The type of the cell (i.e. the generic type of the {@link IndexedCell} subclass).
  * @param <C> The cell type (e.g. TableRow or TreeTableRow)
  * @param <R> The type of cell that is contained within each row (e.g.
- *           {@link javafx.scene.control.TableCell or {@link javafx.scene.control.TreeTableCell}}).
+ *           {@link javafx.scene.control.TableCell} or {@link javafx.scene.control.TreeTableCell}).
  *
  * @since 9
  * @see javafx.scene.control.TableRow
