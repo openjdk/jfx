@@ -38,7 +38,6 @@ import javafx.scene.layout.HBox;
 
 import java.io.File;
 
-
 public class InputTypeAcceptAttributeTest extends Application {
 
     private String fileNames[] = {"TEXT.txt", "PNG.png", "PDF.pdf", "JPG.jpg"};
@@ -66,11 +65,12 @@ public class InputTypeAcceptAttributeTest extends Application {
                         "It shows all files, but user can select files of specified type only."));
 
         Button passButton = new Button("Pass");
-        Button failButton = new Button("Fail");
         passButton.setOnAction(e -> {
-                cleanup();
-		Platform.exit();
-	});
+            cleanup();
+            Platform.exit();
+        });
+
+        Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
             cleanup();
             Platform.exit();
@@ -89,22 +89,21 @@ public class InputTypeAcceptAttributeTest extends Application {
                 " </body>\n" +
                 "</html>");
 
-    HBox buttons = new HBox(20, passButton, failButton);
-    buttons.setPadding(new Insets(10));
-    VBox rootNode = new VBox(20, new HBox(instructions), webView, buttons);
-    rootNode.setPadding(new Insets(10));
+        HBox buttons = new HBox(20, passButton, failButton);
+        buttons.setPadding(new Insets(10));
+        VBox rootNode = new VBox(20, new HBox(instructions), webView, buttons);
+        rootNode.setPadding(new Insets(10));
         Scene scene = new Scene(rootNode, 1000, 450);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
     private void cleanup() {
-	file = null;
-	for (int i = 0; i < fileNames.length; ++i) {
+        file = null;
+        for (int i = 0; i < fileNames.length; ++i) {
             file = new File(fileNames[i]);
-	    file.delete();
-	}
-
+            file.delete();
+        }
     }
 
     public static void main(String[] args) {
