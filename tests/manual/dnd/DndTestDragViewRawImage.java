@@ -56,7 +56,10 @@ public class DndTestDragViewRawImage extends Application {
             dragboard.setDragView(image);
         });
 
-        Label label = new Label("Drag image should match source colors when dragged");
+        Label label = new Label("Click the image and drag. " +
+                "The drag image displayed with the cursor (drag view) " +
+                "should match the source image");
+
         VBox vBox = new VBox(label, imageView);
         vBox.setSpacing(5.0);
         vBox.setAlignment(Pos.CENTER);
