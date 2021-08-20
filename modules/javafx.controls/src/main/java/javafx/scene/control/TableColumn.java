@@ -290,8 +290,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      **************************************************************************/
 
     private EventHandler<CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
-        int index = t.getTablePosition().getRow();
-        List<S> list = t.getTableView().getItems();
+        int index = t.getTablePosition() != null ? t.getTablePosition().getRow() : -1;
+        List<S> list = t.getTableView() != null ? t.getTableView().getItems() : null;
         if (list == null || index < 0 || index >= list.size()) return;
         S rowData = list.get(index);
         ObservableValue<T> ov = getCellObservableValue(rowData);
@@ -795,7 +795,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @return The TableView control upon which this event occurred.
          */
         public TableView<S> getTableView() {
-            return pos.getTableView();
+            return pos != null ? pos.getTableView() : null;
         }
 
         /**
@@ -804,7 +804,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @return The TableColumn that the edit occurred in.
          */
         public TableColumn<S,T> getTableColumn() {
-            return pos.getTableColumn();
+            return pos != null ? pos.getTableColumn() : null;
         }
 
         /**
@@ -853,10 +853,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @return the value for the row
          */
         public S getRowValue() {
-            List<S> items = getTableView().getItems();
+            List<S> items = getTableView() != null ? getTableView().getItems() : null;
             if (items == null) return null;
 
-            int row = pos.getRow();
+            int row = pos != null ? pos.getRow() : -1;
             if (row < 0 || row >= items.size()) return null;
 
             return items.get(row);

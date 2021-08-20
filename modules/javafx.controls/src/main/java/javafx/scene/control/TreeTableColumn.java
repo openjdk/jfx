@@ -285,7 +285,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
     private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER =
             t -> {
-                ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
+                TreeItem<S> rowValue = t.getRowValue();
+                if (rowValue == null) return;
+                ObservableValue<T> ov = getCellObservableValue(rowValue);
                 if (ov instanceof WritableValue) {
                     ((WritableValue)ov).setValue(t.getNewValue());
                 }
@@ -772,7 +774,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @return The TableView control upon which this event occurred.
          */
         public TreeTableView<S> getTreeTableView() {
-            return pos.getTreeTableView();
+            return pos != null ? pos.getTreeTableView() : null;
         }
 
         /**
@@ -781,7 +783,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @return The TreeTableColumn that the edit occurred in.
          */
         public TreeTableColumn<S,T> getTableColumn() {
-            return pos.getTableColumn();
+            return pos != null ? pos.getTableColumn() : null;
         }
 
         /**
@@ -830,12 +832,10 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @return the row value
          */
         public TreeItem<S> getRowValue() {
-//            List<S> items = getTreeTableView().getItems();
-//            if (items == null) return null;
-
             TreeTableView<S> treeTable = getTreeTableView();
-            int row = pos.getRow();
-            if (row < 0 || row >= treeTable.getExpandedItemCount()) return null;
+            int row = pos != null ? pos.getRow() : -1;
+            int expandedItemCount = treeTable != null ? treeTable.getExpandedItemCount() : 0;
+            if (row < 0 || row >= expandedItemCount) return null;
 
             return treeTable.getTreeItem(row);
         }
