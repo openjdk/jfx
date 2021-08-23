@@ -5281,6 +5281,7 @@ compileTargets { t ->
                         args("create")
                         args("--class-path")
                         args(srcClassesDir)
+                        args("--module-version", "$RELEASE_VERSION_SHORT")
                         // Not all modules have a "lib" dir
                         if (file(srcLibDir).isDirectory()) {
                             args("--libs")
