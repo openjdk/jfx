@@ -698,10 +698,16 @@ final public class WebView extends Parent {
     }
 
     /**
-     * Specifies the background color of the webPage, allowing
-     * some or full transparency.
+     * Specifies the background color of the web page.
      *
-     * Default color: White
+     * With this property, the WebView control's background
+     * can have any solid color, including some or complete
+     * level of transparency.
+     *
+     * However, if the HTML content being loaded set its own
+     * background color, it will take precedence.
+     *
+     * @defaultValue {@code Color.WHITE}
      *
      * @since 18
      */
