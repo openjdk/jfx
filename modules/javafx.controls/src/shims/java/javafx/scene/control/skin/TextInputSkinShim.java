@@ -25,6 +25,8 @@
 
 package javafx.scene.control.skin;
 
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.text.Text;
@@ -33,6 +35,8 @@ import javafx.scene.text.Text;
  * Utility methods to access package-private api in TextInput-related skins.
  */
 public class TextInputSkinShim {
+
+//------------ TextField
 
     /**
      * Returns the promptNode from the textField's skin. The skin must be of type
@@ -60,6 +64,34 @@ public class TextInputSkinShim {
         TextFieldSkin skin = (TextFieldSkin) textField.getSkin();
         return skin.getTextTranslateX();
     }
+
+//----------- TextArea
+
+    /**
+     * Returns the promptNode from the textField's skin. The skin must be of type
+     * TextFieldSkin.
+     */
+    public static Text getPromptNode(TextArea textArea) {
+        TextAreaSkin skin = (TextAreaSkin) textArea.getSkin();
+        return skin.getPromptNode();
+    }
+
+    public static Text getTextNode(TextArea textArea) {
+        TextAreaSkin skin = (TextAreaSkin) textArea.getSkin();
+        return skin.getTextNode();
+    }
+
+    public static ScrollPane getScrollPane(TextArea textArea) {
+        TextAreaSkin skin = (TextAreaSkin) textArea.getSkin();
+        return skin.getScrollPane();
+    }
+
+    public static void setHandlePressed(TextArea textArea, boolean pressed) {
+        TextAreaSkin skin = (TextAreaSkin) textArea.getSkin();
+        skin.setHandlePressed(pressed);
+    }
+
+//---------- TextInputControl
 
     /**
      * Returns a boolean indicating whether or not the control's caret is blinking.

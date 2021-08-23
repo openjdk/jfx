@@ -50,14 +50,17 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -73,6 +76,221 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+//------------ TextArea
+
+    /**
+     * Sanity: event filter must consume scrollEvent.
+     */
+    @Test
+    public void testScrollEventFilter() {
+        TextArea area = new TextArea("some text");
+        showControl(area, true);
+        setHandlePressed(area, true);
+        ScrollEvent scrollEvent = new ScrollEvent(ScrollEvent.ANY, 0, 0, 0, 0, false, false, false, false,
+                true, // direct
+                false, 0, 0, 0, USE_PREF_SIZE, null, USE_COMPUTED_SIZE, null, 0, 0, null);
+        assertTrue("sanity: created a fake direct event", scrollEvent.isDirect());
+        // must use copy to detect change in consume
+        ScrollEvent copy = scrollEvent.copyFor(area, area);
+        Event.fireEvent(area, copy);
+        assertTrue("scrollEvent must be consumed", copy.isConsumed());
+    }
+
+    /**
+     * Sanity: change of selection must update textNode.
+     */
+    @Test
+    public void testTextAreaSelectUpdate() {
+        TextArea area = new TextArea("some text");
+        installDefaultSkin(area);
+        Text textNode = getTextNode(area);
+        area.selectAll();
+        textNode.getParent().getParent().layout();
+        int end = area.getLength();
+        assertEquals("sanity: area caret moved to end", end, area.getCaretPosition());
+        assertEquals("sanity: area selection updated", end, area.getSelection().getEnd());
+        assertEquals("textNode end", end, textNode.getSelectionEnd());
+    }
+
+    /**
+     * Sanity: toggle textWrap must update scrollPane's fitToWidth.
+     */
+    @Test
+    public void testTextAreaSetWrapUpdate() {
+        TextArea area = new TextArea("some text");
+        installDefaultSkin(area);
+        boolean isWrap = area.isWrapText();
+        ScrollPane scrollPane = getScrollPane(area);
+        assertEquals(isWrap, scrollPane.isFitToWidth());
+        area.setWrapText(!isWrap);
+        assertEquals(!isWrap, scrollPane.isFitToWidth());
+    }
+
+    /**
+     * NPE from listener to prefColumnCount.
+     */
+    @Test
+    public void testTextAreaSetColumnCount() {
+        TextArea area = new TextArea("some text");
+        int prefColumn = area.getPrefColumnCount();
+        assertEquals("sanity: initial count", TextArea.DEFAULT_PREF_COLUMN_COUNT, prefColumn);
+        installDefaultSkin(area);
+        replaceSkin(area);
+        area.setPrefColumnCount(prefColumn * 2);
+    }
+
+    /**
+     * Sanity: change of prefColumnCount must update scrollPane.
+     */
+    @Test
+    public void testTextAreaSetColumnCountUpdate() {
+        TextArea area = new TextArea("some text");
+        int prefColumn = area.getPrefColumnCount();
+        assertEquals("sanity: initial count", TextArea.DEFAULT_PREF_COLUMN_COUNT, prefColumn);
+        installDefaultSkin(area);
+        ScrollPane scrollPane = getScrollPane(area);
+        double prefViewportWidth = scrollPane.getPrefViewportWidth();
+        area.setPrefColumnCount(prefColumn * 2);
+        assertEquals("prefViewportWidth must be updated", prefViewportWidth * 2, scrollPane.getPrefViewportWidth(), 1);
+    }
+
+    /**
+     * NPE from listener to prefRowCount.
+     */
+    @Test
+    public void testTextAreaSetRowCount() {
+        TextArea area = new TextArea("some text");
+        int prefRows = area.getPrefRowCount();
+        installDefaultSkin(area);
+        replaceSkin(area);
+        area.setPrefRowCount(prefRows * 2);
+    }
+
+    /**
+     * Sanity: change of prefRows must update scrollPane.
+     */
+    @Test
+    public void testTextAreaSetRowCountUpdate() {
+        TextArea area = new TextArea("some text");
+        int prefRows = area.getPrefRowCount();
+        assertEquals("sanity: initial row count", TextArea.DEFAULT_PREF_ROW_COUNT, prefRows);
+        installDefaultSkin(area);
+        ScrollPane scrollPane = getScrollPane(area);
+        double prefViewportHeight = scrollPane.getPrefViewportHeight();
+        area.setPrefRowCount(prefRows * 2);
+        assertEquals("prefViewportHeight must be updated", prefViewportHeight * 2, scrollPane.getPrefViewportHeight(), 1);
+    }
+
+    /**
+     * Sanity: change of text must update textNode.
+     */
+    @Test
+    public void testTextAreaSetTextUpdate() {
+        String initial = "some text";
+        TextArea area = new TextArea(initial);
+        installDefaultSkin(area);
+        Text textNode = getTextNode(area);
+        assertEquals("sanity initial text sync'ed to textNode", initial, textNode.getText());
+        String replaced = "replaced text";
+        area.setText(replaced);
+        assertEquals(replaced, textNode.getText());
+    }
+
+    /**
+     * NPE on changing promptText: binding to promptText triggers internal listener to usePromptText.
+     */
+    @Test
+    public void testTextAreaPrompt() {
+        TextArea area = new TextArea();
+        installDefaultSkin(area);
+        replaceSkin(area);
+        area.setPromptText("prompt");
+    }
+
+    /**
+     * Sanity: change of promptText must update promptNode.
+     */
+    @Test
+    public void testTextAreaPromptUpdate() {
+        TextArea area = new TextArea();
+        installDefaultSkin(area);
+        assertNull("sanity: default prompt is null", getPromptNode(area));
+        area.setPromptText("prompt");
+        assertNotNull("prompt node must be created", getPromptNode(area));
+    }
+
+    @Test
+    public void testTextAreaChildren() {
+        TextArea area = new TextArea("some text");
+        installDefaultSkin(area);
+        int children = area.getChildrenUnmodifiable().size();
+        replaceSkin(area);
+        assertEquals("children size must be unchanged: ", children, area.getChildrenUnmodifiable().size());
+    }
+
+    /**
+     * NPE from listener to scrollPane's hValue.
+     */
+    @Test
+    public void testTextAreaSetScrollLeft() {
+        TextArea area = new TextArea(LOREM_IPSUM + LOREM_IPSUM);
+        installDefaultSkin(area);
+        replaceSkin(area);
+        area.setScrollLeft(500);
+    }
+
+    /**
+     * Sanity: change of scrollLeft must update scrollPane's hValue.
+     */
+    @Test
+    public void testTextAreaSetScrollLeftUpdate() {
+        TextArea area = new TextArea(LOREM_IPSUM + LOREM_IPSUM);
+        showControl(area, true);
+        ScrollPane scrollPane = getScrollPane(area);
+        double scrollLeft = 500;
+        area.setScrollLeft(scrollLeft);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("sanity: scrollLeft updated", scrollLeft, area.getScrollLeft(), 0.1);
+        assertTrue("scrollPane hValue > 0", scrollPane.getHvalue() > 0.0);
+    }
+
+    /**
+     * NPE from listener to scrollPane's vValue.
+     */
+    @Test
+    public void testTextAreaSetScrollTop() {
+        TextArea area = new TextArea(LOREM_IPSUM + LOREM_IPSUM);
+        area.setWrapText(true);
+        installDefaultSkin(area);
+        replaceSkin(area);
+        area.setScrollTop(100);
+    }
+
+    /**
+     * Sanity: change of scrollTop must update scrollPane's vValue.
+     */
+    @Ignore("8272082")
+    @Test
+    public void testTextAreaSetScrollTopUpdate() {
+        TextArea area = new TextArea(LOREM_IPSUM + LOREM_IPSUM);
+        area.setWrapText(true);
+        showControl(area, true, 300, 300);
+        ScrollPane scrollPane = getScrollPane(area);
+        double scrollTop = 100;
+        area.setScrollTop(scrollTop);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("sanity: scrollTop updated", scrollTop, area.getScrollTop(), 0.1);
+        assertTrue("scrollPane vValue > 0", scrollPane.getVvalue() > 0.0);
+    }
+
+    public static final String LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
+            + "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "
+            + "ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip "
+            + "ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate "
+            + "velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat "
+            + "cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+
 
 // ----------- TextField
 
@@ -573,9 +791,27 @@ public class SkinCleanupTest {
      * @param focused if true, requests focus on the added control
      */
     protected void showControl(Control control, boolean focused) {
+        showControl(control, focused, -1, -1);
+    }
+
+    /**
+     * Ensures the control is shown in an active scenegraph. Requests
+     * focus on the control if focused == true.
+     * On first call, sizes the scene to sceneX/Y if sceneX > 0
+     *
+     * @param control the control to show
+     * @param focused if true, requests focus on the added control
+     * @param sceneX the width of the scene or -1 for autosizing
+     * @param sceneY the height of the scene or -1 for autosing
+     */
+    protected void showControl(Control control, boolean focused, double sceneX, double sceneY) {
         if (root == null) {
             root = new VBox();
-            scene = new Scene(root);
+            if (sceneX > 0) {
+                scene = new Scene(root, sceneX, sceneY);
+            } else {
+                scene = new Scene(root);
+            }
             stage = new Stage();
             stage.setScene(scene);
         }
