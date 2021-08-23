@@ -3903,6 +3903,7 @@ allprojects {
         project.compileJava {
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', project.moduleSourcePath
                 ])
         }
@@ -3925,6 +3926,7 @@ allprojects {
         project.compileShimsJava {
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', project.moduleSourcePathShim
                 ])
         }
