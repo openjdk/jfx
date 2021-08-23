@@ -2205,6 +2205,7 @@ project(":graphics") {
         options.compilerArgs.addAll([
             '-h', "$buildDir/gensrc/headers/",  // Note: this creates the native headers
             '-implicit:none',
+            '--module-version', "$RELEASE_VERSION_SHORT",
             '--module-source-path', defaultModuleSourcePath
             ] )
     }
@@ -3600,6 +3601,7 @@ project(":web") {
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', defaultModuleSourcePath
                 ])
         }
