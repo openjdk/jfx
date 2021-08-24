@@ -29,15 +29,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.NamedArg;
-import javafx.geometry.Insets;
-import javafx.scene.Node;
-import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.SubCssMetaData;
-import javafx.css.converter.InsetsConverter;
-import javafx.css.converter.URLConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.BorderImageWidthConverter;
 import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
@@ -47,7 +40,15 @@ import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
+
+import javafx.beans.NamedArg;
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.css.converter.InsetsConverter;
+import javafx.css.converter.URLConverter;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.paint.Paint;
 
 /**
  * The border of a {@link Region}. A {@code Border} is an immutable object which
@@ -387,6 +388,20 @@ public final class Border {
         int result = this.strokes.hashCode();
         result = 31 * result + this.images.hashCode();
         hash = result;
+    }
+
+    /**
+     * A convenience factory method for creating a solid border with a single {@code Paint}. The border will use the
+     * default {@code CornerRadii} and the default {@code BorderWidths} of {@link BorderStroke}.
+     *
+     * @implNote this call is equivalent to
+     * <p>
+     * {@code new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));}
+     * @param stroke the stroke of the border
+     * @return a new border of the given stroke
+     */
+    public static Border stroke(Paint stroke) {
+        return new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));
     }
 
     /**

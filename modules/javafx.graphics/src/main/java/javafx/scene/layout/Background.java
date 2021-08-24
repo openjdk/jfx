@@ -354,6 +354,20 @@ public final class Background {
     }
 
     /**
+     * A convenience factory method for creating a background with a single {@code Paint}. The background will use the
+     * default {@code CornerRadii} and the default {@code Insets} of {@link BackgroundFill}.
+     *
+     * @implNote this call is equivalent to
+     * <p>
+     * {@code new Background(new BackgroundFill(fill, null, null));}
+     * @param fill the fill of the background
+     * @return a new background of the given fill
+     */
+    public static Background fill(Paint fill) {
+        return new Background(new BackgroundFill(fill, null, null));
+    }
+
+    /**
      * Gets whether the fill of this Background is based on percentages (that is, relative to the
      * size of the region being styled). Specifically, this returns true if any of the CornerRadii
      * on any of the fills on this Background has a radius that is based on percentages.
