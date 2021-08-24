@@ -29,8 +29,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.beans.NamedArg;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.SubCssMetaData;
+import javafx.css.converter.InsetsConverter;
+import javafx.css.converter.URLConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.BorderImageWidthConverter;
 import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
@@ -40,15 +47,7 @@ import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
-
-import javafx.beans.NamedArg;
-import javafx.css.CssMetaData;
 import javafx.css.Styleable;
-import javafx.css.converter.InsetsConverter;
-import javafx.css.converter.URLConverter;
-import javafx.geometry.Insets;
-import javafx.scene.Node;
-import javafx.scene.paint.Paint;
 
 /**
  * The border of a {@link Region}. A {@code Border} is an immutable object which
