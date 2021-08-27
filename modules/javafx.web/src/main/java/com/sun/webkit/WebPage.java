@@ -2551,7 +2551,7 @@ public final class WebPage {
     private void fireLoadEvent(long frameID, int state, String url,
             String contentType, double progress, int errorCode)
     {
-        setBackgroundColor(backgroundColor.hashCode());
+        setBackgroundColor(getColorInt32Value(backgroundColor));
         for (LoadListenerClient l : loadListenerClients) {
             l.dispatchLoadEvent(frameID, state, url, contentType, progress, errorCode);
         }
