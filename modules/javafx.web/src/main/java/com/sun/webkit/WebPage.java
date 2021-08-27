@@ -598,11 +598,9 @@ public final class WebPage {
     }
 
     public void setBackgroundColor(long frameID, int backgroundColor) {
-        this.backgroundColor = getColorFromHash(backgroundColor);
         lockPage();
         try {
-            log.fine("setBackgroundColor: hash: " + backgroundColor +
-                    "(color: " + this.backgroundColor + ") ");
+            log.fine("setBackgroundColor int32: " + backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
@@ -618,12 +616,16 @@ public final class WebPage {
         }
     }
 
+    public void setBackgroundColor(Color backgroundColor) {
+        log.fine("setBackgroundColor color: " + backgroundColor);
+        this.backgroundColor = backgroundColor;
+        setBackgroundColor(getColorInt32Value(backgroundColor));
+    }
+
     public void setBackgroundColor(int backgroundColor) {
-        this.backgroundColor = getColorFromHash(backgroundColor);
         lockPage();
         try {
-            log.fine("setBackgroundColor hash: " + backgroundColor +
-                    "(color: " + this.backgroundColor + ") " +
+            log.fine("setBackgroundColor int32: " + backgroundColor +
                    " for all frames");
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
@@ -2576,10 +2578,17 @@ public final class WebPage {
         return backgroundColor == null || backgroundColor.isOpaque();
     }
 
-    private static Color getColorFromHash(int hash) {
-        String hexString = Integer.toHexString(hash);
-        int length = hexString.length();
-        return Color.valueOf("#" + "0".repeat(8 - length) + hexString);
+    private static int getColorInt32Value(Color color) {
+        if (color == null) {
+            return -1;
+        }
+        int red = (int) Math.round(color.getRed() * 255.0);
+        int green = (int) Math.round(color.getGreen() * 255.0);
+        int blue = (int) Math.round(color.getBlue() * 255.0);
+        int alpha = (int) Math.round(color.getOpacity() * 255.0);
+
+        // return 32 bit integer representation compatible with WebKit
+        return (red << 24) | (green << 16) | (blue << 8) | alpha;
     }
 
     // Package scope method for testing

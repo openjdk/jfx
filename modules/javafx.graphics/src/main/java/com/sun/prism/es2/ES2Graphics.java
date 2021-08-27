@@ -67,7 +67,7 @@ public class ES2Graphics extends BaseShaderGraphics {
         // set the blend mode to CLEAR
         context.updateCompositeMode(CompositeMode.CLEAR);
         Paint oldPaint = getPaint();
-        setPaint(Color.TRANSPARENT); // any color will do...
+        setPaint(Color.TRANSPARENT);
         fillQuad(x1, y1, x2, y2);
         context.flushVertexBuffer();
         setPaint(oldPaint);

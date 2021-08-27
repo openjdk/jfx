@@ -276,7 +276,7 @@ final public class WebView extends Parent {
         engine.setView(this);
         page = engine.getPage();
         page.setFontSmoothingType(DEFAULT_FONT_SMOOTHING_TYPE.ordinal());
-        page.setBackgroundColor(DEFAULT_PAGE_FILL.hashCode());
+        page.setBackgroundColor(DEFAULT_PAGE_FILL);
 
         registerEventHandlers();
         stagePulseListener = () -> {
@@ -700,12 +700,12 @@ final public class WebView extends Parent {
     /**
      * Specifies the background color of the web page.
      *
-     * With this property, the WebView control's background
+     * <p>With this property, the {@code WebView} control's background
      * can have any solid color, including some or complete
      * level of transparency.
      *
-     * However, if the HTML content being loaded set its own
-     * background color, it will take precedence.
+     * <p>However, if the HTML content being loaded sets its own
+     * background color, that color will take precedence.
      *
      * @defaultValue {@code Color.WHITE}
      *
@@ -729,8 +729,7 @@ final public class WebView extends Parent {
                 protected void invalidated() {
                     Toolkit.getToolkit().checkFxUserThread();
                     Color color = get();
-                    page.setBackgroundColor(color != null ? color.hashCode() :
-                            DEFAULT_PAGE_FILL.hashCode());
+                    page.setBackgroundColor(color);
                 }
 
                 @Override
