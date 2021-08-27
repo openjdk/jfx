@@ -393,11 +393,11 @@ public final class Border {
      * A convenience factory method for creating a solid border with a single {@code Paint}. The border will use the
      * default {@code CornerRadii} and the default {@code BorderWidths} of {@link BorderStroke}.
      *
-     * @implNote this call is equivalent to
-     * <p>
-     * {@code new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));}
+     * @implSpec
+     * This call is equivalent to {@code new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));}.
      * @param stroke the stroke of the border
      * @return a new border of the given stroke
+     * @since 18
      */
     public static Border stroke(Paint stroke) {
         return new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));

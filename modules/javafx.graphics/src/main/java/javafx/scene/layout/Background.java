@@ -357,11 +357,10 @@ public final class Background {
      * A convenience factory method for creating a background with a single {@code Paint}. The background will use the
      * default {@code CornerRadii} and the default {@code Insets} of {@link BackgroundFill}.
      *
-     * @implNote this call is equivalent to
-     * <p>
-     * {@code new Background(new BackgroundFill(fill, null, null));}
+     * @implSpec This call is equivalent to {@code new Background(new BackgroundFill(fill, null, null));}.
      * @param fill the fill of the background
      * @return a new background of the given fill
+     * @since 18
      */
     public static Background fill(Paint fill) {
         return new Background(new BackgroundFill(fill, null, null));
