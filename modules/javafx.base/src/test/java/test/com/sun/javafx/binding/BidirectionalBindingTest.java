@@ -301,6 +301,15 @@ public class BidirectionalBindingTest<T> {
         assertEquals(v[1], op2.getValue());
     }
 
+    @Test
+    public void testSetValueWithoutIntermediateValidation() {
+        BidirectionalBinding.bind(op1, op2);
+        op1.setValue(v[0]);
+        op2.setValue(v[1]);
+        assertEquals(v[1], op1.getValue());
+        assertEquals(v[1], op2.getValue());
+    }
+
     @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         final Boolean[] booleanData = new Boolean[] {true, false, true, false};
