@@ -124,8 +124,8 @@ final public class CssParser {
     // a string and this is that string.
     private String     stylesheetAsText;
 
-    // the url of the stylesheet file, or the docbase of an applet. This will
-    // be null if the source is not a file or from an applet.
+    // the url of the stylesheet file. This will
+    // be null if the source is not a file.
     private String        sourceOfStylesheet;
 
     // the Styleable from the node with an in-line style. This will be null

@@ -389,57 +389,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeLayer
 
 /*
  * Class:     com_sun_glass_ui_mac_MacView
- * Method:    _getNativeRemoteLayerId
- * Signature: (JLjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeRemoteLayerId
-(JNIEnv *env, jobject jView, jlong jPtr, jstring jServerString)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeLayerId");
-    LOG("   layer: %p", jPtr);
-    if (!jPtr) return 0;
-
-    jint layerId = 0;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        NSView<GlassView> *view = getGlassView(env, jPtr);
-        layerId = (jint)[view getRemoteLayerIdForServer:[GlassHelper nsStringWithJavaString:jServerString withEnv:env]];
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-
-    LOG("   layerId: %d", layerId);
-    return layerId;
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacView
- * Method:    _hostRemoteLayerId
- * Signature: (JI)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1hostRemoteLayerId
-(JNIEnv *env, jobject jView, jlong jPtr, jint jRemoteLayerId)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacView__1hostRemoteLayerId");
-    if (!jPtr) return;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        if (jRemoteLayerId > 0)
-        {
-            NSView<GlassView> *view = getGlassView(env, jPtr);
-            [view hostRemoteLayerId:(uint32_t)jRemoteLayerId];
-        }
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacView
  * Method:    _getX
  * Signature: ()I
  */
