@@ -91,7 +91,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<?> other) {
+    public void unbindBidirectional(Property<Number> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

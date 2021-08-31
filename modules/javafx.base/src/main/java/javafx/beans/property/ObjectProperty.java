@@ -93,7 +93,7 @@ public abstract class ObjectProperty<T> extends ReadOnlyObjectProperty<T>
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<?> other) {
+    public void unbindBidirectional(Property<T> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

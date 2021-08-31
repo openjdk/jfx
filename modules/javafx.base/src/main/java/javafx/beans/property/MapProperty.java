@@ -86,7 +86,7 @@ public abstract class MapProperty<K, V> extends ReadOnlyMapProperty<K, V> implem
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<?> other) {
+    public void unbindBidirectional(Property<ObservableMap<K, V>> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

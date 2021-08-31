@@ -87,7 +87,7 @@ public abstract class SetProperty<E> extends ReadOnlySetProperty<E> implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<?> other) {
+    public void unbindBidirectional(Property<ObservableSet<E>> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

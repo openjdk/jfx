@@ -127,7 +127,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<?> other) {
+    public void unbindBidirectional(Property<String> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         BidirectionalBinding.unbind(this, other);
     }

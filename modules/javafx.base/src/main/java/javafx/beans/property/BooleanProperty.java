@@ -93,7 +93,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      * {@inheritDoc}
      */
     @Override
-    public void unbindBidirectional(Property<?> other) {
+    public void unbindBidirectional(Property<Boolean> other) {
         Objects.requireNonNull(other, "Property cannot be null");
         Bindings.unbindBidirectional(this, other);
     }

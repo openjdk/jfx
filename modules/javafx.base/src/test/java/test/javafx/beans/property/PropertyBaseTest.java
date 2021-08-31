@@ -99,7 +99,7 @@ public class PropertyBaseTest<T> {
         @Override public void unbind() {}
         @Override public boolean isBound() { return false; }
         @Override public void bindBidirectional(Property<Number> other) {}
-        @Override public void unbindBidirectional(Property<?> other) {}
+        @Override public void unbindBidirectional(Property<Number> other) {}
 
         @Override public Object getBean() { return null; }
         @Override public String getName() { return ""; }
