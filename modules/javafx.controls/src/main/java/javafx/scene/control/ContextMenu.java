@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,7 @@ root.getChildren().add(textField);
 @IDProperty("id")
 public class ContextMenu extends PopupControl {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -130,7 +130,7 @@ public class ContextMenu extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -156,7 +156,7 @@ public class ContextMenu extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -208,7 +208,7 @@ public class ContextMenu extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -298,7 +298,7 @@ public class ContextMenu extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -322,7 +322,7 @@ public class ContextMenu extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

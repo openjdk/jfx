@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,11 +54,8 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TabPane;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 
@@ -115,10 +112,6 @@ public class SkinMemoryLeakTest {
                 SplitPane.class,
                 TableRow.class,
                 TableView.class,
-                // @Ignore("8244419")
-                TextArea.class,
-                // @Ignore("8240506")
-                TextField.class,
                 TreeTableRow.class,
                 TreeTableView.class
         );

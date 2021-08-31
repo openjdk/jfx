@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ import java.util.function.Consumer;
  * @since 9
  */
 public class ScrollPaneSkin extends SkinBase<ScrollPane> {
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -90,7 +90,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -148,7 +148,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -243,7 +243,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -318,7 +318,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -376,7 +376,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -613,7 +613,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

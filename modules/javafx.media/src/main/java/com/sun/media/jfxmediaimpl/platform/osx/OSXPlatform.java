@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,11 +37,8 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 
 /**
- * Mac OS X Platform implementation. This class implements both the QTKit based
- * platform and the AVFoundation based platforms.
- *
- * NOTE: The QTKit based platform is deprecated and will be removed in a future
- * release.
+ * Mac OS X Platform implementation. This class implements the AVFoundation
+ * based platform.
  */
 public final class OSXPlatform extends Platform {
     /**
@@ -77,19 +74,12 @@ public final class OSXPlatform extends Platform {
                 @SuppressWarnings("removal")
                 boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                     boolean avf = false;
-                    boolean qtk = false;
-                    // attempt to load the AVFoundation based player first
-                    // AVFoundation will have precedence
                     try {
                         NativeLibLoader.loadLibrary("jfxmedia_avf");
                         avf = true;
                     } catch (UnsatisfiedLinkError ule) {}
-                    try {
-                        NativeLibLoader.loadLibrary("jfxmedia_qtkit");
-                        qtk = true;
-                    } catch (UnsatisfiedLinkError ule) {}
 
-                    return avf || qtk;
+                    return avf;
                 });
                 isLoaded = tmp;
             } catch (Exception e) {

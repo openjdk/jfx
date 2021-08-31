@@ -50,7 +50,7 @@ import javafx.beans.NamedArg;
  */
 public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -79,7 +79,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -90,7 +90,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     int fixedColumnIndex = -1;
     private final int nonFixedColumnIndex;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

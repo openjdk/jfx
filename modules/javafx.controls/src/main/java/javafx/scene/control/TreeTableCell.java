@@ -73,7 +73,7 @@ import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
  */
 public class TreeTableCell<S,T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -92,7 +92,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -103,7 +103,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -192,7 +192,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             new WeakInvalidationListener(rootPropertyListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -309,7 +309,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     public final TreeTableRow<S> getTreeTableRow() { return getTableRow(); }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
@@ -344,17 +344,17 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent editEvent = new CellEditEvent(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TreeTableColumn.<S,T>editStartEvent(),
                 null
             );
 
             Event.fireEvent(column, editEvent);
         }
-        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
@@ -710,7 +710,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                              Expert API                                 *
      *                                                                         *
@@ -807,7 +807,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -835,7 +835,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

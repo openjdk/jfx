@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ import javafx.scene.layout.Region;
  */
 public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -68,7 +68,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
     private static final double DO_NOT_CHANGE_SIZE = Double.MAX_VALUE - 100;
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * fields
      *
@@ -79,7 +79,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -122,7 +122,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Implementation
      *
@@ -311,7 +311,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes / enums
      *

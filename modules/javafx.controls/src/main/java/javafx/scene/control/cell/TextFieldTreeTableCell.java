@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ import javafx.util.converter.DefaultStringConverter;
  */
 public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -94,7 +94,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -104,7 +104,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -141,7 +141,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -177,7 +177,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

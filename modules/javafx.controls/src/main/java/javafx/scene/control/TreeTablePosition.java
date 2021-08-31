@@ -48,7 +48,7 @@ import javafx.beans.NamedArg;
  */
 public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -90,7 +90,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -101,7 +101,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
     int fixedColumnIndex = -1;
     private final int nonFixedColumnIndex;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

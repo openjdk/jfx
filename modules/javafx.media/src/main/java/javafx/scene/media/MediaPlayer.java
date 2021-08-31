@@ -1846,9 +1846,9 @@ public final class MediaPlayer {
         }
     }
 
-    //*************************************************************************************************
-    //********** Player event-handling
-    //*************************************************************************************************
+    // ************************************************************************************************
+    // ********* Player event-handling
+    // ************************************************************************************************
 
     void preReady() {
         // Notify MediaView that we ready
@@ -1880,7 +1880,7 @@ public final class MediaPlayer {
         media.setDuration(duration);
         media._updateMedia(jfxPlayer.getMedia());
 
-        //***** Sync up the player with the desired properties if they were called
+        // **** Sync up the player with the desired properties if they were called
         //      before onReady()
         handleRequestedChanges();
 
@@ -2130,7 +2130,7 @@ public final class MediaPlayer {
         return onStalled;
     }
 
-    /****************************************************************************
+    /* **************************************************************************
      * AudioSpectrum API
      ***************************************************************************/
 
@@ -2390,7 +2390,7 @@ public final class MediaPlayer {
         }
     }
 
-    /****************************************************************************
+    /* **************************************************************************
      * Listeners section
      ***************************************************************************
      * Listener of modifications to the marker map in the public Media API.

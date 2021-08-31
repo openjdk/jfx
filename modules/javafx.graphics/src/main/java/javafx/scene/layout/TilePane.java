@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -184,7 +184,7 @@ import javafx.util.Callback;
  */
 public class TilePane extends Pane {
 
-    /********************************************************************
+    /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
 
@@ -243,7 +243,7 @@ public class TilePane extends Pane {
         setMargin(child, null);
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
@@ -998,7 +998,7 @@ public class TilePane extends Pane {
     private int actualRows = 0;
     private int actualColumns = 0;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

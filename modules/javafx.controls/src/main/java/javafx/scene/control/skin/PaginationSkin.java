@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
  */
 public class PaginationSkin extends SkinBase<Pagination> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -92,7 +92,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -132,7 +132,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -161,7 +161,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -225,7 +225,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -375,7 +375,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -441,7 +441,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -796,7 +796,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
@@ -1364,7 +1364,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

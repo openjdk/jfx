@@ -550,6 +550,31 @@ public class TableCellTest {
         assertEquals("startEdit must not fire while editing", 0, events.size());
     }
 
+    @Test
+    public void testEditStartEventAfterStartOnCell() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals(editingColumn, events.get(0).getTableColumn());
+        TablePosition<?, ?> editingCell = events.get(0).getTablePosition();
+        assertEquals(editingIndex, editingCell.getRow());
+    }
+
+    @Test
+    public void testEditStartEventAfterStartOnTable() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        table.edit(editingIndex, editingColumn);
+        assertEquals(editingColumn, events.get(0).getTableColumn());
+        TablePosition<?, ?> editingCell = events.get(0).getTablePosition();
+        assertEquals(editingIndex, editingCell.getRow());
+    }
 
     /**
      * Test that cell.cancelEdit can switch table editing off

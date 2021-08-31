@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ import static javafx.scene.web.HTMLEditorSkin.Command.*;
  */
 public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -165,7 +165,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -205,7 +205,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Methods                                                          *
      *                                                                         *
@@ -213,7 +213,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -234,7 +234,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -485,7 +485,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -528,7 +528,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -1155,7 +1155,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *
