@@ -26,14 +26,10 @@
 package javafx.scene.control.skin;
 
 import javafx.geometry.Orientation;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
 import javafx.scene.control.Control;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
-
-import java.util.Collections;
 
 /**
  * Default skin implementation for the {@link Separator} control.
@@ -108,6 +104,13 @@ public class SeparatorSkin extends SkinBase<Separator> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+
+    @Override
+    public void dispose() {
+        getChildren().remove(line);
+        super.dispose();
+    }
 
     /**
      * We only need to deal with the single "line" child region. The important

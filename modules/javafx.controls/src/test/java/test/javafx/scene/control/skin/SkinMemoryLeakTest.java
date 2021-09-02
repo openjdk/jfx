@@ -54,7 +54,6 @@ import javafx.scene.control.Pagination;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Separator;
 import javafx.scene.control.Skin;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SplitMenuButton;
@@ -141,8 +140,6 @@ public class SkinMemoryLeakTest {
                 PasswordField.class,
                 ScrollBar.class,
                 ScrollPane.class,
-                // @Ignore("8273071")
-                Separator.class,
                 // @Ignore("8245145")
                 Spinner.class,
                 SplitMenuButton.class,
