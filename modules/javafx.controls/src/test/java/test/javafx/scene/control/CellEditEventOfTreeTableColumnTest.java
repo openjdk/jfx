@@ -183,7 +183,6 @@ public class CellEditEventOfTreeTableColumnTest {
         TreeItem<String> root = new TreeItem<>("root");
         root.setExpanded(true);
         ObservableList<String> model = FXCollections.observableArrayList("Four", "Five", "Fear");
-            // "Flop", "Food", "Fizz"
         root.getChildren().addAll(model.stream().map(TreeItem::new).collect(Collectors.toList()));
         table = new TreeTableView<String>(root);
         editingColumn = new TreeTableColumn<>("TEST");
