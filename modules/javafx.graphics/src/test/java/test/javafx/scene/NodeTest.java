@@ -1091,6 +1091,34 @@ public class NodeTest {
     }
 
     @Test
+    public void testDefaultValueForManagedIsTrueWhenReadFromGetter() {
+        final Node node = new Rectangle();
+        assertTrue(node.isManaged());
+    }
+
+    @Test
+    public void testDefaultValueForManagedIsTrueWhenReadFromProperty() {
+        final Node node = new Rectangle();
+        assertTrue(node.managedProperty().get());
+    }
+
+    @Test
+    public void settingManagedThroughSetterShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.setManaged(false);
+        assertFalse(node.isManaged());
+        assertFalse(node.managedProperty().get());
+    }
+
+    @Test
+    public void settingManagedThroughPropertyShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.managedProperty().set(false);
+        assertFalse(node.isManaged());
+        assertFalse(node.managedProperty().get());
+    }
+
+    @Test
     public void testDefaultStyleIsEmptyString() {
         final Node node = new Rectangle();
         assertEquals("", node.getStyle());
