@@ -54,7 +54,7 @@ import java.util.HashMap;
 /*
  * Quantum Renderer
  */
-final class QuantumRenderer extends ThreadPoolExecutor  {
+final public class QuantumRenderer extends ThreadPoolExecutor  {
     @SuppressWarnings("removal")
     private static boolean usePurgatory = // TODO - deprecate
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("decora.purgatory"));

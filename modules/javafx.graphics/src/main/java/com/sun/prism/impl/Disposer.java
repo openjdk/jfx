@@ -32,6 +32,7 @@ import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.Hashtable;
 import java.util.LinkedList;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * This class is used for registering and disposing the native
@@ -126,6 +127,19 @@ public class Disposer {
      * thread on which  the resources were created).
      */
     public static void cleanUp() {
+        if (!Thread.currentThread().getName().startsWith("QuantumRenderer")) {
+            try {
+                CountDownLatch latch = new CountDownLatch(1);
+                com.sun.javafx.tk.quantum.QuantumRenderer.getInstance().execute(() -> {
+                    cleanUp();
+                    latch.countDown();
+                });
+                latch.await();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+            return;
+        }
         disposerInstance.disposeUnreachables();
         disposerInstance.processDisposalQueue();
     }
