@@ -352,6 +352,41 @@ public class TableViewTest {
         assertEquals("Item 2", fm.getFocusedItem());
     }
 
+    @Test
+    public void ensureRowRemainsSelectedWhenSelectingCellInSameRow() {
+        class Person {
+            final String firstName, lastName;
+            Person(String firstName, String lastName) {
+                this.firstName = firstName;
+                this.lastName = lastName;
+            }
+            public String getFirstName() { return firstName; }
+            public String getLastName() { return lastName; }
+        }
+
+        var tableView = new TableView<Person>();
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        var col1 = new TableColumn<Person, String>();
+        col1.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        var col2 = new TableColumn<Person, String>();
+        col2.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+        tableView.getColumns().addAll(List.of(col1, col2));
+
+        var ab = new Person("a", "b");
+        tableView.getItems().add(ab);
+        var cd = new Person("c", "d");
+        tableView.getItems().add(cd);
+
+        tableView.getSelectionModel().select(0);
+        tableView.getSelectionModel().clearAndSelect(0, col1);
+
+        // The following asserts should work once JDK-8273336 is fixed:
+        // assertEquals(1, tableView.getSelectionModel().getSelectedIndices().size());
+        // assertEquals(0, (int)tableView.getSelectionModel().getSelectedIndices().get(0));
+    }
+
     /*********************************************************************
      * Tests for columns                                                 *
      ********************************************************************/
