@@ -301,6 +301,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     // editing location at start of edit - fix for JDK-8187229
     private TablePosition<S, T> editingCellAtStartEdit;
+    // test-only
+    TablePosition<S, T> getEditingCellAtStartEdit() {
+        return editingCellAtStartEdit;
+    }
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -342,14 +346,14 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
-        if (! isEditing()) return;
+        if (!isEditing()) return;
 
         final TableView<S> table = getTableView();
-        if (table != null) {
-            // Inform the TableView of the edit being ready to be committed.
-            CellEditEvent editEvent = new CellEditEvent(
+        if (getTableColumn() != null) {
+            // Inform the TableColumn of the edit being ready to be committed.
+            CellEditEvent<S, T> editEvent = new CellEditEvent<>(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TableColumn.editCommitEvent(),
                 newValue
             );
@@ -381,22 +385,22 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
-        if (! isEditing()) return;
-
-        final TableView<S> table = getTableView();
+        if (!isEditing()) return;
 
         super.cancelEdit();
 
-        // reset the editing index on the TableView
+        final TableView<S> table = getTableView();
         if (table != null) {
+            // reset the editing index on the TableView
             if (updateEditingIndex) table.edit(-1, null);
-
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
             // clicked out of the table entirely and given focus to something else.
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+        }
 
+        if (getTableColumn() != null) {
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
                 editingCellAtStartEdit,
