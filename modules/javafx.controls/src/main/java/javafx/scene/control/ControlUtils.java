@@ -87,7 +87,7 @@ class ControlUtils {
 
             {
                 int insertionPoint = Collections.binarySearch(removed, retainedRow, rowComparator);
-                if (insertionPoint == 0) {
+                if (insertionPoint >= 0) {
                     firstRemovedRange = removed;
                     secondRemovedRange = Collections.emptyList();
                 } else {

@@ -379,12 +379,21 @@ public class TableViewTest {
         var cd = new Person("c", "d");
         tableView.getItems().add(cd);
 
-        tableView.getSelectionModel().select(0);
-        tableView.getSelectionModel().clearAndSelect(0, col1);
+        var selectionModel = tableView.getSelectionModel();
+        selectionModel.select(0);
+        selectionModel.clearAndSelect(0, col1);
 
         // The following asserts should work once JDK-8273336 is fixed:
-        // assertEquals(1, tableView.getSelectionModel().getSelectedIndices().size());
-        // assertEquals(0, (int)tableView.getSelectionModel().getSelectedIndices().get(0));
+        //
+        // assertEquals(1, selectionModel.getSelectedIndices().size());
+        // assertEquals(0, (int)selectionModel.getSelectedIndices().get(0));
+
+        selectionModel.clearSelection();
+        selectionModel.selectRange(0, col1, 1, col2);
+        selectionModel.clearAndSelect(1, col2);
+
+        // assertEquals(1, selectionModel.getSelectedIndices().size());
+        // assertEquals(1, (int)selectionModel.getSelectedIndices().get(0));
     }
 
     /*********************************************************************
