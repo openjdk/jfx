@@ -24,15 +24,9 @@ Issue key|Summary|Subcomponent
 [JDK-8259718](https://bugs.openjdk.java.net/browse/JDK-8259718)|Remove the Marlin rasterizer (single-precision)|graphics
 [JDK-8267551](https://bugs.openjdk.java.net/browse/JDK-8267551)|Support loading images from inline data-URIs|graphics
 [JDK-8268120](https://bugs.openjdk.java.net/browse/JDK-8268120)|Allow hardware cursor to be used on Monocle-EGL platforms|graphics
-[JDK-8257895](https://bugs.openjdk.java.net/browse/JDK-8257895)|Allow building of JavaFX media libs for Apple Silicon|media
 [JDK-8258499](https://bugs.openjdk.java.net/browse/JDK-8258499)|JavaFX: Move src.zip out of the lib directory|other
 [JDK-8252935](https://bugs.openjdk.java.net/browse/JDK-8252935)|Add treeShowing listener only when needed|scenegraph
 [JDK-8259680](https://bugs.openjdk.java.net/browse/JDK-8259680)|Need API to query states of CAPS LOCK and NUM LOCK keys|scenegraph
-
-## List of Sub-task
-
-Issue key|Summary|Subcomponent
----------|-------|------------
 [JDK-8092439](https://bugs.openjdk.java.net/browse/JDK-8092439)|[Monocle] Refactor monocle SPI to allow support for multiple screens|graphics
 
 ## List of Fixed Bugs
@@ -59,7 +53,6 @@ Issue key|Summary|Subcomponent
 [JDK-8239138](https://bugs.openjdk.java.net/browse/JDK-8239138)|StyleManager should use a BufferedInputStream|controls
 [JDK-8244075](https://bugs.openjdk.java.net/browse/JDK-8244075)|Accelerator of ContextMenu's MenuItem is not removed when ContextMenu is removed from Scene|controls
 [JDK-8252238](https://bugs.openjdk.java.net/browse/JDK-8252238)|TableView: Editable (pseudo-editable) cells should respect the row editability|controls
-[JDK-8252820](https://bugs.openjdk.java.net/browse/JDK-8252820)|Skins: cleanup use of deprecated snapSize/snapPosition|controls
 [JDK-8256283](https://bugs.openjdk.java.net/browse/JDK-8256283)|IndexOutOfBoundsException when sorting a TreeTableView|controls
 [JDK-8258663](https://bugs.openjdk.java.net/browse/JDK-8258663)|Fixed size TableCells are not removed from sene graph when column is removed|controls
 [JDK-8261460](https://bugs.openjdk.java.net/browse/JDK-8261460)|Incorrect CSS applied to ContextMenu on DialogPane|controls
@@ -89,10 +82,8 @@ Issue key|Summary|Subcomponent
 [JDK-8262396](https://bugs.openjdk.java.net/browse/JDK-8262396)|Update Mesa 3-D Headers to version 21.0.3|graphics
 [JDK-8262802](https://bugs.openjdk.java.net/browse/JDK-8262802)|Wrong context origin coordinates when using EGL and HiDPI|graphics
 [JDK-8263402](https://bugs.openjdk.java.net/browse/JDK-8263402)|MemoryLeak: Node hardreferences it's previous Parent after csslayout and getting removed from the scene|graphics
-[JDK-8263778](https://bugs.openjdk.java.net/browse/JDK-8263778)|Fix monocle JNI signatures for instance methods|graphics
 [JDK-8267160](https://bugs.openjdk.java.net/browse/JDK-8267160)|Monocle mouse never get ENTERED state|graphics
 [JDK-8267314](https://bugs.openjdk.java.net/browse/JDK-8267314)|Loading some animated GIFs fails with ArrayIndexOutOfBoundsException: Index 4096 out of bounds for length 4096|graphics
-[JDK-8267621](https://bugs.openjdk.java.net/browse/JDK-8267621)|Mark HonorDeveloperSettingsTest as unstable on Linux|graphics
 [JDK-8259356](https://bugs.openjdk.java.net/browse/JDK-8259356)|MediaPlayer's seek freezes video|media
 [JDK-8262365](https://bugs.openjdk.java.net/browse/JDK-8262365)|Update GStreamer to version 1.18.3|media
 [JDK-8262366](https://bugs.openjdk.java.net/browse/JDK-8262366)|Update glib to version 2.66.7|media
@@ -113,7 +104,6 @@ Issue key|Summary|Subcomponent
 [JDK-8260165](https://bugs.openjdk.java.net/browse/JDK-8260165)|CSSFilterTest.testCSSFilterRendering system test fails|web
 [JDK-8260245](https://bugs.openjdk.java.net/browse/JDK-8260245)|Update ICU4C to version 68.2|web
 [JDK-8260257](https://bugs.openjdk.java.net/browse/JDK-8260257)|[Linux] WebView no longer reacts to some mouse events|web
-[JDK-8261927](https://bugs.openjdk.java.net/browse/JDK-8261927)|WebKit build fails with Visual Studio 2017|web
 [JDK-8263788](https://bugs.openjdk.java.net/browse/JDK-8263788)|JavaFX application freezes completely after some time when using the WebView|web
 [JDK-8264501](https://bugs.openjdk.java.net/browse/JDK-8264501)|UIWebView for iOS is deprecated|web
 [JDK-8264990](https://bugs.openjdk.java.net/browse/JDK-8264990)|WebEngine crashes with segfault when not loaded through system classloader|web
