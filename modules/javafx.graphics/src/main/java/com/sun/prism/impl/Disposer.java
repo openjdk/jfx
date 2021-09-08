@@ -25,6 +25,8 @@
 
 package com.sun.prism.impl;
 
+import com.sun.javafx.tk.quantum.QuantumToolkit;
+
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.PhantomReference;
@@ -32,7 +34,6 @@ import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.Hashtable;
 import java.util.LinkedList;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * This class is used for registering and disposing the native
@@ -128,16 +129,7 @@ public class Disposer {
      */
     public static void cleanUp() {
         if (!Thread.currentThread().getName().startsWith("QuantumRenderer")) {
-            try {
-                CountDownLatch latch = new CountDownLatch(1);
-                com.sun.javafx.tk.quantum.QuantumRenderer.getInstance().execute(() -> {
-                    cleanUp();
-                    latch.countDown();
-                });
-                latch.await();
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+            QuantumToolkit.runInRenderThreadAndWait(() -> cleanUp());
             return;
         }
         disposerInstance.disposeUnreachables();
