@@ -94,7 +94,7 @@ public final class WebPage {
     private int width, height;
 
     private int fontSmoothingType;
-    private Color backgroundColor = Color.WHITE;
+    private int backgroundIntRgba = 0xFFFFFFFF;
 
     private final WCFrameView hostWindow;
 
@@ -375,7 +375,7 @@ public final class WebPage {
     }
 
     private void scroll(int x, int y, int w, int h, int dx, int dy) {
-        if (!isBackgroundOpaque()) {
+        if (!isBackgroundColorOpaque()) {
             if (paintLog.isLoggable(Level.FINEST)) {
                 paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +"]");
             }
@@ -598,9 +598,10 @@ public final class WebPage {
     }
 
     public void setBackgroundColor(long frameID, int backgroundColor) {
+        backgroundIntRgba = backgroundColor;
         lockPage();
         try {
-            log.fine("setBackgroundColor int32: " + backgroundColor);
+            log.fine("setBackgroundColor intRgba: {0}", backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
@@ -608,7 +609,7 @@ public final class WebPage {
             if (!frames.contains(frameID)) {
                 return;
             }
-            twkSetTransparent(frameID, isBackgroundTransparent());
+            twkSetTransparent(frameID, isBackgroundColorTransparent());
             twkSetBackgroundColor(frameID, backgroundColor);
             repaintAll();
         } finally {
@@ -618,22 +619,21 @@ public final class WebPage {
 
     public void setBackgroundColor(Color backgroundColor) {
         log.fine("setBackgroundColor color: " + backgroundColor);
-        this.backgroundColor = backgroundColor;
-        setBackgroundColor(getColorInt32Value(backgroundColor));
+        setBackgroundColor(getIntRgba(backgroundColor));
     }
 
     public void setBackgroundColor(int backgroundColor) {
+        backgroundIntRgba = backgroundColor;
         lockPage();
         try {
-            log.fine("setBackgroundColor int32: " + backgroundColor +
-                   " for all frames");
+            log.fine("setBackgroundColor intRgba: {0} for all frames", backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
             }
 
             for (long frameID: frames) {
-                twkSetTransparent(frameID, isBackgroundTransparent());
+                twkSetTransparent(frameID, isBackgroundColorTransparent());
                 twkSetBackgroundColor(frameID, backgroundColor);
             }
             repaintAll();
@@ -744,7 +744,6 @@ public final class WebPage {
     private void paint2GC(WCGraphicsContext gc) {
         paintLog.finest("Entering");
         gc.setFontSmoothingType(this.fontSmoothingType);
-        gc.setOpaque(isBackgroundOpaque());
 
         List<RenderFrame> framesToRender;
         synchronized (frameQueue) {
@@ -758,8 +757,15 @@ public final class WebPage {
             paintLog.finest("Rendering: {0}", frame);
             for (WCRenderQueue rq : frame.getRQList()) {
                 gc.saveState();
-                if (rq.getClip() != null) {
-                    gc.setClip(rq.getClip());
+                WCRectangle clip = rq.getClip();
+                if (clip != null) {
+                    if (isBackgroundColorTransparent()) {
+                        // As backbuffer is enabled, new clips are drawn over the old rendered frames
+                        // regardless the alpha channel. While that works fine for alpha > 0,
+                        // for alpha == 0 we need to clear the old frame or it will still be visible.
+                        gc.clearRect((int) clip.getX(), (int) clip.getY(), (int) clip.getWidth(), (int) clip.getHeight());
+                    }
+                    gc.setClip(clip);
                 }
                 rq.decode(gc);
                 gc.restoreState();
@@ -838,7 +844,7 @@ public final class WebPage {
                                         me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
                                         me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(), me.isPopupTrigger(),
                                         me.getWhen() / 1000.0);
-            if (!isBackgroundOpaque()) {
+            if (!isBackgroundColorOpaque()) {
                 repaintAll();
             }
             return result;
@@ -860,7 +866,7 @@ public final class WebPage {
                     me.getDeltaX(), me.getDeltaY(),
                     me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
                     me.getWhen() / 1000.0);
-            if (!isBackgroundOpaque()) {
+            if (!isBackgroundColorOpaque()) {
                 repaintAll();
             }
             return result;
@@ -2551,7 +2557,7 @@ public final class WebPage {
     private void fireLoadEvent(long frameID, int state, String url,
             String contentType, double progress, int errorCode)
     {
-        setBackgroundColor(getColorInt32Value(backgroundColor));
+        setBackgroundColor(backgroundIntRgba);
         for (LoadListenerClient l : loadListenerClients) {
             l.dispatchLoadEvent(frameID, state, url, contentType, progress, errorCode);
         }
@@ -2570,15 +2576,15 @@ public final class WebPage {
         addDirtyRect(new WCRectangle(0, 0, width, height));
     }
 
-    private boolean isBackgroundTransparent() {
-        return backgroundColor != null && backgroundColor.getOpacity() == 0f;
+    private boolean isBackgroundColorTransparent() {
+        return (backgroundIntRgba & 0x000000FF) == 0;
     }
 
-    private boolean isBackgroundOpaque() {
-        return backgroundColor == null || backgroundColor.isOpaque();
+    private boolean isBackgroundColorOpaque() {
+        return (backgroundIntRgba & 0x000000FF) == 255;
     }
 
-    private static int getColorInt32Value(Color color) {
+    private static int getIntRgba(Color color) {
         if (color == null) {
             return -1;
         }

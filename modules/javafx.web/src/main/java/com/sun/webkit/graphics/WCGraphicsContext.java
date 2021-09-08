@@ -59,8 +59,6 @@ public abstract class WCGraphicsContext {
     public abstract void setTextMode(boolean fill, boolean stroke, boolean clip);
     public abstract void setFontSmoothingType(int fontSmoothingType);
     public abstract int getFontSmoothingType();
-    public abstract void setOpaque(boolean opaque);
-    public abstract boolean isOpaque();
 
     public abstract void setStrokeStyle(int style);
     public abstract void setStrokeColor(Color color);

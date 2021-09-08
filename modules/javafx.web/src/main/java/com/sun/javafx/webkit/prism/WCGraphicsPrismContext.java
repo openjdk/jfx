@@ -97,7 +97,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     private Graphics cachedGraphics = null;
 
     private int fontSmoothingType;
-    private boolean isOpaque = true;
     private boolean isRootLayerValid = false;
 
     WCGraphicsPrismContext(Graphics g) {
@@ -455,10 +454,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     public void setClip(WCRectangle c) {
-        if (!isOpaque) {
-            clearRect((int)c.getX(), (int)c.getY(),
-                    (int)c.getWidth(), (int)c.getHeight());
-        }
         setClip(new Rectangle((int)c.getX(), (int)c.getY(),
                               (int)c.getWidth(), (int)c.getHeight()));
     }
@@ -634,16 +629,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public int getFontSmoothingType() {
         return fontSmoothingType;
-    }
-
-    @Override
-    public void setOpaque(boolean opaque) {
-        this.isOpaque = opaque;
-    }
-
-    @Override
-    public boolean isOpaque() {
-        return isOpaque;
     }
 
     @Override
