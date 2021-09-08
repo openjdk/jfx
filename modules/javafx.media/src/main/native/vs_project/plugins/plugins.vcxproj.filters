@@ -10,6 +10,9 @@
     <Filter Include="dshowwrapper">
       <UniqueIdentifier>{56564e42-f8d2-4a48-8b90-8d65e262180a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="mfwrapper">
+      <UniqueIdentifier>{a396eb3d-d2e5-418e-999c-38fcdc5473a5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\gstreamer\plugins\javasource\javasource.c">
@@ -40,5 +43,26 @@
       <Filter>dshowwrapper</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\plugins\fxplugins.c" />
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfwrapper.cpp">
+      <Filter>mfwrapper</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfwrapper.h">
+      <Filter>mfwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\Allocator.h">
+      <Filter>dshowwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\dshowwrapper.h">
+      <Filter>dshowwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\Sink.h">
+      <Filter>dshowwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\Src.h">
+      <Filter>dshowwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\fxplugins_common.h" />
   </ItemGroup>
 </Project>

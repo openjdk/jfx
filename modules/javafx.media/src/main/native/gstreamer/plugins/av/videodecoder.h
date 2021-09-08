@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@
 #define __VIDEODECODER_H__
 
 #include "decoder.h"
+
+#include <libswscale/swscale.h>
 
 G_BEGIN_DECLS
 
@@ -59,7 +61,14 @@ struct _VideoDecoder {
     int         v_offset;
     int         uv_blocksize;
 
-    AVPacket       packet;
+    AVPacket    packet;
+
+    gint        codec_id;
+
+#if HEVC_SUPPORT
+    struct SwsContext *sws_context;
+    AVFrame           *dest_frame;
+#endif // HEVC_SUPPORT
 };
 
 struct _VideoDecoderClass

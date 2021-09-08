@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -481,7 +481,9 @@ uint32_t CGstPipelineFactory::CreateMP4Pipeline(GstElement* source, GstElement* 
                                                 CPipelineOptions* pOptions, CPipeline** ppPipeline)
 {
 #if TARGET_OS_WIN32
-    return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, "dshowwrapper", pVideoSink, pOptions, ppPipeline);
+    // We need to load dshowwrapper (H.264) or mfwrapper (H.265), but we do not know which one based on .mp4
+    // extension, so intead we will load video decoder dynamically when qtdemux will signal video pad added.
+    return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, NULL, pVideoSink, pOptions, ppPipeline);
 #elif TARGET_OS_MAC
     return CreateAVPipeline(source, "qtdemux", "audioconverter", true, "avcdecoder", pVideoSink, pOptions, ppPipeline);
 #elif TARGET_OS_LINUX
@@ -811,9 +813,9 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
     if (NULL == *ppVideobin)
         return ERROR_GSTREAMER_BIN_CREATE;
 
-    GstElement *videodec   = CreateElement (strDecoderName);
+    GstElement *videodec   = strDecoderName != NULL ? CreateElement (strDecoderName) : NULL;
     GstElement *videoqueue = CreateElement ("queue");
-    if (NULL == videodec || NULL == videoqueue)
+    if ((NULL != strDecoderName && NULL == videodec) || NULL == videoqueue)
         return ERROR_GSTREAMER_ELEMENT_CREATE;
 
     if(NULL == pVideoSink)
@@ -839,14 +841,22 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
             NULL);
     gst_app_sink_set_caps(GST_APP_SINK(pVideoSink), appSinkCaps);
 #endif
-
     gst_bin_add_many (GST_BIN (*ppVideobin), videoqueue, videodec, videoconv, pVideoSink, NULL);
     if(!gst_element_link_many (videoqueue, videodec, videoconv, pVideoSink, NULL))
         return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
 #else
-    gst_bin_add_many (GST_BIN (*ppVideobin), videoqueue, videodec, pVideoSink, NULL);
-    if(!gst_element_link_many (videoqueue, videodec, pVideoSink, NULL))
-        return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
+    if (videodec)
+    {
+        gst_bin_add_many(GST_BIN(*ppVideobin), videoqueue, videodec, pVideoSink, NULL);
+        if (!gst_element_link_many(videoqueue, videodec, pVideoSink, NULL))
+            return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
+    }
+    else
+    {
+        gst_bin_add_many(GST_BIN(*ppVideobin), videoqueue, pVideoSink, NULL);
+        if (!gst_element_link_many(pVideoSink, NULL))
+            return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
+    }
 #endif
     GstPad* sink_pad = gst_element_get_static_pad(videoqueue, "sink");
     if (NULL == sink_pad)
