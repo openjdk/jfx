@@ -359,7 +359,7 @@ public final class Background {
      * @implSpec
      * This call is equivalent to {@link BackgroundFill#BackgroundFill(Paint, CornerRadii, Insets)
      * new Background(new BackgroundFill(fill, null, null));}.
-     * @param fill the fill of the background. If {@code null}, {@code Color.TRANSPARENT} will be used. 
+     * @param fill the fill of the background. If {@code null}, {@code Color.TRANSPARENT} will be used.
      * @return a new background of the given fill
      * @since 18
      */
