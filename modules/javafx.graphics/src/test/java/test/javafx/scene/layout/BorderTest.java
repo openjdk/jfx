@@ -561,4 +561,11 @@ public class BorderTest {
         Border a = new Border((BorderStroke[])null, null);
         assertFalse(a.equals("Some random String"));
     }
+
+    @Test
+    public void testSingleStroke() {
+        var border1 = Border.stroke(Color.BEIGE);
+        var border2 = new Border(new BorderStroke(Color.BEIGE, BorderStrokeStyle.SOLID, null, null));
+        assertEquals("The factory method should give the same result as the constructor", border2, border1);
+    }
 }
