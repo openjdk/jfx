@@ -212,24 +212,64 @@ public final class RotateTransition extends Transition {
         return axis;
     }
 
-    private ObjectProperty<Point3D> pivot;
-    private static final Point3D DEFAULT_PIVOT = null;
+    private DoubleProperty pivotX;
+    private static final double DEFAULT_PIVOT_X = 0.5;
 
-    public final void setPivot(Point3D value) {
-        if ((pivot != null) || (value != DEFAULT_PIVOT)) {
-            pivotProperty().set(value);
+    public final void setPivotX(double value) {
+        if ((pivotX != null) || (value != DEFAULT_PIVOT_X)) {
+            pivotXProperty().set(value);
         }
     }
 
-    public final Point3D getPivot() {
-        return (pivot == null) ? DEFAULT_PIVOT : pivot.get();
+    public final double getPivotX() {
+        return (pivotX == null) ? DEFAULT_PIVOT_X : pivotX.get();
     }
 
-    public final ObjectProperty<Point3D> pivotProperty() {
-        if (pivot == null) {
-            pivot = new SimpleObjectProperty<>(this, "pivot", DEFAULT_PIVOT);
+    public final DoubleProperty pivotXProperty() {
+        if (pivotX == null) {
+            pivotX = new SimpleDoubleProperty(this, "pivotX", DEFAULT_PIVOT_X);
         }
-        return pivot;
+        return pivotX;
+    }
+
+    private DoubleProperty pivotY;
+    private static final double DEFAULT_PIVOT_Y = 0.5;
+
+    public final void setPivotY(double value) {
+        if ((pivotY != null) || (value != DEFAULT_PIVOT_Y)) {
+            pivotYProperty().set(value);
+        }
+    }
+
+    public final double getPivotY() {
+        return (pivotY == null) ? DEFAULT_PIVOT_Y : pivotY.get();
+    }
+
+    public final DoubleProperty pivotYProperty() {
+        if (pivotY == null) {
+            pivotY = new SimpleDoubleProperty(this, "pivotY", DEFAULT_PIVOT_Y);
+        }
+        return pivotY;
+    }
+
+    private DoubleProperty pivotZ;
+    private static final double DEFAULT_PIVOT_Z = 0.5;
+
+    public final void setPivotZ(double value) {
+        if ((pivotZ != null) || (value != DEFAULT_PIVOT_Z)) {
+            pivotZProperty().set(value);
+        }
+    }
+
+    public final double getPivotZ() {
+        return (pivotZ == null) ? DEFAULT_PIVOT_Z : pivotZ.get();
+    }
+
+    public final DoubleProperty pivotZProperty() {
+        if (pivotZ == null) {
+            pivotZ = new SimpleDoubleProperty(this, "pivotZ", DEFAULT_PIVOT_Z);
+        }
+        return pivotZ;
     }
 
     /**
@@ -385,10 +425,13 @@ public final class RotateTransition extends Transition {
             if (_axis != null) {
                 node.get().setRotationAxis(_axis);
             }
-            Point3D pivot = getPivot();
-            if (pivot != null) {
-                node.get().setRotationPivot(pivot);
-            }
+
+            double pivotX = getPivotX();
+            node.get().setRotationPivotX(pivotX);
+            double pivotY = getPivotY();
+            node.get().setRotationPivotY(pivotY);
+            double pivotZ = getPivotZ();
+            node.get().setRotationPivotZ(pivotZ);
         }
     }
 

@@ -45,6 +45,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
@@ -5050,9 +5051,15 @@ public abstract class Node implements EventTarget, Styleable {
                 getTranslateX() + getLayoutX(), getTranslateY() + getLayoutY(), getTranslateZ());
 
         if (getRotate() != 0) {
-            double rotPivotX = getRotationPivot().getX();
-            double rotPivotY = getRotationPivot().getY();
-            double rotPivotZ = getRotationPivot().getZ();
+            double rotPivotX = getRotationPivotX();
+            double rotPivotY = getRotationPivotY();
+            double rotPivotZ = getRotationPivotZ();
+            boolean isPivotNormalized = normalizedRotationPivotProperty().get();
+            if (isPivotNormalized) {
+                rotPivotX = Utils.clamp(0, rotPivotX, 1) * getBoundsInLocal().getWidth();
+                rotPivotY = Utils.clamp(0, rotPivotY, 1) * getBoundsInLocal().getHeight();
+                rotPivotZ = Utils.clamp(0, rotPivotZ, 1) * getBoundsInLocal().getDepth();
+            }
             double rotAxisX = getRotationAxis().getX();
             double rotAxisY = getRotationAxis().getY();
             double rotAxisZ = getRotationAxis().getZ();
@@ -5064,9 +5071,15 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1) {
-            double scalePivotX = getScalePivot().getX();
-            double scalePivotY = getScalePivot().getY();
-            double scalePivotZ = getScalePivot().getZ();
+            double scalePivotX = getScalePivotX();
+            double scalePivotY = getScalePivotY();
+            double scalePivotZ = getScalePivotZ();
+            boolean isPivotNormalized = normalizedScalePivotProperty().get();
+            if (isPivotNormalized) {
+                scalePivotX = Utils.clamp(0, scalePivotX, 1) * getBoundsInLocal().getWidth();
+                scalePivotY = Utils.clamp(0, scalePivotY, 1) * getBoundsInLocal().getHeight();
+                scalePivotZ = Utils.clamp(0, scalePivotZ, 1) * getBoundsInLocal().getDepth();
+            }
 
             localToParentTx = localToParentTx.deriveWithTranslation(scalePivotX, scalePivotY, scalePivotZ)
                                              .deriveWithScale(getScaleX(), getScaleY(), getScaleZ())
@@ -5701,12 +5714,12 @@ public abstract class Node implements EventTarget, Styleable {
         return getNodeTransformation().scaleZProperty();
     }
 
-    public final void setScalePivot(Point3D value) {
-        scalePivotProperty().set(value);
+    public final void setScalePivotX(double value) {
+        scalePivotXProperty().set(value);
     }
 
-    public final Point3D getScalePivot() {
-        return (nodeTransformation == null) ? defaultPivot() : nodeTransformation.getScalePivot();
+    public final double getScalePivotX() {
+        return (nodeTransformation == null) ? DEFAULT_SCALE_PIVOT_X : nodeTransformation.getScalePivotX();
     }
 
     /**
@@ -5719,8 +5732,56 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @return the scale pivot for this {@code Node}
      */
-    public final ObjectProperty<Point3D> scalePivotProperty() {
-        return getNodeTransformation().scalePivotProperty();
+    public final DoubleProperty scalePivotXProperty() {
+        return getNodeTransformation().scalePivotXProperty();
+    }
+
+    public final void setScalePivotY(double value) {
+        scalePivotYProperty().set(value);
+    }
+    
+    public final double getScalePivotY() {
+        return (nodeTransformation == null) ? DEFAULT_SCALE_PIVOT_Y : nodeTransformation.getScalePivotY();
+    }
+
+    /**
+     * The point of origin for the scaling of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
+     * <p>
+     * Note that this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @return the scale pivot for this {@code Node}
+     */
+    public final DoubleProperty scalePivotYProperty() {
+        return getNodeTransformation().scalePivotYProperty();
+    }
+    
+    public final void setScalePivotZ(double value) {
+        scalePivotZProperty().set(value);
+    }
+    
+    public final double getScalePivotZ() {
+        return (nodeTransformation == null) ? DEFAULT_SCALE_PIVOT_Z : nodeTransformation.getScalePivotZ();
+    }
+
+    /**
+     * The point of origin for the scaling of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
+     * <p>
+     * Note that this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @return the scale pivot for this {@code Node}
+     */
+    public final DoubleProperty scalePivotZProperty() {
+        return getNodeTransformation().scalePivotZProperty();
+    }
+
+    public final BooleanProperty normalizedScalePivotProperty() {
+        return getNodeTransformation().normalizedScalePivotProperty();
     }
 
     public final void setRotate(double value) {
@@ -5767,9 +5828,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final Point3D getRotationAxis() {
-        return (nodeTransformation == null)
-                ? DEFAULT_ROTATION_AXIS
-                : nodeTransformation.getRotationAxis();
+        return (nodeTransformation == null) ? DEFAULT_ROTATION_AXIS : nodeTransformation.getRotationAxis();
     }
 
     /**
@@ -5786,12 +5845,12 @@ public abstract class Node implements EventTarget, Styleable {
         return getNodeTransformation().rotationAxisProperty();
     }
 
-    public final void setRotationPivot(Point3D value) {
-        rotationPivotProperty().set(value);
+    public final void setRotationPivotX(double value) {
+        rotationPivotXProperty().set(value);
     }
 
-    public final Point3D getRotationPivot() {
-        return (nodeTransformation == null) ? defaultPivot() : nodeTransformation.getRotationPivot();
+    public final double getRotationPivotX() {
+        return (nodeTransformation == null) ? DEFAULT_ROTATION_PIVOT_X : nodeTransformation.getRotationPivotX();
     }
 
     /**
@@ -5804,8 +5863,56 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @return the rotation pivot for this {@code Node}
      */
-    public final ObjectProperty<Point3D> rotationPivotProperty() {
-        return getNodeTransformation().rotationPivotProperty();
+    public final DoubleProperty rotationPivotXProperty() {
+        return getNodeTransformation().rotationPivotXProperty();
+    }
+
+    public final void setRotationPivotY(double value) {
+        rotationPivotYProperty().set(value);
+    }
+
+    public final double getRotationPivotY() {
+        return (nodeTransformation == null) ? DEFAULT_ROTATION_PIVOT_Y : nodeTransformation.getRotationPivotY();
+    }
+
+    /**
+     * The rotation pivot of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
+     * <p>
+     * Note that this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @return the rotation pivot for this {@code Node}
+     */
+    public final DoubleProperty rotationPivotYProperty() {
+        return getNodeTransformation().rotationPivotYProperty();
+    }
+
+    public final void setRotationPivotZ(double value) {
+        rotationPivotZProperty().set(value);
+    }
+
+    public final double getRotationPivotZ() {
+        return (nodeTransformation == null) ? DEFAULT_ROTATION_PIVOT_Z : nodeTransformation.getRotationPivotZ();
+    }
+
+    /**
+     * The rotation pivot of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
+     * <p>
+     * Note that this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @return the rotation pivot for this {@code Node}
+     */
+    public final DoubleProperty rotationPivotZProperty() {
+        return getNodeTransformation().rotationPivotZProperty();
+    }
+
+    public final BooleanProperty normalizedRotationPivotProperty() {
+        return getNodeTransformation().normalizedRotationPivotProperty();
     }
 
     /**
@@ -5889,11 +5996,21 @@ public abstract class Node implements EventTarget, Styleable {
     private static final double DEFAULT_TRANSLATE_X = 0;
     private static final double DEFAULT_TRANSLATE_Y = 0;
     private static final double DEFAULT_TRANSLATE_Z = 0;
+
     private static final double DEFAULT_SCALE_X = 1;
     private static final double DEFAULT_SCALE_Y = 1;
     private static final double DEFAULT_SCALE_Z = 1;
+    private static final double DEFAULT_SCALE_PIVOT_X = 0.5;
+    private static final double DEFAULT_SCALE_PIVOT_Y = 0.5;
+    private static final double DEFAULT_SCALE_PIVOT_Z = 0.5;
+    private static final boolean DEFAULT_NORMALIZED_SCALE_PIVOT = true;
+
     private static final double DEFAULT_ROTATE = 0;
     private static final Point3D DEFAULT_ROTATION_AXIS = Rotate.Z_AXIS;
+    private static final double DEFAULT_ROTATION_PIVOT_X = 0.5;
+    private static final double DEFAULT_ROTATION_PIVOT_Y = 0.5;
+    private static final double DEFAULT_ROTATION_PIVOT_Z = 0.5;
+    private static final boolean DEFAULT_NORMALIZED_ROTATION_PIVOT = true;
 
     /**
      * The default rotation and scale pivot is the node center
@@ -5906,13 +6023,22 @@ public abstract class Node implements EventTarget, Styleable {
         private DoubleProperty translateX;
         private DoubleProperty translateY;
         private DoubleProperty translateZ;
+
         private DoubleProperty scaleX;
         private DoubleProperty scaleY;
         private DoubleProperty scaleZ;
-        private ObjectProperty<Point3D> scalePivot;
+        private DoubleProperty scalePivotX;
+        private DoubleProperty scalePivotY;
+        private DoubleProperty scalePivotZ;
+        private BooleanProperty normalizedScalePivot;
+
         private DoubleProperty rotate;
         private ObjectProperty<Point3D> rotationAxis;
-        private ObjectProperty<Point3D> rotationPivot;
+        private DoubleProperty rotationPivotX;
+        private DoubleProperty rotationPivotY;
+        private DoubleProperty rotationPivotZ;
+        private BooleanProperty normalizedRotationPivot;
+
         private ObservableList<Transform> transforms;
         private LazyTransformProperty localToParentTransform;
         private LazyTransformProperty localToSceneTransform;
@@ -6315,21 +6441,70 @@ public abstract class Node implements EventTarget, Styleable {
             return scaleZ;
         }
 
-        public Point3D getScalePivot() {
-            return (scalePivot == null) ? defaultPivot() : scalePivot.get();
+        public double getScalePivotX() {
+            return (scalePivotX == null) ? DEFAULT_SCALE_PIVOT_X : scalePivotX.get();
         }
 
-        public final ObjectProperty<Point3D> scalePivotProperty() {
-            if (scalePivot == null) {
-                scalePivot = new SimpleObjectProperty<>(Node.this, "scalePivot", defaultPivot()) {
+        public final DoubleProperty scalePivotXProperty() {
+            if (scalePivotX == null) {
+                scalePivotX = new SimpleDoubleProperty(DEFAULT_SCALE_PIVOT_X) {
                     @Override
-                    protected void invalidated() {
+                    public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
                     }
                 };
             }
-            return scalePivot;
+            return scalePivotX;
         }
+
+        public double getScalePivotY() {
+            return (scalePivotY == null) ? DEFAULT_SCALE_PIVOT_Y : scalePivotY.get();
+        }
+
+        public final DoubleProperty scalePivotYProperty() {
+            if (scalePivotY == null) {
+                scalePivotY = new SimpleDoubleProperty(DEFAULT_SCALE_PIVOT_Y) {
+                    @Override
+                    public void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return scalePivotY;
+        }
+
+        public double getScalePivotZ() {
+            return (scalePivotZ == null) ? DEFAULT_SCALE_PIVOT_Z : scalePivotZ.get();
+        }
+
+        public final DoubleProperty scalePivotZProperty() {
+            if (scalePivotZ == null) {
+                scalePivotZ = new SimpleDoubleProperty(DEFAULT_SCALE_PIVOT_Z) {
+                    @Override
+                    public void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return scalePivotZ;
+        }
+
+        public boolean getNormalizedScalePivot() {
+            return (normalizedScalePivot == null) ? DEFAULT_NORMALIZED_SCALE_PIVOT : normalizedScalePivot.get();
+        }
+
+        public final BooleanProperty normalizedScalePivotProperty() {
+            if (normalizedScalePivot == null) {
+                normalizedScalePivot = new SimpleBooleanProperty(DEFAULT_NORMALIZED_SCALE_PIVOT) {
+                    @Override
+                    public void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return normalizedScalePivot;
+        }
+
 
         public double getRotate() {
             return (rotate == null) ? DEFAULT_ROTATE : rotate.get();
@@ -6390,20 +6565,68 @@ public abstract class Node implements EventTarget, Styleable {
             return rotationAxis;
         }
 
-        public Point3D getRotationPivot() {
-            return (rotationPivot == null) ? defaultPivot() : rotationPivot.get();
+        public double getRotationPivotX() {
+            return (rotationPivotX == null) ? DEFAULT_ROTATION_PIVOT_X : rotationPivotX.get();
         }
 
-        public final ObjectProperty<Point3D> rotationPivotProperty() {
-            if (rotationPivot == null) {
-                rotationPivot = new SimpleObjectProperty<>(Node.this, "rotationPivot", defaultPivot()) {
+        public final DoubleProperty rotationPivotXProperty() {
+            if (rotationPivotX == null) {
+                rotationPivotX = new SimpleDoubleProperty(DEFAULT_ROTATION_PIVOT_X) {
                     @Override
-                    protected void invalidated() {
+                    public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
                     }
                 };
             }
-            return rotationPivot;
+            return rotationPivotX;
+        }
+
+        public double getRotationPivotY() {
+            return (rotationPivotY == null) ? DEFAULT_ROTATION_PIVOT_Y : rotationPivotY.get();
+        }
+
+        public final DoubleProperty rotationPivotYProperty() {
+            if (rotationPivotY == null) {
+                rotationPivotY = new SimpleDoubleProperty(DEFAULT_ROTATION_PIVOT_Y) {
+                    @Override
+                    public void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return rotationPivotY;
+        }
+
+        public double getRotationPivotZ() {
+            return (rotationPivotZ == null) ? DEFAULT_ROTATION_PIVOT_Z : rotationPivotZ.get();
+        }
+
+        public final DoubleProperty rotationPivotZProperty() {
+            if (rotationPivotZ == null) {
+                rotationPivotZ = new SimpleDoubleProperty(DEFAULT_ROTATION_PIVOT_Z) {
+                    @Override
+                    public void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return rotationPivotZ;
+        }
+
+        public boolean getNormalizedRotationPivot() {
+            return (normalizedRotationPivot == null) ? DEFAULT_NORMALIZED_ROTATION_PIVOT : normalizedRotationPivot.get();
+        }
+
+        public final BooleanProperty normalizedRotationPivotProperty() {
+            if (normalizedRotationPivot == null) {
+                normalizedRotationPivot = new SimpleBooleanProperty(DEFAULT_NORMALIZED_ROTATION_PIVOT) {
+                    @Override
+                    public void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return normalizedRotationPivot;
         }
 
         public ObservableList<Transform> getTransforms() {
