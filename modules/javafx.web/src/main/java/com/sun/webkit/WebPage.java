@@ -83,6 +83,7 @@ public final class WebPage {
     private final static PlatformLogger paintLog = PlatformLogger.getLogger(WebPage.class.getName() + ".paint");
 
     private static final int MAX_FRAME_QUEUE_SIZE = 10;
+    private static final int DEFAULT_BACKGROUND_INT_RGBA = 0xFFFFFFFF; // Color.WHITE
 
     // Native WebPage* pointer
     private long pPage = 0;
@@ -94,7 +95,7 @@ public final class WebPage {
     private int width, height;
 
     private int fontSmoothingType;
-    private int backgroundIntRgba = 0xFFFFFFFF;
+    private int backgroundIntRgba = DEFAULT_BACKGROUND_INT_RGBA;
 
     private final WCFrameView hostWindow;
 
@@ -2586,7 +2587,7 @@ public final class WebPage {
 
     private static int getIntRgba(Color color) {
         if (color == null) {
-            return -1;
+            return DEFAULT_BACKGROUND_INT_RGBA;
         }
         int red = (int) Math.round(color.getRed() * 255.0);
         int green = (int) Math.round(color.getGreen() * 255.0);

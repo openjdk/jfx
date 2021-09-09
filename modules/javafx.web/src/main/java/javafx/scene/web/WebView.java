@@ -703,8 +703,7 @@ final public class WebView extends Parent {
      * <p>With this property, the {@code WebView} control's background
      * can have any solid color, including some or complete
      * level of transparency.
-     *
-     * <p>However, if the HTML content being loaded sets its own
+     * However, if the HTML content being loaded sets its own
      * background color, that color will take precedence.
      *
      * @defaultValue {@code Color.WHITE}
