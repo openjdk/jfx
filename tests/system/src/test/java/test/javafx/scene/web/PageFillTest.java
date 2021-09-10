@@ -149,9 +149,10 @@ public class PageFillTest {
             });
 
             String content = "<html>" + "<head></head>" +
-                    "<body><font color=\"black\">" +
-                    "</br>this is a line".repeat(100) +
-                    "</font></body></html>";
+                    "<body>" +
+                    "<span style=\"color: black; font-family: Arial,Helvetica,sans-serif\">" +
+                    "<br>this is a line".repeat(100) +
+                    "</span></body></html>";
             webView.getEngine().loadContent(content);
         });
 
@@ -171,7 +172,7 @@ public class PageFillTest {
             assertColorEquals("Color 3 should be:",
                     color, pr.getColor(50, 50), delta);
             assertColorEquals("Color 4 should be:",
-                    color, pr.getColor(100, 50), delta);
+                    color, pr.getColor(110, 50), delta);
 
             assertColorNotEquals("Color 5 should not be:",
                     color, pr.getColor(10, 50), delta);
@@ -198,9 +199,9 @@ public class PageFillTest {
             assertColorEquals("Color 7 should be:",
                     color, pr.getColor(50, 10), delta);
             assertColorEquals("Color 8 should be:",
-                    color, pr.getColor(100, 50), delta);
+                    color, pr.getColor(110, 50), delta);
             assertColorEquals("Color 9 should be:",
-                    color, pr.getColor(100, 100), delta);
+                    color, pr.getColor(110, 100), delta);
 
             assertColorNotEquals("Color 10 should not be:",
                     color, pr.getColor(10, 50), delta);
@@ -223,9 +224,9 @@ public class PageFillTest {
             assertColorEquals("Color 12 should be:",
                     color, pr.getColor(50, 10), delta);
             assertColorEquals("Color 13 should be:",
-                    color, pr.getColor(100, 50), delta);
+                    color, pr.getColor(110, 50), delta);
             assertColorEquals("Color 14 should be:",
-                    color, pr.getColor(100, 100), delta);
+                    color, pr.getColor(110, 100), delta);
 
             assertColorNotEquals("Color 15 should not be:",
                     color, pr.getColor(10, 50), delta);
@@ -251,9 +252,9 @@ public class PageFillTest {
             assertColorEquals("Color 17 should be:",
                     color, pr.getColor(50, 10), delta);
             assertColorEquals("Color 18 should be:",
-                    color, pr.getColor(100, 50), delta);
+                    color, pr.getColor(110, 50), delta);
             assertColorEquals("Color 19 should be:",
-                    color, pr.getColor(100, 100), delta);
+                    color, pr.getColor(110, 100), delta);
 
             assertColorNotEquals("Color 20 should not be:",
                     color, pr.getColor(10, 50), delta);
@@ -261,9 +262,10 @@ public class PageFillTest {
 
         Util.runAndWait(() -> {
             String content = "<html>" + "<head></head>" +
-                    "<body style=\"background-color:#da10a2\"><font color=\"black\">" +
-                    "</br>this is another line".repeat(100) +
-                    "</font></body></html>";
+                    "<body style=\"background-color:#da10a2\">" +
+                    "<span style=\"color: black; font-family: Arial,Helvetica,sans-serif\">" +
+                    "<br>this is another line".repeat(100) +
+                    "</span></body></html>";
             webView.getEngine().loadContent(content);
         });
 
@@ -280,9 +282,9 @@ public class PageFillTest {
             assertColorEquals("Color 22 should be:",
                     color, pr.getColor(50, 10), delta);
             assertColorEquals("Color 23 should be:",
-                    color, pr.getColor(100, 50), delta);
+                    color, pr.getColor(110, 50), delta);
             assertColorEquals("Color 24 should be:",
-                    color, pr.getColor(100, 100), delta);
+                    color, pr.getColor(110, 100), delta);
 
             assertColorNotEquals("Color 25 should not be:",
                     color, pr.getColor(10, 50), delta);
