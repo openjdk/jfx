@@ -937,9 +937,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         // Also, this leads to a crash on the Mac
         if ([window->nsWindow styleMask] & (1 << 14)/*NSFullScreenWindowMask*/) {
             [window->nsWindow performSelector:@selector(toggleFullScreen:) withObject:nil];
-
-            // Wait until the FS mode has really exited
-            [GlassApplication enterFullScreenExitingLoop];
         }
 
         NSView<GlassView> *oldView = window->view;

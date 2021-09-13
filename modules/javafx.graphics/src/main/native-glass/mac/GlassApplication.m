@@ -730,30 +730,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     shouldKeepRunningNestedLoop = NO;
 }
 
-+ (void)enterFullScreenExitingLoop
-{
-    if (isFullScreenExitingLoop) {
-        return;
-    }
-    isFullScreenExitingLoop = YES;
-    GET_MAIN_JENV;
-    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
-        (*env)->ExceptionDescribe(env);
-        (*env)->ExceptionClear(env);
-    }
-    isFullScreenExitingLoop = NO;
-}
-
-+ (void)leaveFullScreenExitingLoopIfNeeded
-{
-    if (!isFullScreenExitingLoop) {
-        return;
-    }
-    GET_MAIN_JENV;
-    (*env)->CallStaticVoidMethod(env, jApplicationClass,
-            javaIDs.Application.leaveNestedEventLoop, (jobject)NULL);
-}
-
 + (void)registerKeyEvent:(NSEvent*)event
 {
     if (!keyCodeForCharMap) {

@@ -1232,7 +1232,6 @@ static jstring convertNSStringToJString(id aString, int length)
     {
         [[self->nsView window] toggleFullScreen:self];
         // wait until the operation is complete
-        [GlassApplication enterFullScreenExitingLoop];
         return;
     }
 
@@ -1346,7 +1345,7 @@ static jstring convertNSStringToJString(id aString, int length)
         {
             [self->nativeFullScreenModeWindow performSelector:@selector(toggleFullScreen:) withObject:nil];
             // wait until the operation is complete
-            [GlassApplication enterFullScreenExitingLoop];
+            //[GlassApplication enterFullScreenExitingLoop];
             return;
         }
 

@@ -52,9 +52,6 @@
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env;
 + (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue;
 
-+ (void)enterFullScreenExitingLoop;
-+ (void)leaveFullScreenExitingLoopIfNeeded;
-
 + (void)registerKeyEvent:(NSEvent*)event;
 + (jint)getKeyCodeForChar:(jchar)c;
 
