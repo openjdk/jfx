@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,44 @@
 
 package test.javafx.scene.control;
 
-import javafx.scene.control.skin.TableCellSkin;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableCellShim;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import com.sun.javafx.tk.Toolkit;
+
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
+
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableCellShim;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumn.CellEditEvent;
+import javafx.scene.control.TablePosition;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.control.skin.TableCellSkin;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 /**
  */
 public class TableCellTest {
     private TableCell<String,String> cell;
     private TableView<String> table;
+    private TableColumn<String, String> editingColumn;
+    private TableRow<String> row;
     private ObservableList<String> model;
+    private StageLoader stageLoader;
 
     @Before public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
@@ -62,10 +76,14 @@ public class TableCellTest {
         cell = new TableCell<String,String>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
         table = new TableView<String>(model);
+        editingColumn = new TableColumn<>("TEST");
+
+        row = new TableRow<>();
     }
 
     @After
     public void cleanup() {
+        if (stageLoader != null) stageLoader.dispose();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
@@ -320,6 +338,242 @@ public class TableCellTest {
     @Test public void test_jdk_8151524() {
         TableCell cell = new TableCell();
         cell.setSkin(new TableCellSkin(cell));
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Not editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the row is not editable.
+     */
+    @Test
+    public void testCellInUneditableRowIsNotEditable() {
+        table.setEditable(true);
+        row.setEditable(false);
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(true);
+        table.getColumns().add(tableColumn);
+
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Not editable<br>
+     * Row: Editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the table is not editable.
+     */
+    @Test
+    public void testCellInUneditableTableIsNotEditable() {
+        table.setEditable(false);
+        row.setEditable(true);
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(true);
+        table.getColumns().add(tableColumn);
+
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Editable<br>
+     * Column: Not editable<br>
+     * Expected: Cell can not be edited because the column is not editable.
+     */
+    @Test
+    public void testCellInUneditableColumnIsNotEditable() {
+        table.setEditable(true);
+        row.setEditable(true);
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(false);
+        table.getColumns().add(tableColumn);
+
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Basic config of table-/cell to allow testing of editEvents:
+     * table is editable, has editingColumn and cell is configured with table and column.
+     */
+    private void setupForEditing() {
+        table.setEditable(true);
+        table.getColumns().add(editingColumn);
+        // FIXME: default cell (of tableColumn) needs not-null value for firing cancel
+        editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(""));
+
+        cell.updateTableView(table);
+        cell.updateTableColumn(editingColumn);
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnCell() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        table.edit(editingIndex, editingColumn);
+        TablePosition<?, ?> editingPosition = table.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        cell.cancelEdit();
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnTable() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        table.edit(editingIndex, editingColumn);
+        TablePosition<?, ?> editingPosition = table.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        table.edit(-1, null);
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCellReuse() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        table.edit(editingIndex, editingColumn);
+        TablePosition<?, ?> editingPosition = table.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        cell.updateIndex(0);
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+    }
+
+    @Test
+    public void testEditCancelEventAfterModifyItems() {
+        setupForEditing();
+        stageLoader = new StageLoader(table);
+        int editingIndex = 1;
+        table.edit(editingIndex, editingColumn);
+        TablePosition<?, ?> editingPosition = table.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        table.getItems().add(0, "added");
+        Toolkit.getToolkit().firePulse();
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+    }
+
+    /**
+     * Test that removing the editing item implicitly cancels an ongoing
+     * edit and fires a correct cancel event.
+     */
+    @Test
+    public void testEditCancelEventAfterRemoveEditingItem() {
+        setupForEditing();
+        stageLoader = new StageLoader(table);
+        int editingIndex = 1;
+        table.edit(editingIndex, editingColumn);
+        TablePosition<?, ?> editingPosition = table.getEditingCell();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        table.getItems().remove(editingIndex);
+        Toolkit.getToolkit().firePulse();
+        assertNull("sanity: editing terminated on items modification", table.getEditingCell());
+        assertEquals("column must have received editCancel", 1, events.size());
+        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+    }
+
+    /**
+     * Test that removing the editing item does not cause a memory leak.
+     */
+    @Test
+    public void testEditCancelMemoryLeakAfterRemoveEditingItem() {
+        TableView<MenuItem> table = new TableView<>(FXCollections.observableArrayList(
+                new MenuItem("some"), new MenuItem("other")));
+        TableColumn<MenuItem, String> editingColumn = new TableColumn<>("Text");
+        editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(""));
+        table.setEditable(true);
+        table.getColumns().add(editingColumn);
+        stageLoader = new StageLoader(table);
+        int editingIndex = 1;
+        MenuItem editingItem = table.getItems().get(editingIndex);
+        WeakReference<MenuItem> itemRef = new WeakReference<>(editingItem);
+        table.edit(editingIndex, editingColumn);
+        table.getItems().remove(editingIndex);
+        editingItem = null;
+        Toolkit.getToolkit().firePulse();
+        attemptGC(itemRef);
+        assertEquals("item must be gc'ed", null, itemRef.get());
+    }
+
+    @Test
+    public void testEditStartFiresEvent() {
+        setupForEditing();
+        cell.updateIndex(1);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must fire", 1, events.size());
+    }
+
+    @Test
+    public void testEditStartDoesNotFireEventWhileEditing() {
+        setupForEditing();
+        cell.updateIndex(1);
+        cell.startEdit();
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must not fire while editing", 0, events.size());
+    }
+
+    @Test
+    public void testEditStartEventAfterStartOnCell() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals(editingColumn, events.get(0).getTableColumn());
+        TablePosition<?, ?> editingCell = events.get(0).getTablePosition();
+        assertEquals(editingIndex, editingCell.getRow());
+    }
+
+    @Test
+    public void testEditStartEventAfterStartOnTable() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        table.edit(editingIndex, editingColumn);
+        assertEquals(editingColumn, events.get(0).getTableColumn());
+        TablePosition<?, ?> editingCell = events.get(0).getTablePosition();
+        assertEquals(editingIndex, editingCell.getRow());
     }
 
     /**

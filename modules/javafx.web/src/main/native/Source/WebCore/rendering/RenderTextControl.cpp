@@ -64,12 +64,13 @@ void RenderTextControl::styleDidChange(StyleDifference diff, const RenderStyle* 
     if (!innerText)
         return;
     RenderTextControlInnerBlock* innerTextRenderer = innerText->renderer();
-    if (innerTextRenderer) {
-        // We may have set the width and the height in the old style in layout().
-        // Reset them now to avoid getting a spurious layout hint.
-        innerTextRenderer->mutableStyle().setHeight(Length());
-        innerTextRenderer->mutableStyle().setWidth(Length());
-        innerTextRenderer->setStyle(textFormControlElement().createInnerTextStyle(style()));
+    if (innerTextRenderer && oldStyle) {
+        // FIXME: The height property of the inner text block style may be mutated by RenderTextControlSingleLine::layout.
+        // See if the original has changed before setting it and triggering a layout.
+        auto newInnerTextStyle = textFormControlElement().createInnerTextStyle(style());
+        auto oldInnerTextStyle = textFormControlElement().createInnerTextStyle(*oldStyle);
+        if (newInnerTextStyle != oldInnerTextStyle)
+            innerTextRenderer->setStyle(WTFMove(newInnerTextStyle));
     }
     textFormControlElement().updatePlaceholderVisibility();
 }
@@ -171,24 +172,11 @@ void RenderTextControl::computePreferredLogicalWidths()
     m_maxPreferredLogicalWidth = 0;
 
     if (style().logicalWidth().isFixed() && style().logicalWidth().value() >= 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().logicalWidth().value());
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().logicalWidth());
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    if (style().logicalMinWidth().isFixed() && style().logicalMinWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().logicalMinWidth().value()));
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().logicalMinWidth().value()));
-    }
-
-    if (style().logicalMaxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().logicalMaxWidth().value()));
-        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().logicalMaxWidth().value()));
-    }
-
-    LayoutUnit toAdd = borderAndPaddingLogicalWidth();
-
-    m_minPreferredLogicalWidth += toAdd;
-    m_maxPreferredLogicalWidth += toAdd;
+    RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), borderAndPaddingLogicalWidth());
 
     setPreferredLogicalWidthsDirty(false);
 }

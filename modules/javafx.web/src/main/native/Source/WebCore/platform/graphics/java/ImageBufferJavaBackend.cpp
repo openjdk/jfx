@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,9 +35,9 @@
 namespace WebCore {
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
-    const FloatSize& size, float resolutionScale, ColorSpace colorSpace, const HostWindow*)
+    const Parameters& parameters, const HostWindow*)
 {
-    IntSize backendSize = calculateBackendSize(size, resolutionScale);
+    IntSize backendSize = calculateBackendSize(parameters.logicalSize, parameters.resolutionScale);
     if (backendSize.isEmpty())
         return nullptr;
 
@@ -52,8 +52,8 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     auto image = RQRef::create(JLObject(env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
-        (jint) ceilf(resolutionScale * size.width()),
-        (jint) ceilf(resolutionScale * size.height())
+        (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.width()),
+        (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.height())
     )));
     WTF::CheckAndClearException(env);
 
@@ -72,32 +72,31 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
 
     auto context = makeUnique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
 
+    auto platformImage = ImageJava::create(image, context->platformContext()->rq_ref(),
+        backendSize.width(), backendSize.height());
+
     return std::unique_ptr<ImageBufferJavaBackend>(new ImageBufferJavaBackend(
-        size, backendSize, resolutionScale, colorSpace, WTFMove(image), WTFMove(context)));
+        parameters, WTFMove(platformImage), WTFMove(context), backendSize));
 }
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
-    const FloatSize& size, const GraphicsContext&)
+    const Parameters& parameters, const GraphicsContext&)
 {
-    return ImageBufferJavaBackend::create(size, 1, ColorSpace::SRGB, nullptr);
+    return ImageBufferJavaBackend::create(parameters, nullptr);
 }
 
 ImageBufferJavaBackend::ImageBufferJavaBackend(
-    const FloatSize& logicalSize,
-    const IntSize& backendSize,
-    float resolutionScale,
-    ColorSpace colorSpace,
-    RefPtr<RQRef> image,
-    std::unique_ptr<GraphicsContext>&& context)
-    : ImageBufferBackend(logicalSize, backendSize, resolutionScale, colorSpace)
+    const Parameters& parameters, PlatformImagePtr image, std::unique_ptr<GraphicsContext>&& context, IntSize backendSize)
+    : ImageBufferBackend(parameters)
     , m_image(WTFMove(image))
     , m_context(WTFMove(context))
+    , m_backendSize(backendSize)
 {
 }
 
 JLObject ImageBufferJavaBackend::getWCImage() const
 {
-    return m_image->cloneLocalCopy();
+    return m_image->getImage()->cloneLocalCopy();
 }
 
 void *ImageBufferJavaBackend::getData() const
@@ -143,15 +142,19 @@ void ImageBufferJavaBackend::flushContext()
 {
 }
 
-NativeImagePtr ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
+IntSize ImageBufferJavaBackend::backendSize() const
 {
-    return m_image;
+    return m_backendSize;
+}
+
+RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
+{
+    return NativeImage::create(makeRefPtr(m_image.get()));
 }
 
 RefPtr<Image> ImageBufferJavaBackend::copyImage(BackingStoreCopy, PreserveResolution) const
 {
-    return BufferImage::create(m_image, m_context->platformContext()->rq_ref(),
-        m_backendSize.width(), m_backendSize.height());
+    return BufferImage::create(m_image);
 }
 
 void ImageBufferJavaBackend::draw(GraphicsContext& context, const FloatRect& destRect,

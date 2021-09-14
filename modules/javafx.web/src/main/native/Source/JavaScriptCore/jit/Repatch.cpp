@@ -73,15 +73,16 @@ namespace JSC {
 
 static FunctionPtr<CFunctionPtrTag> readPutICCallTarget(CodeBlock* codeBlock, CodeLocationCall<JSInternalPtrTag> call)
 {
-    FunctionPtr<OperationPtrTag> target = MacroAssembler::readCallTarget<OperationPtrTag>(call);
 #if ENABLE(FTL_JIT)
     if (codeBlock->jitType() == JITType::FTLJIT) {
-        MacroAssemblerCodePtr<JITThunkPtrTag> thunk = MacroAssemblerCodePtr<OperationPtrTag>::createFromExecutableAddress(target.executableAddress()).retagged<JITThunkPtrTag>();
+        FunctionPtr<JITThunkPtrTag> target = MacroAssembler::readCallTarget<JITThunkPtrTag>(call);
+        MacroAssemblerCodePtr<JITThunkPtrTag> thunk = MacroAssemblerCodePtr<JITThunkPtrTag>::createFromExecutableAddress(target.executableAddress());
         return codeBlock->vm().ftlThunks->keyForSlowPathCallThunk(thunk).callTarget().retagged<CFunctionPtrTag>();
     }
 #else
     UNUSED_PARAM(codeBlock);
 #endif // ENABLE(FTL_JIT)
+    FunctionPtr<OperationPtrTag> target = MacroAssembler::readCallTarget<OperationPtrTag>(call);
     return target.retagged<CFunctionPtrTag>();
 }
 
@@ -91,11 +92,11 @@ void ftlThunkAwareRepatchCall(CodeBlock* codeBlock, CodeLocationCall<JSInternalP
     if (codeBlock->jitType() == JITType::FTLJIT) {
         VM& vm = codeBlock->vm();
         FTL::Thunks& thunks = *vm.ftlThunks;
-        FunctionPtr<OperationPtrTag> target = MacroAssembler::readCallTarget<OperationPtrTag>(call);
-        auto slowPathThunk = MacroAssemblerCodePtr<JITThunkPtrTag>::createFromExecutableAddress(target.retaggedExecutableAddress<JITThunkPtrTag>());
+        FunctionPtr<JITThunkPtrTag> target = MacroAssembler::readCallTarget<JITThunkPtrTag>(call);
+        auto slowPathThunk = MacroAssemblerCodePtr<JITThunkPtrTag>::createFromExecutableAddress(target.executableAddress());
         FTL::SlowPathCallKey key = thunks.keyForSlowPathCallThunk(slowPathThunk);
         key = key.withCallTarget(newCalleeFunction);
-        MacroAssembler::repatchCall(call, FunctionPtr<OperationPtrTag>(thunks.getSlowPathCallThunk(vm, key).retaggedCode<OperationPtrTag>()));
+        MacroAssembler::repatchCall(call, FunctionPtr<JITThunkPtrTag>(thunks.getSlowPathCallThunk(vm, key).code()));
         return;
     }
 #else // ENABLE(FTL_JIT)
@@ -164,6 +165,8 @@ inline FunctionPtr<CFunctionPtrTag> appropriateOptimizingGetByFunction(GetByKind
         return operationGetByValOptimize;
     case GetByKind::PrivateName:
         return operationGetPrivateNameOptimize;
+    case GetByKind::PrivateNameById:
+        return operationGetPrivateNameByIdOptimize;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -183,6 +186,8 @@ inline FunctionPtr<CFunctionPtrTag> appropriateGetByFunction(GetByKind kind)
         return operationGetByValGeneric;
     case GetByKind::PrivateName:
         return operationGetPrivateName;
+    case GetByKind::PrivateNameById:
+        return operationGetPrivateNameById;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -202,7 +207,7 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
         if (!baseValue.isCell())
             return GiveUpOnCache;
         JSCell* baseCell = baseValue.asCell();
-        const bool isPrivate = kind == GetByKind::PrivateName;
+        const bool isPrivate = kind == GetByKind::PrivateName || kind == GetByKind::PrivateNameById;
 
         std::unique_ptr<AccessCase> newCase;
 
@@ -405,7 +410,7 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
 
                     newCase = GetterSetterAccessCase::create(
                         vm, codeBlock, type, propertyName, offset, structure, conditionSet, loadTargetFromProxy,
-                        slot.watchpointSet(), slot.isCacheableCustom() ? slot.customGetter() : nullptr,
+                        slot.watchpointSet(), slot.isCacheableCustom() ? FunctionPtr<CustomAccessorPtrTag>(slot.customGetter()) : nullptr,
                         slot.isCacheableCustom() && slot.slotBase() != baseValue ? slot.slotBase() : nullptr,
                         domAttribute, WTFMove(prototypeAccessChain));
                 }
@@ -490,6 +495,11 @@ static InlineCacheAction tryCacheArrayGetByVal(JSGlobalObject* globalObject, Cod
             case TypeFloat64:
                 accessType = AccessCase::IndexedTypedArrayFloat64Load;
                 break;
+            // FIXME: Optimize BigInt64Array / BigUint64Array in IC
+            // https://bugs.webkit.org/show_bug.cgi?id=221183
+            case TypeBigInt64:
+            case TypeBigUint64:
+                return GiveUpOnCache;
             default:
                 RELEASE_ASSERT_NOT_REACHED();
             }
@@ -535,34 +545,48 @@ void repatchArrayGetByVal(JSGlobalObject* globalObject, CodeBlock* codeBlock, JS
 
 static auto appropriateGenericPutByIdFunction(const PutPropertySlot &slot, PutKind putKind) -> decltype(&operationPutByIdDirectStrict)
 {
-    if (slot.isStrictMode()) {
-        if (putKind == Direct)
+    switch (putKind) {
+    case PutKind::NotDirect:
+        if (slot.isStrictMode())
+            return operationPutByIdStrict;
+        return operationPutByIdNonStrict;
+    case PutKind::Direct:
+        if (slot.isStrictMode())
             return operationPutByIdDirectStrict;
-        if (putKind == DirectPrivateFieldCreate)
-            return operationPutByIdDefinePrivateFieldStrict;
-        if (putKind == DirectPrivateFieldPut)
-            return operationPutByIdPutPrivateFieldStrict;
-        return operationPutByIdStrict;
-    }
-    if (putKind == Direct)
         return operationPutByIdDirectNonStrict;
-    return operationPutByIdNonStrict;
+    case PutKind::DirectPrivateFieldDefine:
+        ASSERT(slot.isStrictMode());
+        return operationPutByIdDefinePrivateFieldStrict;
+    case PutKind::DirectPrivateFieldSet:
+        ASSERT(slot.isStrictMode());
+        return operationPutByIdSetPrivateFieldStrict;
+    }
+    // Make win port compiler happy
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 static auto appropriateOptimizingPutByIdFunction(const PutPropertySlot &slot, PutKind putKind) -> decltype(&operationPutByIdDirectStrictOptimize)
 {
-    if (slot.isStrictMode()) {
-        if (putKind == Direct)
+    switch (putKind) {
+    case PutKind::NotDirect:
+        if (slot.isStrictMode())
+            return operationPutByIdStrictOptimize;
+        return operationPutByIdNonStrictOptimize;
+    case PutKind::Direct:
+        if (slot.isStrictMode())
             return operationPutByIdDirectStrictOptimize;
-        if (putKind == DirectPrivateFieldCreate)
-            return operationPutByIdDefinePrivateFieldStrictOptimize;
-        if (putKind == DirectPrivateFieldPut)
-            return operationPutByIdPutPrivateFieldStrictOptimize;
-        return operationPutByIdStrictOptimize;
-    }
-    if (putKind == Direct)
         return operationPutByIdDirectNonStrictOptimize;
-    return operationPutByIdNonStrictOptimize;
+    case PutKind::DirectPrivateFieldDefine:
+        ASSERT(slot.isStrictMode());
+        return operationPutByIdDefinePrivateFieldStrictOptimize;
+    case PutKind::DirectPrivateFieldSet:
+        ASSERT(slot.isStrictMode());
+        return operationPutByIdSetPrivateFieldStrictOptimize;
+    }
+    // Make win port compiler happy
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSValue baseValue, Structure* oldStructure, CacheableIdentifier propertyName, const PutPropertySlot& slot, StructureStubInfo& stubInfo, PutKind putKind)
@@ -591,8 +615,28 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
         if (!oldStructure->propertyAccessesAreCacheable())
             return GiveUpOnCache;
 
-        std::unique_ptr<AccessCase> newCase;
         JSCell* baseCell = baseValue.asCell();
+
+        bool isProxy = false;
+        if (baseCell->type() == PureForwardingProxyType) {
+            baseCell = jsCast<JSProxy*>(baseCell)->target();
+            baseValue = baseCell;
+            isProxy = true;
+
+            // We currently only cache Replace and JS/Custom Setters on JSProxy. We don't
+            // cache transitions because global objects will never share the same structure
+            // in our current implementation.
+            bool isCacheableProxy = (slot.isCacheablePut() && slot.type() == PutPropertySlot::ExistingProperty)
+                || slot.isCacheableSetter()
+                || slot.isCacheableCustom();
+            if (!isCacheableProxy)
+                return GiveUpOnCache;
+        }
+
+        if (isProxy && (putKind == PutKind::DirectPrivateFieldSet || putKind == PutKind::DirectPrivateFieldDefine))
+            return GiveUpOnCache;
+
+        std::unique_ptr<AccessCase> newCase;
 
         if (slot.base() == baseValue && slot.isCacheablePut()) {
             if (slot.type() == PutPropertySlot::ExistingProperty) {
@@ -608,7 +652,8 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
 
                 if (stubInfo.cacheType() == CacheType::Unset
                     && InlineAccess::canGenerateSelfPropertyReplace(stubInfo, slot.cachedOffset())
-                    && !oldStructure->needImpurePropertyWatchpoint()) {
+                    && !oldStructure->needImpurePropertyWatchpoint()
+                    && !isProxy) {
 
                     bool generatedCodeInline = InlineAccess::generateSelfPropertyReplace(stubInfo, oldStructure, slot.cachedOffset());
                     if (generatedCodeInline) {
@@ -619,8 +664,9 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
                     }
                 }
 
-                newCase = AccessCase::create(vm, codeBlock, AccessCase::Replace, propertyName, slot.cachedOffset(), oldStructure);
+                newCase = ProxyableAccessCase::create(vm, codeBlock, AccessCase::Replace, propertyName, slot.cachedOffset(), oldStructure, ObjectPropertyConditionSet(), isProxy);
             } else {
+                ASSERT(!isProxy);
                 ASSERT(slot.type() == PutPropertySlot::NewProperty);
 
                 if (!oldStructure->isObject())
@@ -650,8 +696,7 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
 
                 std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain;
                 ObjectPropertyConditionSet conditionSet;
-                if (putKind == NotDirect) {
-                    ASSERT(putKind != DirectPrivateFieldPut && putKind != DirectPrivateFieldCreate);
+                if (putKind == PutKind::NotDirect) {
                     auto cacheStatus = prepareChainForCaching(globalObject, baseCell, nullptr);
                     if (!cacheStatus)
                         return GiveUpOnCache;
@@ -669,7 +714,7 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
                     }
                 }
 
-                if (putKind == DirectPrivateFieldCreate) {
+                if (putKind == PutKind::DirectPrivateFieldDefine) {
                     ASSERT(ident.isPrivateName());
                     conditionSet = generateConditionsForPropertyMiss(vm, codeBlock, globalObject, newStructure, ident.impl());
                     if (!conditionSet.isValid())
@@ -706,8 +751,9 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
 
                 newCase = GetterSetterAccessCase::create(
                     vm, codeBlock, slot.isCustomAccessor() ? AccessCase::CustomAccessorSetter : AccessCase::CustomValueSetter, oldStructure, propertyName,
-                    invalidOffset, conditionSet, WTFMove(prototypeAccessChain), slot.customSetter(), slot.base() != baseValue ? slot.base() : nullptr);
+                    invalidOffset, conditionSet, WTFMove(prototypeAccessChain), isProxy, slot.customSetter().retagged<CustomAccessorPtrTag>(), slot.base() != baseValue ? slot.base() : nullptr);
             } else {
+                ASSERT(slot.isCacheableSetter());
                 ObjectPropertyConditionSet conditionSet;
                 std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain;
                 PropertyOffset offset = slot.cachedOffset();
@@ -742,7 +788,7 @@ static InlineCacheAction tryCachePutByID(JSGlobalObject* globalObject, CodeBlock
                 }
 
                 newCase = GetterSetterAccessCase::create(
-                    vm, codeBlock, AccessCase::Setter, oldStructure, propertyName, offset, conditionSet, WTFMove(prototypeAccessChain));
+                    vm, codeBlock, AccessCase::Setter, oldStructure, propertyName, offset, conditionSet, WTFMove(prototypeAccessChain), isProxy);
             }
         }
 
@@ -811,7 +857,7 @@ static InlineCacheAction tryCacheDeleteBy(JSGlobalObject* globalObject, CodeBloc
                 return GiveUpOnCache;
             ASSERT(newOffset == slot.cachedOffset());
             ASSERT(newStructure->previousID() == oldStructure);
-            ASSERT(newStructure->isPropertyDeletionTransition());
+            ASSERT(newStructure->transitionKind() == TransitionKind::PropertyDeletion);
             ASSERT(newStructure->isObject());
             ASSERT(isValidOffset(newOffset));
             newCase = AccessCase::createDelete(vm, codeBlock, propertyName, newOffset, oldStructure, newStructure);
@@ -962,6 +1008,112 @@ void repatchInByID(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSObject*
 
     if (tryCacheInByID(globalObject, codeBlock, baseObject, propertyName, wasFound, slot, stubInfo) == GiveUpOnCache)
         ftlThunkAwareRepatchCall(codeBlock, stubInfo.slowPathCallLocation, operationInById);
+}
+
+static InlineCacheAction tryCacheCheckPrivateBrand(
+    JSGlobalObject* globalObject, CodeBlock* codeBlock, JSObject* base, CacheableIdentifier brandID,
+    StructureStubInfo& stubInfo)
+{
+    VM& vm = globalObject->vm();
+    AccessGenerationResult result;
+    Identifier ident = Identifier::fromUid(vm, brandID.uid());
+
+    {
+        GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm.heap);
+        if (forceICFailure(globalObject))
+            return GiveUpOnCache;
+
+        Structure* structure = base->structure(vm);
+
+        InlineCacheAction action = actionForCell(vm, base);
+        if (action != AttemptToCache)
+            return action;
+
+        bool isBaseProperty = true;
+        LOG_IC((ICEvent::CheckPrivateBrandAddAccessCase, structure->classInfo(), ident, isBaseProperty));
+
+        std::unique_ptr<AccessCase> newCase = AccessCase::createCheckPrivateBrand(vm, codeBlock, brandID, structure);
+
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTFMove(newCase));
+
+        if (result.generatedSomeCode()) {
+            LOG_IC((ICEvent::CheckPrivateBrandReplaceWithJump, structure->classInfo(), ident, isBaseProperty));
+
+            RELEASE_ASSERT(result.code());
+            InlineAccess::rewireStubAsJump(stubInfo, CodeLocationLabel<JITStubRoutinePtrTag>(result.code()));
+        }
+    }
+
+    fireWatchpointsAndClearStubIfNeeded(vm, stubInfo, codeBlock, result);
+
+    return result.shouldGiveUpNow() ? GiveUpOnCache : RetryCacheLater;
+}
+
+void repatchCheckPrivateBrand(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSObject* baseObject, CacheableIdentifier brandID, StructureStubInfo& stubInfo)
+{
+    SuperSamplerScope superSamplerScope(false);
+
+    if (tryCacheCheckPrivateBrand(globalObject, codeBlock, baseObject, brandID, stubInfo) == GiveUpOnCache)
+        ftlThunkAwareRepatchCall(codeBlock, stubInfo.slowPathCallLocation, operationCheckPrivateBrandGeneric);
+}
+
+static InlineCacheAction tryCacheSetPrivateBrand(
+    JSGlobalObject* globalObject, CodeBlock* codeBlock, JSObject* base, Structure* oldStructure, CacheableIdentifier brandID,
+    StructureStubInfo& stubInfo)
+{
+    VM& vm = globalObject->vm();
+    AccessGenerationResult result;
+    Identifier ident = Identifier::fromUid(vm, brandID.uid());
+
+    {
+        GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm.heap);
+        if (forceICFailure(globalObject))
+            return GiveUpOnCache;
+
+        ASSERT(oldStructure);
+
+        if (oldStructure->isDictionary())
+            return RetryCacheLater;
+
+        InlineCacheAction action = actionForCell(vm, base);
+        if (action != AttemptToCache)
+            return action;
+
+        Structure* newStructure = Structure::setBrandTransitionFromExistingStructureConcurrently(oldStructure, brandID.uid());
+        if (!newStructure)
+            return RetryCacheLater;
+        if (newStructure->isDictionary())
+            return GiveUpOnCache;
+        ASSERT(newStructure->previousID() == oldStructure);
+        ASSERT(newStructure->transitionKind() == TransitionKind::SetBrand);
+        ASSERT(newStructure->isObject());
+
+        bool isBaseProperty = true;
+        LOG_IC((ICEvent::SetPrivateBrandAddAccessCase, oldStructure->classInfo(), ident, isBaseProperty));
+
+        std::unique_ptr<AccessCase> newCase = AccessCase::createSetPrivateBrand(vm, codeBlock, brandID, oldStructure, newStructure);
+
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTFMove(newCase));
+
+        if (result.generatedSomeCode()) {
+            LOG_IC((ICEvent::SetPrivateBrandReplaceWithJump, oldStructure->classInfo(), ident, isBaseProperty));
+
+            RELEASE_ASSERT(result.code());
+            InlineAccess::rewireStubAsJump(stubInfo, CodeLocationLabel<JITStubRoutinePtrTag>(result.code()));
+        }
+    }
+
+    fireWatchpointsAndClearStubIfNeeded(vm, stubInfo, codeBlock, result);
+
+    return result.shouldGiveUpNow() ? GiveUpOnCache : RetryCacheLater;
+}
+
+void repatchSetPrivateBrand(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSObject* baseObject, Structure* oldStructure, CacheableIdentifier brandID, StructureStubInfo& stubInfo)
+{
+    SuperSamplerScope superSamplerScope(false);
+
+    if (tryCacheSetPrivateBrand(globalObject, codeBlock, baseObject, oldStructure,  brandID, stubInfo) == GiveUpOnCache)
+        ftlThunkAwareRepatchCall(codeBlock, stubInfo.slowPathCallLocation, operationSetPrivateBrandGeneric);
 }
 
 static InlineCacheAction tryCacheInstanceOf(
@@ -1501,8 +1653,8 @@ void resetPutByID(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
         optimizedFunction = operationPutByIdNonStrictOptimize;
     else if (unoptimizedFunction == operationPutByIdDirectStrict || unoptimizedFunction == operationPutByIdDirectStrictOptimize)
         optimizedFunction = operationPutByIdDirectStrictOptimize;
-    else if (unoptimizedFunction == operationPutByIdPutPrivateFieldStrict || unoptimizedFunction == operationPutByIdPutPrivateFieldStrictOptimize)
-        optimizedFunction = operationPutByIdPutPrivateFieldStrictOptimize;
+    else if (unoptimizedFunction == operationPutByIdSetPrivateFieldStrict || unoptimizedFunction == operationPutByIdSetPrivateFieldStrictOptimize)
+        optimizedFunction = operationPutByIdSetPrivateFieldStrictOptimize;
     else if (unoptimizedFunction == operationPutByIdDefinePrivateFieldStrict || unoptimizedFunction == operationPutByIdDefinePrivateFieldStrictOptimize)
         optimizedFunction = operationPutByIdDefinePrivateFieldStrictOptimize;
     else {
@@ -1537,6 +1689,18 @@ void resetInByID(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
 void resetInstanceOf(StructureStubInfo& stubInfo)
 {
     resetPatchableJump(stubInfo);
+}
+
+void resetCheckPrivateBrand(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
+{
+    ftlThunkAwareRepatchCall(codeBlock, stubInfo.slowPathCallLocation, operationCheckPrivateBrandOptimize);
+    InlineAccess::rewireStubAsJump(stubInfo, stubInfo.slowPathStartLocation);
+}
+
+void resetSetPrivateBrand(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
+{
+    ftlThunkAwareRepatchCall(codeBlock, stubInfo.slowPathCallLocation, operationSetPrivateBrandOptimize);
+    InlineAccess::rewireStubAsJump(stubInfo, stubInfo.slowPathStartLocation);
 }
 
 MacroAssemblerCodePtr<JSEntryPtrTag> jsToWasmICCodePtr(VM& vm, CodeSpecializationKind kind, JSObject* callee)

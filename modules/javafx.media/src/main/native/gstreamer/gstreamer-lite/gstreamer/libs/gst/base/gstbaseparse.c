@@ -1336,11 +1336,7 @@ gst_base_parse_sink_event_default (GstBaseParse * parse, GstEvent * event)
         /* not considered BYTE seekable if it is talking to us in TIME,
          * whatever else it might claim */
         parse->priv->upstream_seekable = FALSE;
-#ifndef GSTREAMER_LITE
         next_dts = GST_CLOCK_TIME_NONE;
-#else // GSTREAMER_LITE
-        next_dts = in_segment->start;
-#endif // GSTREAMER_LITE
         gst_event_copy_segment (event, &out_segment);
       }
 

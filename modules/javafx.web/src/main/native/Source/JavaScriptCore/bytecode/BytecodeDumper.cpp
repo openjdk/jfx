@@ -149,7 +149,7 @@ void CodeBlockBytecodeDumper<Block>::dumpConstants()
                 sourceCodeRepresentationDescription = "";
                 break;
             case SourceCodeRepresentation::LinkTimeConstant:
-                sourceCodeRepresentationDescription = ": in source as linke-time-constant";
+                sourceCodeRepresentationDescription = ": in source as link-time-constant";
                 break;
             }
             this->m_out.printf("   k%u = %s%s\n", static_cast<unsigned>(i), toCString(constant.get()).data(), sourceCodeRepresentationDescription);
@@ -277,11 +277,29 @@ void CodeBlockBytecodeDumper<Block>::dumpGraph(Block* block, const InstructionSt
 
     out.printf("\n");
 
+    Vector<Vector<unsigned>> predecessors;
+    predecessors.resize(graph.size());
+    for (auto& block : graph) {
+        if (block.isEntryBlock() || block.isExitBlock())
+            continue;
+        for (auto successorIndex : block.successors()) {
+            if (!predecessors[successorIndex].contains(block.index()))
+                predecessors[successorIndex].append(block.index());
+        }
+    }
+
     for (BytecodeBasicBlock& block : graph) {
         if (block.isEntryBlock() || block.isExitBlock())
             continue;
 
         out.print("bb#", block.index(), "\n");
+
+        out.print("Predecessors: [");
+        for (unsigned predecessor : predecessors[block.index()]) {
+            if (!graph[predecessor].isEntryBlock())
+                out.print(" #", predecessor);
+        }
+        out.print(" ]\n");
 
         for (unsigned i = 0; i < block.totalLength(); ) {
             auto& currentInstruction = instructions.at(i + block.leaderOffset());
@@ -388,7 +406,7 @@ CString BytecodeDumper::formatConstant(Type type, uint64_t constant) const
     case Type::F64:
         return toCString(bitwise_cast<double>(constant));
         break;
-    case Type::Anyref:
+    case Type::Externref:
     case Type::Funcref:
         if (JSValue::decode(constant) == jsNull())
             return "null";

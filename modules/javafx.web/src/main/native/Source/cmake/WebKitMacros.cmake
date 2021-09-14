@@ -119,20 +119,6 @@ macro(WEBKIT_ADD_PRECOMPILED_HEADER _header _cpp _source)
     #FIXME: Add support for Xcode.
 endmacro()
 
-macro(WEBKIT_WRAP_SOURCELIST)
-    foreach (_file ${ARGN})
-        get_filename_component(_basename ${_file} NAME_WE)
-        get_filename_component(_path ${_file} PATH)
-
-        if (NOT _file MATCHES "${DERIVED_SOURCES_WEBCORE_DIR}")
-            string(REGEX REPLACE "/" "\\\\\\\\" _sourcegroup "${_path}")
-            source_group("${_sourcegroup}" FILES ${_file})
-        endif ()
-    endforeach ()
-
-    source_group("DerivedSources" REGULAR_EXPRESSION "${DERIVED_SOURCES_WEBCORE_DIR}")
-endmacro()
-
 macro(WEBKIT_FRAMEWORK_DECLARE _target)
     # add_library() without any source files triggers CMake warning
     # Addition of dummy "source" file does not result in any changes in generated build.ninja file
@@ -207,7 +193,104 @@ macro(_WEBKIT_TARGET_ANALYZE _target)
     endif ()
 endmacro()
 
+function(_WEBKIT_LINK_FRAMEWORK_INTO target_name framework _public_frameworks_var _private_frameworks_var)
+    set_property(GLOBAL PROPERTY ${framework}_LINKED_INTO ${target_name})
+
+    get_property(_framework_public_frameworks GLOBAL PROPERTY ${framework}_FRAMEWORKS)
+    foreach (dependency IN LISTS ${_framework_public_frameworks})
+        set(${_public_frameworks_var} "${${_public_frameworks_var}};${dependency}" PARENT_SCOPE)
+    endforeach ()
+
+    get_property(_framework_private_frameworks GLOBAL PROPERTY ${framework}_PRIVATE_FRAMEWORKS)
+    foreach (dependency IN LISTS _framework_private_frameworks)
+        set(${_private_frameworks_var} "${${_private_frameworks_var}};${dependency}" PARENT_SCOPE)
+        _WEBKIT_LINK_FRAMEWORK_INTO(${target_name} ${dependency} ${_public_frameworks_var} ${_private_frameworks_var})
+    endforeach ()
+endfunction()
+
+macro(_WEBKIT_FRAMEWORK_LINK_FRAMEWORK _target_name)
+    # Set the public libraries before modifying them when determining visibility.
+    set_property(GLOBAL PROPERTY ${_target_name}_PUBLIC_LIBRARIES ${${_target_name}_LIBRARIES})
+
+    set(_public_frameworks)
+    set(_private_frameworks)
+
+    foreach (framework IN LISTS ${_target_name}_FRAMEWORKS)
+        get_property(_linked_into GLOBAL PROPERTY ${framework}_LINKED_INTO)
+        if (_linked_into)
+            list(APPEND _public_frameworks ${_linked_into})
+        elseif (${framework}_LIBRARY_TYPE STREQUAL "SHARED")
+            list(APPEND _public_frameworks ${framework})
+        else ()
+            list(APPEND _private_frameworks ${framework})
+        endif ()
+    endforeach ()
+
+    # Recurse into the dependent frameworks
+    if (_private_frameworks)
+        list(REMOVE_DUPLICATES _private_frameworks)
+    endif ()
+    if (${_target_name}_LIBRARY_TYPE STREQUAL "SHARED")
+        set_property(GLOBAL PROPERTY ${_target_name}_LINKED_INTO ${_target_name})
+        foreach (framework IN LISTS _private_frameworks)
+            _WEBKIT_LINK_FRAMEWORK_INTO(${_target_name} ${framework} _public_frameworks _private_frameworks)
+        endforeach ()
+    endif ()
+
+    # Add to the ${target_name}_LIBRARIES
+    if (_public_frameworks)
+        list(REMOVE_DUPLICATES _public_frameworks)
+    endif ()
+    foreach (framework IN LISTS _public_frameworks)
+        list(APPEND ${_target_name}_LIBRARIES WebKit::${framework})
+    endforeach ()
+
+    # Add to the ${target_name}_PRIVATE_LIBRARIES
+    if (_private_frameworks)
+        list(REMOVE_DUPLICATES _private_frameworks)
+    endif ()
+    foreach (framework IN LISTS _private_frameworks)
+        if (${_target_name}_LIBRARY_TYPE STREQUAL "SHARED")
+            get_property(_linked_libraries GLOBAL PROPERTY ${framework}_PUBLIC_LIBRARIES)
+            list(APPEND ${_target_name}_INTERFACE_LIBRARIES
+                ${_linked_libraries}
+            )
+            list(APPEND ${_target_name}_INTERFACE_INCLUDE_DIRECTORIES
+                ${${framework}_FRAMEWORK_HEADERS_DIR}
+                ${${framework}_PRIVATE_FRAMEWORK_HEADERS_DIR}
+            )
+            list(APPEND ${_target_name}_PRIVATE_LIBRARIES WebKit::${framework})
+            if (${framework}_LIBRARY_TYPE STREQUAL "OBJECT")
+                list(APPEND ${_target_name}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}>)
+            endif ()
+        else ()
+            list(APPEND ${_target_name}_LIBRARIES WebKit::${framework})
+        endif ()
+    endforeach ()
+
+    set_property(GLOBAL PROPERTY ${_target_name}_FRAMEWORKS ${_public_frameworks})
+    set_property(GLOBAL PROPERTY ${_target_name}_PRIVATE_FRAMEWORKS ${_private_frameworks})
+endmacro()
+
+macro(_WEBKIT_EXECUTABLE_LINK_FRAMEWORK _target)
+    foreach (framework IN LISTS ${_target}_FRAMEWORKS)
+        get_property(_linked_into GLOBAL PROPERTY ${framework}_LINKED_INTO)
+
+        # See if the executable is linking a framework that the specified framework is already linked into
+        if ((NOT _linked_into) OR (${framework} STREQUAL ${_linked_into}) OR (NOT ${_linked_into} IN_LIST ${_target}_FRAMEWORKS))
+            list(APPEND ${_target}_PRIVATE_LIBRARIES WebKit::${framework})
+
+            # The WebKit:: alias targets do not propagate OBJECT libraries so the
+            # underyling library's objects are explicitly added to link properly
+            if (TARGET ${framework} AND ${framework}_LIBRARY_TYPE STREQUAL "OBJECT")
+                list(APPEND ${_target}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}>)
+            endif ()
+        endif ()
+    endforeach ()
+endmacro()
+
 macro(WEBKIT_FRAMEWORK _target)
+    _WEBKIT_FRAMEWORK_LINK_FRAMEWORK(${_target})
     _WEBKIT_TARGET(${_target} ${_target})
     _WEBKIT_TARGET_ANALYZE(${_target})
 
@@ -236,10 +319,14 @@ macro(WEBKIT_FRAMEWORK_TARGET _target)
     target_link_libraries(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_LIBRARIES})
     target_include_directories(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_INCLUDE_DIRECTORIES})
     add_dependencies(${_target}_PostBuild ${${_target}_INTERFACE_DEPENDENCIES})
+    if (NOT ${_target}_LIBRARY_TYPE STREQUAL "SHARED")
+        target_compile_definitions(${_target}_PostBuild INTERFACE "STATICALLY_LINKED_WITH_${_target}")
+    endif ()
     add_library(WebKit::${_target} ALIAS ${_target}_PostBuild)
 endmacro()
 
 macro(WEBKIT_EXECUTABLE _target)
+    _WEBKIT_EXECUTABLE_LINK_FRAMEWORK(${_target})
     _WEBKIT_TARGET(${_target} ${_target})
     _WEBKIT_TARGET_ANALYZE(${_target})
 
@@ -271,6 +358,7 @@ macro(WEBKIT_WRAP_EXECUTABLE _target)
 
     add_library(${_wrapped_target_name} SHARED "${CMAKE_BINARY_DIR}/cmakeconfig.h")
 
+    _WEBKIT_EXECUTABLE_LINK_FRAMEWORK(${_target})
     _WEBKIT_TARGET(${_target} ${_wrapped_target_name})
     _WEBKIT_TARGET_ANALYZE(${_wrapped_target_name})
 
@@ -281,6 +369,8 @@ macro(WEBKIT_WRAP_EXECUTABLE _target)
     unset(${_target}_INCLUDE_DIRECTORIES)
     unset(${_target}_SYSTEM_INCLUDE_DIRECTORIES)
     unset(${_target}_PRIVATE_INCLUDE_DIRECTORIES)
+    unset(${_target}_PRIVATE_LIBRARIES)
+    unset(${_target}_FRAMEWORKS)
 
     # Reset the sources
     set(${_target}_SOURCES ${opt_SOURCES})

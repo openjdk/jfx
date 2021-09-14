@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import java.io.IOException;
 
 // PENDING_DOC_REVIEW
 /**
- * When mouse event occurs, the top-most node under cursor is picked and
+ * When a mouse event occurs, the top-most node under cursor is picked and
  * the event is delivered to it through capturing and bubbling phases
  * described at {@link javafx.event.EventDispatcher EventDispatcher}.
  * <p>
@@ -57,7 +57,7 @@ import java.io.IOException;
  * <p>
  * The simple press-drag-release gesture is default. It's best used to allow
  * changing size of a shape, dragging it around and so on. Whole
- * press-drag-release gesture is delivered to one node. When mouse
+ * press-drag-release gesture is delivered to one node. When a mouse
  * button is pressed, the top-most node is picked and all subsequent
  * mouse events are delivered to the same node until the button is released.
  * If a mouse clicked event is generated from these events, it is still
@@ -96,7 +96,7 @@ import java.io.IOException;
  *
  * <h2>Mouse enter/exit handling</h2>
  * <p>
- * When mouse enters a node, the node gets {@code MOUSE_ENTERED} event, when
+ * When the mouse enters a node, the node gets {@code MOUSE_ENTERED} event, when
  * it leaves, it gets {@code MOUSE_EXITED} event. These events are delivered
  * only to the entered/exited node and seemingly don't go through the
  * capturing/bubbling phases. This is the most common use-case.
@@ -104,9 +104,9 @@ import java.io.IOException;
  * When the capturing or bubbling is desired, there are
  * {@code MOUSE_ENTERED_TARGET}/{@code MOUSE_EXITED_TARGET} events. These events
  * go through capturing/bubbling phases normally. This means that parent may
- * receive the {@code MOUSE_ENTERED_TARGET} event when mouse entered
+ * receive the {@code MOUSE_ENTERED_TARGET} event when the mouse entered
  * either the parent itself or some of its children. To distinguish between
- * these two cases event target can be tested on equality with the node.
+ * these two cases, the event target can be tested on equality with the node.
  * <p>
  * These two types are closely connected:
  * {@code MOUSE_ENTERED}/{@code MOUSE_EXITED} are subtypes
@@ -139,7 +139,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(InputEvent.ANY, "MOUSE");
 
     /**
-     * This event occurs when mouse button is pressed. This activates a
+     * This event occurs when a mouse button is pressed. This activates a
      * press-drag-release gesture, so all subsequent mouse events until
      * the button is released are delivered to the same node.
      */
@@ -147,7 +147,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_PRESSED");
 
     /**
-     * This event occurs when mouse button is released. It is delivered
+     * This event occurs when a mouse button is released. It is delivered
      * to the same node where the button has been pressed which activated
      * a press-drag-release gesture.
      */
@@ -155,7 +155,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_RELEASED");
 
     /**
-     * This event occurs when mouse button has been clicked (pressed and
+     * This event occurs when a mouse button has been clicked (pressed and
      * released on the same node). This event provides a button-like behavior
      * to any node. Note that even long drags can generate click event (it
      * is delivered to the top-most node on which the mouse was both
@@ -165,7 +165,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_CLICKED");
 
     /**
-     * This event occurs when mouse enters a node. It's the bubbling variant,
+     * This event occurs when the mouse enters a node. It's the bubbling variant,
      * which is delivered also to all parents of the entered node (unless it
      * was consumed). When notifications about mouse entering some of node's
      * children are not desired, {@code MOUSE_ENTERED} event handler should
@@ -177,7 +177,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_ENTERED_TARGET");
 
     /**
-     * This event occurs when mouse enters a node. This event type is delivered
+     * This event occurs when the mouse enters a node. This event type is delivered
      * only to the entered node, if parents want to filter it or get the
      * bubbling event, they need to use {@code MOUSE_ENTERED_TARGET}.
      *
@@ -187,7 +187,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.MOUSE_ENTERED_TARGET, "MOUSE_ENTERED");
 
     /**
-     * This event occurs when mouse exits a node. It's the bubbling variant,
+     * This event occurs when the mouse exits a node. It's the bubbling variant,
      * which is delivered also to all parents of the exited node (unless it
      * was consumed). When notifications about mouse exiting some of node's
      * children are not desired, {@code MOUSE_EXITED} event handler should
@@ -199,7 +199,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_EXITED_TARGET");
 
     /**
-     * This event occurs when mouse exits a node. This event type is delivered
+     * This event occurs when the mouse exits a node. This event type is delivered
      * only to the exited node, if parents want to filter it or get the
      * bubbling event, they need to use {@code MOUSE_EXITED_TARGET}.
      *
@@ -209,7 +209,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.MOUSE_EXITED_TARGET, "MOUSE_EXITED");
 
     /**
-     * This event occurs when mouse moves within a node and no buttons
+     * This event occurs when the mouse moves within a node and no buttons
      * are pressed. If any mouse button is pressed, MOUSE_DRAGGED event
      * occurs instead.
      */
@@ -217,7 +217,7 @@ public class MouseEvent extends InputEvent {
             new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_MOVED");
 
     /**
-     * This event occurs when mouse moves with a pressed button.
+     * This event occurs when the mouse moves with a pressed button.
      * It is delivered to the same node where the button has been pressed
      * which activated a press-drag-release gesture. It is delivered
      * regardless of the mouse being within bounds of the node.

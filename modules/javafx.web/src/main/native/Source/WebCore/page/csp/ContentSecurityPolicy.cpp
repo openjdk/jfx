@@ -27,6 +27,7 @@
 #include "config.h"
 #include "ContentSecurityPolicy.h"
 
+#include "BlobURL.h"
 #include "ContentSecurityPolicyClient.h"
 #include "ContentSecurityPolicyDirective.h"
 #include "ContentSecurityPolicyDirectiveList.h"
@@ -277,8 +278,12 @@ void ContentSecurityPolicy::setOverrideAllowInlineStyle(bool value)
     m_overrideInlineStyleAllowed = value;
 }
 
-bool ContentSecurityPolicy::urlMatchesSelf(const URL& url) const
+bool ContentSecurityPolicy::urlMatchesSelf(const URL& url, bool forFrameSrc) const
 {
+    // As per https://w3c.github.io/webappsec-csp/#match-url-to-source-expression, we compare the URL origin with the policy origin.
+    // We get origin using https://url.spec.whatwg.org/#concept-url-origin which has specific blob URLs treatment as follow.
+    if (forFrameSrc && url.protocolIsBlob())
+        return m_selfSource->matches(BlobURL::getOriginURL(url));
     return m_selfSource->matches(url);
 }
 
@@ -651,11 +656,16 @@ bool ContentSecurityPolicy::allowBaseURI(const URL& url, bool overrideContentSec
     return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForBaseURI, url);
 }
 
+static bool shouldReportProtocolOnly(const URL& url)
+{
+    return !url.isHierarchical() || url.protocolIs("file");
+}
+
 String ContentSecurityPolicy::deprecatedURLForReporting(const URL& url) const
 {
     if (!url.isValid())
         return { };
-    if (!url.isHierarchical() || url.protocolIs("file"))
+    if (shouldReportProtocolOnly(url))
         return url.protocol().toString();
     return static_cast<SecurityOriginData>(*m_selfSource).securityOrigin()->canRequest(url) ? url.strippedForUseAsReferrer() : SecurityOrigin::create(url)->toString();
 }
@@ -686,7 +696,9 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
 
     // FIXME: Support sending reports from worker.
     CSPInfo info;
-    info.documentURI = blockedURL.string();
+
+    info.documentURI = m_documentURL ? m_documentURL.value().strippedForUseAsReferrer() : deprecatedURLForReporting(blockedURL);
+
     if (m_client)
         m_client->willSendCSPViolationReport(info);
     else {
@@ -698,7 +710,7 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
         if (!frame)
             return;
 
-        info.documentURI = document.url().strippedForUseAsReferrer();
+        info.documentURI = shouldReportProtocolOnly(document.url()) ? document.url().protocol().toString() : document.url().strippedForUseAsReferrer();
 
         auto stack = createScriptCallStack(JSExecState::currentState(), 2);
         auto* callFrame = stack->firstNonNativeCallFrame();

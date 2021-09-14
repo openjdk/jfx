@@ -29,23 +29,17 @@
 
 #include "GPUBuffer.h"
 #include "GPUOrigin3D.h"
+#include "GPUPlatformTypes.h"
 #include "GPUTexture.h"
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
-
-OBJC_PROTOCOL(MTLBlitCommandEncoder);
-OBJC_PROTOCOL(MTLCommandBuffer);
 
 namespace WebCore {
 
 class GPUDevice;
 
 struct GPUExtent3D;
-
-using PlatformCommandBuffer = MTLCommandBuffer;
-using PlatformCommandBufferSmartPtr = RetainPtr<MTLCommandBuffer>;
 
 struct GPUBufferCopyViewBase {
     uint64_t offset;

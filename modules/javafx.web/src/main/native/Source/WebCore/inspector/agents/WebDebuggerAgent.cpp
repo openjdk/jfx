@@ -49,18 +49,18 @@ bool WebDebuggerAgent::enabled() const
     return m_instrumentingAgents.enabledWebDebuggerAgent() == this && InspectorDebuggerAgent::enabled();
 }
 
-void WebDebuggerAgent::enable()
+void WebDebuggerAgent::internalEnable()
 {
     m_instrumentingAgents.setEnabledWebDebuggerAgent(this);
 
-    InspectorDebuggerAgent::enable();
+    InspectorDebuggerAgent::internalEnable();
 }
 
-void WebDebuggerAgent::disable(bool isBeingDestroyed)
+void WebDebuggerAgent::internalDisable(bool isBeingDestroyed)
 {
     m_instrumentingAgents.setEnabledWebDebuggerAgent(nullptr);
 
-    InspectorDebuggerAgent::disable(isBeingDestroyed);
+    InspectorDebuggerAgent::internalDisable(isBeingDestroyed);
 }
 
 void WebDebuggerAgent::didAddEventListener(EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
@@ -79,14 +79,14 @@ void WebDebuggerAgent::didAddEventListener(EventTarget& target, const AtomString
     if (m_registeredEventListeners.contains(registeredListener.get()))
         return;
 
-    JSC::JSGlobalObject* scriptState = target.scriptExecutionContext()->execState();
-    if (!scriptState)
+    auto* globalObject = target.scriptExecutionContext()->globalObject();
+    if (!globalObject)
         return;
 
     int identifier = m_nextEventListenerIdentifier++;
     m_registeredEventListeners.set(registeredListener.get(), identifier);
 
-    didScheduleAsyncCall(scriptState, InspectorDebuggerAgent::AsyncCallType::EventListener, identifier, registeredListener->isOnce());
+    didScheduleAsyncCall(globalObject, InspectorDebuggerAgent::AsyncCallType::EventListener, identifier, registeredListener->isOnce());
 }
 
 void WebDebuggerAgent::willRemoveEventListener(EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)

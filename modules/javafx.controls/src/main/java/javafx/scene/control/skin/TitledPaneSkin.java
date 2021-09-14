@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ import javafx.scene.text.Font;
  */
 public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -78,7 +78,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -98,7 +98,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -178,7 +178,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -200,7 +200,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -288,7 +288,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -406,7 +406,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
@@ -494,7 +494,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             double labelPrefWidth = labelPrefWidth(height);
 
             if (arrowRegion != null) {
-                arrowWidth = snapSize(arrowRegion.prefWidth(height));
+                arrowWidth = snapSizeX(arrowRegion.prefWidth(height));
             }
 
             return left + arrowWidth + labelPrefWidth + right;
@@ -507,7 +507,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             double labelPrefHeight = labelPrefHeight(width);
 
             if (arrowRegion != null) {
-                arrowHeight = snapSize(arrowRegion.prefHeight(width));
+                arrowHeight = snapSizeY(arrowRegion.prefHeight(width));
             }
 
             return top + Math.max(arrowHeight, labelPrefHeight) + bottom;
@@ -520,10 +520,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             final double right = snappedRightInset();
             double width = getWidth() - (left + right);
             double height = getHeight() - (top + bottom);
-            double arrowWidth = snapSize(arrowRegion.prefWidth(-1));
-            double arrowHeight = snapSize(arrowRegion.prefHeight(-1));
-            double labelWidth = snapSize(Math.min(width - arrowWidth / 2.0, labelPrefWidth(-1)));
-            double labelHeight = snapSize(labelPrefHeight(-1));
+            double arrowWidth = snapSizeX(arrowRegion.prefWidth(-1));
+            double arrowHeight = snapSizeY(arrowRegion.prefHeight(-1));
+            double labelWidth = snapSizeX(Math.min(width - arrowWidth / 2.0, labelPrefWidth(-1)));
+            double labelHeight = snapSizeY(labelPrefHeight(-1));
 
             double x = left + arrowWidth + Utils.computeXOffset(width - arrowWidth, labelWidth, hpos);
             if (HPos.CENTER == hpos) {

@@ -230,7 +230,7 @@ bool Path::isEmpty() const
         return true;
 
 #if ENABLE(INLINE_PATH_DATA)
-    if (hasAnyInlineData())
+    if (hasInlineData())
         return false;
 #endif
 
@@ -249,16 +249,27 @@ FloatPoint Path::currentPoint() const
 
 #if ENABLE(INLINE_PATH_DATA)
     if (hasInlineData<MoveData>())
-        return WTF::get<MoveData>(m_inlineData).location;
+        return inlineData<MoveData>().location;
 
     if (hasInlineData<LineData>())
-        return WTF::get<LineData>(m_inlineData).end;
+        return inlineData<LineData>().end;
 
     if (hasInlineData<BezierCurveData>())
-        return WTF::get<BezierCurveData>(m_inlineData).endPoint;
+        return inlineData<BezierCurveData>().endPoint;
 
     if (hasInlineData<QuadCurveData>())
-        return WTF::get<QuadCurveData>(m_inlineData).endPoint;
+        return inlineData<QuadCurveData>().endPoint;
+
+    if (hasInlineData<ArcData>()) {
+        auto& arc = inlineData<ArcData>();
+        if (arc.type == ArcData::Type::ClosedLineAndArc)
+            return arc.start;
+
+        return {
+            arc.center.x() + arc.radius * std::acos(arc.endAngle),
+            arc.center.y() + arc.radius * std::asin(arc.endAngle)
+        };
+    }
 #endif
 
     return currentPointSlowCase();
@@ -286,11 +297,12 @@ void Path::addArc(const FloatPoint& point, float radius, float startAngle, float
         return;
 
 #if ENABLE(INLINE_PATH_DATA)
-    if (isNull() || hasInlineData<MoveData>()) {
+    bool hasMoveData = hasInlineData<MoveData>();
+    if (isNull() || hasMoveData) {
         ArcData arc;
-        if (hasAnyInlineData()) {
-            arc.hasOffset = true;
-            arc.offset = WTF::get<MoveData>(m_inlineData).location;
+        if (hasMoveData) {
+            arc.type = ArcData::Type::LineAndArc;
+            arc.start = inlineData<MoveData>().location;
         }
         arc.center = point;
         arc.radius = radius;
@@ -310,12 +322,21 @@ void Path::addArc(const FloatPoint& point, float radius, float startAngle, float
 void Path::addLineTo(const FloatPoint& point)
 {
 #if ENABLE(INLINE_PATH_DATA)
-    if (isNull() || hasInlineData<MoveData>()) {
+    bool hasMoveData = hasInlineData<MoveData>();
+    if (isNull() || hasMoveData) {
         LineData line;
-        line.start = hasAnyInlineData() ? WTF::get<MoveData>(m_inlineData).location : FloatPoint();
+        line.start = hasMoveData ? inlineData<MoveData>().location : FloatPoint();
         line.end = point;
         m_inlineData = { WTFMove(line) };
         return;
+    }
+
+    if (hasInlineData<ArcData>()) {
+        auto& arc = inlineData<ArcData>();
+        if (arc.type == ArcData::Type::LineAndArc && arc.start == point) {
+            arc.type = ArcData::Type::ClosedLineAndArc;
+            return;
+        }
     }
 #endif
 
@@ -327,7 +348,7 @@ void Path::addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endP
 #if ENABLE(INLINE_PATH_DATA)
     if (isNull() || hasInlineData<MoveData>()) {
         QuadCurveData curve;
-        curve.startPoint = hasAnyInlineData() ? WTF::get<MoveData>(m_inlineData).location : FloatPoint();
+        curve.startPoint = hasInlineData() ? WTF::get<MoveData>(m_inlineData).location : FloatPoint();
         curve.controlPoint = controlPoint;
         curve.endPoint = endPoint;
         m_inlineData = { WTFMove(curve) };
@@ -343,7 +364,7 @@ void Path::addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& c
 #if ENABLE(INLINE_PATH_DATA)
     if (isNull() || hasInlineData<MoveData>()) {
         BezierCurveData curve;
-        curve.startPoint = hasAnyInlineData() ? WTF::get<MoveData>(m_inlineData).location : FloatPoint();
+        curve.startPoint = hasInlineData() ? WTF::get<MoveData>(m_inlineData).location : FloatPoint();
         curve.controlPoint1 = controlPoint1;
         curve.controlPoint2 = controlPoint2;
         curve.endPoint = endPoint;
@@ -386,7 +407,7 @@ FloatRect Path::fastBoundingRect() const
         return { };
 
 #if ENABLE(INLINE_PATH_DATA)
-    if (auto rect = boundingRectFromInlineData())
+    if (auto rect = fastBoundingRectFromInlineData())
         return *rect;
 #endif
 
@@ -395,14 +416,85 @@ FloatRect Path::fastBoundingRect() const
 
 #if ENABLE(INLINE_PATH_DATA)
 
+Optional<FloatRect> Path::fastBoundingRectFromInlineData() const
+{
+    if (hasInlineData<ArcData>()) {
+        auto& arc = inlineData<ArcData>();
+        auto diameter = 2 * arc.radius;
+        FloatRect approximateBounds { arc.center, FloatSize(diameter, diameter) };
+        approximateBounds.move(-arc.radius, -arc.radius);
+        if (arc.type == ArcData::Type::LineAndArc || arc.type == ArcData::Type::ClosedLineAndArc)
+            approximateBounds.extend(arc.start);
+        return approximateBounds;
+    }
+
+    return boundingRectFromInlineData();
+}
+
+static FloatRect computeArcBounds(const FloatPoint& center, float radius, float start, float end, bool clockwise)
+{
+    if (clockwise)
+        std::swap(start, end);
+
+    constexpr float fullCircle = 2 * piFloat;
+    if (end - start >= fullCircle) {
+        auto diameter = radius * 2;
+        return { center.x() - radius, center.y() - radius, diameter, diameter };
+    }
+
+    auto normalize = [&] (float radians) {
+        double circles = radians / fullCircle;
+        return fullCircle * (circles - floor(circles));
+    };
+
+    start = normalize(start);
+    end = normalize(end);
+
+    auto lengthInRadians = end - start;
+    if (start > end)
+        lengthInRadians += fullCircle;
+
+    FloatPoint startPoint { center.x() + radius * cos(start), center.y() + radius * sin(start) };
+    FloatPoint endPoint { center.x() + radius * cos(end), center.y() + radius * sin(end) };
+    FloatRect result;
+    result.fitToPoints(startPoint, endPoint);
+
+    auto contains = [&] (float angleToCheck) {
+        return (start < angleToCheck && start + lengthInRadians > angleToCheck)
+            || (start > angleToCheck && start + lengthInRadians > angleToCheck + fullCircle);
+    };
+
+    if (contains(0))
+        result.shiftMaxXEdgeTo(center.x() + radius);
+
+    if (contains(piOverTwoFloat))
+        result.shiftMaxYEdgeTo(center.y() + radius);
+
+    if (contains(piFloat))
+        result.shiftXEdgeTo(center.x() - radius);
+
+    if (contains(3 * piOverTwoFloat))
+        result.shiftYEdgeTo(center.y() - radius);
+
+    return result;
+}
+
 Optional<FloatRect> Path::boundingRectFromInlineData() const
 {
+    if (hasInlineData<ArcData>()) {
+        auto& arc = inlineData<ArcData>();
+        auto bounds = computeArcBounds(arc.center, arc.radius, arc.startAngle, arc.endAngle, arc.clockwise);
+        if (arc.type == ArcData::Type::LineAndArc || arc.type == ArcData::Type::ClosedLineAndArc)
+            bounds.extend(arc.start);
+        return bounds;
+    }
+
     if (hasInlineData<MoveData>())
         return FloatRect { };
 
     if (hasInlineData<LineData>()) {
         FloatRect result;
-        auto& line = WTF::get<LineData>(m_inlineData);
+        auto& line = inlineData<LineData>();
         result.fitToPoints(line.start, line.end);
         return result;
     }

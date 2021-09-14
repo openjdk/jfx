@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -294,7 +294,7 @@ public class ChoiceBoxTreeTableCellTest {
         tableView.setEditable(true);
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.updateTreeTableView(tableView);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
 
         tableView.edit(0, tc);
         assertFalse(cell.isEditing());
@@ -308,7 +308,7 @@ public class ChoiceBoxTreeTableCellTest {
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.setEditable(true);
         cell.updateTreeTableView(tableView);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
 
         tableView.edit(0, tc);
         assertFalse(cell.isEditing());
@@ -353,7 +353,7 @@ public class ChoiceBoxTreeTableCellTest {
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
 
         tableView.edit(0, tc);
         assertTrue(cell.isEditing());
@@ -368,7 +368,7 @@ public class ChoiceBoxTreeTableCellTest {
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);
@@ -385,7 +385,7 @@ public class ChoiceBoxTreeTableCellTest {
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);
@@ -405,7 +405,7 @@ public class ChoiceBoxTreeTableCellTest {
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);
@@ -425,7 +425,7 @@ public class ChoiceBoxTreeTableCellTest {
         ChoiceBoxTreeTableCell<Object,Object> cell = new ChoiceBoxTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);

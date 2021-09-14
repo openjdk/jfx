@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,12 +63,12 @@
 
 namespace WebCore {
 
-static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, jint id)
+static void setGradient(Gradient &gradient,
+    AffineTransform& gradientSpaceTransformation, PlatformGraphicsContext* context, jint id)
 {
     const Vector<Gradient::ColorStop, 2> stops = gradient.stops();
     int nStops = stops.size();
 
-    AffineTransform gt = gradient.gradientSpaceTransform();
     FloatPoint p0, p1;
     float startRadius, endRadius;
     bool isRadialGradient = true;
@@ -89,8 +89,8 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
             }
     );
 
-    p0 = gt.mapPoint(p0);
-    p1 = gt.mapPoint(p1);
+    p0 = gradientSpaceTransformation.mapPoint(p0);
+    p1 = gradientSpaceTransformation.mapPoint(p1);
 
     context->rq().freeSpace(4 * 11 + 20 * nStops)
     << id
@@ -102,8 +102,8 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
 
     if (isRadialGradient) {
         context->rq()
-        << (jfloat)(gt.xScale() * startRadius)
-        << (jfloat)(gt.xScale() * endRadius);
+        << (jfloat)(gradientSpaceTransformation.xScale() * startRadius)
+        << (jfloat)(gradientSpaceTransformation.xScale() * endRadius);
     }
     context->rq()
     << (jint)0 //is not proportional
@@ -114,6 +114,24 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
         auto [r, g, b, a] = cs.color.toSRGBALossy<float>();
         context->rq()
         << r << g << b << a << (jfloat)cs.offset;
+    }
+}
+
+static void flushImageRQ(PlatformGraphicsContext* context, const PlatformImagePtr& image)
+{
+    if (!image || !image->getRenderingQueue())
+        return;
+
+    auto rq = image->getRenderingQueue();
+
+    if (!rq->isEmpty()) {
+        // 1. Drawing is flushed to the buffered image's RenderQueue.
+        rq->flushBuffer();
+
+        // 2. The buffered image's RenderQueue is to be decoded.
+        context->rq().freeSpace(8)
+        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
+        << rq->getRQRenderingQueue();
     }
 }
 
@@ -217,24 +235,19 @@ void GraphicsContext::fillRect(const FloatRect& rect)
         return;
 
     if (m_state.fillPattern) {
-        Image& img = m_state.fillPattern->tileImage();
-        FloatRect destRect(
-            rect.x(),
-            rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
-            m_state.fillPattern->repeatY() ? rect.height() : img.height());
-        img.drawPattern(
-            *this,
-            destRect,
-            FloatRect(0., 0., img.width(), img.height()),
-            m_state.fillPattern->getPatternSpaceTransform(),
-            FloatPoint(),
-            FloatSize(),
-            CompositeOperator::Copy);
+        auto image = m_state.fillPattern->tileImage().platformImage();
+
+        FloatRect destRect(rect.x(), rect.y(),
+            m_state.fillPattern->repeatX() ? rect.width() : image->size().width(),
+            m_state.fillPattern->repeatY() ? rect.height() : image->size().height());
+        drawPlatformPattern(image, FloatSize(), destRect,
+            FloatRect(0., 0., image->size().width(), image->size().height()),
+            m_state.fillPattern->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
     } else {
         if (m_state.fillGradient) {
             setGradient(
                 *m_state.fillGradient,
+                m_state.fillGradientSpaceTransform,
                 platformContext(),
                 com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_GRADIENT);
         }
@@ -255,11 +268,6 @@ void GraphicsContext::clip(const FloatRect& rect)
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
-}
-
-void GraphicsContext::clipToImageBuffer(ImageBuffer&, const FloatRect&)
-{
-    notImplemented();
 }
 
 IntRect GraphicsContext::clipBounds() const
@@ -632,6 +640,7 @@ void GraphicsContext::strokeRect(const FloatRect& rect, float lineWidth)
     if (m_state.strokeGradient) {
         setGradient(
             *m_state.strokeGradient,
+            m_state.strokeGradientSpaceTransform,
             platformContext(),
             com_sun_webkit_graphics_GraphicsDecoder_SET_STROKE_GRADIENT);
     }
@@ -724,6 +733,7 @@ void GraphicsContext::strokePath(const Path& path)
     if (m_state.strokeGradient) {
         setGradient(
             *m_state.strokeGradient,
+            m_state.strokeGradientSpaceTransform,
             platformContext(),
             com_sun_webkit_graphics_GraphicsDecoder_SET_STROKE_GRADIENT);
     }
@@ -775,26 +785,52 @@ void GraphicsContext::clipOut(const FloatRect& rect)
     path.addRoundedRect(rect, FloatSize());
     clipOut(path);
 }
-void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+
+void GraphicsContext::drawPlatformImage(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
-    if (paintingDisabled())
+    if (!image || !image->getImage())
         return;
 
-    if (m_impl) {
-        m_impl->drawPattern(image, destRect, srcRect, patternTransform, phase, spacing, options);
-        return;
+    savePlatformState();
+    setCompositeOperation(options.compositeOperator(), options.blendMode());
+
+    FloatRect adjustedSrcRect(srcRect);
+    FloatRect adjustedDestRect(destRect);
+
+    if (options.orientation() != ImageOrientation::None) {
+        // ImageOrientation expects the origin to be at (0, 0).
+        translate(destRect.x(), destRect.y());
+        adjustedDestRect.setLocation(FloatPoint());
+        concatCTM(options.orientation().transformFromDefault(adjustedDestRect.size()));
+        if (options.orientation().usesWidthAsHeight()) {
+            // The destination rectangle will have it's width and height already reversed for the orientation of
+            // the image, as it was needed for page layout, so we need to reverse it back here.
+            adjustedDestRect.setSize(adjustedDestRect.size().transposedSize());
+        }
     }
+
+    platformContext()->rq().freeSpace(72)
+        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
+        << image->getImage()
+        << adjustedDestRect.x() << adjustedDestRect.y()
+        << adjustedDestRect.width() << adjustedDestRect.height()
+        << adjustedSrcRect.x() << adjustedSrcRect.y()
+        << adjustedSrcRect.width() << adjustedSrcRect.height();
+    restorePlatformState();
+}
+
+void GraphicsContext::drawPlatformPattern(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, const ImagePaintingOptions&)
+{
+    if (paintingDisabled() || !patternTransform.isInvertible())
+        return;
 
     JNIEnv* env = WTF::GetJavaEnv();
 
-    if (srcRect.isEmpty()) {
+    if (tileRect.isEmpty()) {
         return;
     }
 
-    NativeImagePtr currFrame = image.nativeImageForCurrentFrame();
-    if (!currFrame) {
-        return;
-    }
+    flushImageRQ(platformContext(), image);
 
     TransformationMatrix tm = patternTransform.toTransformationMatrix();
 
@@ -809,8 +845,8 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const
 
     platformContext()->rq().freeSpace(13 * 4)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
-        << currFrame
-        << srcRect.x() << srcRect.y() << srcRect.width() << srcRect.height()
+        << image->getImage()
+        << tileRect.x() << tileRect.y() << tileRect.width() << tileRect.height()
         << RQRef::create(transform)
         << phase.x() << phase.y()
         << destRect.x() << destRect.y() << destRect.width() << destRect.height();
@@ -826,25 +862,21 @@ void GraphicsContext::fillPath(const Path& path)
         clipPath(path, m_state.fillRule);
         FloatRect rect(path.boundingRect());
 
-        Image& img = m_state.fillPattern->tileImage();
-        FloatRect destRect(
-            rect.x(),
-            rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
-            m_state.fillPattern->repeatY() ? rect.height() : img.height());
-        img.drawPattern(
-            *this,
-            destRect,
-            FloatRect(0., 0., img.width(), img.height()),
-            m_state.fillPattern->getPatternSpaceTransform(),
-            FloatPoint(),
-            FloatSize(),
-            CompositeOperator::Copy);
+        auto image = m_state.fillPattern->tileImage().platformImage();
+
+        FloatRect destRect(rect.x(), rect.y(),
+            m_state.fillPattern->repeatX() ? rect.width() : image->size().width(),
+            m_state.fillPattern->repeatY() ? rect.height() : image->size().height());
+        drawPlatformPattern(image, FloatSize(), destRect,
+            FloatRect(0., 0., image->size().width(), image->size().height()),
+            m_state.fillPattern->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
+
         restorePlatformState();
     } else {
         if (m_state.fillGradient) {
             setGradient(
                 *m_state.fillGradient,
+                m_state.fillGradientSpaceTransform,
                 platformContext(),
                 com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_GRADIENT);
         }

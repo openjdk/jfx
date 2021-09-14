@@ -71,7 +71,7 @@ class WEBCORE_EXPORT RealtimeMediaSource
     : public ThreadSafeRefCounted<RealtimeMediaSource, WTF::DestructionThread::MainRunLoop>
     , public CanMakeWeakPtr<RealtimeMediaSource, WeakPtrFactoryInitialization::Eager>
 #if !RELEASE_LOG_DISABLED
-    , protected LoggerHelper
+    , public LoggerHelper
 #endif
 {
 public:
@@ -131,7 +131,7 @@ public:
 
     bool captureDidFail() const { return m_captureDidFailed; }
 
-    virtual bool interrupted() const { return m_interrupted; }
+    virtual bool interrupted() const { return false; }
 
     const String& name() const { return m_name; }
     void setName(String&& name) { m_name = WTFMove(name); }
@@ -195,6 +195,7 @@ public:
     virtual bool isMockSource() const { return false; }
     virtual bool isCaptureSource() const { return false; }
     virtual CaptureDevice::DeviceType deviceType() const { return CaptureDevice::DeviceType::Unknown; }
+    virtual bool isVideoSource() const;
 
     virtual void monitorOrientation(OrientationNotifier&) { }
 
@@ -298,7 +299,6 @@ private:
     bool m_pendingSettingsDidChangeNotification { false };
     bool m_echoCancellation { false };
     bool m_isProducingData { false };
-    bool m_interrupted { false };
     bool m_captureDidFailed { false };
     bool m_isEnded { false };
     bool m_hasStartedProducingData { false };
@@ -321,6 +321,11 @@ String convertEnumerationToString(RealtimeMediaSource::Type);
 inline void RealtimeMediaSource::whenReady(CompletionHandler<void(String)>&& callback)
 {
     callback({ });
+}
+
+inline bool RealtimeMediaSource::isVideoSource() const
+{
+    return false;
 }
 
 } // namespace WebCore

@@ -37,6 +37,7 @@
 #include "ThreadableLoaderClient.h"
 #include <wtf/Forward.h>
 #include <wtf/Optional.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -85,6 +86,8 @@ public:
 
     const URL& url() { return m_urlForReading; }
 
+    bool isCompleted() const;
+
 private:
     void terminate();
     void cleanup();
@@ -92,13 +95,11 @@ private:
     void convertToText();
     void convertToDataURL();
 
-    bool isCompleted() const;
-
     static ExceptionCode httpStatusCodeToErrorCode(int);
     static ExceptionCode toErrorCode(BlobResourceHandle::Error);
 
     ReadType m_readType;
-    FileReaderLoaderClient* m_client;
+    WeakPtr<FileReaderLoaderClient> m_client;
     TextEncoding m_encoding;
     String m_dataType;
 

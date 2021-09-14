@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -860,7 +860,7 @@ void JIT::emit_op_to_number(const Instruction* currentInstruction)
     addSlowCase(branch32(AboveOrEqual, regT1, TrustedImm32(JSValue::LowestTag)));
     isInt32.link(this);
 
-    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock), JSValueRegs(regT1, regT0));
     if (src != dst)
         emitStore(dst, regT1, regT0);
 }
@@ -882,7 +882,7 @@ void JIT::emit_op_to_numeric(const Instruction* currentInstruction)
     addSlowCase(branchIfNotNumber(argumentValueRegs, regT2));
     isBigInt.link(this);
 
-    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock), JSValueRegs(regT1, regT0));
     if (src != dst)
         emitStore(dst, regT1, regT0);
 }
@@ -913,7 +913,7 @@ void JIT::emit_op_to_object(const Instruction* currentInstruction)
     addSlowCase(branchIfNotCell(regT1));
     addSlowCase(branchIfNotObject(regT0));
 
-    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock), JSValueRegs(regT1, regT0));
     if (src != dst)
         emitStore(dst, regT1, regT0);
 }
@@ -970,7 +970,7 @@ void JIT::emit_op_catch(const Instruction* currentInstruction)
         buffer->forEach([&] (ValueProfileAndVirtualRegister& profile) {
             JSValueRegs regs(regT1, regT0);
             emitGetVirtualRegister(profile.m_operand, regs);
-            emitValueProfilingSite(static_cast<ValueProfile&>(profile));
+            emitValueProfilingSite(static_cast<ValueProfile&>(profile), regs);
         });
     }
 #endif // ENABLE(DFG_JIT)
@@ -1151,9 +1151,9 @@ void JIT::emit_op_has_structure_propertyImpl(const Instruction* currentInstructi
     emitStoreBool(dst, regT0);
 }
 
-void JIT::emit_op_has_structure_property(const Instruction* currentInstruction)
+void JIT::emit_op_has_enumerable_structure_property(const Instruction* currentInstruction)
 {
-    emit_op_has_structure_propertyImpl<OpHasStructureProperty>(currentInstruction);
+    emit_op_has_structure_propertyImpl<OpHasEnumerableStructureProperty>(currentInstruction);
 }
 
 void JIT::emit_op_has_own_structure_property(const Instruction* currentInstruction)
@@ -1187,21 +1187,21 @@ void JIT::privateCompileHasIndexedProperty(ByValInfo* byValInfo, ReturnAddressPt
 
     byValInfo->stubRoutine = FINALIZE_CODE_FOR_STUB(
         m_codeBlock, patchBuffer, JITStubRoutinePtrTag,
-        "Baseline has_indexed_property stub for %s, return point %p", toCString(*m_codeBlock).data(), returnAddress.value());
+        "Baseline has_indexed_property stub for %s, return point %p", toCString(*m_codeBlock).data(), returnAddress.untaggedValue());
 
     MacroAssembler::repatchJump(byValInfo->badTypeJump, CodeLocationLabel<JITStubRoutinePtrTag>(byValInfo->stubRoutine->code().code()));
-    MacroAssembler::repatchCall(CodeLocationCall<NoPtrTag>(MacroAssemblerCodePtr<NoPtrTag>(returnAddress)), FunctionPtr<OperationPtrTag>(operationHasIndexedPropertyGeneric));
+    MacroAssembler::repatchCall(CodeLocationCall<ReturnAddressPtrTag>(MacroAssemblerCodePtr<ReturnAddressPtrTag>(returnAddress)), FunctionPtr<OperationPtrTag>(operationHasIndexedPropertyGeneric));
 }
 
-void JIT::emit_op_has_indexed_property(const Instruction* currentInstruction)
+void JIT::emit_op_has_enumerable_indexed_property(const Instruction* currentInstruction)
 {
-    auto bytecode = currentInstruction->as<OpHasIndexedProperty>();
+    auto bytecode = currentInstruction->as<OpHasEnumerableIndexedProperty>();
     auto& metadata = bytecode.metadata(m_codeBlock);
     VirtualRegister dst = bytecode.m_dst;
     VirtualRegister base = bytecode.m_base;
     VirtualRegister property = bytecode.m_property;
     ArrayProfile* profile = &metadata.m_arrayProfile;
-    ByValInfo* byValInfo = m_codeBlock->addByValInfo();
+    ByValInfo* byValInfo = m_codeBlock->addByValInfo(m_bytecodeIndex);
 
     emitLoadPayload(base, regT0);
     emitJumpSlowCaseIfNotJSCell(base);
@@ -1240,11 +1240,11 @@ void JIT::emit_op_has_indexed_property(const Instruction* currentInstruction)
     m_byValCompilationInfo.append(ByValCompilationInfo(byValInfo, m_bytecodeIndex, PatchableJump(), badType, mode, profile, done, nextHotPath));
 }
 
-void JIT::emitSlow_op_has_indexed_property(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+void JIT::emitSlow_op_has_enumerable_indexed_property(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
     linkAllSlowCases(iter);
 
-    auto bytecode = currentInstruction->as<OpHasIndexedProperty>();
+    auto bytecode = currentInstruction->as<OpHasEnumerableIndexedProperty>();
     VirtualRegister dst = bytecode.m_dst;
     VirtualRegister base = bytecode.m_base;
     VirtualRegister property = bytecode.m_property;
@@ -1298,7 +1298,7 @@ void JIT::emit_op_get_direct_pname(const Instruction* currentInstruction)
     load32(BaseIndex(regT0, regT2, TimesEight, offsetOfFirstProperty + OBJECT_OFFSETOF(JSValue, u.asBits.payload)), regT0);
 
     done.link(this);
-    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock), JSValueRegs(regT1, regT0));
     emitStore(dst, regT1, regT0);
 }
 

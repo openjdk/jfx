@@ -41,10 +41,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamAudioDestinationNode);
 
 ExceptionOr<Ref<MediaStreamAudioDestinationNode>> MediaStreamAudioDestinationNode::create(BaseAudioContext& context, const AudioNodeOptions& options)
 {
-    if (context.isStopped())
-        return Exception { InvalidStateError };
-
-    context.lazyInitialize();
+    // This behavior is not part of the specification. This is done for consistency with Blink.
+    if (context.isStopped() || !context.scriptExecutionContext())
+        return Exception { NotAllowedError, "Cannot create a MediaStreamAudioDestinationNode in a detached frame"_s };
 
     auto node = adoptRef(*new MediaStreamAudioDestinationNode(context));
 
@@ -56,11 +55,10 @@ ExceptionOr<Ref<MediaStreamAudioDestinationNode>> MediaStreamAudioDestinationNod
 }
 
 MediaStreamAudioDestinationNode::MediaStreamAudioDestinationNode(BaseAudioContext& context)
-    : AudioBasicInspectorNode(context)
+    : AudioBasicInspectorNode(context, NodeTypeMediaStreamAudioDestination)
     , m_source(MediaStreamAudioSource::create(context.sampleRate()))
     , m_stream(MediaStream::create(*context.document(), MediaStreamPrivate::create(context.document()->logger(), m_source.copyRef())))
 {
-    setNodeType(NodeTypeMediaStreamAudioDestination);
     initialize();
 }
 
@@ -72,10 +70,6 @@ MediaStreamAudioDestinationNode::~MediaStreamAudioDestinationNode()
 void MediaStreamAudioDestinationNode::process(size_t numberOfFrames)
 {
     m_source->consumeAudio(*input(0)->bus(), numberOfFrames);
-}
-
-void MediaStreamAudioDestinationNode::reset()
-{
 }
 
 } // namespace WebCore

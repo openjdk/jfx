@@ -28,36 +28,38 @@
 #include "AudioIOCallback.h"
 #include "AudioNode.h"
 #include "ExceptionOr.h"
-#include <wtf/Function.h>
+#include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 
 class AudioDestinationNode : public AudioNode, public AudioIOCallback {
     WTF_MAKE_ISO_ALLOCATED(AudioDestinationNode);
 public:
-    explicit AudioDestinationNode(BaseAudioContext&);
+    AudioDestinationNode(BaseAudioContext&, float sampleRate);
     virtual ~AudioDestinationNode();
 
     // AudioNode
     void process(size_t) override { }; // we're pulled by hardware so this is never called
-    void reset() override { m_currentSampleFrame = 0; }
 
     // The audio hardware calls render() to get the next render quantum of audio into destinationBus.
     // It will optionally give us local/live audio input in sourceBus (if it's not 0).
-    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames) override;
+    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition) override;
+
+    float sampleRate() const final { return m_sampleRate; }
 
     size_t currentSampleFrame() const { return m_currentSampleFrame; }
     double currentTime() const { return currentSampleFrame() / static_cast<double>(sampleRate()); }
 
-    virtual unsigned maxChannelCount() const { return 0; }
+    virtual unsigned maxChannelCount() const = 0;
 
     // Enable local/live input for the specified device.
     virtual void enableInput(const String& inputDeviceId) = 0;
 
-    virtual ExceptionOr<void> startRendering() = 0;
-    virtual void resume(WTF::Function<void ()>&&) { }
-    virtual void suspend(WTF::Function<void ()>&&) { }
-    virtual void close(WTF::Function<void ()>&&) { }
+    virtual void startRendering(CompletionHandler<void(Optional<Exception>&&)>&&) = 0;
+    virtual void resume(CompletionHandler<void(Optional<Exception>&&)>&& completionHandler) { completionHandler(WTF::nullopt); }
+    virtual void suspend(CompletionHandler<void(Optional<Exception>&&)>&& completionHandler) { completionHandler(WTF::nullopt); }
+    virtual void close(CompletionHandler<void()>&& completionHandler) { completionHandler(); }
+    virtual void restartRendering() { }
 
     virtual bool isPlaying() { return false; }
     void isPlayingDidChange() override;
@@ -72,11 +74,12 @@ protected:
     void updateIsEffectivelyPlayingAudio();
 
     // Counts the number of sample-frames processed by the destination.
-    size_t m_currentSampleFrame;
+    std::atomic<size_t> m_currentSampleFrame { 0 };
 
-    bool m_isSilent;
-    bool m_isEffectivelyPlayingAudio;
-    bool m_muted;
+    float m_sampleRate;
+    bool m_isSilent { true };
+    bool m_isEffectivelyPlayingAudio { false };
+    bool m_muted { false };
 };
 
 } // namespace WebCore

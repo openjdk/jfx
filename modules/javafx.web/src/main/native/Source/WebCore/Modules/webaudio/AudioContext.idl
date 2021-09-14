@@ -29,18 +29,20 @@
     EnabledBySetting=WebAudio&ModernUnprefixedWebAudio,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToNativeObject,
+    Exposed=Window
 ] interface AudioContext : BaseAudioContext {
-    [CallWith=Document, MayThrowException] constructor(optional AudioContextOptions contextOptions);
+    [CallWith=Document] constructor(optional AudioContextOptions contextOptions);
 
     readonly attribute double baseLatency;
 
     // FIXME: Add support.
     // readonly attribute double outputLatency;
-    // AudioTimestamp getOutputTimestamp();
 
-    [ImplementedAs=suspendRendering] Promise<void> suspend();
-    [ImplementedAs=resumeRendering] Promise<void> resume();
-    Promise<void> close();
+    [CallWith=ActiveWindow] AudioTimestamp getOutputTimestamp();
+
+    [ImplementedAs=suspendRendering] Promise<undefined> suspend();
+    [ImplementedAs=resumeRendering] Promise<undefined> resume();
+    Promise<undefined> close();
 
     [Conditional=VIDEO, MayThrowException] MediaElementAudioSourceNode createMediaElementSource(HTMLMediaElement mediaElement);
     [Conditional=MEDIA_STREAM, MayThrowException] MediaStreamAudioSourceNode createMediaStreamSource(MediaStream mediaStream);

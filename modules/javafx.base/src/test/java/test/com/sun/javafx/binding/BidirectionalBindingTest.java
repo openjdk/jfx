@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -298,6 +298,15 @@ public class BidirectionalBindingTest<T> {
         assertEquals(op4.getValue(), op2.getValue());
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(v[0], op1.getValue());
+        assertEquals(v[1], op2.getValue());
+    }
+
+    @Test
+    public void testSetValueWithoutIntermediateValidation() {
+        BidirectionalBinding.bind(op1, op2);
+        op1.setValue(v[0]);
+        op2.setValue(v[1]);
+        assertEquals(v[1], op1.getValue());
         assertEquals(v[1], op2.getValue());
     }
 

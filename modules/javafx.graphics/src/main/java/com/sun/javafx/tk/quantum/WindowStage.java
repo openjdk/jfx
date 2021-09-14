@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -259,7 +259,7 @@ class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, AccessControlContext acc) {
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
         ViewScene scene = new ViewScene(depthBuffer, msaa);
         scene.setSecurityContext(acc);
         return scene;
@@ -630,6 +630,7 @@ class WindowStage extends GlassStage {
 
     private boolean hasPermission(Permission perm) {
         try {
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
                 sm.checkPermission(perm, getAccessControlContext());
@@ -762,6 +763,7 @@ class WindowStage extends GlassStage {
         }
     }
 
+    @SuppressWarnings("removal")
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
             if (activeFSWindow.compareAndSet(this, null)) {
@@ -895,7 +897,12 @@ class WindowStage extends GlassStage {
         if (platformWindow != null) {
             platformWindow.setEnabled(enabled);
         }
-        if (!enabled) {
+        if (enabled) {
+            // Check if window is really enabled - to handle nested case
+            if (platformWindow != null && platformWindow.isEnabled()) {
+                requestToFront();
+            }
+        } else {
             removeActiveWindow(this);
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -145,7 +145,7 @@ public class ButtonBar extends Control {
     // TODO add support for BUTTON_ORDER_NONE
     // TODO test and document what happens with unexpected button order strings
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -176,7 +176,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static enumerations
      *
@@ -432,7 +432,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -442,7 +442,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -490,7 +490,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -519,7 +519,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -586,7 +586,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Implementation
      *
@@ -606,7 +606,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes / enums
      *

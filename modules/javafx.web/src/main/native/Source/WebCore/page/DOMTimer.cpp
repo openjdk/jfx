@@ -56,15 +56,11 @@ public:
     DOMTimerFireState(ScriptExecutionContext& context, int nestingLevel)
         : m_context(context)
         , m_contextIsDocument(is<Document>(m_context))
-    {
         // For worker threads, don't update the current DOMTimerFireState.
         // Setting this from workers would not be thread-safe, and its not relevant to current uses.
-        if (m_contextIsDocument) {
-            m_initialDOMTreeVersion = downcast<Document>(context).domTreeVersion();
-            m_previous = current;
-            current = this;
-        }
-
+        , m_initialDOMTreeVersion(m_contextIsDocument ? downcast<Document>(m_context).domTreeVersion() : 0)
+        , m_previous(m_contextIsDocument ? std::exchange(current, this) : nullptr)
+    {
         m_context.setTimerNestingLevel(nestingLevel);
     }
 
@@ -95,11 +91,11 @@ public:
 
 private:
     ScriptExecutionContext& m_context;
-    uint64_t m_initialDOMTreeVersion;
-    DOMTimerFireState* m_previous;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
+    uint64_t m_initialDOMTreeVersion;
+    DOMTimerFireState* m_previous;
 };
 
 DOMTimerFireState* DOMTimerFireState::current = nullptr;
@@ -284,6 +280,8 @@ void DOMTimer::fired()
     // wait unit the end of this function to delete DOMTimer.
     Ref<DOMTimer> protectedThis(*this);
 
+    bool oneShot = !repeatInterval();
+
     ASSERT(scriptExecutionContext());
     ScriptExecutionContext& context = *scriptExecutionContext();
 
@@ -291,7 +289,7 @@ void DOMTimer::fired()
     if (is<Document>(context)) {
         auto& document = downcast<Document>(context);
         if (auto* holdingTank = document.domTimerHoldingTankIfExists(); holdingTank && holdingTank->contains(*this)) {
-            if (!repeatInterval())
+            if (oneShot)
                 startOneShot(0_s);
             return;
         }
@@ -309,7 +307,7 @@ void DOMTimer::fired()
     // Only the first execution of a multi-shot timer should get an affirmative user gesture indicator.
     m_userGestureTokenToForward = nullptr;
 
-    InspectorInstrumentation::willFireTimer(context, m_timeoutId, !repeatInterval());
+    InspectorInstrumentation::willFireTimer(context, m_timeoutId, oneShot);
 
     // Simple case for non-one-shot timers.
     if (isActive()) {
@@ -320,7 +318,7 @@ void DOMTimer::fired()
 
         m_action->execute(context);
 
-        InspectorInstrumentation::didFireTimer(context);
+        InspectorInstrumentation::didFireTimer(context, m_timeoutId, oneShot);
 
         updateThrottlingStateIfNecessary(fireState);
         return;
@@ -338,7 +336,7 @@ void DOMTimer::fired()
 #endif
     m_action->execute(context);
 
-    InspectorInstrumentation::didFireTimer(context);
+    InspectorInstrumentation::didFireTimer(context, m_timeoutId, oneShot);
 
     // Check if we should throttle nested single-shot timers.
     if (nestedTimers) {

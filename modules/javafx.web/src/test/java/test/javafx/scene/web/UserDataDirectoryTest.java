@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -400,6 +400,7 @@ public class UserDataDirectoryTest extends TestBase {
         }
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testSecurityError() {
         String url = new File("src/test/resources/test/html/ipsum.html")
@@ -417,6 +418,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertHasNoLocalStorage(webEngine);
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testSecurityErrorWithPassiveHandler() {
         String url = new File("src/test/resources/test/html/ipsum.html")
@@ -438,6 +440,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertOccurred(USER_DATA_DIRECTORY_SECURITY_ERROR, handler);
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testSecurityErrorWithRecoveringHandler() {
         String url = new File("src/test/resources/test/html/ipsum.html")
@@ -718,6 +721,7 @@ public class UserDataDirectoryTest extends TestBase {
         }
     }
 
+    @SuppressWarnings("removal")
     private static final class CustomSecurityManager extends SecurityManager {
         private final String path;
 

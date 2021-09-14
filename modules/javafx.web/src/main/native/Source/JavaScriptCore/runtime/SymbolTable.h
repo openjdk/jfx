@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "ScopedArgumentsTable.h"
 #include "TypeLocation.h"
 #include "VarOffset.h"
+#include "VariableEnvironment.h"
 #include "Watchpoint.h"
 #include <memory>
 #include <wtf/HashTraits.h>
@@ -450,8 +451,7 @@ public:
     typedef HashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
     typedef HashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
     typedef Vector<SymbolTableEntry*> LocalToEntryVec;
-    typedef HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> PrivateNameSet;
-    typedef WTF::IteratorRange<typename PrivateNameSet::iterator> PrivateNameIteratorRange;
+    typedef WTF::IteratorRange<typename PrivateNameEnvironment::iterator> PrivateNameIteratorRange;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -605,14 +605,14 @@ public:
         return makeIteratorRange(m_rareData->m_privateNames.begin(), m_rareData->m_privateNames.end());
     }
 
-    void addPrivateName(UniquedStringImpl* key)
+    void addPrivateName(const RefPtr<UniquedStringImpl>& key, PrivateNameEntry value)
     {
         ASSERT(key && !key->isSymbol());
         if (!m_rareData)
             m_rareData = WTF::makeUnique<SymbolTableRareData>();
 
-        ASSERT(!m_rareData->m_privateNames.contains(key));
-        m_rareData->m_privateNames.add(key);
+        ASSERT(m_rareData->m_privateNames.find(key) == m_rareData->m_privateNames.end());
+        m_rareData->m_privateNames.add(key, value);
     }
 
     template<typename Entry>
@@ -733,11 +733,12 @@ public:
         m_singleton.notifyWrite(vm, this, scope, reason);
     }
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_EXPORT_INFO;
 
     void finalizeUnconditionally(VM&);
+    void dump(PrintStream&) const;
 
 private:
     JS_EXPORT_PRIVATE SymbolTable(VM&);
@@ -756,7 +757,7 @@ public:
         OffsetToVariableMap m_offsetToVariableMap;
         UniqueTypeSetMap m_uniqueTypeSetMap;
         WriteBarrier<CodeBlock> m_codeBlock;
-        PrivateNameSet m_privateNames;
+        PrivateNameEnvironment m_privateNames;
     };
 
 private:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -156,17 +156,17 @@ public:
 
     MetadataTable* metadataTable() const { return m_metadata.get(); }
 
-    int numParameters() const { return m_numParameters; }
-    void setNumParameters(int newValue);
+    unsigned numParameters() const { return m_numParameters; }
+    void setNumParameters(unsigned newValue);
 
-    int numberOfArgumentsToSkip() const { return m_numberOfArgumentsToSkip; }
+    unsigned numberOfArgumentsToSkip() const { return m_numberOfArgumentsToSkip; }
 
-    int numCalleeLocals() const { return m_numCalleeLocals; }
+    unsigned numCalleeLocals() const { return m_numCalleeLocals; }
 
-    int numVars() const { return m_numVars; }
-    int numTmps() const { return m_unlinkedCode->hasCheckpoints() * maxNumCheckpointTmps; }
+    unsigned numVars() const { return m_numVars; }
+    unsigned numTmps() const { return m_unlinkedCode->hasCheckpoints() * maxNumCheckpointTmps; }
 
-    int* addressOfNumParameters() { return &m_numParameters; }
+    unsigned* addressOfNumParameters() { return &m_numParameters; }
     static ptrdiff_t offsetOfNumParameters() { return OBJECT_OFFSETOF(CodeBlock, m_numParameters); }
 
     CodeBlock* alternative() const { return static_cast<CodeBlock*>(m_alternative.get()); }
@@ -201,10 +201,10 @@ public:
     // https://bugs.webkit.org/show_bug.cgi?id=123677
     CodeBlock* baselineVersion();
 
+    DECLARE_VISIT_CHILDREN;
+
     static size_t estimatedSize(JSCell*, VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
     static void destroy(JSCell*);
-    void visitChildren(SlotVisitor&);
     void finalizeUnconditionally(VM&);
 
     void notifyLexicalBindingUpdate();
@@ -243,7 +243,7 @@ public:
 
     ALWAYS_INLINE bool isTemporaryRegister(VirtualRegister reg)
     {
-        return reg.offset() >= m_numVars;
+        return reg.offset() >= static_cast<int>(m_numVars);
     }
 
     HandlerInfo* handlerForBytecodeIndex(BytecodeIndex, RequiredHandler = RequiredHandler::AnyHandler);
@@ -308,16 +308,16 @@ public:
     template <typename Generator, typename = typename std::enable_if<std::is_same<Generator, JITSubGenerator>::value>::type>
     JITSubIC* addMathIC(BinaryArithProfile* profile) { return addJITSubIC(profile); }
 
-    StructureStubInfo* addStubInfo(AccessType);
+    StructureStubInfo* addStubInfo(AccessType, CodeOrigin);
 
     // O(n) operation. Use getICStatusMap() unless you really only intend to get one stub info.
     StructureStubInfo* findStubInfo(CodeOrigin);
     // O(n) operation. Use getICStatusMap() unless you really only intend to get one by-val-info.
     ByValInfo* findByValInfo(CodeOrigin);
 
-    ByValInfo* addByValInfo();
+    ByValInfo* addByValInfo(BytecodeIndex);
 
-    CallLinkInfo* addCallLinkInfo();
+    CallLinkInfo* addCallLinkInfo(CodeOrigin);
 
     // This is a slow function call used primarily for compiling OSR exits in the case
     // that there had been inlining. Chances are if you want to use this, you're really
@@ -869,6 +869,7 @@ public:
 
     bool m_hasLinkedOSRExit : 1;
     bool m_isEligibleForLLIntDowngrade : 1;
+    bool m_visitChildrenSkippedDueToOldAge { false };
 
     // Internal methods for use by validation code. It would be private if it wasn't
     // for the fact that we use it from anonymous namespaces.
@@ -943,6 +944,8 @@ private:
     friend class CodeBlockSet;
     friend class ExecutableToCodeBlockEdge;
 
+    template<typename Visitor> ALWAYS_INLINE void visitChildren(Visitor&);
+
     BytecodeLivenessAnalysis& livenessAnalysisSlow();
 
     CodeBlock* specialOSREntryBlockOrNull();
@@ -953,8 +956,6 @@ private:
 
     void updateAllValueProfilePredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
-    void setConstantIdentifierSetRegisters(VM&, const RefCountedArray<ConstantIdentifierSetEntry>& constants);
-
     void setConstantRegisters(const RefCountedArray<WriteBarrier<Unknown>>& constants, const RefCountedArray<SourceCodeRepresentation>& constantsSourceCodeRepresentation, ScriptExecutable* topLevelExecutable);
 
     void replaceConstant(VirtualRegister reg, JSValue value)
@@ -963,16 +964,16 @@ private:
         m_constantRegisters[reg.toConstantIndex()].set(*m_vm, this, value);
     }
 
-    bool shouldVisitStrongly(const ConcurrentJSLocker&);
+    template<typename Visitor> bool shouldVisitStrongly(const ConcurrentJSLocker&, Visitor&);
     bool shouldJettisonDueToWeakReference(VM&);
-    bool shouldJettisonDueToOldAge(const ConcurrentJSLocker&);
+    template<typename Visitor> bool shouldJettisonDueToOldAge(const ConcurrentJSLocker&, Visitor&);
 
-    void propagateTransitions(const ConcurrentJSLocker&, SlotVisitor&);
-    void determineLiveness(const ConcurrentJSLocker&, SlotVisitor&);
+    template<typename Visitor> void propagateTransitions(const ConcurrentJSLocker&, Visitor&);
+    template<typename Visitor> void determineLiveness(const ConcurrentJSLocker&, Visitor&);
 
-    void stronglyVisitStrongReferences(const ConcurrentJSLocker&, SlotVisitor&);
-    void stronglyVisitWeakReferences(const ConcurrentJSLocker&, SlotVisitor&);
-    void visitOSRExitTargets(const ConcurrentJSLocker&, SlotVisitor&);
+    template<typename Visitor> void stronglyVisitStrongReferences(const ConcurrentJSLocker&, Visitor&);
+    template<typename Visitor> void stronglyVisitWeakReferences(const ConcurrentJSLocker&, Visitor&);
+    template<typename Visitor> void visitOSRExitTargets(const ConcurrentJSLocker&, Visitor&);
 
     unsigned numberOfNonArgumentValueProfiles() { return m_numberOfNonArgumentValueProfiles; }
     unsigned totalNumberOfValueProfiles() { return numberOfArgumentValueProfiles() + numberOfNonArgumentValueProfiles(); }
@@ -995,10 +996,10 @@ private:
     void insertBasicBlockBoundariesForControlFlowProfiler();
     void ensureCatchLivenessIsComputedForBytecodeIndexSlow(const OpCatch&, BytecodeIndex);
 
-    int m_numCalleeLocals;
-    int m_numVars;
-    int m_numParameters;
-    int m_numberOfArgumentsToSkip { 0 };
+    unsigned m_numCalleeLocals;
+    unsigned m_numVars;
+    unsigned m_numParameters;
+    unsigned m_numberOfArgumentsToSkip { 0 };
     unsigned m_numberOfNonArgumentValueProfiles { 0 };
     union {
         unsigned m_debuggerRequests;

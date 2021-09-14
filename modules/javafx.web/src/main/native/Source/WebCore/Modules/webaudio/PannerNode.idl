@@ -26,15 +26,16 @@
     Conditional=WEB_AUDIO,
     JSGenerateToJSObject,
     EnabledBySetting=ModernUnprefixedWebAudio,
+    Exposed=Window
 ] interface PannerNode : AudioNode {
-    [MayThrowException] constructor (BaseAudioContext context, optional PannerOptions options);
+    constructor (BaseAudioContext context, optional PannerOptions options);
 
     // Default model for stereo is equalpower
     attribute PanningModelType panningModel;
 
     // Uses a 3D cartesian coordinate system 
-    void setPosition(unrestricted float x, unrestricted float y, unrestricted float z);
-    void setOrientation(unrestricted float x, unrestricted float y, unrestricted float z);
+    [MayThrowException] undefined setPosition(float x, float y, float z);
+    [MayThrowException] undefined setOrientation(float x, float y, float z);
 
     // Default distance model is inverse
     attribute DistanceModelType distanceModel;

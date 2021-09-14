@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -201,7 +201,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [GlassTouches stopTracking:self];
 
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
+
     if (env != NULL)
     {
         (*env)->DeleteGlobalRef(env, self->jView);

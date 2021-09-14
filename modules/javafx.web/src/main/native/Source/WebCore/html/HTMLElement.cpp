@@ -45,6 +45,7 @@
 #include "HTMLBDIElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLButtonElement.h"
+#include "HTMLDivElement.h"
 #include "HTMLDocument.h"
 #include "HTMLElementFactory.h"
 #include "HTMLFieldSetElement.h"
@@ -55,16 +56,19 @@
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
+#include "HTMLStyleElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "NodeTraversal.h"
 #include "RenderElement.h"
+#include "RenderImage.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
 #include "SimulatedClick.h"
 #include "StyleProperties.h"
 #include "Text.h"
+#include "UserAgentStyleSheets.h"
 #include "XMLNames.h"
 #include "markup.h"
 #include <wtf/IsoMallocInlines.h>
@@ -72,6 +76,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+
+#if ENABLE(IMAGE_EXTRACTION)
+#include "ImageExtractionResult.h"
+#endif
 
 namespace WebCore {
 
@@ -312,6 +320,7 @@ HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
         &onseekingAttr.get(),
         &onselectAttr.get(),
         &onselectstartAttr.get(),
+        &onslotchangeAttr.get(),
         &onstalledAttr.get(),
         &onsubmitAttr.get(),
         &onsuspendAttr.get(),
@@ -451,10 +460,10 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& va
     }
 
     if (name == tabindexAttr) {
-        if (value.isEmpty())
-            clearTabIndexExplicitlyIfNeeded();
-        else if (auto optionalTabIndex = parseHTMLInteger(value))
+        if (auto optionalTabIndex = parseHTMLInteger(value))
             setTabIndexExplicitly(optionalTabIndex.value());
+        else
+            setTabIndexExplicitly(WTF::nullopt);
         return;
     }
 
@@ -539,10 +548,7 @@ ExceptionOr<void> HTMLElement::setInnerText(const String& text)
     // FIXME: This doesn't take whitespace collapsing into account at all.
 
     if (!text.contains('\n') && !text.contains('\r')) {
-        if (text.isEmpty())
-            replaceAllChildren(nullptr);
-        else
-            replaceAllChildren(document().createTextNode(text));
+        replaceAllChildrenWithNewText(text);
         return { };
     }
 
@@ -552,19 +558,19 @@ ExceptionOr<void> HTMLElement::setInnerText(const String& text)
     auto* r = renderer();
     if ((r && r->style().preserveNewline()) || (isConnected() && isTextControlInnerTextElement())) {
         if (!text.contains('\r')) {
-            replaceAllChildren(document().createTextNode(text));
+            replaceAllChildrenWithNewText(text);
             return { };
         }
         String textWithConsistentLineBreaks = text;
         textWithConsistentLineBreaks.replace("\r\n", "\n");
         textWithConsistentLineBreaks.replace('\r', '\n');
-        replaceAllChildren(document().createTextNode(textWithConsistentLineBreaks));
+        replaceAllChildrenWithNewText(textWithConsistentLineBreaks);
         return { };
     }
 
     // Add text nodes and <br> elements.
     auto fragment = textToFragment(document(), text);
-    // FIXME: This should use replaceAllChildren() once it accepts DocumentFragments as input.
+    // FIXME: This should use a variant of replaceAllChildrenWithNewText() which accepts DocumentFragments as input.
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
     return replaceChildrenWithFragment(*this, WTFMove(fragment));
@@ -785,7 +791,7 @@ bool HTMLElement::rendererIsEverNeeded()
             return false;
     } else if (hasTagName(noembedTag)) {
         RefPtr<Frame> frame = document().frame();
-        if (frame && frame->loader().arePluginsEnabled())
+        if (frame && frame->arePluginsEnabled())
             return false;
     }
     return StyledElement::rendererIsEverNeeded();
@@ -948,7 +954,7 @@ void HTMLElement::calculateAndAdjustDirectionality()
         invalidateStyleForSubtree();
 }
 
-void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChangeType changeType)
+void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type changeType)
 {
     // FIXME: This function looks suspicious.
 
@@ -957,7 +963,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
 
     RefPtr<Node> oldMarkedNode;
     if (beforeChange)
-        oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
+        oldMarkedNode = changeType == ChildChange::Type::ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
 
     while (oldMarkedNode && elementAffectsDirectionality(*oldMarkedNode))
         oldMarkedNode = oldMarkedNode->nextSibling();
@@ -1187,6 +1193,105 @@ void HTMLElement::setEnterKeyHint(const String& value)
 {
     setAttributeWithoutSynchronization(enterkeyhintAttr, value);
 }
+
+static const AtomString& imageOverlayElementIdentifier()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("image-overlay", AtomString::ConstructFromLiteral);
+    return identifier;
+}
+
+bool HTMLElement::shouldUpdateSelectionForMouseDrag(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate)
+{
+    if (!is<HTMLDivElement>(targetNode))
+        return true;
+
+    auto shadowHost = makeRefPtr(targetNode.shadowHost());
+    if (!is<HTMLElement>(shadowHost))
+        return true;
+
+    auto& host = downcast<HTMLElement>(*shadowHost);
+    if (!host.hasImageOverlay())
+        return true;
+
+    if (!targetNode.contains(selectionBeforeUpdate.start().containerNode()))
+        return true;
+
+    for (auto& child : childrenOfType<HTMLDivElement>(*host.userAgentShadowRoot())) {
+        if (child.getIdAttribute() == imageOverlayElementIdentifier())
+            return &targetNode != &child;
+    }
+
+    return true;
+}
+
+bool HTMLElement::hasImageOverlay() const
+{
+    auto shadowRoot = userAgentShadowRoot();
+    if (LIKELY(!shadowRoot))
+        return false;
+
+    return shadowRoot->hasElementWithId(*imageOverlayElementIdentifier().impl());
+}
+
+#if ENABLE(IMAGE_EXTRACTION)
+
+void HTMLElement::updateWithImageExtractionResult(ImageExtractionResult&& result)
+{
+    if (result.isEmpty())
+        return;
+
+    if (auto* renderer = this->renderer()) {
+        if (!is<RenderImage>(renderer))
+            return;
+
+        downcast<RenderImage>(*renderer).setHasImageOverlay();
+    }
+
+    static NeverDestroyed<const String> shadowStyle(imageOverlayUserAgentStyleSheet, String::ConstructFromLiteral);
+    auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
+    style->setTextContent(shadowStyle);
+
+    auto shadowRoot = makeRef(ensureUserAgentShadowRoot());
+    shadowRoot->appendChild(WTFMove(style));
+
+    auto container = HTMLDivElement::create(document());
+    container->setIdAttribute(imageOverlayElementIdentifier());
+    shadowRoot->appendChild(container);
+
+    static MainThreadNeverDestroyed<const AtomString> imageOverlayTextClass("image-overlay-text", AtomString::ConstructFromLiteral);
+
+    IntSize containerSize { offsetWidth(), offsetHeight() };
+    for (auto& data : result.textData) {
+        auto child = HTMLDivElement::create(document());
+        child->classList().add(imageOverlayTextClass);
+
+        container->appendChild(child);
+        child->appendChild(Text::create(document(), data.text));
+        child->appendChild(HTMLBRElement::create(document()));
+
+        IntSize originalSize { child->offsetWidth(), child->offsetHeight() };
+        if (originalSize.isEmpty())
+            continue;
+
+        auto targetRect = data.normalizedQuad.boundingBox();
+        targetRect.scale(containerSize);
+
+        IntPoint translationOffset {
+            static_cast<int>(targetRect.x() + (targetRect.width() - originalSize.width()) / 2),
+            static_cast<int>(targetRect.y() + (targetRect.height() - originalSize.height()) / 2)
+        };
+
+        child->setInlineStyleProperty(CSSPropertyTransform, makeString(
+            "translate("_s, translationOffset.x(), "px, "_s, translationOffset.y(), "px) "_s
+            "scale("_s, targetRect.width() / originalSize.width(), ", "_s, targetRect.height() / originalSize.height(), ")"_s
+        ));
+    }
+
+    if (auto frame = makeRefPtr(document().frame()))
+        frame->eventHandler().scheduleCursorUpdate();
+}
+
+#endif // ENABLE(IMAGE_EXTRACTION)
 
 } // namespace WebCore
 

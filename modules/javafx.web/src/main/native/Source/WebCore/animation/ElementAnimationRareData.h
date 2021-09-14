@@ -39,15 +39,15 @@ class ElementAnimationRareData {
     WTF_MAKE_NONCOPYABLE(ElementAnimationRareData);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit ElementAnimationRareData();
+    explicit ElementAnimationRareData(PseudoId);
     ~ElementAnimationRareData();
+
+    PseudoId pseudoId() const { return m_pseudoId; }
 
     KeyframeEffectStack* keyframeEffectStack() { return m_keyframeEffectStack.get(); }
     KeyframeEffectStack& ensureKeyframeEffectStack();
 
-    AnimationCollection& webAnimations() { return m_webAnimations; }
-    AnimationCollection& cssAnimations() { return m_cssAnimations; }
-    AnimationCollection& transitions() { return m_transitions; }
+    AnimationCollection& animations() { return m_animations; }
     CSSAnimationCollection& animationsCreatedByMarkup() { return m_animationsCreatedByMarkup; }
     void setAnimationsCreatedByMarkup(CSSAnimationCollection&&);
     PropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
@@ -59,12 +59,11 @@ private:
 
     std::unique_ptr<KeyframeEffectStack> m_keyframeEffectStack;
     std::unique_ptr<const RenderStyle> m_lastStyleChangeEventStyle;
-    AnimationCollection m_webAnimations;
-    AnimationCollection m_cssAnimations;
-    AnimationCollection m_transitions;
+    AnimationCollection m_animations;
     CSSAnimationCollection m_animationsCreatedByMarkup;
     PropertyToTransitionMap m_completedTransitionsByProperty;
     PropertyToTransitionMap m_runningTransitionsByProperty;
+    PseudoId m_pseudoId;
 };
 
 } // namespace WebCore

@@ -28,10 +28,14 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "InlineIterator.h"
+#include "LayoutContainerBox.h"
 #include "LayoutInlineTextBox.h"
 #include "LayoutLineBreakBox.h"
+#include "LayoutReplacedBox.h"
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
+#include "RenderImage.h"
 #include "RenderLineBreak.h"
 
 namespace WebCore {
@@ -46,70 +50,149 @@ static RenderStyle rootBoxStyle(const RenderStyle& style)
     return clonedStyle;
 }
 
-BoxTree::BoxTree(const RenderBlockFlow& flow)
-    : m_root(rootBoxStyle(flow.style()))
+BoxTree::BoxTree(RenderBlockFlow& flow)
+    : m_flow(flow)
+    , m_root(rootBoxStyle(flow.style()))
 {
     if (flow.isAnonymous())
         m_root.setIsAnonymous();
 
-    buildTree(flow);
+    buildTree();
 }
 
-void BoxTree::buildTree(const RenderBlockFlow& flow)
+void BoxTree::buildTree()
 {
-    for (auto& childRenderer : childrenOfType<RenderObject>(flow)) {
-        std::unique_ptr<Layout::Box> childBox;
+    auto createChildBox = [&](RenderObject& childRenderer) -> std::unique_ptr<Layout::Box> {
         if (is<RenderText>(childRenderer)) {
             auto& textRenderer = downcast<RenderText>(childRenderer);
-            childBox = makeUnique<Layout::InlineTextBox>(textRenderer.text(), textRenderer.canUseSimplifiedTextMeasuring(), RenderStyle::createAnonymousStyleWithDisplay(m_root.style(), DisplayType::Inline));
-        } else if (childRenderer.isLineBreak()) {
-            auto clonedStyle = RenderStyle::clone(childRenderer.style());
-            clonedStyle.setDisplay(DisplayType::Inline);
-            clonedStyle.setFloating(Float::No);
-            clonedStyle.setPosition(PositionType::Static);
-            childBox = makeUnique<Layout::LineBreakBox>(downcast<RenderLineBreak>(childRenderer).isWBR(), WTFMove(clonedStyle));
+            auto style = RenderStyle::createAnonymousStyleWithDisplay(textRenderer.style(), DisplayType::Inline);
+            return makeUnique<Layout::InlineTextBox>(textRenderer.text(), textRenderer.canUseSimplifiedTextMeasuring(), WTFMove(style));
         }
-        ASSERT(childBox);
 
-        m_root.appendChild(*childBox);
-        m_boxes.append({ WTFMove(childBox), &childRenderer });
+        auto style = RenderStyle::clone(childRenderer.style());
+        if (childRenderer.isLineBreak()) {
+            style.setDisplay(DisplayType::Inline);
+            style.setFloating(Float::No);
+            style.setPosition(PositionType::Static);
+            return makeUnique<Layout::LineBreakBox>(downcast<RenderLineBreak>(childRenderer).isWBR(), WTFMove(style));
+        }
+
+        if (is<RenderReplaced>(childRenderer))
+            return makeUnique<Layout::ReplacedBox>(Layout::Box::ElementAttributes { is<RenderImage>(childRenderer) ? Layout::Box::ElementType::Image : Layout::Box::ElementType::GenericElement }, WTFMove(style));
+
+        if (is<RenderBlock>(childRenderer))
+            return makeUnique<Layout::ReplacedBox>(Layout::Box::ElementAttributes { Layout::Box::ElementType::GenericElement }, WTFMove(style));
+
+        if (is<RenderInline>(childRenderer)) {
+            if (childRenderer.parent()->isAnonymousBlock()) {
+                // This looks like continuation renderer.
+                auto& renderInline = downcast<RenderInline>(childRenderer);
+                auto shouldNotRetainBorderPaddingAndMarginStart = renderInline.isContinuation();
+                auto shouldNotRetainBorderPaddingAndMarginEnd = !renderInline.isContinuation() && renderInline.inlineContinuation();
+                if (shouldNotRetainBorderPaddingAndMarginStart) {
+                    style.setMarginStart(RenderStyle::initialMargin());
+                    style.resetBorderLeft();
+                    style.setPaddingLeft(RenderStyle::initialPadding());
+                }
+                if (shouldNotRetainBorderPaddingAndMarginEnd) {
+                    style.setMarginEnd(RenderStyle::initialMargin());
+                    style.resetBorderRight();
+                    style.setPaddingRight(RenderStyle::initialPadding());
+                }
+            }
+            return makeUnique<Layout::ContainerBox>(Layout::Box::ElementAttributes { Layout::Box::ElementType::GenericElement }, WTFMove(style));
+        }
+
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    };
+
+    for (auto walker = InlineWalker(m_flow); !walker.atEnd(); walker.advance()) {
+        if (walker.atEndOfInline())
+            continue;
+        auto& childRenderer = *walker.current();
+        auto childBox = createChildBox(childRenderer);
+        appendChild(WTFMove(childBox), childRenderer);
     }
 }
 
-const Layout::Box* BoxTree::layoutBoxForRenderer(const RenderObject& renderer) const
+void BoxTree::appendChild(std::unique_ptr<Layout::Box> childBox, RenderObject& childRenderer)
 {
+    auto& parentBox = downcast<Layout::ContainerBox>(layoutBoxForRenderer(*childRenderer.parent()));
+    parentBox.appendChild(*childBox);
+
+    m_boxes.append({ WTFMove(childBox), &childRenderer });
+
+    if (m_boxes.size() > smallTreeThreshold) {
+        if (m_rendererToBoxMap.isEmpty()) {
+            for (auto& entry : m_boxes)
+                m_rendererToBoxMap.add(entry.renderer, entry.box.get());
+        } else
+            m_rendererToBoxMap.add(&childRenderer, m_boxes.last().box.get());
+    }
+}
+
+void BoxTree::updateStyle(const RenderBoxModelObject& renderer)
+{
+    auto& layoutBox = layoutBoxForRenderer(renderer);
+    auto& style = renderer.style();
+    if (&layoutBox == &rootLayoutBox())
+        layoutBox.updateStyle(rootBoxStyle(style));
+    else
+        layoutBox.updateStyle(style);
+
+    if (is<Layout::ContainerBox>(layoutBox)) {
+        for (auto* child = downcast<Layout::ContainerBox>(layoutBox).firstChild(); child; child = child->nextSibling()) {
+            if (child->isInlineTextBox())
+                child->updateStyle(RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::Inline));
+        }
+    }
+}
+
+Layout::Box& BoxTree::layoutBoxForRenderer(const RenderObject& renderer)
+{
+    if (&renderer == &m_flow)
+        return m_root;
+
     if (m_boxes.size() <= smallTreeThreshold) {
         auto index = m_boxes.findMatching([&](auto& entry) {
             return entry.renderer == &renderer;
         });
-        if (index == notFound)
-            return nullptr;
-        return m_boxes[index].box.get();
+        RELEASE_ASSERT(index != notFound);
+        return *m_boxes[index].box;
     }
 
-    if (m_rendererToBoxMap.isEmpty()) {
-        for (auto& entry : m_boxes)
-            m_rendererToBoxMap.add(entry.renderer, entry.box.get());
-    }
-    return m_rendererToBoxMap.get(&renderer);
+    return *m_rendererToBoxMap.get(&renderer);
 }
 
-const RenderObject* BoxTree::rendererForLayoutBox(const Layout::Box& box) const
+const Layout::Box& BoxTree::layoutBoxForRenderer(const RenderObject& renderer) const
 {
+    return const_cast<BoxTree&>(*this).layoutBoxForRenderer(renderer);
+}
+
+RenderObject& BoxTree::rendererForLayoutBox(const Layout::Box& box)
+{
+    if (&box == &m_root)
+        return m_flow;
+
     if (m_boxes.size() <= smallTreeThreshold) {
         auto index = m_boxes.findMatching([&](auto& entry) {
             return entry.box.get() == &box;
         });
-        if (index == notFound)
-            return nullptr;
-        return m_boxes[index].renderer;
+        RELEASE_ASSERT(index != notFound);
+        return *m_boxes[index].renderer;
     }
 
     if (m_boxToRendererMap.isEmpty()) {
         for (auto& entry : m_boxes)
             m_boxToRendererMap.add(entry.box.get(), entry.renderer);
     }
-    return m_boxToRendererMap.get(&box);
+    return *m_boxToRendererMap.get(&box);
+}
+
+const RenderObject& BoxTree::rendererForLayoutBox(const Layout::Box& box) const
+{
+    return const_cast<BoxTree&>(*this).rendererForLayoutBox(box);
 }
 
 }

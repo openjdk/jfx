@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WebCoreTestSupport.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
 #include "InternalSettings.h"
 #include "Internals.h"
@@ -43,11 +44,14 @@
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/IdentifierInlines.h>
+#include <JavaScriptCore/JITOperationList.h>
 #include <JavaScriptCore/JSValueRef.h>
 #include <wtf/URLParser.h>
 
 #if PLATFORM(COCOA)
 #include "UTIRegistry.h"
+#include "VersionChecks.h"
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 namespace WebCoreTestSupport {
@@ -140,7 +144,14 @@ void initializeLogChannelsIfNecessary()
 
 void setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
 {
-    InternalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
+    DeprecatedGlobalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
+}
+
+void setLinkedOnOrAfterEverythingForTesting()
+{
+#if PLATFORM(COCOA)
+    setApplicationSDKVersion(std::numeric_limits<uint32_t>::max());
+#endif
 }
 
 void installMockGamepadProvider()
@@ -212,11 +223,11 @@ void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier)
         if (!script)
             return;
 
-        auto& state = *globalScope.execState();
-        auto& vm = state.vm();
+        auto& globalObject = *globalScope.globalObject();
+        auto& vm = globalObject.vm();
         JSLockHolder locker(vm);
-        auto* contextWrapper = script->workerGlobalScopeWrapper();
-        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&state, contextWrapper, ServiceWorkerInternals::create(identifier)));
+        auto* contextWrapper = script->globalScopeWrapper();
+        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&globalObject, contextWrapper, ServiceWorkerInternals::create(identifier)));
     });
 #else
     UNUSED_PARAM(serviceWorkerIdentifier);
@@ -229,5 +240,20 @@ void setAdditionalSupportedImageTypesForTesting(const WTF::String& imageTypes)
     WebCore::setAdditionalSupportedImageTypesForTesting(imageTypes);
 }
 #endif
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+extern const uintptr_t startOfJITOperationsInWebCoreTestSupport __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const uintptr_t endOfJITOperationsInWebCoreTestSupport __asm("section$end$__DATA_CONST$__jsc_ops");
+#endif
+
+void populateJITOperations()
+{
+#if ENABLE(JIT_OPERATION_VALIDATION)
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [] {
+        JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInWebCoreTestSupport, &endOfJITOperationsInWebCoreTestSupport);
+    });
+#endif
+}
 
 }

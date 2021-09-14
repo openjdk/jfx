@@ -86,18 +86,19 @@ macro(find_package package)
     endif ()
 
     # Apple builds have a unique location for ICU
-    if (APPLE AND "${package}" STREQUAL "ICU")
+    if (USE_APPLE_ICU AND "${package}" STREQUAL "ICU")
         set(_found_package ON)
 
         set(ICU_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/ICU/Headers)
 
-        # Apple just has a single dylib for ICU
-        set(ICU_I18N_LIBRARY /usr/lib/libicucore.dylib)
-        set(ICU_UC_LIBRARY /usr/lib/libicucore.dylib)
-        set(ICU_DATA_LIBRARY /usr/lib/libicucore.dylib)
+        # Apple just has a single tbd/dylib for ICU.
+        find_library(ICU_I18N_LIBRARY icucore)
+        find_library(ICU_UC_LIBRARY icucore)
+        find_library(ICU_DATA_LIBRARY icucore)
 
         set(ICU_LIBRARIES ${ICU_UC_LIBRARY})
         set(ICU_FOUND ON)
+        message(STATUS "Found ICU: ${ICU_LIBRARIES}")
     endif ()
 
     if (NOT _found_package)

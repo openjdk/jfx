@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -515,6 +515,10 @@ private:
             case Array::Int32Array:
                 changed |= mergePrediction(SpecInt32Only);
                 break;
+            case Array::BigInt64Array:
+            case Array::BigUint64Array:
+                changed |= mergePrediction(SpecBigInt);
+                break;
             default:
                 changed |= mergePrediction(node->getHeapPrediction());
                 break;
@@ -875,6 +879,8 @@ private:
         case TryGetById:
         case GetByValWithThis:
         case GetByOffset:
+        case GetPrivateName:
+        case GetPrivateNameById:
         case MultiGetByOffset:
         case GetDirectPname:
         case Call:
@@ -1035,14 +1041,15 @@ private:
         case InstanceOfCustom:
         case IsEmpty:
         case TypeOfIsUndefined:
+        case TypeOfIsObject:
+        case TypeOfIsFunction:
         case IsUndefinedOrNull:
         case IsBoolean:
         case IsNumber:
         case IsBigInt:
         case NumberIsInteger:
         case IsObject:
-        case IsObjectOrNull:
-        case IsFunction:
+        case IsCallable:
         case IsConstructor:
         case IsCellWithType:
         case IsTypedArrayView:
@@ -1110,7 +1117,8 @@ private:
         case NewArrayWithSize:
         case CreateRest:
         case NewArrayBuffer:
-        case ObjectKeys: {
+        case ObjectKeys:
+        case ObjectGetOwnPropertyNames: {
             setPrediction(SpecArray);
             break;
         }
@@ -1208,11 +1216,12 @@ private:
             setPrediction(SpecInt32Only);
             break;
         }
-        case HasGenericProperty:
-        case HasStructureProperty:
         case HasOwnStructureProperty:
         case InStructureProperty:
-        case HasIndexedProperty: {
+        case HasIndexedProperty:
+        case HasEnumerableIndexedProperty:
+        case HasEnumerableStructureProperty:
+        case HasEnumerableProperty: {
             setPrediction(SpecBoolean);
             break;
         }
@@ -1313,6 +1322,7 @@ private:
         case CheckTierUpInLoop:
         case CheckTierUpAtReturn:
         case CheckTierUpAndOSREnter:
+        case AssertInBounds:
         case CheckInBounds:
         case ValueToInt32:
         case DoubleRep:
@@ -1376,6 +1386,10 @@ private:
         case PutByValWithThis:
         case PutByIdWithThis:
         case PutByVal:
+        case PutPrivateName:
+        case PutPrivateNameById:
+        case SetPrivateBrand:
+        case CheckPrivateBrand:
         case PutClosureVar:
         case PutInternalField:
         case PutToArguments:
@@ -1417,7 +1431,7 @@ private:
         case Phantom:
         case Check:
         case CheckArray:
-        case CheckNeutered:
+        case CheckDetached:
         case CheckVarargs:
         case PutGlobalVariable:
         case CheckTraps:
@@ -1428,7 +1442,6 @@ private:
         case NotifyWrite:
         case ConstantStoragePointer:
         case MovHint:
-        case ZombieHint:
         case ExitOK:
         case VarargsLength:
         case LoadVarargs:
@@ -1443,6 +1456,8 @@ private:
         case FilterPutByIdStatus:
         case FilterInByIdStatus:
         case FilterDeleteByStatus:
+        case FilterCheckPrivateBrandStatus:
+        case FilterSetPrivateBrandStatus:
         case ClearCatchLocals:
         case DataViewSet:
         case InvalidationPoint:

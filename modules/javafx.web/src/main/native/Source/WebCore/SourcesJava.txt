@@ -1,4 +1,4 @@
-// Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 //
 // This code is free software; you can redistribute it and/or modify it
@@ -62,8 +62,11 @@ platform/java/SharedBufferJava.cpp
 platform/java/MainThreadSharedTimerJava.cpp
 platform/java/StringJava.cpp
 platform/java/TouchEventJava.cpp
+platform/java/WebKitLogging.cpp
 platform/java/WheelEventJava.cpp
 platform/java/WidgetJava.cpp
+
+platform/graphics/displaylists/DisplayListDrawGlyphsRecorderJava.cpp
 platform/graphics/java/BitmapImageJava.cpp
 platform/graphics/java/BufferImageJava.cpp
 platform/graphics/java/ChromiumBridge.cpp
@@ -71,6 +74,7 @@ platform/graphics/java/ComplexTextControllerJava.cpp
 platform/graphics/java/FontCacheJava.cpp
 platform/graphics/java/FontCustomPlatformData.cpp
 platform/graphics/java/FontCascadeJava.cpp
+platform/graphics/java/FontDescriptionJava.cpp
 platform/graphics/java/FontJava.cpp
 platform/graphics/java/FontPlatformDataJava.cpp
 platform/graphics/java/GlyphPageTreeNodeJava.cpp
@@ -106,6 +110,5 @@ platform/network/java/URLLoader.cpp
 bindings/java/JavaDOMUtils.cpp
 bindings/java/JavaEventListener.cpp
 
-platform/java/WebKitLogging.cpp
 page/java/DragControllerJava.cpp
 page/java/EventHandlerJava.cpp

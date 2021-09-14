@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,6 +122,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("removal")
     @Override
     public void run() {
         // Run the loader in the page's access control context
@@ -185,7 +186,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         } catch (MalformedURLException ex) {
             error = ex;
             errorCode = LoadListenerClient.MALFORMED_URL;
-        } catch (AccessControlException ex) {
+        } catch (@SuppressWarnings("removal") AccessControlException ex) {
             error = ex;
             errorCode = LoadListenerClient.PERMISSION_DENIED;
         } catch (UnknownHostException ex) {

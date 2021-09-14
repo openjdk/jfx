@@ -69,7 +69,7 @@ static RefPtr<JSON::Value> jsToInspectorValue(JSGlobalObject* globalObject, JSVa
                 auto elementValue = jsToInspectorValue(globalObject, array.getIndex(globalObject, i), maxDepth);
                 if (!elementValue)
                     return nullptr;
-                inspectorArray->pushValue(WTFMove(elementValue));
+                inspectorArray->pushValue(elementValue.releaseNonNull());
             }
             return inspectorArray;
         }
@@ -77,12 +77,12 @@ static RefPtr<JSON::Value> jsToInspectorValue(JSGlobalObject* globalObject, JSVa
         auto inspectorObject = JSON::Object::create();
         auto& object = *value.getObject();
         PropertyNameArray propertyNames(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-        object.methodTable(vm)->getOwnPropertyNames(&object, globalObject, propertyNames, EnumerationMode());
+        object.methodTable(vm)->getOwnPropertyNames(&object, globalObject, propertyNames, DontEnumPropertiesMode::Exclude);
         for (auto& name : propertyNames) {
             auto inspectorValue = jsToInspectorValue(globalObject, object.get(globalObject, name), maxDepth);
             if (!inspectorValue)
                 return nullptr;
-            inspectorObject->setValue(name.string(), WTFMove(inspectorValue));
+            inspectorObject->setValue(name.string(), inspectorValue.releaseNonNull());
         }
         return inspectorObject;
     }

@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-class AdClickAttribution;
+class PrivateClickMeasurement;
 class DOMTokenList;
 
 // Link relation bitmask values.
@@ -87,7 +87,7 @@ private:
     bool isMouseFocusable() const override;
     bool isKeyboardFocusable(KeyboardEvent*) const override;
     void defaultEventHandler(Event&) final;
-    void setActive(bool active = true, bool pause = false) final;
+    void setActive(bool active, bool pause, Style::InvalidationScope) final;
     bool accessKeyAction(bool sendMouseEvents) final;
     bool isURLAttribute(const Attribute&) const final;
     bool canStartSelection() const final;
@@ -100,7 +100,7 @@ private:
 
     void sendPings(const URL& destinationURL);
 
-    Optional<AdClickAttribution> parseAdClickAttribution() const;
+    Optional<PrivateClickMeasurement> parsePrivateClickMeasurement() const;
 
     void handleClick(Event&);
 

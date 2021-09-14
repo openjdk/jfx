@@ -82,8 +82,10 @@ abstract class GLFactory {
         if (PrismSettings.verbose) {
             System.out.println("GLFactory using " + factoryClassName);
         }
-        platformFactory = factoryClassName == null ? null :
+        @SuppressWarnings("removal")
+        GLFactory tmp = factoryClassName == null ? null :
             AccessController.doPrivileged(new FactoryLoader(factoryClassName));
+        platformFactory = tmp;
     }
 
     private static class FactoryLoader implements PrivilegedAction<GLFactory> {

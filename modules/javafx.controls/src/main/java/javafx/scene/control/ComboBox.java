@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -189,7 +189,7 @@ import java.lang.ref.WeakReference;
  */
 public class ComboBox<T> extends ComboBoxBase<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -209,7 +209,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -240,8 +240,9 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         // selection model to indicate that this is the selected item
         valueProperty().addListener((ov, t, t1) -> {
             if (getItems() == null) return;
-
             SelectionModel<T> sm = getSelectionModel();
+            if (sm == null) return;
+
             int index = getItems().indexOf(t1);
 
             if (index == -1) {
@@ -278,7 +279,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             if (!isEditable()) {
                 // check if value is in items list
                 if (getItems() != null && !getItems().contains(getValue())) {
-                    getSelectionModel().clearSelection();
+                    SingleSelectionModel<T> selectionModel = getSelectionModel();
+                    if (selectionModel != null) {
+                        selectionModel.clearSelection();
+                    }
                 }
             }
         });
@@ -292,7 +296,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -432,7 +436,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -475,7 +479,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -505,7 +509,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *
@@ -520,7 +524,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -666,7 +670,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

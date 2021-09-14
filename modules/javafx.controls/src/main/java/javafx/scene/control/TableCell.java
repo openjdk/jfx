@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,7 @@ import javafx.scene.control.TableColumn.CellEditEvent;
  */
 public class TableCell<S,T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -94,7 +94,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -104,7 +104,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     boolean lockItemOnEdit = false;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -187,7 +187,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             new WeakListChangeListener<String>(columnStyleClassListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -293,19 +293,25 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
 
+    // editing location at start of edit - fix for JDK-8187229
+    private TablePosition<S, T> editingCellAtStartEdit;
+
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final TableView<S> table = getTableView();
         final TableColumn<S,T> column = getTableColumn();
-        if (! isEditable() ||
-                (table != null && ! table.isEditable()) ||
-                (column != null && ! getTableColumn().isEditable())) {
+        final TableRow<S> row = getTableRow();
+        if (!isEditable() ||
+                (table != null && !table.isEditable()) ||
+                (column != null && !column.isEditable()) ||
+                (row != null && !row.isEditable())) {
             return;
         }
 
@@ -321,10 +327,11 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TableColumn.editStartEvent(),
                 null
             );
@@ -382,7 +389,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
         // reset the editing index on the TableView
         if (table != null) {
-            TablePosition<S,?> editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
@@ -393,7 +399,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
-                editingCell,
+                editingCellAtStartEdit,
                 TableColumn.editCancelEvent(),
                 null
             );
@@ -702,10 +708,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         super.layoutChildren();
     }
 
-
-
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                              Expert API                                 *
      *                                                                         *
@@ -780,7 +783,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -804,7 +807,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

@@ -51,20 +51,25 @@ public:
     double z() const { return m_z; }
     double angle() const { return m_angle; }
 
-private:
-    bool isIdentity() const override { return m_angle == 0; }
-    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
+    bool operator==(const TransformOperation&) const override;
+
+    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) final;
+
+    bool isIdentity() const final { return !m_angle; }
+
     bool isRepresentableIn2D() const final { return (!m_x && !m_y) || !m_angle; }
 
-    bool operator==(const TransformOperation&) const override;
+private:
+    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
     bool apply(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const override
     {
-        transform.rotate3d(m_x, m_y, m_z, m_angle);
+        if (type() == TransformOperation::ROTATE)
+            transform.rotate(m_angle);
+        else
+            transform.rotate3d(m_x, m_y, m_z, m_angle);
         return false;
     }
-
-    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
 
     void dump(WTF::TextStream&) const final;
 
