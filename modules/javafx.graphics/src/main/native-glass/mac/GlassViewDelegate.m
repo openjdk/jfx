@@ -1231,7 +1231,6 @@ static jstring convertNSStringToJString(id aString, int length)
     if ([[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]] == NO)
     {
         [[self->nsView window] toggleFullScreen:self];
-        // wait until the operation is complete
         return;
     }
 
@@ -1344,8 +1343,6 @@ static jstring convertNSStringToJString(id aString, int length)
         if (self->nativeFullScreenModeWindow)
         {
             [self->nativeFullScreenModeWindow performSelector:@selector(toggleFullScreen:) withObject:nil];
-            // wait until the operation is complete
-            //[GlassApplication enterFullScreenExitingLoop];
             return;
         }
 
