@@ -913,7 +913,9 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
                         memcpy(data, (raw + whsz), nraw - whsz);
 
                         if (is_raw_image) {
+                            guchar* origdata = data;
                             data = (guchar*) convert_BGRA_to_RGBA((const int*) data, w * 4, h);
+                            g_free(origdata);
                         }
 
                         pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
