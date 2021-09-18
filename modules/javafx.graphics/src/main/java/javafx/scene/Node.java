@@ -2637,12 +2637,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final boolean isManaged() {
-        return managed == null ? true : managed.get();
+        return managed == null || managed.get();
     }
 
     public final BooleanProperty managedProperty() {
         if (managed == null) {
-            managed = new BooleanPropertyBase(true) {
+            managed = new StyleableBooleanProperty(true) {
 
                 @Override
                 protected void invalidated() {
@@ -2651,6 +2651,11 @@ public abstract class Node implements EventTarget, Styleable {
                         parent.managedChildChanged();
                     }
                     notifyManagedChanged();
+                }
+
+                @Override
+                public CssMetaData<Node, Boolean> getCssMetaData() {
+                    return StyleableProperties.MANAGED;
                 }
 
                 @Override
@@ -9101,6 +9106,20 @@ public abstract class Node implements EventTarget, Styleable {
                     return (StyleableProperty<Boolean>)node.visibleProperty();
                 }
             };
+        private static final CssMetaData<Node,Boolean> MANAGED =
+            new CssMetaData<Node,Boolean>("-fx-managed",
+                    BooleanConverter.getInstance(), Boolean.TRUE) {
+
+                @Override
+                public boolean isSettable(Node node) {
+                    return node.managed == null || !node.managed.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                    return (StyleableProperty<Boolean>)node.managedProperty();
+                }
+            };
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
@@ -9122,6 +9141,7 @@ public abstract class Node implements EventTarget, Styleable {
              styleables.add(TRANSLATE_Y);
              styleables.add(TRANSLATE_Z);
              styleables.add(VISIBILITY);
+             styleables.add(MANAGED);
              STYLEABLES = Collections.unmodifiableList(styleables);
 
          }

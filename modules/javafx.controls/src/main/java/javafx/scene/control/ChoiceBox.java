@@ -151,9 +151,12 @@ public class ChoiceBox<T> extends Control {
         // selection model to indicate that this is the selected item
         valueProperty().addListener((ov, t, t1) -> {
             if (getItems() == null) return;
+            SingleSelectionModel<T> sm = getSelectionModel();
+            if (sm == null) return;
+
             int index = getItems().indexOf(t1);
             if (index > -1) {
-                getSelectionModel().select(index);
+                sm.select(index);
             }
         });
     }
