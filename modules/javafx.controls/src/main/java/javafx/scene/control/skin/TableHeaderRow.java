@@ -357,7 +357,7 @@ public class TableHeaderRow extends StackPane {
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
-        double x = scrollX;
+        double x = snapPositionX(scrollX);
         double headerWidth = snapSizeX(getRootHeader().prefWidth(-1));
         double prefHeight = getHeight() - snappedTopInset() - snappedBottomInset();
         double cornerWidth = snapSizeX(flow.getVbar().prefWidth(-1));

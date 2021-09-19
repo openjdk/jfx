@@ -40,8 +40,11 @@ import javafx.beans.InvalidationListener;
 import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.Node;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.shape.Circle;
 
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
 
@@ -1317,6 +1320,26 @@ public class VirtualFlowTest {
             if (cell != null) assertFalse(cell.isVisible());
         }
     }
+
+    @Test public void testScrollingXIsSnapped() {
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionX(newValue);
+        flow.shim_getHbar().setValue(newValue);
+
+        double layoutX = flow.get_clipView().getLayoutX();
+        double clipLayoutX = flow.get_clipView().getClip().getLayoutX();
+
+        assertEquals(snappedNewValue, clipLayoutX, 0.0);
+        assertEquals(-snappedNewValue, layoutX, 0.0);
+
+        loader.dispose();
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

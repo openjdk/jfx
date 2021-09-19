@@ -3077,8 +3077,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         public void setClipX(double clipX) {
-            setLayoutX(-clipX);
-            clipRect.setLayoutX(clipX);
+            double snappedClipX = snapPositionX(clipX);
+            setLayoutX(-snappedClipX);
+            clipRect.setLayoutX(snappedClipX);
         }
 
         public void setClipY(double clipY) {

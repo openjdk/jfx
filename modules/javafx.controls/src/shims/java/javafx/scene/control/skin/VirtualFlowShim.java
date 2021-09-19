@@ -30,6 +30,7 @@ import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Region;
 
 public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
 
@@ -73,7 +74,7 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
         return super.getVbar();
     }
 
-    public ClippedContainer get_clipView() {
+    public Region get_clipView() {
         return super.clipView;
     }
 
