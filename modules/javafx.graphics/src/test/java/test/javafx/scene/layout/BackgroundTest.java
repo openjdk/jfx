@@ -724,6 +724,13 @@ public class BackgroundTest {
         assertEquals("The factory method should give the same result as the constructor", background1, background2);
     }
 
+    @Test
+    public void testSingleFillWithNullPaint() {
+        var background1 = Background.fill(null);
+        var background2 = new Background(new BackgroundFill(null, null, null));
+        assertEquals("The factory method should give the same result as the constructor", background1, background2);
+    }
+
     // TODO: What happens if the corner radii become so big that we would end up with a negative opaque
     // inset in one dimension?
 

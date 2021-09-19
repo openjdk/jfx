@@ -390,7 +390,7 @@ public final class Border {
     }
 
     /**
-     * A convenience factory method for creating a solid border with a single {@code Paint}.
+     * A convenience factory method for creating a solid {@code Border} with a single {@code Paint}.
      *
      * @implSpec
      * This call is equivalent to {@link BorderStroke#BorderStroke(Paint, BorderStrokeStyle, CornerRadii, BorderWidths)

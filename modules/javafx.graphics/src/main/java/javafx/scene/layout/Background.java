@@ -354,7 +354,7 @@ public final class Background {
     }
 
     /**
-     * A convenience factory method for creating a background with a single {@code Paint}.
+     * A convenience factory method for creating a {@code Background} with a single {@code Paint}.
      *
      * @implSpec
      * This call is equivalent to {@link BackgroundFill#BackgroundFill(Paint, CornerRadii, Insets)
