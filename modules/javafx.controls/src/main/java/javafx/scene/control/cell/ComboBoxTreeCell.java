@@ -325,13 +325,13 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        super.startEdit();
-        if (!isEditing()) {
+        TreeItem<T> treeItem = getTreeItem();
+        if (treeItem == null) {
             return;
         }
 
-        TreeItem<T> treeItem = getTreeItem();
-        if (treeItem == null) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 

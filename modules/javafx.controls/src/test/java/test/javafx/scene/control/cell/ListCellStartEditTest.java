@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.scene.control;
+package test.javafx.scene.control.cell;
 
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
@@ -46,6 +46,7 @@ import java.util.function.Supplier;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Parameterized tests for the {@link ListCell#startEdit()} method of {@link ListCell} and all sub implementations.
@@ -56,8 +57,10 @@ public class ListCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
 
-    private ListView<String> listView;
     private final Supplier<ListCell<String>> listCellSupplier;
+
+    private ListView<String> listView;
+    private ListCell<String> listCell;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
@@ -66,7 +69,7 @@ public class ListCellStartEditTest {
     }
 
     private static Collection<Object[]> wrapAsObjectArray(List<Supplier<ListCell<?>>> listCells) {
-        return listCells.stream().map(tc -> new Object[] { tc }).collect(toList());
+        return listCells.stream().map(cell -> new Object[] { cell }).collect(toList());
     }
 
     public ListCellStartEditTest(Supplier<ListCell<String>> listCellSupplier) {
@@ -77,24 +80,24 @@ public class ListCellStartEditTest {
     public void setup() {
         ObservableList<String> items = FXCollections.observableArrayList("1", "2", "3");
         listView = new ListView<>(items);
+
+        listCell = listCellSupplier.get();
     }
 
     @Test
     public void testStartEditMustNotThrowNPE() {
-        ListCell<String> listCell = listCellSupplier.get();
         // A list cell without anything attached should not throw a NPE.
         listCell.startEdit();
     }
 
     @Test
     public void testStartEditRespectsEditable() {
-        ListCell<String> listCell = listCellSupplier.get();
         listCell.updateIndex(0);
         listCell.updateListView(listView);
 
         for (boolean isListViewEditable : EDITABLE_STATES) {
             for (boolean isCellEditable : EDITABLE_STATES) {
-                testStartEditImpl(listCell, isListViewEditable, isCellEditable);
+                testStartEditImpl(isListViewEditable, isCellEditable);
             }
         }
     }
@@ -103,11 +106,10 @@ public class ListCellStartEditTest {
      * A {@link ListCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding list view and cell is editable.
      *
-     * @param listCell the {@link ListCell} where the <code>startEdit</code> method is tested
      * @param isListViewEditable true, when the list view should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(ListCell<String> listCell, boolean isListViewEditable, boolean isCellEditable) {
+    private void testStartEditImpl(boolean isListViewEditable, boolean isCellEditable) {
         assertFalse(listCell.isEditing());
 
         listView.setEditable(isListViewEditable);
@@ -118,11 +120,15 @@ public class ListCellStartEditTest {
         boolean expectedEditingState = isListViewEditable && isCellEditable;
         assertEquals(expectedEditingState, listCell.isEditing());
 
-        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
-        // Special check for CheckBoxListCell.
-//        if (listCell instanceof CheckBoxListCell) {
-//            assertEquals(expectedEditingState, !listCell.getGraphic().isDisabled());
-//        }
+        if (listCell instanceof CheckBoxListCell) {
+            assertNotNull(listCell.getGraphic());
+            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Check if the checkbox is disabled when not editable.
+            // assertEquals(expectedEditingState, !listCell.getGraphic().isDisabled());
+        } else if (!listCell.getClass().equals(ListCell.class)) {
+            // All other sub implementation should show a graphic when editable.
+            assertEquals(expectedEditingState, listCell.getGraphic() != null);
+        }
 
         // Restore the editing state.
         listCell.cancelEdit();

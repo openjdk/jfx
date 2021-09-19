@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.scene.control;
+package test.javafx.scene.control.cell;
 
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.TreeCell;
@@ -45,6 +45,7 @@ import java.util.function.Supplier;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Parameterized tests for the {@link TreeCell#startEdit()} method of {@link TreeCell} and all sub implementations.
@@ -55,17 +56,19 @@ public class TreeCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
 
-    private TreeView<String> treeView;
     private final Supplier<TreeCell<String>> treeCellSupplier;
+
+    private TreeView<String> treeView;
+    private TreeCell<String> treeCell;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return wrapAsObjectArray(List.of(TreeCell::new, ComboBoxTreeCell::new, TextFieldTreeCell::new,
-                ChoiceBoxTreeCell::new,() ->  new CheckBoxTreeCell<>(obj -> new SimpleBooleanProperty())));
+                ChoiceBoxTreeCell::new,() -> new CheckBoxTreeCell<>(obj -> new SimpleBooleanProperty())));
     }
 
     private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TreeCell<String>>> treeCells) {
-        return treeCells.stream().map(tc -> new Object[] { tc }).collect(toList());
+        return treeCells.stream().map(cell -> new Object[] { cell }).collect(toList());
     }
 
     public TreeCellStartEditTest(Supplier<TreeCell<String>> treeCellSupplier) {
@@ -77,25 +80,25 @@ public class TreeCellStartEditTest {
         TreeItem<String> root = new TreeItem<>("1");
         root.getChildren().addAll(List.of(new TreeItem<>("2"), new TreeItem<>("3")));
         treeView = new TreeView<>(root);
+
+        treeCell = treeCellSupplier.get();
     }
 
     @Test
     public void testStartEditMustNotThrowNPE() {
-        TreeCell<String> treeCell = treeCellSupplier.get();
         // A tree cell without anything attached should not throw a NPE.
         treeCell.startEdit();
     }
 
     @Test
     public void testStartEditRespectsEditable() {
-        TreeCell<String> treeCell = treeCellSupplier.get();
         treeCell.updateIndex(0);
 
         treeCell.updateTreeView(treeView);
 
         for (boolean isTreeViewEditable : EDITABLE_STATES) {
             for (boolean isCellEditable : EDITABLE_STATES) {
-                testStartEditImpl(treeCell, isTreeViewEditable, isCellEditable);
+                testStartEditImpl(isTreeViewEditable, isCellEditable);
             }
         }
     }
@@ -104,11 +107,10 @@ public class TreeCellStartEditTest {
      * A {@link TreeCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding tree view and cell is editable.
      *
-     * @param treeCell the {@link TreeCell} where the <code>startEdit</code> method is tested
      * @param isTreeViewEditable true, when the tree view should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(TreeCell<String> treeCell, boolean isTreeViewEditable, boolean isCellEditable) {
+    private void testStartEditImpl(boolean isTreeViewEditable, boolean isCellEditable) {
         assertFalse(treeCell.isEditing());
 
         treeView.setEditable(isTreeViewEditable);
@@ -119,11 +121,15 @@ public class TreeCellStartEditTest {
         boolean expectedEditingState = isTreeViewEditable && isCellEditable;
         assertEquals(expectedEditingState, treeCell.isEditing());
 
-        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
-        // Special check for CheckBoxTreeCell.
-//        if (treeCell instanceof CheckBoxTreeCell) {
-//            assertEquals(expectedEditingState, !treeCell.getGraphic().isDisabled());
-//        }
+        if (treeCell instanceof CheckBoxTreeCell) {
+            assertNotNull(treeCell.getGraphic());
+            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Check if the checkbox is disabled when not editable.
+            // assertEquals(expectedEditingState, !treeCell.getGraphic().isDisabled());
+        } else if (!treeCell.getClass().equals(TreeCell.class)) {
+            // All other sub implementation should show a graphic when editable.
+            assertEquals(expectedEditingState, treeCell.getGraphic() != null);
+        }
 
         // Restore the editing state.
         treeCell.cancelEdit();

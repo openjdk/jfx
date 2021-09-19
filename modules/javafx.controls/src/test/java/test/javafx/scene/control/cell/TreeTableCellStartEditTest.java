@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.scene.control;
+package test.javafx.scene.control.cell;
 
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
@@ -47,6 +47,7 @@ import java.util.function.Supplier;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Parameterized tests for the {@link TreeTableCell#startEdit()} method of {@link TreeTableCell} and all sub
@@ -58,11 +59,13 @@ public class TreeTableCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
 
+    private final Supplier<TreeTableCell<String, ?>> treeTableCellSupplier;
+
     private TreeTableView<String> treeTable;
     private TreeTableRow<String> treeTableRow;
     private TreeTableColumn<String, ?> treeTableColumn;
+    private TreeTableCell<String, ?> treeTableCell;
 
-    private final Supplier<TreeTableCell<String, ?>> treeTableCellSupplier;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
@@ -72,7 +75,7 @@ public class TreeTableCellStartEditTest {
     }
 
     private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TreeTableCell<Object, ?>>> treeTableCells) {
-        return treeTableCells.stream().map(tc -> new Object[] { tc }).collect(toList());
+        return treeTableCells.stream().map(cell -> new Object[] { cell }).collect(toList());
     }
 
     public TreeTableCellStartEditTest(Supplier<TreeTableCell<String, ?>> treeTableCellSupplier) {
@@ -89,18 +92,18 @@ public class TreeTableCellStartEditTest {
         treeTable.getColumns().add(treeTableColumn);
 
         treeTableRow = new TreeTableRow<>();
+
+        treeTableCell = treeTableCellSupplier.get();
     }
 
     @Test
     public void testStartEditMustNotThrowNPE() {
-        TreeTableCell<String, ?> treeTableCell = treeTableCellSupplier.get();
         // A tree table cell without anything attached should not throw a NPE.
         treeTableCell.startEdit();
     }
 
     @Test
     public void testStartEditRespectsEditable() {
-        TreeTableCell<String, ?> treeTableCell = treeTableCellSupplier.get();
         treeTableCell.updateIndex(0);
 
         treeTableCell.updateTreeTableColumn((TreeTableColumn) treeTableColumn);
@@ -111,7 +114,7 @@ public class TreeTableCellStartEditTest {
             for (boolean isColumnEditable : EDITABLE_STATES) {
                 for (boolean isRowEditable : EDITABLE_STATES) {
                     for (boolean isCellEditable : EDITABLE_STATES) {
-                        testStartEditImpl(treeTableCell, isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
+                        testStartEditImpl(isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
                     }
                 }
             }
@@ -122,13 +125,12 @@ public class TreeTableCellStartEditTest {
      * A {@link TreeTableCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding tree table, column, row and cell is editable.
      *
-     * @param treeTableCell the {@link TreeTableCell} where the <code>startEdit</code> method is tested
      * @param isTreeTableEditable true, when the tree table should be editable, false otherwise
      * @param isColumnEditable true, when the column should be editable, false otherwise
      * @param isRowEditable true, when the row should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(TreeTableCell<String, ?> treeTableCell, boolean isTreeTableEditable, boolean isColumnEditable, boolean isRowEditable,
+    private void testStartEditImpl(boolean isTreeTableEditable, boolean isColumnEditable, boolean isRowEditable,
             boolean isCellEditable) {
         assertFalse(treeTableCell.isEditing());
 
@@ -142,11 +144,18 @@ public class TreeTableCellStartEditTest {
         boolean expectedEditingState = isTreeTableEditable && isColumnEditable && isRowEditable && isCellEditable;
         assertEquals(expectedEditingState, treeTableCell.isEditing());
 
-        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
-        // Special check for CheckBoxTreeTableCell.
-//        if (treeTableCell instanceof CheckBoxTreeTableCell) {
-//            assertEquals(expectedEditingState, !treeTableCell.getGraphic().isDisabled());
-//        }
+        if (treeTableCell instanceof CheckBoxTreeTableCell) {
+            assertNotNull(treeTableCell.getGraphic());
+            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Check if the checkbox is disabled when not editable.
+            // assertEquals(expectedEditingState, !treeTableCell.getGraphic().isDisabled());
+        } else if (treeTableCell instanceof ProgressBarTreeTableCell) {
+            // The progress bar is always shown.
+            assertNotNull(treeTableCell.getGraphic());
+        } else if (!treeTableCell.getClass().equals(TreeTableCell.class)) {
+            // All other sub implementation should show a graphic when editable.
+            assertEquals(expectedEditingState, treeTableCell.getGraphic() != null);
+        }
 
         // Restore the editing state.
         treeTableCell.cancelEdit();

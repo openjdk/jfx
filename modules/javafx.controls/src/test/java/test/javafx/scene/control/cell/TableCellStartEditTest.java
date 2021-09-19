@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.scene.control;
+package test.javafx.scene.control.cell;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -48,6 +48,7 @@ import java.util.function.Supplier;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Parameterized tests for the {@link TableCell#startEdit()} method of {@link TableCell} and all sub implementations.
@@ -58,11 +59,13 @@ public class TableCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
 
+    private final Supplier<TableCell<String, ?>> tableCellSupplier;
+
     private TableView<String> table;
     private TableRow<String> tableRow;
     private TableColumn<String, ?> tableColumn;
+    private TableCell<String, ?> tableCell;
 
-    private final Supplier<TableCell<String, ?>> tableCellSupplier;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
@@ -71,7 +74,7 @@ public class TableCellStartEditTest {
     }
 
     private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TableCell<Object, ?>>> tableCells) {
-        return tableCells.stream().map(tc -> new Object[] { tc }).collect(toList());
+        return tableCells.stream().map(cell -> new Object[] { cell }).collect(toList());
     }
 
     public TableCellStartEditTest(Supplier<TableCell<String, ?>> tableCellSupplier) {
@@ -87,18 +90,18 @@ public class TableCellStartEditTest {
         table.getColumns().add(tableColumn);
 
         tableRow = new TableRow<>();
+
+        tableCell = tableCellSupplier.get();
     }
 
     @Test
     public void testStartEditMustNotThrowNPE() {
-        TableCell<String, ?> tableCell = tableCellSupplier.get();
         // A table cell without anything attached should not throw a NPE.
         tableCell.startEdit();
     }
 
     @Test
     public void testStartEditRespectsEditable() {
-        TableCell<String, ?> tableCell = tableCellSupplier.get();
         tableCell.updateIndex(0);
 
         tableCell.updateTableColumn(tableColumn);
@@ -109,7 +112,7 @@ public class TableCellStartEditTest {
             for (boolean isColumnEditable : EDITABLE_STATES) {
                 for (boolean isRowEditable : EDITABLE_STATES) {
                     for (boolean isCellEditable : EDITABLE_STATES) {
-                        testStartEditImpl(tableCell, isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
+                        testStartEditImpl(isTableEditable, isColumnEditable, isRowEditable, isCellEditable);
                     }
                 }
             }
@@ -120,13 +123,12 @@ public class TableCellStartEditTest {
      * A {@link TableCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding table, column, row  and cell is editable.
      *
-     * @param tableCell the {@link TableCell} where the <code>startEdit</code> method is tested
      * @param isTableEditable true, when the table should be editable, false otherwise
      * @param isColumnEditable true, when the column should be editable, false otherwise
      * @param isRowEditable true, when the row should be editable, false otherwise
      * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(TableCell<String, ?> tableCell, boolean isTableEditable, boolean isColumnEditable, boolean isRowEditable,
+    private void testStartEditImpl(boolean isTableEditable, boolean isColumnEditable, boolean isRowEditable,
             boolean isCellEditable) {
         assertFalse(tableCell.isEditing());
 
@@ -141,11 +143,18 @@ public class TableCellStartEditTest {
         boolean expectedEditingState = isTableEditable && isColumnEditable && isRowEditable && isCellEditable;
         assertEquals(expectedEditingState, tableCell.isEditing());
 
-        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
-        // Special check for CheckBoxTableCell.
-//        if (tableCell instanceof CheckBoxTableCell) {
-//            assertEquals(expectedEditingState, !tableCell.getGraphic().isDisabled());
-//        }
+        if (tableCell instanceof CheckBoxTableCell) {
+            assertNotNull(tableCell.getGraphic());
+            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Check if the checkbox is disabled when not editable.
+            // assertEquals(expectedEditingState, !tableCell.getGraphic().isDisabled());
+        } else if (tableCell instanceof ProgressBarTableCell) {
+            // The progress bar is always shown.
+            assertNotNull(tableCell.getGraphic());
+        } else if (!tableCell.getClass().equals(TableCell.class)) {
+            // All other sub implementation should show a graphic when editable.
+            assertEquals(expectedEditingState, tableCell.getGraphic() != null);
+        }
 
         // Restore the editing state.
         tableCell.cancelEdit();
