@@ -65,14 +65,14 @@ public class ES2Graphics extends BaseShaderGraphics {
         context.flushVertexBuffer();
         CompositeMode mode = getCompositeMode();
         // set the blend mode to CLEAR
-        context.updateCompositeMode(CompositeMode.CLEAR);
+        setCompositeMode(CompositeMode.CLEAR);
         Paint oldPaint = getPaint();
         setPaint(Color.BLACK); // any color will do...
         fillQuad(x1, y1, x2, y2);
         context.flushVertexBuffer();
         setPaint(oldPaint);
         // restore default blend mode
-        context.updateCompositeMode(mode);
+        setCompositeMode(mode);
     }
 
     @Override
