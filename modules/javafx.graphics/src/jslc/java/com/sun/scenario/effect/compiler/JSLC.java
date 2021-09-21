@@ -322,6 +322,7 @@ public class JSLC {
         public String genericsName;
         public String interfaceName;
         public String pkgName = rootPkg;
+        public Map<Integer, String> outNameMap = DEFAULT_INFO_MAP;
 
         private String extraOpts;
 
@@ -461,7 +462,7 @@ public class JSLC {
         }
 
         public File getOutputFile(int outType) {
-            String fileName = DEFAULT_INFO_MAP.get(outType);
+            String fileName = outNameMap.get(outType);
             return getOutputFile(fileName);
         }
     }
