@@ -149,11 +149,12 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     }
 
     if (jwindow) {
-        if (!event->in || isEnabled()) {
+        if (isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
-        } else {
+        } else if (event->in) {
+            // when the user tries to activate a disabled window, send FOCUS_DISABLED
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
