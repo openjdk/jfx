@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
@@ -56,7 +54,7 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.TreeView;
+import javafx.scene.layout.Region;
 
 /**
  * Default skin implementation for the {@link TreeTableRow} control.
@@ -117,43 +115,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             // those detailed in JDK-8143266
         });
 
-        setupTreeTableViewListeners();
-    }
-
-    private void setupTreeTableViewListeners() {
-        TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
-        if (treeTableView == null) {
-            getSkinnable().treeTableViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().treeTableViewProperty().removeListener(this);
-                    setupTreeTableViewListeners();
-                }
-            });
-        } else {
-            registerChangeListener(treeTableView.treeColumnProperty(), e -> {
-                // Fix for RT-27782: Need to set isDirty to true, rather than the
-                // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.leftLabelPadding()
-                isDirty = true;
-                getSkinnable().requestLayout();
-            });
-
-            DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
-            if (fixedCellSizeProperty != null) {
-                registerChangeListener(fixedCellSizeProperty, e -> {
-                    fixedCellSize = fixedCellSizeProperty.get();
-                    fixedCellSizeEnabled = fixedCellSize > 0;
-                });
-                fixedCellSize = fixedCellSizeProperty.get();
-                fixedCellSizeEnabled = fixedCellSize > 0;
-
-                // JDK-8144500:
-                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-                // that when it changes, we can appropriately add / remove cells that may or may not
-                // be required (because we remove all cells that are not visible).
-                registerChangeListener(getVirtualFlow().widthProperty(), e -> treeTableView.requestLayout());
-            }
-        }
     }
 
 
@@ -163,11 +124,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      *                                                                         *
      **************************************************************************/
 
-    private final InvalidationListener graphicListener = o -> {
+    private void updateTreeItemGraphic() {
         disclosureNodeDirty = true;
         getSkinnable().requestLayout();
-    };
-
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -253,12 +213,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
 
-
     /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    @Override
+    double getFixedCellSize() {
+        return getTreeTableView() != null ? getTreeTableView().getFixedCellSize() : Region.USE_COMPUTED_SIZE ;
+    }
 
     /** {@inheritDoc} */
     @Override protected TreeTableCell<T, ?> createCell(TableColumnBase tcb) {
@@ -332,20 +296,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     /** {@inheritDoc} */
     @Override protected ObjectProperty<Node> graphicProperty() {
         TreeTableRow<T> treeTableRow = getSkinnable();
-        if (treeTableRow == null) return null;
+        // FIXME: illegal access if skinnable is null
         if (treeItem == null) return null;
 
         return treeItem.graphicProperty();
     }
 
     private void updateTreeItem() {
-        if (treeItem != null) {
-            treeItem.graphicProperty().removeListener(graphicListener);
-        }
+        unregisterInvalidationListeners(graphicProperty());
         treeItem = getSkinnable().getTreeItem();
-        if (treeItem != null) {
-            treeItem.graphicProperty().addListener(graphicListener);
-        }
+        registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
     }
 
     private TreeTableView<T> getTreeTableView() {
@@ -398,11 +358,30 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private void updateTableViewSkin() {
         TreeTableView<T> tableView = getSkinnable().getTreeTableView();
+        if (tableView != null) {
+            registerChangeListener(tableView.treeColumnProperty(), e -> {
+                // Fix for RT-27782: Need to set isDirty to true, rather than the
+                // cheaper updateCells, as otherwise the text indentation will not
+                // be recalculated in TreeTableCellSkin.leftLabelPadding()
+                isDirty = true;
+                getSkinnable().requestLayout();
+            });
+        }
         if (tableView != null && tableView.getSkin() instanceof TreeTableViewSkin) {
             treeTableViewSkin = (TreeTableViewSkin)tableView.getSkin();
+            registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
         }
     }
 
+    // test-only
+    TreeTableViewSkin<T> getTableViewSkin() {
+        return treeTableViewSkin;
+    }
+
+    // test-only
+    TreeItem<T> getTreeItem() {
+        return (TreeItem<T>) treeItem;
+    }
 
     /* *************************************************************************
      *                                                                         *

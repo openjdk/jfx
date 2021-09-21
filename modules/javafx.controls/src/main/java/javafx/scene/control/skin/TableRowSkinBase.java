@@ -133,10 +133,6 @@ public abstract class TableRowSkinBase<T,
     boolean isDirty = false;
     boolean updateCells = false;
 
-    double fixedCellSize;
-    boolean fixedCellSizeEnabled;
-
-
 
     /* *************************************************************************
      *                                                                         *
@@ -162,13 +158,13 @@ public abstract class TableRowSkinBase<T,
         // watches for any change in the leaf columns observableArrayList - this will indicate
         // that the column order has changed and that we should update the row
         // such that the cells are in the new order
-        getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        registerListChangeListener(getVisibleLeafColumns(), c -> updateLeafColumns());
         // --- end init bindings
 
 
         // use invalidation listener here to update even when item equality is true
         // (e.g. see RT-22463)
-        control.itemProperty().addListener(o -> requestCellUpdate());
+        registerInvalidationListener(control.itemProperty(), o -> requestCellUpdate());
         registerChangeListener(control.indexProperty(), e -> {
             // Fix for RT-36661, where empty table cells were showing content, as they
             // had incorrect table cell indices (but the table row index was correct).
@@ -188,15 +184,10 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = c -> {
+    private void updateLeafColumns() {
         isDirty = true;
         getSkinnable().requestLayout();
-    };
-
-    private WeakListChangeListener<TableColumnBase> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<>(visibleLeafColumnsListener);
-
-
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -344,7 +335,7 @@ public abstract class TableRowSkinBase<T,
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
             boolean isVisible = true;
-            if (fixedCellSizeEnabled) {
+            if (isFixedCellSizeEnabled()) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve
                 // performance. However, we only do this when there is a
@@ -356,14 +347,14 @@ public abstract class TableRowSkinBase<T,
                 // may be variable and / or dynamic.
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
 
-                height = fixedCellSize;
+                height = getFixedCellSize();
             } else {
                 height = Math.max(controlHeight, tableCell.prefHeight(-1));
                 height = snapSizeY(height) - snapSizeY(verticalPadding);
             }
 
             if (isVisible) {
-                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
+                if (isFixedCellSizeEnabled() && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
 
@@ -442,7 +433,7 @@ public abstract class TableRowSkinBase<T,
             } else {
                 width = snapSizeX(tableCell.prefWidth(-1)) - snapSizeX(horizontalPadding);
 
-                if (fixedCellSizeEnabled) {
+                if (isFixedCellSizeEnabled()) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
@@ -541,7 +532,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // update children of each row
-        if (fixedCellSizeEnabled) {
+        if (isFixedCellSizeEnabled()) {
             // we leave the adding / removing up to the layoutChildren method mostly, but here we remove any children
             // cells that refer to columns that are removed or not visible.
             List<Node> toRemove = new ArrayList<>();
@@ -580,8 +571,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
-            return fixedCellSize;
+        if (isFixedCellSizeEnabled()) {
+            return getFixedCellSize();
         }
 
         // fix for RT-29080
@@ -610,8 +601,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
-            return fixedCellSize;
+        if (isFixedCellSizeEnabled()) {
+            return getFixedCellSize();
         }
 
         // fix for RT-29080
@@ -638,10 +629,22 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
-            return fixedCellSize;
+        if (isFixedCellSizeEnabled()) {
+            return getFixedCellSize();
         }
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    /**
+     * Returns the fixedCellSize of the row's control.
+     */
+    abstract double getFixedCellSize();
+
+    /**
+     * Returns true if fixedCellSize is greater than 0, false otherwise.
+     */
+    boolean isFixedCellSizeEnabled() {
+        return getFixedCellSize() > 0;
     }
 
     final void checkState() {
@@ -655,7 +658,15 @@ public abstract class TableRowSkinBase<T,
         }
     }
 
+    // test-only
+    boolean isDirty() {
+        return isDirty;
+    }
 
+    // test-only
+    void setDirty(boolean dirty) {
+        isDirty = dirty;
+    }
 
     /* *************************************************************************
      *                                                                         *
