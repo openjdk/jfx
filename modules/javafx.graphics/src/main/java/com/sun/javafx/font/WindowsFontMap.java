@@ -110,13 +110,12 @@ class WindowsFontMap {
         courierFD.boldItalicFileName = "courbi.ttf";
 
         PLATFORM_FONT_MAP = Map.of(
-                "segoe", segoeFD,
-                "tahoma", tahomaFD,
-                "verdana", verdanaFD,
-                "arial", arialFD,
-                "times", timesFD,
-                "courier", courierFD
-        );
+            "segoe", segoeFD,
+            "tahoma", tahomaFD,
+            "verdana", verdanaFD,
+            "arial", arialFD,
+            "times", timesFD,
+            "courier", courierFD);
     }
 
     static String getPathName(String filename) {
