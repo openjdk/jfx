@@ -426,7 +426,7 @@ public class ScrollBarTest {
         scrollBar.setMax(100.0);
         scrollBar.setValue(90.0);
         scrollBar.adjustValue(0.95); //This should block increment to the max value
-        assertEquals(scrollBar.getValue(), 100.0, 0.0);
+        assertEquals(100.0, scrollBar.getValue(), 0.0);
     }
 
     /**
@@ -439,8 +439,8 @@ public class ScrollBarTest {
         scrollBar.setMin(0.0);
         scrollBar.setMax(100.0);
         scrollBar.setValue(10.0);
-        scrollBar.adjustValue(0.05); //This should block increment to the max value
-        assertEquals(scrollBar.getValue(), 0.0, 0.0);
+        scrollBar.adjustValue(0.05); //This should block decrement to the min value
+        assertEquals(0.0, scrollBar.getValue(), 0.0);
     }
 
     @Test public void incrementWhenValueIsNegativeAndSeeIfValueIsClampedToMin() {
