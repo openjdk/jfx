@@ -322,7 +322,7 @@ public class JSLC {
         public String genericsName;
         public String interfaceName;
         public String pkgName = rootPkg;
-        public Map<Integer, String> outNameMap = DEFAULT_INFO_MAP;
+        public Map<Integer, String> outNameMap = new HashMap<>(DEFAULT_INFO_MAP);
 
         private String extraOpts;
 
