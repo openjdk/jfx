@@ -861,11 +861,14 @@ class WindowStage extends GlassStage {
         for (int i = activeWindows.size() - 1; i > 0; i--) {
             WindowStage window = activeWindows.get(i);
 
-            if (window.modality == Modality.APPLICATION_MODAL
-                || (window.modality == Modality.WINDOW_MODAL && window.owner == this)) {
+            if (Modality.APPLICATION_MODAL == window.modality
+                || (Modality.WINDOW_MODAL == window.modality && window.owner == this)) {
                 window.setIconified(false);
                 window.requestToFront();
                 window.requestFocus();
+                break;
+            } else if (window == this) {
+                // no need to continue if reached self
                 break;
             }
         }
