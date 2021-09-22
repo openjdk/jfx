@@ -23,18 +23,19 @@
  * questions.
  */
 
-package test.javafx.scene;
+package test.com.sun.javafx.application;
 
-import org.junit.Test;
-import test.util.memory.JMemoryBuddy;
 import javafx.application.Platform;
+import org.junit.Test;
+import org.junit.AfterClass;
+import test.util.memory.JMemoryBuddy;
 
 public class PlatformStartupMemoryLeakTest {
 
     @Test
     public void testStartupLeak() {
         JMemoryBuddy.memoryTest((checker) -> {
-            // Doesn't work as lambda for some reason, due to "BoundMethodHandle$Species_L"
+            // This Runnable must not turn into a lambda, because then the test wouldn't work anymore.
             Runnable r = new Runnable() {
                 @Override
                 public void run() {
@@ -45,4 +46,10 @@ public class PlatformStartupMemoryLeakTest {
             checker.assertCollectable(r);
         });
     }
+
+    @AfterClass
+    public static void tearDown() {
+        Platform.exit();
+    }
+
 }
