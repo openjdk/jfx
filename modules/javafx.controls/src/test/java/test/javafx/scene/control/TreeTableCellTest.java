@@ -876,6 +876,32 @@ public class TreeTableCellTest {
         assertEquals("treeItem must be gc'ed", null, itemRef.get());
     }
 
+    @Test
+    public void testEditStartEventAfterStartOnCell() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals(editingColumn, events.get(0).getTableColumn());
+        TreeTablePosition<?, ?> editingCell = events.get(0).getTreeTablePosition();
+        assertEquals(editingIndex, editingCell.getRow());
+    }
+
+    @Test
+    public void testEditStartEventAfterStartOnTable() {
+        setupForEditing();
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditStart(events::add);
+        tree.edit(editingIndex, editingColumn);
+        assertEquals(editingColumn, events.get(0).getTableColumn());
+        TreeTablePosition<?, ?> editingCell = events.get(0).getTreeTablePosition();
+        assertEquals(editingIndex, editingCell.getRow());
+    }
+
 
     /**
      * Test that cell.cancelEdit can switch table editing off
