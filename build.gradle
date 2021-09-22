@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2205,6 +2205,7 @@ project(":graphics") {
         options.compilerArgs.addAll([
             '-h', "$buildDir/gensrc/headers/",  // Note: this creates the native headers
             '-implicit:none',
+            '--module-version', "$RELEASE_VERSION_SHORT",
             '--module-source-path', defaultModuleSourcePath
             ] )
     }
@@ -3600,6 +3601,7 @@ project(":web") {
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', defaultModuleSourcePath
                 ])
         }
@@ -3903,6 +3905,7 @@ allprojects {
         project.compileJava {
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', project.moduleSourcePath
                 ])
         }
@@ -3925,6 +3928,7 @@ allprojects {
         project.compileShimsJava {
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', project.moduleSourcePathShim
                 ])
         }
@@ -4077,6 +4081,10 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addBooleanOption("html5").setValue(true);
     options.addBooleanOption("javafx").setValue(true);
     options.addBooleanOption("use").setValue(true);
+
+    // Suppress generating overridden methods with no additional documentation
+    // The leading '-' is necessary, since this option starts with '--' and gradle adds '-' when passing an option to javadoc
+    options.addBooleanOption("-override-methods=summary").setValue(true);
 
     options.setOptionFiles([
         new File(rootProject.buildDir,MODULESOURCEPATH)
@@ -4782,6 +4790,11 @@ compileTargets { t ->
         def modularEmptyPublicationJarTask = project.task("moduleEmptyPublicationJar${t.capital}", type: Jar) {
             destinationDirectory = file("${dstModularJarDir}")
             archiveFileName = modularEmptyPublicationJarName
+            manifest {
+                attributes(
+                        'Automatic-Module-Name':"${moduleName}Empty"
+                )
+            }
         }
 
         def modularPublicationJarName = "${moduleName}-${t.name}.jar"
@@ -5275,6 +5288,7 @@ compileTargets { t ->
                         args("create")
                         args("--class-path")
                         args(srcClassesDir)
+                        args("--module-version", "$RELEASE_VERSION_SHORT")
                         // Not all modules have a "lib" dir
                         if (file(srcLibDir).isDirectory()) {
                             args("--libs")

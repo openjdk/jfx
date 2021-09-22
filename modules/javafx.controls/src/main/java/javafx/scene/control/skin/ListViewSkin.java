@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -175,8 +175,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     private WeakInvalidationListener
                 weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
 
-    private EventHandler<MouseEvent> ml;
-
     /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -218,7 +216,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
 
-        ml = event -> {
+        EventHandler<MouseEvent> ml = event -> {
             // RT-15127: cancel editing on scroll. This is a bit extreme
             // (we are cancelling editing on touching the scrollbars).
             // This can be improved at a later date.
@@ -281,12 +279,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             listViewItems.removeListener(weakListViewItemsListener);
             listViewItems = null;
         }
-        // flow related cleanup
-        // leaking without nulling factory
-        flow.setCellFactory(null);
-        // for completeness - but no effect with/out?
-        flow.getVbar().removeEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        flow.getHbar().removeEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        getChildren().remove(flow);
         super.dispose();
 
         if (behavior != null) {

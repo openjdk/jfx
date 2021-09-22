@@ -344,17 +344,17 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent editEvent = new CellEditEvent(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TreeTableColumn.<S,T>editStartEvent(),
                 null
             );
 
             Event.fireEvent(column, editEvent);
         }
-        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
