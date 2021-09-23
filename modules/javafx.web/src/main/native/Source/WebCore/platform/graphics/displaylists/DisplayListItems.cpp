@@ -141,6 +141,23 @@ SetInlineFillGradient::SetInlineFillGradient(float offsets[maxColorStopCount], S
     }
 }
 
+SetInlineFillGradient::SetInlineFillGradient(const SetInlineFillGradient& other)
+{
+    if (WTF::holds_alternative<Gradient::RadialData>(other.m_data) || WTF::holds_alternative<Gradient::LinearData>(other.m_data) || WTF::holds_alternative<Gradient::ConicData>(other.m_data)) {
+        m_data = other.m_data;
+        m_gradientSpaceTransform = other.m_gradientSpaceTransform;
+        m_spreadMethod = other.m_spreadMethod;
+        m_colorStopCount = other.m_colorStopCount;
+        if (m_colorStopCount > maxColorStopCount)
+            m_colorStopCount = 0;
+        for (uint8_t i = 0; i < m_colorStopCount; ++i) {
+            m_offsets[i] = other.m_offsets[i];
+            m_colors[i] = other.m_colors[i];
+        }
+    } else
+        m_isValid = false;
+}
+
 Ref<Gradient> SetInlineFillGradient::gradient() const
 {
     auto gradient = Gradient::create(Gradient::Data(m_data));
@@ -559,7 +576,10 @@ static TextStream& operator<<(TextStream& ts, const DrawLinesForText& item)
 
 void DrawDotsForDocumentMarker::apply(GraphicsContext& context) const
 {
-    context.drawDotsForDocumentMarker(m_rect, m_style);
+    context.drawDotsForDocumentMarker(m_rect, {
+        static_cast<DocumentMarkerLineStyle::Mode>(m_styleMode),
+        m_styleShouldUseDarkAppearance,
+    });
 }
 
 Optional<FloatRect> DrawDotsForDocumentMarker::localBounds(const GraphicsContext&) const
@@ -961,7 +981,8 @@ static TextStream& operator<<(TextStream& ts, const BeginTransparencyLayer& item
 
 void EndTransparencyLayer::apply(GraphicsContext& context) const
 {
-    context.endTransparencyLayer();
+    if (context.isInTransparencyLayer())
+        context.endTransparencyLayer();
 }
 
 #if USE(CG)
