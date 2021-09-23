@@ -1343,7 +1343,7 @@ public class VirtualFlowTest {
         assertEquals(null, flow.getScene());
         flow.shim_getHbar().setValue(10);
         scene.setRoot(flow);
-        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);        
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
     }
 }
 
