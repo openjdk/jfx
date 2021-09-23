@@ -84,7 +84,7 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     public double get_clipView_getHeight() {
         return super.clipView.getHeight();
     }
-    
+
     public double get_clipView_getX() {
     	return - super.clipView.getLayoutX();
     }

@@ -1319,25 +1319,25 @@ public class VirtualFlowTest {
             if (cell != null) assertFalse(cell.isVisible());
         }
     }
-        
+
     @Test public void testScrollBarClipSyncWhileInvisibleOrNoScene() {
         flow.setCellCount(3);
         flow.resize(50, flow.getHeight());
         pulse();
-    	
+
         flow.setVisible(true);
         Scene scene = new Scene(flow);
         // sync works with both scene in place and flow visible
         assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
         flow.shim_getHbar().setValue(42);
         assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
-        
+
         // sync works with flow invisible
         flow.setVisible(false);
         flow.shim_getHbar().setValue(21);
         flow.setVisible(true);
         assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
-        
+
         // sync works with no scene
         scene.setRoot(new HBox());
         assertEquals(null, flow.getScene());
@@ -1345,7 +1345,6 @@ public class VirtualFlowTest {
         scene.setRoot(flow);
         assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);        
     }
-    
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
