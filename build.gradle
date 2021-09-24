@@ -1945,6 +1945,8 @@ allprojects {
     // setup this dependency here.
     dependencies {
         testImplementation group: "junit", name: "junit", version: "4.8.2"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
+        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
         }
@@ -1959,6 +1961,8 @@ allprojects {
     // Java 7 but when we switch to 8 this will be needed, and probably again when
     // we start building with Java 9.
     test {
+        useJUnitPlatform();
+
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
