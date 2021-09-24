@@ -30,6 +30,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.scene.control.CellShim;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
@@ -901,6 +902,173 @@ public class TreeTableCellTest {
         TreeTablePosition<?, ?> editingCell = events.get(0).getTreeTablePosition();
         assertEquals(editingIndex, editingCell.getRow());
     }
+
+ //------------- commitEdit
+ // fix of JDK-8271474 changed the implementation of how the editing location is evaluated
+
+     @Test
+     public void testEditCommitEvent() {
+         setupForEditing();
+         int editingIndex = 1;
+         cell.updateIndex(editingIndex);
+         // FIXME JDK-8187474
+         // should use cell.startEdit for consistency with the following tests
+         tree.edit(editingIndex, editingColumn);
+         TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.setOnEditCommit(events::add);
+         cell.commitEdit("edited");
+         assertEquals("column must have received editCommit", 1, events.size());
+         assertEquals("editing location of commit event must be same as table's editingCell",
+                 editingPosition, events.get(0).getTreeTablePosition());
+     }
+
+     @Test
+     public void testEditCommitEditingCellAtStartEdit() {
+         setupForEditing();
+         int editingIndex = 1;
+         cell.updateIndex(editingIndex);
+         cell.startEdit();
+         TreeTablePosition<?, ?> editingCellAtStartEdit = TreeTableCellShim.getEditingCellAtStartEdit(cell);
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.setOnEditCommit(events::add);
+         cell.commitEdit("edited");
+         assertEquals("column must have received editCommit", 1, events.size());
+         assertEquals("editing location of commit event must be same as editingCellAtStartEdit",
+                 editingCellAtStartEdit, events.get(0).getTreeTablePosition());
+     }
+
+     @Test
+     public void testEditCommitEventNullTable() {
+         setupForcedEditing(null, editingColumn);
+         cell.startEdit();
+         TreeTablePosition<?, ?> editingCellAtStartEdit = TreeTableCellShim.getEditingCellAtStartEdit(cell);
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TreeTableColumn.editAnyEvent(), events::add);
+         cell.commitEdit("edited");
+         assertEquals("column must have received editCommit", 1, events.size());
+         assertEquals("editing location of commit event must be same as editingCellAtStartEdit",
+                 editingCellAtStartEdit, events.get(0).getTreeTablePosition());
+     }
+
+// --- JDK-8271474: implement consistent event firing pattern
+//  test pattern:
+//        for every edit method
+//        for every combinations of null table and null column
+//           must not throw NPE
+//           expected event state (if applicable)
+
+     @Test
+     public void testEditStartNullTable() {
+         setupForcedEditing(null, editingColumn);
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TreeTableColumn.editAnyEvent(), events::add);
+         cell.startEdit();
+         assertEquals(1, events.size());
+     }
+
+     @Test
+     public void testEditCancelNullTable() {
+         setupForcedEditing(null, editingColumn);
+         cell.startEdit();
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TreeTableColumn.editAnyEvent(), events::add);
+         cell.cancelEdit();
+         assertEquals(1, events.size());
+     }
+
+     @Test
+     public void testEditCommitNullTable() {
+         setupForcedEditing(null, editingColumn);
+         cell.startEdit();
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TreeTableColumn.editAnyEvent(), events::add);
+         cell.commitEdit("edited");
+         assertEquals(1, events.size());
+     }
+
+     @Test
+     public void testEditStartNullColumn() {
+         setupForcedEditing(tree, null);
+         cell.startEdit();
+     }
+
+     @Test
+     public void testEditCancelNullColumn() {
+         setupForcedEditing(tree, null);
+         cell.startEdit();
+         cell.cancelEdit();
+     }
+
+     @Test
+     public void testEditCommitNullColumn() {
+         setupForcedEditing(tree, null);
+         cell.startEdit();
+         cell.commitEdit("edited");
+     }
+
+     @Test
+     public void testEditStartNullTableNullColumn() {
+         setupForcedEditing(null, null);
+         cell.startEdit();
+     }
+
+     @Test
+     public void testEditCancelNullTableNullColumn() {
+         setupForcedEditing(null, null);
+         cell.startEdit();
+         cell.cancelEdit();
+     }
+
+     @Test
+     public void testEditCommitNullTableNullColumn() {
+         setupForcedEditing(null, null);
+         cell.startEdit();
+         cell.commitEdit("edited");
+     }
+
+ //--------- test the test setup
+
+     @Test
+     public void testCellStartEditNullTable() {
+         setupForcedEditing(null, editingColumn);
+         // must not be empty to be switched into editing
+         assertFalse(cell.isEmpty());
+         cell.startEdit();
+         assertTrue(cell.isEditing());
+     }
+
+     @Test
+     public void testCellStartEditNullColumn() {
+         setupForcedEditing(tree, null);
+         // must not be empty to be switched into editing
+         assertFalse(cell.isEmpty());
+         cell.startEdit();
+         assertTrue(cell.isEditing());
+     }
+
+     @Test
+     public void testCellStartEditNullTableNullColumn() {
+         setupForcedEditing(null, null);
+         // must not be empty to be switched into editing
+         assertFalse(cell.isEmpty());
+         cell.startEdit();
+         assertTrue(cell.isEditing());
+     }
+
+     /**
+      * Configures the cell to be editable without table or column.
+      */
+     private void setupForcedEditing(TreeTableView table, TreeTableColumn editingColumn) {
+         if (table != null) {
+             table.setEditable(true);
+             cell.updateTreeTableView(table);
+         }
+         if (editingColumn != null ) cell.updateTableColumn(editingColumn);
+         // force into editable state (not empty)
+         TreeTableCellShim.set_lockItemOnEdit(cell, true);
+         CellShim.updateItem(cell, "something", false);
+     }
 
 
     /**
