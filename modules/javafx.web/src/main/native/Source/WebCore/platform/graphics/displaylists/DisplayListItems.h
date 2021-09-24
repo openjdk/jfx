@@ -37,6 +37,7 @@
 #include "Pattern.h"
 #include "RenderingResourceIdentifier.h"
 #include "SharedBuffer.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/TypeCasts.h>
 
 namespace WTF {
@@ -176,6 +177,8 @@ public:
 
     SetInlineFillGradient(const Gradient&, const AffineTransform& gradientSpaceTransform);
     WEBCORE_EXPORT SetInlineFillGradient(float offsets[maxColorStopCount], SRGBA<uint8_t> colors[maxColorStopCount], const Gradient::Data&, const AffineTransform& gradientSpaceTransform, GradientSpreadMethod, uint8_t colorStopCount);
+    SetInlineFillGradient(const SetInlineFillGradient&);
+    bool isValid() const { return m_isValid; }
 
     static bool isInline(const Gradient&);
     Ref<Gradient> gradient() const;
@@ -189,6 +192,7 @@ private:
     AffineTransform m_gradientSpaceTransform;
     GradientSpreadMethod m_spreadMethod { GradientSpreadMethod::Pad };
     uint8_t m_colorStopCount { 0 };
+    bool m_isValid { true };
 };
 
 class SetInlineFillColor {
@@ -750,7 +754,7 @@ public:
 
     RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
     FloatRect destinationRect() const { return m_destinationRect; }
-    bool isValid() const { return !!m_imageBufferIdentifier; }
+    bool isValid() const { return m_imageBufferIdentifier.isValid(); }
 
     void apply(GraphicsContext&, WebCore::ImageBuffer&) const;
 
@@ -998,7 +1002,7 @@ public:
     FloatRect destinationRect() const { return m_destinationRect; }
     ImagePaintingOptions options() const { return m_options; }
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return !!m_imageBufferIdentifier; }
+    bool isValid() const { return m_imageBufferIdentifier.isValid(); }
 
     void apply(GraphicsContext&, WebCore::ImageBuffer&) const;
 
@@ -1033,7 +1037,7 @@ public:
     const FloatRect& source() const { return m_srcRect; }
     const FloatRect& destinationRect() const { return m_destinationRect; }
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return !!m_imageIdentifier; }
+    bool isValid() const { return m_imageIdentifier.isValid(); }
 
     NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
     void apply(GraphicsContext&, NativeImage&) const;
@@ -1065,7 +1069,7 @@ public:
     FloatPoint phase() const { return m_phase; }
     FloatSize spacing() const { return m_spacing; }
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return !!m_imageIdentifier; }
+    bool isValid() const { return m_imageIdentifier.isValid(); }
 
     NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
     void apply(GraphicsContext&, NativeImage&) const;
@@ -1255,11 +1259,23 @@ public:
     static constexpr bool isInlineItem = true;
     static constexpr bool isDrawingItem = true;
 
-    DrawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
+    using UnderlyingDocumentMarkerLineStyleType = std::underlying_type<DocumentMarkerLineStyle::Mode>::type;
+
+    DrawDotsForDocumentMarker(const FloatRect& rect, const DocumentMarkerLineStyle& style)
         : m_rect(rect)
-        , m_style(style)
+        , m_styleMode(static_cast<UnderlyingDocumentMarkerLineStyleType>(style.mode))
+        , m_styleShouldUseDarkAppearance(style.shouldUseDarkAppearance)
     {
     }
+
+    DrawDotsForDocumentMarker(const FloatRect& rect, UnderlyingDocumentMarkerLineStyleType styleMode, bool styleShouldUseDarkAppearance)
+        : m_rect(rect)
+        , m_styleMode(styleMode)
+        , m_styleShouldUseDarkAppearance(styleShouldUseDarkAppearance)
+    {
+    }
+
+    bool isValid() const { return isValidEnum<DocumentMarkerLineStyle::Mode>(m_styleMode); }
 
     FloatRect rect() const { return m_rect; }
 
@@ -1270,7 +1286,8 @@ public:
 
 private:
     FloatRect m_rect;
-    DocumentMarkerLineStyle m_style;
+    UnderlyingDocumentMarkerLineStyleType m_styleMode { 0 };
+    bool m_styleShouldUseDarkAppearance { false };
 };
 
 class DrawEllipse {
@@ -1792,26 +1809,45 @@ Optional<FillRectWithRoundedHole> FillRectWithRoundedHole::decode(Decoder& decod
 
 #if ENABLE(INLINE_PATH_DATA)
 
-class FillInlinePath {
+class InlinePathDataStorage {
+public:
+    InlinePathDataStorage(const InlinePathData& pathData)
+    {
+        if (pathData.index() >= 0 && static_cast<size_t>(pathData.index()) < WTF::variant_size<InlinePathData>::value)
+            m_pathData = pathData;
+        else {
+            auto moved = WTFMove(m_pathData);
+            UNUSED_VARIABLE(moved);
+        }
+    }
+
+    bool isValid() const { return !m_pathData.valueless_by_exception(); }
+
+    Path path() const { return Path::from(m_pathData); }
+
+protected:
+    InlinePathData m_pathData;
+};
+
+class FillInlinePath : public InlinePathDataStorage {
 public:
     static constexpr ItemType itemType = ItemType::FillInlinePath;
     static constexpr bool isInlineItem = true;
     static constexpr bool isDrawingItem = true;
 
-    FillInlinePath(const InlinePathData& pathData)
-        : m_pathData(pathData)
+    FillInlinePath(const FillInlinePath& other)
+        : InlinePathDataStorage(other.m_pathData)
     {
     }
-
-    Path path() const { return Path::from(m_pathData); }
+    FillInlinePath(const InlinePathData& pathData)
+        : InlinePathDataStorage(pathData)
+    {
+    }
 
     void apply(GraphicsContext&) const;
 
     Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
     Optional<FloatRect> localBounds(const GraphicsContext&) const { return path().fastBoundingRect(); }
-
-private:
-    InlinePathData m_pathData;
 };
 
 #endif // ENABLE(INLINE_PATH_DATA)
@@ -1970,7 +2006,7 @@ public:
     const FloatRect& destination() const { return m_destination; }
     MediaPlayerIdentifier identifier() const { return m_identifier; }
 
-    bool isValid() const { return !!m_identifier; }
+    bool isValid() const { return m_identifier.isValid(); }
 
     NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
 
@@ -2035,26 +2071,26 @@ private:
 
 #if ENABLE(INLINE_PATH_DATA)
 
-class StrokeInlinePath {
+class StrokeInlinePath : public InlinePathDataStorage {
 public:
     static constexpr ItemType itemType = ItemType::StrokeInlinePath;
     static constexpr bool isInlineItem = true;
     static constexpr bool isDrawingItem = true;
 
-    StrokeInlinePath(const InlinePathData& pathData)
-        : m_pathData(pathData)
+    StrokeInlinePath(const StrokeInlinePath& other)
+        : InlinePathDataStorage(other.m_pathData)
     {
     }
 
-    Path path() const { return Path::from(m_pathData); }
+    StrokeInlinePath(const InlinePathData& pathData)
+        : InlinePathDataStorage(pathData)
+    {
+    }
 
     void apply(GraphicsContext&) const;
 
     Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
     Optional<FloatRect> localBounds(const GraphicsContext&) const;
-
-private:
-    InlinePathData m_pathData;
 };
 
 #endif // ENABLE(INLINE_PATH_DATA)
@@ -2203,7 +2239,7 @@ public:
     }
 
     FlushIdentifier identifier() const { return m_identifier; }
-    bool isValid() const { return !!m_identifier; }
+    bool isValid() const { return m_identifier.isValid(); }
 
     void apply(GraphicsContext&) const;
 
@@ -2225,7 +2261,7 @@ public:
     }
 
     ItemBufferIdentifier identifier() const { return m_identifier; }
-    bool isValid() const { return !!m_identifier; }
+    bool isValid() const { return m_identifier.isValid(); }
 
 private:
     ItemBufferIdentifier m_identifier;
@@ -2243,7 +2279,7 @@ public:
     }
 
     RenderingResourceIdentifier identifier() const { return m_identifier; }
-    bool isValid() const { return !!m_identifier; }
+    bool isValid() const { return m_identifier.isValid(); }
 
 private:
     RenderingResourceIdentifier m_identifier;

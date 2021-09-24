@@ -425,7 +425,7 @@ void RenderTreeBuilder::attachToRenderElement(RenderElement& parent, RenderPtr<R
     parent.didAttachChild(newChild, beforeChild);
 }
 
-void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
+void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild, ReinsertAfterMove reinsertAfterMove)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!parent.view().frameView().layoutContext().layoutState(), "Layout must not mutate render tree");
     ASSERT(parent.canHaveChildren() || parent.canHaveGeneratedChildren());
@@ -449,7 +449,9 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
         if (is<RenderMultiColumnFlow>(fragmentedFlow))
             multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*fragmentedFlow), *newChild);
 
-        if (is<RenderElement>(*newChild))
+        // FIXME: needsStateReset could probably be used for multicolumn as well.
+        auto needsStateReset = reinsertAfterMove == ReinsertAfterMove::No;
+        if (needsStateReset && is<RenderElement>(*newChild))
             RenderCounter::rendererSubtreeAttached(downcast<RenderElement>(*newChild));
     }
 
@@ -480,8 +482,24 @@ void RenderTreeBuilder::move(RenderBoxModelObject& from, RenderBoxModelObject& t
         attach(to, WTFMove(childToMove), beforeChild);
     } else {
         auto childToMove = detachFromRenderElement(from, child);
-        attachToRenderElementInternal(to, WTFMove(childToMove), beforeChild);
+        attachToRenderElementInternal(to, WTFMove(childToMove), beforeChild, ReinsertAfterMove::Yes);
     }
+
+    auto findBFCRootAndDestroyInlineTree = [&] {
+        auto* containingBlock = &from;
+        while (containingBlock) {
+            containingBlock->setNeedsLayout();
+            if (is<RenderBlockFlow>(*containingBlock)) {
+                downcast<RenderBlockFlow>(*containingBlock).deleteLines();
+                break;
+            }
+            containingBlock = containingBlock->containingBlock();
+        }
+    };
+    // When moving a subtree out of a BFC we need to make sure that the line boxes generated for the inline tree are not accessible anymore from the renderers.
+    // Let's find the BFC root and nuke the inline tree (At some point we are going to destroy the subtree instead of moving these renderers around.)
+    if (is<RenderInline>(child))
+        findBFCRootAndDestroyInlineTree();
 }
 
 void RenderTreeBuilder::move(RenderBoxModelObject& from, RenderBoxModelObject& to, RenderObject& child, NormalizeAfterInsertion normalizeAfterInsertion)
@@ -577,9 +595,6 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
         // We have gone from not affecting the inline status of the parent flow to suddenly
         // having an impact. See if there is a mismatch between the parent flow's
         // childrenInline() state and our state.
-        // FIXME(186894): startsAffectingParent has clearly nothing to do with resetting the inline state.
-        if (!is<RenderSVGInline>(renderer))
-            renderer.setInline(renderer.style().isDisplayInlineType());
         if (renderer.isInline() != renderer.parent()->childrenInline())
             childFlowStateChangesAndAffectsParentBlock(renderer);
         return;
