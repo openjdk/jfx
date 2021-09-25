@@ -1944,6 +1944,7 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
+        testImplementation group: "junit", name: "junit", version: "4.13.2"
         testImplementation(group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1") {
             exclude(group: "org.apiguardian", module: "apiguardian-api")
         }
@@ -2040,7 +2041,7 @@ project(":base") {
     }
 
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "4.8.2"
+        testImplementation group: "junit", name: "junit", version: "4.13.2"
         testImplementation sourceSets.main.output
         testImplementation sourceSets.shims.output
     }
@@ -2116,7 +2117,7 @@ project(":graphics") {
     }
 
     dependencies {
-        stubImplementation group: "junit", name: "junit", version: "4.8.2"
+        stubImplementation group: "junit", name: "junit", version: "4.13.2"
 
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
         testImplementation project(":base").sourceSets.test.output
