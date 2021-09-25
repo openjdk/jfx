@@ -1944,13 +1944,11 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "4.8.2"
         testImplementation(group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1") {
             exclude(group: "org.apiguardian", module: "apiguardian-api")
         }
         testRuntimeOnly(group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1") {
             exclude(group: "org.apiguardian", module: "apiguardian-api")
-            exclude(group: "org.hamcrest", module: "hamcrest-core")
         }
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
