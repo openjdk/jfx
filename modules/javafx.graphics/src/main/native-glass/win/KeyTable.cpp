@@ -234,17 +234,84 @@ BOOL IsExtendedKey(UINT vkey) {
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
+
+static bool isOEMKey(UINT wKey)
+{
+    switch (wKey) {
+        case VK_OEM_1:
+        case VK_OEM_PLUS:
+        case VK_OEM_COMMA:
+        case VK_OEM_MINUS:
+        case VK_OEM_PERIOD:
+        case VK_OEM_2:
+        case VK_OEM_3:
+        case VK_OEM_4:
+        case VK_OEM_5:
+        case VK_OEM_6:
+        case VK_OEM_7:
+        case VK_OEM_8:
+        case VK_OEM_102:
+            return true;
+    }
+    return false;
+}
+
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
   (JNIEnv * env, jobject jApplication, jchar c)
 {
-    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c,
-            ::GetKeyboardLayout(GlassApplication::GetMainThreadId()));
+    HKL keyboardLayout = ::GetKeyboardLayout(GlassApplication::GetMainThreadId());
+    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c, keyboardLayout);
 
     if (!vkey || vkey == 0xFF) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     }
 
-    return WindowsKeyToJavaKey(vkey);
+    // To determine the correct key code we reproduce the algorithm in
+    // ViewContainer::HandleViewKeyEvent in simplified form. For the OEM
+    // keys we query for the unshifted character on that key and use it
+    // to determine the Java code. For all other keys we use the table.
+    jint jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    if (isOEMKey(vkey)) {
+        // Map the virtual key code to an unshifted character.
+        UINT keyCodeChar = LOWORD(::MapVirtualKeyEx(vkey, 2, keyboardLayout));
+        switch (keyCodeChar) {
+            case L'!':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EXCLAMATION; break;
+            case L'"':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE; break;
+            case L'#':   jKeyCode = com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN; break;
+            case L'$':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOLLAR; break;
+            case L'&':   jKeyCode = com_sun_glass_events_KeyEvent_VK_AMPERSAND; break;
+            case L'\'':  jKeyCode = com_sun_glass_events_KeyEvent_VK_QUOTE; break;
+            case L'(':   jKeyCode = com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS; break;
+            case L')':   jKeyCode = com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS; break;
+            case L'*':   jKeyCode = com_sun_glass_events_KeyEvent_VK_ASTERISK; break;
+            case L'+':   jKeyCode = com_sun_glass_events_KeyEvent_VK_PLUS; break;
+            case L',':   jKeyCode = com_sun_glass_events_KeyEvent_VK_COMMA; break;
+            case L'-':   jKeyCode = com_sun_glass_events_KeyEvent_VK_MINUS; break;
+            case L'.':   jKeyCode = com_sun_glass_events_KeyEvent_VK_PERIOD; break;
+            case L'/':   jKeyCode = com_sun_glass_events_KeyEvent_VK_SLASH; break;
+            case L':':   jKeyCode = com_sun_glass_events_KeyEvent_VK_COLON; break;
+            case L';':   jKeyCode = com_sun_glass_events_KeyEvent_VK_SEMICOLON; break;
+            case L'<':   jKeyCode = com_sun_glass_events_KeyEvent_VK_LESS; break;
+            case L'=':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EQUALS; break;
+            case L'>':   jKeyCode = com_sun_glass_events_KeyEvent_VK_GREATER; break;
+            case L'@':   jKeyCode = com_sun_glass_events_KeyEvent_VK_AT; break;
+            case L'[':   jKeyCode = com_sun_glass_events_KeyEvent_VK_OPEN_BRACKET; break;
+            case L'\\':  jKeyCode = com_sun_glass_events_KeyEvent_VK_BACK_SLASH; break;
+            case L']':   jKeyCode = com_sun_glass_events_KeyEvent_VK_CLOSE_BRACKET; break;
+            case L'^':   jKeyCode = com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX; break;
+            case L'_':   jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDERSCORE; break;
+            case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BACK_QUOTE; break;
+            case L'{':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BRACELEFT; break;
+            case L'}':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BRACERIGHT; break;
+            case 0x00A1: jKeyCode = com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION; break;
+            case 0x20A0: jKeyCode = com_sun_glass_events_KeyEvent_VK_EURO_SIGN; break;
+        }
+    }
+    else {
+        jKeyCode = WindowsKeyToJavaKey(vkey);
+    }
+
+    return jKeyCode;
 }
 
 /*
