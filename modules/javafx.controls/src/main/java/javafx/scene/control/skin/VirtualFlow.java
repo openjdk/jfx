@@ -3191,17 +3191,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        @Override
         public int size() {
             return firstIndex == -1 ? 0 : lastIndex - firstIndex + 1;
         }
 
-        @Override
         public boolean isEmpty() {
             return firstIndex == -1;
         }
 
-        @Override
         public T get(int index) {
             if (index > (lastIndex - firstIndex) || index < 0) {
                 // Commented out exception due to RT-29111
@@ -3212,7 +3209,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             return array.get(firstIndex + index);
         }
 
-        @Override
         public void clear() {
             for (int i = 0; i < array.size(); i++) {
                 array.set(i, null);
@@ -3231,7 +3227,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             return remove(lastIndex - firstIndex);
         }
 
-        @Override
         public T remove(int index) {
             if (index > lastIndex - firstIndex || index < 0) {
                 throw new ArrayIndexOutOfBoundsException();
