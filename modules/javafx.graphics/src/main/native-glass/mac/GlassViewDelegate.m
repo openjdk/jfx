@@ -1342,7 +1342,6 @@ static jstring convertNSStringToJString(id aString, int length)
     {
         if (self->nativeFullScreenModeWindow)
         {
-            [self->nativeFullScreenModeWindow performSelector:@selector(toggleFullScreen:) withObject:nil];
             return;
         }
 
