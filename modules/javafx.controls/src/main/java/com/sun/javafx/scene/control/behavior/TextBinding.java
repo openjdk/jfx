@@ -183,23 +183,30 @@ public class TextBinding {
         }
 
         StringBuilder builder = new StringBuilder(s.length());
+        int i = 0;
 
-        for (int i = 0, length = s.length(); i < length; ++i) {
+        // Parse the input string and stop after the first mnemonic.
+        for (int length = s.length(); i < length; ++i) {
             if (isEscapedMnemonicSymbol(s, i)) {
                 builder.append(s.charAt(i++));
             } else if (isSimpleMnemonic(s, i)) {
                 char c = s.charAt(i + 1);
-                builder.append(c);
                 mnemonic = String.valueOf(c);
                 mnemonicIndex = i;
                 i += 1;
+                break;
             } else if (isExtendedMnemonic(s, i)) {
                 mnemonic = String.valueOf(s.charAt(i + 2));
                 extendedMnemonicText = s.substring(i + 1, i + 4);
-                i += 3;
+                i += 4;
+                break;
             } else {
                 builder.append(s.charAt(i));
             }
+        }
+
+        if (s.length() > i) {
+            builder.append(s.substring(i));
         }
 
         text = builder.toString();
@@ -216,21 +223,31 @@ public class TextBinding {
 
     /**
      * Determines whether the string contains a simple mnemonic at the specified position.
+     * A simple mnemonic is any two-character string similar to "_x", where x is not an
+     * underscore or a whitespace character, and the string is not similar to an extended
+     * mnemonic at the specified position.
      */
     private boolean isSimpleMnemonic(String s, int position) {
-        return s.length() > position + 1
-            && s.charAt(position) == MNEMONIC_SYMBOL
-            && Character.isAlphabetic(s.charAt(position + 1));
+        if (s.length() <= position + 1
+                || s.charAt(position) != MNEMONIC_SYMBOL
+                || s.charAt(position + 1) == MNEMONIC_SYMBOL
+                || Character.isWhitespace(s.charAt(position + 1))) {
+            return false;
+        }
+
+        return !isExtendedMnemonic(s, position);
     }
 
     /**
      * Determines whether the string contains an extended mnemonic at the specified position.
+     * An extended mnemonic is any four-character string similar to "_(x)", where x is any
+     * character except whitespace.
      */
     private boolean isExtendedMnemonic(String s, int position) {
         return s.length() > position + 3
             && s.charAt(position) == MNEMONIC_SYMBOL
             && s.charAt(position + 1) == '('
-            && Character.isAlphabetic(s.charAt(position + 2))
+            && !Character.isWhitespace(s.charAt(position + 2))
             && s.charAt(position + 3) == ')';
     }
 
