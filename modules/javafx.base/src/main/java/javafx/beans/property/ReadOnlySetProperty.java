@@ -50,74 +50,103 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
     }
 
     /**
-     * Creates a bidirectional content binding of the {@link javafx.collections.ObservableSet}, that is
-     * wrapped in this {@code ReadOnlySetProperty}, and another {@code ObservableSet}.
+     * Creates a bidirectional content binding between the {@link javafx.collections.ObservableSet} that is
+     * wrapped in this {@code ReadOnlySetProperty} and another {@code ObservableSet}.
      * <p>
-     * A bidirectional content binding ensures that the content of two {@code ObservableSets} is the
-     * same. If the content of one of the sets changes, the other one will be updated automatically.
+     * A bidirectional content binding ensures that the content of the two sets is the same.
+     * If the content of one of the sets changes, the content of the other set will be updated automatically.
      *
-     * @param set the {@code ObservableSet} this property should be bound to
-     * @throws NullPointerException if {@code set} is {@code null}
-     * @throws IllegalArgumentException if {@code set} is the same set that this {@code ReadOnlySetProperty} points to
+     * @param other the {@code ObservableSet} this property should be bound to
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
      */
-    public abstract void bindContentBidirectional(ObservableSet<E> set);
+    public abstract void bindContentBidirectional(ObservableSet<E> other);
 
     /**
-     * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableSet}, that is
-     * wrapped in this {@code ReadOnlySetProperty}, and another {@code Object}.
+     * Removes the bidirectional content binding that was established with
+     * {@link #bindContentBidirectional(ObservableSet)}.
+     * <p>
+     * Bidirectional content bindings can be removed by calling this method on either of the two endpoints:
+     * <pre>{@code
+     * property1.bindContentBidirectional(property2);
+     * property2.unbindContentBidirectional(property1);
+     * }</pre>
+     * The content of the wrapped set will remain unchanged.
+     * If this property is not bidirectionally content-bound, calling this method has no effect.
      *
-     * @param object the {@code Object} to which the bidirectional binding should be removed
-     * @throws NullPointerException if {@code object} is {@code null}
-     * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
+     * @param other the {@code ObservableSet} to which the bidirectional content binding should be removed
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
+     * @since 18
      */
-    public abstract void unbindContentBidirectional(ObservableSet<E> object);
+    public abstract void unbindContentBidirectional(ObservableSet<E> other);
 
     /**
-     * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableSet}, that is
-     * wrapped in this {@code ReadOnlySetProperty}, and another {@code Object}.
+     * Removes the bidirectional content binding that was established with
+     * {@link #bindContentBidirectional(ObservableSet)}.
+     * <p>
+     * Bidirectional content bindings can be removed by calling this method on either of the two endpoints:
+     * <pre>{@code
+     * property1.bindContentBidirectional(property2);
+     * property2.unbindContentBidirectional(property1);
+     * }</pre>
+     * The content of the wrapped set will remain unchanged.
+     * If this property is not bidirectionally content-bound, calling this method has no effect.
      *
-     * @param object the {@code Object} to which the bidirectional binding should be removed
-     * @throws NullPointerException if {@code object} is {@code null}
-     * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
+     * @param other the {@code Object} to which the bidirectional content binding should be removed
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
      * @deprecated use {@link #unbindContentBidirectional(ObservableSet)} instead
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContentBidirectional(Object object);
+    public abstract void unbindContentBidirectional(Object other);
 
     /**
-     * Creates a content binding between the {@link javafx.collections.ObservableSet}, that is
-     * wrapped in this {@code ReadOnlySetProperty}, and another {@code ObservableSet}.
+     * Creates a content binding between the {@link javafx.collections.ObservableSet} that is wrapped
+     * in this {@code ReadOnlySetProperty} (the <em>bound set</em>) and another {@code ObservableSet}
+     * (the <em>source set</em>).
      * <p>
-     * A content binding ensures that the content of the wrapped {@code ObservableSets} is the
-     * same as that of the other set. If the content of the other set changes, the wrapped set will be updated
-     * automatically. Once the wrapped set is bound to another set, you must not change it directly.
+     * A content binding ensures that the content of the bound set is the same as that of the source set.
+     * If the content of the source set changes, the content of the bound set will be updated automatically.
+     * In contrast, a regular binding will replace the bound set instance with the source set instance,
+     * which means that only a single set instance exists for both properties.
+     * <p>
+     * Once a content binding is established, the bound set becomes effectively read-only: any attempt to
+     * change the content of the bound set by calling a mutating method of {@link ObservableSet} will cause
+     * the content binding to fail. In this case, the content binding is removed because the bound set and
+     * the source set may be out-of-sync.
      *
-     * @param set the {@code ObservableSet} this property should be bound to
-     * @throws NullPointerException if {@code set} is {@code null}
-     * @throws IllegalArgumentException if {@code set} is the same set that this {@code ReadOnlySetProperty} points to
+     * @param source the source {@code ObservableSet} this property should be bound to
+     * @throws NullPointerException if {@code source} is {@code null}
+     * @throws IllegalArgumentException if {@code source} is the set wrapped in this {@code ReadOnlySetProperty}
      */
-    public abstract void bindContent(ObservableSet<E> set);
+    public abstract void bindContent(ObservableSet<E> source);
 
     /**
-     * Deletes a content binding between the {@link javafx.collections.ObservableSet}, that is
-     * wrapped in this {@code ReadOnlySetProperty}, and another {@code Object}.
+     * Removes the content binding that was established with {@link #bindContent(ObservableSet)}.
+     * <p>
+     * The content of the wrapped set will remain unchanged.
+     * If this property is not content-bound, calling this method has no effect.
      *
-     * @throws NullPointerException if {@code object} is {@code null}
-     * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
+     * @since 18
      */
-    public abstract void unbindContent();
+    public void unbindContent() {
+        throw new UnsupportedOperationException();
+    }
 
     /**
-     * Deletes a content binding between the {@link javafx.collections.ObservableSet}, that is
-     * wrapped in this {@code ReadOnlySetProperty}, and another {@code Object}.
+     * Removes the content binding that was established with {@link #bindContent(ObservableSet)}.
+     * <p>
+     * The content of the wrapped set will remain unchanged.
+     * If this property is not content-bound, calling this method has no effect.
      *
-     * @param object the {@code Object} to which the binding should be removed
-     * @throws NullPointerException if {@code object} is {@code null}
-     * @throws IllegalArgumentException if {@code object} is the same set that this {@code ReadOnlySetProperty} points to
-     * @deprecated use {@link #unbindContent()} instead
+     * @param source the content binding source
+     * @throws NullPointerException if {@code source} is {@code null}
+     * @throws IllegalArgumentException if {@code source} is the set wrapped in this {@code ReadOnlySetProperty}
+     * @deprecated use {@link #unbindContent()}
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContent(Object object);
+    public abstract void unbindContent(Object source);
 
     @Override
     public boolean equals(Object obj) {

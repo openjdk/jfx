@@ -132,8 +132,8 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
     }
 
     @Override
-    public void unbindContent(Object object) {
-        Bindings.unbindContent(this, object);
+    public void unbindContent(Object source) {
+        Bindings.unbindContent(this, source);
     }
 
     @Override
@@ -150,9 +150,9 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
     }
 
     @Override
-    public void unbindContentBidirectional(Object object) {
-        if (object instanceof ObservableSet<?>) {
-            unbindContentBidirectional((ObservableSet<E>)object);
+    public void unbindContentBidirectional(Object other) {
+        if (other instanceof ObservableSet<?>) {
+            unbindContentBidirectional((ObservableSet<E>) other);
         }
     }
 

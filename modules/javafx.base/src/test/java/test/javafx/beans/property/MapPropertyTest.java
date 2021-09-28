@@ -212,12 +212,12 @@ public class MapPropertyTest {
         }
 
         @Override
-        public void unbindContentBidirectional(Object object) {
+        public void unbindContentBidirectional(Object other) {
             fail("Not in use");
         }
 
         @Override
-        public void bindContent(ObservableMap<Object, Object> other) {
+        public void bindContent(ObservableMap<Object, Object> source) {
             fail("Not in use");
         }
 

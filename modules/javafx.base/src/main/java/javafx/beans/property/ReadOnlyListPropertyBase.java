@@ -131,8 +131,8 @@ public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E
     }
 
     @Override
-    public void unbindContent(Object object) {
-        Bindings.unbindContent(this, object);
+    public void unbindContent(Object source) {
+        Bindings.unbindContent(this, source);
     }
 
     @Override
@@ -149,9 +149,9 @@ public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E
     }
 
     @Override
-    public void unbindContentBidirectional(Object object) {
-        if (object instanceof ObservableList<?>) {
-            unbindContentBidirectional((ObservableList<E>)object);
+    public void unbindContentBidirectional(Object other) {
+        if (other instanceof ObservableList<?>) {
+            unbindContentBidirectional((ObservableList<E>) other);
         }
     }
 

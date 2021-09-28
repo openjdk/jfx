@@ -199,22 +199,22 @@ public class SetPropertyTest {
         }
 
         @Override
-        public void bindContentBidirectional(ObservableSet<Object> set) {
+        public void bindContentBidirectional(ObservableSet<Object> other) {
             fail("Not in use");
         }
 
         @Override
-        public void unbindContentBidirectional(ObservableSet<Object> object) {
+        public void unbindContentBidirectional(ObservableSet<Object> other) {
             fail("Not in use");
         }
 
         @Override
-        public void unbindContentBidirectional(Object object) {
+        public void unbindContentBidirectional(Object other) {
             fail("Not in use");
         }
 
         @Override
-        public void bindContent(ObservableSet<Object> set) {
+        public void bindContent(ObservableSet<Object> source) {
             fail("Not in use");
         }
 
@@ -224,7 +224,7 @@ public class SetPropertyTest {
         }
 
         @Override
-        public void unbindContent(Object object) {
+        public void unbindContent(Object source) {
             fail("Not in use");
         }
     }

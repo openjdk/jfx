@@ -148,9 +148,9 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
     }
 
     @Override
-    public void unbindContentBidirectional(Object object) {
-        if (object instanceof ObservableMap<?, ?>) {
-            unbindContentBidirectional((ObservableMap<K, V>)object);
+    public void unbindContentBidirectional(Object other) {
+        if (other instanceof ObservableMap<?, ?>) {
+            unbindContentBidirectional((ObservableMap<K, V>) other);
         }
     }
 

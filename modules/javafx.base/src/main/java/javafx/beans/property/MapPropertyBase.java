@@ -328,9 +328,9 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     }
 
     @Override
-    public void unbindContentBidirectional(Object object) {
-        if (object instanceof ObservableMap<?, ?>) {
-            unbindContentBidirectional((ObservableMap<K, V>)object);
+    public void unbindContentBidirectional(Object other) {
+        if (other instanceof ObservableMap<?, ?>) {
+            unbindContentBidirectional((ObservableMap<K, V>) other);
         }
     }
 

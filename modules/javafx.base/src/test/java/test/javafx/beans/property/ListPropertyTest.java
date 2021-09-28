@@ -209,7 +209,7 @@ public class ListPropertyTest {
         }
 
         @Override
-        public void unbindContentBidirectional(Object object) {
+        public void unbindContentBidirectional(Object other) {
             fail("Not in use");
         }
 
@@ -224,7 +224,7 @@ public class ListPropertyTest {
         }
 
         @Override
-        public void unbindContent(Object object) {
+        public void unbindContent(Object source) {
             fail("Not in use");
         }
     }

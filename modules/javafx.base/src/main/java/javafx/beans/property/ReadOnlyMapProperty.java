@@ -51,54 +51,77 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
     }
 
     /**
-     * Creates a bidirectional content binding of the {@link javafx.collections.ObservableMap} that is
+     * Creates a bidirectional content binding between the {@link javafx.collections.ObservableMap} that is
      * wrapped in this {@code ReadOnlyMapProperty} and another {@code ObservableMap}.
      * <p>
-     * A bidirectional content binding ensures that the content of two {@code ObservableMaps} is the
-     * same. If the content of one of the maps changes, the other one will be updated automatically.
+     * A bidirectional content binding ensures that the content of two maps is the same.
+     * If the content of one of the maps changes, the content of the other map will be updated automatically.
      *
      * @param other the {@code ObservableMap} this property should be bound to
      * @throws NullPointerException if {@code other} is {@code null}
-     * @throws IllegalArgumentException if {@code other} is the same map that this {@code ReadOnlyMapProperty} points to
+     * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
      */
     public abstract void bindContentBidirectional(ObservableMap<K, V> other);
 
     /**
-     * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableMap}, that is
-     * wrapped in this {@code ReadOnlyMapProperty}, and another {@code Object}.
+     * Removes the bidirectional content binding that was established with
+     * {@link #bindContentBidirectional(ObservableMap)}.
+     * <p>
+     * Bidirectional content bindings can be removed by calling this method on either of the two endpoints:
+     * <pre>{@code
+     * property1.bindContentBidirectional(property2);
+     * property2.unbindContentBidirectional(property1);
+     * }</pre>
+     * The content of the wrapped map will remain unchanged.
+     * If this property is not bidirectionally content-bound, calling this method has no effect.
      *
-     * @param other the {@code Object} to which the bidirectional binding should be removed
+     * @param other the {@code ObservableMap} to which the bidirectional content binding should be removed
      * @throws NullPointerException if {@code other} is {@code null}
-     * @throws IllegalArgumentException if {@code other} is the same map that this {@code ReadOnlyMapProperty} points to
+     * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
      * @since 18
      */
     public abstract void unbindContentBidirectional(ObservableMap<K, V> other);
 
     /**
-     * Deletes a bidirectional content binding between the {@link javafx.collections.ObservableMap}, that is
-     * wrapped in this {@code ReadOnlyMapProperty}, and another {@code Object}.
+     * Removes the bidirectional content binding that was established with
+     * {@link #bindContentBidirectional(ObservableMap)}.
+     * <p>
+     * Bidirectional content bindings can be removed by calling this method on either of the two endpoints:
+     * <pre>{@code
+     * property1.bindContentBidirectional(property2);
+     * property2.unbindContentBidirectional(property1);
+     * }</pre>
+     * The content of the wrapped map will remain unchanged.
+     * If this property is not bidirectionally content-bound, calling this method has no effect.
      *
-     * @param object the {@code Object} to which the bidirectional binding should be removed
-     * @throws NullPointerException if {@code object} is {@code null}
-     * @throws IllegalArgumentException if {@code object} is the same map that this {@code ReadOnlyMapProperty} points to
+     * @param other the {@code Object} to which the bidirectional content binding should be removed
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
      * @deprecated use {@link #unbindContentBidirectional(ObservableMap)} instead
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContentBidirectional(Object object);
+    public abstract void unbindContentBidirectional(Object other);
 
     /**
-     * Creates a content binding between the {@link javafx.collections.ObservableMap}, that is
-     * wrapped in this {@code ReadOnlyMapProperty}, and another {@code ObservableMap}.
+     * Creates a content binding between the {@link javafx.collections.ObservableMap} that is wrapped
+     * in this {@code ReadOnlyMapProperty} (the <em>bound map</em>) and another {@code ObservableMap}
+     * (the <em>source map</em>).
      * <p>
-     * A content binding ensures that the content of the wrapped {@code ObservableMaps} is the
-     * same as that of the other map. If the content of the other map changes, the wrapped map will be updated
-     * automatically. Once the wrapped list is bound to another map, you must not change it directly.
+     * A content binding ensures that the content of the bound map is the same as that of the source map.
+     * If the content of the source map changes, the content of the bound map will be updated automatically.
+     * In contrast, a regular binding will replace the bound map instance with the source map instance,
+     * which means that only a single map instance exists for both properties.
+     * <p>
+     * Once a content binding is established, the bound map becomes effectively read-only: any attempt to
+     * change the content of the bound map by calling a mutating method of {@link ObservableMap} will cause
+     * the content binding to fail. In this case, the content binding is removed because the bound map and
+     * the source map may be out-of-sync.
      *
-     * @param other the {@code ObservableMap} this property should be bound to
-     * @throws NullPointerException if {@code other} is {@code null}
-     * @throws IllegalArgumentException if {@code other} is the same map that this {@code ReadOnlyMapProperty} points to
+     * @param source the source {@code ObservableMap} this property should be bound to
+     * @throws NullPointerException if {@code source} is {@code null}
+     * @throws IllegalArgumentException if {@code source} is the map wrapped in this {@code ReadOnlyMapProperty}
      */
-    public abstract void bindContent(ObservableMap<K, V> other);
+    public abstract void bindContent(ObservableMap<K, V> source);
 
     /**
      * Deletes a content binding between the {@link javafx.collections.ObservableMap}, that is
@@ -106,7 +129,9 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      *
      * @since 18
      */
-    public abstract void unbindContent();
+    public void unbindContent() {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Deletes a content binding between the {@link javafx.collections.ObservableMap}, that is

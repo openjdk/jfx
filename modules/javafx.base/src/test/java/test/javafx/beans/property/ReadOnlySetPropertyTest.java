@@ -121,19 +121,19 @@ public class ReadOnlySetPropertyTest {
         }
 
         @Override
-        public void bindContentBidirectional(ObservableSet<Object> set) {
+        public void bindContentBidirectional(ObservableSet<Object> other) {
         }
 
         @Override
-        public void unbindContentBidirectional(ObservableSet<Object> object) {
+        public void unbindContentBidirectional(ObservableSet<Object> other) {
         }
 
         @Override
-        public void unbindContentBidirectional(Object object) {
+        public void unbindContentBidirectional(Object other) {
         }
 
         @Override
-        public void bindContent(ObservableSet<Object> set) {
+        public void bindContent(ObservableSet<Object> source) {
         }
 
         @Override
@@ -141,7 +141,7 @@ public class ReadOnlySetPropertyTest {
         }
 
         @Override
-        public void unbindContent(Object object) {
+        public void unbindContent(Object source) {
         }
     }
 

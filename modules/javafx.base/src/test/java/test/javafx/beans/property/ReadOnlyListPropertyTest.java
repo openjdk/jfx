@@ -129,7 +129,7 @@ public class ReadOnlyListPropertyTest {
         }
 
         @Override
-        public void unbindContentBidirectional(Object object) {
+        public void unbindContentBidirectional(Object other) {
         }
 
         @Override
@@ -137,7 +137,7 @@ public class ReadOnlyListPropertyTest {
         }
 
         @Override
-        public void unbindContent(Object object) {
+        public void unbindContent(Object source) {
         }
 
         @Override

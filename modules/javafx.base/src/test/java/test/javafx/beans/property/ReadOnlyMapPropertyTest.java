@@ -128,11 +128,11 @@ public class ReadOnlyMapPropertyTest {
         }
 
         @Override
-        public void unbindContentBidirectional(Object object) {
+        public void unbindContentBidirectional(Object other) {
         }
 
         @Override
-        public void bindContent(ObservableMap<Object, Object> other) {
+        public void bindContent(ObservableMap<Object, Object> source) {
         }
 
         @Override
