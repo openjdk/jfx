@@ -2064,12 +2064,21 @@ public class LabelSkinTest {
      ***************************************************************************/
 
     @Test
-    public void mnemonicSymbolIsRemovedFromDisplayedText() {
+    public void mnemonicLetterIsRemovedFromDisplayedText() {
         label.setMnemonicParsing(true);
         label.setText("foo _bar");
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void mnemonicDigitIsRemovedFromDisplayedText() {
+        label.setMnemonicParsing(true);
+        label.setText("foo _1");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo 1", LabelSkinBaseShim.getText(label).getText());
     }
 
     @Test
@@ -2082,12 +2091,39 @@ public class LabelSkinTest {
     }
 
     @Test
+    public void extendedMnemonicUnderscoreIsRemovedFromDisplayedText() {
+        label.setMnemonicParsing(true);
+        label.setText("foo _(_)bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void extendedMnemonicClosingBraceIsRemovedFromDisplayedText() {
+        label.setMnemonicParsing(true);
+        label.setText("foo _())bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
     public void escapedMnemonicSymbolIsRetainedInDisplayedText() {
         label.setMnemonicParsing(true);
         label.setText("foo __bar");
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo _bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void whitespaceIsNotProcessedAsExtendedMnemonic() {
+        label.setMnemonicParsing(true);
+        label.setText("foo _( ) bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo ( ) bar", LabelSkinBaseShim.getText(label).getText());
     }
 
     @Test
@@ -2115,6 +2151,24 @@ public class LabelSkinTest {
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo_", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void mnemonicParsingStopsAfterFirstSimpleMnemonic() {
+        label.setMnemonicParsing(true);
+        label.setText("_foo _bar _qux");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo _bar _qux", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
+    public void mnemonicParsingStopsAfterFirstExtendedMnemonic() {
+        label.setMnemonicParsing(true);
+        label.setText("_(x)foo _bar _qux");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo _bar _qux", LabelSkinBaseShim.getText(label).getText());
     }
 
     public static final class LabelSkinMock extends LabelSkin {
