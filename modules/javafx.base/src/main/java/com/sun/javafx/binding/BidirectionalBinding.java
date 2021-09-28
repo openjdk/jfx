@@ -173,13 +173,13 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
 
     private final int cachedHashCode;
 
-    private BidirectionalBinding(Object property1, Object property2) {
+    private BidirectionalBinding(Property<?> property1, Property<?> property2) {
         cachedHashCode = property1.hashCode() * property2.hashCode();
     }
 
-    protected abstract Object getProperty1();
+    protected abstract Property<?> getProperty1();
 
-    protected abstract Object getProperty2();
+    protected abstract Property<?> getProperty2();
 
     @Override
     public int hashCode() {
@@ -197,16 +197,16 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
             return true;
         }
 
-        final Object propertyA1 = getProperty1();
-        final Object propertyA2 = getProperty2();
+        final Property<?> propertyA1 = getProperty1();
+        final Property<?> propertyA2 = getProperty2();
         if ((propertyA1 == null) || (propertyA2 == null)) {
             return false;
         }
 
         if (obj instanceof BidirectionalBinding) {
             final BidirectionalBinding otherBinding = (BidirectionalBinding) obj;
-            final Object propertyB1 = otherBinding.getProperty1();
-            final Object propertyB2 = otherBinding.getProperty2();
+            final Property<?> propertyB1 = otherBinding.getProperty1();
+            final Property<?> propertyB2 = otherBinding.getProperty2();
             if ((propertyB1 == null) || (propertyB2 == null)) {
                 return false;
             }
@@ -761,22 +761,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
     }
 
     private static class UntypedGenericBidirectionalBinding extends BidirectionalBinding {
-        private final Object property1;
-        private final Object property2;
+        private final Property<?> property1;
+        private final Property<?> property2;
 
-        public UntypedGenericBidirectionalBinding(Object property1, Object property2) {
+        public UntypedGenericBidirectionalBinding(Property<?> property1, Property<?> property2) {
             super(property1, property2);
             this.property1 = property1;
             this.property2 = property2;
         }
 
         @Override
-        protected Object getProperty1() {
+        protected Property<?> getProperty1() {
             return property1;
         }
 
         @Override
-        protected Object getProperty2() {
+        protected Property<?> getProperty2() {
             return property2;
         }
 
@@ -802,12 +802,12 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         protected abstract T fromString(String value) throws ParseException;
 
         @Override
-        protected Object getProperty1() {
+        protected Property<?> getProperty1() {
             return stringPropertyRef.get();
         }
 
         @Override
-        protected Object getProperty2() {
+        protected Property<?> getProperty2() {
             return otherPropertyRef.get();
         }
 
