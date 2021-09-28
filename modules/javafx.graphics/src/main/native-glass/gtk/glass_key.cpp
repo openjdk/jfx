@@ -316,6 +316,42 @@ jint glass_key_to_modifier(jint glassKey) {
             return 0;
     }
 }
+
+/*
+ * Function to determine whether the Xkb extention is available. This is a
+ * precaution against X protocol errors, although it should be available on all
+ * Linux systems.
+ */
+
+static Bool xkbInitialized = False;
+static Bool xkbAvailable = False;
+
+static Bool isXkbAvailable(Display *display) {
+    if (!xkbInitialized) {
+        int xkbMajor = XkbMajorVersion;
+        int xkbMinor = XkbMinorVersion;
+        xkbAvailable = XkbQueryExtension(display, NULL, NULL, NULL, &xkbMajor, &xkbMinor);
+        xkbInitialized = True;
+    }
+    return xkbAvailable;
+}
+
+/*
+ * Determine which keyboard layout is active. This is the group
+ * number in the Xkb state. There is no direct way to query this
+ * in Gdk.
+ */
+static gint get_current_keyboard_group()
+{
+    Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
+    if (isXkbAvailable(display)) {
+        XkbStateRec xkbState;
+        XkbGetState(display, XkbUseCoreKbd, &xkbState);
+        return xkbState.group;
+    }
+    return -1;
+}
+
 extern "C" {
 
 /*
@@ -343,26 +379,53 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
 
     g_free(ucs_char);
 
-    return gdk_keyval_to_glass(keyval);
-}
+    // This call must return the same JavaFX key code that would be generated
+    // if the user typed the character. get_glass_key assigns keycodes based
+    // on the unshifted character on the key. To match that behavior determine
+    // which key the the user would press and then query for the unshifted
+    // character.
+    gint current_group = get_current_keyboard_group();
+    if (current_group < 0)
+        return gdk_keyval_to_glass(keyval);
 
-/*
- * Function to determine whether the Xkb extention is available. This is a
- * precaution against X protocol errors, although it should be available on all
- * Linux systems.
- */
+    GdkKeymap* keymap = gdk_keymap_get_default();
+    GdkKeymapKey* keys;
+    gint count;
+    if (!gdk_keymap_get_entries_for_keyval(keymap, keyval, &keys, &count))
+        return gdk_keyval_to_glass(keyval);
 
-static Bool xkbInitialized = False;
-static Bool xkbAvailable = False;
+    GdkKeymapKey unshifted = {};
+    unshifted.group = current_group;
+    unshifted.level = 0; // No modifiers
 
-static Bool isXkbAvailable(Display *display) {
-    if (!xkbInitialized) {
-        int xkbMajor = XkbMajorVersion;
-        int xkbMinor = XkbMinorVersion;
-        xkbAvailable = XkbQueryExtension(display, NULL, NULL, NULL, &xkbMajor, &xkbMinor);
-        xkbInitialized = True;
+    // For some keyvals that are common across all layout (like Space) we
+    // will get one result from group 0 even if it is not the current group.
+    if (count == 1) {
+        unshifted.keycode = keys[0].keycode;
+        unshifted.group = keys[0].group;
     }
-    return xkbAvailable;
+    else {
+        for (gint i = 0; i < count; ++i) {
+            if (keys[i].group == current_group) {
+                unshifted.keycode = keys[i].keycode;
+                break;
+            }
+        }
+    }
+    g_free(keys);
+
+    keyval = gdk_keymap_lookup_key(keymap, &unshifted);
+    jint jKeyCode = gdk_keyval_to_glass(keyval);
+    if (jKeyCode == com_sun_glass_events_KeyEvent_VK_UNDEFINED && unshifted.group != 0)
+    {
+        // get_glass_key assumes that if it can't find a Java key code the keyval must
+        // be non-Latin and falls back to probing keyboard layout 0 assuming it will
+        // yield a Latin result.
+        unshifted.group = 0;
+        keyval = gdk_keymap_lookup_key(keymap, &unshifted);
+        jKeyCode = gdk_keyval_to_glass(keyval);
+    }
+    return jKeyCode;
 }
 
 /*
