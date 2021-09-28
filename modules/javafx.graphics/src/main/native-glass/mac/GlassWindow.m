@@ -1045,7 +1045,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         //          right-click handling in [NSApplication sendEvent].  This defers
         //          the close until the [NSWindow _resignKeyFocus] can be performed.
 
-        [window->nsWindow performSelectorOnMainThread:@selector(close) withObject:nil waitUntilDone:NO];
+        [window->nsWindow performSelectorOnMainThread:@selector(close) withObject:nil waitUntilDone:YES];
 
         // The NSWindow will be automatically released after closing
         // The GlassWindow is released in the [NSWindow dealloc] override
