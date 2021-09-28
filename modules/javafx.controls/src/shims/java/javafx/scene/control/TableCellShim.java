@@ -31,8 +31,11 @@ public class TableCellShim<S,T> extends TableCell<S,T> {
         super.updateItem(item, empty);
     }
 
-    public static void set_lockItemOnEdit(TableCell tc, boolean b) {
+    public static <S, T> void set_lockItemOnEdit(TableCell<S, T> tc, boolean b) {
         tc.lockItemOnEdit = b;
     }
 
+    public static <S, T> TablePosition<S, T> getEditingCellAtStartEdit(TableCell<S, T> cell) {
+        return cell.getEditingCellAtStartEdit();
+    }
 }

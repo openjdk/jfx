@@ -36,6 +36,14 @@ import java.text.Format;
 import java.text.ParseException;
 import java.util.Objects;
 
+/**
+ * @implNote Bidirectional bindings are implemented with InvalidationListeners, which are fired once
+ *           when the changed property was valid, but elided for any future changes until the property
+ *           is again validated by calling its getValue()/get() method.
+ *           Since bidirectional bindings require that we observe all property changes, independent
+ *           of whether the property was validated by user code, we manually validate both properties
+ *           by calling their getter method in all relevant places.
+ */
 public abstract class BidirectionalBinding implements InvalidationListener, WeakListener {
 
     private static void checkParameters(Property<?> property1, Property<?> property2) {
@@ -68,6 +76,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         property1.removeListener(binding);
         property2.removeListener(binding);
         property1.setValue(property2.getValue());
+        property1.getValue();
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
@@ -80,6 +89,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         stringProperty.removeListener(binding);
         otherProperty.removeListener(binding);
         stringProperty.setValue(format.format(otherProperty.getValue()));
+        stringProperty.getValue();
         stringProperty.addListener(binding);
         otherProperty.addListener(binding);
         return binding;
@@ -92,6 +102,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         stringProperty.removeListener(binding);
         otherProperty.removeListener(binding);
         stringProperty.setValue(converter.toString(otherProperty.getValue()));
+        stringProperty.getValue();
         stringProperty.addListener(binding);
         otherProperty.addListener(binding);
         return binding;
@@ -142,6 +153,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         property1.removeListener(binding);
         property2.removeListener(binding);
         property1.setValue(property2.getValue());
+        property1.getValue();
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
@@ -153,6 +165,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         property1.removeListener(binding);
         property2.removeListener(binding);
         property1.setValue((T)property2.getValue());
+        property1.getValue();
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
@@ -249,18 +262,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             boolean newValue = property1.get();
                             property2.set(newValue);
+                            property2.get();
                             oldValue = newValue;
                         } else {
                             boolean newValue = property2.get();
                             property1.set(newValue);
+                            property1.get();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.set(oldValue);
+                                property1.get();
                             } else {
                                 property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -322,18 +339,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             double newValue = property1.get();
                             property2.set(newValue);
+                            property2.get();
                             oldValue = newValue;
                         } else {
                             double newValue = property2.get();
                             property1.set(newValue);
+                            property1.get();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.set(oldValue);
+                                property1.get();
                             } else {
                                 property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -395,18 +416,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             float newValue = property1.get();
                             property2.set(newValue);
+                            property2.get();
                             oldValue = newValue;
                         } else {
                             float newValue = property2.get();
                             property1.set(newValue);
+                            property1.get();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.set(oldValue);
+                                property1.get();
                             } else {
                                 property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -468,18 +493,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             int newValue = property1.get();
                             property2.set(newValue);
+                            property2.get();
                             oldValue = newValue;
                         } else {
                             int newValue = property2.get();
                             property1.set(newValue);
+                            property1.get();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.set(oldValue);
+                                property1.get();
                             } else {
                                 property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -541,18 +570,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             long newValue = property1.get();
                             property2.set(newValue);
+                            property2.get();
                             oldValue = newValue;
                         } else {
                             long newValue = property2.get();
                             property1.set(newValue);
+                            property1.get();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.set(oldValue);
+                                property1.get();
                             } else {
                                 property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -614,18 +647,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             T newValue = property1.getValue();
                             property2.setValue(newValue);
+                            property2.getValue();
                             oldValue = newValue;
                         } else {
                             T newValue = property2.getValue();
                             property1.setValue(newValue);
+                            property1.getValue();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.setValue(oldValue);
+                                property1.getValue();
                             } else {
                                 property2.setValue(oldValue);
+                                property2.getValue();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -687,18 +724,22 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == sourceProperty) {
                             T newValue = property1.getValue();
                             property2.setValue(newValue);
+                            property2.getValue();
                             oldValue = newValue;
                         } else {
                             T newValue = (T)property2.getValue();
                             property1.setValue(newValue);
+                            property1.getValue();
                             oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.setValue((T)oldValue);
+                                property1.getValue();
                             } else {
                                 property2.setValue(oldValue);
+                                property2.getValue();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -788,16 +829,20 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         if (property1 == observable) {
                             try {
                                 property2.setValue(fromString(property1.getValue()));
+                                property2.getValue();
                             } catch (Exception e) {
                                 Logging.getLogger().warning("Exception while parsing String in bidirectional binding", e);
                                 property2.setValue(null);
+                                property2.getValue();
                             }
                         } else {
                             try {
                                 property1.setValue(toString(property2.getValue()));
+                                property1.getValue();
                             } catch (Exception e) {
                                 Logging.getLogger().warning("Exception while converting Object to String in bidirectional binding", e);
                                 property1.setValue("");
+                                property1.getValue();
                             }
                         }
                     } finally {

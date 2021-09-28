@@ -31,8 +31,12 @@ public class TreeTableCellShim<S,T> extends TreeTableCell<S,T> {
         super.updateItem(item, empty);
     }
 
-    public static void set_lockItemOnEdit(TreeTableCell tc, boolean b) {
+    public static <S, T> void set_lockItemOnEdit(TreeTableCell<S, T> tc, boolean b) {
         tc.lockItemOnEdit = b;
+    }
+
+    public static <S, T> TreeTablePosition<S, T> getEditingCellAtStartEdit(TreeTableCell<S, T> cell) {
+        return cell.getEditingCellAtStartEdit();
     }
 
 }
