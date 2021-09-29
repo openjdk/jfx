@@ -36,7 +36,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class HostServicesShowDocumentTest extends Application {
-    
+
     private final static String testHtmlUri = new File("test.html").toURI().toString();
     private final static String testTxtUri  = new File("test.txt").toURI().toString();
     private final static String testCsvUri  = new File("test.csv").toURI().toString();
@@ -56,17 +56,17 @@ public class HostServicesShowDocumentTest extends Application {
         showHtmlButton.setOnAction(e -> {
             this.getHostServices().showDocument(testHtmlUri);
         });
-        
+
         Button showTxtButton = new Button("TXT");
         showTxtButton.setOnAction(e -> {
             this.getHostServices().showDocument(testTxtUri);
         });
-        
+
         Button showCsvButton = new Button("CSV");
         showCsvButton.setOnAction(e -> {
             this.getHostServices().showDocument(testCsvUri);
         });
-        
+
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
             Platform.exit();
