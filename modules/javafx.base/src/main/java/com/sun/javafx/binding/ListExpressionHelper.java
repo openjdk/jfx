@@ -172,7 +172,12 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
+        protected ContentBinding getContentBinding() {
+            return null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
             return null;
         }
 
@@ -234,7 +239,12 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
+        protected ContentBinding getContentBinding() {
+            return null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
             return null;
         }
 
@@ -300,8 +310,13 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
-            return type.isInstance(listener) ? (T)listener : null;
+        protected ContentBinding getContentBinding() {
+            return listener instanceof ContentBinding ? (ContentBinding)listener : null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
+            return listener instanceof BidirectionalContentBinding ? (BidirectionalContentBinding)listener : null;
         }
 
         @Override
@@ -577,10 +592,21 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
+        protected ContentBinding getContentBinding() {
             for (int i = 0; i < listChangeSize; ++i) {
-                if (type.isInstance(listChangeListeners[i])) {
-                    return (T)listChangeListeners[i];
+                if (listChangeListeners[i] instanceof ContentBinding) {
+                    return (ContentBinding)listChangeListeners[i];
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
+            for (int i = 0; i < listChangeSize; ++i) {
+                if (listChangeListeners[i] instanceof BidirectionalContentBinding) {
+                    return (BidirectionalContentBinding)listChangeListeners[i];
                 }
             }
 

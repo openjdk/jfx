@@ -28,23 +28,29 @@ package com.sun.javafx.binding;
 public abstract class CollectionExpressionHelperBase extends ExpressionHelperBase {
 
     public static void requireNotContentBound(CollectionExpressionHelperBase helper) {
-        if (getCollectionChangeListener(helper, ContentBinding.class) != null) {
+        if (getContentBinding(helper) != null) {
             throw new IllegalStateException(
                 "Cannot establish a bidirectional content binding because a content binding already exists.");
         }
     }
 
     public static void requireNotContentBoundBidirectional(CollectionExpressionHelperBase helper) {
-        if (getCollectionChangeListener(helper, BidirectionalContentBinding.class) != null) {
+        if (getBidirectionalContentBinding(helper) != null) {
             throw new IllegalStateException(
                 "Cannot establish a content binding because a bidirectional content binding already exists.");
         }
     }
 
-    public static <T> T getCollectionChangeListener(CollectionExpressionHelperBase helper, Class<T> type) {
-        return helper != null ? helper.getCollectionChangeListener(type) : null;
+    public static ContentBinding getContentBinding(CollectionExpressionHelperBase helper) {
+        return helper != null ? helper.getContentBinding() : null;
     }
 
-    protected abstract <T> T getCollectionChangeListener(Class<T> type);
+    public static BidirectionalContentBinding getBidirectionalContentBinding(CollectionExpressionHelperBase helper) {
+        return helper != null ? helper.getBidirectionalContentBinding() : null;
+    }
+
+    protected abstract ContentBinding getContentBinding();
+
+    protected abstract BidirectionalContentBinding getBidirectionalContentBinding();
 
 }

@@ -125,7 +125,7 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
 
     @Override
     public void unbindContent() {
-        ContentBinding binding = SetExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        ContentBinding binding = SetExpressionHelper.getContentBinding(helper);
         if (binding != null) {
             binding.dispose();
         }

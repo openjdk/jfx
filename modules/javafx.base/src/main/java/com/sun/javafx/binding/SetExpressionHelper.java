@@ -158,7 +158,12 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
+        protected ContentBinding getContentBinding() {
+            return null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
             return null;
         }
 
@@ -220,7 +225,12 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
+        protected ContentBinding getContentBinding() {
+            return null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
             return null;
         }
 
@@ -286,8 +296,13 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
-            return type.isInstance(listener) ? (T)listener : null;
+        protected ContentBinding getContentBinding() {
+            return listener instanceof ContentBinding ? (ContentBinding)listener : null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
+            return listener instanceof BidirectionalContentBinding ? (BidirectionalContentBinding)listener : null;
         }
 
         @Override
@@ -578,10 +593,21 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
         }
 
         @Override
-        protected <T> T getCollectionChangeListener(Class<T> type) {
+        protected ContentBinding getContentBinding() {
             for (int i = 0; i < setChangeSize; ++i) {
-                if (type.isInstance(setChangeListeners[i])) {
-                    return (T)setChangeListeners[i];
+                if (setChangeListeners[i] instanceof ContentBinding) {
+                    return (ContentBinding)setChangeListeners[i];
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        protected BidirectionalContentBinding getBidirectionalContentBinding() {
+            for (int i = 0; i < setChangeSize; ++i) {
+                if (setChangeListeners[i] instanceof BidirectionalContentBinding) {
+                    return (BidirectionalContentBinding)setChangeListeners[i];
                 }
             }
 

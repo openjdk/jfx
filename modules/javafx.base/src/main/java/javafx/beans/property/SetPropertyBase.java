@@ -304,7 +304,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
     @Override
     public void unbindContent() {
-        ContentBinding binding = SetExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        ContentBinding binding = SetExpressionHelper.getContentBinding(helper);
         if (binding != null) {
             binding.dispose();
         }

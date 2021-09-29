@@ -123,7 +123,7 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
 
     @Override
     public void unbindContent() {
-        ContentBinding binding = MapExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        ContentBinding binding = MapExpressionHelper.getContentBinding(helper);
         if (binding != null) {
             binding.dispose();
         }

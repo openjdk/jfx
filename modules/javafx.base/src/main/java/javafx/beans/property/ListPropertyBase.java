@@ -302,7 +302,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
     @Override
     public void unbindContent() {
-        ContentBinding binding = ListExpressionHelper.getCollectionChangeListener(helper, ContentBinding.class);
+        ContentBinding binding = ListExpressionHelper.getContentBinding(helper);
         if (binding != null) {
             binding.dispose();
         }
