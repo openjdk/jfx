@@ -368,6 +368,7 @@ public class ListCell<T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
          // Inform the ListView of the edit starting.
         if (list != null) {
             list.fireEvent(new ListView.EditEvent<T>(list,

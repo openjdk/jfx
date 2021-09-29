@@ -348,6 +348,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
         editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent<S, T> editEvent = new CellEditEvent<>(
