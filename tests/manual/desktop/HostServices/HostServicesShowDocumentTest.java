@@ -37,9 +37,9 @@ import javafx.stage.Stage;
 
 public class HostServicesShowDocumentTest extends Application {
 
-    private final static String testHtmlUri = new File("test.html").toURI().toString();
-    private final static String testTxtUri  = new File("test.txt").toURI().toString();
-    private final static String testCsvUri  = new File("test.csv").toURI().toString();
+    private static final String testHtmlUri = new File("test.html").toURI().toString();
+    private static final String testTxtUri  = new File("test.txt").toURI().toString();
+    private static final String testCsvUri  = new File("test.csv").toURI().toString();
 
     @Override
     public void start(Stage primaryStage) throws Exception {
