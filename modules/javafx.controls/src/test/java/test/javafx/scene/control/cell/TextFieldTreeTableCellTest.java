@@ -237,13 +237,6 @@ public class TextFieldTreeTableCellTest {
         assertNull(cell.getGraphic());
     }
 
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
-        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-        cell.setEditable(true);
-        cell.startEdit();
-    }
-
     @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
         TreeTableColumn tc = new TreeTableColumn();
         TreeTableView tableView = new TreeTableView();
@@ -296,14 +289,6 @@ public class TextFieldTreeTableCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
-        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {

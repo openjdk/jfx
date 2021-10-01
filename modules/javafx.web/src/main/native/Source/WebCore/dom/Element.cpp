@@ -1613,7 +1613,7 @@ Optional<std::pair<RenderObject*, FloatRect>> Element::boundingAbsoluteRectWitho
         // Get the bounding rectangle from the SVG model.
         SVGElement& svgElement = downcast<SVGElement>(*this);
         FloatRect localRect;
-        if (svgElement.getBoundingBox(localRect))
+        if (svgElement.getBoundingBox(localRect, SVGLocatable::DisallowStyleUpdate))
             quads.append(renderer->localToAbsoluteQuad(localRect));
     } else if (auto pair = listBoxElementBoundingBox(*this)) {
         renderer = pair.value().first;
@@ -4221,15 +4221,16 @@ void Element::resetComputedStyle()
         return;
 
     auto reset = [](Element& element) {
-        if (!element.hasRareData() || !element.elementRareData()->computedStyle())
-            return;
         if (element.hasCustomStyleResolveCallbacks())
             element.willResetComputedStyle();
         element.elementRareData()->resetComputedStyle();
     };
     reset(*this);
-    for (auto& child : descendantsOfType<Element>(*this))
+    for (auto& child : descendantsOfType<Element>(*this)) {
+        if (!child.hasRareData() || !child.elementRareData()->computedStyle() || child.hasDisplayContents())
+            continue;
         reset(child);
+    }
 }
 
 void Element::resetStyleRelations()
@@ -4566,11 +4567,6 @@ ElementIdentifier Element::createElementIdentifier()
     ASSERT(!hasNodeFlag(NodeFlag::HasElementIdentifier));
     setNodeFlag(NodeFlag::HasElementIdentifier);
     return ElementIdentifier::generate();
-}
-
-void Element::didChangeRenderer(RenderObject* oldRenderer)
-{
-    InspectorInstrumentation::nodeLayoutContextChanged(*this, oldRenderer);
 }
 
 #if ENABLE(CSS_TYPED_OM)

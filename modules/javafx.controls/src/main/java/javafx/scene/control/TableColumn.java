@@ -30,7 +30,6 @@ import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkin;
-import javafx.scene.control.skin.TableViewSkinBase;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -783,9 +782,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                 EventType<CellEditEvent<S,T>> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
-            if (table == null) {
-                throw new NullPointerException("TableView can not be null");
-            }
             this.pos = pos;
             this.newValue = newValue;
         }

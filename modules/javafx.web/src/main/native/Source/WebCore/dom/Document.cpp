@@ -1870,21 +1870,20 @@ bool Document::hidden() const
 
 void Document::registerMediaElement(HTMLMediaElement& element)
 {
-    m_mediaElements.add(&element);
+    m_mediaElements.add(element);
 }
 
 void Document::unregisterMediaElement(HTMLMediaElement& element)
 {
-    m_mediaElements.remove(&element);
+    m_mediaElements.remove(element);
 }
 
 void Document::forEachMediaElement(const Function<void(HTMLMediaElement&)>& function)
 {
-    Vector<Ref<HTMLMediaElement>> elements;
-    for (auto* element : m_mediaElements)
-        elements.append(*element);
-    for (auto& element : elements)
-        function(element);
+    ASSERT(!m_mediaElements.hasNullReferences());
+    m_mediaElements.forEach([&](auto& element) {
+        function(makeRef(element));
+    });
 }
 
 #endif

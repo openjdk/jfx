@@ -210,6 +210,7 @@ static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode&
 {
     NodeVector postInsertionNotificationTargets;
     {
+        WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
         if (UNLIKELY(containerNode.isShadowRoot() || containerNode.isInShadowTree()))
@@ -628,6 +629,9 @@ void ContainerNode::removeBetween(Node* previousChild, Node* nextChild, Node& ol
     ASSERT(oldChild.parentNode() == this);
 
     destroyRenderTreeIfNeeded(oldChild);
+
+    if (UNLIKELY(hasShadowRootContainingSlots()))
+        shadowRoot()->willRemoveAssignedNode(oldChild);
 
     if (nextChild) {
         nextChild->setPreviousSibling(previousChild);

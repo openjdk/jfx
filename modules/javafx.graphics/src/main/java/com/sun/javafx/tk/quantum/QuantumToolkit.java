@@ -376,6 +376,7 @@ public final class QuantumToolkit extends Toolkit {
         launchLatch.countDown();
         try {
             Application.invokeAndWait(this.userRunnable);
+            this.userRunnable = null;
 
             if (getPrimaryTimer().isFullspeed()) {
                 /*

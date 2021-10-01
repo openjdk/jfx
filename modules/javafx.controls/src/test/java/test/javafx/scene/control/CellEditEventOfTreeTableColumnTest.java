@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.scene.control.TreeTableColumn.editCommitEvent;
@@ -113,7 +112,6 @@ public class CellEditEventOfTreeTableColumnTest {
 
 // ------------- event source
 
-    @Ignore("JDK-8271474")
     @Test
     public void testNullTable() {
         new CellEditEvent<Object, Object>(null, // null table must not throw NPE
@@ -130,7 +128,6 @@ public class CellEditEventOfTreeTableColumnTest {
         assertCellEditEvent(table);
     }
 
-    @Ignore("JDK-8271474")
     @Test
     public void testCellEditEventNullSource() {
         assertCellEditEvent(null);

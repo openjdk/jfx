@@ -319,7 +319,8 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getListView().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -330,12 +331,8 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
         comboBox.getSelectionModel().select(getItem());
 
-        super.startEdit();
-
-        if (isEditing()) {
-            setText(null);
-            setGraphic(comboBox);
-        }
+        setText(null);
+        setGraphic(comboBox);
     }
 
     /** {@inheritDoc} */

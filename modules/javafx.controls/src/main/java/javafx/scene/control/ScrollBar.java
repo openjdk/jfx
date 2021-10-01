@@ -324,9 +324,6 @@ public class ScrollBar extends Control {
                 newValue = getValue() - getBlockIncrement();
             }
 
-            boolean incrementing = position > ((getValue() - getMin())/(getMax() - getMin()));
-            if (incrementing && newValue > posValue) newValue = posValue;
-            if (! incrementing && newValue < posValue) newValue = posValue;
             setValue(Utils.clamp(getMin(), newValue, getMax()));
         }
     }
