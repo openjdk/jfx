@@ -1031,7 +1031,7 @@ public class TreeTableCellTest {
      public void testStartEditOffRangeMustNotFireStartEdit() {
          setupForEditing();
          cell.updateIndex(tree.getExpandedItemCount());
-         List<CellEditEvent> events = new ArrayList<>();
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.addEventHandler(TreeTableColumn.editStartEvent(), events::add);
          cell.startEdit();
          assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
@@ -1048,7 +1048,7 @@ public class TreeTableCellTest {
          cell.updateIndex(tree.getExpandedItemCount());
          cell.startEdit();
          assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
-         assertEquals("editing location", null, tree.getEditingCell());
+         assertNull("treetable editing location must not be updated", tree.getEditingCell());
      }
 
 

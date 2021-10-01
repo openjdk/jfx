@@ -707,7 +707,7 @@ public class TableCellTest {
          setupForEditing();
          int editingRow = table.getItems().size();
          cell.updateIndex(editingRow);
-         List<CellEditEvent> events = new ArrayList<>();
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.addEventHandler(TableColumn.editStartEvent(), events::add);
          cell.startEdit();
          assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
@@ -723,8 +723,6 @@ public class TableCellTest {
          setupForEditing();
          int editingRow = table.getItems().size();
          cell.updateIndex(editingRow);
-         List<CellEditEvent> events = new ArrayList<>();
-         editingColumn.addEventHandler(TableColumn.editStartEvent(), events::add);
          cell.startEdit();
          assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
          assertNull("table editing location must not be updated", table.getEditingCell());

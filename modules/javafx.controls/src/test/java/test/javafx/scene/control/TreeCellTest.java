@@ -849,7 +849,7 @@ public class TreeCellTest {
         tree.setEditable(true);
         cell.updateTreeView(tree);
         cell.updateIndex(tree.getExpandedItemCount());
-        List<EditEvent> events = new ArrayList<>();
+        List<EditEvent<?>> events = new ArrayList<>();
         tree.addEventHandler(TreeView.editStartEvent(), events::add);
         cell.startEdit();
         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
@@ -867,7 +867,7 @@ public class TreeCellTest {
         cell.updateIndex(tree.getExpandedItemCount());
         cell.startEdit();
         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
-        assertEquals("editing location", null, tree.getEditingItem());
+        assertNull("tree editing location must not be updated", tree.getEditingItem());
     }
 
 

@@ -857,7 +857,7 @@ public class ListCellTest {
         list.setEditable(true);
         cell.updateListView(list);
         cell.updateIndex(list.getItems().size());
-        List<EditEvent> events = new ArrayList<>();
+        List<EditEvent<?>> events = new ArrayList<>();
         list.addEventHandler(ListView.editStartEvent(), events::add);
         cell.startEdit();
         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
@@ -871,7 +871,7 @@ public class ListCellTest {
         cell.updateIndex(list.getItems().size());
         cell.startEdit();
         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
-        assertEquals("list editing location must not be updated", - 1, list.getEditingIndex());
+        assertEquals("list editing location must not be updated", -1, list.getEditingIndex());
     }
 
 
