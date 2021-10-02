@@ -847,7 +847,7 @@ public class DialogPane extends Pane {
         double h;
 
         if (prefHeight > currentHeight && prefHeight > minHeight && (prefHeight <= dialogHeight || dialogHeight == 0)) {
-            h = prefHeight;
+            h = Utils.boundedSize(prefHeight, minHeight, maxHeight);
             resize(w, h);
         } else {
             boolean isDialogGrowing = currentHeight > oldHeight;
