@@ -31,6 +31,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.tk.Toolkit;
@@ -699,6 +700,32 @@ public class TableCellTest {
          setupForcedEditing(null, null);
          cell.startEdit();
          cell.commitEdit("edited");
+     }
+
+     @Test
+     public void testStartEditOffRangeMustNotFireStartEdit() {
+         setupForEditing();
+         int editingRow = table.getItems().size();
+         cell.updateIndex(editingRow);
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TableColumn.editStartEvent(), events::add);
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertEquals("must not fire editStart", 0, events.size());
+     }
+
+     /**
+      *  Note: this is a false green until JDK-8187474 (update control editing location) is fixed
+      */
+     @Ignore("JDK-8187474")
+     @Test
+     public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+         setupForEditing();
+         int editingRow = table.getItems().size();
+         cell.updateIndex(editingRow);
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertNull("table editing location must not be updated", table.getEditingCell());
      }
 
  //--------- test the test setup
