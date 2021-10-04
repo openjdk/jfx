@@ -304,12 +304,20 @@ public class TreeTableCellTest {
         assertNull(tree.getEditingCell());
     }
 
-    @Ignore // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
-        tree.setEditable(true);
-        cell.updateTreeTableView(tree);
+        setupForEditing();
         cell.updateIndex(1);
         cell.startEdit();
+        assertEquals(apples, tree.getEditingCell().getTreeItem());
+    }
+
+    @Test public void editCellWithTreeNoColumnResultsInUpdatedEditingIndexProperty() {
+        // note: cell index must be != -1 because table.edit(-1, null) sets editingCell to null
+        cell.updateIndex(1);
+        setupForcedEditing(tree, null);
+        cell.startEdit();
+        assertTrue(cell.isEditing());
+        assertNotNull(tree.getEditingCell());
         assertEquals(apples, tree.getEditingCell().getTreeItem());
     }
 
@@ -911,9 +919,7 @@ public class TreeTableCellTest {
          setupForEditing();
          int editingIndex = 1;
          cell.updateIndex(editingIndex);
-         // FIXME JDK-8187474
-         // should use cell.startEdit for consistency with the following tests
-         tree.edit(editingIndex, editingColumn);
+         cell.startEdit();
          TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
@@ -1038,10 +1044,6 @@ public class TreeTableCellTest {
          assertEquals("cell must not fire editStart if not editing", 0, events.size());
      }
 
-     /**
-      *  Note: this would be a false green until JDK-8187474 (update control editing location) is fixed
-      */
-     @Ignore("JDK-8187474")
      @Test
      public void testStartEditOffRangeMustNotUpdateEditingLocation() {
          setupForEditing();

@@ -377,17 +377,18 @@ public class TreeCell<T> extends IndexedCell<T> {
         super.startEdit();
 
         if (!isEditing()) return;
+
+        treeItemAtStartEdit = getTreeItem();
          // Inform the TreeView of the edit starting.
         if (tree != null) {
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editStartEvent(),
-                    getTreeItem(),
+                    treeItemAtStartEdit,
                     getItem(),
                     null));
-
+            tree.edit(treeItemAtStartEdit);
             tree.requestFocus();
         }
-        treeItemAtStartEdit = getTreeItem();
     }
 
      /** {@inheritDoc} */

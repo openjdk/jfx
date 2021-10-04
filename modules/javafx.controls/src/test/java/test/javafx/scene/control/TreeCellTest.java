@@ -599,7 +599,6 @@ public class TreeCellTest {
         assertNull(tree.getEditingItem());
     }
 
-    @Ignore // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
         tree.setEditable(true);
         cell.updateTreeView(tree);
@@ -848,7 +847,8 @@ public class TreeCellTest {
     public void testStartEditOffRangeMustNotFireStartEdit() {
         tree.setEditable(true);
         cell.updateTreeView(tree);
-        cell.updateIndex(tree.getExpandedItemCount());
+        // update cell's treeItem so there is something to update
+        cell.updateTreeItem(new TreeItem<>("not-contained"));
         List<EditEvent<?>> events = new ArrayList<>();
         tree.addEventHandler(TreeView.editStartEvent(), events::add);
         cell.startEdit();
@@ -856,15 +856,12 @@ public class TreeCellTest {
         assertEquals("cell must not fire editStart if not editing", 0, events.size());
     }
 
-    /**
-     *  Note: this is a false green until JDK-8187474 (update control editing location) is fixed
-     */
-    @Ignore("JDK-8187474")
     @Test
     public void testStartEditOffRangeMustNotUpdateEditingLocation() {
         tree.setEditable(true);
         cell.updateTreeView(tree);
-        cell.updateIndex(tree.getExpandedItemCount());
+        // update cell's treeItem so there is something to update
+        cell.updateTreeItem(new TreeItem<>("not-contained"));
         cell.startEdit();
         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
         assertNull("tree editing location must not be updated", tree.getEditingItem());
