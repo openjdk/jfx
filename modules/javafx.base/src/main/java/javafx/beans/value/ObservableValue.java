@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package javafx.beans.value;
+
+import java.util.function.Function;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -137,4 +139,55 @@ public interface ObservableValue<T> extends Observable {
      * @return The current value
      */
     T getValue();
+
+    /**
+     * Returns an {@link ObservableValue} which provides a mapping of the value
+     * held by this {@code ObservableValue}, and provides {@code null} when this
+     * {@code ObservableValue} holds {@code null}.
+     *
+     * @param <U> the type of values held by the resulting {@code ObservableValue}
+     * @param mapper a {@link Function} which converts a given value to a new value, cannot be null
+     * @return an {@link ObservableValue} which provides a mapping of the value
+     *     held by this {@code ObservableValue}, and provides {@code null} when
+     *     this {@code ObservableValue} holds {@code null}, never null
+     */
+    default <U> ObservableValue<U> map(Function<? super T, ? extends U> mapper) {
+        return new MappedBinding<>(this, mapper);
+    }
+
+    /**
+     * Returns an {@link ObservableValue} which provides a mapping of the value
+     * held by this {@code ObservableValue}, or {@code constant} when this
+     * {@code ObservableValue} holds {@code null}.
+     *
+     * @param constant an alternative value to use when this {@code ObservableValue}
+     *     holds {@code null}, can be null
+     * @return an {@link ObservableValue} which provides a mapping of the value
+     *     held by this {@code ObservableValue}, or {@code constant} when this
+     *     {@code ObservableValue} holds {@code null}, never null
+     */
+    default ObservableValue<T> orElse(T constant) {
+        return new OrElseBinding<>(this, constant);
+    }
+
+    /**
+     * Returns an {@link ObservableValue} which provides the value in the {@code
+     * ObservableValue} given by applying {@code mapper} on the value held by this
+     * {@code ObservableValue}, and is {@code null} when this
+     * {@code ObservableValue} holds {@code null}.<p>
+     *
+     * Returning {@code null} from {@code mapper} will result in an
+     * {@code ObservableValue} which holds {@code null}.
+     *
+     * @param <U> the type of values held by the resulting {@code ObservableValue}
+     * @param mapper a {@link Function} which converts a given value to an
+     *     {@code ObservableValue}, cannot be null
+     * @return an {@link ObservableValue} which provides the value in the
+     *     {@code ObservableValue} given by applying {@code mapper} on the value
+     *     held by this {@code ObservableValue}, and is {@code null} when this
+     *     {@code ObservableValue} holds {@code null}, never null
+     */
+    default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
+        return new FlatMappedBinding<>(this, mapper);
+    }
 }
