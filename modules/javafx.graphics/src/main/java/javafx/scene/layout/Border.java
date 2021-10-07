@@ -390,6 +390,20 @@ public final class Border {
     }
 
     /**
+     * A convenience factory method for creating a solid {@code Border} with a single {@code Paint}.
+     *
+     * @implSpec
+     * This call is equivalent to {@link BorderStroke#BorderStroke(Paint, BorderStrokeStyle, CornerRadii, BorderWidths)
+     * new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));}.
+     * @param stroke the stroke of the border (for all sides). If {@code null}, {@code Color.BLACK} will be used.
+     * @return a new border of the given stroke
+     * @since 18
+     */
+    public static Border stroke(Paint stroke) {
+        return new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
