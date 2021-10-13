@@ -109,12 +109,14 @@ class TouchPipeline {
         return false;
     }
 
+    private TouchState filterState = new TouchState();
     void pushState(TouchState state) {
         if (MonocleSettings.settings.traceEventsVerbose) {
             MonocleTrace.traceEvent("Pushing %s to %s", state, this);
         }
-        if (!filter(state)) {
-            touch.setState(state);
+        state.copyTo(filterState);
+        if (!filter(filterState)) {
+            touch.setState(filterState);
         }
     }
 
