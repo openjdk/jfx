@@ -220,6 +220,13 @@ void FrameLoaderClientJava::dispatchDidNavigateWithinPage()
                   1.0 /* progress */);
 }
 
+// Called from twkInit to initialize the client. This will ensure that
+// the page field is initialized before any operation that needs it
+void FrameLoaderClientJava::init()
+{
+    (void)page();
+}
+
 Page* FrameLoaderClientJava::page()
 {
     if (!m_page) {
