@@ -822,7 +822,7 @@ final public class CssParser {
 
             if (root.token == null
                     || ((ttype = root.token.getType()) != CssLexer.STRING
-                    && ttype != CssLexer.IDENT)
+                        && ttype != CssLexer.IDENT)
                     || (str = root.token.getText()) == null
                     || str.isEmpty()) {
                 error(root,  "Expected STRING or IDENT");
