@@ -31,7 +31,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.tk.Toolkit;
@@ -557,7 +556,7 @@ public class TableCellTest {
         // note: cell index must be != -1 because table.edit(-1, null) sets editingCell to null
         cell.updateIndex(editingRow);
         setupForcedEditing(table, null);
-        TablePosition<?,?> editingCell = new TablePosition<>(table, editingRow, null);
+        TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, null);
         cell.startEdit();
         assertTrue(cell.isEditing());
         assertEquals("table must be editing at", editingCell, table.getEditingCell());
