@@ -4,7 +4,9 @@
 
 The following notes describe important changes and information about this release. In some cases, the descriptions provide links to additional detailed information about an issue or a change.
 
-As of JDK 11 the JavaFX modules are delivered separately from the JDK. These release notes cover the standalone JavaFX 17.0.1 release. JavaFX 17.0.1 requires JDK 11 or later.
+As of JDK 11 the JavaFX modules are delivered separately from the JDK. These release notes cover the standalone JavaFX 17.0.1 release. As such, they complement the [JavaFX 17 Release Notes](https://github.com/openjdk/jfx/blob/jfx17/doc-files/release-notes-17.md).
+
+JavaFX 17.0.1 requires JDK 11 or later.
 
 ## List of Fixed Bugs
 
