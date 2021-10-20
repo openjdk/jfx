@@ -193,6 +193,12 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *         an empty String is returned.
      */
     @Override public final String getStyle() { return styleProperty().get(); }
+
+    /**
+     * Get the {@code StringProperty} representing the CSS style associated with
+     * this specific {@code PopupControl}.
+     * @return the {@code StringProperty} representing the CSS style
+     */
     public final StringProperty styleProperty() { return bridge.styleProperty(); }
 
     /**
@@ -1029,8 +1035,9 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Get the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1047,6 +1054,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
+     * Used to specify that a pseudo-class of this node has changed.
+     *
      * @param pseudoClass the pseudo class
      * @param active the active state
      * @see Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)
@@ -1132,6 +1141,12 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         {
             // To initialize the class helper at the begining each constructor of this class
             CSSBridgeHelper.initHelper(this);
+        }
+
+        /**
+         * Constructs a default CSSBridge
+         */
+        public CSSBridge() {
         }
 
         /**

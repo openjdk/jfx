@@ -1165,41 +1165,42 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
      * Represents commands that can be passed into the HTMLEditor web engine.
      */
     public enum Command {
-        CUT("cut"),
-        COPY("copy"),
-        PASTE("paste"),
+        /** Cut command.*/    CUT("cut"),
+        /** Copy command.*/   COPY("copy"),
+        /** Paste command.*/  PASTE("paste"),
 
-        UNDO("undo"),
-        REDO("redo"),
+        /** Undo command.*/   UNDO("undo"),
+        /** Redo command.*/   REDO("redo"),
 
+        /** Command to insert horizontal rule.*/
         INSERT_HORIZONTAL_RULE("inserthorizontalrule"),
 
-        ALIGN_LEFT("justifyleft"),
-        ALIGN_CENTER("justifycenter"),
-        ALIGN_RIGHT("justifyright"),
-        ALIGN_JUSTIFY("justifyfull"),
+        /** Align Left command.*/     ALIGN_LEFT("justifyleft"),
+        /** Align Center command.*/   ALIGN_CENTER("justifycenter"),
+        /** Align Right command.*/    ALIGN_RIGHT("justifyright"),
+        /** Align Justify command.*/  ALIGN_JUSTIFY("justifyfull"),
 
-        BULLETS("insertUnorderedList"),
-        NUMBERS("insertOrderedList"),
+        /** Insert bullets command.*/ BULLETS("insertUnorderedList"),
+        /** Insert numbers command.*/ NUMBERS("insertOrderedList"),
 
-        INDENT("indent"),
-        OUTDENT("outdent"),
+        /** Indent command.*/         INDENT("indent"),
+        /** Outdent command.*/        OUTDENT("outdent"),
 
-        FORMAT("formatblock"),
-        FONT_FAMILY("fontname"),
-        FONT_SIZE("fontsize"),
+        /** Format command.*/         FORMAT("formatblock"),
+        /** Font name command.*/      FONT_FAMILY("fontname"),
+        /** Font size command.*/      FONT_SIZE("fontsize"),
 
-        BOLD("bold"),
-        ITALIC("italic"),
-        UNDERLINE("underline"),
-        STRIKETHROUGH("strikethrough"),
+        /** Bold command.*/           BOLD("bold"),
+        /** Italic command.*/         ITALIC("italic"),
+        /** Underline command.*/      UNDERLINE("underline"),
+        /** Strikethrough command.*/  STRIKETHROUGH("strikethrough"),
 
-        FOREGROUND_COLOR("forecolor"),
-        BACKGROUND_COLOR("backcolor"),
-        STYLEWITHCSS("styleWithCSS"),
+        /** Foreground color command.*/  FOREGROUND_COLOR("forecolor"),
+        /** Background color command.*/  BACKGROUND_COLOR("backcolor"),
+        /** Style with CSS command.*/    STYLEWITHCSS("styleWithCSS"),
 
-        INSERT_NEW_LINE("insertnewline"),
-        INSERT_TAB("inserttab");
+        /** Insert newline command.*/    INSERT_NEW_LINE("insertnewline"),
+        /** Insert tab command.*/        INSERT_TAB("inserttab");
 
         private final String command;
 
@@ -1207,6 +1208,11 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             this.command = command;
         }
 
+        /**
+         * Get the name of this command.
+         *
+         * @return the name of this command
+         */
         public String getCommand() {
             return command;
         }
