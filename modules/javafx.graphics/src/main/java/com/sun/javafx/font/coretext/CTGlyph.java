@@ -26,6 +26,7 @@
 package com.sun.javafx.font.coretext;
 
 import com.sun.javafx.font.FontResource;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
@@ -39,7 +40,7 @@ class CTGlyph implements Glyph {
     private boolean drawShapes;
 
     /* Always using BRGA context has the same performance as gray */
-    private static boolean LCD_CONTEXT = true;
+    private static boolean LCD_CONTEXT = PrismFontFactory.getFontFactory().isLCDTextSupported();
     private static boolean CACHE_CONTEXT = true;
 
     private static long cachedContextRef;
