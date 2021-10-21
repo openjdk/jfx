@@ -578,7 +578,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     /**
-     * Get the {@code CssMetaData} associated with this class, which may include the
+     * Gets the {@code CssMetaData} associated with this class, which may include the
      * {@code CssMetaData} of its superclasses.
      * @return the {@code CssMetaData}
      * @since JavaFX 8.0

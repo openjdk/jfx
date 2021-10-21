@@ -1221,7 +1221,7 @@ public class DialogPane extends Pane {
     }
 
     /**
-     * Get the {@code CssMetaData} associated with this class, which may include the
+     * Gets the {@code CssMetaData} associated with this class, which may include the
      * {@code CssMetaData} of its superclasses.
      * @return the {@code CssMetaData}
      */

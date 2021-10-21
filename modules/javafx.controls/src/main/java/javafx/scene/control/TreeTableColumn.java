@@ -620,7 +620,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     }
 
     /**
-     * Get the {@code CssMetaData} associated with this class, which may include the
+     * Gets the {@code CssMetaData} associated with this class, which may include the
      * {@code CssMetaData} of its superclasses.
      * @return empty list is returned as of now
      */

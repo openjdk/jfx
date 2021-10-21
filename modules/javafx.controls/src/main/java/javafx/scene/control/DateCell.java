@@ -43,7 +43,7 @@ import javafx.scene.control.skin.DateCellSkin;
 public class DateCell extends Cell<LocalDate> {
 
     /**
-     * Creates a default DateCell.
+     * Creates a default {@code DateCell}.
      */
     public DateCell() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);

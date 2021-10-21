@@ -43,8 +43,8 @@ public class SortEvent<C> extends Event {
             new EventType<SortEvent> (Event.ANY, "SORT");
 
     /**
-     * Get the default singleton {@code SortEvent}.
-     * @param <C> type of control
+     * Gets the default singleton {@code SortEvent}.
+     * @param <C> the type of control
      * @return the default singleton {@code SortEvent}
      */
     @SuppressWarnings("unchecked")
@@ -55,7 +55,7 @@ public class SortEvent<C> extends Event {
     private static final EventType<?> SORT_EVENT = new EventType<>(SortEvent.ANY, "SORT_EVENT");
 
     /**
-     * Construct a new {@code Event} with the specified event source, target
+     * Constructs a new {@code Event} with the specified event source, target
      * and type. If the source or target is set to {@code null}, it is replaced
      * by the {@code NULL_SOURCE_TARGET} value.
      *

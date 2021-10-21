@@ -109,7 +109,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     protected CSSBridge bridge;
 
     /**
-     * Create a new empty PopupControl.
+     * Creates a new empty {@code PopupControl}.
      */
     public PopupControl() {
         super();
@@ -1035,7 +1035,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
-     * Get the {@code CssMetaData} associated with this class, which may include the
+     * Gets the {@code CssMetaData} associated with this class, which may include the
      * {@code CssMetaData} of its superclasses.
      * @return the {@code CssMetaData}
      * @since JavaFX 8.0
@@ -1144,7 +1144,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         }
 
         /**
-         * Constructs a default CSSBridge
+         * Constructs a default {@code CSSBridge}.
          */
         public CSSBridge() {
         }

@@ -728,7 +728,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     protected void updateHighlightTextFill() {};
 
     /**
-     * Handle input method event.
+     * Handles an input method event.
      * @param event the {@code InputMethodEvent} to be handled
      */
     protected void handleInputMethodEvent(InputMethodEvent event) {

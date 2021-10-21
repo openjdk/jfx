@@ -156,13 +156,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     protected abstract T getModelItem(int index);
 
     /**
-     * Focus the item at the given index.
-     * @param index the index of the item that needs to be focused.
+     * Focuses the item at the given index.
+     * @param index the index of the item that needs to be focused
      */
     protected abstract void focus(int index);
 
     /**
-     * Get the index of the focused item.
+     * Gets the index of the focused item.
      * @return the index of the focused item
      */
     protected abstract int getFocusedIndex();
