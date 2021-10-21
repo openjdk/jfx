@@ -64,9 +64,9 @@ struct _GstMFWrapper
     gboolean force_discontinuity;
 
     HRESULT hr_mfstartup;
-    
+
     IMFTransform *pDecoder;
-    
+
     IMFSample *pDecoderOutput;
 
     IMFTransform *pColorConvert;
