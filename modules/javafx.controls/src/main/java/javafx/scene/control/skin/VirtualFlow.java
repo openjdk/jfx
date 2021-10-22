@@ -590,6 +590,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         verticalProperty().addListener(listenerX);
         hbar.valueProperty().addListener(listenerX);
         hbar.visibleProperty().addListener(listenerX);
+        visibleProperty().addListener(listenerX);
+        sceneProperty().addListener(listenerX);
 
 //        ChangeListener listenerY = new ChangeListener() {
 //            @Override public void handle(Bean bean, PropertyReference property) {

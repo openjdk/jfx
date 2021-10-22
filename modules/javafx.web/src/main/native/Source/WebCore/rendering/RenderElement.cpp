@@ -589,24 +589,23 @@ RenderPtr<RenderObject> RenderElement::detachRendererInternal(RenderObject& rend
     return RenderPtr<RenderObject>(&renderer);
 }
 
+static inline RenderBlock* nearestNonAnonymousContainingBlockIncludingSelf(RenderElement* renderer)
+{
+    while (renderer && (!is<RenderBlock>(*renderer) || renderer->isAnonymousBlock()))
+        renderer = renderer->containingBlock();
+    return downcast<RenderBlock>(renderer);
+}
+
 RenderBlock* RenderElement::containingBlockForFixedPosition() const
 {
-    auto* renderer = parent();
-    while (renderer && !renderer->canContainFixedPositionObjects())
-        renderer = renderer->parent();
-
-    ASSERT(!renderer || !renderer->isAnonymousBlock());
-    return downcast<RenderBlock>(renderer);
+    auto* ancestor = parent();
+    while (ancestor && !ancestor->canContainFixedPositionObjects())
+        ancestor = ancestor->parent();
+    return nearestNonAnonymousContainingBlockIncludingSelf(ancestor);
 }
 
 RenderBlock* RenderElement::containingBlockForAbsolutePosition() const
 {
-    auto nearestNonAnonymousContainingBlockIncludingSelf = [&] (auto* renderer) {
-        while (renderer && (!is<RenderBlock>(*renderer) || renderer->isAnonymousBlock()))
-            renderer = renderer->containingBlock();
-        return downcast<RenderBlock>(renderer);
-    };
-
     if (is<RenderInline>(*this) && style().position() == PositionType::Relative) {
         // A relatively positioned RenderInline forwards its absolute positioned descendants to
         // its nearest non-anonymous containing block (to avoid having positioned objects list in RenderInlines).
@@ -2177,8 +2176,8 @@ void RenderElement::adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded()
     if (is<RenderBlock>(*this))
         downcast<RenderBlock>(*this).resetEnclosingFragmentedFlowAndChildInfoIncludingDescendants();
     else {
-        // Relatively positioned inline boxes can have absolutely positioned block children. We need to reset them as well.
-        for (auto& descendant : childrenOfType<RenderBlock>(*this))
+        // Relatively positioned inline boxes can have absolutely positioned block descendants. We need to reset them as well.
+        for (auto& descendant : descendantsOfType<RenderBlock>(*this))
             descendant.resetEnclosingFragmentedFlowAndChildInfoIncludingDescendants();
     }
 

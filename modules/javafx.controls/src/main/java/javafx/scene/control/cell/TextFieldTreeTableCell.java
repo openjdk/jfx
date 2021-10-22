@@ -185,20 +185,16 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable()
-                || ! getTreeTableView().isEditable()
-                || ! getTableColumn().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
-        super.startEdit();
 
-        if (isEditing()) {
-            if (textField == null) {
-                textField = CellUtils.createTextField(this, getConverter());
-            }
-
-            CellUtils.startEdit(this, getConverter(), null, null, textField);
+        if (textField == null) {
+            textField = CellUtils.createTextField(this, getConverter());
         }
+
+        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */

@@ -924,8 +924,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     page->setDeviceScaleFactor(devicePixelScale);
 
     settings.setLinkPrefetchEnabled(true);
-    static_cast<FrameLoaderClientJava&>(page->mainFrame().loader().client())
-                                            .setFrame(&page->mainFrame());
+
+    FrameLoaderClientJava& client =
+        static_cast<FrameLoaderClientJava&>(page->mainFrame().loader().client());
+    client.init();
+    client.setFrame(&page->mainFrame());
 
     page->mainFrame().init();
 
