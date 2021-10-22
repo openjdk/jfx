@@ -545,7 +545,7 @@ public class TableCellTest {
         setupForEditing();
         int editingRow = 1;
         cell.updateIndex(editingRow);
-        TablePosition<?,?> editingCell = new TablePosition<>(table, editingRow, editingColumn);
+        TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, editingColumn);
         cell.startEdit();
         assertEquals("table must be editing at", editingCell, table.getEditingCell());
     }
