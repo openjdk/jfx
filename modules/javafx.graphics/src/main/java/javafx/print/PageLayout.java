@@ -120,6 +120,10 @@ public final class PageLayout {
         this.bMargin = bottomMargin;
     }
 
+    /**
+     * Gets the {@code PageOrientation}.
+     * @return the {@code PageOrientation}
+     */
     public PageOrientation getPageOrientation() {
         return orient;
     }

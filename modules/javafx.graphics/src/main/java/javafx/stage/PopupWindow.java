@@ -152,6 +152,9 @@ public abstract class PopupWindow extends Window {
     private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
     private TreeShowingExpression treeShowingExpression;
 
+    /**
+     * Creates a {@code PopupWindow}.
+     */
     public PopupWindow() {
         final Pane popupRoot = new Pane();
         popupRoot.setBackground(Background.EMPTY);

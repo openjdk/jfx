@@ -227,6 +227,9 @@ public class Window implements EventTarget {
     @SuppressWarnings("removal")
     final AccessControlContext acc = AccessController.getContext();
 
+    /**
+     * Creates a {@code Window}.
+     */
     protected Window() {
         // necessary for WindowCloseRequestHandler
         initializeInternalEventDispatcher();
@@ -771,6 +774,11 @@ public class Window implements EventTarget {
      * @defaultValue null
      */
     private SceneModel scene = new SceneModel();
+
+    /**
+     * Sets the {@code Scene} of this {@code Window}.
+     * @param value the {@code Scene} to be set
+     */
     protected void setScene(Scene value) { scene.set(value); }
     public final Scene getScene() { return scene.get(); }
     public final ReadOnlyObjectProperty<Scene> sceneProperty() { return scene.getReadOnlyProperty(); }

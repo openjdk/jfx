@@ -1300,6 +1300,11 @@ public class Stage extends Window {
         return fullScreenExitHint.get();
     }
 
+    /**
+     * Gets the full screen exit hint property.
+     * @return the full screen exit hint property
+     * @since JavaFX 8.0
+     */
     public final ObjectProperty<String> fullScreenExitHintProperty() {
         return fullScreenExitHint;
     }
