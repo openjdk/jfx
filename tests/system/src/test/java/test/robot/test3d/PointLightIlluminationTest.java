@@ -151,7 +151,7 @@ public class PointLightIlluminationTest extends VisualTestBase {
      */
     private Scene createTestScene() {
         Sphere sphere = new Sphere(SCENE_WIDTH_HEIGHT / 2);
-        // By moving the sphere and the camera away from point 0, the effect the bug JDK-8255015
+        // By moving the sphere and the camera away from point 0, the effect of the bug JDK-8255015
         // becomes more visible, because all point light coordinates would be wrong, if the pixel scale
         // factor was not set correctly. If it was not moved away from point 0, only the Z coordinate
         // of the point light would be wrong.
