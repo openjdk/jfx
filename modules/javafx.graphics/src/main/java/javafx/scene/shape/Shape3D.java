@@ -98,7 +98,7 @@ public abstract class Shape3D extends Node {
     private static final PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
 
     /**
-     * Creates a {@code Shape3D}.
+     * Constructor for subclasses to call.
      */
     protected Shape3D() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {

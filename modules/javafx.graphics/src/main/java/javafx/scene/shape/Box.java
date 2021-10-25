@@ -85,9 +85,6 @@ public class Box extends Shape3D {
 
     private TriangleMesh mesh;
 
-    /**
-     * Default size of the {@code Box}.
-     */
     public static final double DEFAULT_SIZE = 2;
 
     {

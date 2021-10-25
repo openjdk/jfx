@@ -776,8 +776,26 @@ public class Window implements EventTarget {
     private SceneModel scene = new SceneModel();
 
     /**
-     * Sets the {@code Scene} of this {@code Window}.
-     * @param value the {@code Scene} to be set
+     * Sets the value of the {@code scene} property.
+     *
+     * The {@code Scene} to be rendered on this {@code Window}. There can only
+     * be one {@code Scene} on the {@code Window} at a time, and a {@code Scene}
+     * can only be on one {@code Window} at a time. Setting a {@code Scene} on
+     * a different {@code Window} will cause the old {@code Window} to lose the
+     * reference before the new one gains it. You may swap {@code Scene}s on
+     * a {@code Window} at any time, even if it is an instance of {@code Stage}
+     * and with {@link Stage#fullScreenProperty() fullScreen} set to true.
+     * If the width or height of this {@code Window} have never been set by the
+     * application, setting the scene will cause this {@code Window} to take its
+     * width or height from that scene.  Resizing this window by end user does
+     * not count as setting the width or height by the application.
+     *
+     * An {@link IllegalStateException} is thrown if this property is set
+     * on a thread other than the JavaFX Application Thread.
+     *
+     * @defaultValue null
+     *
+     * @param value the value for the {@code scene} property
      */
     protected void setScene(Scene value) { scene.set(value); }
     public final Scene getScene() { return scene.get(); }

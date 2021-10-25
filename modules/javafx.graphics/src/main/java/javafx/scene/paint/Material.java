@@ -77,7 +77,7 @@ public abstract class Material {
      */
 
     /**
-     * Creates a {@code Material}.
+     * Constructor for subclasses to call.
      */
     protected Material() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {

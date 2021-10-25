@@ -160,7 +160,7 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Creates a {@code Camera}.
+     * Constructor for subclasses to call.
      */
     protected Camera() {
         InvalidationListener dirtyTransformListener = observable
