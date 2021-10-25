@@ -621,8 +621,8 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the
-     * {@code CssMetaData} of its superclasses.
-     * @return empty list is returned as of now
+     * {@code CssMetaData} of its superclasses. It is currently an empty list.
+     * @return an empty list
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();

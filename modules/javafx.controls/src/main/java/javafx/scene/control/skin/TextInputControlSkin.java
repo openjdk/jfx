@@ -111,11 +111,17 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
     public static enum TextUnit {
-    /** Character unit */ CHARACTER,
-    /** Word unit */      WORD,
-    /** Line unit */      LINE,
-    /** Paragraph unit */ PARAGRAPH,
-    /** Page unit */      PAGE };
+        /** Character unit */
+        CHARACTER,
+        /** Word unit */
+        WORD,
+        /** Line unit */
+        LINE,
+        /** Paragraph unit */
+        PARAGRAPH,
+        /** Page unit */
+        PAGE
+    };
 
     /**
      * Direction names for caret movement.
@@ -123,12 +129,19 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
     public static enum Direction {
-    /** Left Direction */  LEFT,
-    /** Right Direction */ RIGHT,
-    /** Up Direction */    UP,
-    /** Down Direction */  DOWN,
-    /** Beginning */       BEGINNING,
-    /** End */             END };
+        /** Left Direction */
+        LEFT,
+        /** Right Direction */
+        RIGHT,
+        /** Up Direction */
+        UP,
+        /** Down Direction */
+        DOWN,
+        /** Beginning */
+        BEGINNING,
+        /** End */
+        END
+    };
 
     static boolean preload = false;
     static {
@@ -599,14 +612,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      **************************************************************************/
 
     /**
-     * Get the path elements describing the shape of the underline for the given range.
+     * Gets the path elements describing the shape of the underline for the given range.
      * @param start the start
      * @param end the end
      * @return the path elements describing the shape of the underline for the given range
      */
     protected abstract PathElement[] getUnderlineShape(int start, int end);
 
-    /** Get the path elements describing the bounding rectangles for the given range of text.
+    /** Gets the path elements describing the bounding rectangles for the given range of text.
      * @param start the start
      * @param end the end
      * @return the path elements describing the bounding rectangles for the given range of text

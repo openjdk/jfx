@@ -32,6 +32,7 @@ import javafx.event.EventType;
 
 /**
  * Event related to {@link TableView} and {@link TreeTableView} sorting.
+ * @param <C> the type of control
  * @since JavaFX 8.0
  */
 public class SortEvent<C> extends Event {
@@ -55,12 +56,12 @@ public class SortEvent<C> extends Event {
     private static final EventType<?> SORT_EVENT = new EventType<>(SortEvent.ANY, "SORT_EVENT");
 
     /**
-     * Constructs a new {@code Event} with the specified event source, target
-     * and type. If the source or target is set to {@code null}, it is replaced
-     * by the {@code NULL_SOURCE_TARGET} value.
+     * Constructs a new {@code SortEvent} with the specified event source and target.
+     * If the source or target is set to {@code null}, it is replaced by
+     * the {@code NULL_SOURCE_TARGET} value.
      *
      * @param source the event source which sent the event
-     * @param target the target of the scroll to operation
+     * @param target the target of the event
      */
     public SortEvent(@NamedArg("source") C source, @NamedArg("target") EventTarget target) {
         super(source, target, sortEvent());

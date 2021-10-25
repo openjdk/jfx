@@ -168,36 +168,17 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      */
     @Override public final ObservableList<String> getStyleClass() { return bridge.getStyleClass(); }
 
-    /**
-     * A string representation of the CSS style associated with this
-     * specific {@code PopupControl}. This is analogous to the "style" attribute of an
-     * HTML element. Note that, like the HTML style attribute, this
-     * variable contains style properties and values and not the
-     * selector portion of a style rule.
-     * @param value The inline CSS style to use for this {@code PopupControl}.
-     *         {@code null} is implicitly converted to an empty String.
-     * @defaultValue empty string
-     */
     public final void setStyle(String value) { styleProperty().set(value); }
-
-    // TODO: javadoc copied from property for the sole purpose of providing a return tag
-    /**
-     * A string representation of the CSS style associated with this
-     * specific {@code PopupControl}. This is analogous to the "style" attribute of an
-     * HTML element. Note that, like the HTML style attribute, this
-     * variable contains style properties and values and not the
-     * selector portion of a style rule.
-     * @defaultValue empty string
-     * @return The inline CSS style associated with this {@code PopupControl}.
-     *         If this {@code PopupControl} does not have an inline style,
-     *         an empty String is returned.
-     */
     @Override public final String getStyle() { return styleProperty().get(); }
 
     /**
-     * Get the {@code StringProperty} representing the CSS style associated with
-     * this specific {@code PopupControl}.
-     * @return the {@code StringProperty} representing the CSS style
+     * A string representation of the CSS style associated with this
+     * specific {@code PopupControl}. This is analogous to the "style" attribute of an
+     * HTML element. Note that, like the HTML style attribute, this
+     * variable contains style properties and values and not the
+     * selector portion of a style rule.
+     * @return the {@code style} property
+     * @defaultValue null
      */
     public final StringProperty styleProperty() { return bridge.styleProperty(); }
 

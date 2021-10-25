@@ -402,6 +402,10 @@ public class TabPane extends Control {
         return tabMaxWidth == null ? DEFAULT_TAB_MAX_WIDTH : tabMaxWidth.getValue();
     }
 
+    /**
+     * The maximum width of the tabs in the TabPane.
+     * @return the maximum width property
+     */
     public final DoubleProperty tabMaxWidthProperty() {
         if (tabMaxWidth == null) {
             tabMaxWidth = new StyleableDoubleProperty(DEFAULT_TAB_MAX_WIDTH) {
@@ -498,6 +502,10 @@ public class TabPane extends Control {
         return tabMaxHeight == null ? DEFAULT_TAB_MAX_HEIGHT : tabMaxHeight.getValue();
     }
 
+    /**
+    * <p>The maximum height of the tabs in the TabPane.</p>
+    * @return the maximum height of the tabs
+    */
     public final DoubleProperty tabMaxHeightProperty() {
         if (tabMaxHeight == null) {
             tabMaxHeight = new StyleableDoubleProperty(DEFAULT_TAB_MAX_HEIGHT) {
