@@ -778,7 +778,7 @@ public class Window implements EventTarget {
     /**
      * Sets the value of the {@code scene} property.
      *
-     * The {@code Scene} to be rendered on this {@code Window}. There can only
+     * <p>The {@code Scene} to be rendered on this {@code Window}. There can only
      * be one {@code Scene} on the {@code Window} at a time, and a {@code Scene}
      * can only be on one {@code Window} at a time. Setting a {@code Scene} on
      * a different {@code Window} will cause the old {@code Window} to lose the
@@ -791,11 +791,13 @@ public class Window implements EventTarget {
      * not count as setting the width or height by the application.
      *
      * An {@link IllegalStateException} is thrown if this property is set
-     * on a thread other than the JavaFX Application Thread.
+     * on a thread other than the JavaFX Application Thread.</p>
      *
      * @defaultValue null
      *
      * @param value the value for the {@code scene} property
+     * @see #getScene()
+     * @see #sceneProperty()
      */
     protected void setScene(Scene value) { scene.set(value); }
     public final Scene getScene() { return scene.get(); }
