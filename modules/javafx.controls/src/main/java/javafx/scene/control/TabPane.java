@@ -503,9 +503,9 @@ public class TabPane extends Control {
     }
 
     /**
-    * <p>The maximum height of the tabs in the TabPane.</p>
-    * @return the maximum height of the tabs
-    */
+     * <p>The maximum height of the tabs in the TabPane.</p>
+     * @return the maximum height of the tabs
+     */
     public final DoubleProperty tabMaxHeightProperty() {
         if (tabMaxHeight == null) {
             tabMaxHeight = new StyleableDoubleProperty(DEFAULT_TAB_MAX_HEIGHT) {

@@ -177,6 +177,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * HTML element. Note that, like the HTML style attribute, this
      * variable contains style properties and values and not the
      * selector portion of a style rule.
+     * A value of {@code null} is implicitly converted to an empty {@code String}.
+     *
      * @return the {@code style} property
      * @defaultValue null
      */
