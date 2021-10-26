@@ -64,7 +64,7 @@ public class PointLightIlluminationTest extends VisualTestBase {
     private static final int    UPPER_CORNER_Y     = (int) (SCENE_WIDTH_HEIGHT * CORNER_FACTOR);
     private static final int    LOWER_CORNER_Y     = (int) (SCENE_WIDTH_HEIGHT * (1 - CORNER_FACTOR));
     private static final double COLOR_TOLERANCE    = 0.07;
-    private static Scene testScene;
+    private static volatile Scene testScene = null;
 
     @Before
     public void setupEach() {
