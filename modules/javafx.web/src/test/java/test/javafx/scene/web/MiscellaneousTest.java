@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -404,6 +404,25 @@ public class MiscellaneousTest extends TestBase {
         }
     }
 
+    private void verifyUserAgentString(String userAgentString) {
+        final String fxVersion = System.getProperty("javafx.runtime.version");
+        final String numericStr = fxVersion.split("[^0-9]")[0];
+        final String fxVersionString = "JavaFX/" + numericStr;
+        assertTrue("UserAgentString does not contain " + fxVersionString, userAgentString.contains(fxVersionString));
+
+        File webkitLicense = new File("src/main/legal/webkit.md");
+        assertTrue("File does not exist: " + webkitLicense, webkitLicense.exists());
+
+        try (final BufferedReader licenseText = new BufferedReader(new FileReader(webkitLicense))) {
+            final String firstLine = licenseText.readLine().trim();
+            final String webkitVersion = firstLine.substring(firstLine.lastIndexOf(" ") + 2);
+            assertTrue("webkitVersion should not be empty", webkitVersion.length() > 0);
+            assertTrue("UserAgentString does not contain: " + webkitVersion, userAgentString.contains(webkitVersion));
+        } catch (IOException ex){
+            throw new AssertionError(ex);
+        }
+    }
+
     /**
      * @test
      * @bug 8193207
@@ -412,22 +431,24 @@ public class MiscellaneousTest extends TestBase {
     @Test public void testUserAgentString() {
         submit(() -> {
             final String userAgentString = getEngine().getUserAgent();
-            final String fxVersion = System.getProperty("javafx.runtime.version");
-            final String numericStr = fxVersion.split("[^0-9]")[0];
-            final String fxVersionString = "JavaFX/" + numericStr;
-            assertTrue("UserAgentString does not contain " + fxVersionString, userAgentString.contains(fxVersionString));
+            verifyUserAgentString(userAgentString);
+        });
+    }
 
-            File webkitLicense = new File("src/main/legal/webkit.md");
-            assertTrue("File does not exist: " + webkitLicense, webkitLicense.exists());
-
-            try (final BufferedReader licenseText = new BufferedReader(new FileReader(webkitLicense))) {
-                final String firstLine = licenseText.readLine().trim();
-                final String webkitVersion = firstLine.substring(firstLine.lastIndexOf(" ") + 2);
-                assertTrue("webkitVersion should not be empty", webkitVersion.length() > 0);
-                assertTrue("UserAgentString does not contain: " + webkitVersion, userAgentString.contains(webkitVersion));
-            } catch (IOException ex){
-                throw new AssertionError(ex);
-            }
+    /**
+     * @test
+     * @bug 8275138
+     * Check UserAgentString from JavaScript for javafx runtime version and webkit version
+     */
+    @Test public void testUserAgentStringJS() {
+        final WebEngine webEngine = createWebEngine();
+        submit(() -> {
+            final JSObject window = (JSObject) webEngine.executeScript("window");
+            assertNotNull(window);
+            webEngine.executeScript("var userAgent = navigator.userAgent");
+            String userAgentString = (String)window.getMember("userAgent");
+            assertNotNull(userAgentString);
+            verifyUserAgentString(userAgentString);
         });
     }
 

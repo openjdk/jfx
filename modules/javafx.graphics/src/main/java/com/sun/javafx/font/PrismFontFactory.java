@@ -133,7 +133,7 @@ public abstract class PrismFontFactory implements FontFactory {
                         }
                     }
 
-                    boolean lcdTextOff = isIOS || isAndroid || isEmbedded;
+                    boolean lcdTextOff = isMacOSX || isIOS || isAndroid || isEmbedded;
                     String defLCDProp = lcdTextOff ? "false" : "true";
                     String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
                     lcdEnabled = lcdProp.equals("true");

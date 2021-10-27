@@ -1027,6 +1027,31 @@ public class TreeTableCellTest {
          cell.commitEdit("edited");
      }
 
+     @Test
+     public void testStartEditOffRangeMustNotFireStartEdit() {
+         setupForEditing();
+         cell.updateIndex(tree.getExpandedItemCount());
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TreeTableColumn.editStartEvent(), events::add);
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertEquals("cell must not fire editStart if not editing", 0, events.size());
+     }
+
+     /**
+      *  Note: this would be a false green until JDK-8187474 (update control editing location) is fixed
+      */
+     @Ignore("JDK-8187474")
+     @Test
+     public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+         setupForEditing();
+         cell.updateIndex(tree.getExpandedItemCount());
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertNull("treetable editing location must not be updated", tree.getEditingCell());
+     }
+
+
  //--------- test the test setup
 
      @Test

@@ -331,6 +331,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
         editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(

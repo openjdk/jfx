@@ -46,6 +46,8 @@ public:
     FrameLoaderClientJava(const JLObject &webPage);
     ~FrameLoaderClientJava();
 
+    void init();
+
     bool hasWebView() const override;
 
     void makeRepresentation(DocumentLoader*) override;

@@ -40,10 +40,12 @@ import javafx.beans.InvalidationListener;
 import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.shape.Circle;
 
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -1316,6 +1318,32 @@ public class VirtualFlowTest {
             cell = vf.get_accumCell();
             if (cell != null) assertFalse(cell.isVisible());
         }
+    }
+
+    @Test public void testScrollBarClipSyncWhileInvisibleOrNoScene() {
+        flow.setCellCount(3);
+        flow.resize(50, flow.getHeight());
+        pulse();
+
+        flow.setVisible(true);
+        Scene scene = new Scene(flow);
+        // sync works with both scene in place and flow visible
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+        flow.shim_getHbar().setValue(42);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+
+        // sync works with flow invisible
+        flow.setVisible(false);
+        flow.shim_getHbar().setValue(21);
+        flow.setVisible(true);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+
+        // sync works with no scene
+        scene.setRoot(new HBox());
+        assertEquals(null, flow.getScene());
+        flow.shim_getHbar().setValue(10);
+        scene.setRoot(flow);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
     }
 }
 
