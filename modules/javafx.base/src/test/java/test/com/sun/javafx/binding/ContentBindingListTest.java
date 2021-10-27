@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.binding;
 
+import com.sun.javafx.beans.BeanErrors;
 import com.sun.javafx.binding.ContentBinding;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
@@ -37,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
+import static test.util.MoreAssertions.*;
 
 public class ContentBindingListTest {
 
@@ -84,19 +86,22 @@ public class ContentBindingListTest {
         assertEquals(list2_sorted, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_Null_X() {
-        Bindings.bindContent(null, op2);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.bindContent(null, op2));
+        assertEquals(BeanErrors.BINDING_TARGET_NULL.getMessage(), ex.getMessage());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_X_Null() {
-        Bindings.bindContent(op1, null);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.bindContent(op1, null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(), ex.getMessage());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testBind_X_Self() {
-        Bindings.bindContent(op2, op2);
+        var ex = assertThrows(IllegalArgumentException.class, () -> Bindings.bindContent(op2, op2));
+        assertEquals(BeanErrors.CANNOT_BIND_COLLECTION_TO_ITSELF.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -123,19 +128,22 @@ public class ContentBindingListTest {
         assertEquals(list1, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_Null_X() {
-        Bindings.unbindContent(null, op2);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.unbindContent(null, op2));
+        assertEquals(BeanErrors.BINDING_TARGET_NULL.getMessage(), ex.getMessage());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_X_Null() {
-        Bindings.unbindContent(op1, null);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.unbindContent(op1, null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(), ex.getMessage());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnbind_X_Self() {
-        Bindings.unbindContent(op2, op2);
+        var ex = assertThrows(IllegalArgumentException.class, () -> Bindings.unbindContent(op2, op2));
+        assertEquals(BeanErrors.CANNOT_UNBIND_COLLECTION_FROM_ITSELF.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -245,7 +253,7 @@ public class ContentBindingListTest {
 
             target.remove(0);
             assertEquals(1, exceptions.size());
-            assertTrue(exceptions.get(0).getMessage().contains("Illegal list modification"));
+            assertEquals(BeanErrors.ILLEGAL_LIST_MODIFICATION.getMessage(), exceptions.get(0).getMessage());
         } finally {
             Thread.currentThread().setUncaughtExceptionHandler(oldHandler);
         }

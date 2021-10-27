@@ -28,7 +28,6 @@ package javafx.beans.property;
 import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalBinding;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableBooleanValue;
 import com.sun.javafx.binding.Logging;
@@ -85,8 +84,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      */
     @Override
     public void bindBidirectional(Property<Boolean> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other);
+        BidirectionalBinding.bind(this, other);
     }
 
     /**
@@ -94,8 +92,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      */
     @Override
     public void unbindBidirectional(Property<Boolean> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.unbindBidirectional(this, other);
+        BidirectionalBinding.unbind(this, other);
     }
 
     /**

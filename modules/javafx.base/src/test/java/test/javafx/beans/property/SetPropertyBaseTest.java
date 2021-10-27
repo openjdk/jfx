@@ -25,8 +25,8 @@
 
 package test.javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import test.javafx.collections.MockSetObserver;
-import java.util.HashSet;
 import javafx.beans.property.SetProperty;
 import javafx.beans.property.SetPropertyBase;
 import javafx.beans.property.SimpleSetProperty;
@@ -40,6 +40,7 @@ import org.junit.Test;
 import static test.javafx.collections.MockSetObserver.Call;
 import test.javafx.collections.MockSetObserver.Tuple;
 import static org.junit.Assert.*;
+import static test.util.MoreAssertions.*;
 
 public class SetPropertyBaseTest {
 
@@ -436,11 +437,12 @@ public class SetPropertyBaseTest {
         setChangeListener.assertAdded(MockSetObserver.Tuple.tup(OBJECT_1b));
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
         final SetProperty<Object> v = new SimpleSetProperty<Object>(VALUE_1a);
         property.bind(v);
-        property.set(VALUE_1a);
+        var ex = assertThrows(RuntimeException.class, () -> property.set(VALUE_1a));
+        assertEquals(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(v), ex.getMessage());
     }
 
     @Test
@@ -542,9 +544,16 @@ public class SetPropertyBaseTest {
         assertEquals(0, setChangeListener.getCallsNumber());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());
+    }
+
+    @Test
+    public void testBindToSelf() {
+        var ex = assertThrows(IllegalArgumentException.class, () -> property.bind(property));
+        assertEquals(BeanErrors.CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(property), ex.getMessage());
     }
 
     @Test
@@ -645,6 +654,125 @@ public class SetPropertyBaseTest {
         assertEquals(VALUE_1b, property.get());
         assertEquals(1, property.counter);
         invalidationListener.check(property, 1);
+    }
+
+    @Test
+    public void testBindBidirectional_targetIsBound() {
+        var target = new SimpleSetProperty<>(this, "target");
+        var source = new SimpleSetProperty<>(this, "source");
+        target.bind(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindBidirectional_sourceIsBound() {
+        var target = new SimpleSetProperty<>(this, "target");
+        var source = new SimpleSetProperty<>(this, "source");
+        var other = new SimpleSetProperty<>(this, "other");
+        source.bind(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_targetIsBoundBidirectionally() {
+        var target = new SimpleSetProperty<>(this, "target");
+        var source = new SimpleSetProperty<>(this, "source");
+        target.bindBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bind(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContentBidirectional_targetIsContentBound() {
+        var target = new SimpleSetProperty<>(this, "target", FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(this, "source", FXCollections.<String>observableSet());
+        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContentBidirectional_sourceIsContentBound() {
+        var target = new SimpleSetProperty<>(this, "target", FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(this, "source", FXCollections.<String>observableSet());
+        var other = new SimpleSetProperty<>(this, "source", FXCollections.<String>observableSet());
+        source.bindContent(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContent_targetIsContentBoundBidirectionally() {
+        var target = new SimpleSetProperty<>(this, "target", FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(this, "source", FXCollections.<String>observableSet());
+        target.bindContentBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContent(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testSetValueOfContentBoundPropertyFails() {
+        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.set(FXCollections.observableSet()));
+        assertEquals(BeanErrors.CANNOT_SET_CONTENT_BOUND_PROPERTY.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((SetChangeListener<? super String>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        target.bindContent(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.add("bar");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((SetChangeListener<? super String>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
+        target.bindContentBidirectional(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.add("bar");
+        assertEquals(1, target.size());
     }
 
     @Test
@@ -765,92 +893,6 @@ public class SetPropertyBaseTest {
         public String getName() {
             return name;
         }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
-        var target = new SimpleSetProperty<String>();
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bind(source);
-        target.bindBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
-        var target = new SimpleSetProperty<String>();
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindBidirectional(source);
-        target.bind(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
-        var target = new SimpleSetProperty<String>();
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindContent(source);
-        target.bindContentBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
-        var target = new SimpleSetProperty<String>();
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindContentBidirectional(source);
-        target.bindContent(source);
-    }
-
-    @Test
-    public void testContentBindingIsReplaced() {
-        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindContent(source);
-        target.bindContent(source);
-
-        int[] calls = new int[1];
-        target.addListener((SetChangeListener<? super String>)change -> calls[0]++);
-
-        source.add("foo");
-        assertEquals(1, calls[0]);
-    }
-
-    @Test
-    public void testContentBindingIsRemoved() {
-        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindContent(source);
-        source.add("foo");
-        assertEquals(1, target.size());
-
-        target.unbindContent();
-        source.add("bar");
-        assertEquals(1, target.size());
-    }
-
-    @Test
-    public void testBidirectionalContentBindingIsReplaced() {
-        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindContentBidirectional(source);
-        target.bindContentBidirectional(source);
-
-        int[] calls = new int[1];
-        target.addListener((SetChangeListener<? super String>)change -> calls[0]++);
-
-        source.add("foo");
-        assertEquals(1, calls[0]);
-    }
-
-    @Test
-    public void testBidirectionalContentBindingIsRemoved() {
-        var target = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        var source = new SimpleSetProperty<>(FXCollections.<String>observableSet());
-        target.bindContentBidirectional(source);
-        source.add("foo");
-        assertEquals(1, target.size());
-
-        target.unbindContentBidirectional(source);
-        source.add("bar");
-        assertEquals(1, target.size());
     }
 
 }

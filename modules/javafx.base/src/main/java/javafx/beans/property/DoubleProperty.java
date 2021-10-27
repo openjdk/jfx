@@ -30,7 +30,6 @@ import java.util.Objects;
 import com.sun.javafx.binding.BidirectionalBinding;
 import com.sun.javafx.binding.Logging;
 
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableDoubleValue;
 
@@ -84,8 +83,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     @Override
     public void bindBidirectional(Property<Number> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other);
+        BidirectionalBinding.bind(this, other);
     }
 
     /**
@@ -93,8 +91,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     @Override
     public void unbindBidirectional(Property<Number> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.unbindBidirectional(this, other);
+        BidirectionalBinding.unbind(this, other);
     }
 
     /**

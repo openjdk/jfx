@@ -25,9 +25,11 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
 import javafx.beans.binding.SetExpression;
 import javafx.collections.ObservableSet;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -60,7 +62,9 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
      */
-    public abstract void bindContentBidirectional(ObservableSet<E> other);
+    public void bindContentBidirectional(ObservableSet<E> other) {
+        BidirectionalContentBinding.bind(this, other);
+    }
 
     /**
      * Removes the bidirectional content binding that was established with
@@ -79,7 +83,9 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
      * @since 18
      */
-    public abstract void unbindContentBidirectional(ObservableSet<E> other);
+    public void unbindContentBidirectional(ObservableSet<E> other) {
+        BidirectionalContentBinding.unbind(this, other);
+    }
 
     /**
      * Removes the bidirectional content binding that was established with
@@ -99,7 +105,12 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @deprecated use {@link #unbindContentBidirectional(ObservableSet)} instead
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContentBidirectional(Object other);
+    public void unbindContentBidirectional(Object other) {
+        Objects.requireNonNull(other);
+        if (other instanceof ObservableSet<?>) {
+            BidirectionalContentBinding.unbind(this, (ObservableSet<E>)other);
+        }
+    }
 
     /**
      * Creates a content binding between the {@link javafx.collections.ObservableSet} that is wrapped
@@ -147,6 +158,18 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      */
     @Deprecated(since = "18", forRemoval = true)
     public abstract void unbindContent(Object source);
+
+    /**
+     * Returns whether this property is bound by a unidirectional content binding that was
+     * established by calling {@link #bindContent(ObservableSet)}.
+     * <p>
+     * Note that this method does not account for bidirectional content bindings that were
+     * established by calling {@link #bindContentBidirectional(ObservableSet)}.
+     *
+     * @return whether this property is unidirectionally content-bound
+     * @since 18
+     */
+    public abstract boolean isContentBound();
 
     @Override
     public boolean equals(Object obj) {

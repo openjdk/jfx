@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.binding;
 
+import com.sun.javafx.beans.BeanErrors;
 import com.sun.javafx.binding.BidirectionalContentBinding;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
@@ -37,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
+import static test.util.MoreAssertions.assertThrows;
 
 public class BidirectionalContentBindingListTest {
 

@@ -177,8 +177,8 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
-            return null;
+        protected boolean isContentBoundBidirectional() {
+            return false;
         }
 
         @Override
@@ -244,8 +244,8 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
-            return null;
+        protected boolean isContentBoundBidirectional() {
+            return false;
         }
 
         @Override
@@ -315,8 +315,8 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
-            return listener instanceof BidirectionalContentBinding ? (BidirectionalContentBinding)listener : null;
+        protected boolean isContentBoundBidirectional() {
+            return listener instanceof BidirectionalContentBinding;
         }
 
         @Override
@@ -603,14 +603,14 @@ public abstract class ListExpressionHelper<E> extends CollectionExpressionHelper
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
+        protected boolean isContentBoundBidirectional() {
             for (int i = 0; i < listChangeSize; ++i) {
                 if (listChangeListeners[i] instanceof BidirectionalContentBinding) {
-                    return (BidirectionalContentBinding)listChangeListeners[i];
+                    return true;
                 }
             }
 
-            return null;
+            return false;
         }
 
         @Override

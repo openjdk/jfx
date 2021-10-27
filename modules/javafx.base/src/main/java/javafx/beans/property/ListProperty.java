@@ -25,11 +25,9 @@
 
 package javafx.beans.property;
 
-import javafx.beans.binding.Bindings;
+import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.value.WritableListValue;
 import javafx.collections.ObservableList;
-
-import java.util.Objects;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping an
@@ -77,8 +75,7 @@ public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
      */
     @Override
     public void bindBidirectional(Property<ObservableList<E>> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other);
+        BidirectionalBinding.bind(this, other);
     }
 
     /**
@@ -86,8 +83,7 @@ public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
      */
     @Override
     public void unbindBidirectional(Property<ObservableList<E>> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.unbindBidirectional(this, other);
+        BidirectionalBinding.unbind(this, other);
     }
 
     /**

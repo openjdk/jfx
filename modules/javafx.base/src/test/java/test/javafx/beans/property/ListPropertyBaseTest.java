@@ -27,6 +27,7 @@ package test.javafx.beans.property;
 
 import java.util.Arrays;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.collections.ListChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
@@ -46,6 +47,7 @@ import javafx.beans.property.SimpleListProperty;
 import test.javafx.collections.Person;
 
 import static org.junit.Assert.*;
+import static test.util.MoreAssertions.*;
 
 public class ListPropertyBaseTest {
 
@@ -478,11 +480,12 @@ public class ListPropertyBaseTest {
         listChangeListener.check1AddRemove(property, VALUE_1a, 0, 1);
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
         final ListProperty<Object> v = new SimpleListProperty<Object>(VALUE_1a);
         property.bind(v);
-        property.set(VALUE_1a);
+        var ex = assertThrows(RuntimeException.class, () -> property.set(VALUE_1a));
+        assertEquals(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(v), ex.getMessage());
     }
 
     @Test
@@ -584,9 +587,16 @@ public class ListPropertyBaseTest {
         listChangeListener.check0();
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());
+    }
+
+    @Test
+    public void testBindToSelf() {
+        var ex = assertThrows(IllegalArgumentException.class, () -> property.bind(property));
+        assertEquals(BeanErrors.CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(property), ex.getMessage());
     }
 
     @Test
@@ -689,6 +699,125 @@ public class ListPropertyBaseTest {
         assertEquals(VALUE_1b, property.get());
         assertEquals(1, property.counter);
         invalidationListener.check(property, 1);
+    }
+
+    @Test
+    public void testBindBidirectional_targetIsBound() {
+        var target = new SimpleListProperty<>(this, "target");
+        var source = new SimpleListProperty<>(this, "source");
+        target.bind(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindBidirectional_sourceIsBound() {
+        var target = new SimpleListProperty<>(this, "target");
+        var source = new SimpleListProperty<>(this, "source");
+        var other = new SimpleListProperty<>(this, "other");
+        source.bind(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_targetIsBoundBidirectionally() {
+        var target = new SimpleListProperty<>(this, "target");
+        var source = new SimpleListProperty<>(this, "source");
+        target.bindBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bind(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContentBidirectional_targetIsContentBound() {
+        var target = new SimpleListProperty<>(this, "target", FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(this, "source", FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContentBidirectional_sourceIsContentBound() {
+        var target = new SimpleListProperty<>(this, "target", FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(this, "source", FXCollections.<String>observableArrayList());
+        var other = new SimpleListProperty<>(this, "source", FXCollections.<String>observableArrayList());
+        source.bindContent(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContent_targetIsContentBoundBidirectionally() {
+        var target = new SimpleListProperty<>(this, "target", FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(this, "source", FXCollections.<String>observableArrayList());
+        target.bindContentBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContent(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testSetValueOfContentBoundPropertyFails() {
+        var target = new SimpleListProperty<>(this, "target", FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(this, "source", FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.set(FXCollections.observableArrayList()));
+        assertEquals(BeanErrors.CANNOT_SET_CONTENT_BOUND_PROPERTY.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((ListChangeListener<? super String>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContent(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.add("bar");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((ListChangeListener<? super String>)change -> calls[0]++);
+
+        source.add("foo");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
+        target.bindContentBidirectional(source);
+        source.add("foo");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.add("bar");
+        assertEquals(1, target.size());
     }
 
     @Test
@@ -863,92 +992,6 @@ public class ListPropertyBaseTest {
         public String getName() {
             return name;
         }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
-        var target = new SimpleListProperty<String>();
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bind(source);
-        target.bindBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
-        var target = new SimpleListProperty<String>();
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindBidirectional(source);
-        target.bind(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
-        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindContent(source);
-        target.bindContentBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
-        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindContentBidirectional(source);
-        target.bindContent(source);
-    }
-
-    @Test
-    public void testContentBindingIsReplaced() {
-        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindContent(source);
-        target.bindContent(source);
-
-        int[] calls = new int[1];
-        target.addListener((ListChangeListener<? super String>)change -> calls[0]++);
-
-        source.add("foo");
-        assertEquals(1, calls[0]);
-    }
-
-    @Test
-    public void testContentBindingIsRemoved() {
-        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindContent(source);
-        source.add("foo");
-        assertEquals(1, target.size());
-
-        target.unbindContent();
-        source.add("bar");
-        assertEquals(1, target.size());
-    }
-
-    @Test
-    public void testBidirectionalContentBindingIsReplaced() {
-        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindContentBidirectional(source);
-        target.bindContentBidirectional(source);
-
-        int[] calls = new int[1];
-        target.addListener((ListChangeListener<? super String>)change -> calls[0]++);
-
-        source.add("foo");
-        assertEquals(1, calls[0]);
-    }
-
-    @Test
-    public void testBidirectionalContentBindingIsRemoved() {
-        var target = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        var source = new SimpleListProperty<>(FXCollections.<String>observableArrayList());
-        target.bindContentBidirectional(source);
-        source.add("foo");
-        assertEquals(1, target.size());
-
-        target.unbindContentBidirectional(source);
-        source.add("bar");
-        assertEquals(1, target.size());
     }
 
 }

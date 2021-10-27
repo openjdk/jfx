@@ -28,6 +28,7 @@ package com.sun.javafx.binding;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 import javafx.util.StringConverter;
 
@@ -35,6 +36,8 @@ import java.lang.ref.WeakReference;
 import java.text.Format;
 import java.text.ParseException;
 import java.util.Objects;
+
+import static com.sun.javafx.beans.BeanErrors.*;
 
 /**
  * @implNote Bidirectional bindings are implemented with InvalidationListeners, which are fired once
@@ -46,128 +49,168 @@ import java.util.Objects;
  */
 public abstract class BidirectionalBinding implements InvalidationListener, WeakListener {
 
-    private static void checkParameters(Property<?> property1, Property<?> property2) {
-        Objects.requireNonNull(property1, "Both properties must be specified.");
-        Objects.requireNonNull(property2, "Both properties must be specified.");
-
-        if (property1 == property2) {
-            throw new IllegalArgumentException("Cannot bind property to itself");
+    /**
+     * Exceptions thrown here will be surfaced by {@link Bindings#bindBidirectional(Property, Property)}
+     * and by {@link Property#bindBidirectional(Property)}. In the latter case, the 'target'
+     * argument is the 'this' pointer of the Property class. If 'this' is a bound property, we
+     * throw an IllegalStateException instead of an IllegalArgumentException, because from the
+     * perspective of a user of the Property class, 'target' was not specified as an argument.
+     *
+     * However, when using the Bindings class to set up a bidirectional binding, we catch the
+     * IllegalStateException and re-throw it as an IllegalArgumentException. From the perspective
+     * of a user of the Bindings class, 'target' was specified as an argument.
+     */
+    private static void checkBindParameters(Property<?> target, Property<?> source) {
+        if (target == null) {
+            throw new NullPointerException(BINDING_TARGET_NULL.getMessage());
         }
 
-        if (property1.isBound() || property2.isBound()) {
-            throw new IllegalStateException("Cannot establish a bidirectional binding for a bound property.");
+        if (source == null) {
+            throw new NullPointerException(BINDING_SOURCE_NULL.getMessage(target));
+        }
+
+        if (target == source) {
+            throw new IllegalArgumentException(CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(target));
+        }
+
+        if (target.isBound()) {
+            throw new IllegalStateException(BIND_CONFLICT_BIDIRECTIONAL.getMessage(target));
+        }
+
+        if (source.isBound()) {
+            throw new IllegalArgumentException(BIND_CONFLICT_BIDIRECTIONAL.getMessage(source));
         }
     }
 
-    public static <T> BidirectionalBinding bind(Property<T> property1, Property<T> property2) {
-        checkParameters(property1, property2);
+    private static void checkUnbindParameters(Property<?> target, Property<?> source) {
+        if (target == null) {
+            throw new NullPointerException(BINDING_TARGET_NULL.getMessage());
+        }
+
+        if (source == null) {
+            throw new NullPointerException(BINDING_SOURCE_NULL.getMessage(target));
+        }
+
+        if (target == source) {
+            throw new IllegalArgumentException(CANNOT_UNBIND_PROPERTY_FROM_ITSELF.getMessage(target));
+        }
+    }
+
+    public static <T> BidirectionalBinding bind(Property<T> target, Property<T> source) {
+        checkBindParameters(target, source);
         final BidirectionalBinding binding =
-                ((property1 instanceof DoubleProperty) && (property2 instanceof DoubleProperty)) ?
-                        new BidirectionalDoubleBinding((DoubleProperty) property1, (DoubleProperty) property2)
-                : ((property1 instanceof FloatProperty) && (property2 instanceof FloatProperty)) ?
-                        new BidirectionalFloatBinding((FloatProperty) property1, (FloatProperty) property2)
-                : ((property1 instanceof IntegerProperty) && (property2 instanceof IntegerProperty)) ?
-                        new BidirectionalIntegerBinding((IntegerProperty) property1, (IntegerProperty) property2)
-                : ((property1 instanceof LongProperty) && (property2 instanceof LongProperty)) ?
-                        new BidirectionalLongBinding((LongProperty) property1, (LongProperty) property2)
-                : ((property1 instanceof BooleanProperty) && (property2 instanceof BooleanProperty)) ?
-                        new BidirectionalBooleanBinding((BooleanProperty) property1, (BooleanProperty) property2)
-                : new TypedGenericBidirectionalBinding<T>(property1, property2);
-        property1.removeListener(binding);
-        property2.removeListener(binding);
-        property1.setValue(property2.getValue());
-        property1.getValue();
-        property1.addListener(binding);
-        property2.addListener(binding);
+                ((target instanceof DoubleProperty) && (source instanceof DoubleProperty)) ?
+                        new BidirectionalDoubleBinding((DoubleProperty) target, (DoubleProperty) source)
+                : ((target instanceof FloatProperty) && (source instanceof FloatProperty)) ?
+                        new BidirectionalFloatBinding((FloatProperty) target, (FloatProperty) source)
+                : ((target instanceof IntegerProperty) && (source instanceof IntegerProperty)) ?
+                        new BidirectionalIntegerBinding((IntegerProperty) target, (IntegerProperty) source)
+                : ((target instanceof LongProperty) && (source instanceof LongProperty)) ?
+                        new BidirectionalLongBinding((LongProperty) target, (LongProperty) source)
+                : ((target instanceof BooleanProperty) && (source instanceof BooleanProperty)) ?
+                        new BidirectionalBooleanBinding((BooleanProperty) target, (BooleanProperty) source)
+                : new TypedGenericBidirectionalBinding<T>(target, source);
+
+        // We can't know whether the two properties are already bidirectionally bound.
+        // However, since BidirectionalBinding instances are equal if their endpoints are identical, removing
+        // the newly-created binding has the effect of removing an already existing bidirectional binding.
+        target.removeListener(binding);
+        source.removeListener(binding);
+
+        target.setValue(source.getValue());
+        target.getValue();
+        target.addListener(binding);
+        source.addListener(binding);
+
         return binding;
     }
 
-    public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format) {
-        Objects.requireNonNull(format, "Format cannot be null");
-        checkParameters(stringProperty, otherProperty);
-        final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
-        stringProperty.removeListener(binding);
-        otherProperty.removeListener(binding);
-        stringProperty.setValue(format.format(otherProperty.getValue()));
-        stringProperty.getValue();
-        stringProperty.addListener(binding);
-        otherProperty.addListener(binding);
+    public static Object bind(Property<String> target, Property<?> source, Format format) {
+        Objects.requireNonNull(format, "Format cannot be null.");
+        checkBindParameters(target, source);
+        final var binding = new StringFormatBidirectionalBinding(target, source, format);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.setValue(format.format(source.getValue()));
+        target.getValue();
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 
-    public static <T> Object bind(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
-        Objects.requireNonNull(converter, "Converter cannot be null");
-        checkParameters(stringProperty, otherProperty);
-        final var binding = new StringConverterBidirectionalBinding<>(stringProperty, otherProperty, converter);
-        stringProperty.removeListener(binding);
-        otherProperty.removeListener(binding);
-        stringProperty.setValue(converter.toString(otherProperty.getValue()));
-        stringProperty.getValue();
-        stringProperty.addListener(binding);
-        otherProperty.addListener(binding);
+    public static <T> Object bind(Property<String> target, Property<T> source, StringConverter<T> converter) {
+        Objects.requireNonNull(converter, "Converter cannot be null.");
+        checkBindParameters(target, source);
+        final var binding = new StringConverterBidirectionalBinding<>(target, source, converter);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.setValue(converter.toString(source.getValue()));
+        target.getValue();
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 
-    public static void unbind(Property<?> property1, Property<?> property2) {
-        checkParameters(property1, property2);
-        final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
-        property1.removeListener(binding);
-        property2.removeListener(binding);
+    public static void unbind(Property<?> target, Property<?> source) {
+        checkUnbindParameters(target, source);
+        final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Integer> property1, IntegerProperty property2) {
-        return bindNumber(property1, (Property<Number>)property2);
+    public static BidirectionalBinding bindNumber(Property<Integer> target, IntegerProperty source) {
+        return bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Long> property1, LongProperty property2) {
-        return bindNumber(property1, (Property<Number>)property2);
+    public static BidirectionalBinding bindNumber(Property<Long> target, LongProperty source) {
+        return bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Float> property1, FloatProperty property2) {
-        return bindNumber(property1, (Property<Number>)property2);
+    public static BidirectionalBinding bindNumber(Property<Float> target, FloatProperty source) {
+        return bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Double> property1, DoubleProperty property2) {
-        return bindNumber(property1, (Property<Number>)property2);
+    public static BidirectionalBinding bindNumber(Property<Double> target, DoubleProperty source) {
+        return bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(IntegerProperty property1, Property<Integer> property2) {
-        return bindNumberObject(property1, property2);
+    public static BidirectionalBinding bindNumber(IntegerProperty target, Property<Integer> source) {
+        return bindNumberObject(target, source);
     }
 
-    public static BidirectionalBinding bindNumber(LongProperty property1, Property<Long> property2) {
-        return bindNumberObject(property1, property2);
+    public static BidirectionalBinding bindNumber(LongProperty target, Property<Long> source) {
+        return bindNumberObject(target, source);
     }
 
-    public static BidirectionalBinding bindNumber(FloatProperty property1, Property<Float> property2) {
-        return bindNumberObject(property1, property2);
+    public static BidirectionalBinding bindNumber(FloatProperty target, Property<Float> source) {
+        return bindNumberObject(target, source);
     }
 
-    public static BidirectionalBinding bindNumber(DoubleProperty property1, Property<Double> property2) {
-        return bindNumberObject(property1, property2);
+    public static BidirectionalBinding bindNumber(DoubleProperty target, Property<Double> source) {
+        return bindNumberObject(target, source);
     }
 
-    private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> property1, Property<T> property2) {
-        checkParameters(property1, property2);
-        final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(property2, property1);
-        property1.removeListener(binding);
-        property2.removeListener(binding);
-        property1.setValue(property2.getValue());
-        property1.getValue();
-        property1.addListener(binding);
-        property2.addListener(binding);
+    private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> target, Property<T> source) {
+        checkBindParameters(target, source);
+        final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(source, target);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.setValue(source.getValue());
+        target.getValue();
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 
-    private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
-        checkParameters(property1, property2);
-        final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(property1, property2);
-        property1.removeListener(binding);
-        property2.removeListener(binding);
-        property1.setValue((T)property2.getValue());
-        property1.getValue();
-        property1.addListener(binding);
-        property2.addListener(binding);
+    private static <T extends Number> BidirectionalBinding bindNumber(Property<T> target, Property<Number> source) {
+        checkBindParameters(target, source);
+        final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.setValue((T)source.getValue());
+        target.getValue();
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 

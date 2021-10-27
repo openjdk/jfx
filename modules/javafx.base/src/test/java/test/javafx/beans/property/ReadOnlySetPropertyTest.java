@@ -143,6 +143,11 @@ public class ReadOnlySetPropertyTest {
         @Override
         public void unbindContent(Object source) {
         }
+
+        @Override
+        public boolean isContentBound() {
+            return false;
+        }
     }
 
 }

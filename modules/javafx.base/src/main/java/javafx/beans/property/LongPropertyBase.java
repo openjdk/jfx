@@ -25,6 +25,11 @@
 
 package javafx.beans.property;
 
+import java.lang.ref.WeakReference;
+
+import com.sun.javafx.beans.BeanErrors;
+import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.property.PropertyHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
@@ -33,10 +38,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableLongValue;
 import javafx.beans.value.ObservableNumberValue;
 import javafx.beans.value.ObservableValue;
-
-import com.sun.javafx.binding.ExpressionHelper;
-import java.lang.ref.WeakReference;
-import java.util.Objects;
 
 /**
  * The class {@code LongPropertyBase} is the base class for a property wrapping
@@ -141,9 +142,9 @@ public abstract class LongPropertyBase extends LongProperty {
     @Override
     public void set(long newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
-                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(this));
         }
+
         if (value != newValue) {
             value = newValue;
             markInvalid();
@@ -163,8 +164,7 @@ public abstract class LongPropertyBase extends LongProperty {
      */
     @Override
     public void bind(final ObservableValue<? extends Number> source) {
-        Objects.requireNonNull(source, "Cannot bind to null");
-        ExpressionHelper.requireNotBoundBidirectional(helper);
+        PropertyHelper.checkBind(this, source, helper);
 
         ObservableLongValue newObservable;
         if (source instanceof ObservableLongValue) {

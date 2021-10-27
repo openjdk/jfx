@@ -25,6 +25,7 @@
 
 package test.javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.collections.MapChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
@@ -42,6 +43,7 @@ import javafx.beans.property.MapPropertyBase;
 import javafx.beans.property.SimpleMapProperty;
 
 import static test.javafx.collections.MockMapObserver.Call;
+import static test.util.MoreAssertions.*;
 import static org.junit.Assert.*;
 
 public class MapPropertyBaseTest {
@@ -500,11 +502,12 @@ public class MapPropertyBaseTest {
         mapChangeListener.assertAdded(MockMapObserver.Tuple.tup(KEY_1b, DATA_1b));
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testMapBoundValue() {
         final MapProperty<Object, Object> v = new SimpleMapProperty<Object, Object>(VALUE_1a);
         property.bind(v);
-        property.set(VALUE_1a);
+        var ex = assertThrows(RuntimeException.class, () -> property.set(VALUE_1a));
+        assertEquals(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(v), ex.getMessage());
     }
 
     @Test
@@ -606,9 +609,16 @@ public class MapPropertyBaseTest {
         assertEquals(0, mapChangeListener.getCallsNumber());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());
+    }
+
+    @Test
+    public void testBindToSelf() {
+        var ex = assertThrows(IllegalArgumentException.class, () -> property.bind(property));
+        assertEquals(BeanErrors.CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(property), ex.getMessage());
     }
 
     @Test
@@ -709,6 +719,125 @@ public class MapPropertyBaseTest {
         assertEquals(VALUE_1b, property.get());
         assertEquals(1, property.counter);
         invalidationListener.check(property, 1);
+    }
+    
+    @Test
+    public void testBindBidirectional_targetIsBound() {
+        var target = new SimpleMapProperty<>(this, "target");
+        var source = new SimpleMapProperty<>(this, "source");
+        target.bind(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindBidirectional_sourceIsBound() {
+        var target = new SimpleMapProperty<>(this, "target");
+        var source = new SimpleMapProperty<>(this, "source");
+        var other = new SimpleMapProperty<>(this, "other");
+        source.bind(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_targetIsBoundBidirectionally() {
+        var target = new SimpleMapProperty<>(this, "target");
+        var source = new SimpleMapProperty<>(this, "source");
+        target.bindBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bind(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContentBidirectional_targetIsContentBound() {
+        var target = new SimpleMapProperty<>(this, "target", FXCollections.<String, String>observableHashMap());
+        var source = new SimpleMapProperty<>(this, "source", FXCollections.<String, String>observableHashMap());
+        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContentBidirectional_sourceIsContentBound() {
+        var target = new SimpleMapProperty<>(this, "target", FXCollections.<String, String>observableHashMap());
+        var source = new SimpleMapProperty<>(this, "source", FXCollections.<String, String>observableHashMap());
+        var other = new SimpleMapProperty<>(this, "source", FXCollections.<String, String>observableHashMap());
+        source.bindContent(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBindContent_targetIsContentBoundBidirectionally() {
+        var target = new SimpleMapProperty<>(this, "target", FXCollections.<String, String>observableHashMap());
+        var source = new SimpleMapProperty<>(this, "source", FXCollections.<String, String>observableHashMap());
+        target.bindContentBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContent(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testSetValueOfContentBoundPropertyFails() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.set(FXCollections.observableHashMap()));
+        assertEquals(BeanErrors.CANNOT_SET_CONTENT_BOUND_PROPERTY.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testContentBindingIsReplaced() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContent(source);
+        target.bindContent(source);
+
+        int[] calls = new int[1];
+        target.addListener((MapChangeListener<String, String>) change -> calls[0]++);
+
+        source.put("foo", "bar");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testContentBindingIsRemoved() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContent(source);
+        source.put("foo", "bar");
+        assertEquals(1, target.size());
+
+        target.unbindContent();
+        source.put("qux", "quux");
+        assertEquals(1, target.size());
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsReplaced() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        target.bindContentBidirectional(source);
+
+        int[] calls = new int[1];
+        target.addListener((MapChangeListener<String, String>)change -> calls[0]++);
+
+        source.put("foo", "bar");
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    public void testBidirectionalContentBindingIsRemoved() {
+        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
+        target.bindContentBidirectional(source);
+        source.put("foo", "bar");
+        assertEquals(1, target.size());
+
+        target.unbindContentBidirectional(source);
+        source.put("qux", "quux");
+        assertEquals(1, target.size());
     }
 
     @Test
@@ -831,92 +960,6 @@ public class MapPropertyBaseTest {
         public String getName() {
             return name;
         }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
-        var target = new SimpleMapProperty<String, String>();
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bind(source);
-        target.bindBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
-        var target = new SimpleMapProperty<String, String>();
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindBidirectional(source);
-        target.bind(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
-        var target = new SimpleMapProperty<String, String>();
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindContent(source);
-        target.bindContentBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
-        var target = new SimpleMapProperty<String, String>();
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindContentBidirectional(source);
-        target.bindContent(source);
-    }
-
-    @Test
-    public void testContentBindingIsReplaced() {
-        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindContent(source);
-        target.bindContent(source);
-
-        int[] calls = new int[1];
-        target.addListener((MapChangeListener<String, String>) change -> calls[0]++);
-
-        source.put("foo", "bar");
-        assertEquals(1, calls[0]);
-    }
-
-    @Test
-    public void testContentBindingIsRemoved() {
-        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindContent(source);
-        source.put("foo", "bar");
-        assertEquals(1, target.size());
-
-        target.unbindContent();
-        source.put("qux", "quux");
-        assertEquals(1, target.size());
-    }
-
-    @Test
-    public void testBidirectionalContentBindingIsReplaced() {
-        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindContentBidirectional(source);
-        target.bindContentBidirectional(source);
-
-        int[] calls = new int[1];
-        target.addListener((MapChangeListener<String, String>)change -> calls[0]++);
-
-        source.put("foo", "bar");
-        assertEquals(1, calls[0]);
-    }
-
-    @Test
-    public void testBidirectionalContentBindingIsRemoved() {
-        var target = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        var source = new SimpleMapProperty<String, String>(FXCollections.observableHashMap());
-        target.bindContentBidirectional(source);
-        source.put("foo", "bar");
-        assertEquals(1, target.size());
-
-        target.unbindContentBidirectional(source);
-        source.put("qux", "quux");
-        assertEquals(1, target.size());
     }
 
 }

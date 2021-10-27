@@ -26,6 +26,7 @@
 package com.sun.javafx.binding;
 
 import javafx.beans.WeakListener;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.collections.*;
 
 import java.lang.ref.WeakReference;
@@ -33,19 +34,66 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.sun.javafx.beans.BeanErrors.*;
+
 public abstract class ContentBinding implements WeakListener {
 
-    private static void checkParameters(Object property1, Object property2) {
-        if ((property1 == null) || (property2 == null)) {
-            throw new NullPointerException("Both parameters must be specified.");
+    private static void checkBindParameters(
+            Object target, Object source, Class<?> collectionType, CollectionExpressionHelperBase helper) {
+        if (target == null) {
+            throw new NullPointerException(BINDING_TARGET_NULL.getMessage());
         }
-        if (property1 == property2) {
-            throw new IllegalArgumentException("Cannot bind object to itself");
+
+        if (source == null) {
+            throw new NullPointerException(BINDING_SOURCE_NULL.getMessage(target));
+        }
+
+        Object c1 = unwrapObservableCollection(target, collectionType);
+        Object c2 = unwrapObservableCollection(source, collectionType);
+
+        if (c1 != null && c1 == c2) {
+            throw new IllegalArgumentException(CANNOT_BIND_COLLECTION_TO_ITSELF.getMessage(target));
+        }
+
+        if (CollectionExpressionHelperBase.isContentBoundBidirectional(helper)) {
+            throw new IllegalStateException(CONTENT_BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target));
         }
     }
 
+    private static void checkUnbindParameters(Object target, Object source) {
+        if (target == null) {
+            throw new NullPointerException(BINDING_TARGET_NULL.getMessage());
+        }
+
+        if (source == null) {
+            throw new NullPointerException(BINDING_SOURCE_NULL.getMessage(target));
+        }
+
+        if (target == source) {
+            throw new IllegalArgumentException(CANNOT_UNBIND_COLLECTION_FROM_ITSELF.getMessage(target));
+        }
+    }
+
+    private static Object unwrapObservableCollection(Object property, Class<?> collectionType) {
+        while (property != null) {
+            if (property instanceof ReadOnlyProperty<?>) {
+                property = ((ReadOnlyProperty<?>)property).getValue();
+            } else {
+                return collectionType.isInstance(property) ? property : null;
+            }
+        }
+
+        return null;
+    }
+
     public static <E> Object bind(List<E> list1, ObservableList<? extends E> list2) {
-        checkParameters(list1, list2);
+        return bind(list1, list2, null);
+    }
+
+    public static <E> Object bind(
+            List<E> list1, ObservableList<? extends E> list2, CollectionExpressionHelperBase helper) {
+        checkBindParameters(list1, list2, ObservableList.class, helper);
+
         final ListContentBinding<E> contentBinding = new ListContentBinding<>(list1, list2);
         if (list1 instanceof ObservableList) {
             ((ObservableList<E>)list1).removeListener(contentBinding);
@@ -66,7 +114,13 @@ public abstract class ContentBinding implements WeakListener {
     }
 
     public static <E> Object bind(Set<E> set1, ObservableSet<? extends E> set2) {
-        checkParameters(set1, set2);
+        return bind(set1, set2, null);
+    }
+
+    public static <E> Object bind(
+            Set<E> set1, ObservableSet<? extends E> set2, CollectionExpressionHelperBase helper) {
+        checkBindParameters(set1, set2, ObservableSet.class, helper);
+
         final SetContentBinding<E> contentBinding = new SetContentBinding<>(set1, set2);
         if (set1 instanceof ObservableSet<?>) {
             ((ObservableSet<E>)set1).removeListener(contentBinding);
@@ -85,7 +139,13 @@ public abstract class ContentBinding implements WeakListener {
     }
 
     public static <K, V> Object bind(Map<K, V> map1, ObservableMap<? extends K, ? extends V> map2) {
-        checkParameters(map1, map2);
+        return bind(map1, map2, null);
+    }
+
+    public static <K, V> Object bind(
+            Map<K, V> map1, ObservableMap<? extends K, ? extends V> map2, CollectionExpressionHelperBase helper) {
+        checkBindParameters(map1, map2, ObservableMap.class, helper);
+
         final MapContentBinding<K, V> contentBinding = new MapContentBinding<>(map1, map2);
         if (map1 instanceof ObservableMap<?, ?>) {
             ((ObservableMap<? extends K, ? extends V>)map1).removeListener(contentBinding);
@@ -104,7 +164,8 @@ public abstract class ContentBinding implements WeakListener {
     }
 
     public static <E> void unbind(List<E> obj1, ObservableList<? extends E> obj2) {
-        checkParameters(obj1, obj2);
+        checkUnbindParameters(obj1, obj2);
+
         var binding = new ListContentBinding<>(obj1, obj2);
         obj2.removeListener(binding);
 
@@ -114,7 +175,8 @@ public abstract class ContentBinding implements WeakListener {
     }
 
     public static <E> void unbind(Set<E> obj1, ObservableSet<? extends E> obj2) {
-        checkParameters(obj1, obj2);
+        checkUnbindParameters(obj1, obj2);
+
         var binding = new SetContentBinding<>(obj1, obj2);
         obj2.removeListener(binding);
 
@@ -124,7 +186,8 @@ public abstract class ContentBinding implements WeakListener {
     }
 
     public static <K, V> void unbind(Map<K, V> obj1, ObservableMap<? extends K, ? extends V> obj2) {
-        checkParameters(obj1, obj2);
+        checkUnbindParameters(obj1, obj2);
+
         var binding = new MapContentBinding<>(obj1, obj2);
         obj2.removeListener(binding);
 
@@ -132,6 +195,8 @@ public abstract class ContentBinding implements WeakListener {
             ((ObservableMap<? extends K, ? extends V>)obj1).removeListener(binding);
         }
     }
+
+    public abstract boolean isTarget(Object obj);
 
     public abstract void dispose();
 
@@ -164,8 +229,7 @@ public abstract class ContentBinding implements WeakListener {
                     list2.removeListener(this);
                 }
 
-                throw new RuntimeException(
-                    "Illegal list modification: Content binding was removed because the lists are out-of-sync.");
+                throw new RuntimeException(ILLEGAL_LIST_MODIFICATION.getMessage());
             }
 
             if (list1 == null) {
@@ -191,6 +255,11 @@ public abstract class ContentBinding implements WeakListener {
                     updating = false;
                 }
             }
+        }
+
+        @Override
+        public boolean isTarget(Object obj) {
+            return obj != null && obj == list1.get();
         }
 
         @Override
@@ -283,8 +352,7 @@ public abstract class ContentBinding implements WeakListener {
                     set2.removeListener(this);
                 }
 
-                throw new RuntimeException(
-                    "Illegal set modification: Content binding was removed because the sets are out-of-sync.");
+                throw new RuntimeException(ILLEGAL_SET_MODIFICATION.getMessage());
             }
 
             if (set1 == null) {
@@ -302,6 +370,11 @@ public abstract class ContentBinding implements WeakListener {
                     updating = false;
                 }
             }
+        }
+
+        @Override
+        public boolean isTarget(Object obj) {
+            return obj != null && obj == set1.get();
         }
 
         @Override
@@ -394,8 +467,7 @@ public abstract class ContentBinding implements WeakListener {
                     map2.removeListener(this);
                 }
 
-                throw new RuntimeException(
-                    "Illegal map modification: Content binding was removed because the maps are out-of-sync.");
+                throw new RuntimeException(ILLEGAL_MAP_MODIFICATION.getMessage());
             }
 
             if (map1 == null) {
@@ -414,6 +486,11 @@ public abstract class ContentBinding implements WeakListener {
                     updating = false;
                 }
             }
+        }
+
+        @Override
+        public boolean isTarget(Object obj) {
+            return obj != null && obj == map1.get();
         }
 
         @Override

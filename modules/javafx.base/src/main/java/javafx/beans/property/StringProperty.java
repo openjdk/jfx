@@ -26,13 +26,10 @@
 package javafx.beans.property;
 
 import com.sun.javafx.binding.BidirectionalBinding;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableStringValue;
 import javafx.util.StringConverter;
-
 import java.text.Format;
-import java.util.Objects;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
@@ -78,8 +75,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      */
     @Override
     public void bindBidirectional(Property<String> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other);
+        BidirectionalBinding.bind(this, other);
     }
 
     /**
@@ -98,8 +94,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      * @since JavaFX 2.1
      */
     public void bindBidirectional(Property<?> other, Format format) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other, format);
+        BidirectionalBinding.bind(this, other, format);
     }
 
     /**
@@ -119,7 +114,6 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      * @since JavaFX 2.1
      */
     public <T> void bindBidirectional(Property<T> other, StringConverter<T> converter) {
-        Objects.requireNonNull(other, "Property cannot be null");
         BidirectionalBinding.bind(this, other, converter);
     }
 
@@ -128,7 +122,6 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      */
     @Override
     public void unbindBidirectional(Property<String> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
         BidirectionalBinding.unbind(this, other);
     }
 
@@ -148,7 +141,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
     @Deprecated(since = "18", forRemoval = true)
     public void unbindBidirectional(Object other) {
         if (other instanceof Property<?>) {
-            unbindBidirectional((Property<?>)other);
+            BidirectionalBinding.unbind(this, (Property<?>)other);
         }
     }
 

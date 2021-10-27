@@ -28,7 +28,6 @@ package javafx.beans.property;
 import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalBinding;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableFloatValue;
 import com.sun.javafx.binding.Logging;
@@ -83,8 +82,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      */
     @Override
     public void bindBidirectional(Property<Number> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other);
+        BidirectionalBinding.bind(this, other);
     }
 
     /**
@@ -92,8 +90,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      */
     @Override
     public void unbindBidirectional(Property<Number> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.unbindBidirectional(this, other);
+        BidirectionalBinding.unbind(this, other);
     }
 
     /**

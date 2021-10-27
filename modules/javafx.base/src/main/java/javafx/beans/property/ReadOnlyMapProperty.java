@@ -25,10 +25,12 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
 import javafx.beans.binding.MapExpression;
 import javafx.collections.ObservableMap;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Superclass for all readonly properties wrapping an {@link javafx.collections.ObservableMap}.
@@ -61,7 +63,9 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
      */
-    public abstract void bindContentBidirectional(ObservableMap<K, V> other);
+    public void bindContentBidirectional(ObservableMap<K, V> other) {
+        BidirectionalContentBinding.bind(this, other);
+    }
 
     /**
      * Removes the bidirectional content binding that was established with
@@ -80,7 +84,9 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
      * @since 18
      */
-    public abstract void unbindContentBidirectional(ObservableMap<K, V> other);
+    public void unbindContentBidirectional(ObservableMap<K, V> other) {
+        BidirectionalContentBinding.unbind(this, other);
+    }
 
     /**
      * Removes the bidirectional content binding that was established with
@@ -100,7 +106,12 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @deprecated use {@link #unbindContentBidirectional(ObservableMap)} instead
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContentBidirectional(Object other);
+    public void unbindContentBidirectional(Object other) {
+        Objects.requireNonNull(other);
+        if (other instanceof ObservableMap<?, ?>) {
+            BidirectionalContentBinding.unbind(this, (ObservableMap<K, V>)other);
+        }
+    }
 
     /**
      * Creates a content binding between the {@link javafx.collections.ObservableMap} that is wrapped
@@ -144,6 +155,20 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      */
     @Deprecated(since = "18", forRemoval = true)
     public abstract void unbindContent(Object object);
+
+    /**
+     * Returns whether this property is bound by a unidirectional content binding that was
+     * established by calling {@link #bindContent(ObservableMap)}.
+     * <p>
+     * Note that this method does not account for bidirectional content bindings that were
+     * established by calling {@link #bindContentBidirectional(ObservableMap)}.
+     *
+     * @return whether this property is bound by a unidirectional content binding
+     * @since 18
+     */
+    public boolean isContentBound() {
+        return false;
+    }
 
     @Override
     public boolean equals(Object obj) {

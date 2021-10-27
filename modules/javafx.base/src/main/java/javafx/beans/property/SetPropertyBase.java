@@ -25,12 +25,14 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
+import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.SetExpressionHelper;
+import com.sun.javafx.property.PropertyHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableSet;
@@ -228,8 +230,6 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
         }
     }
 
-
-
     /**
      * The method {@code invalidated()} can be overridden to receive
      * invalidation notifications. This is the preferred option in
@@ -255,9 +255,13 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
     @Override
     public void set(ObservableSet<E> newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
-                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(this));
         }
+
+        if (isContentBound()) {
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_CONTENT_BOUND_PROPERTY.getMessage(this));
+        }
+
         if (value != newValue) {
             final ObservableSet<E> oldValue = value;
             value = newValue;
@@ -272,8 +276,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
     @Override
     public void bind(final ObservableValue<? extends ObservableSet<E>> source) {
-        Objects.requireNonNull(source, "Cannot bind to null");
-        SetExpressionHelper.requireNotBoundBidirectional(helper);
+        PropertyHelper.checkBind(this, source, helper);
 
         if (source != this.observable) {
             unbind();
@@ -297,42 +300,28 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
     @Override
     public void bindContent(ObservableSet<E> source) {
-        Objects.requireNonNull(source, "Source cannot be null");
-        SetExpressionHelper.requireNotContentBoundBidirectional(helper);
-        Bindings.bindContent(this, source);
+        ContentBinding.bind(this, source, helper);
     }
 
     @Override
     public void unbindContent() {
         ContentBinding binding = SetExpressionHelper.getContentBinding(helper);
-        if (binding != null) {
+        if (binding != null && binding.isTarget(this)) {
             binding.dispose();
         }
     }
 
     @Override
     public void unbindContent(Object source) {
-        Bindings.unbindContent(this, source);
-    }
-
-    @Override
-    public void bindContentBidirectional(ObservableSet<E> other) {
-        Objects.requireNonNull(other, "Set cannot be null");
-        SetExpressionHelper.requireNotContentBound(helper);
-        Bindings.bindContentBidirectional(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(ObservableSet<E> other) {
-        Objects.requireNonNull(other, "Set cannot be null");
-        Bindings.unbindContentBidirectional(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(Object other) {
-        if (other instanceof ObservableSet<?>) {
-            unbindContentBidirectional((ObservableSet<E>) other);
+        if (source instanceof ObservableSet<?>) {
+            ContentBinding.unbind(this, (ObservableSet<E>)source);
         }
+    }
+
+    @Override
+    public boolean isContentBound() {
+        ContentBinding binding = SetExpressionHelper.getContentBinding(helper);
+        return binding != null && binding.isTarget(this);
     }
 
     /**

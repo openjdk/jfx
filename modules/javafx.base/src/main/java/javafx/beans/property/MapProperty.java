@@ -25,11 +25,9 @@
 
 package javafx.beans.property;
 
-import javafx.beans.binding.Bindings;
+import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.value.WritableMapValue;
 import javafx.collections.ObservableMap;
-
-import java.util.Objects;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping an
@@ -78,8 +76,7 @@ public abstract class MapProperty<K, V> extends ReadOnlyMapProperty<K, V> implem
      */
     @Override
     public void bindBidirectional(Property<ObservableMap<K, V>> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.bindBidirectional(this, other);
+        BidirectionalBinding.bind(this, other);
     }
 
     /**
@@ -87,8 +84,7 @@ public abstract class MapProperty<K, V> extends ReadOnlyMapProperty<K, V> implem
      */
     @Override
     public void unbindBidirectional(Property<ObservableMap<K, V>> other) {
-        Objects.requireNonNull(other, "Property cannot be null");
-        Bindings.unbindBidirectional(this, other);
+        BidirectionalBinding.unbind(this, other);
     }
 
     /**

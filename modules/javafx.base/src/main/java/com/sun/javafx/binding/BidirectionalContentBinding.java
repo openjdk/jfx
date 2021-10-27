@@ -25,8 +25,13 @@
 
 package com.sun.javafx.binding;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.beans.WeakListener;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyListProperty;
+import javafx.beans.property.ReadOnlyMapProperty;
 import javafx.beans.property.ReadOnlyProperty;
+import javafx.beans.property.ReadOnlySetProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
@@ -38,20 +43,51 @@ import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.Set;
 
+import static com.sun.javafx.beans.BeanErrors.*;
+
 public abstract class BidirectionalContentBinding implements WeakListener {
 
-    private static void checkParameters(Object collection1, Object collection2, Class<?> collectionType) {
-        if (collection1 == null || collection2 == null) {
-            throw new NullPointerException("Both parameters must be specified.");
+    /**
+     * Exceptions thrown here will be surfaced by {@link Bindings#bindContentBidirectional(ObservableList, ObservableList)}
+     * and by {@link ReadOnlyListProperty#bindContentBidirectional(ObservableList)} (set/map similarly).
+     * In the latter case, the 'target' argument is the 'this' pointer of the ReadOnlyListProperty class.
+     * If 'this' is content-bound, we throw an IllegalStateException instead of an IllegalArgumentException,
+     * because from the perspective of a user of the ReadOnlyListProperty class, 'target' was not specified
+     * as an argument.
+     *
+     * However, when using the Bindings class to set up a bidirectional content binding, we catch the
+     * IllegalStateException and re-throw it as an IllegalArgumentException. From the perspective of a user of
+     * the Bindings class, 'target' was specified as an argument.
+     */
+    private static void checkParameters(Object target, Object source, Class<?> collectionType) {
+        if (target == null) {
+            throw new NullPointerException(BINDING_TARGET_NULL.getMessage());
         }
 
-        collection1 = unwrapObservableCollection(collection1, collectionType);
-        collection2 = unwrapObservableCollection(collection2, collectionType);
-
-        if (collection1 != null && collection1 == collection2) {
-            throw new IllegalArgumentException(
-                "Cannot bind to the same " + collectionType.getSimpleName() + " instance.");
+        if (source == null) {
+            throw new NullPointerException(BINDING_SOURCE_NULL.getMessage(target));
         }
+
+        if (isContentBound(target)) {
+            throw new IllegalStateException(CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(target));
+        }
+
+        if (isContentBound(source)) {
+            throw new IllegalArgumentException(CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(source));
+        }
+
+        Object c1 = unwrapObservableCollection(target, collectionType);
+        Object c2 = unwrapObservableCollection(source, collectionType);
+
+        if (c1 != null && c1 == c2) {
+            throw new IllegalArgumentException(CANNOT_BIND_COLLECTION_TO_ITSELF.getMessage(c1));
+        }
+    }
+
+    private static boolean isContentBound(Object c) {
+        return c instanceof ReadOnlyListProperty<?> && ((ReadOnlyListProperty<?>)c).isContentBound()
+            || c instanceof ReadOnlySetProperty<?> && ((ReadOnlySetProperty<?>)c).isContentBound()
+            || c instanceof ReadOnlyMapProperty<?, ?> && ((ReadOnlyMapProperty<?, ?>)c).isContentBound();
     }
 
     private static Object unwrapObservableCollection(Object property, Class<?> collectionType) {
@@ -66,60 +102,60 @@ public abstract class BidirectionalContentBinding implements WeakListener {
         return null;
     }
 
-    public static <E> Object bind(ObservableList<E> list1, ObservableList<E> list2) {
-        checkParameters(list1, list2, ObservableList.class);
-        final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
-        list1.removeListener(binding);
-        list2.removeListener(binding);
-        list1.setAll(list2);
-        list1.addListener(binding);
-        list2.addListener(binding);
+    public static <E> Object bind(ObservableList<E> target, ObservableList<E> source) {
+        checkParameters(target, source, ObservableList.class);
+        final ListContentBinding<E> binding = new ListContentBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.setAll(source);
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 
-    public static <E> Object bind(ObservableSet<E> set1, ObservableSet<E> set2) {
-        checkParameters(set1, set2, ObservableSet.class);
-        final SetContentBinding<E> binding = new SetContentBinding<>(set1, set2);
-        set1.removeListener(binding);
-        set2.removeListener(binding);
-        set1.clear();
-        set1.addAll(set2);
-        set1.addListener(binding);
-        set2.addListener(binding);
+    public static <E> Object bind(ObservableSet<E> target, ObservableSet<E> source) {
+        checkParameters(target, source, ObservableSet.class);
+        final SetContentBinding<E> binding = new SetContentBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.clear();
+        target.addAll(source);
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 
-    public static <K, V> Object bind(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
-        checkParameters(map1, map2, ObservableMap.class);
-        final MapContentBinding<K, V> binding = new MapContentBinding<>(map1, map2);
-        map1.removeListener(binding);
-        map2.removeListener(binding);
-        map1.clear();
-        map1.putAll(map2);
-        map1.addListener(binding);
-        map2.addListener(binding);
+    public static <K, V> Object bind(ObservableMap<K, V> target, ObservableMap<K, V> source) {
+        checkParameters(target, source, ObservableMap.class);
+        final MapContentBinding<K, V> binding = new MapContentBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
+        target.clear();
+        target.putAll(source);
+        target.addListener(binding);
+        source.addListener(binding);
         return binding;
     }
 
-    public static <E> void unbind(ObservableList<E> list1, ObservableList<E> list2) {
-        checkParameters(list1, list2, ObservableList.class);
-        final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
-        list1.removeListener(binding);
-        list2.removeListener(binding);
+    public static <E> void unbind(ObservableList<E> target, ObservableList<E> source) {
+        checkParameters(target, source, ObservableList.class);
+        final ListContentBinding<E> binding = new ListContentBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
     }
 
-    public static <E> void unbind(ObservableSet<E> set1, ObservableSet<E> set2) {
-        checkParameters(set1, set2, ObservableSet.class);
-        final SetContentBinding<E> binding = new SetContentBinding<>(set1, set2);
-        set1.removeListener(binding);
-        set2.removeListener(binding);
+    public static <E> void unbind(ObservableSet<E> target, ObservableSet<E> source) {
+        checkParameters(target, source, ObservableSet.class);
+        final SetContentBinding<E> binding = new SetContentBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
     }
 
-    public static <K, V> void unbind(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
-        checkParameters(map1, map2, ObservableMap.class);
-        final MapContentBinding<K, V> binding = new MapContentBinding<>(map1, map2);
-        map1.removeListener(binding);
-        map2.removeListener(binding);
+    public static <K, V> void unbind(ObservableMap<K, V> target, ObservableMap<K, V> source) {
+        checkParameters(target, source, ObservableMap.class);
+        final MapContentBinding<K, V> binding = new MapContentBinding<>(target, source);
+        target.removeListener(binding);
+        source.removeListener(binding);
     }
 
     private static class ListContentBinding<E>

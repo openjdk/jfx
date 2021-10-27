@@ -25,14 +25,15 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
+import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.MapExpressionHelper;
+import com.sun.javafx.property.PropertyHelper;
 import java.lang.ref.WeakReference;
-import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.*;
@@ -227,8 +228,6 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         }
     }
 
-
-
     /**
      * The method {@code invalidated()} can be overridden to receive
      * invalidation notifications. This is the preferred option in
@@ -254,9 +253,13 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     @Override
     public void set(ObservableMap<K, V> newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
-                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(this));
         }
+
+        if (isContentBound()) {
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_CONTENT_BOUND_PROPERTY.getMessage(this));
+        }
+
         if (value != newValue) {
             final ObservableMap<K, V> oldValue = value;
             value = newValue;
@@ -271,8 +274,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
     @Override
     public void bind(final ObservableValue<? extends ObservableMap<K, V>> source) {
-        Objects.requireNonNull(source, "Cannot bind to null");
-        MapExpressionHelper.requireNotBoundBidirectional(helper);
+        PropertyHelper.checkBind(this, source, helper);
 
         if (source != observable) {
             unbind();
@@ -296,42 +298,28 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
     @Override
     public void bindContent(ObservableMap<K, V> source) {
-        Objects.requireNonNull(source, "Source cannot be null");
-        MapExpressionHelper.requireNotContentBoundBidirectional(helper);
-        Bindings.bindContent(this, source);
+        ContentBinding.bind(this, source, helper);
     }
 
     @Override
     public void unbindContent() {
         ContentBinding binding = MapExpressionHelper.getContentBinding(helper);
-        if (binding != null) {
+        if (binding != null && binding.isTarget(this)) {
             binding.dispose();
         }
     }
 
     @Override
     public void unbindContent(Object object) {
-        Bindings.unbindContent(this, object);
-    }
-
-    @Override
-    public void bindContentBidirectional(ObservableMap<K, V> other) {
-        Objects.requireNonNull(other, "Map cannot be null");
-        MapExpressionHelper.requireNotContentBound(helper);
-        Bindings.bindContentBidirectional(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(ObservableMap<K, V> other) {
-        Objects.requireNonNull(other, "Map cannot be null");
-        Bindings.unbindContentBidirectional(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(Object other) {
-        if (other instanceof ObservableMap<?, ?>) {
-            unbindContentBidirectional((ObservableMap<K, V>) other);
+        if (object instanceof ObservableMap<?, ?>) {
+            ContentBinding.unbind(this, (ObservableMap<K, V>)object);
         }
+    }
+
+    @Override
+    public boolean isContentBound() {
+        ContentBinding binding = MapExpressionHelper.getContentBinding(helper);
+        return binding != null && binding.isTarget(this);
     }
 
     /**

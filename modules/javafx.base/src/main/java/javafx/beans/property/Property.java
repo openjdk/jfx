@@ -113,7 +113,8 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * exception.
      * <p>
      * If this property is already bidirectionally bound to the other property, the existing binding
-     * will be removed as if by calling {@link #unbindBidirectional(Property)}.
+     * will be removed as if by calling {@link #unbindBidirectional(Property)} before the new binding
+     * is established.
      *
      * @param other the other property
      * @throws NullPointerException if {@code other} is {@code null}
@@ -135,8 +136,6 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * If the properties are not bidirectionally bound, calling this method has no effect.
      *
      * @param other the other property
-     * @throws NullPointerException if {@code other} is {@code null}
-     * @throws IllegalArgumentException if {@code other} is {@code this}
      */
     void unbindBidirectional(Property<T> other);
 

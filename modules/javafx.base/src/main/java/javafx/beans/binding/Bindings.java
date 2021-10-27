@@ -868,7 +868,11 @@ public final class Bindings {
      *            if both properties are equal
      */
     public static <T> void bindBidirectional(Property<T> property1, Property<T> property2) {
-        BidirectionalBinding.bind(property1, property2);
+        try {
+            BidirectionalBinding.bind(property1, property2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -901,14 +905,14 @@ public final class Bindings {
      *            if one of the properties is {@code null}
      * @throws IllegalArgumentException
      *            if both properties are equal
+     * @throws ClassCastException
+     *            if the specified objects are not {@code Property} instances
      * @since JavaFX 2.1
      * @deprecated use {@link #unbindBidirectional(Property, Property)} instead
      */
     @Deprecated(since = "18", forRemoval = true)
     public static void unbindBidirectional(Object property1, Object property2) {
-        if (property1 instanceof Property<?> && property2 instanceof Property<?>) {
-            BidirectionalBinding.unbind((Property<?>) property1, (Property<?>)property2);
-        }
+        BidirectionalBinding.unbind((Property<?>)property1, (Property<?>)property2);
     }
 
     /**
@@ -948,7 +952,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public  static void bindBidirectional(Property<String> stringProperty, Property<?> otherProperty, Format format) {
-        BidirectionalBinding.bind(stringProperty, otherProperty, format);
+        try {
+            BidirectionalBinding.bind(stringProperty, otherProperty, format);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -989,7 +997,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <T> void bindBidirectional(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
-        BidirectionalBinding.bind(stringProperty, otherProperty, converter);
+        try {
+            BidirectionalBinding.bind(stringProperty, otherProperty, converter);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -1031,7 +1043,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <E> void bindContentBidirectional(ObservableList<E> list1, ObservableList<E> list2) {
-        BidirectionalContentBinding.bind(list1, list2);
+        try {
+            BidirectionalContentBinding.bind(list1, list2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -1073,7 +1089,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <E> void bindContentBidirectional(ObservableSet<E> set1, ObservableSet<E> set2) {
-        BidirectionalContentBinding.bind(set1, set2);
+        try {
+            BidirectionalContentBinding.bind(set1, set2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -1117,7 +1137,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <K, V> void bindContentBidirectional(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
-        BidirectionalContentBinding.bind(map1, map2);
+        try {
+            BidirectionalContentBinding.bind(map1, map2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -1221,7 +1245,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <E> void bindContent(List<E> list1, ObservableList<? extends E> list2) {
-        ContentBinding.bind(list1, list2);
+        try {
+            ContentBinding.bind(list1, list2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -1251,7 +1279,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <E> void bindContent(Set<E> set1, ObservableSet<? extends E> set2) {
-        ContentBinding.bind(set1, set2);
+        try {
+            ContentBinding.bind(set1, set2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**
@@ -1283,7 +1315,11 @@ public final class Bindings {
      * @since JavaFX 2.1
      */
     public static <K, V> void bindContent(Map<K, V> map1, ObservableMap<? extends K, ? extends V> map2) {
-        ContentBinding.bind(map1, map2);
+        try {
+            ContentBinding.bind(map1, map2);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+        }
     }
 
     /**

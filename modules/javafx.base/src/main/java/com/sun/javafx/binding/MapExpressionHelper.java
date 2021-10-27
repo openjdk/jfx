@@ -164,8 +164,8 @@ public abstract class MapExpressionHelper<K, V> extends CollectionExpressionHelp
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
-            return null;
+        protected boolean isContentBoundBidirectional() {
+            return false;
         }
 
         @Override
@@ -231,8 +231,8 @@ public abstract class MapExpressionHelper<K, V> extends CollectionExpressionHelp
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
-            return null;
+        protected boolean isContentBoundBidirectional() {
+            return false;
         }
 
         @Override
@@ -302,8 +302,8 @@ public abstract class MapExpressionHelper<K, V> extends CollectionExpressionHelp
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
-            return listener instanceof BidirectionalContentBinding ? (BidirectionalContentBinding)listener : null;
+        protected boolean isContentBoundBidirectional() {
+            return listener instanceof BidirectionalContentBinding;
         }
 
         @Override
@@ -613,14 +613,14 @@ public abstract class MapExpressionHelper<K, V> extends CollectionExpressionHelp
         }
 
         @Override
-        protected BidirectionalContentBinding getBidirectionalContentBinding() {
+        protected boolean isContentBoundBidirectional() {
             for (int i = 0; i < mapChangeSize; ++i) {
                 if (mapChangeListeners[i] instanceof BidirectionalContentBinding) {
-                    return (BidirectionalContentBinding)mapChangeListeners[i];
+                    return true;
                 }
             }
 
-            return null;
+            return false;
         }
 
         @Override

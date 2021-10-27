@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.binding;
 
+import com.sun.javafx.beans.BeanErrors;
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
@@ -38,6 +39,7 @@ import java.util.Collection;
 import javafx.beans.value.ObservableValue;
 
 import static org.junit.Assert.*;
+import static test.util.MoreAssertions.*;
 
 @RunWith(Parameterized.class)
 public class BidirectionalBindingTest<T> {
@@ -241,34 +243,54 @@ public class BidirectionalBindingTest<T> {
         assertFalse(binding3.equals(binding4));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBind_Null_X() {
-        Bindings.bindBidirectional(null, op2);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.bindBidirectional(null, op2));
+        assertEquals(BeanErrors.BINDING_TARGET_NULL.getMessage(), ex.getMessage());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBind_X_Null() {
-        Bindings.bindBidirectional(op1, null);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.bindBidirectional(op1, null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(op1), ex.getMessage());
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testBind_X_Self() {
-        Bindings.bindBidirectional(op1, op1);
+        var ex = assertThrows(IllegalArgumentException.class, () -> Bindings.bindBidirectional(op1, op1));
+        assertEquals(BeanErrors.CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(op1), ex.getMessage());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testUnbind_Null_X() {
-        Bindings.unbindBidirectional(null, op2);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.unbindBidirectional(null, op2));
+        assertEquals(BeanErrors.BINDING_TARGET_NULL.getMessage(), ex.getMessage());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testUnbind_X_Null() {
-        Bindings.unbindBidirectional(op1, null);
+        var ex = assertThrows(NullPointerException.class, () -> Bindings.unbindBidirectional(op1, null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(op1), ex.getMessage());
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testUnbind_X_Self() {
-        Bindings.unbindBidirectional(op1, op1);
+        var ex = assertThrows(IllegalArgumentException.class, () -> Bindings.unbindBidirectional(op1, op1));
+        assertEquals(BeanErrors.CANNOT_UNBIND_PROPERTY_FROM_ITSELF.getMessage(op1), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_UnboundX_BoundY() {
+        op3.bind(op4);
+        var ex = assertThrows(IllegalArgumentException.class, () -> Bindings.bindBidirectional(op1, op3));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(op3), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_BoundX_UnboundY() {
+        op1.bind(op2);
+        var ex = assertThrows(IllegalArgumentException.class, () -> Bindings.bindBidirectional(op1, op3));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(op1), ex.getMessage());
     }
 
     @Test
@@ -291,20 +313,26 @@ public class BidirectionalBindingTest<T> {
         final String[] stringData = new String[] {"A", "B", "C", "D"};
 
         return Arrays.asList(new Object[][] {
-            { new Factory(() -> new SimpleBooleanProperty(), booleanData) },
-            { new Factory(() -> new SimpleDoubleProperty(), doubleData) },
-            { new Factory(() -> new SimpleFloatProperty(), floatData) },
-            { new Factory(() -> new SimpleIntegerProperty(), integerData) },
-            { new Factory(() -> new SimpleLongProperty(), longData) },
-            { new Factory(() -> new SimpleObjectProperty<>(), objectData) },
-            { new Factory(() -> new SimpleStringProperty(), stringData) },
-            { new Factory(() -> new ReadOnlyBooleanWrapper(), booleanData) },
-            { new Factory(() -> new ReadOnlyDoubleWrapper(), doubleData) },
-            { new Factory(() -> new ReadOnlyFloatWrapper(), floatData) },
-            { new Factory(() -> new ReadOnlyIntegerWrapper(), integerData) },
-            { new Factory(() -> new ReadOnlyLongWrapper(), longData) },
-            { new Factory(() -> new ReadOnlyObjectWrapper<>(), objectData) },
-            { new Factory(() -> new ReadOnlyStringWrapper(), stringData) },
+            { new Factory(() -> new SimpleBooleanProperty(BEAN, nextName()), booleanData) },
+            { new Factory(() -> new SimpleDoubleProperty(BEAN, nextName()), doubleData) },
+            { new Factory(() -> new SimpleFloatProperty(BEAN, nextName()), floatData) },
+            { new Factory(() -> new SimpleIntegerProperty(BEAN, nextName()), integerData) },
+            { new Factory(() -> new SimpleLongProperty(BEAN, nextName()), longData) },
+            { new Factory(() -> new SimpleObjectProperty<>(BEAN, nextName()), objectData) },
+            { new Factory(() -> new SimpleStringProperty(BEAN, nextName()), stringData) },
+            { new Factory(() -> new ReadOnlyBooleanWrapper(BEAN, nextName()), booleanData) },
+            { new Factory(() -> new ReadOnlyDoubleWrapper(BEAN, nextName()), doubleData) },
+            { new Factory(() -> new ReadOnlyFloatWrapper(BEAN, nextName()), floatData) },
+            { new Factory(() -> new ReadOnlyIntegerWrapper(BEAN, nextName()), integerData) },
+            { new Factory(() -> new ReadOnlyLongWrapper(BEAN, nextName()), longData) },
+            { new Factory(() -> new ReadOnlyObjectWrapper<>(BEAN, nextName()), objectData) },
+            { new Factory(() -> new ReadOnlyStringWrapper(BEAN, nextName()), stringData) },
         });
+    }
+
+    private static final Object BEAN = new Object() {};
+
+    private static String nextName() {
+        return Integer.toHexString((int)Double.doubleToLongBits(Math.random())).toUpperCase();
     }
 }

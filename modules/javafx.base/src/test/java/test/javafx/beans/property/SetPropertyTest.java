@@ -227,5 +227,11 @@ public class SetPropertyTest {
         public void unbindContent(Object source) {
             fail("Not in use");
         }
+
+        @Override
+        public boolean isContentBound() {
+            fail("Not in use");
+            return false;
+        }
     }
 }

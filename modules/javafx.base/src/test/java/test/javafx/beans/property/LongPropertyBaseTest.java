@@ -25,12 +25,14 @@
 
 package test.javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.beans.property.LongProperty;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.property.SimpleLongProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static test.util.MoreAssertions.*;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
@@ -203,11 +205,12 @@ public class LongPropertyBaseTest {
         changeListener.check(property, VALUE_1, -VALUE_1, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
         final LongProperty v = new SimpleLongProperty(VALUE_1);
         property.bind(v);
-        property.set(VALUE_1);
+        var ex = assertThrows(RuntimeException.class, () -> property.set(VALUE_1));
+        assertEquals(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(v), ex.getMessage());
     }
 
     @Test
@@ -348,9 +351,16 @@ public class LongPropertyBaseTest {
         changeListener.check(property, value2, value1, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());
+    }
+
+    @Test
+    public void testBindToSelf() {
+        var ex = assertThrows(IllegalArgumentException.class, () -> property.bind(property));
+        assertEquals(BeanErrors.CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(property), ex.getMessage());
     }
 
     @Test
@@ -444,6 +454,34 @@ public class LongPropertyBaseTest {
         assertEquals(value2, property.get());
         assertEquals(1, property.counter);
         invalidationListener.check(property, 1);
+    }
+    
+    @Test
+    public void testBindBidirectional_targetIsBound() {
+        var target = new SimpleLongProperty(this, "target");
+        var source = new SimpleLongProperty(this, "source");
+        target.bind(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindBidirectional_sourceIsBound() {
+        var target = new SimpleLongProperty(this, "target");
+        var source = new SimpleLongProperty(this, "source");
+        var other = new SimpleLongProperty(this, "other");
+        source.bind(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_targetIsBoundBidirectionally() {
+        var target = new SimpleLongProperty(this, "target");
+        var source = new SimpleLongProperty(this, "source");
+        target.bindBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bind(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
     }
 
     @Test
@@ -543,22 +581,6 @@ public class LongPropertyBaseTest {
         @Override public Object getBean() { return bean; }
 
         @Override public String getName() { return name; }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
-        var target = new SimpleLongProperty();
-        var source = new SimpleLongProperty();
-        target.bind(source);
-        target.bindBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
-        var target = new SimpleLongProperty();
-        var source = new SimpleLongProperty();
-        target.bindBidirectional(source);
-        target.bind(source);
     }
 
 }

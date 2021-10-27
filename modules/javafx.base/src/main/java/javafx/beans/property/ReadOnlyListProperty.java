@@ -27,6 +27,9 @@ package javafx.beans.property;
 
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
+
+import com.sun.javafx.binding.BidirectionalContentBinding;
 import javafx.beans.binding.ListExpression;
 import javafx.collections.ObservableList;
 
@@ -61,7 +64,9 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is the list wrapped in this {@code ReadOnlyListProperty}
      */
-    public abstract void bindContentBidirectional(ObservableList<E> other);
+    public void bindContentBidirectional(ObservableList<E> other) {
+        BidirectionalContentBinding.bind(this, other);
+    }
 
     /**
      * Removes the bidirectional content binding that was established with
@@ -80,7 +85,9 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @throws IllegalArgumentException if {@code other} is the list wrapped in this {@code ReadOnlyListProperty}
      * @since 18
      */
-    public abstract void unbindContentBidirectional(ObservableList<E> other);
+    public void unbindContentBidirectional(ObservableList<E> other) {
+        BidirectionalContentBinding.unbind(this, other);
+    }
 
     /**
      * Removes the bidirectional content binding that was established with
@@ -100,7 +107,12 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @deprecated use {@link #unbindContentBidirectional(ObservableList)} instead
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContentBidirectional(Object other);
+    public void unbindContentBidirectional(Object other) {
+        Objects.requireNonNull(other);
+        if (other instanceof ObservableList<?>) {
+            BidirectionalContentBinding.unbind(this, (ObservableList<E>)other);
+        }
+    }
 
     /**
      * Creates a content binding between the {@link javafx.collections.ObservableList} that is wrapped
@@ -142,12 +154,24 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * If this property is not content-bound, calling this method has no effect.
      *
      * @param source the content binding source
-     * @throws NullPointerException if {@code source} is {@code null}
-     * @throws IllegalArgumentException if {@code source} is the list wrapped in this {@code ReadOnlyListProperty}
      * @deprecated use {@link #unbindContent()}
      */
     @Deprecated(since = "18", forRemoval = true)
     public abstract void unbindContent(Object source);
+
+    /**
+     * Returns whether this property is bound by a unidirectional content binding that was
+     * established by calling {@link #bindContent(ObservableList)}.
+     * <p>
+     * Note that this method does not account for bidirectional content bindings that were
+     * established by calling {@link #bindContentBidirectional(ObservableList)}.
+     *
+     * @return whether this property is bound by a unidirectional content binding
+     * @since 18
+     */
+    public boolean isContentBound() {
+        return false;
+    }
 
     @Override
     public boolean equals(Object obj) {

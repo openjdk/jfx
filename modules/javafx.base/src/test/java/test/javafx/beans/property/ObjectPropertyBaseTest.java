@@ -25,12 +25,14 @@
 
 package test.javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static test.util.MoreAssertions.*;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
@@ -204,11 +206,12 @@ public class ObjectPropertyBaseTest {
         changeListener.check(property, VALUE_1a, VALUE_1b, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
         final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1a);
         property.bind(v);
-        property.set(VALUE_1a);
+        var ex = assertThrows(RuntimeException.class, () -> property.set(VALUE_1a));
+        assertEquals(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(v), ex.getMessage());
     }
 
     @Test
@@ -275,9 +278,16 @@ public class ObjectPropertyBaseTest {
         changeListener.check(property, VALUE_1b, VALUE_1a, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
+        assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());
+    }
+
+    @Test
+    public void testBindToSelf() {
+        var ex = assertThrows(IllegalArgumentException.class, () -> property.bind(property));
+        assertEquals(BeanErrors.CANNOT_BIND_PROPERTY_TO_ITSELF.getMessage(property), ex.getMessage());
     }
 
     @Test
@@ -343,6 +353,34 @@ public class ObjectPropertyBaseTest {
         assertEquals(VALUE_1b, property.get());
         assertEquals(1, property.counter);
         invalidationListener.check(property, 1);
+    }
+    
+    @Test
+    public void testBindBidirectional_targetIsBound() {
+        var target = new SimpleObjectProperty<>(this, "target");
+        var source = new SimpleObjectProperty<>(this, "source");
+        target.bind(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
+    }
+
+    @Test
+    public void testBindBidirectional_sourceIsBound() {
+        var target = new SimpleObjectProperty<>(this, "target");
+        var source = new SimpleObjectProperty<>(this, "source");
+        var other = new SimpleObjectProperty<>(this, "other");
+        source.bind(other);
+        var ex = assertThrows(IllegalArgumentException.class, () -> target.bindBidirectional(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_BIDIRECTIONAL.getMessage(source), ex.getMessage());
+    }
+
+    @Test
+    public void testBind_targetIsBoundBidirectionally() {
+        var target = new SimpleObjectProperty<>(this, "target");
+        var source = new SimpleObjectProperty<>(this, "source");
+        target.bindBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bind(source));
+        assertEquals(BeanErrors.BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
     }
 
     @Test
@@ -442,22 +480,6 @@ public class ObjectPropertyBaseTest {
         @Override public Object getBean() { return bean; }
 
         @Override public String getName() { return name; }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBoundPropertyThrowsExceptionWhenBidirectionalBindingIsAdded() {
-        var target = new SimpleObjectProperty<String>();
-        var source = new SimpleObjectProperty<String>();
-        target.bind(source);
-        target.bindBidirectional(source);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testBidirectionalBoundPropertyThrowsExceptionWhenBindingIsAdded() {
-        var target = new SimpleObjectProperty<String>();
-        var source = new SimpleObjectProperty<String>();
-        target.bindBidirectional(source);
-        target.bind(source);
     }
 
 }

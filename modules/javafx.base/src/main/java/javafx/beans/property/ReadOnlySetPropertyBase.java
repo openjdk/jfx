@@ -25,15 +25,13 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.SetExpressionHelper;
 import javafx.beans.InvalidationListener;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-
-import java.util.Objects;
 
 /**
  * Base class for all readonly properties wrapping an {@link javafx.collections.ObservableSet}.
@@ -116,11 +114,9 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
         SetExpressionHelper.fireValueChangedEvent(helper, change);
     }
 
-        @Override
+    @Override
     public void bindContent(ObservableSet<E> source) {
-        Objects.requireNonNull(source, "Source cannot be null");
-        SetExpressionHelper.requireNotContentBoundBidirectional(helper);
-        Bindings.bindContent(this, source);
+        ContentBinding.bind(this, source, helper);
     }
 
     @Override
@@ -133,26 +129,30 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
 
     @Override
     public void unbindContent(Object source) {
-        Bindings.unbindContent(this, source);
+        if (source instanceof ObservableSet<?>) {
+            ContentBinding.unbind(this, (ObservableSet<? extends E>)source);
+        }
+    }
+
+    @Override
+    public boolean isContentBound() {
+        return SetExpressionHelper.getContentBinding(helper) != null;
     }
 
     @Override
     public void bindContentBidirectional(ObservableSet<E> other) {
-        Objects.requireNonNull(other, "Set cannot be null");
-        SetExpressionHelper.requireNotContentBound(helper);
-        Bindings.bindContentBidirectional(this, other);
+        BidirectionalContentBinding.bind(this, other);
     }
 
     @Override
     public void unbindContentBidirectional(ObservableSet<E> other) {
-        Objects.requireNonNull(other, "Set cannot be null");
-        Bindings.unbindContentBidirectional(this, other);
+        BidirectionalContentBinding.unbind(this, other);
     }
 
     @Override
     public void unbindContentBidirectional(Object other) {
         if (other instanceof ObservableSet<?>) {
-            unbindContentBidirectional((ObservableSet<E>) other);
+            BidirectionalContentBinding.unbind(this, (ObservableSet<E>)other);
         }
     }
 

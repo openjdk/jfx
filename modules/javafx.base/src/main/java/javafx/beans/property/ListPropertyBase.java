@@ -25,19 +25,19 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.ListExpressionHelper;
+import com.sun.javafx.property.PropertyHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import java.lang.ref.WeakReference;
-import java.util.Objects;
 
 /**
  * The class {@code ListPropertyBase} is the base class for a property
@@ -226,8 +226,6 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         }
     }
 
-
-
     /**
      * The method {@code invalidated()} can be overridden to receive
      * invalidation notifications. This is the preferred option in
@@ -253,9 +251,13 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
     @Override
     public void set(ObservableList<E> newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
-                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(this));
         }
+
+        if (isContentBound()) {
+            throw new IllegalStateException(BeanErrors.CANNOT_SET_CONTENT_BOUND_PROPERTY.getMessage(this));
+        }
+
         if (value != newValue) {
             final ObservableList<E> oldValue = value;
             value = newValue;
@@ -270,8 +272,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
     @Override
     public void bind(final ObservableValue<? extends ObservableList<E>> source) {
-        Objects.requireNonNull(source, "Cannot bind to null");
-        ListExpressionHelper.requireNotBoundBidirectional(helper);
+        PropertyHelper.checkBind(this, source, helper);
 
         if (source != observable) {
             unbind();
@@ -295,42 +296,28 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
     @Override
     public void bindContent(ObservableList<E> source) {
-        Objects.requireNonNull(source, "Source cannot be null");
-        ListExpressionHelper.requireNotContentBoundBidirectional(helper);
-        Bindings.bindContent(this, source);
+        ContentBinding.bind(this, source, helper);
     }
 
     @Override
     public void unbindContent() {
         ContentBinding binding = ListExpressionHelper.getContentBinding(helper);
-        if (binding != null) {
+        if (binding != null && binding.isTarget(this)) {
             binding.dispose();
         }
     }
 
     @Override
     public void unbindContent(Object source) {
-        Bindings.unbindContent(this, source);
-    }
-
-    @Override
-    public void bindContentBidirectional(ObservableList<E> other) {
-        Objects.requireNonNull(other, "List cannot be null");
-        ListExpressionHelper.requireNotContentBound(helper);
-        Bindings.bindContentBidirectional(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(ObservableList<E> other) {
-        Objects.requireNonNull(other, "List cannot be null");
-        Bindings.unbindContentBidirectional(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(Object other) {
-        if (other instanceof ObservableList<?>) {
-            unbindContentBidirectional((ObservableList<E>) other);
+        if (source instanceof ObservableList<?>) {
+            ContentBinding.unbind(this, (ObservableList<E>)source);
         }
+    }
+
+    @Override
+    public boolean isContentBound() {
+        ContentBinding binding = ListExpressionHelper.getContentBinding(helper);
+        return binding != null && binding.isTarget(this);
     }
 
     /**

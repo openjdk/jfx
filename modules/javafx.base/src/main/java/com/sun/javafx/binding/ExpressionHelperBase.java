@@ -27,21 +27,18 @@ package com.sun.javafx.binding;
 
 public abstract class ExpressionHelperBase {
 
-    public static void requireNotBoundBidirectional(ExpressionHelperBase helper) {
-        if (helper != null && helper.isBoundBidirectional()) {
-            throw new IllegalStateException(
-                "Cannot bind a property for which a bidirectional binding was established.");
-        }
-    }
-
     public static void fireValueChangedEvent(ExpressionHelperBase helper) {
         if (helper != null) {
             helper.fireValueChangedEvent();
         }
     }
 
+    public static boolean isBoundBidirectional(ExpressionHelperBase helper) {
+        return helper != null && helper.isBoundBidirectional();
+    }
 
     protected abstract boolean isBoundBidirectional();
+
     protected abstract void fireValueChangedEvent();
 
 }
