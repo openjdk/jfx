@@ -369,6 +369,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         }
         if (tableView != null && tableView.getSkin() instanceof TreeTableViewSkin) {
             treeTableViewSkin = (TreeTableViewSkin)tableView.getSkin();
+            // JDK-8144500:
+            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+            // that when it changes, we can appropriately add / remove cells that may or may not
+            // be required (because we remove all cells that are not visible).
             registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
         }
     }
