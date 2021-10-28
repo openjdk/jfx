@@ -153,7 +153,7 @@ public abstract class PopupWindow extends Window {
     private TreeShowingExpression treeShowingExpression;
 
     /**
-     * Creates a {@code PopupWindow}.
+     * Constructor for subclasses to call.
      */
     public PopupWindow() {
         final Pane popupRoot = new Pane();
