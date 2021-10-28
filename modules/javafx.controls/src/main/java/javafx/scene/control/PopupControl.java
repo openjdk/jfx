@@ -132,7 +132,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
      *
      * @return the id property
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     public final StringProperty idProperty() { return bridge.idProperty(); }
 
@@ -145,7 +145,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      * @param value  the id assigned to this {@code PopupControl} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     public final void setId(String value) { idProperty().set(value); }
 
@@ -158,7 +158,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      * @return the id assigned to this {@code PopupControl} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     @Override public final String getId() { return idProperty().get(); }
 
@@ -177,10 +177,10 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * HTML element. Note that, like the HTML style attribute, this
      * variable contains style properties and values and not the
      * selector portion of a style rule.
-     * A value of {@code null} is implicitly converted to an empty {@code String}.
+     * <p>A value of {@code null} is implicitly converted to an empty {@code String}.</p>
      *
      * @return the {@code style} property
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     public final StringProperty styleProperty() { return bridge.styleProperty(); }
 
@@ -193,7 +193,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * {@code Skin}. Every {@code Skin} maintains a back reference to the
      * {@code PopupControl}.
      * <p>
-     * A skin may be null.
+     * A skin may be {@code null}.
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() {
         return skin;
@@ -1127,9 +1127,9 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         }
 
         /**
-         * Constructs a default {@code CSSBridge}.
+         * Constructor for subclasses to call.
          */
-        public CSSBridge() {
+        protected CSSBridge() {
         }
 
         /**
