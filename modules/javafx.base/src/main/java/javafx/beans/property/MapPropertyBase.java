@@ -26,7 +26,6 @@
 package javafx.beans.property;
 
 import com.sun.javafx.beans.BeanErrors;
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.MapExpressionHelper;
 import com.sun.javafx.property.PropertyHelper;

@@ -133,7 +133,9 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @throws NullPointerException if {@code source} is {@code null}
      * @throws IllegalArgumentException if {@code source} is the list wrapped in this {@code ReadOnlyListProperty}
      */
-    public abstract void bindContent(ObservableList<E> source);
+    public void bindContent(ObservableList<E> source) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Removes the content binding that was established with {@link #bindContent(ObservableList)}.
@@ -157,7 +159,9 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @deprecated use {@link #unbindContent()}
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContent(Object source);
+    public void unbindContent(Object source) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Returns whether this property is bound by a unidirectional content binding that was

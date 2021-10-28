@@ -132,7 +132,9 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @throws NullPointerException if {@code source} is {@code null}
      * @throws IllegalArgumentException if {@code source} is the map wrapped in this {@code ReadOnlyMapProperty}
      */
-    public abstract void bindContent(ObservableMap<K, V> source);
+    public void bindContent(ObservableMap<K, V> source) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Deletes a content binding between the {@link javafx.collections.ObservableMap}, that is
@@ -154,7 +156,9 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @deprecated use {@link #unbindContent()} instead
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContent(Object object);
+    public void unbindContent(Object object) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Returns whether this property is bound by a unidirectional content binding that was

@@ -131,7 +131,9 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws NullPointerException if {@code source} is {@code null}
      * @throws IllegalArgumentException if {@code source} is the set wrapped in this {@code ReadOnlySetProperty}
      */
-    public abstract void bindContent(ObservableSet<E> source);
+    public void bindContent(ObservableSet<E> source) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Removes the content binding that was established with {@link #bindContent(ObservableSet)}.
@@ -157,7 +159,9 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @deprecated use {@link #unbindContent()}
      */
     @Deprecated(since = "18", forRemoval = true)
-    public abstract void unbindContent(Object source);
+    public void unbindContent(Object source) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Returns whether this property is bound by a unidirectional content binding that was
@@ -169,7 +173,9 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @return whether this property is unidirectionally content-bound
      * @since 18
      */
-    public abstract boolean isContentBound();
+    public boolean isContentBound() {
+        return false;
+    }
 
     @Override
     public boolean equals(Object obj) {

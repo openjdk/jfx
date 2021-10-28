@@ -38,6 +38,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 /**
  * The class {@code ListPropertyBase} is the base class for a property
@@ -309,6 +310,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
     @Override
     public void unbindContent(Object source) {
+        Objects.requireNonNull(source);
         if (source instanceof ObservableList<?>) {
             ContentBinding.unbind(this, (ObservableList<E>)source);
         }

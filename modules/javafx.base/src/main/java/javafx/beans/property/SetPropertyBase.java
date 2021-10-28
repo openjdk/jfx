@@ -26,7 +26,6 @@
 package javafx.beans.property;
 
 import com.sun.javafx.beans.BeanErrors;
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.SetExpressionHelper;
 import com.sun.javafx.property.PropertyHelper;
@@ -39,7 +38,6 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 
 import java.lang.ref.WeakReference;
-import java.util.Objects;
 
 /**
  * The class {@code SetPropertyBase} is the base class for a property

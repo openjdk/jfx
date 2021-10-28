@@ -25,13 +25,14 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.ListExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+
+import java.util.Objects;
 
 /**
  * Base class for all readonly properties wrapping an
@@ -121,13 +122,14 @@ public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E
     @Override
     public void unbindContent() {
         ContentBinding binding = ListExpressionHelper.getContentBinding(helper);
-        if (binding != null) {
+        if (binding != null && binding.isTarget(this)) {
             binding.dispose();
         }
     }
 
     @Override
     public void unbindContent(Object source) {
+        Objects.requireNonNull(source);
         if (source instanceof ObservableList<?>) {
             ContentBinding.unbind(this, (ObservableList<? extends E>)source);
         }
@@ -135,24 +137,8 @@ public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E
 
     @Override
     public boolean isContentBound() {
-        return ListExpressionHelper.getContentBinding(helper) != null;
-    }
-
-    @Override
-    public void bindContentBidirectional(ObservableList<E> other) {
-        BidirectionalContentBinding.bind(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(ObservableList<E> other) {
-        BidirectionalContentBinding.unbind(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(Object other) {
-        if (other instanceof ObservableList<?>) {
-            BidirectionalContentBinding.unbind(this, (ObservableList<E>)other);
-        }
+        ContentBinding binding = ListExpressionHelper.getContentBinding(helper);
+        return binding != null && binding.isTarget(this);
     }
 
 }

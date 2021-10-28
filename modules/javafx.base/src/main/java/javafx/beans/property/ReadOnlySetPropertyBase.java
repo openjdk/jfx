@@ -25,13 +25,14 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.SetExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
+
+import java.util.Objects;
 
 /**
  * Base class for all readonly properties wrapping an {@link javafx.collections.ObservableSet}.
@@ -122,13 +123,14 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
     @Override
     public void unbindContent() {
         ContentBinding binding = SetExpressionHelper.getContentBinding(helper);
-        if (binding != null) {
+        if (binding != null && binding.isTarget(this)) {
             binding.dispose();
         }
     }
 
     @Override
     public void unbindContent(Object source) {
+        Objects.requireNonNull(source);
         if (source instanceof ObservableSet<?>) {
             ContentBinding.unbind(this, (ObservableSet<? extends E>)source);
         }
@@ -136,24 +138,8 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
 
     @Override
     public boolean isContentBound() {
-        return SetExpressionHelper.getContentBinding(helper) != null;
-    }
-
-    @Override
-    public void bindContentBidirectional(ObservableSet<E> other) {
-        BidirectionalContentBinding.bind(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(ObservableSet<E> other) {
-        BidirectionalContentBinding.unbind(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(Object other) {
-        if (other instanceof ObservableSet<?>) {
-            BidirectionalContentBinding.unbind(this, (ObservableSet<E>)other);
-        }
+        ContentBinding binding = SetExpressionHelper.getContentBinding(helper);
+        return binding != null && binding.isTarget(this);
     }
 
 }

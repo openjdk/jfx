@@ -25,13 +25,14 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.BidirectionalContentBinding;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.MapExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
+
+import java.util.Objects;
 
 /**
  * Base class for all readonly properties wrapping an {@link javafx.collections.ObservableMap}.
@@ -120,13 +121,14 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
     @Override
     public void unbindContent() {
         ContentBinding binding = MapExpressionHelper.getContentBinding(helper);
-        if (binding != null) {
+        if (binding != null && binding.isTarget(this)) {
             binding.dispose();
         }
     }
 
     @Override
     public void unbindContent(Object object) {
+        Objects.requireNonNull(object);
         if (object instanceof ObservableMap<?, ?>) {
             ContentBinding.unbind(this, (ObservableMap<? extends K, ? extends V>)object);
         }
@@ -134,24 +136,8 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
 
     @Override
     public boolean isContentBound() {
-        return MapExpressionHelper.getContentBinding(helper) != null;
-    }
-
-    @Override
-    public void bindContentBidirectional(ObservableMap<K, V> other) {
-        BidirectionalContentBinding.bind(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(ObservableMap<K, V> other) {
-        BidirectionalContentBinding.unbind(this, other);
-    }
-
-    @Override
-    public void unbindContentBidirectional(Object other) {
-        if (other instanceof ObservableMap<?, ?>) {
-            BidirectionalContentBinding.unbind(this, (ObservableMap<K, V>)other);
-        }
+        ContentBinding binding = MapExpressionHelper.getContentBinding(helper);
+        return binding != null && binding.isTarget(this);
     }
 
 }

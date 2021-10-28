@@ -196,6 +196,9 @@ public abstract class ContentBinding implements WeakListener {
         }
     }
 
+    /**
+     * Returns whether the specified object is the target of the content binding (as opposed to the source).
+     */
     public abstract boolean isTarget(Object obj);
 
     public abstract void dispose();
