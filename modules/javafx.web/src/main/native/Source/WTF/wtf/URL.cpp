@@ -93,6 +93,27 @@ StringView URL::lastPathComponent() const
     return StringView(m_string).substring(start, end - start + 1);
 }
 
+bool URL::hasSpecialScheme() const
+{
+    // https://url.spec.whatwg.org/#special-scheme
+    return protocolIs("ftp")
+        || protocolIs("file")
+        || protocolIs("http")
+        || protocolIs("https")
+        || protocolIs("ws")
+        || protocolIs("wss");
+}
+
+unsigned URL::pathStart() const
+{
+    unsigned start = m_hostEnd + m_portLength;
+    if (start == m_schemeEnd + 1U
+        && start + 1 < m_string.length()
+        && m_string[start] == '/' && m_string[start + 1] == '.')
+        start += 2;
+    return start;
+}
+
 StringView URL::protocol() const
 {
     if (!m_isValid)
@@ -414,6 +435,18 @@ unsigned URL::credentialsEnd() const
     return end;
 }
 
+static bool forwardSlashHashOrQuestionMark(UChar c)
+{
+    return c == '/'
+        || c == '#'
+        || c == '?';
+}
+
+static bool slashHashOrQuestionMark(UChar c)
+{
+    return forwardSlashHashOrQuestionMark(c) || c == '\\';
+}
+
 void URL::setHost(StringView newHost)
 {
     if (!m_isValid)
@@ -421,6 +454,9 @@ void URL::setHost(StringView newHost)
 
     if (newHost.contains(':') && !newHost.startsWith('['))
         return;
+
+    if (auto index = newHost.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
+        newHost = newHost.substring(0, index);
 
     Vector<UChar, 512> encodedHostName;
     if (!appendEncodedHostname(encodedHostName, newHost))
@@ -598,7 +634,7 @@ void URL::removeFragmentIdentifier()
     if (!m_isValid)
         return;
 
-    m_string = m_string.left(m_queryEnd);
+        m_string = m_string.left(m_queryEnd);
 }
 
 void URL::removeQueryAndFragmentIdentifier()
@@ -641,7 +677,7 @@ void URL::setPath(StringView path)
 
     parse(makeString(
         StringView(m_string).left(pathStart()),
-        path.startsWith('/') ? "" : "/",
+        path.startsWith('/') || (path.startsWith('\\') && (hasSpecialScheme() || protocolIs("file"))) ? "" : "/",
         escapePathWithoutCopying(path),
         StringView(m_string).substring(m_pathEnd)
     ));
@@ -820,22 +856,22 @@ bool protocolIsInHTTPFamily(StringView url)
 
 const URL& aboutBlankURL()
 {
-    static NeverDestroyed<URL> staticBlankURL;
+    static LazyNeverDestroyed<URL> staticBlankURL;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [&] {
         static constexpr const char* aboutBlank = "about:blank";
-        staticBlankURL.get() = URL(URL(), StringImpl::createStaticStringImpl(aboutBlank, strlen(aboutBlank)));
+        staticBlankURL.construct(URL(), StringImpl::createStaticStringImpl(aboutBlank, strlen(aboutBlank)));
     });
     return staticBlankURL;
 }
 
 const URL& aboutSrcDocURL()
 {
-    static NeverDestroyed<URL> staticSrcDocURL;
+    static LazyNeverDestroyed<URL> staticSrcDocURL;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [&] {
         static constexpr const char* aboutSrcDoc = "about:srcdoc";
-        staticSrcDocURL.get() = URL(URL(), StringImpl::createStaticStringImpl(aboutSrcDoc, strlen(aboutSrcDoc)));
+        staticSrcDocURL.construct(URL(), StringImpl::createStaticStringImpl(aboutSrcDoc, strlen(aboutSrcDoc)));
     });
     return staticSrcDocURL;
 }
@@ -873,6 +909,7 @@ bool portAllowed(const URL& url)
         42,   // name
         43,   // nicname
         53,   // domain
+        69,   // TFTP
         77,   // priv-rjs
         79,   // finger
         87,   // ttylink
@@ -890,8 +927,10 @@ bool portAllowed(const URL& url)
         119,  // nntp
         123,  // NTP
         135,  // loc-srv / epmap
+        137,  // NetBIOS
         139,  // netbios
         143,  // IMAP2
+        161,  // SNMP
         179,  // BGP
         389,  // LDAP
         427,  // SLP (Also used by Apple Filing Protocol)
@@ -906,6 +945,7 @@ bool portAllowed(const URL& url)
         532,  // netnews
         540,  // UUCP
         548,  // afpovertcp [Apple addition]
+        554,  // rtsp
         556,  // remotefs
         563,  // NNTP+SSL
         587,  // ESMTP
@@ -913,6 +953,9 @@ bool portAllowed(const URL& url)
         636,  // LDAP+SSL
         993,  // IMAP+SSL
         995,  // POP3+SSL
+        1719, // H323 (RAS)
+        1720, // H323 (Q931)
+        1723, // H323 (H245)
         2049, // NFS
         3659, // apple-sasl / PasswordServer [Apple addition]
         4045, // lockd
@@ -920,6 +963,7 @@ bool portAllowed(const URL& url)
         5060, // SIP
         5061, // SIPS
         6000, // X11
+        6566, // SANE
         6665, // Alternate IRC [Apple addition]
         6666, // Alternate IRC [Apple addition]
         6667, // Standard IRC [Apple addition]
@@ -927,6 +971,7 @@ bool portAllowed(const URL& url)
         6669, // Alternate IRC [Apple addition]
         6679, // Alternate IRC SSL [Apple addition]
         6697, // IRC+SSL [Apple addition]
+        10080, // amanda
     };
 
     // If the port is not in the blocked port list, allow it.

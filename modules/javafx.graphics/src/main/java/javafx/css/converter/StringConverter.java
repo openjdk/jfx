@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,7 @@ import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 /**
- * String type converts embedded unicode characters
- *
+ * Converter for quoted strings which may have embedded unicode characters.
  * @since 9
  */
 public final class StringConverter extends StyleConverter<String, String> {
@@ -43,6 +42,10 @@ public final class StringConverter extends StyleConverter<String, String> {
         static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
+    /**
+     * Get the {@code StringConverter} instance.
+     * @return the {@code StringConverter} instance
+     */
     public static StyleConverter<String, String> getInstance() {
         return Holder.INSTANCE;
     }
@@ -65,9 +68,16 @@ public final class StringConverter extends StyleConverter<String, String> {
         return "StringConverter";
     }
 
+    /**
+     * Converter to convert a sequence of {@code String}s to an array of {@code String}s.
+     *
+     * @since 9
+     */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<String, String>[], String[]> {
-
-
+        /**
+         * Get the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
+         */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
         }

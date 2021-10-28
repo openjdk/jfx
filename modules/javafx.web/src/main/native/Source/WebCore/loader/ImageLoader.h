@@ -42,7 +42,7 @@ typedef EventSender<ImageLoader> ImageEventSender;
 
 enum class RelevantMutation : bool { Yes, No };
 
-class ImageLoader : public CachedImageClient {
+class ImageLoader : public CachedImageClient, public CanMakeWeakPtr<ImageLoader> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~ImageLoader();
@@ -81,7 +81,7 @@ public:
 
     void loadDeferredImage();
 
-    bool isDeferred() const { return m_lazyImageLoadState == LazyImageLoadState::Deferred; }
+    bool isDeferred() const { return m_lazyImageLoadState == LazyImageLoadState::Deferred || m_lazyImageLoadState == LazyImageLoadState::LoadImmediately; }
 
     Document& document() { return m_element.document(); }
 
@@ -90,6 +90,7 @@ protected:
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
 private:
+    void resetLazyImageLoading(Document&);
     enum class LazyImageLoadState : uint8_t { None, Deferred, LoadImmediately, FullImage };
 
     virtual void dispatchLoadEvent() = 0;
@@ -113,6 +114,8 @@ private:
     void decode();
 
     void timerFired();
+
+    VisibleInViewportState imageVisibleInViewport(const Document&) const override;
 
     Element& m_element;
     CachedResourceHandle<CachedImage> m_image;

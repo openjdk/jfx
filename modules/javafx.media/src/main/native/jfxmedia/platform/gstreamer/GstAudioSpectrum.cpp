@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -95,7 +95,7 @@ void CGstAudioSpectrum::SetBands(int bands, CBandsHolder* holder)
     g_object_set(m_pSpectrum, "bands", bands, NULL);
 
     CBandsHolder *old_holder = (CBandsHolder*)g_atomic_pointer_get(&m_pHolder);
-    g_atomic_pointer_compare_and_exchange((gpointer*)&m_pHolder, old_holder, holder);
+    g_atomic_pointer_compare_and_exchange((gpointer*)&m_pHolder, (gpointer)old_holder, (gpointer)holder);
     CBandsHolder::ReleaseRef(old_holder);
 }
 

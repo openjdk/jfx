@@ -110,23 +110,28 @@ RefPtr<FilterEffect> CSSFilter::buildReferenceFilter(RenderElement& renderer, Fi
         return nullptr;
     }
 
-    RefPtr<FilterEffect> effect;
-
     auto builder = makeUnique<SVGFilterBuilder>(&previousEffect);
     m_sourceAlpha = builder->getEffectById(SourceAlpha::effectName());
 
+    RefPtr<FilterEffect> effect;
+    Vector<Ref<FilterEffect>> referenceEffects;
+
     for (auto& effectElement : childrenOfType<SVGFilterPrimitiveStandardAttributes>(*filter)) {
         effect = effectElement.build(builder.get(), *this);
-        if (!effect)
-            continue;
+        if (!effect) {
+            LOG_WITH_STREAM(Filters, stream << "CSSFilter " << this << " buildReferenceFilter: failed to build effect from " << effectElement);
+            return nullptr;
+        }
 
         effectElement.setStandardAttributes(effect.get());
         if (effectElement.renderer())
-            effect->setOperatingColorSpace(effectElement.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? ColorSpace::LinearRGB : ColorSpace::SRGB);
+            effect->setOperatingColorSpace(effectElement.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB : DestinationColorSpace::SRGB);
 
         builder->add(effectElement.result(), effect);
-        m_effects.append(*effect);
+        referenceEffects.append(*effect);
     }
+
+    m_effects.appendVector(WTFMove(referenceEffects));
     return effect;
 }
 
@@ -221,11 +226,10 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
         case FilterOperation::INVERT: {
             auto& componentTransferOperation = downcast<BasicComponentTransferFilterOperation>(filterOperation);
             ComponentTransferFunction transferFunction;
-            transferFunction.type = FECOMPONENTTRANSFER_TYPE_TABLE;
-            Vector<float> transferParameters;
-            transferParameters.append(narrowPrecisionToFloat(componentTransferOperation.amount()));
-            transferParameters.append(narrowPrecisionToFloat(1 - componentTransferOperation.amount()));
-            transferFunction.tableValues = transferParameters;
+            transferFunction.type = FECOMPONENTTRANSFER_TYPE_LINEAR;
+            float amount = narrowPrecisionToFloat(componentTransferOperation.amount());
+            transferFunction.slope = 1 - 2 * amount;
+            transferFunction.intercept = amount;
 
             ComponentTransferFunction nullFunction;
             effect = FEComponentTransfer::create(*this, transferFunction, transferFunction, transferFunction, nullFunction);
@@ -237,11 +241,10 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
         case FilterOperation::OPACITY: {
             auto& componentTransferOperation = downcast<BasicComponentTransferFilterOperation>(filterOperation);
             ComponentTransferFunction transferFunction;
-            transferFunction.type = FECOMPONENTTRANSFER_TYPE_TABLE;
-            Vector<float> transferParameters;
-            transferParameters.append(0);
-            transferParameters.append(narrowPrecisionToFloat(componentTransferOperation.amount()));
-            transferFunction.tableValues = transferParameters;
+            transferFunction.type = FECOMPONENTTRANSFER_TYPE_LINEAR;
+            float amount = narrowPrecisionToFloat(componentTransferOperation.amount());
+            transferFunction.slope = amount;
+            transferFunction.intercept = 0;
 
             ComponentTransferFunction nullFunction;
             effect = FEComponentTransfer::create(*this, nullFunction, nullFunction, nullFunction, transferFunction);
@@ -290,7 +293,7 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
             // Unlike SVG Filters and CSSFilterImages, filter functions on the filter
             // property applied here should not clip to their primitive subregions.
             effect->setClipsToBounds(consumer == FilterConsumer::FilterFunction);
-            effect->setOperatingColorSpace(ColorSpace::SRGB);
+            effect->setOperatingColorSpace(DestinationColorSpace::SRGB);
 
             if (filterOperation.type() != FilterOperation::REFERENCE) {
                 effect->inputEffects().append(WTFMove(previousEffect));
@@ -306,7 +309,8 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
 
     setMaxEffectRects(m_sourceDrawingRegion);
 #if USE(CORE_IMAGE)
-    m_filterRenderer = FilterEffectRenderer::tryCreate(renderer.settings().coreImageAcceleratedFilterRenderEnabled(), m_effects.last().get());
+    if (!m_filterRenderer)
+        m_filterRenderer = FilterEffectRenderer::tryCreate(renderer.settings().coreImageAcceleratedFilterRenderEnabled(), m_effects.last().get());
 #endif
     return true;
 }
@@ -338,7 +342,8 @@ void CSSFilter::allocateBackingStoreIfNeeded(const GraphicsContext& targetContex
         setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), &targetContext, filterScale()));
 #else
         UNUSED_PARAM(targetContext);
-        setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), filterScale()));
+        RenderingMode mode = m_filterRenderer ? RenderingMode::Accelerated : renderingMode();
+        setSourceImage(ImageBuffer::create(logicalSize, mode, filterScale()));
 #endif
     }
     m_graphicsBufferAttached = true;
@@ -372,12 +377,12 @@ void CSSFilter::apply()
     if (m_filterRenderer) {
         m_filterRenderer->applyEffects(effect);
         if (m_filterRenderer->hasResult()) {
-            effect.transformResultColorSpace(ColorSpace::SRGB);
+            effect.transformResultColorSpace(DestinationColorSpace::SRGB);
             return;
         }
     }
     effect.apply();
-    effect.transformResultColorSpace(ColorSpace::SRGB);
+    effect.transformResultColorSpace(DestinationColorSpace::SRGB);
 }
 
 LayoutRect CSSFilter::computeSourceImageRectForDirtyRect(const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect)

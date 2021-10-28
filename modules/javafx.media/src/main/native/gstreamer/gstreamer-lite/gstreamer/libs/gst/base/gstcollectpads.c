@@ -24,7 +24,6 @@
  * SECTION:gstcollectpads
  * @title: GstCollectPads
  * @short_description: manages a set of pads that operate in collect mode
- * @see_also:
  *
  * Manages a set of pads that operate in collect mode. This means that control
  * is given to the manager of this object when all pads have data.
@@ -172,16 +171,13 @@ static gboolean gst_collect_pads_query_default_internal (GstCollectPads *
   g_mutex_unlock (GST_COLLECT_PADS_GET_EVT_LOCK (pads));          \
 } G_STMT_END
 #define GST_COLLECT_PADS_EVT_WAIT_TIMED(pads, cookie, timeout) G_STMT_START { \
-  GTimeVal __tv; \
-  \
-  g_get_current_time (&tv); \
-  g_time_val_add (&tv, timeout); \
+  gint64 end_time = g_get_monotonic_time () + timeout; \
   \
   g_mutex_lock (GST_COLLECT_PADS_GET_EVT_LOCK (pads));            \
   /* should work unless a lot of event'ing and thread starvation */\
   while (cookie == ((GstCollectPads *) pads)->priv->evt_cookie)         \
-    g_cond_timed_wait (GST_COLLECT_PADS_GET_EVT_COND (pads),            \
-        GST_COLLECT_PADS_GET_EVT_LOCK (pads), &tv);                    \
+    g_cond_wait_until (GST_COLLECT_PADS_GET_EVT_COND (pads),            \
+        GST_COLLECT_PADS_GET_EVT_LOCK (pads), end_time);                    \
   cookie = ((GstCollectPads *) pads)->priv->evt_cookie;                 \
   g_mutex_unlock (GST_COLLECT_PADS_GET_EVT_LOCK (pads));          \
 } G_STMT_END
@@ -409,7 +405,7 @@ unref_data (GstCollectData * data)
   if (data->priv->destroy_notify)
     data->priv->destroy_notify (data);
 
-  g_object_unref (data->pad);
+  gst_object_unref (data->pad);
   if (data->buffer) {
     gst_buffer_unref (data->buffer);
   }

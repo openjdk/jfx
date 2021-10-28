@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,7 +176,7 @@ size_t ImageDecoderJava::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
+PlatformImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
 {
     JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
@@ -195,7 +195,26 @@ NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, Subsampling
         idx));
     WTF::CheckAndClearException(env);
 
-    return RQRef::create(frame);
+    if(!frame)
+        return 0;
+
+    static jmethodID midGetSize = env->GetMethodID(
+        PG_GetImageFrameClass(env),
+        "getSize",
+        "()[I");
+    ASSERT(midGetSize);
+    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
+                        jobject(frame),
+                        midGetSize));
+    if (!jsize) {
+        return ImageJava::create(RQRef::create(frame), nullptr, 0, 0);
+    }
+
+    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
+    IntSize frameSize(size[0], size[1]);
+    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
+
+    return ImageJava::create(RQRef::create(frame), nullptr, frameSize.width(), frameSize.height());
 }
 
 WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
@@ -321,10 +340,10 @@ Optional<IntPoint> ImageDecoderJava::hotSpot() const
     return { };
 }
 
-ImageOrientation ImageDecoderJava::frameOrientationAtIndex(size_t) const
+ImageDecoder::FrameMetadata ImageDecoderJava::frameMetadataAtIndex(size_t) const
 {
     notImplemented();
-    return ImageOrientation(ImageOrientation::None);
+    return { };
 }
 
 size_t ImageDecoderJava::bytesDecodedToDetermineProperties() const

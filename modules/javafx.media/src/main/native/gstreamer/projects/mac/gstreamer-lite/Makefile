@@ -248,6 +248,8 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-good/gst/isomp4/gstisoff.c \
             gst-plugins-good/gst/isomp4/qtdemux_dump.c \
             gst-plugins-good/gst/isomp4/qtdemux_lang.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tags.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tree.c \
             gst-plugins-good/gst/isomp4/qtdemux_types.c \
             gst-plugins-good/gst/spectrum/gstspectrum.c \
             gst-plugins-good/gst/wavparse/gstwavparse.c \

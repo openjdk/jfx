@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,129 +26,22 @@
 #include "config.h"
 #include "ColorConversion.h"
 
-#include "ColorComponents.h"
-#include "ColorMatrix.h"
-#include "ColorTypes.h"
+#include <wtf/MathExtras.h>
 
 namespace WebCore {
 
-float linearToRGBColorComponent(float c)
+// MARK: HSL conversions.
+
+struct HSLHueCalculationResult {
+    float hue;
+    float min;
+    float max;
+    float chroma;
+};
+
+static HSLHueCalculationResult calculateHSLHue(const SRGBA<float>& color)
 {
-    if (c < 0.0031308f)
-        return 12.92f * c;
-
-    return clampTo<float>(1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f, 0, 1);
-}
-
-float rgbToLinearColorComponent(float c)
-{
-    if (c <= 0.04045f)
-        return c / 12.92f;
-
-    return clampTo<float>(std::pow((c + 0.055f) / 1.055f, 2.4f), 0, 1);
-}
-
-LinearSRGBA<float> toLinearSRGBA(const SRGBA<float>& color)
-{
-    return {
-        rgbToLinearColorComponent(color.red),
-        rgbToLinearColorComponent(color.green),
-        rgbToLinearColorComponent(color.blue),
-        color.alpha
-    };
-}
-
-SRGBA<float> toSRGBA(const LinearSRGBA<float>& color)
-{
-    return {
-        linearToRGBColorComponent(color.red),
-        linearToRGBColorComponent(color.green),
-        linearToRGBColorComponent(color.blue),
-        color.alpha
-    };
-}
-
-LinearDisplayP3<float> toLinearDisplayP3(const DisplayP3<float>& color)
-{
-    return {
-        rgbToLinearColorComponent(color.red),
-        rgbToLinearColorComponent(color.green),
-        rgbToLinearColorComponent(color.blue),
-        color.alpha
-    };
-}
-
-DisplayP3<float> toDisplayP3(const LinearDisplayP3<float>& color)
-{
-    return {
-        linearToRGBColorComponent(color.red),
-        linearToRGBColorComponent(color.green),
-        linearToRGBColorComponent(color.blue),
-        color.alpha
-    };
-}
-
-static LinearSRGBA<float> toLinearSRGBA(const XYZA<float>& color)
-{
-    // https://en.wikipedia.org/wiki/SRGB
-    // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-    constexpr ColorMatrix<3, 3> xyzToLinearSRGBMatrix {
-         3.2404542f, -1.5371385f, -0.4985314f,
-        -0.9692660f,  1.8760108f,  0.0415560f,
-         0.0556434f, -0.2040259f,  1.0572252f
-    };
-    return asLinearSRGBA(xyzToLinearSRGBMatrix.transformedColorComponents(asColorComponents(color)));
-}
-
-static XYZA<float> toXYZ(const LinearSRGBA<float>& color)
-{
-    // https://en.wikipedia.org/wiki/SRGB
-    // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-    constexpr ColorMatrix<3, 3> linearSRGBToXYZMatrix {
-        0.4124564f,  0.3575761f,  0.1804375f,
-        0.2126729f,  0.7151522f,  0.0721750f,
-        0.0193339f,  0.1191920f,  0.9503041f
-    };
-    return asXYZA(linearSRGBToXYZMatrix.transformedColorComponents(asColorComponents(color)));
-}
-
-static LinearDisplayP3<float> toLinearDisplayP3(const XYZA<float>& color)
-{
-    // https://drafts.csswg.org/css-color/#color-conversion-code
-    constexpr ColorMatrix<3, 3> xyzToLinearDisplayP3Matrix {
-         2.493496911941425f,  -0.9313836179191239f, -0.4027107844507168f,
-        -0.8294889695615747f,  1.7626640603183463f,  0.0236246858419436f,
-         0.0358458302437845f, -0.0761723892680418f,  0.9568845240076872f
-    };
-    return asLinearDisplayP3(xyzToLinearDisplayP3Matrix.transformedColorComponents(asColorComponents(color)));
-}
-
-static XYZA<float> toXYZ(const LinearDisplayP3<float>& color)
-{
-    // https://drafts.csswg.org/css-color/#color-conversion-code
-    constexpr ColorMatrix<3, 3> linearDisplayP3ToXYZMatrix {
-        0.4865709486482162f, 0.2656676931690931f, 0.198217285234363f,
-        0.2289745640697488f, 0.6917385218365064f, 0.079286914093745f,
-        0.0f,                0.0451133818589026f, 1.043944368900976f
-    };
-    return asXYZA(linearDisplayP3ToXYZMatrix.transformedColorComponents(asColorComponents(color)));
-}
-
-SRGBA<float> toSRGBA(const DisplayP3<float>& color)
-{
-    return toSRGBA(toLinearSRGBA(toXYZ(toLinearDisplayP3(color))));
-}
-
-DisplayP3<float> toDisplayP3(const SRGBA<float>& color)
-{
-    return toDisplayP3(toLinearDisplayP3(toXYZ(toLinearSRGBA(color))));
-}
-
-HSLA<float> toHSLA(const SRGBA<float>& color)
-{
-    // http://en.wikipedia.org/wiki/HSL_color_space.
     auto [r, g, b, alpha] = color;
-
     auto [min, max] = std::minmax({ r, g, b });
     float chroma = max - min;
 
@@ -165,78 +58,232 @@ HSLA<float> toHSLA(const SRGBA<float>& color)
     if (hue >= 360.0f)
         hue -= 360.0f;
 
-    hue /= 360.0f;
+    return { hue, min, max, chroma };
+}
 
-    float lightness = 0.5f * (max + min);
+HSLA<float> ColorConversion<HSLA<float>, SRGBA<float>>::convert(const SRGBA<float>& color)
+{
+    // https://drafts.csswg.org/css-color-4/#hsl-to-rgb
+    auto [r, g, b, alpha] = color;
+    auto [hue, min, max, chroma] = calculateHSLHue(color);
+
+    float lightness = (0.5f * (max + min)) * 100.0f;
     float saturation;
     if (!chroma)
         saturation = 0;
-    else if (lightness <= 0.5f)
-        saturation = (chroma / (max + min));
+    else if (lightness <= 50.0f)
+        saturation = (chroma / (max + min)) * 100.0f;
     else
-        saturation = (chroma / (2.0f - (max + min)));
+        saturation = (chroma / (2.0f - (max + min))) * 100.0f;
 
-    return {
-        hue,
-        saturation,
-        lightness,
-        alpha
-    };
+    return { hue, saturation, lightness, alpha };
 }
 
-// Hue is in the range 0-6, other args in 0-1.
-static float calcHue(float temp1, float temp2, float hueVal)
+SRGBA<float> ColorConversion<SRGBA<float>, HSLA<float>>::convert(const HSLA<float>& color)
 {
-    if (hueVal < 0.0f)
-        hueVal += 6.0f;
-    else if (hueVal >= 6.0f)
-        hueVal -= 6.0f;
-    if (hueVal < 1.0f)
-        return temp1 + (temp2 - temp1) * hueVal;
-    if (hueVal < 3.0f)
-        return temp2;
-    if (hueVal < 4.0f)
-        return temp1 + (temp2 - temp1) * (4.0f - hueVal);
-    return temp1;
-}
-
-// Explanation of this algorithm can be found in the CSS Color 4 Module
-// specification at https://drafts.csswg.org/css-color-4/#hsl-to-rgb with
-// further explanation available at http://en.wikipedia.org/wiki/HSL_color_space
-SRGBA<float> toSRGBA(const HSLA<float>& color)
-{
+    // https://drafts.csswg.org/css-color-4/#hsl-to-rgb
     auto [hue, saturation, lightness, alpha] = color;
 
-    // Convert back to RGB.
     if (!saturation) {
-        return {
-            lightness,
-            lightness,
-            lightness,
-            alpha
-        };
+        auto grey = lightness / 100.0f;
+        return { grey, grey, grey, alpha };
     }
 
-    float temp2 = lightness <= 0.5f ? lightness * (1.0f + saturation) : lightness + saturation - lightness * saturation;
-    float temp1 = 2.0f * lightness - temp2;
+    // hueToRGB() wants hue in the 0-6 range.
+    auto normalizedHue = (hue / 360.0f) * 6.0f;
+    auto normalizedLightness = lightness / 100.0f;
+    auto normalizedSaturation = saturation / 100.0f;
 
-    hue *= 6.0f; // calcHue() wants hue in the 0-6 range.
+    auto hueForRed = normalizedHue + 2.0f;
+    auto hueForGreen = normalizedHue;
+    auto hueForBlue = normalizedHue - 2.0f;
+    if (hueForRed > 6.0f)
+        hueForRed -= 6.0f;
+    else if (hueForBlue < 0.0f)
+        hueForBlue += 6.0f;
+
+    float temp2 = normalizedLightness <= 0.5f ? normalizedLightness * (1.0f + normalizedSaturation) : normalizedLightness + normalizedSaturation - normalizedLightness * normalizedSaturation;
+    float temp1 = 2.0f * normalizedLightness - temp2;
+
+    // Hue is in the range 0-6, other args in 0-1.
+    auto hueToRGB = [](float temp1, float temp2, float hue) {
+        if (hue < 1.0f)
+            return temp1 + (temp2 - temp1) * hue;
+        if (hue < 3.0f)
+            return temp2;
+        if (hue < 4.0f)
+            return temp1 + (temp2 - temp1) * (4.0f - hue);
+        return temp1;
+    };
+
     return {
-        calcHue(temp1, temp2, hue + 2.0f),
-        calcHue(temp1, temp2, hue),
-        calcHue(temp1, temp2, hue - 2.0f),
+        hueToRGB(temp1, temp2, hueForRed),
+        hueToRGB(temp1, temp2, hueForGreen),
+        hueToRGB(temp1, temp2, hueForBlue),
         alpha
     };
 }
 
-SRGBA<float> toSRGBA(const CMYKA<float>& color)
+// MARK: HWB conversions.
+
+HWBA<float> ColorConversion<HWBA<float>, SRGBA<float>>::convert(const SRGBA<float>& color)
 {
-    auto [c, m, y, k, a] = color;
-    float colors = 1 - k;
-    float r = colors * (1.0f - c);
-    float g = colors * (1.0f - m);
-    float b = colors * (1.0f - y);
-    return { r, g, b, a };
+    // https://drafts.csswg.org/css-color-4/#rgb-to-hwb
+    auto [hue, min, max, chroma] = calculateHSLHue(color);
+    auto whiteness = min * 100.0f;
+    auto blackness = (1.0f - max) * 100.0f;
+
+    return { hue, whiteness, blackness, color.alpha };
+}
+
+SRGBA<float> ColorConversion<SRGBA<float>, HWBA<float>>::convert(const HWBA<float>& color)
+{
+    // https://drafts.csswg.org/css-color-4/#hwb-to-rgb
+    auto [hue, whiteness, blackness, alpha] = color;
+
+    if (whiteness + blackness == 100.0f) {
+        auto grey = whiteness / 100.0f;
+        return { grey, grey, grey, alpha };
+    }
+
+    // hueToRGB() wants hue in the 0-6 range.
+    auto normalizedHue = (hue / 360.0f) * 6.0f;
+
+    auto hueForRed = normalizedHue + 2.0f;
+    auto hueForGreen = normalizedHue;
+    auto hueForBlue = normalizedHue - 2.0f;
+    if (hueForRed > 6.0f)
+        hueForRed -= 6.0f;
+    else if (hueForBlue < 0.0f)
+        hueForBlue += 6.0f;
+
+    auto normalizedWhiteness = whiteness / 100.0f;
+    auto normalizedBlackness = blackness / 100.0f;
+
+    // This is the hueToRGB function in convertColor<SRGBA<float>>(const HSLA&) with temp1 == 0
+    // and temp2 == 1 strength reduced through it.
+    auto hueToRGB = [](float hue) {
+        if (hue < 1.0f)
+            return hue;
+        if (hue < 3.0f)
+            return 1.0f;
+        if (hue < 4.0f)
+            return 4.0f - hue;
+        return 0.0f;
+    };
+
+    auto applyWhitenessBlackness = [](float component, auto whiteness, auto blackness) {
+        return (component * (1.0f - whiteness - blackness)) + whiteness;
+    };
+
+    return {
+        applyWhitenessBlackness(hueToRGB(hueForRed), normalizedWhiteness, normalizedBlackness),
+        applyWhitenessBlackness(hueToRGB(hueForGreen), normalizedWhiteness, normalizedBlackness),
+        applyWhitenessBlackness(hueToRGB(hueForBlue), normalizedWhiteness, normalizedBlackness),
+        alpha
+    };
+}
+
+// MARK: Lab conversions.
+
+static constexpr float LABe = 216.0f / 24389.0f;
+static constexpr float LABk = 24389.0f / 27.0f;
+static constexpr float D50WhiteValues[] = { 0.96422f, 1.0f, 0.82521f };
+
+XYZA<float, WhitePoint::D50> ColorConversion<XYZA<float, WhitePoint::D50>, Lab<float>>::convert(const Lab<float>& color)
+{
+    float f1 = (color.lightness + 16.0f) / 116.0f;
+    float f0 = f1 + (color.a / 500.0f);
+    float f2 = f1 - (color.b / 200.0f);
+
+    auto computeXAndZ = [](float t) {
+        float tCubed = t * t * t;
+        if (tCubed > LABe)
+            return tCubed;
+
+        return (116.0f * t - 16.0f) / LABk;
+    };
+
+    auto computeY = [](float t) {
+        if (t > (LABk * LABe)) {
+            float value = (t + 16.0) / 116.0;
+            return value * value * value;
+        }
+
+        return t / LABk;
+    };
+
+    float x = D50WhiteValues[0] * computeXAndZ(f0);
+    float y = D50WhiteValues[1] * computeY(color.lightness);
+    float z = D50WhiteValues[2] * computeXAndZ(f2);
+
+    return { x, y, z, color.alpha };
+}
+
+Lab<float> ColorConversion<Lab<float>, XYZA<float, WhitePoint::D50>>::convert(const XYZA<float, WhitePoint::D50>& color)
+{
+    float x = color.x / D50WhiteValues[0];
+    float y = color.y / D50WhiteValues[1];
+    float z = color.z / D50WhiteValues[2];
+
+    auto fTransform = [](float value) {
+        return value > LABe ? std::cbrt(value) : (LABk * value + 16.0f) / 116.0f;
+    };
+
+    float f0 = fTransform(x);
+    float f1 = fTransform(y);
+    float f2 = fTransform(z);
+
+    float lightness = (116.0f * f1) - 16.0f;
+    float a = 500.0f * (f0 - f1);
+    float b = 200.0f * (f1 - f2);
+
+    return { lightness, a, b, color.alpha };
+}
+
+
+// MARK: LCH conversions.
+
+LCHA<float> ColorConversion<LCHA<float>, Lab<float>>::convert(const Lab<float>& color)
+{
+    // https://www.w3.org/TR/css-color-4/#lab-to-lch
+    float hue = rad2deg(atan2(color.b, color.a));
+
+    return {
+        color.lightness,
+        std::hypot(color.a, color.b),
+        hue >= 0 ? hue : hue + 360,
+        color.alpha
+    };
+}
+
+Lab<float> ColorConversion<Lab<float>, LCHA<float>>::convert(const LCHA<float>& color)
+{
+    // https://www.w3.org/TR/css-color-4/#lch-to-lab
+    float hueAngleRadians = deg2rad(color.hue);
+
+    return {
+        color.lightness,
+        color.chroma * std::cos(hueAngleRadians),
+        color.chroma * std::sin(hueAngleRadians),
+        color.alpha
+    };
+}
+
+// MARK: SRGBA<uint8_t> conversions.
+
+SRGBA<float> ColorConversion<SRGBA<float>, SRGBA<uint8_t>>::convert(const SRGBA<uint8_t>& color)
+{
+    return makeFromComponents<SRGBA<float>>(asColorComponents(color).map([](uint8_t value) -> float {
+        return value / 255.0f;
+    }));
+}
+
+SRGBA<uint8_t> ColorConversion<SRGBA<uint8_t>, SRGBA<float>>::convert(const SRGBA<float>& color)
+{
+    return makeFromComponents<SRGBA<uint8_t>>(asColorComponents(color).map([](float value) -> uint8_t {
+        return std::clamp(std::lround(value * 255.0f), 0l, 255l);
+    }));
 }
 
 } // namespace WebCore

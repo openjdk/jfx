@@ -63,7 +63,6 @@ void CharacterData::setData(const String& data)
     Ref<CharacterData> protectedThis(*this);
 
     setDataAndUpdate(nonNullData, 0, oldLength, nonNullData.length());
-    document().textRemoved(*this, 0, oldLength);
 }
 
 ExceptionOr<String> CharacterData::substringData(unsigned offset, unsigned count)
@@ -106,7 +105,7 @@ unsigned CharacterData::parserAppendData(const String& string, unsigned offset, 
     if (is<Text>(*this) && parentNode())
         downcast<Text>(*this).updateRendererAfterContentChange(oldLength, 0);
 
-    notifyParentAfterChange(ContainerNode::ChildChangeSource::Parser);
+    notifyParentAfterChange(ContainerNode::ChildChange::Source::Parser);
 
     auto mutationRecipients = MutationObserverInterestGroup::createForCharacterDataMutation(*this);
     if (UNLIKELY(mutationRecipients))
@@ -117,12 +116,7 @@ unsigned CharacterData::parserAppendData(const String& string, unsigned offset, 
 
 void CharacterData::appendData(const String& data)
 {
-    String newStr = m_data;
-    newStr.append(data);
-
-    setDataAndUpdate(newStr, m_data.length(), 0, data.length());
-
-    // FIXME: Should we call textInserted here?
+    setDataAndUpdate(m_data + data, m_data.length(), 0, data.length(), UpdateLiveRanges::No);
 }
 
 ExceptionOr<void> CharacterData::insertData(unsigned offset, const String& data)
@@ -130,12 +124,9 @@ ExceptionOr<void> CharacterData::insertData(unsigned offset, const String& data)
     if (offset > length())
         return Exception { IndexSizeError };
 
-    String newStr = m_data;
-    newStr.insert(data, offset);
-
-    setDataAndUpdate(newStr, offset, 0, data.length());
-
-    document().textInserted(*this, offset, data.length());
+    String newData = m_data;
+    newData.insert(data, offset);
+    setDataAndUpdate(newData, offset, 0, data.length());
 
     return { };
 }
@@ -147,12 +138,9 @@ ExceptionOr<void> CharacterData::deleteData(unsigned offset, unsigned count)
 
     count = std::min(count, length() - offset);
 
-    String newStr = m_data;
-    newStr.remove(offset, count);
-
-    setDataAndUpdate(newStr, offset, count, 0);
-
-    document().textRemoved(*this, offset, count);
+    String newData = m_data;
+    newData.remove(offset, count);
+    setDataAndUpdate(newData, offset, count, 0);
 
     return { };
 }
@@ -164,15 +152,10 @@ ExceptionOr<void> CharacterData::replaceData(unsigned offset, unsigned count, co
 
     count = std::min(count, length() - offset);
 
-    String newStr = m_data;
-    newStr.remove(offset, count);
-    newStr.insert(data, offset);
-
-    setDataAndUpdate(newStr, offset, count, data.length());
-
-    // update the markers for spell checking and grammar checking
-    document().textRemoved(*this, offset, count);
-    document().textInserted(*this, offset, data.length());
+    String newData = m_data;
+    newData.remove(offset, count);
+    newData.insert(data, offset);
+    setDataAndUpdate(newData, offset, count, data.length());
 
     return { };
 }
@@ -188,10 +171,15 @@ ExceptionOr<void> CharacterData::setNodeValue(const String& nodeValue)
     return { };
 }
 
-void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength)
+void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges shouldUpdateLiveRanges)
 {
     String oldData = m_data;
     m_data = newData;
+
+    if (oldLength && shouldUpdateLiveRanges != UpdateLiveRanges::No)
+        document().textRemoved(*this, offsetOfReplacedData, oldLength);
+    if (newLength && shouldUpdateLiveRanges != UpdateLiveRanges::No)
+        document().textInserted(*this, offsetOfReplacedData, newLength);
 
     ASSERT(!renderer() || is<Text>(*this));
     if (is<Text>(*this) && parentNode())
@@ -203,12 +191,12 @@ void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfRep
     if (document().frame())
         document().frame()->selection().textWasReplaced(this, offsetOfReplacedData, oldLength, newLength);
 
-    notifyParentAfterChange(ContainerNode::ChildChangeSource::API);
+    notifyParentAfterChange(ContainerNode::ChildChange::Source::API);
 
     dispatchModifiedEvent(oldData);
 }
 
-void CharacterData::notifyParentAfterChange(ContainerNode::ChildChangeSource source)
+void CharacterData::notifyParentAfterChange(ContainerNode::ChildChange::Source source)
 {
     document().incDOMTreeVersion();
 
@@ -216,7 +204,7 @@ void CharacterData::notifyParentAfterChange(ContainerNode::ChildChangeSource sou
         return;
 
     ContainerNode::ChildChange change = {
-        ContainerNode::TextChanged,
+        ContainerNode::ChildChange::Type::TextChanged,
         ElementTraversal::previousSibling(*this),
         ElementTraversal::nextSibling(*this),
         source

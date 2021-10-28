@@ -588,6 +588,54 @@ TransformationMatrix::TransformationMatrix(const AffineTransform& t)
     setMatrix(t.a(), t.b(), t.c(), t.d(), t.e(), t.f());
 }
 
+
+// FIXME: Once https://bugs.webkit.org/show_bug.cgi?id=220856 is addressed we can reuse this function in TransformationMatrix::recompose4().
+TransformationMatrix TransformationMatrix::fromQuaternion(double qx, double qy, double qz, double qw)
+{
+    double xx = qx * qx;
+    double yy = qy * qy;
+    double zz = qz * qz;
+    double xz = qx * qz;
+    double xy = qx * qy;
+    double yz = qy * qz;
+    double xw = qw * qx;
+    double yw = qw * qy;
+    double zw = qw * qz;
+
+    return TransformationMatrix(1 - 2 * (yy + zz), 2 * (xy + zw), 2 * (xz - yw), 0,
+        2 * (xy - zw), 1 - 2 * (xx + zz), 2 * (yz + xw), 0,
+        2 * (xz + yw), 2 * (yz - xw), 1 - 2 * (xx + yy), 0,
+        0, 0, 0, 1);
+}
+
+
+TransformationMatrix TransformationMatrix::fromProjection(double fovUp, double fovDown, double fovLeft, double fovRight, double depthNear, double depthFar)
+{
+    double upTan = tan(fovUp);
+    double downTan = tan(fovDown);
+    double leftTan = tan(fovLeft);
+    double rightTan = tan(fovRight);
+    double xScale = 2.0 / (leftTan + rightTan);
+    double yScale = 2.0 / (upTan + downTan);
+    double invDepth = 1.0 / (depthNear - depthFar);
+
+    return TransformationMatrix(xScale, 0.0f, 0.0f, 0.0f,
+        0.0f, yScale, 0.0f, 0.0f,
+        (leftTan - rightTan) * xScale * -0.5, (upTan - downTan) * yScale * 0.5, (depthNear + depthFar) * invDepth, -1.0f,
+        0.0f, 0.0f, (2.0f * depthFar * depthNear) * invDepth, 0.0f);
+}
+
+TransformationMatrix TransformationMatrix::fromProjection(double fovy, double aspect, double depthNear, double depthFar)
+{
+    double f = 1.0f / tanf(fovy / 2);
+    double invDepth = 1.0f / (depthNear - depthFar);
+
+    return TransformationMatrix(f / aspect, 0.0f, 0.0f, 0.0f,
+        0.0f, f, 0.0f, 0.0f,
+        0.0f, 0.0f, (depthFar + depthNear) * invDepth, -1.0f,
+        0.0f, 0.0f, (2.0f * depthFar * depthNear) * invDepth, 0.0f);
+}
+
 TransformationMatrix& TransformationMatrix::scale(double s)
 {
     return scaleNonUniform(s, s);
@@ -759,20 +807,70 @@ LayoutRect TransformationMatrix::mapRect(const LayoutRect& r) const
 
 FloatRect TransformationMatrix::mapRect(const FloatRect& r) const
 {
-    if (isIdentityOrTranslation()) {
+    auto type = this->type();
+    if (type == Type::IdentityOrTranslation) {
         FloatRect mappedRect(r);
         mappedRect.move(static_cast<float>(m_matrix[3][0]), static_cast<float>(m_matrix[3][1]));
         return mappedRect;
     }
 
-    FloatQuad result;
-
+    float minX = r.x();
+    float minY = r.y();
     float maxX = r.maxX();
     float maxY = r.maxY();
-    result.setP1(internalMapPoint(FloatPoint(r.x(), r.y())));
-    result.setP2(internalMapPoint(FloatPoint(maxX, r.y())));
+
+    if (type == Type::Affine) {
+        double a = m11();
+        double b = m12();
+        double c = m21();
+        double d = m22();
+
+        double minResultX;
+        double minResultY;
+        double maxResultX;
+        double maxResultY;
+
+        if (a > 0) {
+            maxResultX = a * maxX;
+            minResultX = a * minX;
+        } else {
+            maxResultX = a * minX;
+            minResultX = a * maxX;
+        }
+
+        if (b > 0) {
+            maxResultY = b * maxX;
+            minResultY = b * minX;
+        } else {
+            maxResultY = b * minX;
+            minResultY = b * maxX;
+        }
+
+        if (c > 0) {
+            maxResultX += c * maxY;
+            minResultX += c * minY;
+        } else {
+            maxResultX += c * minY;
+            minResultX += c * maxY;
+        }
+
+        if (d > 0) {
+            maxResultY += d * maxY;
+            minResultY += d * minY;
+        } else {
+            maxResultY += d * minY;
+            minResultY += d * maxY;
+        }
+
+        return FloatRect(minResultX + m41(), minResultY + m42(), maxResultX - minResultX, maxResultY - minResultY);
+    }
+
+    FloatQuad result;
+
+    result.setP1(internalMapPoint(FloatPoint(minX, minY)));
+    result.setP2(internalMapPoint(FloatPoint(maxX, minY)));
     result.setP3(internalMapPoint(FloatPoint(maxX, maxY)));
-    result.setP4(internalMapPoint(FloatPoint(r.x(), maxY)));
+    result.setP4(internalMapPoint(FloatPoint(minX, maxY)));
 
     return result.boundingBox();
 }
@@ -906,6 +1004,18 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
         mat.m_matrix[3][3] = 1.0;
     }
     multiply(mat);
+    return *this;
+}
+
+TransformationMatrix& TransformationMatrix::rotate(double angle)
+{
+    if (!std::fmod(angle, 360))
+        return *this;
+
+    angle = deg2rad(angle);
+    double sinZ = sin(angle);
+    double cosZ = cos(angle);
+    multiply({ cosZ, sinZ, -sinZ, cosZ, 0, 0 });
     return *this;
 }
 
@@ -1462,20 +1572,17 @@ void TransformationMatrix::multVecMatrix(double x, double y, double z, double& r
 
 bool TransformationMatrix::isInvertible() const
 {
-    if (isIdentityOrTranslation())
+    auto type = this->type();
+    if (type == Type::IdentityOrTranslation)
         return true;
 
-    double det = WebCore::determinant4x4(m_matrix);
-
-    if (fabs(det) < SMALL_NUMBER)
-        return false;
-
-    return true;
+    return fabs(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix)) >= SMALL_NUMBER;
 }
 
 Optional<TransformationMatrix> TransformationMatrix::inverse() const
 {
-    if (isIdentityOrTranslation()) {
+    auto type = this->type();
+    if (type == Type::IdentityOrTranslation) {
         // identity matrix
         if (m_matrix[3][0] == 0 && m_matrix[3][1] == 0 && m_matrix[3][2] == 0)
             return TransformationMatrix();
@@ -1485,6 +1592,28 @@ Optional<TransformationMatrix> TransformationMatrix::inverse() const
                                     0, 1, 0, 0,
                                     0, 0, 1, 0,
                                     -m_matrix[3][0], -m_matrix[3][1], -m_matrix[3][2], 1);
+    }
+
+    if (type == Type::Affine) {
+        double a = m11();
+        double b = m12();
+        double c = m21();
+        double d = m22();
+        double e = m41();
+        double f = m42();
+        double determinant = a * d - b * c;
+        if (fabs(determinant) < SMALL_NUMBER)
+            return WTF::nullopt;
+
+        double inverseDeterminant = 1 / determinant;
+        return {{
+            d * inverseDeterminant,
+            -b * inverseDeterminant,
+            -c * inverseDeterminant,
+            a * inverseDeterminant,
+            (c * f - d * e) * inverseDeterminant,
+            (b * e - a * f) * inverseDeterminant
+        }};
     }
 
     TransformationMatrix invMat;
@@ -1599,6 +1728,14 @@ void TransformationMatrix::blend4(const TransformationMatrix& from, double progr
 
 void TransformationMatrix::blend(const TransformationMatrix& from, double progress)
 {
+    if (!progress) {
+        *this = from;
+        return;
+    }
+
+    if (progress == 1)
+        return;
+
     if (from.isIdentity() && isIdentity())
         return;
 

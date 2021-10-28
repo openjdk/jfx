@@ -30,6 +30,7 @@
 #include "gasyncqueueprivate.h"
 #include "gmain.h"
 #include "gtestutils.h"
+#include "gthreadprivate.h"
 #include "gtimer.h"
 #include "gutils.h"
 
@@ -113,6 +114,20 @@ static gint max_unused_threads = 2;
 static gint kill_unused_threads = 0;
 static guint max_idle_time = 15 * 1000;
 
+static GThreadSchedulerSettings shared_thread_scheduler_settings;
+static gboolean have_shared_thread_scheduler_settings = FALSE;
+
+typedef struct
+{
+  /* Either thread or error are set in the end. Both transfer-full. */
+  GThreadPool *pool;
+  GThread *thread;
+  GError *error;
+} SpawnThreadData;
+
+static GCond spawn_thread_cond;
+static GAsyncQueue *spawn_thread_queue;
+
 static void             g_thread_pool_queue_push_unlocked (GRealThreadPool  *pool,
                                                            gpointer          data);
 static void             g_thread_pool_free_internal       (GRealThreadPool  *pool);
@@ -146,7 +161,7 @@ g_thread_pool_wait_for_new_pool (void)
   gint last_wakeup_thread_serial;
   gboolean have_relayed_thread_marker = FALSE;
 
-  local_max_unused_threads = g_atomic_int_get (&max_unused_threads);
+  local_max_unused_threads = (guint) g_atomic_int_get (&max_unused_threads);
   local_max_idle_time = g_atomic_int_get (&max_idle_time);
   last_wakeup_thread_serial = g_atomic_int_get (&wakeup_thread_serial);
 
@@ -210,7 +225,7 @@ g_thread_pool_wait_for_new_pool (void)
               DEBUG_MSG (("thread %p updating to new limits.",
                           g_thread_self ()));
 
-              local_max_unused_threads = g_atomic_int_get (&max_unused_threads);
+              local_max_unused_threads = (guint) g_atomic_int_get (&max_unused_threads);
               local_max_idle_time = g_atomic_int_get (&max_idle_time);
               last_wakeup_thread_serial = local_wakeup_thread_serial;
 
@@ -278,6 +293,37 @@ g_thread_pool_wait_for_new_task (GRealThreadPool *pool)
   return task;
 }
 
+static gpointer
+g_thread_pool_spawn_thread (gpointer data)
+{
+  while (TRUE)
+    {
+      SpawnThreadData *spawn_thread_data;
+      GThread *thread = NULL;
+      GError *error = NULL;
+      const gchar *prgname = g_get_prgname ();
+      gchar name[16] = "pool";
+
+      if (prgname)
+        g_snprintf (name, sizeof (name), "pool-%s", prgname);
+
+      g_async_queue_lock (spawn_thread_queue);
+      /* Spawn a new thread for the given pool and wake the requesting thread
+       * up again with the result. This new thread will have the scheduler
+       * settings inherited from this thread and in extension of the thread
+       * that created the first non-exclusive thread-pool. */
+      spawn_thread_data = g_async_queue_pop_unlocked (spawn_thread_queue);
+      thread = g_thread_try_new (name, g_thread_pool_thread_proxy, spawn_thread_data->pool, &error);
+
+      spawn_thread_data->thread = g_steal_pointer (&thread);
+      spawn_thread_data->error = g_steal_pointer (&error);
+
+      g_cond_broadcast (&spawn_thread_cond);
+      g_async_queue_unlock (spawn_thread_queue);
+    }
+
+  return NULL;
+}
 
 static gpointer
 g_thread_pool_thread_proxy (gpointer data)
@@ -410,7 +456,43 @@ g_thread_pool_start_thread (GRealThreadPool  *pool,
         g_snprintf (name, sizeof (name), "pool-%s", prgname);
 
       /* No thread was found, we have to start a new one */
-      thread = g_thread_try_new (name, g_thread_pool_thread_proxy, pool, error);
+      if (pool->pool.exclusive)
+        {
+          /* For exclusive thread-pools this is directly called from new() and
+           * we simply start new threads that inherit the scheduler settings
+           * from the current thread.
+           */
+          thread = g_thread_try_new (name, g_thread_pool_thread_proxy, pool, error);
+        }
+      else
+        {
+          /* For non-exclusive thread-pools this can be called at any time
+           * when a new thread is needed. We make sure to create a new thread
+           * here with the correct scheduler settings: either by directly
+           * providing them if supported by the GThread implementation or by
+           * going via our helper thread.
+           */
+          if (have_shared_thread_scheduler_settings)
+            {
+              thread = g_thread_new_internal (name, g_thread_proxy, g_thread_pool_thread_proxy, pool, 0, &shared_thread_scheduler_settings, error);
+            }
+          else
+            {
+              SpawnThreadData spawn_thread_data = { (GThreadPool *) pool, NULL, NULL };
+
+              g_async_queue_lock (spawn_thread_queue);
+
+              g_async_queue_push_unlocked (spawn_thread_queue, &spawn_thread_data);
+
+              while (!spawn_thread_data.thread && !spawn_thread_data.error)
+                g_cond_wait (&spawn_thread_cond, _g_async_queue_get_mutex (spawn_thread_queue));
+
+              thread = spawn_thread_data.thread;
+              if (!thread)
+                g_propagate_error (error, g_steal_pointer (&spawn_thread_data.error));
+              g_async_queue_unlock (spawn_thread_queue);
+            }
+        }
 
       if (thread == NULL)
         return FALSE;
@@ -445,6 +527,10 @@ g_thread_pool_start_thread (GRealThreadPool  *pool,
  * newly created or reused thread now executes the function @func
  * with the two arguments. The first one is the parameter to
  * g_thread_pool_push() and the second one is @user_data.
+ *
+ * Pass g_get_num_processors() to @max_threads to create as many threads as
+ * there are logical processors on the system. This will not pin each thread to
+ * a specific processor.
  *
  * The parameter @exclusive determines whether the thread pool owns
  * all threads exclusive or shares them with other thread pools.
@@ -498,6 +584,42 @@ g_thread_pool_new (GFunc      func,
   G_LOCK (init);
   if (!unused_thread_queue)
       unused_thread_queue = g_async_queue_new ();
+
+  /* For the very first non-exclusive thread-pool we remember the thread
+   * scheduler settings of the thread creating the pool, if supported by
+   * the GThread implementation. This is then used for making sure that
+   * all threads created on the non-exclusive thread-pool have the same
+   * scheduler settings, and more importantly don't just inherit them
+   * from the thread that just happened to push a new task and caused
+   * a new thread to be created.
+   *
+   * Not doing so could cause real-time priority threads or otherwise
+   * threads with problematic scheduler settings to be part of the
+   * non-exclusive thread-pools.
+   *
+   * If this is not supported by the GThread implementation then we here
+   * start a thread that will inherit the scheduler settings from this
+   * very thread and whose only purpose is to spawn new threads with the
+   * same settings for use by the non-exclusive thread-pools.
+   *
+   *
+   * For non-exclusive thread-pools this is not required as all threads
+   * are created immediately below and are running forever, so they will
+   * automatically inherit the scheduler settings from this very thread.
+   */
+  if (!exclusive && !have_shared_thread_scheduler_settings && !spawn_thread_queue)
+    {
+      if (g_thread_get_scheduler_settings (&shared_thread_scheduler_settings))
+        {
+          have_shared_thread_scheduler_settings = TRUE;
+        }
+      else
+        {
+          spawn_thread_queue = g_async_queue_new ();
+          g_cond_init (&spawn_thread_cond);
+          g_thread_new ("pool-spawner", g_thread_pool_spawn_thread, NULL);
+        }
+    }
   G_UNLOCK (init);
 
   if (retval->pool.exclusive)
@@ -743,10 +865,10 @@ g_thread_pool_unprocessed (GThreadPool *pool)
  * processing a task. Instead at least all still running threads
  * can finish their tasks before the @pool is freed.
  *
- * If @wait_ is %TRUE, the functions does not return before all
+ * If @wait_ is %TRUE, this function does not return before all
  * tasks to be processed (dependent on @immediate, whether all
  * or only the currently running) are ready.
- * Otherwise the function returns immediately.
+ * Otherwise this function returns immediately.
  *
  * After calling this function @pool must not be used anymore.
  */
@@ -899,7 +1021,7 @@ g_thread_pool_get_max_unused_threads (void)
 guint
 g_thread_pool_get_num_unused_threads (void)
 {
-  return g_atomic_int_get (&unused_threads);
+  return (guint) g_atomic_int_get (&unused_threads);
 }
 
 /**
@@ -1022,7 +1144,7 @@ g_thread_pool_set_max_idle_time (guint interval)
 
   g_atomic_int_set (&max_idle_time, interval);
 
-  i = g_atomic_int_get (&unused_threads);
+  i = (guint) g_atomic_int_get (&unused_threads);
   if (i > 0)
     {
       g_atomic_int_inc (&wakeup_thread_serial);
@@ -1058,5 +1180,5 @@ g_thread_pool_set_max_idle_time (guint interval)
 guint
 g_thread_pool_get_max_idle_time (void)
 {
-  return g_atomic_int_get (&max_idle_time);
+  return (guint) g_atomic_int_get (&max_idle_time);
 }

@@ -33,9 +33,11 @@ namespace JSC {
 class JSDataView final : public JSArrayBufferView {
 public:
     using Base = JSArrayBufferView;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesAnyFormOfGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     static constexpr unsigned elementSize = 1;
+
+    static constexpr TypedArrayContentType contentType = TypedArrayContentType::None;
 
     template<typename CellType, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -64,7 +66,7 @@ public:
     RefPtr<DataView> possiblySharedTypedImpl();
     RefPtr<DataView> unsharedTypedImpl();
 
-    static const TypedArrayType TypedArrayStorageType = TypeDataView;
+    static constexpr TypedArrayType TypedArrayStorageType = TypeDataView;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
@@ -72,13 +74,6 @@ public:
 
 private:
     JSDataView(VM&, ConstructionContext&, ArrayBuffer*);
-
-    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
-    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
-    static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-
-    static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
 
     ArrayBuffer* m_buffer;
 };

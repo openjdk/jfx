@@ -74,32 +74,32 @@
 
 
 
-#define ISALPHA(Type) IS ((Type),       \
-          OR (G_UNICODE_LOWERCASE_LETTER, \
-          OR (G_UNICODE_UPPERCASE_LETTER, \
-          OR (G_UNICODE_TITLECASE_LETTER, \
-          OR (G_UNICODE_MODIFIER_LETTER,  \
-          OR (G_UNICODE_OTHER_LETTER,   0))))))
+#define ISALPHA(Type)   IS ((Type),             \
+                OR (G_UNICODE_LOWERCASE_LETTER, \
+                OR (G_UNICODE_UPPERCASE_LETTER, \
+                OR (G_UNICODE_TITLECASE_LETTER, \
+                OR (G_UNICODE_MODIFIER_LETTER,  \
+                OR (G_UNICODE_OTHER_LETTER,     0))))))
 
-#define ISALDIGIT(Type) IS ((Type),       \
-          OR (G_UNICODE_DECIMAL_NUMBER, \
-          OR (G_UNICODE_LETTER_NUMBER,  \
-          OR (G_UNICODE_OTHER_NUMBER,   \
-          OR (G_UNICODE_LOWERCASE_LETTER, \
-          OR (G_UNICODE_UPPERCASE_LETTER, \
-          OR (G_UNICODE_TITLECASE_LETTER, \
-          OR (G_UNICODE_MODIFIER_LETTER,  \
-          OR (G_UNICODE_OTHER_LETTER,   0)))))))))
+#define ISALDIGIT(Type) IS ((Type),             \
+                OR (G_UNICODE_DECIMAL_NUMBER,   \
+                OR (G_UNICODE_LETTER_NUMBER,    \
+                OR (G_UNICODE_OTHER_NUMBER,     \
+                OR (G_UNICODE_LOWERCASE_LETTER, \
+                OR (G_UNICODE_UPPERCASE_LETTER, \
+                OR (G_UNICODE_TITLECASE_LETTER, \
+                OR (G_UNICODE_MODIFIER_LETTER,  \
+                OR (G_UNICODE_OTHER_LETTER,     0)))))))))
 
-#define ISMARK(Type)  IS ((Type),       \
-          OR (G_UNICODE_NON_SPACING_MARK, \
-          OR (G_UNICODE_SPACING_MARK, \
-          OR (G_UNICODE_ENCLOSING_MARK, 0))))
+#define ISMARK(Type)    IS ((Type),             \
+                OR (G_UNICODE_NON_SPACING_MARK, \
+                OR (G_UNICODE_SPACING_MARK, \
+                OR (G_UNICODE_ENCLOSING_MARK,   0))))
 
-#define ISZEROWIDTHTYPE(Type) IS ((Type),     \
-          OR (G_UNICODE_NON_SPACING_MARK, \
-          OR (G_UNICODE_ENCLOSING_MARK, \
-          OR (G_UNICODE_FORMAT,   0))))
+#define ISZEROWIDTHTYPE(Type)   IS ((Type),         \
+                OR (G_UNICODE_NON_SPACING_MARK, \
+                OR (G_UNICODE_ENCLOSING_MARK,   \
+                OR (G_UNICODE_FORMAT,       0))))
 
 /**
  * g_unichar_isalnum:
@@ -362,7 +362,7 @@ g_unichar_istitle (gunichar c)
  * g_unichar_isxdigit:
  * @c: a Unicode character.
  *
- * Determines if a character is a hexidecimal digit.
+ * Determines if a character is a hexadecimal digit.
  *
  * Returns: %TRUE if the character is a hexadecimal digit
  **/
@@ -624,7 +624,7 @@ g_unichar_totitle (gunichar c)
 {
   unsigned int i;
 
-  /* We handle U+0000 explicitely because some elements in
+  /* We handle U+0000 explicitly because some elements in
    * title_table[i][1] may be null. */
   if (c == 0)
     return c;
@@ -664,7 +664,7 @@ g_unichar_digit_value (gunichar c)
  * g_unichar_xdigit_value:
  * @c: a Unicode character
  *
- * Determines the numeric value of a character as a hexidecimal
+ * Determines the numeric value of a character as a hexadecimal
  * digit.
  *
  * Returns: If @c is a hex digit (according to
@@ -1058,12 +1058,12 @@ real_tolower (const gchar *str,
          * The test here matches that in ICU.
          */
         if (ISALPHA (next_type)) /* Lu,Ll,Lt,Lm,Lo */
-    val = 0x3c3;  /* GREEK SMALL SIGMA */
+        val = 0x3c3;    /* GREEK SMALL SIGMA */
         else
-    val = 0x3c2;  /* GREEK SMALL FINAL SIGMA */
+        val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
       }
     else
-      val = 0x3c2;  /* GREEK SMALL FINAL SIGMA */
+        val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
 
     len += g_unichar_to_utf8 (val, out_buffer ? out_buffer + len : NULL);
   }
@@ -1493,6 +1493,12 @@ static const guint32 iso15924_tags[] =
     PACK ('N','a','n','d'), /* G_UNICODE_SCRIPT_NANDINAGARI */
     PACK ('H','m','n','p'), /* G_UNICODE_SCRIPT_NYIAKENG_PUACHUE_HMONG */
     PACK ('W','c','h','o'), /* G_UNICODE_SCRIPT_WANCHO */
+
+  /* Unicode 13.0 additions */
+    PACK ('C', 'h', 'r', 's'), /* G_UNICODE_SCRIPT_CHORASMIAN */
+    PACK ('D', 'i', 'a', 'k'), /* G_UNICODE_SCRIPT_DIVES_AKURU */
+    PACK ('K', 'i', 't', 's'), /* G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT */
+    PACK ('Y', 'e', 'z', 'i'), /* G_UNICODE_SCRIPT_YEZIDI */
 #undef PACK
 };
 

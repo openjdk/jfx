@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,18 +78,25 @@ class MouseState {
         buttonsPressed.removeInt(button);
     }
 
-    /** Returns the Glass window on which the coordinates of this state are located.
+    /**
+     * Returns the Glass window on which the coordinates of this state are located.
      * @param recalculateCache true if the cached value for the target window
      *                         should be recalculated; false if the cached
      *                         value should be used to determine the result
      *                         of this method.
+     * @param fallback if the original window is null, or if no window can
+     * be found, return the fallback window
      * @return the MonocleWindow at the top of the stack at the coordinates
-     * described by this state object.
+     * described by this state object, or the fallback window in case the
+     * current window is null or no window can be found for the supplied coordinates.
      */
-    MonocleWindow getWindow(boolean recalculateCache) {
-        if (window == null || recalculateCache) {
+    MonocleWindow getWindow(boolean recalculateCache, MonocleWindow fallback) {
+        if (recalculateCache) {
             window = (MonocleWindow)
                     MonocleWindowManager.getInstance().getWindowForLocation(x, y);
+        }
+        if (window == null) {
+            window = fallback;
         }
         return window;
     }

@@ -22,7 +22,8 @@
                 "mediasource",
                 "webrtc",
                 "itp-debug",
-                "ad-click-attribution",
+                "private-click-measurement",
+                "payment-request",
                 "other"
             ],
             "description": "Channels for different types of log messages."

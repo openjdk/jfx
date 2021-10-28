@@ -47,6 +47,10 @@ GST_DEBUG_CATEGORY_STATIC (gst_video_filter_debug);
 G_DEFINE_ABSTRACT_TYPE (GstVideoFilter, gst_video_filter,
     GST_TYPE_BASE_TRANSFORM);
 
+/* cached quark to avoid contention on the global quark table lock */
+#define META_TAG_VIDEO meta_tag_video_quark
+static GQuark meta_tag_video_quark;
+
 /* Answer the allocation query downstream. */
 static gboolean
 gst_video_filter_propose_allocation (GstBaseTransform * trans,
@@ -344,8 +348,8 @@ invalid_buffer:
 }
 
 static gboolean
-gst_video_filter_transform_meta (GstBaseTransform * trans, GstBuffer * inbuf,
-    GstMeta * meta, GstBuffer * outbuf)
+gst_video_filter_transform_meta (GstBaseTransform * trans, GstBuffer * outbuf,
+    GstMeta * meta, GstBuffer * inbuf)
 {
   const GstMetaInfo *info = meta->info;
   const gchar *const *tags;
@@ -353,12 +357,11 @@ gst_video_filter_transform_meta (GstBaseTransform * trans, GstBuffer * inbuf,
   tags = gst_meta_api_type_get_tags (info->api);
 
   if (!tags || (g_strv_length ((gchar **) tags) == 1
-          && gst_meta_api_type_has_tag (info->api,
-              g_quark_from_string (GST_META_TAG_VIDEO_STR))))
+          && gst_meta_api_type_has_tag (info->api, META_TAG_VIDEO)))
     return TRUE;
 
-  return GST_BASE_TRANSFORM_CLASS (parent_class)->transform_meta (trans, inbuf,
-      meta, outbuf);
+  return GST_BASE_TRANSFORM_CLASS (parent_class)->transform_meta (trans, outbuf,
+      meta, inbuf);
 }
 
 static void
@@ -386,6 +389,8 @@ gst_video_filter_class_init (GstVideoFilterClass * g_class)
 
   GST_DEBUG_CATEGORY_INIT (gst_video_filter_debug, "videofilter", 0,
       "videofilter");
+
+  meta_tag_video_quark = g_quark_from_static_string (GST_META_TAG_VIDEO_STR);
 }
 
 static void

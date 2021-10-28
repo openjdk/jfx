@@ -49,6 +49,9 @@
 #define RESBUND_H
 
 #include "unicode/utypes.h"
+
+#if U_SHOW_CPLUSPLUS_API
+
 #include "unicode/uobject.h"
 #include "unicode/ures.h"
 #include "unicode/unistr.h"
@@ -283,7 +286,7 @@ public:
     /**
      * Checks whether the resource has another element to iterate over.
      *
-     * @return TRUE if there are more elements, FALSE if there is no more elements
+     * @return true if there are more elements, false if there is no more elements
      * @stable ICU 2.0
      */
     UBool
@@ -489,4 +492,7 @@ private:
 };
 
 U_NAMESPACE_END
+
+#endif /* U_SHOW_CPLUSPLUS_API */
+
 #endif

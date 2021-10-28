@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
@@ -32,7 +33,7 @@ import org.gradle.api.tasks.TaskAction
 class ExportedSymbolsTask extends DefaultTask {
     @OutputFile File outputFile;
     @InputDirectory File libDir;
-    @Optional List<String> excludes;
+    @Optional @Input List<String> excludes;
 
 
     @TaskAction void generateExportedSymbols() {

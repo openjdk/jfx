@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,9 @@ import com.sun.javafx.iio.gif.GIFImageLoaderFactory;
 import com.sun.javafx.iio.ios.IosImageLoaderFactory;
 import com.sun.javafx.iio.jpeg.JPEGImageLoaderFactory;
 import com.sun.javafx.iio.png.PNGImageLoaderFactory;
+import com.sun.javafx.util.DataURI;
+
 import java.io.ByteArrayInputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -286,7 +287,7 @@ public class ImageStorage {
 
     /**
      * Load all images present in the specified input. For more details refer to
-     * {@link #loadAll(java.io.InputStream, com.sun.javafx.iio.ImageLoadListener, int, int, boolean, boolean)}.
+     * {@link #loadAll(InputStream, ImageLoadListener, double, double, boolean, float, boolean)}.
      */
     public static ImageFrame[] loadAll(String input, ImageLoadListener listener,
             double width, double height, boolean preserveAspectRatio,
@@ -309,11 +310,26 @@ public class ImageStorage {
                         String name2x = ImageTools.getScaledImageName(input);
                         theStream = ImageTools.createInputStream(name2x);
                         imgPixelScale = 2.0f;
-                    } catch (IOException e) {
+                    } catch (IOException ignored) {
                     }
                 }
+
                 if (theStream == null) {
-                    theStream = ImageTools.createInputStream(input);
+                    try {
+                        theStream = ImageTools.createInputStream(input);
+                    } catch (IOException ex) {
+                        DataURI dataUri = DataURI.tryParse(input);
+                        if (dataUri != null) {
+                            String mimeType = dataUri.getMimeType();
+                            if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
+                                throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
+                            }
+
+                            theStream = new ByteArrayInputStream(dataUri.getData());
+                        } else {
+                            throw ex;
+                        }
+                    }
                 }
 
                 if (isIOS) {
@@ -321,7 +337,7 @@ public class ImageStorage {
                 } else {
                     loader = getLoaderBySignature(theStream, listener);
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new ImageStorageException(e.getMessage(), e);
             }
 
@@ -338,7 +354,7 @@ public class ImageStorage {
                 if (theStream != null) {
                     theStream.close();
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -164,6 +164,11 @@ Path Font::platformPathForGlyph(Glyph) const
 {
     notImplemented();
     return Path();
+}
+
+bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variation) const
+{
+    return variation ? false : glyphForCharacter(character);
 }
 
 }

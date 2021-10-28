@@ -24,16 +24,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGNumberList {
+[
+    Exposed=Window
+] interface SVGNumberList {
     readonly attribute unsigned long length;
     readonly attribute unsigned long numberOfItems;
 
-    [MayThrowException] void clear();
+    [MayThrowException] undefined clear();
     [MayThrowException] SVGNumber initialize(SVGNumber newItem);
     [MayThrowException] getter SVGNumber getItem(unsigned long index);
     [MayThrowException] SVGNumber insertItemBefore(SVGNumber newItem, unsigned long index);
     [MayThrowException] SVGNumber replaceItem(SVGNumber newItem, unsigned long index);
     [MayThrowException] SVGNumber removeItem(unsigned long index);
     [MayThrowException] SVGNumber appendItem(SVGNumber newItem);
-    [MayThrowException] setter void (unsigned long index, SVGNumber newItem);
+    setter undefined (unsigned long index, SVGNumber newItem);
 };

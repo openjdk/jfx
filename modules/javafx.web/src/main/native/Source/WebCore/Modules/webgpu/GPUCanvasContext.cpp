@@ -75,7 +75,7 @@ Ref<WebGPUSwapChain> GPUCanvasContext::configureSwapChain(const WebGPUSwapChainD
     return newSwapChain;
 }
 
-CALayer* GPUCanvasContext::platformLayer() const
+PlatformLayer* GPUCanvasContext::platformLayer() const
 {
     if (m_swapChain && m_swapChain->swapChain())
         return m_swapChain->swapChain()->platformLayer();
@@ -90,10 +90,18 @@ void GPUCanvasContext::reshape(int width, int height)
     notifyCanvasContentChanged();
 }
 
-void GPUCanvasContext::markLayerComposited()
+void GPUCanvasContext::prepareForDisplayWithPaint()
 {
-    if (m_swapChain && m_swapChain->swapChain())
+    m_isDisplayingWithPaint = true;
+}
+
+void GPUCanvasContext::paintRenderingResultsToCanvas()
+{
+    // FIXME: Unimplemented.
+    if (m_isDisplayingWithPaint && m_swapChain && m_swapChain->swapChain()) {
         m_swapChain->swapChain()->present();
+        m_isDisplayingWithPaint = false;
+    }
 }
 
 } // namespace WebCore

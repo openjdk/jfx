@@ -72,7 +72,7 @@ void WheelEventTestMonitor::setTestCallbackAndStartMonitoring(bool expectWheelEn
     UNUSED_PARAM(expectMomentumEnd);
 #endif
 
-    m_page.scheduleRenderingUpdate();
+    m_page.scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
 
     LOG_WITH_STREAM(WheelEventTestMonitor, stream << "  WheelEventTestMonitor::setTestCallbackAndStartMonitoring - expect end/cancel " << expectWheelEndOrCancel << ", expect momentum end " << expectMomentumEnd);
 }
@@ -95,8 +95,10 @@ void WheelEventTestMonitor::removeDeferralForReason(ScrollableAreaIdentifier ide
     LockHolder lock(m_mutex);
 
     auto it = m_deferCompletionReasons.find(identifier);
-    if (it == m_deferCompletionReasons.end())
+    if (it == m_deferCompletionReasons.end()) {
+        LOG_WITH_STREAM(WheelEventTestMonitor, stream << "      (=) WheelEventTestMonitor::removeDeferralForReason: failed to find defer for id=" << identifier << ", reason=" << reason);
         return;
+    }
 
     LOG_WITH_STREAM(WheelEventTestMonitor, stream << "      (=) WheelEventTestMonitor::removeDeferralForReason: id=" << identifier << ", reason=" << reason);
     it->value.remove(reason);
@@ -110,10 +112,10 @@ void WheelEventTestMonitor::removeDeferralForReason(ScrollableAreaIdentifier ide
 void WheelEventTestMonitor::receivedWheelEvent(const PlatformWheelEvent& event)
 {
 #if ENABLE(KINETIC_SCROLLING)
-    if (event.phase() == PlatformWheelEventPhaseEnded || event.phase() == PlatformWheelEventPhaseCancelled)
+    if (event.phase() == PlatformWheelEventPhase::Ended || event.phase() == PlatformWheelEventPhase::Cancelled)
         m_receivedWheelEndOrCancel = true;
 
-    if (event.momentumPhase() == PlatformWheelEventPhaseEnded)
+    if (event.momentumPhase() == PlatformWheelEventPhase::Ended)
         m_receivedMomentumEnd = true;
 #endif
 }
@@ -121,13 +123,13 @@ void WheelEventTestMonitor::receivedWheelEvent(const PlatformWheelEvent& event)
 void WheelEventTestMonitor::scheduleCallbackCheck()
 {
     if (isMainThread()) {
-        m_page.scheduleRenderingUpdate();
+        m_page.scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
         return;
     }
 
     RunLoop::main().dispatch([weakPage = makeWeakPtr(m_page)] {
         if (weakPage)
-            weakPage->scheduleRenderingUpdate();
+            weakPage->scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
     });
 }
 
@@ -170,6 +172,7 @@ TextStream& operator<<(TextStream& ts, WheelEventTestMonitor::DeferReason reason
     switch (reason) {
     case WheelEventTestMonitor::HandlingWheelEvent: ts << "handling wheel event"; break;
     case WheelEventTestMonitor::HandlingWheelEventOnMainThread: ts << "handling wheel event on main thread"; break;
+    case WheelEventTestMonitor::PostMainThreadWheelEventHandling: ts << "post-main thread event handling"; break;
     case WheelEventTestMonitor::RubberbandInProgress: ts << "rubberbanding"; break;
     case WheelEventTestMonitor::ScrollSnapInProgress: ts << "scroll-snapping"; break;
     case WheelEventTestMonitor::ScrollingThreadSyncNeeded: ts << "scrolling thread sync needed"; break;

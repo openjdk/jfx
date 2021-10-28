@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,8 +58,8 @@ final class FPSCounter extends AnimationTimer {
         totalElapsedTime += currTime - lastTime;
         totalElapsedFrames += 1;
 
-        double elapsedSeconds = (double) elapsedTime / 1e9;
-        double totalElapsedSeconds = (double) totalElapsedTime / 1e9;
+        double elapsedSeconds = elapsedTime / 1e9;
+        double totalElapsedSeconds = totalElapsedTime / 1e9;
         if (elapsedSeconds >= 5.0) {
             double fps = elapsedFrames / elapsedSeconds;
             System.out.println();

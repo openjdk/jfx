@@ -186,7 +186,7 @@
 
 /* We maintain a list of modules, so we can reference count them.
  * That's needed because some platforms don't support references counts on
- * modules. Also, the module for the program itself is kept seperately for
+ * modules. Also, the module for the program itself is kept separately for
  * faster access and because it has special semantics.
  */
 
@@ -204,19 +204,18 @@ struct _GModule
 
 
 /* --- prototypes --- */
-static gpointer   _g_module_open    (const gchar  *file_name,
-             gboolean  bind_lazy,
-             gboolean  bind_local);
-static void   _g_module_close   (gpointer  handle,
-             gboolean  is_unref);
-static gpointer   _g_module_self    (void);
-static gpointer   _g_module_symbol  (gpointer  handle,
-             const gchar  *symbol_name);
-static gchar*   _g_module_build_path  (const gchar  *directory,
-             const gchar  *module_name);
-static inline void  g_module_set_error  (const gchar  *error);
-static inline GModule*  g_module_find_by_handle (gpointer  handle);
-static inline GModule*  g_module_find_by_name (const gchar  *name);
+static gpointer     _g_module_open      (const gchar    *file_name,
+                         gboolean    bind_lazy,
+                         gboolean    bind_local);
+static void     _g_module_close     (gpointer    handle);
+static gpointer     _g_module_self      (void);
+static gpointer     _g_module_symbol    (gpointer    handle,
+                         const gchar    *symbol_name);
+static gchar*       _g_module_build_path    (const gchar    *directory,
+                         const gchar    *module_name);
+static inline void  g_module_set_error  (const gchar    *error);
+static inline GModule*  g_module_find_by_handle (gpointer    handle);
+static inline GModule*  g_module_find_by_name   (const gchar    *name);
 
 
 /* --- variables --- */
@@ -224,7 +223,7 @@ static GModule       *modules = NULL;
 static GModule       *main_module = NULL;
 static GPrivate       module_error_private = G_PRIVATE_INIT (g_free);
 static gboolean       module_debug_initialized = FALSE;
-static guint        module_debug_flags = 0;
+static guint          module_debug_flags = 0;
 
 
 /* --- inline functions --- */
@@ -277,30 +276,27 @@ g_module_set_error (const gchar *error)
 }
 
 
-/* --- include platform specifc code --- */
-#define SUPPORT_OR_RETURN(rv) { g_module_set_error (NULL); }
+/* --- include platform specific code --- */
+#define SUPPORT_OR_RETURN(rv)   { g_module_set_error (NULL); }
 #if (G_MODULE_IMPL == G_MODULE_IMPL_DL)
 #include "gmodule-dl.c"
-#elif (G_MODULE_IMPL == G_MODULE_IMPL_WIN32)
+#elif   (G_MODULE_IMPL == G_MODULE_IMPL_WIN32)
 #include "gmodule-win32.c"
-#elif (G_MODULE_IMPL == G_MODULE_IMPL_DYLD)
-#include "gmodule-dyld.c"
-#elif (G_MODULE_IMPL == G_MODULE_IMPL_AR)
+#elif   (G_MODULE_IMPL == G_MODULE_IMPL_AR)
 #include "gmodule-ar.c"
 #else
 #undef  SUPPORT_OR_RETURN
-#define SUPPORT_OR_RETURN(rv) { g_module_set_error ("dynamic modules are " \
+#define SUPPORT_OR_RETURN(rv)   { g_module_set_error ("dynamic modules are " \
                                               "not supported by this system"); return rv; }
 static gpointer
 _g_module_open (const gchar *file_name,
-    gboolean   bind_lazy,
-    gboolean   bind_local)
+        gboolean     bind_lazy,
+        gboolean     bind_local)
 {
   return NULL;
 }
 static void
-_g_module_close (gpointer  handle,
-     gboolean  is_unref)
+_g_module_close (gpointer handle)
 {
 }
 static gpointer
@@ -310,7 +306,7 @@ _g_module_self (void)
 }
 static gpointer
 _g_module_symbol (gpointer   handle,
-      const gchar *symbol_name)
+          const gchar   *symbol_name)
 {
   return NULL;
 }
@@ -480,7 +476,7 @@ static GRecMutex g_module_global_lock;
  * archive) it tries to open the corresponding module. If that fails
  * and it doesn't have the proper module suffix for the platform
  * (#G_MODULE_SUFFIX), this suffix will be appended and the corresponding
- * module will be opended. If that fails and @file_name doesn't have the
+ * module will be opened. If that fails and @file_name doesn't have the
  * ".la"-suffix, this suffix is appended and g_module_open() tries to open
  * the corresponding module. If eventually that fails as well, %NULL is
  * returned.
@@ -616,14 +612,14 @@ g_module_open (const gchar    *file_name,
       /* search the module list by handle, since file names are not unique */
       module = g_module_find_by_handle (handle);
       if (module)
-  {
-    _g_module_close (module->handle, TRUE);
-    module->ref_count++;
-    g_module_set_error (NULL);
+        {
+      _g_module_close (module->handle);
+          module->ref_count++;
+          g_module_set_error (NULL);
 
-    g_rec_mutex_unlock (&g_module_global_lock);
-    return module;
-  }
+          g_rec_mutex_unlock (&g_module_global_lock);
+          return module;
+        }
 
       saved_error = g_strdup (g_module_error ());
       g_module_set_error (NULL);
@@ -723,7 +719,7 @@ g_module_close (GModule *module)
   }
       module->next = NULL;
 
-      _g_module_close (module->handle, FALSE);
+      _g_module_close (module->handle);
       g_free (module->file_name);
       g_free (module);
     }
@@ -796,7 +792,7 @@ g_module_symbol (GModule     *module,
     *symbol = _g_module_symbol (module->handle, name);
     g_free (name);
   }
-#else /* !G_MODULE_NEED_USCORE */
+#else   /* !G_MODULE_NEED_USCORE */
   *symbol = _g_module_symbol (module->handle, symbol_name);
 #endif  /* !G_MODULE_NEED_USCORE */
 

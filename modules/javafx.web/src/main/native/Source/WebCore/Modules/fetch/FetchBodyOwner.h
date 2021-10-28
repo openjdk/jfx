@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject {
+class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject, public CanMakeWeakPtr<FetchBodyOwner> {
 public:
     FetchBodyOwner(ScriptExecutionContext&, Optional<FetchBody>&&, Ref<FetchHeaders>&&);
     ~FetchBodyOwner();
@@ -69,6 +69,8 @@ public:
     bool hasLoadingError() const;
     ResourceError loadingError() const;
     Optional<Exception> loadingException() const;
+
+    const String& contentType() const { return m_contentType; }
 
 protected:
     const FetchBody& body() const { return *m_body; }

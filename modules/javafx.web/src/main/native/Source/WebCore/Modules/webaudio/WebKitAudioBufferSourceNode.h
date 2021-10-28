@@ -43,10 +43,11 @@ public:
 private:
     explicit WebKitAudioBufferSourceNode(BaseAudioContext& context)
         : AudioBufferSourceNode(context)
-        , m_gain(AudioParam::create(context, "gain"_s, 1.0, 0.0, 1.0))
+        , m_gain(AudioParam::create(context, "gain"_s, 1.0, 0.0, 1.0, AutomationRate::KRate))
     {
     }
 
+    bool shouldThrowOnAttemptToOverwriteBuffer() const final { return false; }
     double legacyGainValue() const final { return gain().value(); }
 
     Ref<AudioParam> m_gain;

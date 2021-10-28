@@ -509,6 +509,7 @@ public abstract class PopupWindow extends Window {
             // Setup the peer
             StageStyle popupStyle;
             try {
+                @SuppressWarnings("removal")
                 final SecurityManager securityManager =
                         System.getSecurityManager();
                 if (securityManager != null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -446,7 +446,11 @@ final public class WebEngine {
 
     /**
      * Title of the current Web page. If the current page has no title,
-     * the value is {@code null}.
+     * the value is {@code null}. This property will be updated
+     * asynchronously some time after the page is loaded. Applications
+     * should not rely on any particular timing, but should listen for
+     * changes to this property, or bind to it, to know when it has
+     * been updated.
      *
      * @return the title property
      */
@@ -1565,6 +1569,7 @@ final public class WebEngine {
         }
 
 
+        @SuppressWarnings("removal")
         @Override
         public boolean sendMessageToFrontend(final String message) {
             boolean result = false;

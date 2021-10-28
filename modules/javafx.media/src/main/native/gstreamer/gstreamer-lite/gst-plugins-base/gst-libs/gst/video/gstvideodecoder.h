@@ -435,7 +435,7 @@ GstVideoCodecState *gst_video_decoder_set_output_state (GstVideoDecoder *decoder
 
 GST_VIDEO_API
 GstVideoCodecState *gst_video_decoder_set_interlaced_output_state (GstVideoDecoder *decoder,
-                                                                   GstVideoFormat fmt, GstVideoInterlaceMode mode,
+                                                                   GstVideoFormat fmt, GstVideoInterlaceMode interlace_mode,
                                                                    guint width, guint height, GstVideoCodecState *reference);
 
 GST_VIDEO_API
@@ -477,9 +477,7 @@ GST_VIDEO_API
 void             gst_video_decoder_set_use_default_pad_acceptcaps (GstVideoDecoder * decoder,
                                                                    gboolean use);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoDecoder, gst_object_unref)
-#endif
 
 G_END_DECLS
 

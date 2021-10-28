@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1044,7 +1044,7 @@ public class TableColumnTest {
         assertEquals(76, table.getItems().get(0).getAge());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void defaultOnEditCommitHandlerDealsWithNullTableView() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
@@ -1054,11 +1054,10 @@ public class TableColumnTest {
                 null, pos, (EventType) eventType, "Richard Bair"));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void defaultOnEditCommitHandlerDealsWithNullTablePosition() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
-        TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
                 table, null, (EventType) eventType, "Richard Bair"));

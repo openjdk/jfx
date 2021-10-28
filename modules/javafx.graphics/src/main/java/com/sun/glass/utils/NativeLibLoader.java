@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ public class NativeLibLoader {
 
     public static synchronized void loadLibrary(String libname) {
         if (!loaded.contains(libname)) {
+            @SuppressWarnings("removal")
             StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
             Class caller = walker.getCallerClass();
@@ -57,6 +58,7 @@ public class NativeLibLoader {
 
     public static synchronized void loadLibrary(String libname, List<String> dependencies) {
         if (!loaded.contains(libname)) {
+            @SuppressWarnings("removal")
             StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
             Class caller = walker.getCallerClass();
@@ -73,7 +75,8 @@ public class NativeLibLoader {
     private static String libSuffix = "";
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             verbose = Boolean.getBoolean("javafx.verbose");
             return null;
         });

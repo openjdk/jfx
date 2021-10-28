@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -511,18 +511,19 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetAmbientLight
 
 /*
  * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetPointLight
- * Signature: (JJIFFFFFFF)V
+ * Method:    nSetLight
+ * Signature: (JJIFFFFFFFFFFFFFFFFF)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetPointLight
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetLight
   (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView, jint index,
         jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
-        jfloat ca, jfloat la, jfloat qa, jfloat range)
+        jfloat ca, jfloat la, jfloat qa, jfloat range,
+        jfloat dirX, jfloat dirY, jfloat dirZ, jfloat innerAngle, jfloat outerAngle, jfloat falloff)
 {
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetPointLight");
+    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetLight");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
     RETURN_IF_NULL(meshView);
-    meshView->setPointLight(index, x, y, z, r, g, b, w, ca, la, qa, range);
+    meshView->setLight(index, x, y, z, r, g, b, w, ca, la, qa, range, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
 }
 
 /*
@@ -734,7 +735,9 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 HRESULT
 D3DContext::TestCooperativeLevel()
 {
-    TraceLn(NWT_TRACE_INFO, "D3DContext::testCooperativeLevel");
+    TraceLn2(NWT_TRACE_INFO,
+             "D3DContext::testCooperativeLevel pd3dDevice = 0x%x, pd3dDeviceEx = 0x%x",
+             pd3dDevice, pd3dDeviceEx);
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
@@ -746,12 +749,13 @@ D3DContext::TestCooperativeLevel()
     switch (res) {
     case S_OK: break;
     case D3DERR_DEVICELOST:
-        TraceLn1(NWT_TRACE_VERBOSE, "  device %d is still lost",
-            adapterOrdinal);
+        TraceLn1(NWT_TRACE_INFO, "  device %d is still lost", adapterOrdinal);
         break;
     case D3DERR_DEVICENOTRESET:
-        TraceLn1(NWT_TRACE_VERBOSE, "  device %d needs to be reset",
-            adapterOrdinal);
+        TraceLn1(NWT_TRACE_INFO, "  device %d needs to be reset", adapterOrdinal);
+        break;
+    case D3DERR_DEVICEREMOVED:
+        TraceLn1(NWT_TRACE_INFO, "  device %d has been removed", adapterOrdinal);
         break;
     case S_PRESENT_OCCLUDED:
         break;

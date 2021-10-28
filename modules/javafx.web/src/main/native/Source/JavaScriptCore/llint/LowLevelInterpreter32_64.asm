@@ -390,7 +390,7 @@ macro makeHostFunctionCall(entry, protoCallFrame, temp1, temp2)
     end
 end
 
-op(handleUncaughtException, macro()
+op(llint_handle_uncaught_exception, macro()
     loadp Callee + PayloadOffset[cfr], t3
     convertCalleeToVM(t3)
     restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(t3, t0)
@@ -417,6 +417,18 @@ op(handleUncaughtException, macro()
         subp cfr, CalleeRegisterSaveSize, sp
     end
 
+    popCalleeSaves()
+    functionEpilogue()
+    ret
+end)
+
+op(llint_get_host_call_return_value, macro ()
+    functionPrologue()
+    pushCalleeSaves()
+    loadp Callee + PayloadOffset[cfr], t0
+    convertCalleeToVM(t0)
+    loadi VM::encodedHostCallReturnValue + TagOffset[t0], t1
+    loadi VM::encodedHostCallReturnValue + PayloadOffset[t0], t0
     popCalleeSaves()
     functionEpilogue()
     ret
@@ -614,6 +626,13 @@ macro writeBarrierOnCellWithReload(cell, reloadAfterSlowPath)
         end)
 end
 
+macro writeBarrierOnOperandWithReload(size, get, cellFieldName, reloadAfterSlowPath)
+    get(cellFieldName, t1)
+    loadConstantOrVariablePayload(size, t1, CellTag, t2, .writeBarrierDone)
+    writeBarrierOnCellWithReload(t2, reloadAfterSlowPath)
+.writeBarrierDone:
+end
+
 macro writeBarrierOnOperand(size, get, cellFieldName)
     get(cellFieldName, t1)
     loadConstantOrVariablePayload(size, t1, CellTag, t2, .writeBarrierDone)
@@ -667,7 +686,7 @@ end
 # Entrypoints into the interpreter
 
 # Expects that CodeBlock is in t1, which is what prologue() leaves behind.
-macro functionArityCheck(doneLabel, slowPath)
+macro functionArityCheck(opcodeName, doneLabel, slowPath)
     loadi PayloadOffset + ArgumentCountIncludingThis[cfr], t0
     biaeq t0, CodeBlock::m_numParameters[t1], doneLabel
     prepareStateForCCall()
@@ -738,6 +757,14 @@ macro functionArityCheck(doneLabel, slowPath)
     loadp CodeBlock::m_instructionsRawPointer[t1], PB
     move 0, PC
     jmp doneLabel
+
+    # It is required in ARMv7 and MIPs because global label definitions
+    # for those architectures generates a set of instructions
+    # that can clobber LLInt execution, resulting in unexpected
+    # crashes.
+    _js_trampoline_%opcodeName%_untag:
+    _js_trampoline_%opcodeName%_tag:
+    crash()
 end
 
 # Instruction implementations
@@ -811,7 +838,7 @@ llintOp(op_check_tdz, OpCheckTdz, macro (size, get, dispatch)
     get(m_targetVirtualRegister, t0)
     loadConstantOrVariableTag(size, t0, t1)
     bineq t1, EmptyValueTag, .opNotTDZ
-    callSlowPath(_slow_path_throw_tdz_error)
+    callSlowPath(_slow_path_check_tdz)
 
 .opNotTDZ:
     dispatch()
@@ -1552,13 +1579,13 @@ llintOpWithMetadata(op_put_by_id, OpPutById, macro (size, get, dispatch, metadat
     loadp StructureChain::m_vector[t3], t3
     assert(macro (ok) btpnz t3, ok end)
 
-    loadp Structure::m_prototype[t2], t2
+    loadp Structure::m_prototype + PayloadOffset[t2], t2
     btpz t2, .opPutByIdTransitionChainDone
 .opPutByIdTransitionChainLoop:
     loadp [t3], t1
     bineq t1, JSCell::m_structureID[t2], .opPutByIdSlow
     addp 4, t3
-    loadp Structure::m_prototype[t1], t2
+    loadp Structure::m_prototype + PayloadOffset[t1], t2
     btpnz t2, .opPutByIdTransitionChainLoop
 
 .opPutByIdTransitionChainDone:
@@ -1693,6 +1720,48 @@ llintOpWithMetadata(op_get_private_name, OpGetPrivateName, macro (size, get, dis
     dispatch()
 end)
 
+llintOpWithMetadata(op_put_private_name, OpPutPrivateName, macro (size, get, dispatch, metadata, return)
+    writeBarrierOnOperands(size, get, m_base, m_value)
+    get(m_base, t3)
+    loadConstantOrVariablePayload(size, t3, CellTag, t0, .opPutPrivateNameSlow)
+    get(m_property, t3)
+    loadConstantOrVariablePayload(size, t3, CellTag, t1, .opPutPrivateNameSlow)
+    metadata(t5, t2)
+    loadi OpPutPrivateName::Metadata::m_oldStructureID[t5], t2
+    bineq t2, JSCell::m_structureID[t0], .opPutPrivateNameSlow
+
+    loadi OpPutPrivateName::Metadata::m_property[t5], t3
+    bineq t3, t1, .opPutPrivateNameSlow
+
+    # At this point, we have:
+    # t0 -> object base
+    # t2 -> current structure ID
+    # t5 -> metadata
+
+    loadi OpPutPrivateName::Metadata::m_newStructureID[t5], t1
+    btiz t1, .opPutNotTransition
+
+    storei t1, JSCell::m_structureID[t0]
+    writeBarrierOnOperandWithReload(size, get, m_base, macro ()
+        # Reload metadata into t5
+        metadata(t5, t1)
+        # Reload base into t0
+        get(m_base, t1)
+        loadConstantOrVariablePayload(size, t1, CellTag, t0, .opPutPrivateNameSlow)
+    end)
+
+.opPutNotTransition:
+    # The only thing live right now is t0, which holds the base.
+    get(m_value, t1)
+    loadConstantOrVariable(size, t1, t2, t3)
+    loadi OpPutPrivateName::Metadata::m_offset[t5], t1
+    storePropertyAtVariableOffset(t1, t0, t2, t3)
+    dispatch()
+
+.opPutPrivateNameSlow:
+    callSlowPath(_llint_slow_path_put_private_name)
+    dispatch()
+end)
 
 macro putByValOp(opcodeName, opcodeStruct, osrExitPoint)
     llintOpWithMetadata(op_%opcodeName%, opcodeStruct, macro (size, get, dispatch, metadata, return)
@@ -2054,7 +2123,7 @@ macro callHelper(opcodeName, slowPath, opcodeStruct, valueProfileName, dstVirtua
     storei t2, ArgumentCountIncludingThis + PayloadOffset[t3]
     storei CellTag, Callee + TagOffset[t3]
     move t3, sp
-    prepareCall(%opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], t2, t3, t4, JSEntryPtrTag)
+    prepareCall(%opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], t2, t3, t4, t1, JSEntryPtrTag)
     callTargetFunction(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, %opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], JSEntryPtrTag)
 
 .opCallSlow:
@@ -2182,7 +2251,7 @@ end)
 
 
 op(llint_throw_from_slow_path_trampoline, macro()
-    loadp Callee[cfr], t1
+    loadp Callee + PayloadOffset[cfr], t1
     convertCalleeToVM(t1)
     copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(t1, t2)
 
@@ -2191,7 +2260,7 @@ op(llint_throw_from_slow_path_trampoline, macro()
     # When throwing from the interpreter (i.e. throwing from LLIntSlowPaths), so
     # the throw target is not necessarily interpreted code, we come to here.
     # This essentially emulates the JIT's throwing protocol.
-    loadp Callee[cfr], t1
+    loadp Callee + PayloadOffset[cfr], t1
     convertCalleeToVM(t1)
     jmp VM::targetMachinePCForThrow[t1]
 end)
@@ -2921,4 +2990,48 @@ end)
 
 op(fuzzer_return_early_from_loop_hint, macro ()
     notSupported()
+end)
+
+
+llintOpWithMetadata(op_check_private_brand, OpCheckPrivateBrand, macro (size, get, dispatch, metadata, return)
+    metadata(t5, t2)
+    get(m_base, t3)
+    loadConstantOrVariablePayload(size, t3, CellTag, t0, .opCheckPrivateBrandSlow)
+    get(m_brand, t3)
+    loadConstantOrVariablePayload(size, t3, CellTag, t1, .opCheckPrivateBrandSlow)
+
+    loadi OpCheckPrivateBrand::Metadata::m_structureID[t5], t3
+    bineq JSCell::m_structureID[t0], t3, .opCheckPrivateBrandSlow
+
+    loadp OpCheckPrivateBrand::Metadata::m_brand[t5], t3
+    bpneq t3, t1, .opCheckPrivateBrandSlow
+    dispatch()
+
+.opCheckPrivateBrandSlow:
+    callSlowPath(_llint_slow_path_check_private_brand)
+    dispatch()
+end)
+
+
+llintOpWithMetadata(op_set_private_brand, OpSetPrivateBrand, macro (size, get, dispatch, metadata, return)
+    metadata(t5, t2)
+    get(m_base, t3)
+    loadConstantOrVariablePayload(size, t3, CellTag, t0, .opSetPrivateBrandSlow)
+    get(m_brand, t3)
+    loadConstantOrVariablePayload(size, t3, CellTag, t1, .opSetPrivateBrandSlow)
+
+    loadi OpSetPrivateBrand::Metadata::m_oldStructureID[t5], t2
+    bineq t2, JSCell::m_structureID[t0], .opSetPrivateBrandSlow
+
+    loadp OpSetPrivateBrand::Metadata::m_brand[t5], t3
+    bpneq t3, t1, .opSetPrivateBrandSlow
+
+    loadi OpSetPrivateBrand::Metadata::m_newStructureID[t5], t1
+    storei t1, JSCell::m_structureID[t0]
+    writeBarrierOnOperand(size, get, m_base)
+    dispatch()
+
+.opSetPrivateBrandSlow:
+    callSlowPath(_llint_slow_path_set_private_brand)
+    dispatch()
 end)

@@ -42,26 +42,21 @@ class InlineTextItem;
 
 class TextUtil {
 public:
-    static InlineLayoutUnit width(const InlineTextItem&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft = 0);
-    static InlineLayoutUnit width(const InlineTextBox&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft = 0);
+    static InlineLayoutUnit width(const InlineTextItem&, InlineLayoutUnit contentLogicalLeft);
+    static InlineLayoutUnit width(const InlineTextItem&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
+    static InlineLayoutUnit width(const InlineTextBox&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
+
     struct SplitData {
         unsigned start { 0 };
         unsigned length { 0 };
         InlineLayoutUnit logicalWidth { 0 };
     };
-    static SplitData split(const InlineTextBox&, unsigned startPosition, unsigned length, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft);
-    static bool shouldPreserveTrailingWhitespace(const RenderStyle&);
+    static SplitData split(const InlineTextItem&, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft);
     static unsigned findNextBreakablePosition(LazyLineBreakIterator&, unsigned startPosition, const RenderStyle&);
 
-private:
-    static InlineLayoutUnit fixedPitchWidth(const StringView&, const RenderStyle&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
+    static bool shouldPreserveSpacesAndTabs(const Box&);
+    static bool shouldPreserveNewline(const Box&);
 };
-
-inline bool TextUtil::shouldPreserveTrailingWhitespace(const RenderStyle& style)
-{
-    auto whitespace = style.whiteSpace();
-    return whitespace == WhiteSpace::Pre || whitespace == WhiteSpace::PreWrap || whitespace == WhiteSpace::BreakSpaces;
-}
 
 }
 }

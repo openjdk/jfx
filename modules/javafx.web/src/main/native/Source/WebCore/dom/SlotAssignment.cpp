@@ -120,6 +120,13 @@ void SlotAssignment::addSlotElementByName(const AtomString& name, HTMLSlotElemen
         return makeUnique<Slot>();
     });
     auto& slot = *addResult.iterator->value;
+
+    if (!m_slotAssignmentsIsValid)
+        assignSlots(shadowRoot);
+
+    shadowRoot.host()->setHasShadowRootContainingSlots(true);
+    m_slotElementCount++;
+
     bool needsSlotchangeEvent = shadowRoot.shouldFireSlotchangeEvent() && hasAssignedNodes(shadowRoot, slot);
 
     slot.elementCount++;
@@ -147,8 +154,15 @@ void SlotAssignment::removeSlotElementByName(const AtomString& name, HTMLSlotEle
     m_slotElementsForConsistencyCheck.remove(&slotElement);
 #endif
 
-    if (auto* host = shadowRoot.host()) // FIXME: We should be able to do a targeted reconstruction.
+    ASSERT(m_slotElementCount > 0);
+    m_slotElementCount--;
+
+    if (auto host = makeRefPtr(shadowRoot.host())) {
+        // FIXME: We should be able to do a targeted reconstruction.
         host->invalidateStyleAndRenderersForSubtree();
+        if (!m_slotElementCount)
+            host->setHasShadowRootContainingSlots(false);
+    }
 
     auto* slot = m_slots.get(slotNameFromAttributeValue(name));
     RELEASE_ASSERT(slot && slot->hasSlotElements());
@@ -293,14 +307,15 @@ void SlotAssignment::didChangeSlot(const AtomString& slotAttrValue, ShadowRoot& 
     if (!slot)
         return;
 
+    RenderTreeUpdater::tearDownRenderersAfterSlotChange(*shadowRoot.host());
+    shadowRoot.host()->invalidateStyleForSubtree();
+
     slot->assignedNodes.clear();
     m_slotAssignmentsIsValid = false;
 
     auto slotElement = makeRefPtr(findFirstSlotElement(*slot, shadowRoot));
     if (!slotElement)
         return;
-
-    shadowRoot.host()->invalidateStyleAndRenderersForSubtree();
 
     if (shadowRoot.shouldFireSlotchangeEvent())
         slotElement->enqueueSlotChangeEvent();
@@ -311,7 +326,7 @@ void SlotAssignment::hostChildElementDidChange(const Element& childElement, Shad
     didChangeSlot(childElement.attributeWithoutSynchronization(slotAttr), shadowRoot);
 }
 
-const Vector<Node*>* SlotAssignment::assignedNodesForSlot(const HTMLSlotElement& slotElement, ShadowRoot& shadowRoot)
+const Vector<WeakPtr<Node>>* SlotAssignment::assignedNodesForSlot(const HTMLSlotElement& slotElement, ShadowRoot& shadowRoot)
 {
     ASSERT(slotElement.containingShadowRoot() == &shadowRoot);
     const AtomString& slotName = slotNameFromAttributeValue(slotElement.attributeWithoutSynchronization(nameAttr));
@@ -329,6 +344,23 @@ const Vector<Node*>* SlotAssignment::assignedNodesForSlot(const HTMLSlotElement&
         return nullptr;
 
     return &slot->assignedNodes;
+}
+
+void SlotAssignment::willRemoveAssignedNode(const Node& node)
+{
+    if (!m_slotAssignmentsIsValid)
+        return;
+
+    if (!is<Text>(node) && !is<Element>(node))
+        return;
+
+    auto* slot = m_slots.get(slotNameForHostChild(node));
+    if (!slot || slot->assignedNodes.isEmpty())
+        return;
+
+    slot->assignedNodes.removeFirstMatching([&node](const auto& item) {
+        return item.get() == &node;
+    });
 }
 
 const AtomString& SlotAssignment::slotNameForHostChild(const Node& child) const
@@ -400,14 +432,14 @@ void SlotAssignment::assignToSlot(Node& child, const AtomString& slotName)
     if (slotName == defaultSlotName()) {
         auto defaultSlotEntry = m_slots.find(defaultSlotName());
         if (defaultSlotEntry != m_slots.end())
-            defaultSlotEntry->value->assignedNodes.append(&child);
+            defaultSlotEntry->value->assignedNodes.append(makeWeakPtr(child));
         return;
     }
 
     auto addResult = m_slots.ensure(slotName, [] {
         return makeUnique<Slot>();
     });
-    addResult.iterator->value->assignedNodes.append(&child);
+    addResult.iterator->value->assignedNodes.append(makeWeakPtr(child));
 }
 
 }

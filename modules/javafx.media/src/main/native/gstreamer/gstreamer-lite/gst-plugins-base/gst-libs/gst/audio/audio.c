@@ -290,6 +290,10 @@ gst_audio_buffer_truncate (GstBuffer * buffer, gint bpf, gsize trim,
   if (samples == orig_samples)
     return buffer;
 
+  GST_DEBUG ("Truncating %" G_GSIZE_FORMAT " to %" G_GSIZE_FORMAT
+      " (trim start %" G_GSIZE_FORMAT ", end %" G_GSIZE_FORMAT ")",
+      orig_samples, samples, trim, orig_samples - trim - samples);
+
   if (!meta || meta->info.layout == GST_AUDIO_LAYOUT_INTERLEAVED) {
     /* interleaved */
     ret = gst_buffer_copy_region (buffer, GST_BUFFER_COPY_ALL, trim * bpf,
@@ -301,7 +305,7 @@ gst_audio_buffer_truncate (GstBuffer * buffer, gint bpf, gsize trim,
   } else {
     /* non-interleaved */
     ret = gst_buffer_make_writable (buffer);
-    meta = gst_buffer_get_audio_meta (buffer);
+    meta = gst_buffer_get_audio_meta (ret);
     meta->samples = samples;
     for (i = 0; i < meta->info.channels; i++) {
       meta->offsets[i] += trim * bpf / meta->info.channels;

@@ -46,7 +46,6 @@ class TextStream;
 namespace WebCore {
 
 class AffineTransform;
-class CSSAnimationController;
 class Color;
 class Cursor;
 class Document;
@@ -76,6 +75,7 @@ class VisiblePosition;
 class SelectionRect;
 #endif
 
+struct InlineRunAndOffset;
 struct PaintInfo;
 struct SimpleRange;
 
@@ -100,6 +100,7 @@ class RenderObject : public CachedImageClient, public CanMakeWeakPtr<RenderObjec
     friend class RenderBlockFlow;
     friend class RenderElement;
     friend class RenderLayer;
+    friend class RenderLayerScrollableArea;
 public:
     // Anonymous objects should pass the document as their node, and they will then automatically be
     // marked as anonymous in the constructor.
@@ -216,14 +217,14 @@ public:
     virtual bool isListMarker() const { return false; }
     virtual bool isMedia() const { return false; }
     virtual bool isMenuList() const { return false; }
-#if ENABLE(METER_ELEMENT)
     virtual bool isMeter() const { return false; }
-#endif
-    virtual bool isSnapshottedPlugIn() const { return false; }
     virtual bool isProgress() const { return false; }
     virtual bool isRenderButton() const { return false; }
     virtual bool isRenderIFrame() const { return false; }
     virtual bool isRenderImage() const { return false; }
+#if ENABLE(MODEL_ELEMENT)
+    virtual bool isRenderModel() const { return false; }
+#endif
     virtual bool isRenderFragmentContainer() const { return false; }
     virtual bool isReplica() const { return false; }
 
@@ -287,7 +288,7 @@ public:
     bool everHadLayout() const { return m_bitfields.everHadLayout(); }
 
     bool childrenInline() const { return m_bitfields.childrenInline(); }
-    void setChildrenInline(bool b) { m_bitfields.setChildrenInline(b); }
+    virtual void setChildrenInline(bool b) { m_bitfields.setChildrenInline(b); }
 
     enum FragmentedFlowState {
         NotInsideFragmentedFlow = 0,
@@ -437,7 +438,7 @@ public:
     bool hasOverflowClip() const { return m_bitfields.hasOverflowClip(); }
 
     bool hasTransformRelatedProperty() const { return m_bitfields.hasTransformRelatedProperty(); } // Transform, perspective or transform-style: preserve-3d.
-    bool hasTransform() const { return hasTransformRelatedProperty() && style().hasTransform(); }
+    bool hasTransform() const { return hasTransformRelatedProperty() && (style().hasTransform() || style().translate() || style().scale() || style().rotate()); }
 
     inline bool preservesNewline() const;
 
@@ -518,7 +519,7 @@ public:
 
     virtual Position positionForPoint(const LayoutPoint&);
     virtual VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*);
-    VisiblePosition createVisiblePosition(int offset, EAffinity) const;
+    VisiblePosition createVisiblePosition(int offset, Affinity) const;
     VisiblePosition createVisiblePosition(const Position&) const;
 
     // Returns the containing block level element for this element.
@@ -560,8 +561,17 @@ public:
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* /*wasFixed*/ = nullptr) const { }
     virtual void absoluteFocusRingQuads(Vector<FloatQuad>&);
 
-    WEBCORE_EXPORT static Vector<FloatQuad> absoluteTextQuads(const SimpleRange&, bool useSelectionHeight = false);
-    WEBCORE_EXPORT static Vector<IntRect> absoluteTextRects(const SimpleRange&, bool useSelectionHeight = false);
+    enum class BoundingRectBehavior : uint8_t {
+        RespectClipping = 1 << 0,
+        UseVisibleBounds = 1 << 1,
+        IgnoreTinyRects = 1 << 2,
+        IgnoreEmptyTextSelections = 1 << 3,
+        UseSelectionHeight = 1 << 4,
+    };
+    WEBCORE_EXPORT static Vector<FloatQuad> absoluteTextQuads(const SimpleRange&, OptionSet<BoundingRectBehavior> = { });
+    WEBCORE_EXPORT static Vector<IntRect> absoluteTextRects(const SimpleRange&, OptionSet<BoundingRectBehavior> = { });
+    WEBCORE_EXPORT static Vector<FloatRect> absoluteBorderAndTextRects(const SimpleRange&, OptionSet<BoundingRectBehavior> = { });
+    static Vector<FloatRect> clientBorderAndTextRects(const SimpleRange&);
 
     // the rect that will be painted if this object is passed as the paintingRoot
     WEBCORE_EXPORT LayoutRect paintingRootRect(LayoutRect& topLevelRect);
@@ -652,7 +662,7 @@ public:
     // The current selection state for an object.  For blocks, the state refers to the state of the leaf
     // descendants (as described above in the HighlightState enum declaration).
     HighlightState selectionState() const { return m_bitfields.selectionState(); }
-    virtual void setSelectionState(HighlightState state) { m_bitfields.setSelectionState(state); }
+    virtual void setSelectionState(HighlightState);
     inline void setSelectionStateIfNeeded(HighlightState);
     bool canUpdateSelectionOnRootLineBoxes();
 
@@ -665,14 +675,6 @@ public:
 
     // Whether or not a given block needs to paint selection gaps.
     virtual bool shouldPaintSelectionGaps() const { return false; }
-
-    /**
-     * Returns the local coordinates of the caret within this render object.
-     * @param caretOffset zero-based offset determining position within the render object.
-     * @param extraWidthToEndOfLine optional out arg to give extra width to end of line -
-     * useful for character range rect computations
-     */
-    virtual LayoutRect localCaretRect(InlineBox*, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine = nullptr);
 
     // When performing a global document tear-down, or when going into the back/forward cache, the renderer of the document is cleared.
     bool renderTreeBeingDestroyed() const;
@@ -697,7 +699,6 @@ public:
     void imageChanged(CachedImage*, const IntRect* = nullptr) override;
     virtual void imageChanged(WrappedImagePtr, const IntRect* = nullptr) { }
 
-    CSSAnimationController& legacyAnimation() const;
     DocumentTimeline* documentTimeline() const;
 
     // Map points and quads through elements, potentially via 3d transforms. You should never need to call these directly; use
@@ -962,11 +963,6 @@ inline Page& RenderObject::page() const
     // so it's safe to assume Frame::page() is non-null as long as there are live RenderObjects.
     ASSERT(frame().page());
     return *frame().page();
-}
-
-inline CSSAnimationController& RenderObject::legacyAnimation() const
-{
-    return frame().legacyAnimation();
 }
 
 inline DocumentTimeline* RenderObject::documentTimeline() const

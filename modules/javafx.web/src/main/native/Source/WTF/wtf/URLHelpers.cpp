@@ -67,12 +67,37 @@ void loadIDNAllowedScriptList()
 
 #endif // !PLATFORM(COCOA)
 
-static bool isArmenianLookalikeCharacter(UChar32 codePoint)
+template<UScriptCode> bool isLookalikeCharacterOfScriptType(UChar32);
+
+template<> bool isLookalikeCharacterOfScriptType<USCRIPT_ARMENIAN>(UChar32 codePoint)
 {
-    return codePoint == 0x0548 || codePoint == 0x054D || codePoint == 0x0578 || codePoint == 0x057D;
+    switch (codePoint) {
+    case 0x0548: /* ARMENIAN CAPITAL LETTER VO */
+    case 0x054D: /* ARMENIAN CAPITAL LETTER SEH */
+    case 0x0551: /* ARMENIAN CAPITAL LETTER CO */
+    case 0x0555: /* ARMENIAN CAPITAL LETTER OH */
+    case 0x0578: /* ARMENIAN SMALL LETTER VO */
+    case 0x057D: /* ARMENIAN SMALL LETTER SEH */
+    case 0x0581: /* ARMENIAN SMALL LETTER CO */
+    case 0x0585: /* ARMENIAN SMALL LETTER OH */
+        return true;
+    default:
+        return false;
+    }
 }
 
-static bool isArmenianScriptCharacter(UChar32 codePoint)
+template<> bool isLookalikeCharacterOfScriptType<USCRIPT_TAMIL>(UChar32 codePoint)
+{
+    switch (codePoint) {
+    case 0x0BE6: /* TAMIL DIGIT ZERO */
+        return true;
+    default:
+        return false;
+    }
+}
+
+template <UScriptCode ScriptType>
+bool isOfScriptType(UChar32 codePoint)
 {
     UErrorCode error = U_ZERO_ERROR;
     UScriptCode script = uscript_getScript(codePoint, &error);
@@ -80,8 +105,7 @@ static bool isArmenianScriptCharacter(UChar32 codePoint)
         LOG_ERROR("got ICU error while trying to look at scripts: %d", error);
         return false;
     }
-
-    return script == USCRIPT_ARMENIAN;
+    return script == ScriptType;
 }
 
 template<typename CharacterType> inline bool isASCIIDigitOrValidHostCharacter(CharacterType charCode)
@@ -106,7 +130,20 @@ template<typename CharacterType> inline bool isASCIIDigitOrValidHostCharacter(Ch
     }
 }
 
-static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UChar32 charCode)
+template <UScriptCode ScriptType>
+bool isLookalikeSequence(const Optional<UChar32>& previousCodePoint, UChar32 codePoint)
+{
+    if (!previousCodePoint || *previousCodePoint == '/')
+        return false;
+
+    auto isLookalikePair = [] (UChar first, UChar second) {
+        return isLookalikeCharacterOfScriptType<ScriptType>(first) && !(isOfScriptType<ScriptType>(second) || isASCIIDigitOrValidHostCharacter(second));
+    };
+    return isLookalikePair(codePoint, *previousCodePoint)
+        || isLookalikePair(*previousCodePoint, codePoint);
+}
+
+static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UChar32 codePoint)
 {
     // This function treats the following as unsafe, lookalike characters:
     // any non-printable character, any character considered as whitespace,
@@ -119,10 +156,10 @@ static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UCh
     // slashes into an ASCII solidus. But one of the two callers uses this
     // on characters that have not been processed by ICU, so they are needed here.
 
-    if (!u_isprint(charCode) || u_isUWhiteSpace(charCode) || u_hasBinaryProperty(charCode, UCHAR_DEFAULT_IGNORABLE_CODE_POINT))
+    if (!u_isprint(codePoint) || u_isUWhiteSpace(codePoint) || u_hasBinaryProperty(codePoint, UCHAR_DEFAULT_IGNORABLE_CODE_POINT))
         return true;
 
-    switch (charCode) {
+    switch (codePoint) {
     case 0x00BC: /* VULGAR FRACTION ONE QUARTER */
     case 0x00BD: /* VULGAR FRACTION ONE HALF */
     case 0x00BE: /* VULGAR FRACTION THREE QUARTERS */
@@ -130,8 +167,10 @@ static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UCh
     /* 0x0131 LATIN SMALL LETTER DOTLESS I is intentionally not considered a lookalike character because it is visually distinguishable from i and it has legitimate use in the Turkish language. */
     case 0x01C0: /* LATIN LETTER DENTAL CLICK */
     case 0x01C3: /* LATIN LETTER RETROFLEX CLICK */
+    case 0x0237: /* LATIN SMALL LETTER DOTLESS J */
     case 0x0251: /* LATIN SMALL LETTER ALPHA */
     case 0x0261: /* LATIN SMALL LETTER SCRIPT G */
+    case 0x0274: /* LATIN LETTER SMALL CAPITAL N */
     case 0x027E: /* LATIN SMALL LETTER R WITH FISHHOOK */
     case 0x02D0: /* MODIFIER LETTER TRIANGULAR COLON */
     case 0x0335: /* COMBINING SHORT STROKE OVERLAY */
@@ -248,19 +287,11 @@ static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UCh
         return previousCodePoint == 0x0237 /* LATIN SMALL LETTER DOTLESS J */
             || previousCodePoint == 0x0131 /* LATIN SMALL LETTER DOTLESS I */
             || previousCodePoint == 0x05D5; /* HEBREW LETTER VAV */
-    case 0x0548: /* ARMENIAN CAPITAL LETTER VO */
-    case 0x054D: /* ARMENIAN CAPITAL LETTER SEH */
-    case 0x0578: /* ARMENIAN SMALL LETTER VO */
-    case 0x057D: /* ARMENIAN SMALL LETTER SEH */
-        return previousCodePoint
-            && !isASCIIDigitOrValidHostCharacter(previousCodePoint.value())
-            && !isArmenianScriptCharacter(previousCodePoint.value());
     case '.':
         return false;
     default:
-        return previousCodePoint
-            && isArmenianLookalikeCharacter(previousCodePoint.value())
-            && !(isArmenianScriptCharacter(charCode) || isASCIIDigitOrValidHostCharacter(charCode));
+        return isLookalikeSequence<USCRIPT_ARMENIAN>(previousCodePoint, codePoint)
+            || isLookalikeSequence<USCRIPT_TAMIL>(previousCodePoint, codePoint);
     }
 }
 

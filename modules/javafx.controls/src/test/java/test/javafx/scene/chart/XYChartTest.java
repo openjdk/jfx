@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,8 +88,8 @@ public class XYChartTest extends ChartTestBase {
         // set tick label font via css and test if ticklabelfont, measure and tick textnode follow.
         ParsedValue pv = new CssParserShim().parseExpr("-fx-tick-label-font","0.916667em System");
         Object val = pv.convert(null);
-        CssMetaData prop = ((StyleableProperty)yaxis.tickLabelFontProperty()).getCssMetaData();
-        prop.set(yaxis, val, null);
+        StyleableProperty prop = (StyleableProperty)yaxis.tickLabelFontProperty();
+        prop.applyStyle(null, val);
         // confirm tickLabelFont, measure and tick's textnode all are in sync with -fx-tick-label-font
         assertEquals(11, Double.valueOf(yaxis.getTickLabelFont().getSize()).intValue());
         assertEquals(11, Double.valueOf(AxisShim.get_measure(yaxis).getFont().getSize()).intValue());

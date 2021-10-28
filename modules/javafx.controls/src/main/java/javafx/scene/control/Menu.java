@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,7 +114,7 @@ public class Menu extends MenuItem {
     public static final EventType<Event> ON_HIDDEN =
             new EventType<Event>(Event.ANY, "MENU_ON_HIDDEN");
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -176,7 +176,7 @@ public class Menu extends MenuItem {
 
 
 
-     /***************************************************************************
+     /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -352,7 +352,7 @@ public class Menu extends MenuItem {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance variables                                                      *
      *                                                                         *
@@ -388,7 +388,7 @@ public class Menu extends MenuItem {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -444,7 +444,7 @@ public class Menu extends MenuItem {
         return tail.prepend(eventHandlerManager);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

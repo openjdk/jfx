@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -201,7 +201,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [GlassTouches stopTracking:self];
 
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
+
     if (env != NULL)
     {
         (*env)->DeleteGlobalRef(env, self->jView);
@@ -1119,7 +1120,8 @@ static jstring convertNSStringToJString(id aString, int length)
             free(dataBytes);
         }
     } else {
-        jStr = (*env)->NewStringUTF(env, [aString UTF8String]);
+        NSData *data = [aString dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
+        jStr = (*env)->NewString(env, (jchar *)[data bytes], data.length/2);
     }
 
     GLASS_CHECK_EXCEPTION(env);

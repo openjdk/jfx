@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -107,6 +107,11 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         }
         break;
     }
+
+    case op_get_private_name:
+        // FIXME: Consider using LLInt caches or IC information to populate GetByStatus
+        // https://bugs.webkit.org/show_bug.cgi?id=217245
+        return GetByStatus(NoInformation, false);
 
     default: {
         ASSERT_NOT_REACHED();
@@ -274,7 +279,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
             case ComplexGetStatus::Inlineable: {
                 std::unique_ptr<CallLinkStatus> callLinkStatus;
                 JSFunction* intrinsicFunction = nullptr;
-                FunctionPtr<OperationPtrTag> customAccessorGetter;
+                FunctionPtr<CustomAccessorPtrTag> customAccessorGetter;
                 std::unique_ptr<DOMAttributeAnnotation> domAttribute;
                 bool haveDOMAttribute = false;
 
@@ -525,7 +530,8 @@ void GetByStatus::filter(const StructureSet& set)
         m_state = NoInformation;
 }
 
-void GetByStatus::visitAggregate(SlotVisitor& visitor)
+template<typename Visitor>
+void GetByStatus::visitAggregateImpl(Visitor& visitor)
 {
     if (isModuleNamespace())
         m_moduleNamespaceData->m_identifier.visitAggregate(visitor);
@@ -533,11 +539,17 @@ void GetByStatus::visitAggregate(SlotVisitor& visitor)
         variant.visitAggregate(visitor);
 }
 
-void GetByStatus::markIfCheap(SlotVisitor& visitor)
+DEFINE_VISIT_AGGREGATE(GetByStatus);
+
+template<typename Visitor>
+void GetByStatus::markIfCheap(Visitor& visitor)
 {
     for (GetByIdVariant& variant : m_variants)
         variant.markIfCheap(visitor);
 }
+
+template void GetByStatus::markIfCheap(AbstractSlotVisitor&);
+template void GetByStatus::markIfCheap(SlotVisitor&);
 
 bool GetByStatus::finalize(VM& vm)
 {

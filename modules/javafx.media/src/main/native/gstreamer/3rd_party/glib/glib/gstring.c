@@ -35,7 +35,7 @@
 #include <ctype.h>
 
 #include "gstring.h"
-
+#include "guriprivate.h"
 #include "gprintf.h"
 
 
@@ -511,34 +511,6 @@ g_string_insert_len (GString     *string,
   return string;
 }
 
-#define SUB_DELIM_CHARS  "!$&'()*+,;="
-
-static gboolean
-is_valid (char        c,
-          const char *reserved_chars_allowed)
-{
-  if (g_ascii_isalnum (c) ||
-      c == '-' ||
-      c == '.' ||
-      c == '_' ||
-      c == '~')
-    return TRUE;
-
-  if (reserved_chars_allowed &&
-      strchr (reserved_chars_allowed, c) != NULL)
-    return TRUE;
-
-  return FALSE;
-}
-
-static gboolean
-gunichar_ok (gunichar c)
-{
-  return
-    (c != (gunichar) -2) &&
-    (c != (gunichar) -1);
-}
-
 /**
  * g_string_append_uri_escaped:
  * @string: a #GString
@@ -547,7 +519,7 @@ gunichar_ok (gunichar c)
  *     to be used, or %NULL
  * @allow_utf8: set %TRUE if the escaped string may include UTF8 characters
  *
- * Appends @unescaped to @string, escaped any characters that
+ * Appends @unescaped to @string, escaping any characters that
  * are reserved in URIs using URI-style escape sequences.
  *
  * Returns: (transfer none): @string
@@ -560,38 +532,8 @@ g_string_append_uri_escaped (GString     *string,
                              const gchar *reserved_chars_allowed,
                              gboolean     allow_utf8)
 {
-  unsigned char c;
-  const gchar *end;
-  static const gchar hex[16] = "0123456789ABCDEF";
-
-  g_return_val_if_fail (string != NULL, NULL);
-  g_return_val_if_fail (unescaped != NULL, NULL);
-
-  end = unescaped + strlen (unescaped);
-
-  while ((c = *unescaped) != 0)
-    {
-      if (c >= 0x80 && allow_utf8 &&
-          gunichar_ok (g_utf8_get_char_validated (unescaped, end - unescaped)))
-        {
-          int len = g_utf8_skip [c];
-          g_string_append_len (string, unescaped, len);
-          unescaped += len;
-        }
-      else if (is_valid (c, reserved_chars_allowed))
-        {
-          g_string_append_c (string, c);
-          unescaped++;
-        }
-      else
-        {
-          g_string_append_c (string, '%');
-          g_string_append_c (string, hex[((guchar)c) >> 4]);
-          g_string_append_c (string, hex[((guchar)c) & 0xf]);
-          unescaped++;
-        }
-    }
-
+  _uri_encoder (string, (const guchar *) unescaped, strlen (unescaped),
+                reserved_chars_allowed, allow_utf8);
   return string;
 }
 
@@ -1149,7 +1091,7 @@ g_string_up (GString *string)
 /**
  * g_string_append_vprintf:
  * @string: a #GString
- * @format: the string format. See the printf() documentation
+ * @format: (not nullable): the string format. See the printf() documentation
  * @args: the list of arguments to insert in the output
  *
  * Appends a formatted string onto the end of a #GString.
@@ -1184,7 +1126,7 @@ g_string_append_vprintf (GString     *string,
 /**
  * g_string_vprintf:
  * @string: a #GString
- * @format: the string format. See the printf() documentation
+ * @format: (not nullable): the string format. See the printf() documentation
  * @args: the parameters to insert into the format string
  *
  * Writes a formatted string into a #GString.

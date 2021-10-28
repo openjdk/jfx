@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,7 +74,6 @@ typedef unsigned UnlinkedArrayProfile;
 typedef unsigned UnlinkedArrayAllocationProfile;
 typedef unsigned UnlinkedObjectAllocationProfile;
 typedef unsigned UnlinkedLLIntCallLinkInfo;
-using ConstantIdentifierSetEntry = std::pair<IdentifierSet, unsigned>;
 
 struct UnlinkedStringJumpTable {
     struct OffsetLocation {
@@ -162,7 +161,7 @@ public:
     const RefCountedArray<SourceCodeRepresentation>& constantsSourceCodeRepresentation() { return m_constantsSourceCodeRepresentation; }
 
     unsigned numberOfConstantIdentifierSets() const { return m_rareData ? m_rareData->m_constantIdentifierSets.size() : 0; }
-    const RefCountedArray<ConstantIdentifierSetEntry>& constantIdentifierSets() { ASSERT(m_rareData); return m_rareData->m_constantIdentifierSets; }
+    const RefCountedArray<IdentifierSet>& constantIdentifierSets() { ASSERT(m_rareData); return m_rareData->m_constantIdentifierSets; }
 
     // Jumps
     size_t numberOfJumpTargets() const { return m_jumpTargets.size(); }
@@ -180,8 +179,8 @@ public:
 
     const InstructionStream& instructions() const;
 
-    int numCalleeLocals() const { return m_numCalleeLocals; }
-    int numVars() const { return m_numVars; }
+    unsigned numCalleeLocals() const { return m_numCalleeLocals; }
+    unsigned numVars() const { return m_numVars; }
 
     // Jump Tables
 
@@ -264,6 +263,13 @@ public:
         if (m_rareData)
             return static_cast<NeedsClassFieldInitializer>(m_rareData->m_needsClassFieldInitializer);
         return NeedsClassFieldInitializer::No;
+    }
+
+    PrivateBrandRequirement privateBrandRequirement() const
+    {
+        if (m_rareData)
+            return static_cast<PrivateBrandRequirement>(m_rareData->m_privateBrandRequirement);
+        return PrivateBrandRequirement::None;
     }
 
     void dump(PrintStream&) const;
@@ -360,9 +366,9 @@ private:
     unsigned m_lineCount { 0 };
     unsigned m_endColumn { UINT_MAX };
 
-    int m_numVars { 0 };
-    int m_numCalleeLocals { 0 };
-    int m_numParameters { 0 };
+    unsigned m_numVars { 0 };
+    unsigned m_numCalleeLocals { 0 };
+    unsigned m_numParameters { 0 };
 
     PackedRefPtr<StringImpl> m_sourceURLDirective;
     PackedRefPtr<StringImpl> m_sourceMappingURLDirective;
@@ -404,9 +410,10 @@ public:
         HashMap<unsigned, TypeProfilerExpressionRange> m_typeProfilerInfoMap;
         RefCountedArray<InstructionStream::Offset> m_opProfileControlFlowBytecodeOffsets;
         RefCountedArray<BitVector> m_bitVectors;
-        RefCountedArray<ConstantIdentifierSetEntry> m_constantIdentifierSets;
+        RefCountedArray<IdentifierSet> m_constantIdentifierSets;
 
         unsigned m_needsClassFieldInitializer : 1;
+        unsigned m_privateBrandRequirement : 1;
     };
 
     int outOfLineJumpOffset(InstructionStream::Offset);
@@ -423,7 +430,7 @@ private:
     RefCountedArray<ExpressionRangeInfo> m_expressionInfo;
 
 protected:
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
     static size_t estimatedSize(JSCell*, VM&);
 
 public:

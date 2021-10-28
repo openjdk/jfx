@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,7 +107,7 @@ public class NGExternalNode extends NGNode {
 
     private Texture createTexture(Graphics g, RenderData rd) {
         ResourceFactory factory = g.getResourceFactory();
-        if (!factory.isDeviceReady()) {
+        if (factory.isDisposed()) {
             return null;
         }
         Texture txt = factory.createTexture(PixelFormat.INT_ARGB_PRE,

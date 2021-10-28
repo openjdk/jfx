@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,9 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundShim;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import org.junit.Test;
@@ -712,6 +715,20 @@ public class BackgroundTest {
         BackgroundFill f4 = new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, new Insets(0, 0, 0, 10));
         Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
         assertFalse(b.isFillPercentageBased());
+    }
+
+    @Test
+    public void testSingleFill() {
+        var background1 = Background.fill(Color.BEIGE);
+        var background2 = new Background(new BackgroundFill(Color.BEIGE, null, null));
+        assertEquals("The factory method should give the same result as the constructor", background1, background2);
+    }
+
+    @Test
+    public void testSingleFillWithNullPaint() {
+        var background1 = Background.fill(null);
+        var background2 = new Background(new BackgroundFill(null, null, null));
+        assertEquals("The factory method should give the same result as the constructor", background1, background2);
     }
 
     // TODO: What happens if the corner radii become so big that we would end up with a negative opaque

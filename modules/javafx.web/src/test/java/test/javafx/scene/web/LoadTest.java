@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,6 @@ public class LoadTest extends TestBase {
 
         assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
         assertTrue("Location.endsWith(FILE)", web.getLocation().endsWith(FILE));
-        assertEquals("Title", "Lorem Ipsum", web.getTitle());
         assertNotNull("Document should not be null", web.getDocument());
     }
 
@@ -73,7 +72,6 @@ public class LoadTest extends TestBase {
 
         assertTrue("Load task failed", getLoadState() == FAILED);
         assertEquals("Location", URL, web.getLocation());
-        assertNull("Title should be null", web.getTitle());
         assertNull("Document should be null", web.getDocument());
     }
 
@@ -84,7 +82,6 @@ public class LoadTest extends TestBase {
 
         assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
         assertEquals("Location", "", web.getLocation());
-        assertEquals("Title", TITLE, web.getTitle());
         assertNotNull("Document should not be null", web.getDocument());
     }
 
@@ -96,7 +93,6 @@ public class LoadTest extends TestBase {
 
         assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
         assertEquals("Location", "", web.getLocation());
-        assertNull("Title should be null", web.getTitle());
 
         // DOM access should happen on FX thread
         submit(() -> {
@@ -200,6 +196,48 @@ public class LoadTest extends TestBase {
             assertEquals("font style should be italic", "italic", (String) getEngine().executeScript(
                 "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-style')"));
         });
+    }
+
+    @Test public void testLoadTitleChanged() {
+        final String FILE = "src/test/resources/test/html/ipsum.html";
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        submit(() -> {
+            WebEngine webEngine = new WebEngine();
+            webEngine.titleProperty().addListener((observable, oldValue, newValue) -> {
+                assertTrue("loadContent in SUCCEEDED State", webEngine.getLoadWorker().getState() == SUCCEEDED);
+                assertEquals("Title", "Lorem Ipsum", webEngine.getTitle());
+                latch.countDown();
+            });
+
+            webEngine.load(new File(FILE).toURI().toASCIIString());
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
+    }
+
+    @Test public void testLoadContentTitleChanged() {
+        final String TITLE = "Title Test";
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        submit(() -> {
+            WebEngine webEngine = new WebEngine();
+            webEngine.titleProperty().addListener((observable, oldValue, newValue) -> {
+                assertTrue("loadContent in SUCCEEDED State", webEngine.getLoadWorker().getState() == SUCCEEDED);
+                assertEquals("Title", TITLE, webEngine.getTitle());
+                latch.countDown();
+            });
+
+            webEngine.loadContent("<html><head><title>" + TITLE + "</title></head></html>");
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
     }
 
     /**

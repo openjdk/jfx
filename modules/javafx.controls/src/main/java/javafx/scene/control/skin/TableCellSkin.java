@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
  */
 public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -54,7 +54,7 @@ public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -77,7 +77,7 @@ public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> 
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

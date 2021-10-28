@@ -35,7 +35,7 @@ namespace JSC {
 class RuntimeArray final : public JSArray {
 public:
     using Base = JSArray;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesAnyFormOfGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
     static constexpr bool needsDestruction = true;
 
     template<typename CellType, JSC::SubspaceAccess>
@@ -59,7 +59,7 @@ public:
     ~RuntimeArray();
     static void destroy(JSCell*);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
@@ -88,7 +88,6 @@ private:
     RuntimeArray(VM&, Structure*);
     void finishCreation(VM&, Bindings::Array*);
 
-    static EncodedJSValue lengthGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
     static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
 
     BindingsArray* m_array;

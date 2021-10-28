@@ -32,6 +32,7 @@
 #include "JSArrayBufferView.h"
 #include "JSCJSValue.h"
 #include "JSSourceCode.h"
+#include "WasmFormat.h"
 #include "WebAssemblyFunction.h"
 #include "WebAssemblyWrapperFunction.h"
 
@@ -77,14 +78,14 @@ ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(JSGlobalO
         return { nullptr, 0 };
     }
 
-    if (arrayBufferView ? arrayBufferView->isNeutered() : arrayBuffer->impl()->isNeutered()) {
+    if (arrayBufferView ? arrayBufferView->isDetached() : arrayBuffer->impl()->isDetached()) {
         throwException(globalObject, throwScope, createTypeError(globalObject,
             "underlying TypedArray has been detatched from the ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
 
     uint8_t* base = arrayBufferView ? static_cast<uint8_t*>(arrayBufferView->vector()) : static_cast<uint8_t*>(arrayBuffer->impl()->data());
-    size_t byteSize = arrayBufferView ? arrayBufferView->length() : arrayBuffer->impl()->byteLength();
+    size_t byteSize = arrayBufferView ? arrayBufferView->byteLength() : arrayBuffer->impl()->byteLength();
     return { base, byteSize };
 }
 
@@ -127,12 +128,20 @@ ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSValue value, WebAssemblyF
     return isWebAssemblyHostFunction(vm, jsCast<JSObject*>(value), wasmFunction, wasmWrapperFunction);
 }
 
-
 ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSValue object)
 {
     WebAssemblyFunction* unused;
     WebAssemblyWrapperFunction* unused2;
     return isWebAssemblyHostFunction(vm, object, unused, unused2);
+}
+
+ALWAYS_INLINE JSValue defaultValueForReferenceType(const Wasm::Type type)
+{
+    ASSERT(Wasm::isRefType(type));
+    if (type == Wasm::Type::Externref)
+        return jsUndefined();
+    ASSERT(type == Wasm::Type::Funcref);
+    return jsNull();
 }
 
 } // namespace JSC

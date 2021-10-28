@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BrandedStructure.h"
 #include "JSArrayBufferView.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
@@ -61,7 +62,12 @@ inline Structure* Structure::createStructure(VM& vm)
 inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);
-    Structure* newStructure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm, previous, deferred);
+    Structure* newStructure;
+    if (previous->isBrandedStructure())
+        newStructure = new (NotNull, allocateCell<BrandedStructure>(vm.heap)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous), deferred);
+    else
+        newStructure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm, previous, deferred);
+
     newStructure->finishCreation(vm, previous);
     return newStructure;
 }
@@ -176,8 +182,17 @@ void Structure::forEachPropertyConcurrently(const Functor& functor)
 
         seenProperties.add(structure->m_transitionPropertyName.get());
 
-        if (structure->isPropertyDeletionTransition())
+        switch (structure->transitionKind()) {
+        case TransitionKind::PropertyAddition:
+        case TransitionKind::PropertyAttributeChange:
+            break;
+        case TransitionKind::PropertyDeletion:
+        case TransitionKind::SetBrand:
             continue;
+        default:
+            ASSERT_NOT_REACHED();
+            break;
+        }
 
         if (!functor(PropertyMapEntry(structure->m_transitionPropertyName.get(), structure->transitionOffset(), structure->transitionPropertyAttributes()))) {
             if (table)
@@ -208,6 +223,7 @@ void Structure::forEachProperty(VM& vm, const Functor& functor)
             if (!functor(entry))
                 return;
         }
+        ensureStillAliveHere(table);
     }
 }
 
@@ -242,32 +258,32 @@ inline bool Structure::transitivelyTransitionedFrom(Structure* structureToFind)
     return false;
 }
 
-inline void Structure::setCachedOwnKeys(VM& vm, JSImmutableButterfly* ownKeys)
+inline void Structure::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSImmutableButterfly* cached)
 {
-    ensureRareData(vm)->setCachedOwnKeys(vm, ownKeys);
+    ensureRareData(vm)->setCachedPropertyNames(vm, kind, cached);
 }
 
-inline JSImmutableButterfly* Structure::cachedOwnKeys() const
-{
-    if (!hasRareData())
-        return nullptr;
-    return rareData()->cachedOwnKeys();
-}
-
-inline JSImmutableButterfly* Structure::cachedOwnKeysIgnoringSentinel() const
+inline JSImmutableButterfly* Structure::cachedPropertyNames(CachedPropertyNamesKind kind) const
 {
     if (!hasRareData())
         return nullptr;
-    return rareData()->cachedOwnKeysIgnoringSentinel();
+    return rareData()->cachedPropertyNames(kind);
 }
 
-inline bool Structure::canCacheOwnKeys() const
+inline JSImmutableButterfly* Structure::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData()->cachedPropertyNamesIgnoringSentinel(kind);
+}
+
+inline bool Structure::canCacheOwnPropertyNames() const
 {
     if (isDictionary())
         return false;
     if (hasIndexedProperties(indexingType()))
         return false;
-    if (typeInfo().overridesAnyFormOfGetPropertyNames())
+    if (typeInfo().overridesAnyFormOfGetOwnPropertyNames())
         return false;
     return true;
 }
@@ -427,11 +443,11 @@ inline size_t nextOutOfLineStorageCapacity(size_t currentCapacity)
     return currentCapacity * outOfLineGrowthFactor;
 }
 
-inline void Structure::setObjectToStringValue(JSGlobalObject* globalObject, VM& vm, JSString* value, const PropertySlot& toStringTagSymbolSlot)
+inline void Structure::cacheSpecialProperty(JSGlobalObject* globalObject, VM& vm, JSValue value, CachedSpecialPropertyKey key, const PropertySlot& slot)
 {
     if (!hasRareData())
         allocateRareData(vm);
-    rareData()->setObjectToStringValue(globalObject, vm, this, value, toStringTagSymbolSlot);
+    rareData()->cacheSpecialProperty(globalObject, vm, this, value, key, slot);
 }
 
 template<Structure::ShouldPin shouldPin, typename Func>
@@ -521,6 +537,49 @@ inline PropertyOffset Structure::remove(VM& vm, PropertyName propertyName, const
     return offset;
 }
 
+template<Structure::ShouldPin shouldPin, typename Func>
+inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyName, unsigned attributes, const Func& func)
+{
+    PropertyTable* table = ensurePropertyTable(vm);
+
+    GCSafeConcurrentJSLocker locker(m_lock, vm.heap);
+
+    switch (shouldPin) {
+    case ShouldPin::Yes:
+        pin(locker, vm, table);
+        break;
+    case ShouldPin::No:
+        setPropertyTable(vm, table);
+        break;
+    }
+
+    ASSERT(JSC::isValidOffset(get(vm, propertyName)));
+
+    checkConsistency();
+    PropertyMapEntry* entry = table->get(propertyName.uid());
+    if (!entry)
+        return invalidOffset;
+
+    PropertyOffset offset = entry->offset;
+
+    if (attributes & PropertyAttribute::DontEnum)
+        setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (attributes & PropertyAttribute::ReadOnly)
+        setContainsReadOnlyProperties();
+
+    entry->attributes = attributes;
+
+    PropertyOffset newMaxOffset = maxOffset();
+
+    func(locker, offset, newMaxOffset);
+
+    ASSERT(maxOffset() == newMaxOffset);
+    ASSERT(JSC::isValidOffset(get(vm, propertyName)));
+
+    checkConsistency();
+    return offset;
+}
+
 template<typename Func>
 inline PropertyOffset Structure::addPropertyWithoutTransition(VM& vm, PropertyName propertyName, unsigned attributes, const Func& func)
 {
@@ -535,6 +594,12 @@ inline PropertyOffset Structure::removePropertyWithoutTransition(VM& vm, Propert
     ASSERT(propertyTableOrNull());
 
     return remove<ShouldPin::Yes>(vm, propertyName, func);
+}
+
+template<typename Func>
+inline PropertyOffset Structure::attributeChangeWithoutTransition(VM& vm, PropertyName propertyName, unsigned attributes, const Func& func)
+{
+    return attributeChange<ShouldPin::Yes>(vm, propertyName, attributes, func);
 }
 
 ALWAYS_INLINE void Structure::setPrototypeWithoutTransition(VM& vm, JSValue prototype)
@@ -608,7 +673,7 @@ ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const
     return !aObj && !bObj;
 }
 
-inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, NonPropertyTransition transitionKind)
+inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, TransitionKind transitionKind)
 {
     IndexingType indexingModeIncludingHistory = newIndexingType(structure->indexingModeIncludingHistory(), transitionKind);
 

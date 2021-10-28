@@ -75,9 +75,7 @@ void              gst_flow_combiner_reset (GstFlowCombiner * combiner);
 GST_BASE_API
 GType             gst_flow_combiner_get_type (void);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstFlowCombiner, gst_flow_combiner_free)
-#endif
 
 G_END_DECLS
 

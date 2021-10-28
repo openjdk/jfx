@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -147,7 +147,7 @@ public class VBox extends Pane {
     private Orientation bias;
     private double[][] tempArray;
 
-/********************************************************************
+/* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
     private static final Priority[] GROW_PRIORITY = new Priority[] {Priority.ALWAYS, Priority.SOMETIMES};
@@ -211,7 +211,7 @@ public class VBox extends Pane {
         setMargin(child, null);
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
@@ -611,7 +611,7 @@ public class VBox extends Pane {
 
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

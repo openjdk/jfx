@@ -44,6 +44,9 @@ public:
 
     RoundedRect roundedContentBoxRect() const;
 
+    bool isContentLikelyVisibleInViewport();
+    bool needsPreferredWidthsRecalculation() const override;
+
 protected:
     RenderReplaced(Element&, RenderStyle&&);
     RenderReplaced(Element&, RenderStyle&&, const LayoutSize& intrinsicSize);
@@ -56,8 +59,6 @@ protected:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const final;
 
     virtual LayoutUnit minimumReplacedHeight() const { return 0_lu; }
-
-    void setSelectionState(HighlightState) override;
 
     bool isSelected() const;
 
@@ -94,6 +95,9 @@ private:
     void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, double& intrinsicRatio) const;
 
     virtual bool shouldDrawSelectionTint() const;
+
+    Color calculateHighlightColor() const;
+    bool isHighlighted(HighlightState, const HighlightData&) const;
 
     mutable LayoutSize m_intrinsicSize;
 };

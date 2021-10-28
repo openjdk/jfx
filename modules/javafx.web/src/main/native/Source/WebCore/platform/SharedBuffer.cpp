@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
@@ -236,9 +236,6 @@ const char* SharedBuffer::DataSegment::data() const
 #if USE(CF)
         [](const RetainPtr<CFDataRef>& data) { return reinterpret_cast<const char*>(CFDataGetBytePtr(data.get())); },
 #endif
-#if USE(SOUP)
-        [](const GUniquePtr<SoupBuffer>& data) { return data->data; },
-#endif
 #if USE(GLIB)
         [](const GRefPtr<GBytes>& data) { return reinterpret_cast<const char*>(g_bytes_get_data(data.get(), nullptr)); },
 #endif
@@ -317,9 +314,6 @@ size_t SharedBuffer::DataSegment::size() const
 #if USE(CF)
         [](const RetainPtr<CFDataRef>& data) { return CFDataGetLength(data.get()); },
 #endif
-#if USE(SOUP)
-        [](const GUniquePtr<SoupBuffer>& data) { return static_cast<size_t>(data->length); },
-#endif
 #if USE(GLIB)
         [](const GRefPtr<GBytes>& data) { return g_bytes_get_size(data.get()); },
 #endif
@@ -351,7 +345,12 @@ const char* SharedBufferDataView::data() const
 RefPtr<SharedBuffer> utf8Buffer(const String& string)
 {
     // Allocate a buffer big enough to hold all the characters.
-    const int length = string.length();
+    const size_t length = string.length();
+    if constexpr (String::MaxLength > std::numeric_limits<size_t>::max() / 3) {
+        if (length > std::numeric_limits<size_t>::max() / 3)
+            return nullptr;
+    }
+
     Vector<char> buffer(length * 3);
 
     // Convert to runs of 8-bit characters.

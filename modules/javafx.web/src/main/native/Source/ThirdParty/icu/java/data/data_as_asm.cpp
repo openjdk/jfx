@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 #include "pkg_genc.h"
+#include "toolutil.h"
 #include <stdio.h>
 
 // Simple tool to convert the icudt*.dat into icudt*_dat.s, it is based
@@ -39,7 +40,7 @@ int main(int argc, char* argv[]) {
     // assembly route.
     // Generate icudt*l_dat.obj file into the <out_dir>.
     // UNUSED(argv[1])
-    writeObjectCode(argv[2], argv[3], argv[4], NULL, NULL, NULL);
+    writeObjectCode(argv[2], argv[3], argv[4], NULL, NULL, NULL, 0, TRUE);
 #else
     if (!checkAssemblyHeaderName(argv[1])) {
         fprintf(stderr, "%s: Unable to recogonize assembler type:%s\n", argv[0], argv[1]);
@@ -47,7 +48,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Generates icudt*l_dat.s file into the <out_dir>.
-    writeAssemblyCode(argv[2], argv[3], argv[4], NULL, NULL);
+    writeAssemblyCode(argv[2], argv[3], argv[4], NULL, NULL, 0);
 #endif
     return 0;
 }

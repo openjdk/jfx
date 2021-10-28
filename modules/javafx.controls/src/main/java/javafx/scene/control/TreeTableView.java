@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -355,7 +355,7 @@ import javafx.util.Callback;
 @DefaultProperty("root")
 public class TreeTableView<S> extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -420,7 +420,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -607,7 +607,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -647,7 +647,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -899,7 +899,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -1510,7 +1510,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -1931,7 +1931,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -2020,7 +2020,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -2085,7 +2085,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -2133,7 +2133,7 @@ public class TreeTableView<S> extends Control {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *
@@ -2271,7 +2271,7 @@ public class TreeTableView<S> extends Control {
     public static abstract class TreeTableViewSelectionModel<S> extends
             TableSelectionModel<TreeItem<S>> {
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private fields                                                      *
          *                                                                     *
@@ -2280,7 +2280,7 @@ public class TreeTableView<S> extends Control {
         private final TreeTableView<S> treeTableView;
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
          *                                                                     *
@@ -2303,7 +2303,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Abstract API                                                        *
          *                                                                     *
@@ -2319,7 +2319,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public API                                                          *
          *                                                                     *
@@ -2367,7 +2367,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private implementation                                              *
          *                                                                     *
@@ -2404,7 +2404,7 @@ public class TreeTableView<S> extends Control {
 
         private TreeTableView<S> treeTableView = null;
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
          *                                                                     *
@@ -2551,7 +2551,9 @@ public class TreeTableView<S> extends Control {
                             }
                         }
 
-                        ControlUtils.reducingChange(selectedIndices, removed);
+                        if (!removed.isEmpty()) {
+                            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
+                        }
 
                         for (int index : removed) {
                             startAtomic();
@@ -2713,7 +2715,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Observable properties (and getters/setters)                         *
          *                                                                     *
@@ -2729,7 +2731,7 @@ public class TreeTableView<S> extends Control {
         }
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Internal properties                                                 *
          *                                                                     *
@@ -2737,7 +2739,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public selection API                                                *
          *                                                                     *
@@ -2812,7 +2814,8 @@ public class TreeTableView<S> extends Control {
              *   return the same number - the place where the removed elements were positioned in the list.
              */
             if (wasSelected) {
-                change = ControlUtils.buildClearAndSelectChange(selectedCellsSeq, previousSelection, row);
+                change = ControlUtils.buildClearAndSelectChange(
+                        selectedCellsSeq, previousSelection, newTablePosition, Comparator.comparing(TreeTablePosition::getRow));
             } else {
                 final int changeIndex = isCellSelectionEnabled ? 0 : Math.max(0, selectedCellsSeq.indexOf(newTablePosition));
                 final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : 1;
@@ -3291,7 +3294,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Support code                                                        *
          *                                                                     *
@@ -3600,7 +3603,7 @@ public class TreeTableView<S> extends Control {
         }
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public API                                                          *
          *                                                                     *
@@ -3702,7 +3705,7 @@ public class TreeTableView<S> extends Control {
 
 
 
-         /***********************************************************************
+         /* *********************************************************************
          *                                                                     *
          * Private Implementation                                              *
          *                                                                     *

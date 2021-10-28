@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,7 +85,8 @@ class KeyInput {
                 } else if (key == KeyEvent.VK_NUM_LOCK) {
                     numLock = !numLock;
                 } else if (key == KeyEvent.VK_C && newState.isControlPressed()) {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    @SuppressWarnings("removal")
+                    var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                         if ("1".equals(System.getenv("JAVAFX_DEBUG"))) {
                             System.exit(0);
                         }

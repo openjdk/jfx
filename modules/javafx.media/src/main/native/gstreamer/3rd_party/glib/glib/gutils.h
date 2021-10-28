@@ -65,6 +65,129 @@ GLIB_AVAILABLE_IN_ALL
 const gchar *         g_get_application_name (void);
 GLIB_AVAILABLE_IN_ALL
 void                  g_set_application_name (const gchar *application_name);
+GLIB_AVAILABLE_IN_2_64
+gchar *               g_get_os_info          (const gchar *key_name);
+
+/**
+ * G_OS_INFO_KEY_NAME:
+ *
+ * A key to get the name of the operating system excluding version information suitable for presentation to the user, e.g. "YoYoOS"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_NAME \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "NAME"
+
+/**
+ * G_OS_INFO_KEY_PRETTY_NAME:
+ *
+ * A key to get the name of the operating system in a format suitable for presentation to the user, e.g. "YoYoOS Foo"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_PRETTY_NAME \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "PRETTY_NAME"
+
+/**
+ * G_OS_INFO_KEY_VERSION:
+ *
+ * A key to get the operating system version suitable for presentation to the user, e.g. "42 (Foo)"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_VERSION \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "VERSION"
+
+/**
+ * G_OS_INFO_KEY_VERSION_CODENAME:
+ *
+ * A key to get a codename identifying the operating system release suitable for processing by scripts or usage in generated filenames, e.g. "foo"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_VERSION_CODENAME \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "VERSION_CODENAME"
+
+/**
+ * G_OS_INFO_KEY_VERSION_ID:
+ *
+ * A key to get the version of the operating system suitable for processing by scripts or usage in generated filenames, e.g. "42"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_VERSION_ID \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "VERSION_ID"
+
+/**
+ * G_OS_INFO_KEY_ID:
+ *
+ * A key to get an ID identifying the operating system suitable for processing by scripts or usage in generated filenames, e.g. "yoyoos"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_ID \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "ID"
+
+/**
+ * G_OS_INFO_KEY_HOME_URL:
+ *
+ * A key to get the homepage for the operating system, e.g. "https://www.yoyo-os.com/"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_HOME_URL \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "HOME_URL"
+
+/**
+ * G_OS_INFO_KEY_DOCUMENTATION_URL:
+ *
+ * A key to get the documentation page for the operating system, e.g. "https://docs.yoyo-os.com/"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_DOCUMENTATION_URL \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "DOCUMENTATION_URL"
+
+/**
+ * G_OS_INFO_KEY_SUPPORT_URL:
+ *
+ * A key to get the support page for the operating system, e.g. "https://support.yoyo-os.com/"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_SUPPORT_URL \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "SUPPORT_URL"
+
+/**
+ * G_OS_INFO_KEY_BUG_REPORT_URL:
+ *
+ * A key to get the bug reporting page for the operating system, e.g. "https://bugs.yoyo-os.com/"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_BUG_REPORT_URL \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "BUG_REPORT_URL"
+
+/**
+ * G_OS_INFO_KEY_PRIVACY_POLICY_URL:
+ *
+ * A key to get the privacy policy for the operating system, e.g. "https://privacy.yoyo-os.com/"
+ *
+ * Since: 2.64
+ */
+#define G_OS_INFO_KEY_PRIVACY_POLICY_URL \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    "PRIVACY_POLICY_URL"
 
 GLIB_AVAILABLE_IN_ALL
 void      g_reload_user_special_dirs_cache     (void);

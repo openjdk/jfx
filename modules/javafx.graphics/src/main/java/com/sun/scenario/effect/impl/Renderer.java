@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,10 @@ public abstract class Renderer {
 
     /**
      * Enumeration describing the lifecycle states of the renderer.
-     * When the renderer is created, it is in the {@code OK} state.
+     * When the renderer is created, it will either start in the {@code OK}
+     * state, or it will start in the {@code NOTREADY} state until
+     * the first time it is used during rendering, then transition
+     * to the {@code OK} state.
      *
      * It could become {@code LOST} at some point. This may happen for
      * example if the renderer is susceptible to display changes.
@@ -61,9 +64,13 @@ public abstract class Renderer {
      * will be created for the particular context.
      * <p>
      * Thus the lifecycle of a renderer is:
-     * {@code OK} [=> {@code LOST} [=> {@code DISPOSED}]]
+     * [{@code NOTREADY} =>] {@code OK} [=> {@code LOST} [=> {@code DISPOSED}]]
      */
     public static enum RendererState {
+        /**
+         * Renderer is not ready; it might be able to be used for rendering.
+         */
+        NOTREADY,
         /**
          * Renderer can be used for rendering.
          */
@@ -85,6 +92,7 @@ public abstract class Renderer {
         Collections.synchronizedMap(new HashMap<String, EffectPeer>(5));
     private final ImagePool imagePool;
 
+    @SuppressWarnings("removal")
     protected static final boolean verbose = AccessController.doPrivileged(
             (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("decora.verbose"));
 
@@ -339,6 +347,9 @@ public abstract class Renderer {
 
         Renderer r = rendererMap.get(fctx);
         if (r != null) {
+            if (r.getRendererState() == RendererState.NOTREADY) {
+                return r;
+            }
             if (r.getRendererState() == RendererState.OK) {
                 return r;
             }

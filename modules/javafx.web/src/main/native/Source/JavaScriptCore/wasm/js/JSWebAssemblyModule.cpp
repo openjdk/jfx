@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,6 +75,10 @@ void JSWebAssemblyModule::finishCreation(VM& vm)
     // On success, a new WebAssembly.Module object is returned with [[Module]] set to the validated Ast.module.
     SymbolTable* exportSymbolTable = SymbolTable::create(vm);
     const Wasm::ModuleInformation& moduleInformation = m_module->moduleInformation();
+    {
+        auto offset = exportSymbolTable->takeNextScopeOffset(NoLockingNecessary);
+        exportSymbolTable->set(NoLockingNecessary, vm.propertyNames->starNamespacePrivateName.impl(), SymbolTableEntry(VarOffset(offset)));
+    }
     for (auto& exp : moduleInformation.exports) {
         auto offset = exportSymbolTable->takeNextScopeOffset(NoLockingNecessary);
         String field = String::fromUTF8(exp.field);
@@ -120,7 +124,8 @@ void JSWebAssemblyModule::setCodeBlock(VM& vm, Wasm::MemoryMode mode, JSWebAssem
     m_codeBlocks[static_cast<size_t>(mode)].set(vm, this, codeBlock);
 }
 
-void JSWebAssemblyModule::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWebAssemblyModule::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSWebAssemblyModule* thisObject = jsCast<JSWebAssemblyModule*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -130,6 +135,8 @@ void JSWebAssemblyModule::visitChildren(JSCell* cell, SlotVisitor& visitor)
     for (unsigned i = 0; i < Wasm::NumberOfMemoryModes; ++i)
         visitor.append(thisObject->m_codeBlocks[i]);
 }
+
+DEFINE_VISIT_CHILDREN(JSWebAssemblyModule);
 
 } // namespace JSC
 

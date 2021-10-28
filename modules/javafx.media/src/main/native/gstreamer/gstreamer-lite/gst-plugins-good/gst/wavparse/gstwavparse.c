@@ -21,14 +21,14 @@
 
 /**
  * SECTION:element-wavparse
+ * @title: wavparse
  *
  * Parse a .wav file into raw or compressed audio.
  *
  * Wavparse supports both push and pull mode operations, making it possible to
  * stream from a network source.
  *
- * <refsect2>
- * <title>Example launch line</title>
+ * ## Example launch line
  * |[
  * gst-launch-1.0 filesrc location=sine.wav ! wavparse ! audioconvert ! alsasink
  * ]| Read a wav file and output to the soundcard using the ALSA element. The
@@ -36,7 +36,7 @@
  * |[
  * gst-launch-1.0 gnomevfssrc location=http://www.example.org/sine.wav ! queue ! wavparse ! audioconvert ! alsasink
  * ]| Stream data from a network url.
- * </refsect2>
+ *
  */
 
 /*
@@ -1825,7 +1825,7 @@ invalid_bps:
 no_bytes_per_sample:
   {
     GST_ELEMENT_ERROR (wav, STREAM, FAILED, (NULL),
-        ("Could not caluclate bytes per sample - invalid data"));
+        ("Could not calculate bytes per sample - invalid data"));
     goto fail;
   }
 unknown_format:
@@ -2020,7 +2020,7 @@ gst_wavparse_add_src_pad (GstWavParse * wav, GstBuffer * buf)
 }
 
 static GstFlowReturn
-gst_wavparse_stream_data (GstWavParse * wav)
+gst_wavparse_stream_data (GstWavParse * wav, gboolean flushing)
 {
   GstBuffer *buf = NULL;
   GstFlowReturn res = GST_FLOW_OK;
@@ -2034,7 +2034,7 @@ iterate_adapter:
       G_GINT64_FORMAT, wav->offset, wav->end_offset, wav->dataleft);
 
   if ((wav->dataleft == 0 || wav->dataleft < wav->blockalign)) {
-    /* In case chunk size is not declared in the begining get size from the
+    /* In case chunk size is not declared in the beginning get size from the
      * file size directly */
     if (wav->chunk_size == 0) {
       gint64 upstream_size = 0;
@@ -2047,7 +2047,7 @@ iterate_adapter:
       if (upstream_size < wav->offset + wav->datastart)
         goto found_eos;
 
-      /* If file has updated since the beggining continue reading the file */
+      /* If file has updated since the beginning continue reading the file */
       wav->dataleft = upstream_size - wav->offset - wav->datastart;
       wav->end_offset = upstream_size;
 
@@ -2110,10 +2110,21 @@ iterate_adapter:
 
     if (avail < desired) {
       GST_LOG_OBJECT (wav, "Got only %u bytes of data from the sinkpad", avail);
-      return GST_FLOW_OK;
-    }
 
-    buf = gst_adapter_take_buffer (wav->adapter, desired);
+      /* If we are at the end of the stream, we need to flush whatever we have left */
+      if (avail > 0 && flushing) {
+        if (avail >= wav->blockalign && wav->blockalign > 0) {
+          avail -= (avail % wav->blockalign);
+          buf = gst_adapter_take_buffer (wav->adapter, avail);
+        } else {
+          return GST_FLOW_OK;
+        }
+      } else {
+        return GST_FLOW_OK;
+      }
+    } else {
+      buf = gst_adapter_take_buffer (wav->adapter, desired);
+    }
   } else {
     if ((res = gst_pad_pull_range (wav->sinkpad, wav->offset,
                 desired, &buf)) != GST_FLOW_OK)
@@ -2293,7 +2304,7 @@ gst_wavparse_loop (GstPad * pad)
       /* fall-through */
 
     case GST_WAVPARSE_DATA:
-      if ((ret = gst_wavparse_stream_data (wav)) != GST_FLOW_OK)
+      if ((ret = gst_wavparse_stream_data (wav, FALSE)) != GST_FLOW_OK)
         goto pause;
       break;
     default:
@@ -2393,7 +2404,7 @@ gst_wavparse_chain (GstPad * pad, GstObject * parent, GstBuffer * buf)
     case GST_WAVPARSE_DATA:
       if (buf && GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_DISCONT))
         wav->discont = TRUE;
-      if ((ret = gst_wavparse_stream_data (wav)) != GST_FLOW_OK)
+      if ((ret = gst_wavparse_stream_data (wav, FALSE)) != GST_FLOW_OK)
         goto done;
       break;
     default:
@@ -2426,7 +2437,7 @@ gst_wavparse_flush_data (GstWavParse * wav)
   guint av;
 
   if ((av = gst_adapter_available (wav->adapter)) > 0) {
-    ret = gst_wavparse_stream_data (wav);
+    ret = gst_wavparse_stream_data (wav, TRUE);
   }
 
   return ret;
@@ -2558,10 +2569,10 @@ gst_wavparse_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
         if (G_UNLIKELY (wav->first)) {
           wav->first = FALSE;
           gst_wavparse_add_src_pad (wav, NULL);
-        } else {
-          /* stream leftover data in current segment */
-          gst_wavparse_flush_data (wav);
         }
+
+        /* stream leftover data in current segment */
+        gst_wavparse_flush_data (wav);
       }
 
       /* fall-through */

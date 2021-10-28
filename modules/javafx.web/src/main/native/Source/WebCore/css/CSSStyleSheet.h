@@ -62,6 +62,9 @@ public:
     bool disabled() const final { return m_isDisabled; }
     void setDisabled(bool) final;
 
+    ExceptionOr<Ref<CSSRuleList>> cssRulesForBindings();
+    ExceptionOr<Ref<CSSRuleList>> rulesForBindings();
+
     WEBCORE_EXPORT RefPtr<CSSRuleList> cssRules();
     WEBCORE_EXPORT ExceptionOr<unsigned> insertRule(const String& rule, unsigned index);
     WEBCORE_EXPORT ExceptionOr<void> deleteRule(unsigned index);

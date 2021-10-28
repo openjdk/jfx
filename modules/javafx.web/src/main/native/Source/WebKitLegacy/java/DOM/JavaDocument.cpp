@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -365,9 +365,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStat
         break;
     case WebCore::VisibilityState::Visible:
         visibility = "visible";
-        break;
-    case WebCore::VisibilityState::Prerender:
-        visibility = "prerender";
         break;
     }
     return JavaReturn<String>(env, String(visibility));

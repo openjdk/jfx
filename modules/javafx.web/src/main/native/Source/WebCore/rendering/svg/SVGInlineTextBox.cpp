@@ -353,12 +353,18 @@ bool SVGInlineTextBox::acquirePaintingResource(GraphicsContext*& context, float 
         return false;
 
     if (!m_paintingResource->applyResource(renderer, style, context, paintingResourceMode())) {
-        if (fallbackColor.isValid()) {
+        if (!fallbackColor.isValid()) {
+            m_paintingResource = nullptr;
+            return false;
+        }
+
             RenderSVGResourceSolidColor* fallbackResource = RenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
 
             m_paintingResource = fallbackResource;
-            m_paintingResource->applyResource(renderer, style, context, paintingResourceMode());
+        if (!m_paintingResource->applyResource(renderer, style, context, paintingResourceMode())) {
+            m_paintingResource = nullptr;
+            return false;
         }
     }
 
@@ -602,13 +608,10 @@ void SVGInlineTextBox::paintText(GraphicsContext& context, const RenderStyle& st
         paintTextWithShadows(context, style, textRun, fragment, 0, startPosition);
 
     // Draw text using selection style from the start to the end position of the selection
-    if (style != selectionStyle)
-        SVGResourcesCache::clientStyleChanged(parent()->renderer(), StyleDifference::Repaint, selectionStyle);
-
-    paintTextWithShadows(context, selectionStyle, textRun, fragment, startPosition, endPosition);
-
-    if (style != selectionStyle)
-        SVGResourcesCache::clientStyleChanged(parent()->renderer(), StyleDifference::Repaint, style);
+    {
+        SVGResourcesCache::SetStyleForScope temporaryStyleChange(parent()->renderer(), style, selectionStyle);
+        paintTextWithShadows(context, selectionStyle, textRun, fragment, startPosition, endPosition);
+    }
 
     // Eventually draw text using regular style from the end position of the selection to the end of the current chunk part
     if (endPosition < fragment.length && !paintSelectedTextOnly)

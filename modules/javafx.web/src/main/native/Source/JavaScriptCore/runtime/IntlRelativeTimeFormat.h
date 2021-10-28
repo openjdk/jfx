@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "JSObject.h"
 #include <unicode/ureldatefmt.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace JSC {
 
@@ -63,7 +64,7 @@ public:
 private:
     IntlRelativeTimeFormat(VM&, Structure*);
     void finishCreation(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
 
@@ -71,12 +72,8 @@ private:
 
     enum class Style : uint8_t { Long, Short, Narrow };
 
-    struct URelativeDateTimeFormatterDeleter {
-        void operator()(URelativeDateTimeFormatter*) const;
-    };
-    struct UNumberFormatDeleter {
-        void operator()(UNumberFormat*) const;
-    };
+    using URelativeDateTimeFormatterDeleter = ICUDeleter<ureldatefmt_close>;
+    using UNumberFormatDeleter = ICUDeleter<unum_close>;
 
     static ASCIILiteral styleString(Style);
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include "InspectorFrontendAPIDispatcher.h"
 #include "InspectorFrontendClient.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -66,6 +67,8 @@ public:
 
     WEBCORE_EXPORT void windowObjectCleared() final;
     WEBCORE_EXPORT void frontendLoaded() override;
+    WEBCORE_EXPORT void pagePaused() final;
+    WEBCORE_EXPORT void pageUnpaused() final;
 
     void startWindowDrag() override { }
     WEBCORE_EXPORT void moveWindowBy(float x, float y) final;
@@ -76,7 +79,7 @@ public:
     WEBCORE_EXPORT void changeAttachedWindowHeight(unsigned) final;
     WEBCORE_EXPORT void changeAttachedWindowWidth(unsigned) final;
     WEBCORE_EXPORT void changeSheetRect(const FloatRect&) final;
-    WEBCORE_EXPORT void openInNewTab(const String& url) final;
+    WEBCORE_EXPORT void openURLExternally(const String& url) final;
     bool canSave()  override { return false; }
     void save(const String&, const String&, bool, bool) override { }
     void append(const String&, const String&) override { }
@@ -90,6 +93,9 @@ public:
     bool isRemote() const final { return false; }
     WEBCORE_EXPORT unsigned inspectionLevel() const final;
     String backendCommandsURL() const final { return String(); };
+
+    InspectorFrontendAPIDispatcher& frontendAPIDispatcher() final { return m_frontendAPIDispatcher; }
+    Page* frontendPage() final { return m_frontendPage; }
 
     WEBCORE_EXPORT bool canAttachWindow();
     WEBCORE_EXPORT void setDockingUnavailable(bool);
@@ -119,10 +125,6 @@ public:
     WEBCORE_EXPORT Page* inspectedPage() const;
     Page* frontendPage() const { return m_frontendPage; }
 
-    WEBCORE_EXPORT void dispatch(const String& signature);
-    WEBCORE_EXPORT void dispatchMessage(const String& messageObject);
-    WEBCORE_EXPORT void dispatchMessageAsync(const String& messageObject);
-
 protected:
     virtual void setAttachedWindowHeight(unsigned) = 0;
     virtual void setAttachedWindowWidth(unsigned) = 0;
@@ -131,19 +133,17 @@ protected:
     virtual void setSheetRect(const WebCore::FloatRect&) = 0;
 
 private:
-    bool evaluateAsBoolean(const String& expression);
-    void evaluateOnLoad(const String& expression);
-
     friend class FrontendMenuProvider;
+    Optional<bool> evaluationResultToBoolean(InspectorFrontendAPIDispatcher::EvaluationResult);
+
     InspectorController* m_inspectedPageController { nullptr };
     Page* m_frontendPage { nullptr };
     // TODO(yurys): this ref shouldn't be needed.
     RefPtr<InspectorFrontendHost> m_frontendHost;
     std::unique_ptr<InspectorFrontendClientLocal::Settings> m_settings;
-    bool m_frontendLoaded { false };
     DockSide m_dockSide;
-    Vector<String> m_evaluateOnLoad;
     Ref<InspectorBackendDispatchTask> m_dispatchTask;
+    Ref<InspectorFrontendAPIDispatcher> m_frontendAPIDispatcher;
 };
 
 } // namespace WebCore

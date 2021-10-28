@@ -400,11 +400,6 @@ g_str_to_ascii (const gchar *str,
           else /* no match found */
             g_string_append_c (result, '?');
         }
-      else if (*str & 0x80) /* Out-of-range non-ASCII case */
-        {
-          g_string_append_c (result, '?');
-          str = g_utf8_next_char (str);
-        }
       else /* ASCII case */
         g_string_append_c (result, *str++);
     }

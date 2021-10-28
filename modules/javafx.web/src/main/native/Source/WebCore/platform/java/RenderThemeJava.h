@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,16 +44,14 @@ class RenderThemeJava final : public RenderTheme {
 public:
     RenderThemeJava();
 
-    bool canPaint(const PaintInfo&) const final { return true; }
-
     // A method asking if the theme's controls actually care about redrawing when hovered.
     bool supportsHover(const RenderStyle&) const override { return true; }
 
 protected:
-    bool paintCheckbox(const RenderObject& o, const PaintInfo& i, const IntRect& r) override;
+    bool paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r) override;
     void setCheckboxSize(RenderStyle& style) const override;
 
-    bool paintRadio(const RenderObject& o, const PaintInfo& i, const IntRect& r) override;
+    bool paintRadio(const RenderObject& o, const PaintInfo& i, const FloatRect& r) override;
     void setRadioSize(RenderStyle& style) const override;
 
     void adjustButtonStyle(RenderStyle&, const Element*) const override;
@@ -69,7 +67,7 @@ protected:
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustTextAreaStyle(RenderStyle&, const Element* e) const override;
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
@@ -100,17 +98,13 @@ protected:
 
 #endif
 
-#if ENABLE(PROGRESS_ELEMENT)
-    double animationRepeatIntervalForProgressBar(RenderProgress&) const override;
-    double animationDurationForProgressBar(RenderProgress&) const override;
-    void adjustProgressBarStyle(StyleResolver&, RenderStyle&, Element*) const override;
+    Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
+    Seconds animationDurationForProgressBar(const RenderProgress&) const override;
+    void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
-#endif
 
-#if ENABLE(METER_ELEMENT)
-    bool supportsMeter(ControlPart) const override;
+    bool supportsMeter(ControlPart, const HTMLMeterElement&) const override;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
-#endif
 
 #if ENABLE(DATALIST_ELEMENT)
     // Returns size of one slider tick mark for a horizontal track.

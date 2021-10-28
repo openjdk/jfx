@@ -134,7 +134,8 @@ protected:
         m_haveToldClient = true;
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
-        frame.loader().clientRedirected(m_url, delay(), WallTime::now() + timer.nextFireInterval(), lockBackForwardList());
+        Ref<Frame> protectedFrame(frame);
+        frame.loader().clientRedirected(URL(m_url), delay(), WallTime::now() + timer.nextFireInterval(), lockBackForwardList());
     }
 
     void didStopTimer(Frame& frame, NewLoadInProgress newLoadInProgress) override
@@ -220,7 +221,7 @@ public:
         frameLoadRequest.disableNavigationToInvalidURL();
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
 
-        auto completionHandler = WTFMove(m_completionHandler);
+        auto completionHandler = std::exchange(m_completionHandler, nullptr);
         frame.loader().changeLocation(WTFMove(frameLoadRequest));
         completionHandler();
     }
@@ -265,7 +266,7 @@ public:
         if (!m_historySteps) {
             // Special case for go(0) from a frame -> reload only the frame
             // To follow Firefox and IE's behavior, history reload can only navigate the self frame.
-            frame.loader().changeLocation(frame.document()->url(), "_self", 0, lockHistory(), lockBackForwardList(), ReferrerPolicy::EmptyString, shouldOpenExternalURLs());
+            frame.loader().changeLocation(frame.document()->url(), "_self", 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs());
             return;
         }
 
@@ -543,7 +544,7 @@ void NavigationScheduler::timerFired()
 
     Ref<Frame> protect(m_frame);
 
-    std::unique_ptr<ScheduledNavigation> redirect = WTFMove(m_redirect);
+    std::unique_ptr<ScheduledNavigation> redirect = std::exchange(m_redirect, nullptr);
     LOG(History, "NavigationScheduler %p timerFired - firing redirect %p", this, redirect.get());
 
     redirect->fire(m_frame);
@@ -562,7 +563,7 @@ void NavigationScheduler::schedule(std::unique_ptr<ScheduledNavigation> redirect
     if (redirect->wasDuringLoad()) {
         if (DocumentLoader* provisionalDocumentLoader = m_frame.loader().provisionalDocumentLoader())
             provisionalDocumentLoader->stopLoading();
-        m_frame.loader().stopLoading(UnloadEventPolicyUnloadAndPageHide);
+        m_frame.loader().stopLoading(UnloadEventPolicy::UnloadAndPageHide);
     }
 
     cancel();
@@ -602,7 +603,7 @@ void NavigationScheduler::cancel(NewLoadInProgress newLoadInProgress)
         InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
     m_timer.stop();
 
-    if (auto redirect = WTFMove(m_redirect))
+    if (auto redirect = std::exchange(m_redirect, nullptr))
         redirect->didStopTimer(m_frame, newLoadInProgress);
 }
 

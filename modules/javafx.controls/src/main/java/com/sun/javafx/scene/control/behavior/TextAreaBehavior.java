@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,6 +64,8 @@ import static javafx.scene.input.KeyCode.*;
 public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private TextAreaSkin skin;
     private TwoLevelFocusBehavior tlFocus;
+
+    private ChangeListener<Boolean> focusListener;
 
     /**************************************************************************
      * Constructors                                                           *
@@ -139,26 +141,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
         addKeyPadMappings(textAreaInputMap);
 
+        focusListener = (src, ov, nv) -> handleFocusChange();
         // Register for change events
-        c.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                // NOTE: The code in this method is *almost* and exact copy of what is in TextFieldBehavior.
-                // The only real difference is that TextFieldBehavior selects all the text when the control
-                // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
-                // TextArea doesn't lose selection on focus lost, whereas the TextField does.
-                final TextArea textArea = getNode();
-                if (textArea.isFocused()) {
-                    if (!focusGainedByMouseClick) {
-                        setCaretAnimating(true);
-                    }
-                } else {
-//                    skin.hideCaret();
-                    focusGainedByMouseClick = false;
-                    setCaretAnimating(false);
-                }
-            }
-        });
+        c.focusedProperty().addListener(focusListener);
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
@@ -167,8 +152,35 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override public void dispose() {
+        getNode().focusedProperty().removeListener(focusListener);
         if (tlFocus != null) tlFocus.dispose();
         super.dispose();
+    }
+
+    /**
+     * Callback from the node's focusListener - this implementation handles
+     * caret animation as appropriate.
+     */
+    private void handleFocusChange() {
+        // FIXME: the code comment below is outdated
+        // actually, this handler __has__ the exact same logic as TextField
+        // (meanwhile, selection handling of TextField is separated out into focusOwnerLister)
+        // The stumbling block against pulling it up into TextInputControlBehavior is
+        // the focusGainedByMouseClick flag
+        // NOTE: The code in this method is *almost* and exact copy of what is in TextFieldBehavior.
+        // The only real difference is that TextFieldBehavior selects all the text when the control
+        // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
+        // TextArea doesn't lose selection on focus lost, whereas the TextField does.
+        final TextArea textArea = getNode();
+        if (textArea.isFocused()) {
+            if (!focusGainedByMouseClick) {
+                setCaretAnimating(true);
+            }
+        } else {
+//                    skin.hideCaret();
+            focusGainedByMouseClick = false;
+            setCaretAnimating(false);
+        }
     }
 
     // An unholy back-reference!

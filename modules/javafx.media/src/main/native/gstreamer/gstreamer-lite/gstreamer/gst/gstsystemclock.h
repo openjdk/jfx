@@ -48,13 +48,16 @@ typedef struct _GstSystemClockPrivate GstSystemClockPrivate;
  * @GST_CLOCK_TYPE_MONOTONIC: monotonic time since some unspecified starting
  *                            point
  * @GST_CLOCK_TYPE_OTHER: some other time source is used (Since: 1.0.5)
+ * @GST_CLOCK_TYPE_TAI: time since Epoch, but using International Atomic Time
+ *                      as reference (Since: 1.18)
  *
  * The different kind of clocks.
  */
 typedef enum {
   GST_CLOCK_TYPE_REALTIME       = 0,
   GST_CLOCK_TYPE_MONOTONIC      = 1,
-  GST_CLOCK_TYPE_OTHER          = 2
+  GST_CLOCK_TYPE_OTHER          = 2,
+  GST_CLOCK_TYPE_TAI            = 3
 } GstClockType;
 
 /**
@@ -87,9 +90,7 @@ GstClock*               gst_system_clock_obtain         (void);
 GST_API
 void                    gst_system_clock_set_default    (GstClock *new_clock);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstSystemClock, gst_object_unref)
-#endif
 
 G_END_DECLS
 

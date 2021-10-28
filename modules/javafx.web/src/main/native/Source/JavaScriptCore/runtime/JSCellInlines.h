@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -141,14 +141,20 @@ ALWAYS_INLINE Structure* JSCell::structure(VM& vm) const
     return vm.getStructure(m_structureID);
 }
 
-inline void JSCell::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSCell::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     visitor.appendUnbarriered(cell->structure(visitor.vm()));
 }
 
-inline void JSCell::visitOutputConstraints(JSCell*, SlotVisitor&)
+DEFINE_VISIT_CHILDREN_WITH_MODIFIER(inline, JSCell);
+
+template<typename Visitor>
+ALWAYS_INLINE void JSCell::visitOutputConstraintsImpl(JSCell*, Visitor&)
 {
 }
+
+DEFINE_VISIT_OUTPUT_CONSTRAINTS_WITH_MODIFIER(inline, JSCell);
 
 ALWAYS_INLINE VM& CallFrame::deprecatedVM() const
 {
@@ -169,7 +175,7 @@ template<typename T>
 ALWAYS_INLINE void* tryAllocateCellHelper(Heap& heap, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     VM& vm = heap.vm();
-    ASSERT(deferralContext || !DisallowGC::isInEffectOnCurrentThread());
+    ASSERT(deferralContext || heap.isDeferred() || !DisallowGC::isInEffectOnCurrentThread());
     ASSERT(size >= sizeof(T));
     JSCell* result = static_cast<JSCell*>(subspaceFor<T>(vm)->allocateNonVirtual(vm, size, deferralContext, failureMode));
     if (failureMode == AllocationFailureMode::ReturnNull && !result)
@@ -241,18 +247,53 @@ inline bool JSCell::isProxy() const
     return m_type == ImpureProxyType || m_type == PureForwardingProxyType || m_type == ProxyObjectType;
 }
 
-ALWAYS_INLINE bool JSCell::isCallable(VM& vm)
+// FIXME: Consider making getCallData concurrency-safe once NPAPI support is removed.
+// https://bugs.webkit.org/show_bug.cgi?id=215801
+template<Concurrency concurrency>
+ALWAYS_INLINE TriState JSCell::isCallableWithConcurrency(VM& vm)
 {
+    if (!isObject())
+        return TriState::False;
     if (type() == JSFunctionType)
-        return true;
-    if (inlineTypeFlags() & OverridesGetCallData)
-        return methodTable(vm)->getCallData(this).type != CallData::Type::None;
-    return false;
+        return TriState::True;
+    if (inlineTypeFlags() & OverridesGetCallData) {
+        if constexpr (concurrency == Concurrency::MainThread)
+            return (methodTable(vm)->getCallData(this).type != CallData::Type::None) ? TriState::True : TriState::False;
+        // We know that InternalFunction::getCallData is concurrency aware. Plus, derived classes of InternalFunction never
+        // override getCallData (this is ensured by ASSERT in InternalFunction).
+        if (type() == InternalFunctionType)
+            return (methodTable(vm)->getCallData(this).type != CallData::Type::None) ? TriState::True : TriState::False;
+        return TriState::Indeterminate;
+    }
+    return TriState::False;
 }
 
-inline bool JSCell::isConstructor(VM& vm)
+template<Concurrency concurrency>
+inline TriState JSCell::isConstructorWithConcurrency(VM& vm)
 {
-    return methodTable(vm)->getConstructData(this).type != CallData::Type::None;
+    if (!isObject())
+        return TriState::False;
+    if constexpr (concurrency == Concurrency::MainThread)
+        return (methodTable(vm)->getConstructData(this).type != CallData::Type::None) ? TriState::True : TriState::False;
+    // We know that both getConstructData of both types are concurrency aware. Plus, derived classes of JSFunction and InternalFunction
+    // never override getConstructData (this is ensured by ASSERT in JSFunction and InternalFunction).
+    if (type() == JSFunctionType || type() == InternalFunctionType)
+        return (methodTable(vm)->getConstructData(this).type != CallData::Type::None) ? TriState::True : TriState::False;
+    return TriState::Indeterminate;
+}
+
+ALWAYS_INLINE bool JSCell::isCallable(VM& vm)
+{
+    auto result = isCallableWithConcurrency<Concurrency::MainThread>(vm);
+    ASSERT(result != TriState::Indeterminate);
+    return result == TriState::True;
+}
+
+ALWAYS_INLINE bool JSCell::isConstructor(VM& vm)
+{
+    auto result = isConstructorWithConcurrency<Concurrency::MainThread>(vm);
+    ASSERT(result != TriState::Indeterminate);
+    return result == TriState::True;
 }
 
 inline bool JSCell::isAPIValueWrapper() const

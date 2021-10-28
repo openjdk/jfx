@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,10 @@ import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
 /**
- * A type that combines two Size values.  The primary purpose of
+ * Converter to combine two {@code Size} values.  The primary purpose of
  * this type is to handle "convert(size1, size2)" expressions in CSS.
+ *
+ * @since 9
  */
 public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, Size>[], Size> {
 
@@ -42,6 +44,10 @@ public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, 
         static final DeriveSizeConverter INSTANCE = new DeriveSizeConverter();
     }
 
+    /**
+     * Gets the {@code DeriveSizeConverter} instance.
+     * @return the {@code DeriveSizeConverter} instance
+     */
     public static DeriveSizeConverter getInstance() {
         return Holder.INSTANCE;
     }

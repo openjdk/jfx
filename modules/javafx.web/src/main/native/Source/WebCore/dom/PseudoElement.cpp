@@ -28,7 +28,6 @@
 #include "config.h"
 #include "PseudoElement.h"
 
-#include "CSSAnimationController.h"
 #include "ContentData.h"
 #include "DocumentTimeline.h"
 #include "InspectorInstrumentation.h"
@@ -47,20 +46,6 @@ const QualifiedName& pseudoElementTagName()
 {
     static NeverDestroyed<QualifiedName> name(nullAtom(), "<pseudo>", nullAtom());
     return name;
-}
-
-String PseudoElement::pseudoElementNameForEvents(PseudoId pseudoId)
-{
-    static NeverDestroyed<const String> after(MAKE_STATIC_STRING_IMPL("::after"));
-    static NeverDestroyed<const String> before(MAKE_STATIC_STRING_IMPL("::before"));
-    switch (pseudoId) {
-    case PseudoId::After:
-        return after;
-    case PseudoId::Before:
-        return before;
-    default:
-        return emptyString();
-    }
 }
 
 PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
@@ -91,23 +76,20 @@ void PseudoElement::clearHostElement()
     InspectorInstrumentation::pseudoElementDestroyed(document().page(), *this);
 
     if (auto* timeline = document().existingTimeline())
-        timeline->elementWasRemoved(*this);
-
-    if (auto* frame = document().frame())
-        frame->legacyAnimation().cancelAnimations(*this);
+        timeline->elementWasRemoved(Styleable::fromElement(*this));
 
     m_hostElement = nullptr;
 }
 
 bool PseudoElement::rendererIsNeeded(const RenderStyle& style)
 {
-    return pseudoElementRendererIsNeeded(&style) || isTargetedByKeyframeEffectRequiringPseudoElement();
-}
+    if (pseudoElementRendererIsNeeded(&style))
+        return true;
 
-bool PseudoElement::isTargetedByKeyframeEffectRequiringPseudoElement()
-{
-    if (auto* stack = keyframeEffectStack())
-        return stack->requiresPseudoElement();
+    if (m_hostElement) {
+        if (auto* stack = m_hostElement->keyframeEffectStack(pseudoId()))
+            return stack->requiresPseudoElement();
+    }
     return false;
 }
 

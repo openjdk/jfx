@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,12 +39,9 @@ class RenderingQueue;
 
 class BufferImage : public Image {
 public:
-    static RefPtr<BufferImage> create(
-        RefPtr<RQRef> rqoImage,
-        RefPtr<RenderingQueue> rq,
-        int w, int h)
+    static RefPtr<BufferImage> create(PlatformImagePtr image)
     {
-        return adoptRef(new BufferImage(rqoImage, rq, w, h));
+        return adoptRef(new BufferImage(image));
     }
 
     void destroyDecodedData(bool = true) override { }
@@ -52,10 +49,7 @@ public:
     //utatodo: callback to Java
     bool currentFrameKnownToBeOpaque() const override { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
 
-    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const override { return FloatSize(m_width, m_height); }
-
-    // ImageDrawResult draw(GraphicsContext& gc, const FloatRect& dstRect,
-    //           const FloatRect& srcRect, CompositeOperator op, BlendMode bm, DecodingMode dm, ImageOrientationDescription) override;
+    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const override { return m_image->size(); }
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect,
         const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
@@ -63,16 +57,16 @@ public:
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
         const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
 
-    NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> nativeImage(const GraphicsContext* = nullptr) override;
+
+    RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
 
 private:
-    BufferImage(RefPtr<RQRef> rqoImage, RefPtr<RenderingQueue> rq, int w, int h);
+    BufferImage(PlatformImagePtr);
 
     void flushImageRQ(GraphicsContext& gc);
 
-    int m_width, m_height;
-    RefPtr<RenderingQueue> m_rq;
-    RefPtr<RQRef> m_rqoImage;
+    RefPtr<ImageJava> m_image;
 };
 
 } // namespace WebCore

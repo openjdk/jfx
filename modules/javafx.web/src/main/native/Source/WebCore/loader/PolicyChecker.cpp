@@ -47,6 +47,7 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLPlugInElement.h"
 #include "Logging.h"
+#include "ThreadableBlobRegistry.h"
 #include <wtf/CompletionHandler.h>
 
 #if USE(QUICK_LOOK)
@@ -110,13 +111,14 @@ CompletionHandlerCallingScope FrameLoader::PolicyChecker::extendBlobURLLifetimeI
         return { };
 
     // Create a new temporary blobURL in case this one gets revoked during the asynchronous navigation policy decision.
-    URL temporaryBlobURL = BlobURL::createPublicURL(&m_frame.document()->securityOrigin());
-    blobRegistry().registerBlobURL(temporaryBlobURL, request.url());
+    auto origin = SecurityOrigin::create(BlobURL::getOriginURL(request.url()));
+    URL temporaryBlobURL = BlobURL::createPublicURL(origin.ptr());
+    ThreadableBlobRegistry::registerBlobURL(origin.ptr(), temporaryBlobURL, request.url());
     request.setURL(temporaryBlobURL);
     if (loader)
         loader->request().setURL(temporaryBlobURL);
     return CompletionHandler<void()>([temporaryBlobURL = WTFMove(temporaryBlobURL)] {
-        blobRegistry().unregisterBlobURL(temporaryBlobURL);
+        ThreadableBlobRegistry::unregisterBlobURL(temporaryBlobURL);
     });
 }
 
@@ -150,7 +152,8 @@ void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request
     if (substituteData.isValid() && !substituteData.failingURL().isEmpty()) {
         bool shouldContinue = true;
 #if ENABLE(CONTENT_FILTERING)
-        shouldContinue = ContentFilter::continueAfterSubstituteDataRequest(*m_frame.loader().activeDocumentLoader(), substituteData);
+        if (auto loader = m_frame.loader().activeDocumentLoader())
+            shouldContinue = ContentFilter::continueAfterSubstituteDataRequest(*loader, substituteData);
 #endif
         if (isBackForwardLoadType(m_loadType))
             m_loadType = FrameLoadType::Reload;

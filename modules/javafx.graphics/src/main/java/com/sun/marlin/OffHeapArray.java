@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,8 @@ final class OffHeapArray  {
     static final int SIZE_INT;
 
     static {
-        UNSAFE = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
+        @SuppressWarnings("removal")
+        Unsafe tmp = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
             @Override
             public Unsafe run() {
                 Unsafe ref = null;
@@ -56,6 +57,7 @@ final class OffHeapArray  {
                 return ref;
             }
         });
+        UNSAFE = tmp;
 
         SIZE_INT = Unsafe.ARRAY_INT_INDEX_SCALE;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
  */
 public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -50,7 +50,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -60,7 +60,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -114,7 +114,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -131,7 +131,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -143,7 +143,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

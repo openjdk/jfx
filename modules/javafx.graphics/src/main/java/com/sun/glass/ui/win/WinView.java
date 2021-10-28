@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,5 +91,14 @@ final class WinView extends View {
     @Override native protected boolean _enterFullscreen(long ptr, boolean animate, boolean keepRatio, boolean hideCursor);
     @Override native protected void _exitFullscreen(long ptr, boolean animate);
 
+    @Override
+    protected void notifyResize(int width, int height) {
+        super.notifyResize(width, height);
+
+        // After resizing, do a move notification to force the view relocation.
+        // When moving to a screen with different DPI settings, its location needs
+        // to be recalculated.
+        updateLocation();
+    }
 }
 

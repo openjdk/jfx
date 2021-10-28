@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ import javafx.util.Pair;
  */
 abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Constructors                                                        *
      *                                                                     *
@@ -78,7 +78,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Observable properties                                               *
      *                                                                     *
@@ -119,7 +119,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Internal field                                                      *
      *                                                                     *
@@ -129,7 +129,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Public selection API                                                *
      *                                                                     *
@@ -372,7 +372,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
          *   return the same number - the place where the removed elements were positioned in the list.
          */
         if (wasSelected) {
-            change = ControlUtils.buildClearAndSelectChange(selectedIndices, previousSelectedIndices, row);
+            change = ControlUtils.buildClearAndSelectChange(
+                    selectedIndices, previousSelectedIndices, row, Comparator.naturalOrder());
         } else {
             int changeIndex = Math.max(0, selectedIndices.indexOf(row));
             change = new NonIterableChange.GenericAddRemoveChange<>(
@@ -617,7 +618,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Private implementation                                              *
      *                                                                     *
@@ -799,9 +800,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         public void clear(int index) {
             if (!bitset.get(index)) return;
 
+            int indicesIndex = indexOf(index);
             _beginChange();
             bitset.clear(index);
-            _nextRemove(index, index);
+            _nextRemove(indicesIndex, index);
             _endChange();
         }
 

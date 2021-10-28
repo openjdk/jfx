@@ -27,24 +27,29 @@
 #include "config.h"
 #include "CachedSVGFont.h"
 
-#if ENABLE(SVG_FONTS)
-
 #include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "SVGDocument.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
+#include "SVGToOTFFontConversion.h"
 #include "ScriptDisallowedScope.h"
+#include "Settings.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "TypedElementDescendantIterator.h"
-#include "SVGToOTFFontConversion.h"
 
 namespace WebCore {
 
-CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar, const Settings& settings)
     : CachedFont(WTFMove(request), sessionID, cookieJar, Type::SVGFontResource)
     , m_externalSVGFontElement(nullptr)
+    , m_settings(settings)
+{
+}
+
+CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, CachedSVGFont& resource)
+    : CachedSVGFont(WTFMove(request), resource.sessionID(), resource.cookieJar(), resource.m_settings)
 {
 }
 
@@ -68,7 +73,7 @@ bool CachedSVGFont::ensureCustomFontData(const AtomString& remoteURI)
         {
             // We may get here during render tree updates when events are forbidden.
             // Frameless document can't run scripts or call back to the client so this is safe.
-            m_externalSVGDocument = SVGDocument::create(nullptr, URL());
+            m_externalSVGDocument = SVGDocument::create(nullptr, m_settings, URL());
             auto decoder = TextResourceDecoder::create("application/xml");
 
             ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
@@ -133,5 +138,3 @@ SVGFontFaceElement* CachedSVGFont::firstFontFace(const AtomString& remoteURI)
 }
 
 }
-
-#endif

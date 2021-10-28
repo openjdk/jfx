@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1091,6 +1091,34 @@ public class NodeTest {
     }
 
     @Test
+    public void testDefaultValueForManagedIsTrueWhenReadFromGetter() {
+        final Node node = new Rectangle();
+        assertTrue(node.isManaged());
+    }
+
+    @Test
+    public void testDefaultValueForManagedIsTrueWhenReadFromProperty() {
+        final Node node = new Rectangle();
+        assertTrue(node.managedProperty().get());
+    }
+
+    @Test
+    public void settingManagedThroughSetterShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.setManaged(false);
+        assertFalse(node.isManaged());
+        assertFalse(node.managedProperty().get());
+    }
+
+    @Test
+    public void settingManagedThroughPropertyShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.managedProperty().set(false);
+        assertFalse(node.isManaged());
+        assertFalse(node.managedProperty().get());
+    }
+
+    @Test
     public void testDefaultStyleIsEmptyString() {
         final Node node = new Rectangle();
         assertEquals("", node.getStyle());
@@ -1892,6 +1920,14 @@ public class NodeTest {
         stage.setScene(scene);
         stage.show();
         assertEquals(100.0, scene.getWidth(), 0.00001);
+    }
+
+    @Test public void managedSetFromCSS() {
+        final AnchorPane node = new AnchorPane();
+        node.setStyle("-fx-managed: false");
+        Scene s = new Scene(node);
+        node.applyCss();
+        assertFalse(node.isManaged());
     }
 
     private Node createTestRect() {

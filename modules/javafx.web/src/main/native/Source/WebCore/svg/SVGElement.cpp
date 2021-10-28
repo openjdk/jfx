@@ -155,8 +155,8 @@ static NEVER_INLINE HashMap<AtomStringImpl*, CSSPropertyID> createAttributeNameT
     return map;
 }
 
-SVGElement::SVGElement(const QualifiedName& tagName, Document& document)
-    : StyledElement(tagName, document, CreateSVGElement)
+SVGElement::SVGElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+    : StyledElement(tagName, document, constructionType)
     , m_propertyAnimatorFactory(makeUnique<SVGPropertyAnimatorFactory>())
 {
     static std::once_flag onceFlag;
@@ -185,7 +185,7 @@ void SVGElement::willRecalcStyle(Style::Change change)
         return;
     // If the style changes because of a regular property change (not induced by SMIL animations themselves)
     // reset the "computed style without SMIL style properties", so the base value change gets reflected.
-    if (change > Style::NoChange || needsStyleRecalc())
+    if (change > Style::Change::None || needsStyleRecalc())
         m_svgRareData->setNeedsOverrideComputedStyleUpdate();
 }
 
@@ -293,6 +293,7 @@ const HashSet<SVGElement*>& SVGElement::instances() const
 
 bool SVGElement::getBoundingBox(FloatRect& rect, SVGLocatable::StyleUpdateStrategy styleUpdateStrategy)
 {
+    // FIXME: should retrieve the value from the associated RenderObject.
     if (is<SVGGraphicsElement>(*this)) {
         rect = downcast<SVGGraphicsElement>(*this).getBBox(styleUpdateStrategy);
         return true;
@@ -339,7 +340,7 @@ void SVGElement::parseAttribute(const QualifiedName& name, const AtomString& val
 
     if (name == HTMLNames::tabindexAttr) {
         if (value.isEmpty())
-            clearTabIndexExplicitlyIfNeeded();
+            setTabIndexExplicitly(WTF::nullopt);
         else if (auto optionalTabIndex = parseHTMLInteger(value))
             setTabIndexExplicitly(optionalTabIndex.value());
         return;
@@ -381,7 +382,7 @@ bool SVGElement::addEventListener(const AtomString& eventType, Ref<EventListener
     return true;
 }
 
-bool SVGElement::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
+bool SVGElement::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
 {
     if (containingShadowRoot())
         return Node::removeEventListener(eventType, listener, options);
@@ -475,9 +476,7 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
     auto& svgChild = downcast<SVGElement>(child);
 
     static const QualifiedName* const invalidTextContent[] {
-#if ENABLE(SVG_FONTS)
         &SVGNames::altGlyphTag.get(),
-#endif
         &SVGNames::textPathTag.get(),
         &SVGNames::trefTag.get(),
         &SVGNames::tspanTag.get(),
@@ -520,11 +519,6 @@ void SVGElement::synchronizeAllAttributes()
     auto map = propertyRegistry().synchronizeAllAttributes();
     for (const auto& entry : map)
         setSynchronizedLazyAttribute(entry.key, entry.value);
-}
-
-void SVGElement::synchronizeAllAnimatedSVGAttribute(SVGElement& svgElement)
-{
-    svgElement.synchronizeAllAttributes();
 }
 
 void SVGElement::commitPropertyChange(SVGProperty* property)
@@ -881,7 +875,7 @@ void SVGElement::childrenChanged(const ChildChange& change)
 {
     StyledElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser)
+    if (change.source == ChildChange::Source::Parser)
         return;
     invalidateInstances();
 }
