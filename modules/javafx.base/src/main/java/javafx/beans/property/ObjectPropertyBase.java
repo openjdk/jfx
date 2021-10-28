@@ -143,7 +143,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
         if (isBound()) {
             throw new IllegalStateException(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(this));
         }
-        
+
         if (value != newValue) {
             value = newValue;
             markInvalid();

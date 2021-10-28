@@ -145,7 +145,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
         if (isBound()) {
             throw new IllegalStateException(BeanErrors.CANNOT_SET_BOUND_PROPERTY.getMessage(this));
         }
-        
+
         if (value != newValue) {
             value = newValue;
             markInvalid();

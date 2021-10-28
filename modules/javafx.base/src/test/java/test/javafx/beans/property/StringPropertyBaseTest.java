@@ -353,7 +353,7 @@ public class StringPropertyBaseTest {
         assertEquals(1, property.counter);
         invalidationListener.check(property, 1);
     }
-    
+
     @Test
     public void testBindBidirectional_targetIsBound() {
         var target = new SimpleStringProperty(this, "target");
