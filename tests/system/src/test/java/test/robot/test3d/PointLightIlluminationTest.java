@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,8 +144,8 @@ public class PointLightIlluminationTest extends VisualTestBase {
 
     /**
      * Creates a new scene with a subscene which contains a perspective camera and a sphere
-     * Although this test class checks the pointlight illumination, there is no explicit pointlight
-     * in the scene. For the test, it is sufficient to use the default pointlight which is created
+     * Although this test class checks the point light illumination, there is no explicit point light
+     * in the scene. For the test, it is sufficient to use the default point light which is created
      * by the perspective camera and located at the same position like the camera.
      * @return Scene
      */
