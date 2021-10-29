@@ -224,8 +224,7 @@ public class TextBinding {
     /**
      * Determines whether the string contains a simple mnemonic at the specified position.
      * A simple mnemonic is any two-character string similar to "_x", where x is not an
-     * underscore or a whitespace character, and the string is not similar to an extended
-     * mnemonic at the specified position.
+     * underscore or a whitespace character.
      */
     private boolean isSimpleMnemonic(String s, int position) {
         return s.length() > position + 1
