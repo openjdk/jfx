@@ -189,16 +189,16 @@ public class TextBinding {
         for (int length = s.length(); i < length; ++i) {
             if (isEscapedMnemonicSymbol(s, i)) {
                 builder.append(s.charAt(i++));
+            } else if (isExtendedMnemonic(s, i)) {
+                mnemonic = String.valueOf(s.charAt(i + 2));
+                extendedMnemonicText = s.substring(i + 1, i + 4);
+                i += 4;
+                break;
             } else if (isSimpleMnemonic(s, i)) {
                 char c = s.charAt(i + 1);
                 mnemonic = String.valueOf(c);
                 mnemonicIndex = i;
                 i += 1;
-                break;
-            } else if (isExtendedMnemonic(s, i)) {
-                mnemonic = String.valueOf(s.charAt(i + 2));
-                extendedMnemonicText = s.substring(i + 1, i + 4);
-                i += 4;
                 break;
             } else {
                 builder.append(s.charAt(i));
@@ -228,14 +228,10 @@ public class TextBinding {
      * mnemonic at the specified position.
      */
     private boolean isSimpleMnemonic(String s, int position) {
-        if (s.length() <= position + 1
-                || s.charAt(position) != MNEMONIC_SYMBOL
-                || s.charAt(position + 1) == MNEMONIC_SYMBOL
-                || Character.isWhitespace(s.charAt(position + 1))) {
-            return false;
-        }
-
-        return !isExtendedMnemonic(s, position);
+        return s.length() > position + 1
+            && s.charAt(position) == MNEMONIC_SYMBOL
+            && s.charAt(position + 1) != MNEMONIC_SYMBOL
+            && !Character.isWhitespace(s.charAt(position + 1));
     }
 
     /**
