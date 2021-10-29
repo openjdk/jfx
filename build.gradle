@@ -4818,7 +4818,7 @@ compileTargets { t ->
             from project.sourceSets.main.allJava
         }
 
-        buildModulesTask.dependsOn(modularPublicationSourcesJarTask)        
+        buildModulesTask.dependsOn(modularPublicationSourcesJarTask)
 
     }
     // ============================================================
