@@ -1618,6 +1618,9 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                         artifact project.tasks."modularPublicationJar$t.capital" {
                             classifier "$t.name"
                         }
+                        artifact project.tasks."modularPublicationSourcesJar" {
+                            classifier "sources"
+                        }
                     }
 
                     pom.withXml {
@@ -4806,6 +4809,16 @@ compileTargets { t ->
         }
 
         buildModulesTask.dependsOn(modularPublicationJarTask)
+
+        // build source jar and copy it to the 'publication' directory
+        def modularPublicationSourcesJarName = "${moduleName}-sources.jar"
+        def modularPublicationSourcesJarTask = project.task("modularPublicationSourcesJar", type: Jar) {
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularPublicationSourcesJarName
+            from project.sourceSets.main.allJava
+        }
+
+        buildModulesTask.dependsOn(modularPublicationSourcesJarTask)        
 
     }
     // ============================================================
