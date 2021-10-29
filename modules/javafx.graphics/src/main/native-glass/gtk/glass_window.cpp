@@ -1368,12 +1368,13 @@ void WindowContextTop::exit_fullscreen() {
     gtk_window_unfullscreen(GTK_WINDOW(gtk_widget));
 }
 
-void WindowContextTop::request_focus(long time_stamp) {
+void WindowContextTop::request_focus() {
     //JDK-8212060: Window show and then move glitch.
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
+
     if (is_visible() && isEnabled()) {
-        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), time_stamp);
+        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), gdk_x11_get_server_time(gdk_window));
     }
 }
 

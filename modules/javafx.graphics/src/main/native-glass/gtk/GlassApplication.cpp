@@ -445,6 +445,7 @@ static void process_events(GdkEvent* event, gpointer data)
     }
 
     if (ctx != NULL) {
+
         EventsCounterHelper helper(ctx);
         try {
             switch (event->type) {
