@@ -727,31 +727,6 @@ public abstract class PrismFontFactory implements FontFactory {
         return null;
     }
 
-    boolean isInstalledFont(String fileName) {
-        // avoid loading the full windows map. Ignore drive letter
-        // as its common to install on D: too in multi-boot.
-        String fileKey;
-        if (isWindows) {
-            if (fileName.toLowerCase().contains("\\windows\\fonts")) {
-                return true;
-            }
-            File f = new File(fileName);
-            fileKey = f.getName();
-        } else {
-            if (isMacOSX && fileName.toLowerCase().contains("/library/fonts")) {
-                // Most fonts are installed in either /System/Library/Fonts/
-                // or /Library/Fonts/
-                return true;
-            }
-            File f = new File(fileName);
-            // fileToFontMap key is the full path on non-windows
-            fileKey = f.getPath();
-        }
-
-        getFullNameToFileMap();
-        return fileToFontMap.get(fileKey.toLowerCase()) != null;
-    }
-
     /* To be called only by methods that already inited the maps
      */
     synchronized private FontResource
