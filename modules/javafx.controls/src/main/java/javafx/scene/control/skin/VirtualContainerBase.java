@@ -64,7 +64,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      **************************************************************************/
 
     /**
-     *
+     * Constructor for subclasses to call.
      * @param control the control
      */
     public VirtualContainerBase(final C control) {

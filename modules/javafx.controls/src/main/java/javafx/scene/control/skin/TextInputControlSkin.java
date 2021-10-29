@@ -110,14 +110,38 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      *
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
-    public static enum TextUnit { CHARACTER, WORD, LINE, PARAGRAPH, PAGE };
+    public static enum TextUnit {
+        /** Character unit */
+        CHARACTER,
+        /** Word unit */
+        WORD,
+        /** Line unit */
+        LINE,
+        /** Paragraph unit */
+        PARAGRAPH,
+        /** Page unit */
+        PAGE
+    };
 
     /**
      * Direction names for caret movement.
      *
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
-    public static enum Direction { LEFT, RIGHT, UP, DOWN, BEGINNING, END };
+    public static enum Direction {
+        /** Left Direction */
+        LEFT,
+        /** Right Direction */
+        RIGHT,
+        /** Up Direction */
+        UP,
+        /** Down Direction */
+        DOWN,
+        /** Beginning */
+        BEGINNING,
+        /** End */
+        END
+    };
 
     static boolean preload = false;
     static {
@@ -435,7 +459,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return textFill;
     }
 
-    // --- prompt text fill
+    /**
+     * The fill {@code Paint} used for the foreground of prompt text.
+     */
     private final ObjectProperty<Paint> promptTextFill = new StyleableObjectProperty<Paint>(Color.GRAY) {
         @Override public Object getBean() {
             return TextInputControlSkin.this;
@@ -500,7 +526,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return highlightFill;
     }
 
-    // --- highlight text fill
+    /**
+     * The fill {@code Paint} used for the foreground of selected text.
+     */
     private final ObjectProperty<Paint> highlightTextFill = new StyleableObjectProperty<Paint>(Color.WHITE) {
         @Override protected void invalidated() {
             updateHighlightTextFill();
@@ -584,23 +612,27 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      **************************************************************************/
 
     /**
+     * Gets the path elements describing the shape of the underline for the given range.
      * @param start the start
      * @param end the end
-     * @return the path elements describing the shape of the underline for the given range.
+     * @return the path elements describing the shape of the underline for the given range
      */
     protected abstract PathElement[] getUnderlineShape(int start, int end);
-    /**
+
+    /** Gets the path elements describing the bounding rectangles for the given range of text.
      * @param start the start
      * @param end the end
-     * @return the path elements describing the bounding rectangles for the given range of text.
+     * @return the path elements describing the bounding rectangles for the given range of text
      */
     protected abstract PathElement[] getRangeShape(int start, int end);
+
     /**
      * Adds highlight for composed text from Input Method.
      * @param nodes the list of nodes
      * @param start the start
      */
     protected abstract void addHighlight(List<? extends Node> nodes, int start);
+
     /**
      * Removes highlight for composed text from Input Method.
      * @param nodes the list of nodes
@@ -708,6 +740,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      */
     protected void updateHighlightTextFill() {};
 
+    /**
+     * Handles an input method event.
+     * @param event the {@code InputMethodEvent} to be handled
+     */
     protected void handleInputMethodEvent(InputMethodEvent event) {
         final TextInputControl textInput = getSkinnable();
         if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
