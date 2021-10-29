@@ -1168,6 +1168,7 @@ void WindowContextTop::set_visible(bool visible)
         }
     }
     WindowContextBase::set_visible(visible);
+
     //JDK-8220272 - fire event first because GDK_FOCUS_CHANGE is not always in order
     if (visible && jwindow && isEnabled()) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
@@ -1367,12 +1368,12 @@ void WindowContextTop::exit_fullscreen() {
     gtk_window_unfullscreen(GTK_WINDOW(gtk_widget));
 }
 
-void WindowContextTop::request_focus() {
+void WindowContextTop::request_focus(long time_stamp) {
     //JDK-8212060: Window show and then move glitch.
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
-    if (is_visible()) {
-        gtk_window_present(GTK_WINDOW(gtk_widget));
+    if (is_visible() && isEnabled()) {
+        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), time_stamp);
     }
 }
 
@@ -1389,8 +1390,6 @@ void WindowContextTop::set_alpha(double alpha) {
 }
 
 void WindowContextTop::set_enabled(bool enabled) {
-    gtk_window_set_accept_focus(GTK_WINDOW(gtk_widget), (enabled) ? TRUE : FALSE);
-
     if (enabled) {
         if (resizable.prev) {
             set_window_resizable(true);

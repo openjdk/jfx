@@ -264,14 +264,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setResizable
  * Signature: (JI)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1requestFocus
-  (JNIEnv * env, jobject obj, jlong ptr, jint focus)
+  (JNIEnv * env, jobject obj, jlong ptr, jint focus, jlong timeStamp)
 {
     (void)env;
     (void)obj;
     (void)focus;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->request_focus();
+    ctx->request_focus(timeStamp);
+
     return JNI_TRUE; //not used
 }
 

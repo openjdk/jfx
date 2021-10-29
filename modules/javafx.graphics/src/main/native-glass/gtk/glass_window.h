@@ -118,7 +118,7 @@ public:
     virtual bool is_visible() = 0;
     virtual void set_bounds(int, int, bool, bool, int, int, int, int) = 0;
     virtual void set_resizable(bool) = 0;
-    virtual void request_focus() = 0;
+    virtual void request_focus(long) = 0;
     virtual void set_focusable(bool)= 0;
     virtual bool grab_focus() = 0;
     virtual bool grab_mouse_drag_focus() = 0;
@@ -282,7 +282,7 @@ public:
     void enter_fullscreen() {}
     void exit_fullscreen() {}
     void set_resizable(bool) {}
-    void request_focus() {}
+    void request_focus(long) {}
     void set_focusable(bool) {}
     void set_title(const char*) {}
     void set_alpha(double) {}
@@ -329,7 +329,7 @@ public:
     void enter_fullscreen();
     void exit_fullscreen();
     void set_resizable(bool) {}
-    void request_focus() {}
+    void request_focus(long) {}
     void set_focusable(bool) {}
     void set_title(const char*) {}
     void set_alpha(double) {}
@@ -410,7 +410,7 @@ public:
     void set_maximized(bool);
     void set_bounds(int, int, bool, bool, int, int, int, int);
     void set_resizable(bool);
-    void request_focus();
+    void request_focus(long);
     void set_focusable(bool);
     void set_title(const char*);
     void set_alpha(double);

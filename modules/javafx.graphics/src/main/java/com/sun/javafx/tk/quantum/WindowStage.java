@@ -856,22 +856,10 @@ class WindowStage extends GlassStage {
         if (activeWindows.isEmpty()) {
             return;
         }
-
-        // walk backwards to find a blocker
-        for (int i = activeWindows.size() - 1; i > 0; i--) {
-            WindowStage window = activeWindows.get(i);
-
-            if (Modality.APPLICATION_MODAL == window.modality
-                || (Modality.WINDOW_MODAL == window.modality && window.owner == this)) {
-                window.setIconified(false);
-                window.requestToFront();
-                window.requestFocus();
-                break;
-            } else if (window == this) {
-                // no need to continue if reached self
-                break;
-            }
-        }
+        WindowStage window = activeWindows.get(activeWindows.size() - 1);
+        window.setIconified(false);
+        window.requestToFront();
+        window.requestFocus();
     }
 
     @Override public boolean grabFocus() {

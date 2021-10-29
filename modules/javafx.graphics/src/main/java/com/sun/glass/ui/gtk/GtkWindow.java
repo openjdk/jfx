@@ -70,8 +70,7 @@ class GtkWindow extends Window {
     @Override
     protected native boolean _setResizable(long ptr, boolean resizable);
 
-    @Override
-    protected native boolean _requestFocus(long ptr, int event);
+    protected native boolean _requestFocus(long ptr, int event, long timeStamp);
 
     @Override
     protected native void _setFocusable(long ptr, boolean isFocusable);
@@ -222,6 +221,11 @@ class GtkWindow extends Window {
                                     double Myx, double Myy, double Myz, double Myt,
                                     double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    protected boolean _requestFocus(long ptr, int event) {
+        return _requestFocus(ptr, event, System.currentTimeMillis());
     }
 
     @Override
