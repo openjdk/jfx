@@ -87,7 +87,7 @@ public class Box extends Shape3D {
 
     /**
      * Default size of the {@code Box}.
-     * @deprecated This field was exposed mistakenly and will be removed
+     * @deprecated This field was exposed mistakenly and will be removed.
      */
     @Deprecated(since = "18", forRemoval = true)
     public static final double DEFAULT_SIZE = 2;
