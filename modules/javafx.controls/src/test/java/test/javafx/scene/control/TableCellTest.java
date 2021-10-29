@@ -31,7 +31,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.tk.Toolkit;
@@ -542,6 +541,28 @@ public class TableCellTest {
     }
 
     @Test
+    public void testEditStartOnCellUpdatesControl() {
+        setupForEditing();
+        int editingRow = 1;
+        cell.updateIndex(editingRow);
+        TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, editingColumn);
+        cell.startEdit();
+        assertEquals("table must be editing at", editingCell, table.getEditingCell());
+    }
+
+    @Test
+    public void testEditStartOnCellNoColumnUpdatesControl() {
+        int editingRow = 1;
+        // note: cell index must be != -1 because table.edit(-1, null) sets editingCell to null
+        cell.updateIndex(editingRow);
+        setupForcedEditing(table, null);
+        TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, null);
+        cell.startEdit();
+        assertTrue(cell.isEditing());
+        assertEquals("table must be editing at", editingCell, table.getEditingCell());
+    }
+
+    @Test
     public void testEditStartDoesNotFireEventWhileEditing() {
         setupForEditing();
         cell.updateIndex(1);
@@ -586,9 +607,7 @@ public class TableCellTest {
          setupForEditing();
          int editingIndex = 1;
          cell.updateIndex(editingIndex);
-         // FIXME JDK-8187474
-         // should use cell.startEdit for consistency with the following tests
-         table.edit(editingIndex, editingColumn);
+         cell.startEdit();
          TablePosition<?, ?> editingPosition = table.getEditingCell();
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
@@ -714,10 +733,6 @@ public class TableCellTest {
          assertEquals("must not fire editStart", 0, events.size());
      }
 
-     /**
-      *  Note: this is a false green until JDK-8187474 (update control editing location) is fixed
-      */
-     @Ignore("JDK-8187474")
      @Test
      public void testStartEditOffRangeMustNotUpdateEditingLocation() {
          setupForEditing();

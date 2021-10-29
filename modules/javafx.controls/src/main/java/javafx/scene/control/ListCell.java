@@ -369,17 +369,18 @@ public class ListCell<T> extends IndexedCell<T> {
         super.startEdit();
 
         if (!isEditing()) return;
+
+        indexAtStartEdit = getIndex();
          // Inform the ListView of the edit starting.
         if (list != null) {
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editStartEvent(),
                     null,
-                    getIndex()));
-            list.edit(getIndex());
+                    indexAtStartEdit));
+            list.edit(indexAtStartEdit);
             list.requestFocus();
         }
 
-        indexAtStartEdit = getIndex();
     }
 
     /** {@inheritDoc} */
