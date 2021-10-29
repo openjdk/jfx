@@ -1841,6 +1841,7 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
         listView.setPrefHeight(130); // roughly room for four rows
+        Toolkit.getToolkit().firePulse();
 
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
