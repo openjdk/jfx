@@ -57,6 +57,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import javafx.scene.text.HitInfo;
 
 import java.text.Bidi;
 import java.util.List;
@@ -725,10 +726,10 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    TextBinding textBinding = new TextBinding(menuitem.getText());
-                    int mnemonicIndex = textBinding.getMnemonicIndex() ;
+                    TextBinding bindings = new TextBinding(menuitem.getText());
+                    int mnemonicIndex = bindings.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-                        KeyCombination mnemonicKeyCombo = textBinding.getMnemonicKeyCombination();
+                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
                         NodeHelper.setShowMnemonics(cmContent.getLabelAt(i), initialState);

@@ -124,7 +124,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     private double wrapWidth;
     private double wrapHeight;
 
-    private TextBinding textBinding;
+    private TextBinding bindings;
     private Line mnemonic_underscore;
 
     private boolean containsMnemonic = false;
@@ -584,10 +584,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         double mnemonicHeight = 0.0;
         if (containsMnemonic) {
             final Font font = text.getFont();
-            String preSt = textBinding.getText();
+            String preSt = bindings.getText();
             boolean isRTL = (labeledNode.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, textBinding.getMnemonicIndex(), this.wrapWidth, labeled.getLineSpacing(), isRTL);
-            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(textBinding.getMnemonicIndex(), textBinding.getMnemonicIndex() + 1), 0);
+            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, bindings.getMnemonicIndex(), this.wrapWidth, labeled.getLineSpacing(), isRTL);
+            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(bindings.getMnemonicIndex(), bindings.getMnemonicIndex() + 1), 0);
             mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
         }
 
@@ -750,8 +750,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 return null;
             }
             case MNEMONIC: {
-                if (textBinding != null) {
-                    return textBinding.getMnemonic();
+                if (bindings != null) {
+                    return bindings.getMnemonic();
                 }
                 return null;
             }
@@ -948,7 +948,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             int mnemonicIndex = -1;
 
             if (cleanText != null && cleanText.length() > 0
-                    && textBinding != null
+                    && bindings != null
                     && !com.sun.javafx.PlatformUtil.isMac()
                     && getSkinnable().isMnemonicParsing()) {
                 /*
@@ -966,7 +966,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 if (labeledNode == null) {
                     labeledNode = labeled;
                 }
-                mnemonicIndex = textBinding.getMnemonicIndex() ;
+                mnemonicIndex = bindings.getMnemonicIndex() ;
             }
 
             /*
@@ -978,7 +978,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 */
                 if (mnemonicScene != null) {
                     if (mnemonicIndex == -1 ||
-                            (textBinding != null && !textBinding.getMnemonicKeyCombination().equals(mnemonicCode))) {
+                            (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
                         removeMnemonic();
                         containsMnemonic = false;
                     }
@@ -998,7 +998,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             if (cleanText != null && cleanText.length() > 0
                     && mnemonicIndex >= 0 && !containsMnemonic) {
                 containsMnemonic = true;
-                mnemonicCode = textBinding.getMnemonicKeyCombination();
+                mnemonicCode = bindings.getMnemonicKeyCombination();
                 addMnemonic();
             }
 
@@ -1141,13 +1141,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         String sourceText = labeled.getText();
 
         if (sourceText != null && labeled.isMnemonicParsing()) {
-            if (textBinding == null) {
-                textBinding = new TextBinding(sourceText);
+            if (bindings == null) {
+                bindings = new TextBinding(sourceText);
             } else {
-                textBinding.update(sourceText);
+                bindings.update(sourceText);
             }
 
-            return textBinding.getText();
+            return bindings.getText();
         }
 
         return sourceText;
