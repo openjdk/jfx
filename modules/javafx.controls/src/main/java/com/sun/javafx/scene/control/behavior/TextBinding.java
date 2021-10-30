@@ -60,7 +60,7 @@ import java.util.Objects;
  * modifier key is pressed.
  * </ul>
  */
-public class MnemonicParser {
+public class TextBinding {
 
     /**
      * the marker symbol used when parsing for mnemonics
@@ -158,7 +158,7 @@ public class MnemonicParser {
      *
      * @param s the action text string
      */
-    public MnemonicParser(String s) {
+    public TextBinding(String s) {
         update(s);
     }
 

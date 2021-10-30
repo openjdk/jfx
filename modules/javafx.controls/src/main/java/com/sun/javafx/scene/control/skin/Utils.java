@@ -31,7 +31,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.behavior.MnemonicParser;
+import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ConditionalFeature;
@@ -725,10 +725,10 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    MnemonicParser mnemonicParser = new MnemonicParser(menuitem.getText());
-                    int mnemonicIndex = mnemonicParser.getMnemonicIndex() ;
+                    TextBinding textBinding = new TextBinding(menuitem.getText());
+                    int mnemonicIndex = textBinding.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-                        KeyCombination mnemonicKeyCombo = mnemonicParser.getMnemonicKeyCombination();
+                        KeyCombination mnemonicKeyCombo = textBinding.getMnemonicKeyCombination();
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
                         NodeHelper.setShowMnemonics(cmContent.getLabelAt(i), initialState);
@@ -757,7 +757,7 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    MnemonicParser bindings = new MnemonicParser(menuitem.getText());
+                    TextBinding bindings = new TextBinding(menuitem.getText());
                     int mnemonicIndex = bindings.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
                         KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();

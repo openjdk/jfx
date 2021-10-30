@@ -26,7 +26,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.LabeledText;
-import com.sun.javafx.scene.control.behavior.MnemonicParser;
+import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -124,7 +124,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     private double wrapWidth;
     private double wrapHeight;
 
-    private MnemonicParser mnemonicParser;
+    private TextBinding textBinding;
     private Line mnemonic_underscore;
 
     private boolean containsMnemonic = false;
@@ -584,10 +584,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         double mnemonicHeight = 0.0;
         if (containsMnemonic) {
             final Font font = text.getFont();
-            String preSt = mnemonicParser.getText();
+            String preSt = textBinding.getText();
             boolean isRTL = (labeledNode.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, mnemonicParser.getMnemonicIndex(), this.wrapWidth, labeled.getLineSpacing(), isRTL);
-            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(mnemonicParser.getMnemonicIndex(), mnemonicParser.getMnemonicIndex() + 1), 0);
+            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, textBinding.getMnemonicIndex(), this.wrapWidth, labeled.getLineSpacing(), isRTL);
+            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(textBinding.getMnemonicIndex(), textBinding.getMnemonicIndex() + 1), 0);
             mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
         }
 
@@ -750,8 +750,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 return null;
             }
             case MNEMONIC: {
-                if (mnemonicParser != null) {
-                    return mnemonicParser.getMnemonic();
+                if (textBinding != null) {
+                    return textBinding.getMnemonic();
                 }
                 return null;
             }
@@ -948,7 +948,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             int mnemonicIndex = -1;
 
             if (cleanText != null && cleanText.length() > 0
-                    && mnemonicParser != null
+                    && textBinding != null
                     && !com.sun.javafx.PlatformUtil.isMac()
                     && getSkinnable().isMnemonicParsing()) {
                 /*
@@ -966,7 +966,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 if (labeledNode == null) {
                     labeledNode = labeled;
                 }
-                mnemonicIndex = mnemonicParser.getMnemonicIndex() ;
+                mnemonicIndex = textBinding.getMnemonicIndex() ;
             }
 
             /*
@@ -978,7 +978,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 */
                 if (mnemonicScene != null) {
                     if (mnemonicIndex == -1 ||
-                            (mnemonicParser != null && !mnemonicParser.getMnemonicKeyCombination().equals(mnemonicCode))) {
+                            (textBinding != null && !textBinding.getMnemonicKeyCombination().equals(mnemonicCode))) {
                         removeMnemonic();
                         containsMnemonic = false;
                     }
@@ -998,7 +998,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             if (cleanText != null && cleanText.length() > 0
                     && mnemonicIndex >= 0 && !containsMnemonic) {
                 containsMnemonic = true;
-                mnemonicCode = mnemonicParser.getMnemonicKeyCombination();
+                mnemonicCode = textBinding.getMnemonicKeyCombination();
                 addMnemonic();
             }
 
@@ -1141,13 +1141,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         String sourceText = labeled.getText();
 
         if (sourceText != null && labeled.isMnemonicParsing()) {
-            if (mnemonicParser == null) {
-                mnemonicParser = new MnemonicParser(sourceText);
+            if (textBinding == null) {
+                textBinding = new TextBinding(sourceText);
             } else {
-                mnemonicParser.update(sourceText);
+                textBinding.update(sourceText);
             }
 
-            return mnemonicParser.getText();
+            return textBinding.getText();
         }
 
         return sourceText;
