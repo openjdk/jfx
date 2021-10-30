@@ -26,17 +26,29 @@
 package test.com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.control.behavior.MnemonicParser;
+import javafx.scene.input.KeyCombination;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class MnemonicParserTest {
 
+    private static void assertKeyCombination(String expected, KeyCombination actual) {
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            assertSame(KeyCombination.ModifierValue.DOWN, actual.getMeta());
+        } else {
+            assertSame(KeyCombination.ModifierValue.DOWN, actual.getAlt());
+        }
+
+        assertEquals(expected, ((MnemonicParser.MnemonicKeyCombination)actual).getCharacter());
+    }
+
     @Test
     public void testSimpleMnemonicLetter() {
         var helper = new MnemonicParser("foo _bar");
         assertEquals("foo bar", helper.getText());
         assertEquals("b", helper.getMnemonic());
+        assertKeyCombination("b", helper.getMnemonicKeyCombination());
         assertEquals(4, helper.getMnemonicIndex());
     }
 
@@ -45,6 +57,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo _1 bar");
         assertEquals("foo 1 bar", helper.getText());
         assertEquals("1", helper.getMnemonic());
+        assertKeyCombination("1", helper.getMnemonicKeyCombination());
         assertEquals(4, helper.getMnemonicIndex());
     }
 
@@ -53,6 +66,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo _(x)bar");
         assertEquals("foo bar", helper.getText());
         assertEquals("x", helper.getMnemonic());
+        assertKeyCombination("x", helper.getMnemonicKeyCombination());
         assertEquals(4, helper.getMnemonicIndex());
     }
 
@@ -61,6 +75,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo _(_)bar");
         assertEquals("foo bar", helper.getText());
         assertEquals("_", helper.getMnemonic());
+        assertKeyCombination("_", helper.getMnemonicKeyCombination());
         assertEquals(4, helper.getMnemonicIndex());
     }
 
@@ -69,6 +84,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo _())bar");
         assertEquals("foo bar", helper.getText());
         assertEquals(")", helper.getMnemonic());
+        assertKeyCombination(")", helper.getMnemonicKeyCombination());
         assertEquals(4, helper.getMnemonicIndex());
     }
 
@@ -77,6 +93,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo __bar");
         assertEquals("foo _bar", helper.getText());
         assertNull(helper.getMnemonic());
+        assertNull(helper.getMnemonicKeyCombination());
         assertEquals(-1, helper.getMnemonicIndex());
     }
 
@@ -85,6 +102,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo _( ) bar");
         assertEquals("foo ( ) bar", helper.getText());
         assertEquals("(", helper.getMnemonic());
+        assertKeyCombination("(", helper.getMnemonicKeyCombination());
         assertEquals(4, helper.getMnemonicIndex());
     }
 
@@ -93,6 +111,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo_ bar");
         assertEquals("foo_ bar", helper.getText());
         assertNull(helper.getMnemonic());
+        assertNull(helper.getMnemonicKeyCombination());
         assertEquals(-1, helper.getMnemonicIndex());
     }
 
@@ -101,6 +120,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("foo_");
         assertEquals("foo_", helper.getText());
         assertNull(helper.getMnemonic());
+        assertNull(helper.getMnemonicKeyCombination());
         assertEquals(-1, helper.getMnemonicIndex());
     }
 
@@ -109,6 +129,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("_foo _bar _qux");
         assertEquals("foo _bar _qux", helper.getText());
         assertEquals("f", helper.getMnemonic());
+        assertKeyCombination("f", helper.getMnemonicKeyCombination());
         assertEquals(0, helper.getMnemonicIndex());
     }
 
@@ -117,6 +138,7 @@ public class MnemonicParserTest {
         var helper = new MnemonicParser("_(x)foo _bar _qux");
         assertEquals("foo _bar _qux", helper.getText());
         assertEquals("x", helper.getMnemonic());
+        assertKeyCombination("x", helper.getMnemonicKeyCombination());
         assertEquals(0, helper.getMnemonicIndex());
     }
 
