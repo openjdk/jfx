@@ -2064,7 +2064,7 @@ public class LabelSkinTest {
      ***************************************************************************/
 
     @Test
-    public void mnemonicLetterIsRemovedFromDisplayedText() {
+    public void testMnemonicIsProcessedWhenParsingIsEnabled() {
         label.setMnemonicParsing(true);
         label.setText("foo _bar");
         label.autosize();
@@ -2073,16 +2073,7 @@ public class LabelSkinTest {
     }
 
     @Test
-    public void mnemonicDigitIsRemovedFromDisplayedText() {
-        label.setMnemonicParsing(true);
-        label.setText("foo _1");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo 1", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void extendedMnemonicIsRemovedFromDisplayedText() {
+    public void testExtendedMnemonicIsProcessedWhenParsingIsEnabled() {
         label.setMnemonicParsing(true);
         label.setText("foo _(x)bar");
         label.autosize();
@@ -2091,84 +2082,21 @@ public class LabelSkinTest {
     }
 
     @Test
-    public void extendedMnemonicUnderscoreIsRemovedFromDisplayedText() {
-        label.setMnemonicParsing(true);
-        label.setText("foo _(_)bar");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void extendedMnemonicClosingBraceIsRemovedFromDisplayedText() {
-        label.setMnemonicParsing(true);
-        label.setText("foo _())bar");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void escapedMnemonicSymbolIsRetainedInDisplayedText() {
-        label.setMnemonicParsing(true);
-        label.setText("foo __bar");
+    public void testMnemonicsAreNotProcessedWhenParsingIsDisabled() {
+        label.setMnemonicParsing(false);
+        label.setText("foo _bar");
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo _bar", LabelSkinBaseShim.getText(label).getText());
     }
 
     @Test
-    public void whitespaceIsNotProcessedAsExtendedMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("foo _( ) bar");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo ( ) bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void escapedMnemonicSymbolIsNotProcessedWhenMnemonicParsingIsDisabled() {
+    public void testEscapedMnemonicSymbolIsNotProcessedWhenParsingIsDisabled() {
         label.setMnemonicParsing(false);
         label.setText("foo __bar");
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo __bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void underscoreNotFollowedByAlphabeticCharIsNotAMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("foo_ bar");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo_ bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void underscoreAtEndOfTextIsNotAMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("foo_");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo_", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void mnemonicParsingStopsAfterFirstSimpleMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("_foo _bar _qux");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo _bar _qux", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void mnemonicParsingStopsAfterFirstExtendedMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("_(x)foo _bar _qux");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo _bar _qux", LabelSkinBaseShim.getText(label).getText());
     }
 
     public static final class LabelSkinMock extends LabelSkin {

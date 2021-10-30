@@ -60,7 +60,7 @@ import java.util.Objects;
  * modifier key is pressed.
  * </ul>
  */
-public class TextBinding {
+public class MnemonicParser {
 
     /**
      * the marker symbol used when parsing for mnemonics
@@ -158,7 +158,7 @@ public class TextBinding {
      *
      * @param s the action text string
      */
-    public TextBinding(String s) {
+    public MnemonicParser(String s) {
         update(s);
     }
 
@@ -191,6 +191,7 @@ public class TextBinding {
                 builder.append(s.charAt(i++));
             } else if (isExtendedMnemonic(s, i)) {
                 mnemonic = String.valueOf(s.charAt(i + 2));
+                mnemonicIndex = i;
                 extendedMnemonicText = s.substring(i + 1, i + 4);
                 i += 4;
                 break;

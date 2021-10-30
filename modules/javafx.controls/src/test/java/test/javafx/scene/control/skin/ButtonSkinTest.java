@@ -43,7 +43,7 @@ import javafx.scene.input.Mnemonic;
 import javafx.collections.ObservableList;
 import javafx.scene.input.KeyCombination;
 
-import com.sun.javafx.scene.control.behavior.TextBinding.MnemonicKeyCombination;
+import com.sun.javafx.scene.control.behavior.MnemonicParser.MnemonicKeyCombination;
 import javafx.scene.Node;
 import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.shape.Rectangle;
