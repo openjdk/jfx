@@ -25,6 +25,7 @@
 
 package test.javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.collections.MapChangeListener;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
@@ -41,6 +42,7 @@ import javafx.beans.property.ReadOnlyMapPropertyBaseShim;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static test.util.MoreAssertions.assertThrows;
 
 public class ReadOnlyMapPropertyBaseTest {
 
@@ -132,20 +134,22 @@ public class ReadOnlyMapPropertyBaseTest {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
         var target = new ReadOnlyPropertyMock();
         var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
         target.bindContent(source);
-        target.bindContentBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
         var target = new ReadOnlyPropertyMock();
         var source = new ReadOnlyPropertyMock(FXCollections.observableHashMap());
         target.bindContentBidirectional(source);
-        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContent(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
     }
 
     @Test

@@ -25,6 +25,7 @@
 
 package test.javafx.beans.property;
 
+import com.sun.javafx.beans.BeanErrors;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyListPropertyBase;
@@ -39,6 +40,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static test.util.MoreAssertions.assertThrows;
 
 public class ReadOnlyListPropertyBaseTest {
 
@@ -130,20 +132,22 @@ public class ReadOnlyListPropertyBaseTest {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testContentBoundPropertyThrowsExceptionWhenBidirectionalContentBindingIsAdded() {
         var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
         var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
         target.bindContent(source);
-        target.bindContentBidirectional(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContentBidirectional(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_BIDIRECTIONAL.getMessage(target), ex.getMessage());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testBidirectionalContentBoundPropertyThrowsExceptionWhenContentBindingIsAdded() {
         var target = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
         var source = new ReadOnlyPropertyMock(FXCollections.observableArrayList());
         target.bindContentBidirectional(source);
-        target.bindContent(source);
+        var ex = assertThrows(IllegalStateException.class, () -> target.bindContent(source));
+        assertEquals(BeanErrors.CONTENT_BIND_CONFLICT_UNIDIRECTIONAL.getMessage(target), ex.getMessage());
     }
 
     @Test
