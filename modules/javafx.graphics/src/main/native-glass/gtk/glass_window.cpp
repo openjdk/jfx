@@ -1374,7 +1374,16 @@ void WindowContextTop::request_focus() {
     //The below code will only handle later request_focus.
 
     if (is_visible() && isEnabled()) {
-        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), gdk_x11_get_server_time(gdk_window));
+        // gtk_get_current_event_time will most likely return 0 which means focus stealing may occur, causing
+        // activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
+        // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
+        // The ideal solution would be to pass the "time" (not really a time, but a serial number) of X11 events
+        // or the "original" event to the below function.
+        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), gtk_get_current_event_time());
+
+        // this call reorganizes the window order
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+        CHECK_JNI_EXCEPTION(mainEnv);
     }
 }
 
