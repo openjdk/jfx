@@ -99,7 +99,8 @@ public class SkinCleanupTest {
 //------------- TreeTableRow
 
     /**
-     * Sanity test: child cells are updated on changing visible columns.
+     * Sanity test: listener to treeColumn working without side-effects
+     * after replacing skin.
      */
     @Test
     public void testTreeTableRowTreeColumnListenerReplaceSkin() {
@@ -113,7 +114,7 @@ public class SkinCleanupTest {
     }
 
     /**
-     * Sanity test: child cells are updated on changing visible columns.
+     * Sanity test: listener to treeColumn working.
      */
     @Test
     public void testTreeTableRowTreeColumnListener() {

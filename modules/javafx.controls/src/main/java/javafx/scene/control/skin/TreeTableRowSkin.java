@@ -295,10 +295,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected ObjectProperty<Node> graphicProperty() {
-        TreeTableRow<T> treeTableRow = getSkinnable();
-        // FIXME: illegal access if skinnable is null
         if (treeItem == null) return null;
-
         return treeItem.graphicProperty();
     }
 
