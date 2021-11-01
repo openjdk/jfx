@@ -149,11 +149,11 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     }
 
     if (jwindow) {
-        if (isEnabled()) {
+        if (!event->in || isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
-        } else if (event->in) {
+        } else {
             // when the user tries to activate a disabled window, send FOCUS_DISABLED
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
             CHECK_JNI_EXCEPTION(mainEnv)
@@ -1168,7 +1168,6 @@ void WindowContextTop::set_visible(bool visible)
         }
     }
     WindowContextBase::set_visible(visible);
-
     //JDK-8220272 - fire event first because GDK_FOCUS_CHANGE is not always in order
     if (visible && jwindow && isEnabled()) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
@@ -1372,8 +1371,7 @@ void WindowContextTop::request_focus() {
     //JDK-8212060: Window show and then move glitch.
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
-
-    if (is_visible() && isEnabled()) {
+    if (is_visible()) {
         // gtk_get_current_event_time will most likely return 0 which means focus stealing may occur, causing
         // activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
         // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
