@@ -84,8 +84,9 @@ public class ControlAcceleratorSupport {
         // 1. Installing accelerators when Control is added to Scene
         // 2. Removing accelerators when Control is removed from Scene
         // Remove previously added listener if any
-        if (sceneChangeListenerMap.containsKey(anchor)) {
-            ChangeListener<Scene> listener = sceneChangeListenerMap.get(anchor).get();
+        WeakReference<ChangeListener<Scene>> listenerW = sceneChangeListenerMap.get(anchor);
+        if (listenerW != null) {
+            ChangeListener<Scene> listener = listenerW.get();
             if (listener != null) {
                 anchor.sceneProperty().removeListener(listener);
             }
@@ -250,8 +251,9 @@ public class ControlAcceleratorSupport {
         if (scene == null) {
             // The Node is not part of a Scene: Remove the Scene listener that was added
             // at the time of installing the accelerators.
-            if (sceneChangeListenerMap.containsKey(anchor)) {
-                ChangeListener<Scene> listener = sceneChangeListenerMap.get(anchor).get();
+            WeakReference<ChangeListener<Scene>> listenerW = sceneChangeListenerMap.get(anchor);
+            if (listenerW  != null) {
+                ChangeListener<Scene> listener = listenerW.get();
                 if (listener != null) {
                     anchor.sceneProperty().removeListener(listener);
                 }
