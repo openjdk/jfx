@@ -893,7 +893,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                 double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
                 double vPixelValue;
                 if (nodeHeight > 0.0) {
-                    vPixelValue = vRange / nodeHeight;
+                    vPixelValue = vRange / (nodeHeight - contentHeight);
                 }
                 else {
                     vPixelValue = 0.0;
@@ -925,7 +925,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                 double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
                 double hPixelValue;
                 if (nodeWidth > 0.0) {
-                    hPixelValue = hRange / nodeWidth;
+                    hPixelValue = hRange / (nodeWidth - contentWidth);
                 }
                 else {
                     hPixelValue = 0.0;
