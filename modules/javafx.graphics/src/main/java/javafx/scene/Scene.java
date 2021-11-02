@@ -723,7 +723,7 @@ public class Scene implements EventTarget {
     private TKPulseListener cleanupListener = () -> {
         cleanupAdded = false;
         // JDK-8269907 - This is important, to avoid memoryleaks in dirtyNodes and Parent.removed
-        scenePulseListener.synchronizeSceneNodes();
+        synchronizeSceneNodesWithLock();
     };
     private void checkCleanDirtyNodes() {
         if(!cleanupAdded) {
@@ -1288,6 +1288,11 @@ public class Scene implements EventTarget {
         doLayoutPass();
 
         getRoot().updateBounds();
+
+        synchronizeSceneNodesWithLock();
+    }
+
+    private void synchronizeSceneNodesWithLock() {
         if (peer != null) {
             peer.waitForRenderingToComplete();
             peer.waitForSynchronization();
@@ -1300,7 +1305,6 @@ public class Scene implements EventTarget {
         } else {
             scenePulseListener.synchronizeSceneNodes();
         }
-
     }
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
