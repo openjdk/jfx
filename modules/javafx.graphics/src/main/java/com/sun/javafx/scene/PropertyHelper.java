@@ -47,8 +47,11 @@ public class PropertyHelper {
 
     public static int getIntegerProperty(final String propName, final int fallbackValue) {
         try {
-            return AccessController.doPrivileged((java.security.PrivilegedAction<Integer>) () ->
-                Integer.parseInt(System.getProperty(propName, Integer.toString(fallbackValue))));
+            @SuppressWarnings("removal")
+            int answer =
+                AccessController.doPrivileged((java.security.PrivilegedAction<Integer>) () ->
+                    Integer.parseInt(System.getProperty(propName, Integer.toString(fallbackValue))));
+            return answer;
         } catch (Exception any) {
         }
         return fallbackValue;
