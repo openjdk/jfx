@@ -416,8 +416,8 @@ public class HBox extends Pane {
         List<Node>managed = getManagedChildren();
         double contentHeight = 0;
         if (width != -1 && getContentBias() != null) {
-            double prefWidths[][] = getAreaWidths(managed, -1, false);
-            adjustAreaWidths(managed, prefWidths, width, -1);
+            double[][] prefWidths = getChildrenWidths(managed, -1, false);
+            adjustChildrenWidths(managed, prefWidths, width, -1);
             contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, prefWidths[0], getAlignmentInternal().getVpos());
         } else {
             contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
@@ -439,8 +439,8 @@ public class HBox extends Pane {
         List<Node>managed = getManagedChildren();
         double contentHeight = 0;
         if (width != -1 && getContentBias() != null) {
-            double prefWidths[][] = getAreaWidths(managed, -1, false);
-            adjustAreaWidths(managed, prefWidths, width, -1);
+            double[][] prefWidths = getChildrenWidths(managed, -1, false);
+            adjustChildrenWidths(managed, prefWidths, width, -1);
             contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, prefWidths[0], getAlignmentInternal().getVpos());
         } else {
             contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
@@ -450,7 +450,10 @@ public class HBox extends Pane {
                snapSpaceY(insets.getBottom());
     }
 
-    private double[][] getAreaWidths(List<Node>managed, double height, boolean minimum) {
+    /**
+     * Calculates the preferred or minimum width for each child.
+     */
+    private double[][] getChildrenWidths(List<Node> managed, double height, boolean minimum) {
         // height could be -1
         double[][] temp = getTempArray(managed.size());
         final double insideHeight = height == -1? -1 : height -
@@ -468,28 +471,38 @@ public class HBox extends Pane {
         return temp;
     }
 
-    private double adjustAreaWidths(List<Node> managed, double[][] areaWidths, double width, double height) {
+    /**
+     * Adjusts the children widths to fit the provided space.
+     * This might be necessary because the HBox is size-constrained and cannot accommodate the preferred
+     * widths for all children, or it might be necessary because the HBox is sized to be larger than the
+     * preferred widths of its children and needs to grow its children to fit its size.
+     */
+    private double adjustChildrenWidths(List<Node> managed, double[][] childrenWidths, double width, double height) {
         Insets insets = getInsets();
         double top = snapSpaceY(insets.getTop());
         double bottom = snapSpaceY(insets.getBottom());
 
         double refHeight = shouldFillHeight() && height != -1 ? height - top - bottom : -1;
         double totalSpacing = (managed.size() - 1) * snapSpaceX(getSpacing());
-        double contentWidth = sum(areaWidths[0], managed.size()) + totalSpacing;
+        double contentWidth = snappedSum(childrenWidths[0], managed.size()) + totalSpacing;
         double targetWidth = width - snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight());
 
         if (contentWidth < targetWidth) {
-            growAreaWidths(managed, areaWidths, targetWidth, refHeight);
+            growChildrenWidths(managed, childrenWidths, targetWidth, refHeight);
         } else if (contentWidth > targetWidth) {
-            shrinkAreaWidths(managed, areaWidths, targetWidth, refHeight);
+            shrinkChildrenWidths(managed, childrenWidths, targetWidth, refHeight);
         }
 
-        return sum(areaWidths[0], managed.size()) + totalSpacing;
+        return snappedSum(childrenWidths[0], managed.size()) + totalSpacing;
     }
 
-    private void shrinkAreaWidths(List<Node> managed, double[][] areaWidths, double targetWidth, double height) {
-        double[] usedWidths = areaWidths[0];
-        double[] minWidths = areaWidths[1];
+    /**
+     * Shrinks all children widths to fit the target width.
+     * Shrinking is a one-step process: all children are eligible to be adjusted down to their minimum width.
+     */
+    private void shrinkChildrenWidths(List<Node> managed, double[][] childrenWidths, double targetWidth, double height) {
+        double[] usedWidths = childrenWidths[0];
+        double[] minWidths = childrenWidths[1];
         boolean shouldFillHeight = shouldFillHeight();
 
         for (int i = 0, size = managed.size(); i < size; i++) {
@@ -501,9 +514,15 @@ public class HBox extends Pane {
         adjustWidthsWithinLimits(managed, usedWidths, minWidths, targetWidth, managed.size());
     }
 
-    private void growAreaWidths(List<Node> managed, double[][] areaWidths, double targetWidth, double height) {
-        double[] usedWidths = areaWidths[0];
-        double[] maxWidths = areaWidths[1];
+    /**
+     * Grows all children widths to fit the target width.
+     * Growing is a two-step process: first, only children with {@link Priority#ALWAYS} are eligible
+     * for adjustment. If the first adjustment didn't suffice to fit the target width, children with
+     * {@link Priority#SOMETIMES} are also eligible for adjustment.
+     */
+    private void growChildrenWidths(List<Node> managed, double[][] childrenWidths, double targetWidth, double height) {
+        double[] currentWidths = childrenWidths[0];
+        double[] maxWidths = childrenWidths[1];
         boolean shouldFillHeight = shouldFillHeight();
 
         for (Priority priority : GROW_PRIORITY) {
@@ -520,17 +539,31 @@ public class HBox extends Pane {
                 }
             }
 
-            if (adjustWidthsWithinLimits(managed, usedWidths, maxWidths, targetWidth, adjustingNumber)) {
+            if (adjustWidthsWithinLimits(managed, currentWidths, maxWidths, targetWidth, adjustingNumber)) {
                 return;
             }
         }
     }
 
+    /**
+     * Resizes the children widths to fit the target width, while taking into account the resize limits
+     * for each child (their minimum and maximum width). This method will be called once when shrinking,
+     * and may be called twice when growing.
+     *
+     * @param managed the managed children
+     * @param currentWidths the current children widths
+     * @param limitWidths the max or min widths for each child, depending on whether we are growing or shrinking;
+     *                    a value of -1 means the child cannot be resized
+     * @param targetWidth the target width (sum of child widths and spacing)
+     * @param adjustingNumber a number that indicates how many children can be resized
+     * @return {@code true} if the child widths were successfully resized to fit the target width;
+     *         {@code false} otherwise
+     */
     private boolean adjustWidthsWithinLimits(
-            List<Node> managed, double[] usedWidths, double[] limitWidths, double targetWidth, int adjustingNumber) {
+            List<Node> managed, double[] currentWidths, double[] limitWidths, double targetWidth, int adjustingNumber) {
         double totalSpacing = (managed.size() - 1) * snapSpaceX(getSpacing());
-        double currentWidth = sum(usedWidths, managed.size()) + totalSpacing;
-        double currentDelta = targetWidth - currentWidth;
+        double currentTotalWidth = snappedSum(currentWidths, managed.size()) + totalSpacing;
+        double currentDelta = targetWidth - currentTotalWidth;
 
         while ((currentDelta > Double.MIN_VALUE || currentDelta < -Double.MIN_VALUE) && adjustingNumber > 0) {
             double portion = snapPortionX(currentDelta / adjustingNumber);
@@ -540,16 +573,16 @@ public class HBox extends Pane {
                     continue;
                 }
 
-                double maxChange = limitWidths[i] - usedWidths[i];
+                double maxChange = limitWidths[i] - currentWidths[i];
                 double change = currentDelta > 0 ? Math.min(maxChange, portion) : Math.max(maxChange, portion);
-                double oldWidth = usedWidths[i];
+                double oldWidth = currentWidths[i];
 
-                usedWidths[i] = snapSizeX(usedWidths[i] + change);
-                currentWidth = sum(usedWidths, managed.size()) + totalSpacing;
+                currentWidths[i] = snapSizeX(currentWidths[i] + change);
+                currentTotalWidth = snappedSum(currentWidths, managed.size()) + totalSpacing;
 
-                double newDelta = targetWidth - currentWidth;
+                double newDelta = targetWidth - currentTotalWidth;
                 if (Math.abs(newDelta) > Math.abs(currentDelta)) {
-                    usedWidths[i] = oldWidth;
+                    currentWidths[i] = oldWidth;
                     return true;
                 }
 
@@ -565,12 +598,17 @@ public class HBox extends Pane {
         return false;
     }
 
+    /**
+     * Calculates the preferred or minimum content width.
+     * The content width is the total preferred or minimum width of all children,
+     * including spacing between the children.
+     */
     private double computeContentWidth(List<Node> managedChildren, double height, boolean minimum) {
-        return sum(getAreaWidths(managedChildren, height, minimum)[0], managedChildren.size())
+        return snappedSum(getChildrenWidths(managedChildren, height, minimum)[0], managedChildren.size())
                 + (managedChildren.size()-1)*snapSpaceX(getSpacing());
     }
 
-    private double sum(double[] array, int size) {
+    private double snappedSum(double[] array, int size) {
         double res = 0;
         for (int i = 0; i < size; ++i) {
             res += array[i];
@@ -656,8 +694,8 @@ public class HBox extends Pane {
         double space = snapSpaceX(getSpacing());
         boolean shouldFillHeight = shouldFillHeight();
 
-        final double[][] actualAreaWidths = getAreaWidths(managed, height, false);
-        double contentWidth = adjustAreaWidths(managed, actualAreaWidths, width, height);
+        final double[][] actualChildrenWidths = getChildrenWidths(managed, height, false);
+        double contentWidth = adjustChildrenWidths(managed, actualChildrenWidths, width, height);
         double contentHeight = height - top - bottom;
 
         double x = left + computeXOffset(width - left - right, contentWidth, align.getHpos());
@@ -665,17 +703,17 @@ public class HBox extends Pane {
         double baselineOffset = -1;
         if (alignVpos == VPos.BASELINE) {
             double baselineComplement = getMinBaselineComplement();
-            baselineOffset = getAreaBaselineOffset(managed, marginAccessor, i -> actualAreaWidths[0][i],
+            baselineOffset = getAreaBaselineOffset(managed, marginAccessor, i -> actualChildrenWidths[0][i],
                     contentHeight, shouldFillHeight, baselineComplement);
         }
 
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
-            layoutInArea(child, x, y, actualAreaWidths[0][i], contentHeight,
+            layoutInArea(child, x, y, actualChildrenWidths[0][i], contentHeight,
                     baselineOffset, margin, true, shouldFillHeight,
                     alignHpos, alignVpos);
-            x += actualAreaWidths[0][i] + space;
+            x += actualChildrenWidths[0][i] + space;
         }
     }
 
