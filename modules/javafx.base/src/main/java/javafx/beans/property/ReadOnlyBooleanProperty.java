@@ -25,8 +25,8 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.property.PropertyHelper;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanExpression;
 
@@ -54,18 +54,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder(
-                "ReadOnlyBooleanProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && !name.equals("")) {
-            result.append("name: ").append(name).append(", ");
-        }
-        result.append("value: ").append(get()).append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, ReadOnlyBooleanProperty.class);
     }
 
     /**

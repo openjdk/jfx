@@ -28,9 +28,11 @@ package javafx.beans.property;
 import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalBinding;
+import com.sun.javafx.binding.Logging;
+import com.sun.javafx.property.PropertyHelper;
+
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableFloatValue;
-import com.sun.javafx.binding.Logging;
 
 /**
  * This class defines a {@link Property} wrapping a {@code float} value.
@@ -99,18 +101,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder(
-                "FloatProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && (!name.equals(""))) {
-            result.append("name: ").append(name).append(", ");
-        }
-        result.append("value: ").append(get()).append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, FloatProperty.class);
     }
 
     /**

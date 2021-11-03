@@ -328,27 +328,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder("SetProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && (!name.equals(""))) {
-            result.append("name: ").append(name).append(", ");
-        }
-        if (isBound()) {
-            result.append("bound, ");
-            if (valid) {
-                result.append("value: ").append(get());
-            } else {
-                result.append("invalid");
-            }
-        } else {
-            result.append("value: ").append(get());
-        }
-        result.append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, SetProperty.class, valid);
     }
 
     private static class Listener<E> implements InvalidationListener, WeakListener {

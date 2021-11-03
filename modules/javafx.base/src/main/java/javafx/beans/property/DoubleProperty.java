@@ -29,6 +29,7 @@ import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalBinding;
 import com.sun.javafx.binding.Logging;
+import com.sun.javafx.property.PropertyHelper;
 
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableDoubleValue;
@@ -100,18 +101,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder(
-                "DoubleProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && (!name.equals(""))) {
-            result.append("name: ").append(name).append(", ");
-        }
-        result.append("value: ").append(get()).append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, DoubleProperty.class);
     }
 
     /**

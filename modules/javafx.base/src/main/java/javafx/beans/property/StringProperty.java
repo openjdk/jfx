@@ -26,6 +26,7 @@
 package javafx.beans.property;
 
 import com.sun.javafx.binding.BidirectionalBinding;
+import com.sun.javafx.property.PropertyHelper;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableStringValue;
 import javafx.util.StringConverter;
@@ -151,17 +152,6 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder(
-                "StringProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && (!name.equals(""))) {
-            result.append("name: ").append(name).append(", ");
-        }
-        result.append("value: ").append(get()).append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, StringProperty.class);
     }
 }

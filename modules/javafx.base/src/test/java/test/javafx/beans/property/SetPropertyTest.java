@@ -152,7 +152,6 @@ public class SetPropertyTest {
 
         @Override
         public boolean isBound() {
-            fail("Not in use");
             return false;
         }
 

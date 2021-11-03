@@ -27,6 +27,7 @@ package com.sun.javafx.property;
 
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ObservableValue;
 
 import static com.sun.javafx.beans.BeanErrors.*;
@@ -34,6 +35,41 @@ import static com.sun.javafx.beans.BeanErrors.*;
 public class PropertyHelper {
 
     private PropertyHelper() {}
+
+    public static String toString(
+            ReadOnlyProperty<?> property, Class<? extends ReadOnlyProperty> displayClass) {
+        return toString(property, displayClass, false);
+    }
+
+    public static String toString(
+            ReadOnlyProperty<?> property, Class<? extends ReadOnlyProperty> displayClass, boolean valid) {
+        StringBuilder result = new StringBuilder(displayClass.getSimpleName()).append(" [");
+        Object bean = property.getBean();
+        String name = property.getName();
+
+        if (bean != null) {
+            result.append("bean: ").append(bean).append(", ");
+        }
+
+        if (name != null && !name.isBlank()) {
+            result.append("name: ").append(name).append(", ");
+        }
+
+        if (property instanceof Property<?> && ((Property<?>)property).isBound()) {
+            result.append("bound, ");
+
+            if (valid) {
+                result.append("value: ").append(property.getValue());
+            } else {
+                result.append("invalid");
+            }
+        } else {
+            result.append("value: ").append(property.getValue());
+        }
+
+        result.append("]");
+        return result.toString();
+    }
 
     public static void checkBind(Property<?> self, ObservableValue<?> source, ExpressionHelperBase helper) {
         if (source == null) {

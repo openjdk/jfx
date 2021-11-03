@@ -147,7 +147,6 @@ public class StringPropertyTest {
 
         @Override
         public boolean isBound() {
-            fail("Not in use");
             return false;
         }
 

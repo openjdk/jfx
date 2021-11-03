@@ -30,6 +30,7 @@ import java.util.ListIterator;
 import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalContentBinding;
+import com.sun.javafx.property.PropertyHelper;
 import javafx.beans.binding.ListExpression;
 import javafx.collections.ObservableList;
 
@@ -216,18 +217,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder(
-                "ReadOnlyListProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && !name.equals("")) {
-            result.append("name: ").append(name).append(", ");
-        }
-        result.append("value: ").append(get()).append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, ReadOnlyListProperty.class);
     }
 
 }

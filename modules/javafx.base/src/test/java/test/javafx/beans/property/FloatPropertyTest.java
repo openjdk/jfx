@@ -194,7 +194,6 @@ public class FloatPropertyTest {
 
         @Override
         public boolean isBound() {
-            fail("Not in use");
             return false;
         }
 

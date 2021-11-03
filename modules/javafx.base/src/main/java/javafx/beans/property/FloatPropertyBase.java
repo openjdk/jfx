@@ -223,27 +223,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
      */
     @Override
     public String toString() {
-        final Object bean = getBean();
-        final String name = getName();
-        final StringBuilder result = new StringBuilder("FloatProperty [");
-        if (bean != null) {
-            result.append("bean: ").append(bean).append(", ");
-        }
-        if ((name != null) && (!name.equals(""))) {
-            result.append("name: ").append(name).append(", ");
-        }
-        if (isBound()) {
-            result.append("bound, ");
-            if (valid) {
-                result.append("value: ").append(get());
-            } else {
-                result.append("invalid");
-            }
-        } else {
-            result.append("value: ").append(get());
-        }
-        result.append("]");
-        return result.toString();
+        return PropertyHelper.toString(this, FloatProperty.class, valid);
     }
 
     private static class Listener implements InvalidationListener, WeakListener {
