@@ -84,15 +84,9 @@ public abstract class Parent extends Node {
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
-    // If set to true, generate a warning message whenever:
-    // 1. adding a node to a parent if it is currently a child of another parent
-    // 2. the layout limit has been exceeded
-    private static final boolean WARN = PropertyHelper.getBooleanProperty("javafx.sg.warn");
-
-    /**
-     * Limits the number of layout passes in a single call to {@link Parent#layout()}.
-     */
-    private static final int LAYOUT_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.layoutLimit", 100);
+    // If set to true, generate a warning message whenever adding a node to a
+    // parent if it is currently a child of another parent.
+    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
 
     /**
      * Threshold when it's worth to populate list of removed children.
@@ -348,13 +342,13 @@ public abstract class Parent extends Node {
                     for (int i = from; i < to; ++i) {
                         Node n = children.get(i);
                         if (n.getParent() != null && n.getParent() != Parent.this) {
-                            if (WARN) {
+                            if (warnOnAutoMove) {
                                 java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
                                 java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
                                 java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
                             }
                             n.getParent().children.remove(n);
-                            if (WARN) {
+                            if (warnOnAutoMove) {
                                 Thread.dumpStack();
                             }
                         }
@@ -902,7 +896,7 @@ public abstract class Parent extends Node {
         layoutFlags.add(flag);
     }
 
-    private void clearLayoutFlags() {
+    void clearLayoutFlags() {
         layoutFlags.clear();
     }
 
@@ -1303,6 +1297,18 @@ public abstract class Parent extends Node {
      * Calling this method while the Parent is doing layout is a no-op.
      */
     public final void layout() {
+        if (performingLayout && isLayoutFlag(LayoutFlags.NEEDS_LAYOUT)) {
+            /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
+             * while doing the layout.
+             * One example might be an invocation from Group layout bounds recalculation
+             *  (e.g. during the localToScene/localToParent calculation).
+             * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done),
+             * which is likely what the code would expect.
+             * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
+             */
+            return;
+        }
+
         Scene scene = getScene();
         LayoutTracker layoutTracker = scene != null ? scene.layoutTracker : null;
 
@@ -1311,34 +1317,14 @@ public abstract class Parent extends Node {
         }
 
         int pass = 0;
-        while (!isLayoutClean() && (layoutRoot || pass == 0)) {
-            if (pass == LAYOUT_LIMIT) {
-                if (WARN) {
-                    System.err.println(
-                        "WARNING layout limit exceeded (current limit: " + LAYOUT_LIMIT + " layout passes)\r\n" +
-                        "    You can change the limit by setting the javafx.sg.layoutLimit system property.");
-                }
-                break;
-            }
 
+        while (!isLayoutClean() && (layoutRoot || pass == 0)) {
             boolean layoutChildren = isLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
             boolean dirtyBranch = layoutChildren || isLayoutFlag(LayoutFlags.DIRTY_BRANCH);
 
             clearLayoutFlags();
 
             if (layoutChildren) {
-                if (performingLayout) {
-                    /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
-                     * while doing the layout.
-                     * One example might be an invocation from Group layout bounds recalculation
-                     *  (e.g. during the localToScene/localToParent calculation).
-                     * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done),
-                     * which is likely what the code would expect.
-                     * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
-                     */
-                    break;
-                }
-
                 performingLayout = true;
                 layoutChildren();
                 pass++;
@@ -1362,6 +1348,10 @@ public abstract class Parent extends Node {
 
         if (layoutTracker != null) {
             layoutTracker.popNode(pass);
+        }
+
+        if (layoutRoot) {
+            markLayoutFinished();
         }
     }
 

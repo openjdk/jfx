@@ -66,10 +66,7 @@ public class LayoutCycle {
                 break;
         }
 
-        builder.append(", cumulative layout passes: ")
-            .append(root.getCumulativePasses())
-            .append(System.lineSeparator())
-            .append("--> ");
+        builder.append(System.lineSeparator()).append("--> ");
 
         printLayoutTree(builder, root, "    ", false);
 
@@ -78,7 +75,11 @@ public class LayoutCycle {
 
     private void printLayoutTree(StringBuilder text, LayoutFrame frame, String prefix, boolean skin) {
         String className = frame.getNode().getClass().getSimpleName();
-        text.append(className.isEmpty() ? "<anonymous>" : className);
+        if (className.isEmpty()) {
+            className = frame.getNode().getClass().getSuperclass().getSimpleName();
+        }
+
+        text.append(className);
 
         String id = frame.getNode().getId();
         boolean bracket = id != null && !id.isEmpty() || frame.isLayoutRoot() || skin;

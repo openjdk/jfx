@@ -27,6 +27,7 @@ package javafx.scene;
 
 
 import com.sun.javafx.geometry.BoundsUtils;
+import com.sun.javafx.scene.PropertyHelper;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -2622,6 +2623,40 @@ public abstract class Node implements EventTarget, Styleable {
      * Layout related APIs.                                                    *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * Limits the number of times a node can call {@link #requestParentLayout(boolean)}.
+     */
+    private static final int LAYOUT_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.layoutLimit", 100);
+
+    /**
+     * If this node is a layout root, this value authoritatively specifies the current layout cycle.
+     * For all other nodes, this value indicates the layout cycle in which {@link #parentLayoutRequests}
+     * and {@link #layoutSuspended} were set to their current value.
+     */
+    private int layoutCycle;
+
+    /**
+     * The number of calls to {@link #requestParentLayout(boolean)} in the layout cycle indicated
+     * by {@link #layoutCycle}.
+     */
+    private int parentLayoutRequests;
+
+    /**
+     * Indicates whether layout is suspended for this node due to excessive parent layout requests.
+     * When this flag is set, no further calls to {@link #requestParentLayout(boolean)} are processed.
+     * The flag is cleared when the layout cycle is finished.
+     */
+    private boolean layoutSuspended;
+
+    /**
+     * Marks the current layout cycle as finished by increasing the layout cycle counter.
+     * This method must only be called on layout roots.
+     */
+    void markLayoutFinished() {
+        layoutCycle++;
+    }
+
     /**
      * Defines whether or not this node's layout will be managed by it's parent.
      * If the node is managed, it's parent will factor the node's geometry
@@ -3434,8 +3469,61 @@ public abstract class Node implements EventTarget, Styleable {
         return 0;
     }
 
+    private Node getLayoutRoot(Node node) {
+        while (node != null) {
+            if (node instanceof Parent && ((Parent)node).layoutRoot) {
+                return node;
+            }
+
+            node = node.getParent();
+        };
+
+        return null;
+    }
+
     private void requestParentLayout(boolean forceRootLayout) {
         final Parent p = getParent();
+
+        // When forcing a root layout, we check whether the number of requests for the current node
+        // exceeds the layout limit. In this case, we don't process further calls to this method to
+        // prevent excessive layout requests.
+        if (forceRootLayout) {
+            Node root = getLayoutRoot(p);
+
+            if (root != null && root != p) {
+                int rootLayoutCycle = root.layoutCycle;
+
+                // If our stored layoutCycle number doesn't match the layout cycle number of
+                // the layout root, a new layout cycle has begun.
+                if (layoutCycle != rootLayoutCycle) {
+                    layoutCycle = rootLayoutCycle;
+                    layoutSuspended = false;
+                    parentLayoutRequests = 0;
+                } else if (layoutSuspended) {
+                    return;
+                } else {
+                    parentLayoutRequests++;
+
+                    if (parentLayoutRequests > LAYOUT_LIMIT) {
+                        PlatformLogger logger = Logging.getLayoutLogger();
+                        if (logger.isLoggable(Level.WARNING)) {
+                            logger.warning(
+                                "Layout limit exceeded for " + this + "\r\n" +
+                                "    This usually happens when a node adjusts its layoutY coordinate too frequently in a single layout cycle.\r\n" +
+                                "    You can change the limit by setting the javafx.sg.layoutLimit system property (current: " + LAYOUT_LIMIT + ").");
+                        }
+
+                        layoutSuspended = true;
+
+                        // When layout is suspended, we clear the layout flags to mark this node as 'clean'.
+                        // This prevents the layout algorithm from processing this node again.
+                        if (this instanceof Parent) {
+                            ((Parent)this).clearLayoutFlags();
+                        }
+                    }
+                }
+            }
+        }
 
         // Propagate layout if this change isn't triggered by its parent
         if (p != null && !p.isCurrentLayoutChild(Node.this)) {

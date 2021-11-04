@@ -58,15 +58,6 @@ public class LayoutFrame {
         return passes;
     }
 
-    public int getCumulativePasses() {
-        int total = passes;
-        for (LayoutFrame child : children) {
-            total += child.getCumulativePasses();
-        }
-
-        return total;
-    }
-
     LayoutFrame getFrame(Parent node) {
         for (int i = 0, size = children.size(); i < size; ++i) {
             LayoutFrame frame = children.get(i);
