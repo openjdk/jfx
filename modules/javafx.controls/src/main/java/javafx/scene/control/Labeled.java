@@ -42,9 +42,9 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.StringPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
@@ -140,17 +140,7 @@ public abstract class Labeled extends Control {
      */
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new StringPropertyBase("") {
-                @Override
-                public Object getBean() {
-                    return Labeled.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "text";
-                }
-            };
+            text = new SimpleStringProperty(this, "text", "");
         }
         return text;
     }
