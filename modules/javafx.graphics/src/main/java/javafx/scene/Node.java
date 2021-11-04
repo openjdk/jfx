@@ -2077,10 +2077,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (this instanceof Parent) {
             // TODO: As an optimization we only need to layout those dirty
             // roots that are descendants of this node
-            Parent p = (Parent)this;
-            for (int i = 0; i < 3; i++) {
-                p.layout();
-            }
+            ((Parent)this).layout();
         }
     }
 
@@ -2648,6 +2645,10 @@ public abstract class Node implements EventTarget, Styleable {
      * The flag is cleared when the layout cycle is finished.
      */
     private boolean layoutSuspended;
+
+    boolean isLayoutSuspended() {
+        return layoutSuspended;
+    }
 
     /**
      * Marks the current layout cycle as finished by increasing the layout cycle counter.

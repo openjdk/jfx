@@ -1369,12 +1369,15 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * Invoked during the layout pass to layout the children in this
-     * {@code Parent}. By default it will only set the size of managed,
-     * resizable content to their preferred sizes and does not do any node
-     * positioning.
+     * Invoked during the layout pass to layout the children in this {@code Parent}.
+     * By default it will only set the size of managed, resizable content to their preferred sizes
+     * and does not do any node positioning.
      * <p>
      * Subclasses should override this function to layout content as needed.
+     * Note that is is legal to invalidate the scene graph by requesting a new layout pass inside
+     * of this method, but implementers must take great care to prevent an infinite loop of relayout
+     * requests. If the layout subsystem detects that a node excessively requests relayout passes,
+     * it will suspend the layout for this node to prevent an infinite relayout loop.
      */
     protected void layoutChildren() {
         for (int i=0, max=children.size(); i<max; i++) {
