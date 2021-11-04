@@ -25,10 +25,12 @@
 
 package javafx.scene;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.perf.LayoutTracker;
 import com.sun.javafx.scene.InvalidateLayoutOption;
 import com.sun.javafx.scene.PropertyHelper;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.util.Logging;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.collections.FXCollections;
@@ -38,6 +40,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import com.sun.javafx.util.TempState;
@@ -343,14 +346,18 @@ public abstract class Parent extends Node {
                         Node n = children.get(i);
                         if (n.getParent() != null && n.getParent() != Parent.this) {
                             if (warnOnAutoMove) {
-                                java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
-                                java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
-                                java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
+                                PlatformLogger logger = Logging.getLayoutLogger();
+                                if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
+                                    logger.warning(
+                                        "Node was added to a new parent without first removing it from its current parent. " +
+                                        "It will be automatically removed from its current parent." + System.lineSeparator() +
+                                        "    Node: " + n + System.lineSeparator() +
+                                        "    Current parent: " + n.getParent() + System.lineSeparator() +
+                                        "    New parent: " + this);
+                                }
                             }
+
                             n.getParent().children.remove(n);
-                            if (warnOnAutoMove) {
-                                Thread.dumpStack();
-                            }
                         }
                     }
 
@@ -411,7 +418,13 @@ public abstract class Parent extends Node {
             } else {
                 // If childSet was not modified, we still need to check whether the permutation
                 // did change the layout
-                layout_loop:while (c.next()) {
+                layout_loop: while (c.next()) {
+                    // Don't relayout when the list didn't effectively change, as otherwise we
+                    // could end up with an infinite relayout loop.
+                    if (c.wasReplaced() && Objects.equals(c.getRemoved(), c.getAddedSubList())) {
+                        continue;
+                    }
+
                     List<Node> removed = c.getRemoved();
                     for (int i = 0, removedSize = removed.size(); i < removedSize; ++i) {
                         if (removed.get(i).isManaged()) {
