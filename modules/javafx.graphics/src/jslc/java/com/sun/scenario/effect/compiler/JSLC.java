@@ -129,18 +129,15 @@ public class JSLC {
      *   ../decora-es2/build/gensrc/     + rootPkg + /impl/es2/glsl
      *   ../decora-prism-ps/build/gensrc/+ rootPkg + /impl/prism/ps
      */
-    private static Map<Integer, String> initDefaultInfoMap() {
-        Map<Integer, String> infoMap = new HashMap<Integer, String>();
-        infoMap.put(OUT_D3D,        "decora-d3d/build/gensrc/{pkg}/impl/hw/d3d/hlsl/{name}.hlsl");
-        infoMap.put(OUT_ES2,        "decora-es2/build/gensrc/{pkg}/impl/es2/glsl/{name}.frag");
-        infoMap.put(OUT_JAVA,       "decora-jsw/build/gensrc/{pkg}/impl/sw/java/JSW{name}Peer.java");
-        infoMap.put(OUT_PRISM,      "decora-prism-ps/build/gensrc/{pkg}/impl/prism/ps/PPS{name}Peer.java");
-        infoMap.put(OUT_SSE_JAVA,   "decora-sse/build/gensrc/{pkg}/impl/sw/sse/SSE{name}Peer.java");
-        infoMap.put(OUT_ME_JAVA,    "decora-me/build/gensrc/{pkg}/impl/sw/me/ME{name}Peer.java");
-        infoMap.put(OUT_SSE_NATIVE, "decora-sse-native/build/gensrc/SSE{name}Peer.cc");
-        infoMap.put(OUT_ME_NATIVE,  "decora-me-native/build/gensrc/ME{name}Peer.cc");
-        return infoMap;
-    }
+    private static final Map<Integer, String> DEFAULT_INFO_MAP = Map.of(
+        OUT_D3D,        "decora-d3d/build/gensrc/{pkg}/impl/hw/d3d/hlsl/{name}.hlsl",
+        OUT_ES2,        "decora-es2/build/gensrc/{pkg}/impl/es2/glsl/{name}.frag",
+        OUT_JAVA,       "decora-jsw/build/gensrc/{pkg}/impl/sw/java/JSW{name}Peer.java",
+        OUT_PRISM,      "decora-prism-ps/build/gensrc/{pkg}/impl/prism/ps/PPS{name}Peer.java",
+        OUT_SSE_JAVA,   "decora-sse/build/gensrc/{pkg}/impl/sw/sse/SSE{name}Peer.java",
+        OUT_ME_JAVA,    "decora-me/build/gensrc/{pkg}/impl/sw/me/ME{name}Peer.java",
+        OUT_SSE_NATIVE, "decora-sse-native/build/gensrc/SSE{name}Peer.cc",
+        OUT_ME_NATIVE,  "decora-me-native/build/gensrc/ME{name}Peer.cc");
 
     public static ParserInfo compile(JSLCInfo jslcinfo,
                                      String str,
@@ -325,7 +322,7 @@ public class JSLC {
         public String genericsName;
         public String interfaceName;
         public String pkgName = rootPkg;
-        public Map<Integer, String> outNameMap = initDefaultInfoMap();
+        public Map<Integer, String> outNameMap = new HashMap<>(DEFAULT_INFO_MAP);
 
         private String extraOpts;
 

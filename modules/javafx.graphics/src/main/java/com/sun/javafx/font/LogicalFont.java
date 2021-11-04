@@ -27,7 +27,6 @@ package com.sun.javafx.font;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -50,27 +49,24 @@ public class LogicalFont implements CompositeFontResource {
     public static final String STYLE_ITALIC      = "Italic";
     public static final String STYLE_BOLD_ITALIC = "Bold Italic";
 
-    static final HashMap<String, String>
-        canonicalFamilyMap = new  HashMap<String, String>();
-    static {
-        canonicalFamilyMap.put("system", SYSTEM);
+    private static final Map<String, String> CANONICAL_FAMILY_MAP = Map.of(
+        "system", SYSTEM,
 
-        canonicalFamilyMap.put("serif", SERIF);
+        "serif", SERIF,
 
-        canonicalFamilyMap.put("sansserif", SANS_SERIF);
-        canonicalFamilyMap.put("sans-serif", SANS_SERIF); // css style
-        canonicalFamilyMap.put("dialog", SANS_SERIF);
-        canonicalFamilyMap.put("default", SANS_SERIF);
+        "sansserif", SANS_SERIF,
+        "sans-serif", SANS_SERIF, // css style
+        "dialog", SANS_SERIF,
+        "default", SANS_SERIF,
 
-        canonicalFamilyMap.put("monospaced", MONOSPACED);
-        canonicalFamilyMap.put("monospace", MONOSPACED); // css style
-        canonicalFamilyMap.put("dialoginput", MONOSPACED);
-    }
+        "monospaced", MONOSPACED,
+        "monospace", MONOSPACED, // css style
+        "dialoginput", MONOSPACED);
 
     static boolean isLogicalFont(String name) {
         int spaceIndex = name.indexOf(' ');
         if (spaceIndex != -1) name = name.substring(0, spaceIndex);
-        return canonicalFamilyMap.get(name) != null;
+        return CANONICAL_FAMILY_MAP.get(name) != null;
     }
 
     private static String getCanonicalFamilyName(String name) {
@@ -78,7 +74,7 @@ public class LogicalFont implements CompositeFontResource {
              return SANS_SERIF;
          }
          String lcName = name.toLowerCase();
-         return canonicalFamilyMap.get(lcName);
+         return CANONICAL_FAMILY_MAP.get(lcName);
     }
 
     static LogicalFont[] logicalFonts = new LogicalFont[16];
