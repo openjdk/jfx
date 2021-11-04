@@ -3234,6 +3234,8 @@ public abstract class Node implements EventTarget, Styleable {
      * Indicates to the parent node that it should prefer this node to derive its own baseline offset.
      * Setting this value overrides the value returned by {@link Node#isTextBaseline()}.
      */
+    private BooleanProperty prefBaseline;
+
     public final BooleanProperty prefBaselineProperty() {
         if (prefBaseline == null) {
             prefBaseline = new BooleanPropertyBase() {
@@ -3260,10 +3262,6 @@ public abstract class Node implements EventTarget, Styleable {
         return prefBaseline;
     }
 
-    /**
-     * Returns whether the baseline offset reported by this node should be preferred by layout
-     * containers for the purpose of computing their own baseline offset.
-     */
     public final boolean isPrefBaseline() {
         return prefBaseline != null && prefBaseline.get();
     }
@@ -3273,8 +3271,6 @@ public abstract class Node implements EventTarget, Styleable {
             prefBaselineProperty().set(value);
         }
     }
-
-    private BooleanProperty prefBaseline;
 
     /**
      * Returns whether the baseline offset reported by this node corresponds to the baseline
