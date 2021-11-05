@@ -87,9 +87,16 @@ public abstract class Parent extends Node {
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
-    // If set to true, generate a warning message whenever adding a node to a
-    // parent if it is currently a child of another parent.
-    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+    /**
+     * If set to true, generate a warning message whenever adding a node to a
+     * parent if it is currently a child of another parent.
+     */
+    private static final boolean WARN_ON_AUTO_MOVE = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+
+    /**
+     * Limits the number of times {@link Parent#layout()} will iterate to lay out the scene graph.
+     */
+    private static final int LAYOUT_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.layoutLimit", 1000);
 
     /**
      * Threshold when it's worth to populate list of removed children.
@@ -345,7 +352,7 @@ public abstract class Parent extends Node {
                     for (int i = from; i < to; ++i) {
                         Node n = children.get(i);
                         if (n.getParent() != null && n.getParent() != Parent.this) {
-                            if (warnOnAutoMove) {
+                            if (WARN_ON_AUTO_MOVE) {
                                 PlatformLogger logger = Logging.getLayoutLogger();
                                 if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
                                     logger.warning(
@@ -1336,6 +1343,19 @@ public abstract class Parent extends Node {
             boolean dirtyBranch = layoutChildren || isLayoutFlag(LayoutFlags.DIRTY_BRANCH);
 
             clearLayoutFlags();
+
+            if (pass > LAYOUT_LIMIT) {
+                PlatformLogger logger = Logging.getLayoutLogger();
+                if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
+                    logger.warning(
+                        "Layout limit exceeded for " + this + ". " +
+                        "You can change the limit by setting the javafx.sg.layoutLimit system property " +
+                        "(current: " + LAYOUT_LIMIT + ").");
+                }
+
+                break;
+            }
+
 
             if (layoutChildren) {
                 performingLayout = true;

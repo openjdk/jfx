@@ -2624,7 +2624,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Limits the number of times a node can call {@link #requestParentLayout(boolean)}.
      */
-    private static final int LAYOUT_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.layoutLimit", 100);
+    private static final int INVALIDATION_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.invalidationLimit", 100);
 
     /**
      * If this node is a layout root, this value authoritatively specifies the current layout cycle.
@@ -3501,13 +3501,14 @@ public abstract class Node implements EventTarget, Styleable {
                 } else {
                     parentLayoutRequests++;
 
-                    if (parentLayoutRequests > LAYOUT_LIMIT) {
+                    if (parentLayoutRequests > INVALIDATION_LIMIT) {
                         PlatformLogger logger = Logging.getLayoutLogger();
                         if (logger.isLoggable(Level.WARNING)) {
                             logger.warning(
-                                "Layout limit exceeded for " + this + "\r\n" +
-                                "    This usually happens when a node adjusts its layoutY coordinate too frequently in a single layout cycle.\r\n" +
-                                "    You can change the limit by setting the javafx.sg.layoutLimit system property (current: " + LAYOUT_LIMIT + ").");
+                                "Scene graph invalidation limit exceeded for " + this + ". " +
+                                "This usually happens when a node adjusts its layoutY coordinate too frequently " +
+                                "in a single layout cycle. You can change the limit by setting the " +
+                                "javafx.sg.invalidationLimit system property (current: " + INVALIDATION_LIMIT + ").");
                         }
 
                         layoutSuspended = true;
