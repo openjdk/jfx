@@ -1038,15 +1038,22 @@ public class Region extends Parent {
         // Note that I have biased this for layout over binding, because the widthProperty
         // is now going to recompute the width eagerly. The cost of excessive and
         // unnecessary bounds changes, however, is relatively high.
-        if (value != _width) {
+        if (_width != value) {
+            double oldWidth = _width;
             _width = value;
-            cornersValid = false;
-            boundingBox = null;
-            NodeHelper.layoutBoundsChanged(this);
-            NodeHelper.geomChanged(this);
-            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
-            setNeedsLayout(true);
-            requestParentLayout();
+
+            // Layout requests that are triggered by almost (but not quite) equal floating-point
+            // numbers can lead to instability in the layout algorithm, which can manifest in
+            // infinite relayout loops.
+            if (Math.abs(oldWidth - value) > 0.001) {
+                cornersValid = false;
+                boundingBox = null;
+                NodeHelper.layoutBoundsChanged(this);
+                NodeHelper.geomChanged(this);
+                NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
+                setNeedsLayout(true);
+                requestParentLayout();
+            }
         }
     }
 
@@ -1093,29 +1100,36 @@ public class Region extends Parent {
 
     private void heightChanged(double value) {
         if (_height != value) {
+            double oldHeight = _height;
             _height = value;
-            cornersValid = false;
-            // It is possible that somebody sets the height of the region to a value which
-            // it previously held. If this is the case, we want to avoid excessive layouts.
-            // Note that I have biased this for layout over binding, because the heightProperty
-            // is now going to recompute the height eagerly. The cost of excessive and
-            // unnecessary bounds changes, however, is relatively high.
-            boundingBox = null;
-            // Note: although NodeHelper.geomChanged will usually also invalidate the
-            // layout bounds, that is not the case for Regions, and both must
-            // be called separately.
-            NodeHelper.geomChanged(this);
-            NodeHelper.layoutBoundsChanged(this);
-            // We use "NODE_GEOMETRY" to mean that the bounds have changed and
-            // need to be sync'd with the render tree
-            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
-            // Change of the height (or width) won't change the preferred size.
-            // So we don't need to flush the cache. We should however mark this node
-            // as needs layout to be internally layouted.
-            setNeedsLayout(true);
-            // This call is only needed when this was not called from the parent during the layout.
-            // Otherwise it would flush the cache of the parent, which is not necessary
-            requestParentLayout();
+
+            // Layout requests that are triggered by almost (but not quite) equal floating-point
+            // numbers can lead to instability in the layout algorithm, which can manifest in
+            // infinite relayout loops.
+            if (Math.abs(oldHeight - value) > 0.001) {
+                cornersValid = false;
+                // It is possible that somebody sets the height of the region to a value which
+                // it previously held. If this is the case, we want to avoid excessive layouts.
+                // Note that I have biased this for layout over binding, because the heightProperty
+                // is now going to recompute the height eagerly. The cost of excessive and
+                // unnecessary bounds changes, however, is relatively high.
+                boundingBox = null;
+                // Note: although NodeHelper.geomChanged will usually also invalidate the
+                // layout bounds, that is not the case for Regions, and both must
+                // be called separately.
+                NodeHelper.geomChanged(this);
+                NodeHelper.layoutBoundsChanged(this);
+                // We use "NODE_GEOMETRY" to mean that the bounds have changed and
+                // need to be sync'd with the render tree
+                NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
+                // Change of the height (or width) won't change the preferred size.
+                // So we don't need to flush the cache. We should however mark this node
+                // as needs layout to be internally layouted.
+                setNeedsLayout(true);
+                // This call is only needed when this was not called from the parent during the layout.
+                // Otherwise it would flush the cache of the parent, which is not necessary
+                requestParentLayout();
+            }
         }
     }
 

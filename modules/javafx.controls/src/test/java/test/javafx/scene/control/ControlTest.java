@@ -136,6 +136,16 @@ public class ControlTest {
         assertTrue(c.isNeedsLayout());
     }
 
+    @Test public void modifyingTheControlWidthByVerySmallAmountDoesNotLeadToRequestLayout() {
+        // Make sure the Control has its needsLayout flag cleared
+        c.resize(173, c.getHeight());
+        c.layout();
+        assertFalse(c.isNeedsLayout());
+        // Run the test
+        c.resize(173.00001, c.getHeight());
+        assertFalse(c.isNeedsLayout());
+    }
+
     @Test public void modifyingTheControlHeightUpdatesTheLayoutBounds() {
         c.resize(c.getWidth(), 173);
         assertEquals(173, c.getLayoutBounds().getHeight(), 0);
@@ -148,6 +158,16 @@ public class ControlTest {
         // Run the test
         c.resize(c.getWidth(), 173);
         assertTrue(c.isNeedsLayout());
+    }
+
+    @Test public void modifyingTheControlHeightByVerySmallAmountDoesNotLeadToRequestLayout() {
+        // Make sure the Control has its needsLayout flag cleared
+        c.resize(c.getWidth(), 173);
+        c.layout();
+        assertFalse(c.isNeedsLayout());
+        // Run the test
+        c.resize(c.getWidth(), 173.00001);
+        assertFalse(c.isNeedsLayout());
     }
 
     @Test public void multipleModificationsToWidthAndHeightAreReflectedInLayoutBounds() {
