@@ -3234,6 +3234,9 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Indicates to the parent node that it should prefer this node to derive its own baseline offset.
      * Setting this value overrides the value returned by {@link Node#isTextBaseline()}.
+     *
+     * @defaultValue false
+     * @since 18
      */
     private BooleanProperty prefBaseline;
 
@@ -3277,6 +3280,8 @@ public abstract class Node implements EventTarget, Styleable {
      * Returns whether the baseline offset reported by this node corresponds to the baseline
      * of a text node (as compared to the baseline of a non-text node). Subclasses that contain
      * text should override this method and return {@code true}.
+     *
+     * @since 18
      */
     public boolean isTextBaseline() {
         return false;
