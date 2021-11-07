@@ -34,6 +34,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -478,8 +479,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             } else {
                 if (nextDataPoint == null) {
                     nextDataPoint = new LineTo(x, y);
-                } else if ((sortX && x <= nextDataPoint.getX()) ||
-                           (sortY && y <= nextDataPoint.getY()))
+                } else if ((sortX && x < nextDataPoint.getX()) ||
+                           (sortY && y < nextDataPoint.getY()))
                 {
                     nextDataPoint.setX(x);
                     nextDataPoint.setY(y);

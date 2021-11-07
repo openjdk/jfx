@@ -36,14 +36,17 @@ import javafx.scene.chart.Chart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
+import javafx.scene.shape.LineTo;
 import javafx.scene.shape.Path;
 import static org.junit.Assert.assertEquals;
+
+import javafx.scene.shape.PathElement;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class AreaChartTest extends XYChartTestBase {
     AreaChart<Number,Number> ac;
-    final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
+    final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
     boolean useCategoryAxis = false;
     final String[] countries = {"USA", "Italy", "France", "China", "India"};
     protected Chart createChart() {
@@ -60,7 +63,7 @@ public class AreaChartTest extends XYChartTestBase {
         series1.getData().add(new XYChart.Data(countries[3], 15d));
         series1.getData().add(new XYChart.Data(countries[4], 10d));
         } else {
-            xAxis = new NumberAxis();
+            xAxis = new NumberAxis(0, 70, 10);
             ac = new AreaChart<Number,Number>(xAxis,yAxis);
             // add starting data
         series1.getData().add(new XYChart.Data(10d, 10d));
@@ -151,4 +154,73 @@ public class AreaChartTest extends XYChartTestBase {
          pulse();
          assertEquals(5, countSymbols(ac, "chart-area-symbol"));
      }
+     
+    @Test public void testPathOutsideXBounds() {
+        startApp();
+        ac.getData().addAll(series1);
+        pulse();
+
+        final NumberAxis xAxis = (NumberAxis) ac.getXAxis();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        
+        LineTo lastPath = findLastLineInPath();
+        
+        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+    }
+
+    @Test public void testPathInsideXBounds() {
+        startApp();
+        series1.getData().add(new XYChart.Data(50d, 15d)); // upper bound is 70
+        ac.getData().addAll(series1);
+        pulse();
+
+        final NumberAxis xAxis = (NumberAxis) ac.getXAxis();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+
+        LineTo lastPath = findLastLineInPath();
+        // New data is added inside the view bounds and previous data is shifted as the last
+        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+    }
+    
+    @Test public void testPathOutsideXBoundsWithDuplicateXAndHigherY() {
+        startApp();
+        // upper bound = 70
+        series1.getData().add(new XYChart.Data(80d, 20d));
+        ac.getData().addAll(series1);
+        pulse();
+
+        final NumberAxis xAxis = (NumberAxis) ac.getXAxis();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+
+        LineTo lastPath = findLastLineInPath();
+        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+    }
+
+    @Test public void testPathOutsideXBoundsWithDuplicateXAndLowerY() {
+        startApp();
+        // upper bound = 70
+        series1.getData().add(new XYChart.Data(80d, 5d));
+        ac.getData().addAll(series1);
+        pulse();
+
+        final NumberAxis xAxis = (NumberAxis) ac.getXAxis();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+
+        LineTo lastPath = findLastLineInPath();
+        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+    }
+    
+    private LineTo findLastLineInPath() {
+        final ObservableList<Node> children = ((Group) ac.getData().get(0).getNode()).getChildren();
+        Path fillPath = (Path) children.get(0);
+        ObservableList<PathElement> fillElements = fillPath.getElements();
+        // last data path is added at (size - 3) index
+        final PathElement pathElement = fillElements.get(fillElements.size() - 3);
+
+        return (LineTo) pathElement;
+    }
 }
