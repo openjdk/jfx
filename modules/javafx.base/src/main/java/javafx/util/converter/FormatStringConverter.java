@@ -43,6 +43,10 @@ public class FormatStringConverter<T> extends StringConverter<T> {
 
     // ------------------------------------------------------------ Constructors
 
+    /**
+     * Creates a {@code FormatStringConverter} for the given {@code Format} instance.
+     * @param format the {@code Format} instance
+     */
     public FormatStringConverter(@NamedArg("format") Format format) {
         this.format = format;
     }

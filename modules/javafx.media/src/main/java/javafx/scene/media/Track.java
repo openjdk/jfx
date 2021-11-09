@@ -81,7 +81,8 @@ public abstract class Track {
     }
 
     /**
-     * @return a Map containing all known metadata for this <code>Track</code>
+     * Gets the <code>Map</code> containing all known metadata for this <code>Track</code>.
+     * @return the <code>Map</code> containing all known metadata for this <code>Track</code>
      * @since JavaFX 8.0
      */
     public final Map<String,Object> getMetadata() {

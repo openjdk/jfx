@@ -793,6 +793,10 @@ public enum AccessibleAttribute {
         this.returnClass = returnClass;
     }
 
+    /**
+     * Gets the type of {@code AccessibleAttribute}.
+     * @return the type of {@code AccessibleAttribute}
+     */
     public Class<?> getReturnType() {
         return returnClass;
     }

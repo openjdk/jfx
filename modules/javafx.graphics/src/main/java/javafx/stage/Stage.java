@@ -1273,9 +1273,6 @@ public class Stage extends Window {
         return fullScreenExitCombination;
     }
 
-    private final ObjectProperty<String> fullScreenExitHint =
-            new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
-
     /**
      * Specifies the text to show when a user enters full screen mode, usually
      * used to indicate the way a user should go about exiting out of full
@@ -1289,9 +1286,11 @@ public class Stage extends Window {
      * value of this property will be ignored, in which case the
      * default message will be displayed.
      * </p>
-     * @param value the string to be displayed.
      * @since JavaFX 8.0
      */
+    private final ObjectProperty<String> fullScreenExitHint =
+            new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
+
     public final void setFullScreenExitHint(String value) {
         fullScreenExitHint.set(value);
     }
