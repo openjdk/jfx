@@ -26,6 +26,7 @@
 package javafx.scene;
 
 
+import com.sun.javafx.binding.InteractiveBean;
 import com.sun.javafx.geometry.BoundsUtils;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -405,7 +406,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget, Styleable {
+public abstract class Node implements EventTarget, Styleable, InteractiveBean {
 
     /*
      * Store the singleton instance of the NodeHelper subclass corresponding

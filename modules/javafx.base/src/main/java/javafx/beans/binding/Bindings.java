@@ -868,6 +868,10 @@ public final class Bindings {
         BidirectionalBinding.bind(property1, property2);
     }
 
+    public static <T> void bindBidirectional(Property<T> target, Property<T> source, UpdateSourceTrigger trigger) {
+        BidirectionalBinding.bind(target, source, trigger);
+    }
+
     /**
      * Delete a bidirectional binding that was previously defined with
      * {@link #bindBidirectional(Property, Property)}.
@@ -939,8 +943,13 @@ public final class Bindings {
      *            if both properties are equal
      * @since JavaFX 2.1
      */
-    public  static void bindBidirectional(Property<String> stringProperty, Property<?> otherProperty, Format format) {
+    public static void bindBidirectional(Property<String> stringProperty, Property<?> otherProperty, Format format) {
         BidirectionalBinding.bind(stringProperty, otherProperty, format);
+    }
+
+    public static void bindBidirectional(Property<String> target, Property<?> source, Format format,
+                                         UpdateSourceTrigger trigger) {
+        BidirectionalBinding.bind(target, source, format, trigger);
     }
 
     /**
@@ -979,6 +988,11 @@ public final class Bindings {
      */
     public static <T> void bindBidirectional(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
         BidirectionalBinding.bind(stringProperty, otherProperty, converter);
+    }
+
+    public static <T> void bindBidirectional(Property<String> target, Property<T> source, StringConverter<T> converter,
+                                             UpdateSourceTrigger trigger) {
+        BidirectionalBinding.bind(target, source, converter, trigger);
     }
 
     /**

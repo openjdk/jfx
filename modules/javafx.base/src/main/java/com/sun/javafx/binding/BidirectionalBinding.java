@@ -27,9 +27,15 @@ package com.sun.javafx.binding;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.WeakListener;
+import javafx.beans.binding.UpdateSourceTrigger;
 import javafx.beans.property.*;
 import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.event.WeakEventHandler;
+import javafx.util.Pair;
 import javafx.util.StringConverter;
 
 import java.lang.ref.WeakReference;
@@ -55,6 +61,37 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         }
     }
 
+    private static <T> Pair<InvalidationListener, EventHandler<ActionEvent>> setupTargetBindings(
+            BidirectionalBinding binding, Property<T> target, UpdateSourceTrigger trigger) {
+        InteractiveBean targetBean = target.getBean() instanceof InteractiveBean ?
+                (InteractiveBean)target.getBean() : null;
+
+        InvalidationListener focusedListener = null;
+        EventHandler<ActionEvent> actionEventHandler = null;
+
+        if (trigger == UpdateSourceTrigger.DEFAULT || targetBean == null) {
+            target.addListener(binding);
+        } else {
+            focusedListener = observable -> {
+                if (!targetBean.focusedProperty().get()) {
+                    binding.invalidated(target);
+                }
+            };
+
+            if (trigger == UpdateSourceTrigger.FOCUS) {
+                targetBean.focusedProperty().addListener(new WeakInvalidationListener(focusedListener));
+            } else if (trigger == UpdateSourceTrigger.ACTION) {
+                actionEventHandler = event -> binding.invalidated(target);
+                targetBean.focusedProperty().addListener(new WeakInvalidationListener(focusedListener));
+                targetBean.addEventHandler(ActionEvent.ACTION, new WeakEventHandler<>(actionEventHandler));
+            } else {
+                throw new IllegalArgumentException("trigger");
+            }
+        }
+
+        return new Pair<>(focusedListener, actionEventHandler);
+    }
+
     public static <T> BidirectionalBinding bind(Property<T> property1, Property<T> property2) {
         checkParameters(property1, property2);
         final BidirectionalBinding binding =
@@ -76,6 +113,19 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         return binding;
     }
 
+    public static <T> BidirectionalBinding bind(Property<T> target, Property<T> source, UpdateSourceTrigger trigger) {
+        checkParameters(target, source);
+        var binding = new TypedGenericBidirectionalBinding<>(target, source) {
+            @SuppressWarnings("unused")
+            final Pair<InvalidationListener, EventHandler<ActionEvent>> strongRef =
+                setupTargetBindings(this, target, trigger);
+        };
+        target.setValue(source.getValue());
+        target.getValue();
+        source.addListener(binding);
+        return binding;
+    }
+
     public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format) {
         checkParameters(stringProperty, otherProperty);
         Objects.requireNonNull(format, "Format cannot be null");
@@ -87,6 +137,21 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         return binding;
     }
 
+    public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format,
+                              UpdateSourceTrigger trigger) {
+        checkParameters(stringProperty, otherProperty);
+        Objects.requireNonNull(format, "Format cannot be null");
+        final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format) {
+            @SuppressWarnings("unused")
+            final Pair<InvalidationListener, EventHandler<ActionEvent>> strongRef =
+                setupTargetBindings(this, stringProperty, trigger);
+        };
+        stringProperty.setValue(format.format(otherProperty.getValue()));
+        stringProperty.getValue();
+        otherProperty.addListener(binding);
+        return binding;
+    }
+
     public static <T> Object bind(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
         checkParameters(stringProperty, otherProperty);
         Objects.requireNonNull(converter, "Converter cannot be null");
@@ -94,6 +159,21 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         stringProperty.setValue(converter.toString(otherProperty.getValue()));
         stringProperty.getValue();
         stringProperty.addListener(binding);
+        otherProperty.addListener(binding);
+        return binding;
+    }
+
+    public static <T> Object bind(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter,
+                                  UpdateSourceTrigger trigger) {
+        checkParameters(stringProperty, otherProperty);
+        Objects.requireNonNull(converter, "Converter cannot be null");
+        final var binding = new StringConverterBidirectionalBinding<>(stringProperty, otherProperty, converter) {
+            @SuppressWarnings("unused")
+            final Pair<InvalidationListener, EventHandler<ActionEvent>> strongRef =
+                setupTargetBindings(this, stringProperty, trigger);
+        };
+        stringProperty.setValue(converter.toString(otherProperty.getValue()));
+        stringProperty.getValue();
         otherProperty.addListener(binding);
         return binding;
     }
