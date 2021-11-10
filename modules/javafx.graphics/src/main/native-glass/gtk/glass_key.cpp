@@ -405,10 +405,17 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
         unshifted.group = keys[0].group;
     }
     else {
+        // A keyval may appear on more than one key. For example, on a
+        // French layout there's a dedicated dollar key but dollar can
+        // also be generated using the top row digit 4 key with modifiers.
+        // We choose the likeliest one, the one on the lowest level.
+        int current_level = -1;
         for (gint i = 0; i < count; ++i) {
             if (keys[i].group == current_group) {
-                unshifted.keycode = keys[i].keycode;
-                break;
+                if (current_level < 0 || keys[i].level < current_level) {
+                    current_level = keys[i].level;
+                    unshifted.keycode = keys[i].keycode;
+                }
             }
         }
     }
