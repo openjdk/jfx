@@ -1302,9 +1302,9 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popM
                         //LPFILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
                         //LPFILEGROUPDESCRIPTORA for MS_FILE_DESCRIPTOR
                         LPFILEGROUPDESCRIPTORW pdata = reinterpret_cast<LPFILEGROUPDESCRIPTORW>(me.getMem());
-                        jsize bufferSize = me.size() - sizeof(UINT);
+                        jlong bufferSize = me.size() - sizeof(UINT);
                         if ((pdata->cItems > 0) &&
-                            (bufferSize / pdata->cItems >= itemSize))
+                            (bufferSize == (jlong)pdata->cItems * itemSize))
                         {
                             mimes.erase(MS_FILE_CONTENT);
                             mimes.erase(MS_FILE_DESCRIPTOR_UNICODE);
