@@ -90,7 +90,7 @@ public class WebIObserverTest {
 
     @Test public void testIO() {
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
-        URL resource = WebIObserverTest.class.getResource("index.html");
+        URL resource = WebIObserverTest.class.getResource("testIObserver.html");
         assertNotNull("Resource was null", resource);
 
         Util.runAndWait(() -> {

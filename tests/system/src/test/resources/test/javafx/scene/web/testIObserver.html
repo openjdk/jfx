@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+    <style>
+        #parent {
+            border: 2px solid blue;
+            height: 400px;
+            width: 400px;
+            justify-content: center;
+            margin: 20px auto;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #target {
+            transform: translate3d(-202px, 0, 0);
+            background-color: red;
+            height: 300px;
+            width: 300px;
+        }
+
+        #output {
+            margin: 20px auto;
+            width: 400px;
+        }
+        #output pre {
+            display: inline;
+        }
+    </style>
+    <script id="js">
+        function callback(entries) {
+            document.querySelector('#output pre').innerText = entries[0].intersectionRatio;
+        }
+
+        let options = {
+            root: document.querySelector('#parent')
+        };
+
+        testIO = function() {
+            let observer = new IntersectionObserver(callback, options);
+            observer.observe(document.querySelector('#target'));
+        }
+    </script>
+</head>
+<body>
+<div id="parent">
+    <div id="target"></div>
+</div>
+<div id="output">Intersection ratio: <pre>?</pre></div>
+</body>
+</html>
