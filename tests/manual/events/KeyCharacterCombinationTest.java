@@ -115,7 +115,7 @@ public class KeyCharacterCombinationTest extends Application {
         // will probably never be fixed since these keys should be
         // handled using KeyCodeCombinations instead.
         if (Character.isISOControl(e.getCharacter().charAt(0))) {
-            ignored("control key"); 
+            ignored("control key");
             return;
         }
 
@@ -151,7 +151,7 @@ public class KeyCharacterCombinationTest extends Application {
                 combinationDescription = combinationDescription.substring(0, combinationDescription.length() - 1);
             combinationDescription += lastPressed.getCode().getName();
         }
-        
+
         if (combination.match(lastPressed))
             passed("key code " + keyCodeName + " matched " + combinationDescription);
         else
