@@ -46,6 +46,9 @@ import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.*;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -61,6 +64,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -85,6 +89,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
 /**
@@ -97,6 +102,49 @@ public class SkinCleanupTest {
     private Pane root;
 
 //------------- TreeTableRow
+
+    /**
+     * Test access to fixedCellSize via lookup (not listener)
+     */
+    @Ignore("JDK-8277000")
+    @Test
+    public void testTreeTableRowFixedCellSizeListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
+        assertNull("row skin must not have listener to fixedCellSize",
+                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()));
+    }
+
+    /**
+     * Guard against incorrect initial prefWidth with many columns and fixedCellSize.
+     * See JDK-8274061 for details.
+     */
+    @Test
+    public void testTreeTablePrefRowWidthFixedCellSize() {
+        TreeTableView<String[]> table = createManyColumnsTreeTableView(true);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("pref row width for fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
+
+    /**
+     * Sanity test: pref width of tableRow if !fixedCellSize
+     */
+    @Test
+    public void testTreeTablePrefRowTreeTable() {
+        TreeTableView<String[]> table = createManyColumnsTreeTableView(false);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("sanity: pref row witdh for not fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
 
     /**
      * Sanity test: listener to treeColumn working without side-effects
@@ -390,6 +438,44 @@ public class SkinCleanupTest {
 //-------------- helpers for TreeTableRow tests
 
     /**
+     * Creates and returns a treeTable with many columns of width COL_WIDTH each,
+     * setting the fixedCellSize of FIXED_CELL_SIZE if useFixedCellSize is true.
+     */
+    private TreeTableView<String[]> createManyColumnsTreeTableView(boolean useFixedCellSize) {
+        final TreeTableView<String[]> tableView = new TreeTableView<>();
+        final ObservableList<TreeTableColumn<String[], ?>> columns = tableView
+                .getColumns();
+//        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        for (int i = 0; i < COL_COUNT; i++) {
+            TreeTableColumn<String[], String> column = new TreeTableColumn<>("Col" + i);
+            final int colIndex = i;
+            column.setCellValueFactory((cell) -> new SimpleStringProperty(
+                    cell.getValue().getValue()[colIndex]));
+            columns.add(column);
+            sizeColumn(column, COL_WIDTH);
+        }
+        ObservableList<String[]> items = FXCollections.observableArrayList();
+        for (int i = 0; i < ROW_COUNT; i++) {
+            String[] rec = new String[COL_COUNT];
+            for (int j = 0; j < rec.length; j++) {
+                rec[j] = i + ":" + j;
+            }
+            items.add(rec);
+        }
+        TreeItem<String[]> root = new TreeItem<>(items.get(0));
+        root.setExpanded(true);
+        for (int i = 1; i < items.size(); i++) {
+            root.getChildren().add(new TreeItem<>(items.get(i)));
+        }
+        tableView.setRoot(root);
+        if (useFixedCellSize) {
+            tableView.setFixedCellSize(FIXED_CELL_SIZE);
+        }
+
+        return tableView;
+    }
+
+    /**
      * Creates and returns a TreeTableRow configured to test
      * intalling/switching its skin reliably.
      *
@@ -431,6 +517,49 @@ public class SkinCleanupTest {
     }
 
 //--------------------- TableRowSkin
+
+    /**
+     * Test access to fixedCellSize via lookup (not listener)
+     */
+    @Ignore("JDK-8277000")
+    @Test
+    public void testTableRowFixedCellSizeListener() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
+        assertNull("row skin must not have listener to fixedCellSize",
+                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()));
+    }
+
+    /**
+     * Guard against incorrect initial prefWidth with many columns and fixedCellSize.
+     * See JDK-8274061 for details.
+     */
+    @Test
+    public void testTablePrefRowWidthFixedCellSize() {
+        TableView<String[]> table = createManyColumnsTableView(true);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TableRow<?> tableRow = (TableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("pref row width for fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
+
+    /**
+     * Sanity test: pref width of tableRow if !fixedCellSize
+     */
+    @Test
+    public void testTablePrefRowWidth() {
+        TableView<String[]> table = createManyColumnsTableView(false);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TableRow<?> tableRow = (TableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("sanity: pref row witdh for not fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
 
     @Test
     public void testTableRowFixedCellSizeReplaceSkin() {
@@ -640,6 +769,50 @@ public class SkinCleanupTest {
    }
 
 //-------------- helpers for TableRow tests
+
+    private static final int COL_COUNT = 50;
+    private static final int ROW_COUNT = 10;
+    private static final double COL_WIDTH = 50;
+    private static final double FIXED_CELL_SIZE = 24;
+
+    /**
+     * Creates and returns a table with many columns of width COL_WIDTH each,
+     * setting the fixedCellSize of FIXED_CELL_SIZE if useFixedCellSize is true.
+     */
+    private TableView<String[]> createManyColumnsTableView(boolean useFixedCellSize) {
+        final TableView<String[]> tableView = new TableView<>();
+        final ObservableList<TableColumn<String[], ?>> columns = tableView
+                .getColumns();
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        for (int i = 0; i < COL_COUNT; i++) {
+            TableColumn<String[], String> column = new TableColumn<>("Col" + i);
+            final int colIndex = i;
+            column.setCellValueFactory((cell) -> new SimpleStringProperty(
+                    cell.getValue()[colIndex]));
+            columns.add(column);
+            sizeColumn(column, COL_WIDTH);
+        }
+        ObservableList<String[]> items = tableView.getItems();
+        for (int i = 0; i < ROW_COUNT; i++) {
+            String[] rec = new String[COL_COUNT];
+            for (int j = 0; j < rec.length; j++) {
+                rec[j] = i + ":" + j;
+            }
+            items.add(rec);
+        }
+        if (useFixedCellSize) {
+            tableView.setFixedCellSize(FIXED_CELL_SIZE);
+        }
+
+        return tableView;
+    }
+
+    private void sizeColumn(TableColumnBase<?, ?> column, double width) {
+        column.setPrefWidth(width);
+        column.setMinWidth(width);
+        column.setMaxWidth(width);
+    }
+
 
     /**
      * Creates and returns a TableRow configured to test

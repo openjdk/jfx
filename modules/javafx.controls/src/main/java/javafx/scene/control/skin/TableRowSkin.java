@@ -32,8 +32,6 @@ import java.util.List;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TableRowBehavior;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -47,7 +45,6 @@ import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
-import javafx.scene.layout.Region;
 
 /**
  * Default skin implementation for the {@link TableRow} control.
@@ -101,6 +98,34 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             }
         });
 
+        setupTreeTableViewListeners();
+    }
+
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
+    private void setupTreeTableViewListeners() {
+        TableView<T> tableView = getSkinnable().getTableView();
+        if (tableView == null) {
+            registerInvalidationListener(getSkinnable().tableViewProperty(), e -> {
+                unregisterInvalidationListeners(getSkinnable().tableViewProperty());
+                setupTreeTableViewListeners();
+            });
+        } else {
+            DoubleProperty fixedCellSizeProperty = tableView.fixedCellSizeProperty();
+            if (fixedCellSizeProperty != null) {
+                registerChangeListener(fixedCellSizeProperty, e -> {
+                    fixedCellSize = fixedCellSizeProperty.get();
+                    fixedCellSizeEnabled = fixedCellSize > 0;
+                });
+                fixedCellSize = fixedCellSizeProperty.get();
+                fixedCellSizeEnabled = fixedCellSize > 0;
+
+                // JDK-8144500:
+                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+                // that when it changes, we can appropriately add / remove cells that may or may not
+                // be required (because we remove all cells that are not visible).
+                registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
+            }
+        }
     }
 
     /* *************************************************************************
@@ -172,11 +197,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
      *                                                                         *
      **************************************************************************/
 
-    @Override
-    double getFixedCellSize() {
-        return getTableView() != null ? getTableView().getFixedCellSize() : Region.USE_COMPUTED_SIZE ;
-    }
-
     /** {@inheritDoc} */
     @Override protected TableCell<T, ?> createCell(TableColumnBase tcb) {
         TableColumn tableColumn = (TableColumn<T,?>) tcb;
@@ -213,11 +233,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         TableView<T> tableView = getSkinnable().getTableView();
         if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
             tableViewSkin = (TableViewSkin)tableView.getSkin();
-            // JDK-8144500:
-            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-            // that when it changes, we can appropriately add / remove cells that may or may not
-            // be required (because we remove all cells that are not visible).
-            registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
         }
     }
 

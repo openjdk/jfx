@@ -54,7 +54,6 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.layout.Region;
 
 /**
  * Default skin implementation for the {@link TreeTableRow} control.
@@ -115,6 +114,42 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             // those detailed in JDK-8143266
         });
 
+        setupTreeTableViewListeners();
+    }
+
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
+    private void setupTreeTableViewListeners() {
+        TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
+        if (treeTableView == null) {
+            registerInvalidationListener(getSkinnable().treeTableViewProperty(), e -> {
+                unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
+                setupTreeTableViewListeners();
+            });
+        } else {
+            registerChangeListener(treeTableView.treeColumnProperty(), e -> {
+                // Fix for RT-27782: Need to set isDirty to true, rather than the
+                // cheaper updateCells, as otherwise the text indentation will not
+                // be recalculated in TreeTableCellSkin.leftLabelPadding()
+                isDirty = true;
+                getSkinnable().requestLayout();
+            });
+
+            DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
+            if (fixedCellSizeProperty != null) {
+                registerChangeListener(fixedCellSizeProperty, e -> {
+                    fixedCellSize = fixedCellSizeProperty.get();
+                    fixedCellSizeEnabled = fixedCellSize > 0;
+                });
+                fixedCellSize = fixedCellSizeProperty.get();
+                fixedCellSizeEnabled = fixedCellSize > 0;
+
+                // JDK-8144500:
+                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+                // that when it changes, we can appropriately add / remove cells that may or may not
+                // be required (because we remove all cells that are not visible).
+                registerChangeListener(getVirtualFlow().widthProperty(), e -> treeTableView.requestLayout());
+            }
+        }
     }
 
 
@@ -218,11 +253,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
-
-    @Override
-    double getFixedCellSize() {
-        return getTreeTableView() != null ? getTreeTableView().getFixedCellSize() : Region.USE_COMPUTED_SIZE ;
-    }
 
     /** {@inheritDoc} */
     @Override protected TreeTableCell<T, ?> createCell(TableColumnBase tcb) {
@@ -355,22 +385,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private void updateTableViewSkin() {
         TreeTableView<T> tableView = getSkinnable().getTreeTableView();
-        if (tableView != null) {
-            registerChangeListener(tableView.treeColumnProperty(), e -> {
-                // Fix for RT-27782: Need to set isDirty to true, rather than the
-                // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.leftLabelPadding()
-                isDirty = true;
-                getSkinnable().requestLayout();
-            });
-        }
         if (tableView != null && tableView.getSkin() instanceof TreeTableViewSkin) {
             treeTableViewSkin = (TreeTableViewSkin)tableView.getSkin();
-            // JDK-8144500:
-            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-            // that when it changes, we can appropriately add / remove cells that may or may not
-            // be required (because we remove all cells that are not visible).
-            registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
         }
     }
 

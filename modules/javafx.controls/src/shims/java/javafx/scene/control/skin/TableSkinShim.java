@@ -31,7 +31,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -119,12 +118,12 @@ public class TableSkinShim {
 
     public static <T> boolean isFixedCellSizeEnabled(TableRow<T> tableRow) {
         TableRowSkin<T> skin = (TableRowSkin<T>) tableRow.getSkin();
-        return skin.isFixedCellSizeEnabled();
+        return skin.fixedCellSizeEnabled;
     }
 
     public static <T> boolean isFixedCellSizeEnabled(TreeTableRow<T> tableRow) {
         TreeTableRowSkin<T> skin = (TreeTableRowSkin<T>) tableRow.getSkin();
-        return skin.isFixedCellSizeEnabled();
+        return skin.fixedCellSizeEnabled;
     }
 
     public static <T> boolean isDirty(TableRow<T> tableRow) {

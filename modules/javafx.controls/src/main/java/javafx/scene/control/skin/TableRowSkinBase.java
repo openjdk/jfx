@@ -32,11 +32,8 @@ import java.util.*;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.animation.FadeTransition;
-import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.WeakListChangeListener;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
 import javafx.geometry.Insets;
@@ -104,7 +101,6 @@ public abstract class TableRowSkinBase<T,
     private static final int DEFAULT_FULL_REFRESH_COUNTER = 100;
 
 
-
     /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
@@ -132,6 +128,10 @@ public abstract class TableRowSkinBase<T,
 
     boolean isDirty = false;
     boolean updateCells = false;
+
+    // FIXME: replace cached values with direct lookup - JDK-8277000
+    double fixedCellSize;
+    boolean fixedCellSizeEnabled;
 
 
     /* *************************************************************************
@@ -335,7 +335,7 @@ public abstract class TableRowSkinBase<T,
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
             boolean isVisible = true;
-            if (isFixedCellSizeEnabled()) {
+            if (fixedCellSizeEnabled) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve
                 // performance. However, we only do this when there is a
@@ -347,14 +347,14 @@ public abstract class TableRowSkinBase<T,
                 // may be variable and / or dynamic.
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
 
-                height = getFixedCellSize();
+                height = fixedCellSize;
             } else {
                 height = Math.max(controlHeight, tableCell.prefHeight(-1));
                 height = snapSizeY(height) - snapSizeY(verticalPadding);
             }
 
             if (isVisible) {
-                if (isFixedCellSizeEnabled() && tableCell.getParent() == null) {
+                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
 
@@ -433,7 +433,7 @@ public abstract class TableRowSkinBase<T,
             } else {
                 width = snapSizeX(tableCell.prefWidth(-1)) - snapSizeX(horizontalPadding);
 
-                if (isFixedCellSizeEnabled()) {
+                if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
@@ -532,7 +532,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // update children of each row
-        if (isFixedCellSizeEnabled()) {
+        if (fixedCellSizeEnabled) {
             // we leave the adding / removing up to the layoutChildren method mostly, but here we remove any children
             // cells that refer to columns that are removed or not visible.
             List<Node> toRemove = new ArrayList<>();
@@ -571,8 +571,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (isFixedCellSizeEnabled()) {
-            return getFixedCellSize();
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
 
         // fix for RT-29080
@@ -601,8 +601,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (isFixedCellSizeEnabled()) {
-            return getFixedCellSize();
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
 
         // fix for RT-29080
@@ -629,22 +629,10 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (isFixedCellSizeEnabled()) {
-            return getFixedCellSize();
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
-    }
-
-    /**
-     * Returns the fixedCellSize of the row's control.
-     */
-    abstract double getFixedCellSize();
-
-    /**
-     * Returns true if fixedCellSize is greater than 0, false otherwise.
-     */
-    boolean isFixedCellSizeEnabled() {
-        return getFixedCellSize() > 0;
     }
 
     final void checkState() {
