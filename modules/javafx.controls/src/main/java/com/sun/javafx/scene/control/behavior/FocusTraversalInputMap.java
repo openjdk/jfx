@@ -32,7 +32,6 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static com.sun.javafx.scene.control.inputmap.InputMap.*;
@@ -44,29 +43,27 @@ import static javafx.scene.input.KeyCode.UP;
 
 public class FocusTraversalInputMap<N extends Node> {
 
-    private static final List<InputMap.Mapping<?>> mappings = new ArrayList<>();
-    static {
-        mappings.add(new KeyMapping(UP, e -> traverseUp(e)));
-        mappings.add(new KeyMapping(DOWN, e -> traverseDown(e)));
-        mappings.add(new KeyMapping(LEFT, e -> traverseLeft(e)));
-        mappings.add(new KeyMapping(RIGHT, e -> traverseRight(e)));
-        mappings.add(new KeyMapping(TAB, e -> traverseNext(e)));
-        mappings.add(new KeyMapping(new KeyBinding(TAB).shift(), e -> traversePrevious(e)));
+    private static final List<InputMap.Mapping<?>> MAPPINGS = List.of(
+        new KeyMapping(UP, e -> traverseUp(e)),
+        new KeyMapping(DOWN, e -> traverseDown(e)),
+        new KeyMapping(LEFT, e -> traverseLeft(e)),
+        new KeyMapping(RIGHT, e -> traverseRight(e)),
+        new KeyMapping(TAB, e -> traverseNext(e)),
+        new KeyMapping(new KeyBinding(TAB).shift(), e -> traversePrevious(e)),
 
-        mappings.add(new KeyMapping(new KeyBinding(UP).shift().alt().ctrl(), e -> traverseUp(e)));
-        mappings.add(new KeyMapping(new KeyBinding(DOWN).shift().alt().ctrl(), e -> traverseDown(e)));
-        mappings.add(new KeyMapping(new KeyBinding(LEFT).shift().alt().ctrl(), e -> traverseLeft(e)));
-        mappings.add(new KeyMapping(new KeyBinding(RIGHT).shift().alt().ctrl(), e -> traverseRight(e)));
-        mappings.add(new KeyMapping(new KeyBinding(TAB).shift().alt().ctrl(), e -> traverseNext(e)));
-        mappings.add(new KeyMapping(new KeyBinding(TAB).alt().ctrl(), e -> traversePrevious(e)));
-    }
+        new KeyMapping(new KeyBinding(UP).shift().alt().ctrl(), e -> traverseUp(e)),
+        new KeyMapping(new KeyBinding(DOWN).shift().alt().ctrl(), e -> traverseDown(e)),
+        new KeyMapping(new KeyBinding(LEFT).shift().alt().ctrl(), e -> traverseLeft(e)),
+        new KeyMapping(new KeyBinding(RIGHT).shift().alt().ctrl(), e -> traverseRight(e)),
+        new KeyMapping(new KeyBinding(TAB).shift().alt().ctrl(), e -> traverseNext(e)),
+        new KeyMapping(new KeyBinding(TAB).alt().ctrl(), e -> traversePrevious(e)));
 
     private FocusTraversalInputMap() {
         // no-op, just forcing use of static method
     }
 
     public static InputMap.Mapping<?>[] getFocusTraversalMappings() {
-        return mappings.toArray(new InputMap.Mapping[mappings.size()]);
+        return MAPPINGS.toArray(new InputMap.Mapping[MAPPINGS.size()]);
     }
 
     public static <N extends Node> InputMap<N> createInputMap(N node) {

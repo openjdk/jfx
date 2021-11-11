@@ -2064,7 +2064,7 @@ public class LabelSkinTest {
      ***************************************************************************/
 
     @Test
-    public void mnemonicSymbolIsRemovedFromDisplayedText() {
+    public void testMnemonicIsProcessedWhenParsingIsEnabled() {
         label.setMnemonicParsing(true);
         label.setText("foo _bar");
         label.autosize();
@@ -2073,7 +2073,7 @@ public class LabelSkinTest {
     }
 
     @Test
-    public void extendedMnemonicIsRemovedFromDisplayedText() {
+    public void testExtendedMnemonicIsProcessedWhenParsingIsEnabled() {
         label.setMnemonicParsing(true);
         label.setText("foo _(x)bar");
         label.autosize();
@@ -2082,39 +2082,21 @@ public class LabelSkinTest {
     }
 
     @Test
-    public void escapedMnemonicSymbolIsRetainedInDisplayedText() {
-        label.setMnemonicParsing(true);
-        label.setText("foo __bar");
+    public void testMnemonicsAreNotProcessedWhenParsingIsDisabled() {
+        label.setMnemonicParsing(false);
+        label.setText("foo _bar");
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo _bar", LabelSkinBaseShim.getText(label).getText());
     }
 
     @Test
-    public void escapedMnemonicSymbolIsNotProcessedWhenMnemonicParsingIsDisabled() {
+    public void testEscapedMnemonicSymbolIsNotProcessedWhenParsingIsDisabled() {
         label.setMnemonicParsing(false);
         label.setText("foo __bar");
         label.autosize();
         skin.updateDisplayedText();
         assertEquals("foo __bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void underscoreNotFollowedByAlphabeticCharIsNotAMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("foo_ bar");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo_ bar", LabelSkinBaseShim.getText(label).getText());
-    }
-
-    @Test
-    public void underscoreAtEndOfTextIsNotAMnemonic() {
-        label.setMnemonicParsing(true);
-        label.setText("foo_");
-        label.autosize();
-        skin.updateDisplayedText();
-        assertEquals("foo_", LabelSkinBaseShim.getText(label).getText());
     }
 
     public static final class LabelSkinMock extends LabelSkin {

@@ -25,103 +25,97 @@
 
 package com.sun.javafx.font;
 
-import java.util.HashMap;
+import java.util.Map;
 
 class WindowsFontMap {
 
-    static class FamilyDescription {
-        public String familyName;
-        public String plainFullName;
-        public String boldFullName;
-        public String italicFullName;
-        public String boldItalicFullName;
-        public String plainFileName;
-        public String boldFileName;
-        public String italicFileName;
-        public String boldItalicFileName;
+    private static class FamilyDescription {
+        private String familyName;
+        private String plainFullName;
+        private String boldFullName;
+        private String italicFullName;
+        private String boldItalicFullName;
+        private String plainFileName;
+        private String boldFileName;
+        private String italicFileName;
+        private String boldItalicFileName;
     }
 
-    static HashMap<String, FamilyDescription> platformFontMap;
+    private static Map<String, FamilyDescription> PLATFORM_FONT_MAP;
 
     /**
      * populate the map with the most common windows fonts.
      */
-    static HashMap<String, FamilyDescription> populateHardcodedFileNameMap() {
+    private static void populateHardcodedFileNameMap() {
+        var segoeFD = new FamilyDescription();
+        segoeFD.familyName = "Segoe UI";
+        segoeFD.plainFullName = "Segoe UI";
+        segoeFD.plainFileName = "segoeui.ttf";
+        segoeFD.boldFullName = "Segoe UI Bold";
+        segoeFD.boldFileName = "segoeuib.ttf";
+        segoeFD.italicFullName = "Segoe UI Italic";
+        segoeFD.italicFileName = "segoeuii.ttf";
+        segoeFD.boldItalicFullName = "Segoe UI Bold Italic";
+        segoeFD.boldItalicFileName = "segoeuiz.ttf";
 
-        HashMap<String, FamilyDescription> platformFontMap
-            = new HashMap<String, FamilyDescription>();
+        var tahomaFD = new FamilyDescription();
+        tahomaFD.familyName = "Tahoma";
+        tahomaFD.plainFullName = "Tahoma";
+        tahomaFD.plainFileName = "tahoma.ttf";
+        tahomaFD.boldFullName = "Tahoma Bold";
+        tahomaFD.boldFileName = "tahomabd.ttf";
 
-        FamilyDescription fd;
-        fd = new FamilyDescription();
-        fd.familyName = "Segoe UI";
-        fd.plainFullName = "Segoe UI";
-        fd.plainFileName = "segoeui.ttf";
-        fd.boldFullName = "Segoe UI Bold";
-        fd.boldFileName = "segoeuib.ttf";
-        fd.italicFullName = "Segoe UI Italic";
-        fd.italicFileName = "segoeuii.ttf";
-        fd.boldItalicFullName = "Segoe UI Bold Italic";
-        fd.boldItalicFileName = "segoeuiz.ttf";
-        platformFontMap.put("segoe", fd);
+        var verdanaFD = new FamilyDescription();
+        verdanaFD.familyName = "Verdana";
+        verdanaFD.plainFullName = "Verdana";
+        verdanaFD.plainFileName = "verdana.TTF";
+        verdanaFD.boldFullName = "Verdana Bold";
+        verdanaFD.boldFileName = "verdanab.TTF";
+        verdanaFD.italicFullName = "Verdana Italic";
+        verdanaFD.italicFileName = "verdanai.TTF";
+        verdanaFD.boldItalicFullName = "Verdana Bold Italic";
+        verdanaFD.boldItalicFileName = "verdanaz.TTF";
 
-        fd = new FamilyDescription();
-        fd.familyName = "Tahoma";
-        fd.plainFullName = "Tahoma";
-        fd.plainFileName = "tahoma.ttf";
-        fd.boldFullName = "Tahoma Bold";
-        fd.boldFileName = "tahomabd.ttf";
-        platformFontMap.put("tahoma", fd);
+        var arialFD = new FamilyDescription();
+        arialFD.familyName = "Arial";
+        arialFD.plainFullName = "Arial";
+        arialFD.plainFileName = "ARIAL.TTF";
+        arialFD.boldFullName = "Arial Bold";
+        arialFD.boldFileName = "ARIALBD.TTF";
+        arialFD.italicFullName = "Arial Italic";
+        arialFD.italicFileName = "ARIALI.TTF";
+        arialFD.boldItalicFullName = "Arial Bold Italic";
+        arialFD.boldItalicFileName = "ARIALBI.TTF";
 
-        fd = new FamilyDescription();
-        fd.familyName = "Verdana";
-        fd.plainFullName = "Verdana";
-        fd.plainFileName = "verdana.TTF";
-        fd.boldFullName = "Verdana Bold";
-        fd.boldFileName = "verdanab.TTF";
-        fd.italicFullName = "Verdana Italic";
-        fd.italicFileName = "verdanai.TTF";
-        fd.boldItalicFullName = "Verdana Bold Italic";
-        fd.boldItalicFileName = "verdanaz.TTF";
-        platformFontMap.put("verdana", fd);
+        var timesFD = new FamilyDescription();
+        timesFD.familyName = "Times New Roman";
+        timesFD.plainFullName = "Times New Roman";
+        timesFD.plainFileName = "times.ttf";
+        timesFD.boldFullName = "Times New Roman Bold";
+        timesFD.boldFileName = "timesbd.ttf";
+        timesFD.italicFullName = "Times New Roman Italic";
+        timesFD.italicFileName = "timesi.ttf";
+        timesFD.boldItalicFullName = "Times New Roman Bold Italic";
+        timesFD.boldItalicFileName = "timesbi.ttf";
 
-        fd = new FamilyDescription();
-        fd.familyName = "Arial";
-        fd.plainFullName = "Arial";
-        fd.plainFileName = "ARIAL.TTF";
-        fd.boldFullName = "Arial Bold";
-        fd.boldFileName = "ARIALBD.TTF";
-        fd.italicFullName = "Arial Italic";
-        fd.italicFileName = "ARIALI.TTF";
-        fd.boldItalicFullName = "Arial Bold Italic";
-        fd.boldItalicFileName = "ARIALBI.TTF";
-        platformFontMap.put("arial", fd);
+        var courierFD = new FamilyDescription();
+        courierFD.familyName = "Courier New";
+        courierFD.plainFullName = "Courier New";
+        courierFD.plainFileName = "cour.ttf";
+        courierFD.boldFullName = "Courier New Bold";
+        courierFD.boldFileName = "courbd.ttf";
+        courierFD.italicFullName = "Courier New Italic";
+        courierFD.italicFileName = "couri.ttf";
+        courierFD.boldItalicFullName = "Courier New Bold Italic";
+        courierFD.boldItalicFileName = "courbi.ttf";
 
-        fd = new FamilyDescription();
-        fd.familyName = "Times New Roman";
-        fd.plainFullName = "Times New Roman";
-        fd.plainFileName = "times.ttf";
-        fd.boldFullName = "Times New Roman Bold";
-        fd.boldFileName = "timesbd.ttf";
-        fd.italicFullName = "Times New Roman Italic";
-        fd.italicFileName = "timesi.ttf";
-        fd.boldItalicFullName = "Times New Roman Bold Italic";
-        fd.boldItalicFileName = "timesbi.ttf";
-        platformFontMap.put("times", fd);
-
-
-        fd = new FamilyDescription();
-        fd.familyName = "Courier New";
-        fd.plainFullName = "Courier New";
-        fd.plainFileName = "cour.ttf";
-        fd.boldFullName = "Courier New Bold";
-        fd.boldFileName = "courbd.ttf";
-        fd.italicFullName = "Courier New Italic";
-        fd.italicFileName = "couri.ttf";
-        fd.boldItalicFullName = "Courier New Bold Italic";
-        fd.boldItalicFileName = "courbi.ttf";
-        platformFontMap.put("courier", fd);
-
-        return platformFontMap;
+        PLATFORM_FONT_MAP = Map.of(
+            "segoe", segoeFD,
+            "tahoma", tahomaFD,
+            "verdana", verdanaFD,
+            "arial", arialFD,
+            "times", timesFD,
+            "courier", courierFD);
     }
 
     static String getPathName(String filename) {
@@ -135,11 +129,11 @@ class WindowsFontMap {
     // determination so we lose the perf. gain. Need to make the
     // is it a platform font call see if it came from here first.
     static String findFontFile(String lcName, int style) {
-        if (platformFontMap == null) {
-            platformFontMap = populateHardcodedFileNameMap();
+        if (PLATFORM_FONT_MAP == null) {
+            populateHardcodedFileNameMap();
         }
 
-        if (platformFontMap == null || platformFontMap.size() == 0) {
+        if (PLATFORM_FONT_MAP == null || PLATFORM_FONT_MAP.size() == 0) {
             return null;
         }
 
@@ -149,7 +143,7 @@ class WindowsFontMap {
             firstWord = lcName.substring(0, spaceIndex);
         }
 
-        FamilyDescription fd = platformFontMap.get(firstWord);
+        FamilyDescription fd = PLATFORM_FONT_MAP.get(firstWord);
         if (fd == null) {
             return null;
         }
