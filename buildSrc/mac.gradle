@@ -130,7 +130,7 @@ def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
         "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
-        "-arch", "$TARGET_ARCH"]
+        "-arch", isAarch64 ? "arm64" : "$TARGET_ARCH"]
 
 if (hasProperty('TARGET_ARCH')) {
     commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams].flatten()
