@@ -168,7 +168,7 @@ public class AreaChartTest extends XYChartTestBase {
         assertEquals(85d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
         assertEquals(15d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
     }
-    
+
     @Test public void testPathOutsideXBoundsWithDuplicateXAndHigherY() {
         startApp();
         series1.getData().add(new XYChart.Data(100d, 20d)); // upper bound is 90
@@ -198,7 +198,7 @@ public class AreaChartTest extends XYChartTestBase {
         assertEquals(100d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
         assertEquals(20d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
     }
-    
+
     private LineTo findLastLineInPath() {
         final ObservableList<Node> children = ((Group) ac.getData().get(0).getNode()).getChildren();
         Path fillPath = (Path) children.get(0);
