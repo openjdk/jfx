@@ -54,7 +54,6 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.converter.BooleanConverter;
-import javafx.beans.property.BooleanProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
