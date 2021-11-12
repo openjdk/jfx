@@ -63,7 +63,7 @@ public class AreaChartTest extends XYChartTestBase {
         series1.getData().add(new XYChart.Data(countries[3], 15d));
         series1.getData().add(new XYChart.Data(countries[4], 10d));
         } else {
-            xAxis = new NumberAxis(0, 70, 10);
+            xAxis = new NumberAxis(0, 90, 10);
             ac = new AreaChart<Number,Number>(xAxis,yAxis);
             // add starting data
         series1.getData().add(new XYChart.Data(10d, 10d));
@@ -154,24 +154,10 @@ public class AreaChartTest extends XYChartTestBase {
          pulse();
          assertEquals(5, countSymbols(ac, "chart-area-symbol"));
      }
-     
-    @Test public void testPathOutsideXBounds() {
-        startApp();
-        ac.getData().addAll(series1);
-        pulse();
-
-        final NumberAxis xAxis = (NumberAxis) ac.getXAxis();
-        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
-        
-        LineTo lastPath = findLastLineInPath();
-        
-        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
-        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
-    }
 
     @Test public void testPathInsideXBounds() {
         startApp();
-        series1.getData().add(new XYChart.Data(50d, 15d)); // upper bound is 70
+        series1.getData().add(new XYChart.Data(85d, 15d)); // upper bound is 90
         ac.getData().addAll(series1);
         pulse();
 
@@ -179,15 +165,14 @@ public class AreaChartTest extends XYChartTestBase {
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
 
         LineTo lastPath = findLastLineInPath();
-        // New data is added inside the view bounds and previous data is shifted as the last
-        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
-        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+        assertEquals(85d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(15d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
     }
     
     @Test public void testPathOutsideXBoundsWithDuplicateXAndHigherY() {
         startApp();
-        // upper bound = 70
-        series1.getData().add(new XYChart.Data(80d, 20d));
+        series1.getData().add(new XYChart.Data(100d, 20d)); // upper bound is 90
+        series1.getData().add(new XYChart.Data(100d, 50d));
         ac.getData().addAll(series1);
         pulse();
 
@@ -195,14 +180,14 @@ public class AreaChartTest extends XYChartTestBase {
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
 
         LineTo lastPath = findLastLineInPath();
-        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
-        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+        assertEquals(100d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(20d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
     }
 
     @Test public void testPathOutsideXBoundsWithDuplicateXAndLowerY() {
         startApp();
-        // upper bound = 70
-        series1.getData().add(new XYChart.Data(80d, 5d));
+        series1.getData().add(new XYChart.Data(100d, 20d)); // upper bound is 90
+        series1.getData().add(new XYChart.Data(100d, 15d));
         ac.getData().addAll(series1);
         pulse();
 
@@ -210,8 +195,8 @@ public class AreaChartTest extends XYChartTestBase {
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
 
         LineTo lastPath = findLastLineInPath();
-        assertEquals(80d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
-        assertEquals(10d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
+        assertEquals(100d, xAxis.getValueForDisplay(lastPath.getX()).doubleValue(), 0.001);
+        assertEquals(20d, yAxis.getValueForDisplay(lastPath.getY()).doubleValue(), 0.001);
     }
     
     private LineTo findLastLineInPath() {
