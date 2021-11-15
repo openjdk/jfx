@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,10 @@
 
 package test.javafx.scene.control;
 
+import javafx.collections.FXCollections;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
@@ -52,6 +56,8 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -1329,4 +1335,42 @@ public class SplitPaneTest {
 
         sl.dispose();
     }
+
+    /**
+     * Verifies that a divider position change of the {@link SplitPane} does not hang the layout.
+     * Previously, this may happen when the divider position changed too a large number (>1),
+     * which can hang the layout when done during layout (in layoutChildren).
+     */
+    @Test
+    public void testSplitPaneDividerChangeDoesNotHangLayout() {
+        AtomicInteger counter = new AtomicInteger();
+        ComboBox<String> cbx = new ComboBox<>(FXCollections.observableArrayList("1", "2", "3")) {
+            @Override
+            protected void layoutChildren() {
+                counter.incrementAndGet();
+                super.layoutChildren();
+            }
+        };
+        SplitPane pane = new SplitPane(new Label("AAAAA"), new TabPane(new Tab("Test", cbx)));
+        StackPane root = new StackPane(pane);
+
+        StageLoader stageLoader = new StageLoader(root);
+
+        Toolkit.getToolkit().firePulse();
+
+        // Set a too big divider position.
+        pane.setDividerPosition(0, 12);
+
+        Toolkit.getToolkit().firePulse();
+
+        // Reset counter
+        counter.set(0);
+
+        cbx.getSelectionModel().select(0);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(counter.get() > 0);
+        stageLoader.dispose();
+    }
+
 }
