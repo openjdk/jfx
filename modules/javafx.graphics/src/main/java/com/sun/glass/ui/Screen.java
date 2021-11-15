@@ -407,11 +407,14 @@ public final class Screen {
 
     static void initScreens() {
         Application.checkEventThread();
-        Screen[] newScreens = Application.GetApplication().staticScreen_getScreens();
-        if (newScreens == null) {
-            throw new RuntimeException("Internal graphics failed to initialize");
+        Application app = Application.GetApplication();
+        if (app != null) {
+            Screen[] newScreens = app.staticScreen_getScreens();
+            if (newScreens == null) {
+                throw new RuntimeException("Internal graphics failed to initialize");
+            }
+            screens = Collections.unmodifiableList(Arrays.asList(newScreens));
         }
-        screens = Collections.unmodifiableList(Arrays.asList(newScreens));
     }
 
     @Override public String toString() {
