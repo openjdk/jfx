@@ -568,7 +568,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                 }
 #endif
 
-                if (image != nil)
+                if (image != nil && image.size.width > 0 && image.size.height > 0)
                 {
                     CGImageRef cgImage = [image CGImageForProposedRect:NULL context:nil hints:nil];
 
