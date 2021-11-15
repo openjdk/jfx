@@ -34,8 +34,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -74,7 +72,7 @@ public class MacPasteboardTest {
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, localImage)));
             Object content = macPasteboardShim.popMacPasteboard(Clipboard.RAW_IMAGE_TYPE);
-            assertTrue("The contents was not a raw image", content instanceof Pixels);
+            assertTrue("The content was not a raw image", content instanceof Pixels);
 
             Pixels pixels = (Pixels) content;
             assertEquals("The raw image width", 64, pixels.getWidth());
