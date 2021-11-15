@@ -1945,13 +1945,10 @@ allprojects {
     // setup this dependency here.
     dependencies {
         testImplementation group: "junit", name: "junit", version: "4.13.2"
-        testImplementation(group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1") {
-            exclude(group: "org.apiguardian", module: "apiguardian-api")
-        }
-        testRuntimeOnly(group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1") {
-            exclude(group: "org.apiguardian", module: "apiguardian-api")
-        }
-        if (BUILD_CLOSED && DO_JCOV)  {
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
+        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
+ 
+         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
         }
     }
