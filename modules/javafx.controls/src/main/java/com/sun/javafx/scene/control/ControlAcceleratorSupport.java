@@ -286,9 +286,11 @@ public class ControlAcceleratorSupport {
                 accelerators.remove(menuitem.getAccelerator());
 
                 WeakReference<ChangeListener<KeyCombination>> listenerW = changeListenerMap.get(menuitem);
-                ChangeListener<KeyCombination> listener = listenerW == null ? null : listenerW.get();
-                if (listener != null) {
-                    menuitem.acceleratorProperty().removeListener(listener);
+                if (listenerW  != null) {
+                    ChangeListener<KeyCombination> listener = listenerW.get();
+                    if (listener != null) {
+                        menuitem.acceleratorProperty().removeListener(listener);
+                    }
                     changeListenerMap.remove(menuitem);
                 }
             }
