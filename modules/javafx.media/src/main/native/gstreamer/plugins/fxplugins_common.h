@@ -51,6 +51,17 @@ enum JFX_CODEC_ID
     JFX_CODEC_ID_H265, // MP4
 };
 
+// Custom error codes used by our plugins
+
+// GStreamer enums with error codes does not contains more then 25 error codes,
+// so we will start with 0xFF, so we do not conflict with GStreamer
+enum JFX_GST_ERROR_CODES
+{
+    JFX_GST_ERROR = 0xFF,
+    JFX_GST_MISSING_LIBSWSCALE,
+    JFX_GST_INVALID_LIBSWSCALE,
+};
+
 G_END_DECLS
 
 #endif /* __FX_PLUGINS_COMMON_H__ */

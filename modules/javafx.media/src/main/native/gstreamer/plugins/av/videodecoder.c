@@ -185,8 +185,14 @@ static void videodecoder_dispose(GObject* object)
 
     if (decoder->sws_context)
     {
-        sws_freeContext(decoder->sws_context);
+        decoder->sws_freeContext_func(decoder->sws_context);
         decoder->sws_context = NULL;
+    }
+
+    if (decoder->swscale_module)
+    {
+        dlclose(decoder->swscale_module);
+        decoder->swscale_module = NULL;
     }
 #endif // HEVC_SUPPORT
 
@@ -360,6 +366,10 @@ static void videodecoder_init_state(VideoDecoder *decoder)
 #if HEVC_SUPPORT
     decoder->sws_context = NULL;
     decoder->dest_frame = NULL;
+    decoder->swscale_module = NULL;
+    decoder->sws_getContext_func = NULL;
+    decoder->sws_freeContext_func = NULL;
+    decoder->sws_scale_func = NULL;
 #endif // HEVC_SUPPORT
 
     basedecoder_init_state(BASEDECODER(decoder));
@@ -419,6 +429,52 @@ static gboolean videodecoder_init_converter(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
 
+    // Load libswscale
+    if (decoder->swscale_module == NULL)
+    {
+        decoder->swscale_module = dlopen("libswscale.so", RTLD_LAZY);
+        if (decoder->swscale_module == NULL)
+        {
+            // Halt playback, since we cannot continue and post user
+            // friendly error message that libswscale is required
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_MISSING_LIBSWSCALE,
+                    g_strdup("Error: libswscale is required for H.265/HEVC 10/12-bit decoding"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+
+        decoder->sws_getContext_func = dlsym(decoder->swscale_module, "sws_getContext");
+        if (!decoder->sws_getContext_func)
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_INVALID_LIBSWSCALE,
+                    g_strdup("Error: Failed to find \"sws_getContext()\" in libswscale"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+
+        decoder->sws_freeContext_func = dlsym(decoder->swscale_module, "sws_freeContext");
+        if (!decoder->sws_freeContext_func)
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_INVALID_LIBSWSCALE,
+                    g_strdup("Error: Failed to find \"sws_freeContext()\" in libswscale"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+
+        decoder->sws_scale_func = dlsym(decoder->swscale_module, "sws_scale");
+        if (!decoder->sws_scale_func)
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_INVALID_LIBSWSCALE,
+                    g_strdup("Error: Failed to find \"sws_scale()\" in libswscale"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+    }
+
     if (decoder->dest_frame)
     {
         av_frame_free(&decoder->dest_frame);
@@ -427,14 +483,18 @@ static gboolean videodecoder_init_converter(VideoDecoder *decoder)
 
     if (decoder->sws_context)
     {
-        sws_freeContext(decoder->sws_context);
+        decoder->sws_freeContext_func(decoder->sws_context);
         decoder->sws_context = NULL;
     }
 
-    decoder->sws_context = sws_getContext(decoder->width, decoder->height,
-                                          base->frame->format, decoder->width,
-                                          decoder->height, AV_PIX_FMT_YUV420P,
-                                          SWS_BILINEAR, NULL, NULL, NULL);
+    decoder->sws_context =
+            decoder->sws_getContext_func(decoder->width, decoder->height,
+                                         base->frame->format, decoder->width,
+                                         decoder->height, AV_PIX_FMT_YUV420P,
+                                         SWS_BILINEAR, NULL, NULL, NULL);
+
+    if (decoder->sws_context == NULL)
+        return FALSE;
 
     decoder->dest_frame = av_frame_alloc();
     if (decoder->dest_frame == NULL)
@@ -448,7 +508,7 @@ static gboolean videodecoder_init_converter(VideoDecoder *decoder)
     {
         av_frame_free(&decoder->dest_frame);
         decoder->dest_frame = NULL;
-        sws_freeContext(decoder->sws_context);
+        decoder->sws_freeContext_func(decoder->sws_context);
         decoder->sws_context = NULL;
         return FALSE;
     }
@@ -460,16 +520,17 @@ static gboolean videodecoder_convert_frame(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
 
-    if (decoder->sws_context == NULL || decoder->dest_frame == NULL)
+    if (decoder->sws_context == NULL || decoder->dest_frame == NULL ||
+            decoder->sws_scale_func == NULL)
         return TRUE;
 
-    int ret = sws_scale(decoder->sws_context,
-                    base->frame->data,
-                    base->frame->linesize,
-                    0,
-                    base->frame->height,
-                    decoder->dest_frame->data,
-                    decoder->dest_frame->linesize);
+    int ret = decoder->sws_scale_func(decoder->sws_context,
+                                      base->frame->data,
+                                      base->frame->linesize,
+                                      0,
+                                      base->frame->height,
+                                      decoder->dest_frame->data,
+                                      decoder->dest_frame->linesize);
     if (ret < 0)
         return FALSE;
 
@@ -513,7 +574,7 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
         {
             gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
                                              GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                             ("videodecoder_init_convert() failed"), NULL,
+                                             g_strdup("videodecoder_init_convert() failed"), NULL,
                                              ("videodecoder.c"), ("videodecoder_configure_sourcepad"), 0);
             return FALSE;
         }
@@ -522,7 +583,7 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
         {
             gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
                                              GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                             ("videodecoder_convert_frame() failed"), NULL,
+                                             g_strdup("videodecoder_convert_frame() failed"), NULL,
                                              ("videodecoder.c"), ("videodecoder_configure_sourcepad"), 0);
 
             return FALSE;
@@ -674,7 +735,7 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
             {
                 gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
                                          GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                         ("Video frame conversion failed"), NULL,
+                                         g_strdup("Video frame conversion failed"), NULL,
                                          ("videodecoder.c"), ("videodecoder_chain"), 0);
 
                 result = GST_FLOW_ERROR;
@@ -706,7 +767,7 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 {
                     gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
                                              GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                             ("Decoded video buffer allocation failed"), NULL,
+                                             g_strdup("Decoded video buffer allocation failed"), NULL,
                                              ("videodecoder.c"), ("videodecoder_chain"), 0);
                 }
             }

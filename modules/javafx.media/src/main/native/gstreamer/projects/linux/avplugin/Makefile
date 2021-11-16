@@ -58,10 +58,10 @@ LDFLAGS = -L$(BUILD_DIR)    \
 
 ifneq ($(strip $(LIBAV_DIR)),)
 INCLUDES += -I$(LIBAV_DIR)/include
-LDFLAGS  += -L$(LIBAV_DIR)/lib/ -lavcodec -lavformat -lswscale
+LDFLAGS  += -L$(LIBAV_DIR)/lib/ -lavcodec -lavformat
 else
 INCLUDES += $(shell pkg-config --cflags libavcodec libavformat libswscale)
-LDFLAGS  += $(shell pkg-config --libs libavcodec libavformat libswscale)
+LDFLAGS  += $(shell pkg-config --libs libavcodec libavformat)
 endif
 
 ifeq ($(ARCH), x32)

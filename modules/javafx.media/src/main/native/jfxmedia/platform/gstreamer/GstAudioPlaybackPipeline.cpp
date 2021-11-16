@@ -1194,6 +1194,23 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                         g_free(debug);
                     break;
                 }
+                else if (pPipeline != NULL && pPipeline->m_pEventDispatcher != NULL && error->domain == JFX_GST_ERROR)
+                {
+                    if (error->code == JFX_GST_MISSING_LIBSWSCALE)
+                    {
+                        if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_MISSING_LIBSWSCALE))
+                        {
+                            LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
+                        }
+                    }
+                    else if (error->code == JFX_GST_INVALID_LIBSWSCALE)
+                    {
+                        if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_INVALID_LIBSWSCALE))
+                        {
+                            LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
+                        }
+                    }
+                }
             }
 
             // Clear ignore error in case if we did not receive GST_STREAM_ERROR_FAILED after GST_RESOURCE_ERROR_READ.
