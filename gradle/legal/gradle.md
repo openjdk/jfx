@@ -1,4 +1,4 @@
-## Gradle v6.3
+## Gradle v7.3
 
 ### Apache 2.0 License
 ```
