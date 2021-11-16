@@ -33,7 +33,7 @@ import java.util.function.Consumer;
 
 public class LayoutTracker {
 
-    private static final boolean LOGGING_ENABLED = PropertyHelper.getBooleanProperty("javafx.sg.layoutStats");
+    private static final boolean LOGGING_ENABLED = PropertyHelper.getBooleanProperty("javafx.sg.printLayout");
 
     public static boolean isLoggingEnabled() {
         return LOGGING_ENABLED;
@@ -114,7 +114,7 @@ public class LayoutTracker {
 
     public static void releaseSceneTracker(Scene scene) {
         if (sceneAccessor != null) {
-            sceneAccessor.setPerfTracker(scene, null);
+            sceneAccessor.setLayoutTracker(scene, null);
         }
     }
 
@@ -125,18 +125,18 @@ public class LayoutTracker {
     public static LayoutTracker getSceneTracker(Scene scene) {
         LayoutTracker tracker = null;
         if (sceneAccessor != null) {
-            tracker = sceneAccessor.getPerfTracker(scene);
+            tracker = sceneAccessor.getLayoutTracker(scene);
             if (tracker == null) {
                 tracker = new LayoutTracker();
-                sceneAccessor.setPerfTracker(scene, tracker);
+                sceneAccessor.setLayoutTracker(scene, tracker);
             }
         }
         return tracker;
     }
 
     public interface SceneAccessor {
-        void setPerfTracker(Scene scene, LayoutTracker tracker);
-        LayoutTracker getPerfTracker(Scene scene);
+        void setLayoutTracker(Scene scene, LayoutTracker tracker);
+        LayoutTracker getLayoutTracker(Scene scene);
     }
 
 }

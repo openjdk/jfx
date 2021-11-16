@@ -376,10 +376,10 @@ public class Scene implements EventTarget {
                 }
             });
             LayoutTracker.setSceneAccessor(new LayoutTracker.SceneAccessor() {
-                @Override public void setPerfTracker(Scene scene, LayoutTracker tracker) {
+                @Override public void setLayoutTracker(Scene scene, LayoutTracker tracker) {
                     scene.layoutTracker = tracker;
                 }
-                @Override public LayoutTracker getPerfTracker(Scene scene) {
+                @Override public LayoutTracker getLayoutTracker(Scene scene) {
                     return scene.layoutTracker;
                 }
             });

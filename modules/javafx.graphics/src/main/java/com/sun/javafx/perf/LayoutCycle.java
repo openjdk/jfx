@@ -51,7 +51,7 @@ public class LayoutCycle {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("Layouting ");
+        StringBuilder builder = new StringBuilder("Laying out ");
         builder.append(root.getNode().getClass().getSimpleName()).append(' ');
 
         switch (type) {
@@ -59,7 +59,7 @@ public class LayoutCycle {
                 builder.append("(triggered manually)");
                 break;
             case SCENE:
-                builder.append("(triggered by scene out-of-pulse)");
+                builder.append("(triggered by scene, out of pulse)");
                 break;
             case PULSE:
                 builder.append("(triggered by scene pulse)");
