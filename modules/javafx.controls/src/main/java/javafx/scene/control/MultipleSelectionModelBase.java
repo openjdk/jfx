@@ -637,6 +637,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     class SelectedIndicesList extends ReadOnlyUnbackedObservableList<Integer> {
         private final BitSet bitset;
 
+        private int size = -1;
         private int lastGetIndex = -1;
         private int lastGetValue = -1;
 
@@ -705,6 +706,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
 
             _beginChange();
+            size = -1;
             bitset.set(index);
             int indicesIndex = indexOf(index);
             _nextAdd(indicesIndex, indicesIndex + 1);
@@ -725,6 +727,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         public void set(int index, int end, boolean isSet) {
             _beginChange();
+            size = -1;
             if (isSet) {
                 bitset.set(index, end, isSet);
                 int indicesIndex = indexOf(index);
@@ -802,6 +805,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         public void clear() {
             _beginChange();
             List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
+            size = 0;
             bitset.clear();
             _nextRemove(0, removed);
             _endChange();
@@ -812,6 +816,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             int indicesIndex = indexOf(index);
             _beginChange();
+            size = -1;
             bitset.clear(index);
             _nextRemove(indicesIndex, index);
             _endChange();
@@ -867,7 +872,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         /** Returns number of true bits in BitSet */
         @Override public int size() {
-            return bitset.cardinality();
+            if (size >= 0) {
+                return size;
+            }
+            size = bitset.cardinality();
+            return size;
         }
 
         /** Returns the number of bits reserved in the BitSet */
@@ -876,8 +885,40 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         }
 
         @Override public int indexOf(Object obj) {
-            reset();
-            return super.indexOf(obj);
+            if (!(obj instanceof Number)) {
+                return -1;
+            }
+            Number n = (Number) obj;
+            int index = n.intValue();
+            if (!bitset.get(index)) {
+                return -1;
+            }
+
+            // is left most bit
+            if (index == 0) {
+                return 0;
+            }
+
+            // is right most bit
+            if (index == bitset.length() - 1) {
+                return size() - 1;
+            }
+
+            // count right bit
+            if (index > bitset.length() / 2) {
+                int count = 1;
+                for (int i = bitset.nextSetBit(index+1); i >= 0; i = bitset.nextSetBit(i+1)) {
+                    count++;
+                }
+                return size() - count;
+            }
+
+            // count left bit
+            int count = 0;
+            for (int i = bitset.previousSetBit(index-1);  i >= 0; i = bitset.previousSetBit(i-1)) {
+                count++;
+            }
+            return count;
         }
 
         @Override public boolean contains(Object o) {
