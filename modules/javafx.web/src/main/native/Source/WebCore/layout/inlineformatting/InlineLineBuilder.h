@@ -27,226 +27,108 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayRun.h"
-#include "InlineItem.h"
-#include "InlineLineBoxBuilder.h"
-#include "InlineTextItem.h"
+#include "InlineContentBreaker.h"
+#include "InlineFormattingState.h"
+#include "InlineLine.h"
 
 namespace WebCore {
 namespace Layout {
 
-struct HangingContent;
-class InlineFormattingContext;
-class InlineSoftLineBreakItem;
+class FloatingContext;
+struct LineCandidate;
 
 class LineBuilder {
-    struct ContinuousContent;
-
 public:
-    struct Constraints {
+    LineBuilder(InlineFormattingContext&, FloatingState&, HorizontalConstraints rootHorizontalConstraints, const InlineItems&);
+    LineBuilder(const InlineFormattingContext&, const InlineItems&);
+
+    struct InlineItemRange {
+        bool isEmpty() const { return start == end; }
+        size_t size() const { return end - start; }
+        size_t start { 0 };
+        size_t end { 0 };
+    };
+    using FloatList = Vector<const Box*>;
+    struct LineContent {
+        InlineItemRange inlineItemRange;
+        size_t partialTrailingContentLength { 0 };
+        Optional<InlineLayoutUnit> overflowLogicalWidth;
+        const FloatList& floats;
+        bool hasIntrusiveFloat { false };
         InlineLayoutPoint logicalTopLeft;
-        InlineLayoutUnit availableLogicalWidth { 0 };
-        bool lineIsConstrainedByFloat { false };
-        struct HeightAndBaseline {
-            InlineLayoutUnit height { 0 };
-            InlineLayoutUnit baselineOffset { 0 };
-            Optional<LineBoxBuilder::Baseline> strut;
-        };
-        Optional<HeightAndBaseline> heightAndBaseline;
+        InlineLayoutUnit lineLogicalWidth;
+        InlineLayoutUnit contentLogicalWidth;
+        bool isLastLineWithInlineContent { true };
+        const Line::RunList& runs;
     };
+    LineContent layoutInlineContent(const InlineItemRange&, size_t partialLeadingContentLength, Optional<InlineLayoutUnit> leadingLogicalWidth, const InlineRect& initialLineLogicalRect, bool isFirstLine);
 
-    enum class IntrinsicSizing { No, Yes };
-    LineBuilder(const InlineFormattingContext&, Optional<TextAlignMode>, IntrinsicSizing);
-    ~LineBuilder();
-
-    void initialize(const Constraints&);
-    void append(const InlineItem&, InlineLayoutUnit logicalWidth);
-    void appendPartialTrailingTextItem(const InlineTextItem&, InlineLayoutUnit logicalWidth, bool needsHypen);
-    void resetContent();
-    bool isVisuallyEmpty() const { return m_lineBox.isConsideredEmpty(); }
-    bool hasIntrusiveFloat() const { return m_hasIntrusiveFloat; }
-    InlineLayoutUnit availableWidth() const { return logicalWidth() - contentLogicalWidth(); }
-
-    InlineLayoutUnit trimmableTrailingWidth() const { return m_trimmableTrailingContent.width(); }
-    bool isTrailingRunFullyTrimmable() const { return m_trimmableTrailingContent.isTrailingRunFullyTrimmable(); }
-
-    const LineBoxBuilder& lineBox() const { return m_lineBox; }
-    void moveLogicalLeft(InlineLayoutUnit);
-    void moveLogicalRight(InlineLayoutUnit);
-    void setHasIntrusiveFloat() { m_hasIntrusiveFloat = true; }
-
-    struct Run {
-        bool isText() const { return m_type == InlineItem::Type::Text; }
-        bool isBox() const { return m_type == InlineItem::Type::Box; }
-        bool isLineBreak() const { return m_type == InlineItem::Type::HardLineBreak || m_type == InlineItem::Type::SoftLineBreak; }
-        bool isContainerStart() const { return m_type == InlineItem::Type::ContainerStart; }
-        bool isContainerEnd() const { return m_type == InlineItem::Type::ContainerEnd; }
-
-        const Box& layoutBox() const { return *m_layoutBox; }
-        const RenderStyle& style() const { return m_layoutBox->style(); }
-        const Display::InlineRect& logicalRect() const { return m_logicalRect; }
-        Display::Run::Expansion expansion() const { return m_expansion; }
-        const Optional<Display::Run::TextContent>& textContent() const { return m_textContent; }
-
-        Run(Run&&) = default;
-        Run& operator=(Run&& other) = default;
-
-    private:
-        friend class LineBuilder;
-
-        Run(const InlineTextItem&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, bool needsHypen);
-        Run(const InlineSoftLineBreakItem&, InlineLayoutUnit logicalLeft);
-        Run(const InlineItem&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
-
-        void expand(const InlineTextItem&, InlineLayoutUnit logicalWidth);
-
-        InlineLayoutUnit logicalWidth() const { return m_logicalRect.width(); }
-
-        void moveHorizontally(InlineLayoutUnit offset) { m_logicalRect.moveHorizontally(offset); }
-        void shrinkHorizontally(InlineLayoutUnit width) { m_logicalRect.expandHorizontally(-width); }
-
-        void adjustLogicalTop(InlineLayoutUnit logicalTop) { m_logicalRect.setTop(logicalTop); }
-        void moveVertically(InlineLayoutUnit offset) { m_logicalRect.moveVertically(offset); }
-        void setLogicalHeight(InlineLayoutUnit logicalHeight) { m_logicalRect.setHeight(logicalHeight); }
-
-        bool hasExpansionOpportunity() const { return m_expansionOpportunityCount; }
-        ExpansionBehavior expansionBehavior() const;
-        unsigned expansionOpportunityCount() const { return m_expansionOpportunityCount; }
-        void setComputedHorizontalExpansion(InlineLayoutUnit logicalExpansion);
-        void setExpansionBehavior(ExpansionBehavior);
-
-        void setNeedsHyphen() { m_textContent->setNeedsHyphen(); }
-
-        enum class TrailingWhitespace {
-            None,
-            NotCollapsible,
-            Collapsible,
-            Collapsed
-        };
-        bool hasTrailingWhitespace() const { return m_trailingWhitespaceType != TrailingWhitespace::None; }
-        bool hasCollapsibleTrailingWhitespace() const { return m_trailingWhitespaceType == TrailingWhitespace::Collapsible || hasCollapsedTrailingWhitespace(); }
-        bool hasCollapsedTrailingWhitespace() const { return m_trailingWhitespaceType == TrailingWhitespace::Collapsed; }
-        InlineLayoutUnit trailingWhitespaceWidth() const { return m_trailingWhitespaceWidth; }
-        TrailingWhitespace trailingWhitespaceType(const InlineTextItem&) const;
-        void removeTrailingWhitespace();
-        void visuallyCollapseTrailingWhitespace();
-
-        bool hasTrailingLetterSpacing() const;
-        InlineLayoutUnit trailingLetterSpacing() const;
-        void removeTrailingLetterSpacing();
-
-        InlineItem::Type m_type { InlineItem::Type::Text };
-        const Box* m_layoutBox { nullptr };
-        Display::InlineRect m_logicalRect;
-        TrailingWhitespace m_trailingWhitespaceType { TrailingWhitespace::None };
-        InlineLayoutUnit m_trailingWhitespaceWidth { 0 };
-        Optional<Display::Run::TextContent> m_textContent;
-        Display::Run::Expansion m_expansion;
-        unsigned m_expansionOpportunityCount { 0 };
+    struct IntrinsicContent {
+        InlineItemRange inlineItemRange;
+        InlineLayoutUnit logicalWidth { 0 };
+        const FloatList& floats;
     };
-    using RunList = Vector<Run, 10>;
-    enum class IsLastLineWithInlineContent { No, Yes };
-    RunList close(IsLastLineWithInlineContent = IsLastLineWithInlineContent::No);
-
-    static LineBoxBuilder::Baseline halfLeadingMetrics(const FontMetrics&, InlineLayoutUnit lineLogicalHeight);
+    IntrinsicContent computedIntrinsicWidth(const InlineItemRange&, InlineLayoutUnit availableWidth);
 
 private:
-    InlineLayoutUnit logicalTop() const { return m_lineBox.logicalTop(); }
-    InlineLayoutUnit logicalBottom() const { return m_lineBox.logicalBottom(); }
+    void candidateContentForLine(LineCandidate&, size_t inlineItemIndex, const InlineItemRange& needsLayoutRange, size_t overflowLength, Optional<InlineLayoutUnit> leadingLogicalWidth, InlineLayoutUnit currentLogicalRight);
+    size_t nextWrapOpportunity(size_t startIndex, const LineBuilder::InlineItemRange& layoutRange) const;
 
-    InlineLayoutUnit logicalLeft() const { return m_lineBox.logicalLeft(); }
-    InlineLayoutUnit logicalRight() const { return logicalLeft() + logicalWidth(); }
-
-    InlineLayoutUnit logicalWidth() const { return m_lineLogicalWidth; }
-    InlineLayoutUnit logicalHeight() const { return m_lineBox.logicalHeight(); }
-
-    InlineLayoutUnit contentLogicalWidth() const { return m_lineBox.logicalWidth(); }
-    InlineLayoutUnit contentLogicalRight() const { return m_lineBox.logicalRight(); }
-    InlineLayoutUnit baselineOffset() const { return m_lineBox.baselineOffset(); }
-
-    struct InlineRunDetails {
-        InlineLayoutUnit logicalWidth { 0 };
-        bool needsHyphen { false };
+    struct Result {
+        InlineContentBreaker::IsEndOfLine isEndOfLine { InlineContentBreaker::IsEndOfLine::No };
+        struct CommittedContentCount {
+            size_t value { 0 };
+            bool isRevert { false };
+        };
+        CommittedContentCount committedCount { };
+        size_t partialTrailingContentLength { 0 };
+        Optional<InlineLayoutUnit> overflowLogicalWidth { };
     };
-    void appendWith(const InlineItem&, const InlineRunDetails&);
-    void appendNonBreakableSpace(const InlineItem&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
-    void appendTextContent(const InlineTextItem&, InlineLayoutUnit logicalWidth, bool needsHyphen);
-    void appendNonReplacedInlineBox(const InlineItem&, InlineLayoutUnit logicalWidth);
-    void appendReplacedInlineBox(const InlineItem&, InlineLayoutUnit logicalWidth);
-    void appendInlineContainerStart(const InlineItem&, InlineLayoutUnit logicalWidth);
-    void appendInlineContainerEnd(const InlineItem&, InlineLayoutUnit logicalWidth);
-    void appendLineBreak(const InlineItem&);
-
-    void removeTrailingTrimmableContent();
-    void visuallyCollapsePreWrapOverflowContent();
-    HangingContent collectHangingContent(IsLastLineWithInlineContent);
-    void alignHorizontally(const HangingContent&, IsLastLineWithInlineContent);
-    void alignContentVertically();
-
-    void adjustBaselineAndLineHeight(const Run&, const LineBoxBuilder::Baseline&);
-    InlineLayoutUnit runContentHeight(const Run&) const;
-
-    void justifyRuns(InlineLayoutUnit availableWidth);
-
-    bool isVisuallyNonEmpty(const Run&) const;
-
-    LayoutState& layoutState() const;
-    const InlineFormattingContext& formattingContext() const;
-
-    struct TrimmableTrailingContent {
-        TrimmableTrailingContent(RunList&);
-
-        void addFullyTrimmableContent(size_t runIndex, InlineLayoutUnit trimmableWidth);
-        void addPartiallyTrimmableContent(size_t runIndex, InlineLayoutUnit trimmableWidth);
-        InlineLayoutUnit remove();
-        InlineLayoutUnit removePartiallyTrimmableContent();
-
-        InlineLayoutUnit width() const { return m_fullyTrimmableWidth + m_partiallyTrimmableWidth; }
-        bool isEmpty() const { return !m_firstRunIndex.hasValue(); }
-        bool isTrailingRunFullyTrimmable() const { return m_hasFullyTrimmableContent; }
-        bool isTrailingRunPartiallyTrimmable() const { return m_partiallyTrimmableWidth; }
-
-        void reset();
-
-    private:
-        RunList& m_runs;
-        Optional<size_t> m_firstRunIndex;
-        bool m_hasFullyTrimmableContent { false };
-        InlineLayoutUnit m_fullyTrimmableWidth { 0 };
-        InlineLayoutUnit m_partiallyTrimmableWidth { 0 };
+    struct UsedConstraints {
+        InlineRect logicalRect;
+        bool isConstrainedByFloat { false };
     };
+    UsedConstraints initialConstraintsForLine(const InlineRect& initialLineLogicalRect, bool isFirstLine) const;
+    Optional<HorizontalConstraints> floatConstraints(const InlineRect& lineLogicalRect) const;
+
+    void handleFloatContent(const InlineItem&);
+    Result handleInlineContent(InlineContentBreaker&, const InlineItemRange& needsLayoutRange, const LineCandidate&);
+    size_t rebuildLine(const InlineItemRange& needsLayoutRange, const InlineItem& lastInlineItemToAdd);
+    size_t rebuildLineForTrailingSoftHyphen(const InlineItemRange& layoutRange);
+    void commitPartialContent(const InlineContentBreaker::ContinuousContent::RunList&, const InlineContentBreaker::Result::PartialTrailingContent&);
+    void initialize(const UsedConstraints&);
+    struct CommittedContent {
+        size_t inlineItemCount { 0 };
+        size_t partialTrailingContentLength { 0 };
+        Optional<InlineLayoutUnit> overflowLogicalWidth { };
+    };
+    CommittedContent placeInlineContent(const InlineItemRange&, size_t partialLeadingContentLength, Optional<InlineLayoutUnit> overflowLogicalWidth);
+    InlineItemRange close(const InlineItemRange& needsLayoutRange, const CommittedContent&);
+
+    InlineLayoutUnit inlineItemWidth(const InlineItem&, InlineLayoutUnit contentLogicalLeft) const;
+    bool isLastLineWithInlineContent(const InlineItemRange& lineRange, size_t lastInlineItemIndex, bool hasPartialTrailingContent) const;
+
+    const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
+    InlineFormattingState* formattingState() { return m_inlineFormattingState; }
+    FloatingState* floatingState() { return m_floatingState; }
+    const FloatingState* floatingState() const { return m_floatingState; }
+    const ContainerBox& root() const;
+    const LayoutState& layoutState() const;
 
     const InlineFormattingContext& m_inlineFormattingContext;
-    RunList m_runs;
-    TrimmableTrailingContent m_trimmableTrailingContent;
-    Optional<LineBoxBuilder::Baseline> m_initialStrut;
-    InlineLayoutUnit m_lineLogicalWidth { 0 };
-    Optional<TextAlignMode> m_horizontalAlignment;
-    bool m_isIntrinsicSizing { false };
-    bool m_hasIntrusiveFloat { false };
-    LineBoxBuilder m_lineBox;
-    Optional<bool> m_lineIsVisuallyEmptyBeforeTrimmableTrailingContent;
-    bool m_shouldIgnoreTrailingLetterSpacing { false };
+    InlineFormattingState* m_inlineFormattingState { nullptr };
+    FloatingState* m_floatingState { nullptr };
+    Optional<HorizontalConstraints> m_rootHorizontalConstraints;
+
+    Line m_line;
+    InlineRect m_lineLogicalRect;
+    const InlineItems& m_inlineItems;
+    FloatList m_floats;
+    Optional<InlineTextItem> m_partialLeadingTextItem;
+    Vector<const InlineItem*> m_wrapOpportunityList;
+    unsigned m_successiveHyphenatedLineCount { 0 };
+    bool m_contentIsConstrainedByFloat { false };
 };
-
-inline void LineBuilder::TrimmableTrailingContent::reset()
-{
-    m_hasFullyTrimmableContent = false;
-    m_firstRunIndex = { };
-    m_fullyTrimmableWidth = { };
-    m_partiallyTrimmableWidth = { };
-}
-
-inline LineBuilder::Run::TrailingWhitespace LineBuilder::Run::trailingWhitespaceType(const InlineTextItem& inlineTextItem) const
-{
-    if (!inlineTextItem.isWhitespace())
-        return TrailingWhitespace::None;
-    if (!inlineTextItem.isCollapsible())
-        return TrailingWhitespace::NotCollapsible;
-    if (inlineTextItem.length() == 1)
-        return TrailingWhitespace::Collapsible;
-    return TrailingWhitespace::Collapsed;
-}
 
 }
 }

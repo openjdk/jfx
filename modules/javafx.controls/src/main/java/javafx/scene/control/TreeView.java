@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,7 +199,7 @@ import java.util.Map;
 @DefaultProperty("root")
 public class TreeView<T> extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -301,7 +301,7 @@ public class TreeView<T> extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -341,7 +341,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -357,7 +357,7 @@ public class TreeView<T> extends Control {
     private Map<Integer, SoftReference<TreeItem<T>>> treeItemCacheMap = new HashMap<>();
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -389,7 +389,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -887,7 +887,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -1067,7 +1067,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -1095,7 +1095,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1132,8 +1132,9 @@ public class TreeView<T> extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1151,7 +1152,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -1172,7 +1173,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
@@ -1180,7 +1181,7 @@ public class TreeView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *
@@ -1274,7 +1275,7 @@ public class TreeView<T> extends Control {
     // package for testing
     static class TreeViewBitSetSelectionModel<T> extends MultipleSelectionModelBase<TreeItem<T>> {
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Internal fields                                                     *
          *                                                                     *
@@ -1284,7 +1285,7 @@ public class TreeView<T> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
          *                                                                     *
@@ -1465,7 +1466,7 @@ public class TreeView<T> extends Control {
         private InvalidationListener showRootListener;
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public selection API                                                *
          *                                                                     *
@@ -1530,7 +1531,7 @@ public class TreeView<T> extends Control {
         }
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Support code                                                        *
          *                                                                     *
@@ -1568,7 +1569,7 @@ public class TreeView<T> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private implementation                                              *
          *                                                                     *

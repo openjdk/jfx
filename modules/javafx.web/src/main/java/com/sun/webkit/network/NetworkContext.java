@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,12 +92,14 @@ final class NetworkContext {
                 new URLLoaderThreadFactory());
         threadPool.allowCoreThreadTimeOut(true);
 
-        useHTTP2Loader = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             // Use HTTP2 by default on JDK 12 or later
             final var version = Runtime.Version.parse(System.getProperty("java.version"));
             final String defaultUseHTTP2 = version.feature() >= 12 ? "true" : "false";
             return Boolean.valueOf(System.getProperty("com.sun.webkit.useHTTP2Loader", defaultUseHTTP2));
         });
+        useHTTP2Loader = tmp;
     }
 
     /**
@@ -216,6 +218,7 @@ final class NetworkContext {
         // Our implementation employs HttpURLConnection for all
         // HTTP exchanges, so return the value of the "http.maxConnections"
         // system property.
+        @SuppressWarnings("removal")
         int propValue = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>) () -> Integer.getInteger("http.maxConnections", -1));
 
@@ -240,11 +243,13 @@ final class NetworkContext {
         private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
 
         private URLLoaderThreadFactory() {
+            @SuppressWarnings("removal")
             SecurityManager sm = System.getSecurityManager();
             group = (sm != null) ? sm.getThreadGroup()
                     : Thread.currentThread().getThreadGroup();
         }
 
+        @SuppressWarnings("removal")
         @Override
         public Thread newThread(Runnable r) {
             // Assert the modifyThread and modifyThreadGroup permissions

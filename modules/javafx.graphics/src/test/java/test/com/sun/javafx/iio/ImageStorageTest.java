@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -198,5 +198,29 @@ public class ImageStorageTest {
         ImageFrame[] frames = ImageStorage.loadAll(stream, null, 0, 0, false, 1.0f, false);
         assertNotNull(frames);
         assertEquals(1, frames.length);
+    }
+
+    @Test
+    public void testLoadImageFromDataURI() throws ImageStorageException {
+        String url =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
+            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
+            + "ieT81GAGKoAAAAAElFTkSuQmCC";
+
+        ImageFrame[] frames = ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
+        assertEquals(1, frames.length);
+
+        byte[] data = (byte[])frames[0].getImageData().array();
+        assertEquals(-1, data[0]);
+        assertEquals(0, data[1]);
+        assertEquals(0, data[2]);
+
+        assertEquals(0, data[3]);
+        assertEquals(-1, data[4]);
+        assertEquals(0, data[5]);
+
+        assertEquals(0, data[6]);
+        assertEquals(0, data[7]);
+        assertEquals(-1, data[8]);
     }
 }

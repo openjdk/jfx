@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  * Copyright (C) 2010 Daniel Bates (dbates@intudata.com)
  *
@@ -498,6 +498,9 @@ static ListStyleType effectiveListMarkerType(ListStyleType type, int value)
     case ListStyleType::UpperLatin:
     case ListStyleType::UpperNorwegian:
         return (value < 1) ? ListStyleType::Decimal : type;
+    case ListStyleType::String:
+        ASSERT_NOT_REACHED();
+        break;
     }
 
     ASSERT_NOT_REACHED();
@@ -597,6 +600,9 @@ static UChar listMarkerSuffix(ListStyleType type, int value)
     case ListStyleType::UpperRoman:
     case ListStyleType::Urdu:
         return '.';
+    case ListStyleType::String:
+        ASSERT_NOT_REACHED();
+        break;
     }
 
     ASSERT_NOT_REACHED();
@@ -1050,6 +1056,9 @@ String listMarkerText(ListStyleType type, int value)
         return toGeorgian(value);
     case ListStyleType::Hebrew:
         return toHebrew(value);
+    case ListStyleType::String:
+        ASSERT_NOT_REACHED();
+        break;
     }
 
     ASSERT_NOT_REACHED();
@@ -1073,29 +1082,30 @@ RenderListMarker::~RenderListMarker()
 void RenderListMarker::willBeDestroyed()
 {
     if (m_image)
-        m_image->removeClient(this);
+        m_image->removeClient(*this);
     RenderBox::willBeDestroyed();
 }
 
 void RenderListMarker::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
-
     if (oldStyle) {
-        if (style().listStylePosition() != oldStyle->listStylePosition() || style().listStyleType() != oldStyle->listStyleType())
+        if (style().listStylePosition() != oldStyle->listStylePosition() || style().listStyleType() != oldStyle->listStyleType() || (style().listStyleType() == ListStyleType::String && style().listStyleStringValue() != oldStyle->listStyleStringValue()))
             setNeedsLayoutAndPrefWidthsRecalc();
         if (oldStyle->isDisplayInlineType() && !style().isDisplayInlineType()) {
-            delete m_inlineBoxWrapper;
+            setNeedsLayoutAndPrefWidthsRecalc();
+            if (m_inlineBoxWrapper)
+                m_inlineBoxWrapper->dirtyLineBoxes();
             m_inlineBoxWrapper = nullptr;
         }
     }
 
     if (m_image != style().listStyleImage()) {
         if (m_image)
-            m_image->removeClient(this);
+            m_image->removeClient(*this);
         m_image = style().listStyleImage();
         if (m_image)
-            m_image->addClient(this);
+            m_image->addClient(*this);
     }
 }
 
@@ -1260,6 +1270,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     case ListStyleType::Urdu:
     case ListStyleType::Asterisks:
     case ListStyleType::Footnotes:
+    case ListStyleType::String:
         break;
     }
     if (m_text.isEmpty())
@@ -1282,7 +1293,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     FloatPoint textOrigin = FloatPoint(markerRect.x(), markerRect.y() + style().fontMetrics().ascent());
     textOrigin = roundPointToDevicePixels(LayoutPoint(textOrigin), document().deviceScaleFactor(), style().isLeftToRightDirection());
 
-    if (type == ListStyleType::Asterisks || type == ListStyleType::Footnotes)
+    if (type == ListStyleType::Asterisks || type == ListStyleType::Footnotes || type == ListStyleType::String)
         context.drawText(font, textRun, textOrigin);
     else {
         const UChar suffix = listMarkerSuffix(type, m_listItem->value());
@@ -1505,6 +1516,9 @@ void RenderListMarker::updateContent()
     switch (type) {
     case ListStyleType::None:
         break;
+    case ListStyleType::String:
+        m_text = style().listStyleStringValue();
+        break;
     case ListStyleType::Circle:
     case ListStyleType::Disc:
     case ListStyleType::Square:
@@ -1613,11 +1627,13 @@ void RenderListMarker::computePreferredLogicalWidths()
     case ListStyleType::None:
         break;
     case ListStyleType::Asterisks:
-    case ListStyleType::Footnotes: {
-        TextRun run = RenderBlock::constructTextRun(m_text, style());
-        logicalWidth = font.width(run); // no suffix for these types
+    case ListStyleType::Footnotes:
+    case ListStyleType::String:
+        if (!m_text.isEmpty()) {
+            TextRun run = RenderBlock::constructTextRun(m_text, style());
+            logicalWidth = font.width(run); // no suffix for these types
+        }
         break;
-    }
     case ListStyleType::Circle:
     case ListStyleType::Disc:
     case ListStyleType::Square:
@@ -1738,49 +1754,34 @@ void RenderListMarker::updateMargins()
             default:
                 break;
         }
+    } else if (isImage()) {
+        marginStart = -minPreferredLogicalWidth() - cMarkerPadding;
+        marginEnd = cMarkerPadding;
     } else {
-        if (style().isLeftToRightDirection()) {
-            if (isImage())
-                marginStart = -minPreferredLogicalWidth() - cMarkerPadding;
-            else {
-                int offset = fontMetrics.ascent() * 2 / 3;
-                switch (style().listStyleType()) {
-                case ListStyleType::Disc:
-                case ListStyleType::Circle:
-                case ListStyleType::Square:
-                    marginStart = -offset - cMarkerPadding - 1;
-                    break;
-                case ListStyleType::None:
-                    break;
-                default:
-                    marginStart = m_text.isEmpty() ? 0_lu : -minPreferredLogicalWidth() - offset / 2;
-                }
+        int offset = fontMetrics.ascent() * 2 / 3;
+        switch (style().listStyleType()) {
+        case ListStyleType::Disc:
+        case ListStyleType::Circle:
+        case ListStyleType::Square:
+            marginStart = -offset - cMarkerPadding - 1;
+            marginEnd = offset + cMarkerPadding + 1 - minPreferredLogicalWidth();
+            break;
+        case ListStyleType::None:
+            break;
+        case ListStyleType::String:
+            if (!m_text.isEmpty())
+                marginStart = -minPreferredLogicalWidth();
+            break;
+        default:
+            if (!m_text.isEmpty()) {
+                marginStart = -minPreferredLogicalWidth() - offset / 2;
+                marginEnd = offset / 2;
             }
-            marginEnd = -marginStart - minPreferredLogicalWidth();
-        } else {
-            if (isImage())
-                marginEnd = cMarkerPadding;
-            else {
-                int offset = fontMetrics.ascent() * 2 / 3;
-                switch (style().listStyleType()) {
-                case ListStyleType::Disc:
-                case ListStyleType::Circle:
-                case ListStyleType::Square:
-                    marginEnd = offset + cMarkerPadding + 1 - minPreferredLogicalWidth();
-                    break;
-                case ListStyleType::None:
-                    break;
-                default:
-                    marginEnd = m_text.isEmpty() ? 0 : offset / 2;
-                }
-            }
-            marginStart = -marginEnd - minPreferredLogicalWidth();
         }
-
     }
 
-    mutableStyle().setMarginStart(Length(marginStart, Fixed));
-    mutableStyle().setMarginEnd(Length(marginEnd, Fixed));
+    mutableStyle().setMarginStart(Length(marginStart, LengthType::Fixed));
+    mutableStyle().setMarginEnd(Length(marginEnd, LengthType::Fixed));
 }
 
 LayoutUnit RenderListMarker::lineHeight(bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
@@ -1800,6 +1801,9 @@ int RenderListMarker::baselinePosition(FontBaseline baselineType, bool firstLine
 String RenderListMarker::suffix() const
 {
     ListStyleType type = style().listStyleType();
+    if (type == ListStyleType::String)
+        return emptyString();
+
     const UChar suffix = listMarkerSuffix(type, m_listItem->value());
 
     if (suffix == ' ')
@@ -1832,7 +1836,10 @@ FloatRect RenderListMarker::getRelativeMarkerRect()
     ListStyleType type = style().listStyleType();
     switch (type) {
     case ListStyleType::Asterisks:
-    case ListStyleType::Footnotes: {
+    case ListStyleType::Footnotes:
+    case ListStyleType::String: {
+        if (m_text.isEmpty())
+            return FloatRect();
         const FontCascade& font = style().fontCascade();
         TextRun run = RenderBlock::constructTextRun(m_text, style());
         relativeRect = FloatRect(0, 0, font.width(run), font.fontMetrics().height());
@@ -1941,15 +1948,6 @@ FloatRect RenderListMarker::getRelativeMarkerRect()
     }
 
     return relativeRect;
-}
-
-void RenderListMarker::setSelectionState(HighlightState state)
-{
-    // The selection state for our containing block hierarchy is updated by the base class call.
-    RenderBox::setSelectionState(state);
-
-    if (m_inlineBoxWrapper && canUpdateSelectionOnRootLineBoxes())
-        m_inlineBoxWrapper->root().setHasSelectedChildren(state != HighlightState::None);
 }
 
 LayoutRect RenderListMarker::selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent)

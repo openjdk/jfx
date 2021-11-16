@@ -240,10 +240,11 @@ public:
         T newMin = static_cast<T>(m_min) << static_cast<T>(shiftAmount);
         T newMax = static_cast<T>(m_max) << static_cast<T>(shiftAmount);
 
-        if ((newMin >> shiftAmount) != static_cast<T>(m_min))
+        if (((newMin >> shiftAmount) != static_cast<T>(m_min))
+            || ((newMax >> shiftAmount) != static_cast<T>(m_max))) {
             newMin = std::numeric_limits<T>::min();
-        if ((newMax >> shiftAmount) != static_cast<T>(m_max))
             newMax = std::numeric_limits<T>::max();
+        }
 
         return IntRange(newMin, newMax);
     }
@@ -1812,11 +1813,9 @@ private:
         case CCall: {
             // Turn this: Call(fmod, constant1, constant2)
             // Into this: fcall-constant(constant1, constant2)
-            double(*fmodDouble)(double, double) = fmod;
-            fmodDouble = tagCFunction<B3CCallPtrTag>(fmodDouble);
             if (m_value->type() == Double
                 && m_value->numChildren() == 3
-                && m_value->child(0)->isIntPtr(reinterpret_cast<intptr_t>(fmodDouble))
+                && m_value->child(0)->isIntPtr(reinterpret_cast<intptr_t>(tagCFunction<OperationPtrTag>(Math::fmodDouble)))
                 && m_value->child(1)->type() == Double
                 && m_value->child(2)->type() == Double) {
                 replaceWithNewValue(m_value->child(1)->modConstant(m_proc, m_value->child(2)));

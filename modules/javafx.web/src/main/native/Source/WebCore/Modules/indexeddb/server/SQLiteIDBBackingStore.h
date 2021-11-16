@@ -51,7 +51,7 @@ enum class IsSchemaUpgraded : bool { No, Yes };
 class IDBSerializationContext;
 class SQLiteIDBCursor;
 
-class SQLiteIDBBackingStore : public IDBBackingStore {
+class SQLiteIDBBackingStore final : public IDBBackingStore {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     SQLiteIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&, const String& databaseRootDirectory);
@@ -97,7 +97,6 @@ public:
 
     IDBError getBlobRecordsForObjectStoreRecord(int64_t objectStoreRecord, Vector<String>& blobURLs, Vector<String>& blobFilePaths);
 
-    static String databaseNameFromEncodedFilename(const String&);
     static uint64_t databasesSizeForDirectory(const String& directory);
 
     String databaseDirectory() const { return m_databaseDirectory; };
@@ -110,8 +109,6 @@ private:
     String filenameForDatabaseName() const;
     String fullDatabasePath() const;
     String fullDatabaseDirectoryWithUpgrade();
-
-    String databaseRootDirectoryIsolatedCopy() const { return m_databaseRootDirectory.isolatedCopy(); }
 
     bool ensureValidRecordsTable();
     bool ensureValidIndexRecordsTable();
@@ -127,7 +124,7 @@ private:
     IDBError uncheckedSetKeyGeneratorValue(int64_t objectStoreID, uint64_t value);
 
     IDBError updateAllIndexesForAddRecord(const IDBObjectStoreInfo&, const IDBKeyData&, const IndexIDToIndexKeyMap&, int64_t recordID);
-    IDBError updateOneIndexForAddRecord(const IDBIndexInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
+    IDBError updateOneIndexForAddRecord(IDBObjectStoreInfo&, const IDBIndexInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
     IDBError uncheckedPutIndexKey(const IDBIndexInfo&, const IDBKeyData& keyValue, const IndexKey&, int64_t recordID);
     IDBError uncheckedPutIndexRecord(int64_t objectStoreID, int64_t indexID, const IDBKeyData& keyValue, const IDBKeyData& indexKey, int64_t recordID);
     IDBError uncheckedHasIndexRecord(const IDBIndexInfo&, const IDBKeyData&, bool& hasRecord);
@@ -140,6 +137,13 @@ private:
 
     void closeSQLiteDB();
     void close() final;
+
+    bool migrateIndexInfoTableForIDUpdate(const HashMap<std::pair<uint64_t, uint64_t>, uint64_t>& indexIDMap);
+    bool migrateIndexRecordsTableForIDUpdate(const HashMap<std::pair<uint64_t, uint64_t>, uint64_t>& indexIDMap);
+
+    bool removeExistingIndex(uint64_t indexID);
+    bool addExistingIndex(IDBObjectStoreInfo&, const IDBIndexInfo&);
+    bool handleDuplicateIndexIDs(const HashMap<uint64_t, Vector<IDBIndexInfo>>&, IDBDatabaseInfo&);
 
     enum class SQL : size_t {
         CreateObjectStoreInfo,
@@ -154,9 +158,12 @@ private:
         ClearObjectStoreRecords,
         ClearObjectStoreIndexRecords,
         CreateIndexInfo,
+        CreateTempIndexInfo,
         DeleteIndexInfo,
+        RemoveIndexInfo,
         HasIndexRecord,
         PutIndexRecord,
+        PutTempIndexRecord,
         GetIndexRecordForOneKey,
         DeleteIndexRecords,
         RenameIndex,
@@ -174,6 +181,7 @@ private:
         GetBlobURL,
         GetKeyGeneratorValue,
         SetKeyGeneratorValue,
+        GetObjectStoreRecords,
         GetAllKeyRecordsLowerOpenUpperOpen,
         GetAllKeyRecordsLowerOpenUpperClosed,
         GetAllKeyRecordsLowerClosedUpperOpen,

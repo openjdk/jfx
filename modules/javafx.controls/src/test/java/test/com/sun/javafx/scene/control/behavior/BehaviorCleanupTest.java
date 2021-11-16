@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,14 +33,29 @@ import org.junit.Test;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
+import static com.sun.javafx.scene.control.behavior.TextBehaviorShim.*;
 import static javafx.collections.FXCollections.*;
+import static javafx.scene.control.skin.TextInputSkinShim.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /**
  * Test for misbehavior of individual implementations that turned
@@ -48,6 +63,191 @@ import javafx.scene.control.TreeView;
  *
  */
 public class BehaviorCleanupTest {
+
+    private Scene scene;
+    private Stage stage;
+    private Pane root;
+
+//---------- TextAera
+
+    @Test
+    public void testTextAreaFocusListener() {
+        TextArea control = new TextArea("some text");
+        showControl(control, true);
+        assertTrue("caret must be blinking if focused", isCaretBlinking(control));
+        Button button = new Button("dummy");
+        showControl(button, true);
+        assertFalse("caret must not be blinking if not focused", isCaretBlinking(control));
+    }
+
+//---------- TextField
+
+    @Test
+    public void testFocusListener() {
+        TextField control = new TextField("some text");
+        showControl(control, true);
+        assertTrue("caret must be blinking if focused", isCaretBlinking(control));
+        Button button = new Button("dummy");
+        showControl(button, true);
+        assertFalse("caret must not be blinking if not focused", isCaretBlinking(control));
+    }
+
+    @Test
+    public void testFocusOwnerListenerRegisteredInitially() {
+        TextField control = new TextField("some text");
+        showControl(control, true);
+        assertEquals("all text selected", control.getText(), control.getSelectedText());
+        Button button = new Button("dummy");
+        showControl(button, true);
+        assertEquals("selection cleared", 0, control.getSelectedText().length());
+    }
+
+    /**
+     * Tests that focusOwnerListener is re-wired as expected on changing scene
+     * (here: by removing/adding the textField)
+     *
+     * Note: this tests both sceneListener and focusOwnerListener are properly updated.
+     */
+    @Test
+    public void testFocusOwnerListenerOnSceneChanged() {
+        // setup: two focusable nodes, textField focused
+        String firstWord = "some";
+        String secondWord = "text";
+        String text = firstWord + " " + secondWord;
+        TextField control = new TextField(text);
+        showControl(control, true);
+        Button button = new Button("dummy");
+        showControl(button, false);
+        control.selectNextWord();
+        assertEquals("sanity: ", secondWord, control.getSelectedText());
+        // detach textfield from scene
+        root.getChildren().remove(control);
+        assertEquals("selection unchanged after remove", secondWord, control.getSelectedText());
+        // change scene's focusOwner to another node
+        Button secondButton = new Button("another dummy");
+        showControl(secondButton, true);
+        assertEquals("selection unchanged after focusOwner change in old scene",
+                secondWord, control.getSelectedText());
+        // re-add textField
+        root.getChildren().add(control);
+        control.requestFocus();
+        assertEquals("selection changed on becoming scene's focusOwner",
+                text, control.getSelectedText());
+    }
+
+    /**
+     * Guard against regression of JDK-8116975: activate another stage must not affect
+     * selection of textField.
+     */
+    @Test
+    public void testFocusOwnerListenerSecondStage() {
+        String firstWord = "some";
+        String secondWord = "text";
+        String text = firstWord + " " + secondWord;
+        TextField control = new TextField(text);
+        showControl(control, true);
+        Button button = new Button("dummy");
+        showControl(button, false);
+        control.selectNextWord();
+        assertEquals("sanity: ", secondWord, control.getSelectedText());
+
+        // build and activate second stage
+        VBox secondRoot = new VBox(10, new Button("secondButton"));
+        Scene secondScene = new Scene(secondRoot);
+        Stage secondStage = new Stage();
+        secondStage.setScene(secondScene);
+        secondStage.show();
+        secondStage.requestFocus();
+
+        try {
+            assertTrue("sanity: ", secondStage.isFocused());
+            assertEquals("selection unchanged", secondWord, control.getSelectedText());
+            // back to first
+            stage.requestFocus();
+            assertTrue("sanity: ", stage.isFocused());
+            assertTrue("sanity: ", control.isFocused());
+            assertEquals("selection unchanged", secondWord, control.getSelectedText());
+        } finally {
+            // cleanup
+            secondStage.hide();
+        }
+    }
+
+//---------- TextInputControl
+
+    @Test
+    public void testChildMapsCleared() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        InputMap<?> inputMap = behavior.getInputMap();
+        assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
+        behavior.dispose();
+        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
+    }
+
+    @Test
+    public void testDefaultMappingsCleared() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        InputMap<?> inputMap = behavior.getInputMap();
+        assertFalse("sanity: inputMap has mappings", inputMap.getMappings().isEmpty());
+        behavior.dispose();
+        assertEquals("default mappings must be cleared", 0, inputMap.getMappings().size());
+    }
+
+    /**
+     * Sanity test: mappings to key pad keys.
+     */
+    @Test
+    public void testKeyPadMapping() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        InputMap<?> inputMap = behavior.getInputMap();
+        // FIXME: test for all?
+        // Here we take one of the expected only - assumption being that
+        // if the one is properly registered, it's siblings are handled as well
+        KeyCode expectedCode = KeyCode.KP_LEFT;
+        KeyMapping expectedMapping = new KeyMapping(expectedCode, null);
+        assertTrue(inputMap.getMappings().contains(expectedMapping));
+    }
+
+    /**
+     * Sanity test: child mappings to key pad keys.
+     */
+    @Test
+    public void testKeyPadMappingChildInputMap() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        InputMap<?> inputMap = behavior.getInputMap();
+        // FIXME: test for all?
+        // Here we take one of the expected only - assumption being that
+        // if the one is properly registered, its siblings are handled as well
+        KeyCode expectedCode = KeyCode.KP_LEFT;
+        // test os specific child mappings
+        InputMap<?> childInputMapMac = inputMap.getChildInputMaps().get(0);
+        KeyMapping expectedMac = new KeyMapping(new KeyBinding(expectedCode).shortcut(), null);
+        assertTrue(childInputMapMac.getMappings().contains(expectedMac));
+
+        InputMap<?> childInputMapNotMac = inputMap.getChildInputMaps().get(1);
+        KeyMapping expectedNotMac = new KeyMapping(new KeyBinding(expectedCode).ctrl(), null);
+        assertTrue(childInputMapNotMac.getMappings().contains(expectedNotMac));
+    }
+
+    /**
+     * Sanity test: listener to textProperty still effective after fix
+     * (accidentally added twice)
+     */
+    @Test
+    public void testTextPropertyListener() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        assertNull("sanity: initial bidi", getRawBidi(behavior));
+        // validate bidi field
+        isRTLText(behavior);
+        assertNotNull(getRawBidi(behavior));
+        control.setText("dummy");
+        assertNull("listener working (bidi is reset)", getRawBidi(behavior));
+    }
 
 //----------- TreeView
 
@@ -188,8 +388,46 @@ public class BehaviorCleanupTest {
 
   //------------------ setup/cleanup
 
+    /**
+     * Ensures the control is shown and focused in an active scenegraph.
+     *
+     * @param control the control to show
+     */
+    protected void showControl(Control control) {
+        showControl(control, true);
+    }
+
+    /**
+     * Ensures the control is shown in an active scenegraph. Requests
+     * focus on the control if focused == true.
+     *
+     * @param control the control to show
+     * @param focused if true, requests focus on the added control
+     */
+    protected void showControl(Control control, boolean focused) {
+        if (root == null) {
+            root = new VBox();
+            scene = new Scene(root);
+            stage = new Stage();
+            stage.setScene(scene);
+        }
+        if (!root.getChildren().contains(control)) {
+            root.getChildren().add(control);
+        }
+        stage.show();
+        if (focused) {
+            stage.requestFocus();
+            control.requestFocus();
+            assertTrue(control.isFocused());
+            assertSame(control, scene.getFocusOwner());
+        }
+    }
+
     @After
     public void cleanup() {
+        if (stage != null) {
+            stage.hide();
+        }
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 

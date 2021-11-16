@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -350,6 +350,14 @@ extern NSSize maxScreenDimensions;
     jint newH = (h > 0) ? h : (ch > 0) ? (jint)sizeForClient.height : (jint)size.height;
 
     [self _setWindowFrameWithRect:NSMakeRect(newX, newY, newW, newH) withDisplay:JNI_TRUE withAnimate:JNI_FALSE];
+
+    NSRect flipFrame = [self _flipFrame];
+    if (newX != flipFrame.origin.x || newY != flipFrame.origin.y) {
+        // If the new location does not match the position of the window,
+        // send back the actual position to notify the WindowStage,
+        // as it is possible that the windowDidMove event is not triggered.
+        [self _sendJavaWindowMoveEventForFrame:flipFrame];
+    }
 }
 
 - (void)_restorePreZoomedRect

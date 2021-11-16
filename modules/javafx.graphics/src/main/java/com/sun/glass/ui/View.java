@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ public abstract class View {
     @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
     @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
+    @SuppressWarnings("removal")
     final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");
         if (force != null) return Boolean.parseBoolean(force);

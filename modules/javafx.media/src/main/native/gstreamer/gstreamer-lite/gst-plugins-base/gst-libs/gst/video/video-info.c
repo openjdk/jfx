@@ -641,7 +641,7 @@ gst_video_info_is_equal (const GstVideoInfo * info, const GstVideoInfo * other)
  * Returns: a new #GstCaps containing the info of @info.
  */
 GstCaps *
-gst_video_info_to_caps (GstVideoInfo * info)
+gst_video_info_to_caps (const GstVideoInfo * info)
 {
   GstCaps *caps;
   const gchar *format;
@@ -686,14 +686,14 @@ gst_video_info_to_caps (GstVideoInfo * info)
 
   if (GST_VIDEO_INFO_MULTIVIEW_MODE (info) != GST_VIDEO_MULTIVIEW_MODE_NONE) {
     const gchar *caps_str = NULL;
+    GstVideoMultiviewFlags multiview_flags =
+        GST_VIDEO_INFO_MULTIVIEW_FLAGS (info);
 
     /* If the half-aspect flag is set, applying it into the PAR of the
      * resulting caps now seems safe, and helps with automatic behaviour
      * in elements that aren't explicitly multiview aware */
-    if (GST_VIDEO_INFO_MULTIVIEW_FLAGS (info) &
-        GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT) {
-      GST_VIDEO_INFO_MULTIVIEW_FLAGS (info) &=
-          ~GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT;
+    if (multiview_flags & GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT) {
+      multiview_flags &= ~GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT;
       switch (GST_VIDEO_INFO_MULTIVIEW_MODE (info)) {
         case GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE:
         case GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE_QUINCUNX:
@@ -716,7 +716,7 @@ gst_video_info_to_caps (GstVideoInfo * info)
     if (caps_str != NULL) {
       gst_caps_set_simple (caps, "multiview-mode", G_TYPE_STRING,
           caps_str, "multiview-flags", GST_TYPE_VIDEO_MULTIVIEW_FLAGSET,
-          GST_VIDEO_INFO_MULTIVIEW_FLAGS (info), GST_FLAG_SET_MASK_EXACT, NULL);
+          multiview_flags, GST_FLAG_SET_MASK_EXACT, NULL);
     }
   }
 

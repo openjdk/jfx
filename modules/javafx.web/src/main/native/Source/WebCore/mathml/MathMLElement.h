@@ -85,13 +85,12 @@ public:
         Stretched = 18
     };
 
-    virtual Optional<bool> specifiedDisplayStyle() { return WTF::nullopt; }
     virtual Optional<MathVariant> specifiedMathVariant() { return WTF::nullopt; }
 
     virtual void updateSelectedChild() { }
 
 protected:
-    MathMLElement(const QualifiedName& tagName, Document&);
+    MathMLElement(const QualifiedName& tagName, Document&, ConstructionType = CreateMathMLElement);
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     bool childShouldCreateRenderer(const Node&) const override;

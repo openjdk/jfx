@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,8 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     static {
 
-        d3dEnabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             if (PrismSettings.verbose) {
                 System.out.println("Loading D3D native library ...");
             }
@@ -56,6 +57,7 @@ public final class D3DPipeline extends GraphicsPipeline {
             }
             return Boolean.valueOf(nInit(PrismSettings.class, true));
         });
+        d3dEnabled = tmp;
 
         if (PrismSettings.verbose) {
             System.out.println("Direct3D initialization " + (d3dEnabled ? "succeeded" : "failed"));

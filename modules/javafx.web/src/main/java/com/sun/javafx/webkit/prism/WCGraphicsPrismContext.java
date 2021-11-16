@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,6 +81,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
+    @SuppressWarnings("removal")
     private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
             AccessController.doPrivileged((PrivilegedAction<String>) () ->
             System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));

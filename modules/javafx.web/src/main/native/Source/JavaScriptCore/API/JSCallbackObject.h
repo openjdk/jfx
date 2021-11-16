@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,7 +69,10 @@ public:
         m_privateProperties->deletePrivateProperty(propertyName);
     }
 
-    void visitChildren(SlotVisitor& visitor)
+    DECLARE_VISIT_CHILDREN;
+
+    template<typename Visitor>
+    void visitChildren(Visitor& visitor)
     {
         JSPrivatePropertyMap* properties = m_privateProperties.get();
         if (!properties)
@@ -103,7 +106,8 @@ public:
             m_propertyMap.remove(propertyName.impl());
         }
 
-        void visitChildren(SlotVisitor& visitor)
+        template<typename Visitor>
+        void visitChildren(Visitor& visitor)
         {
             LockHolder locker(m_lock);
             for (auto& pair : m_propertyMap) {
@@ -125,7 +129,7 @@ template <class Parent>
 class JSCallbackObject final : public Parent {
 public:
     using Base = Parent;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | ProhibitsPropertyCaching | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ImplementsHasInstance | OverridesAnyFormOfGetPropertyNames | OverridesGetCallData;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesGetCallData | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ImplementsHasInstance | ProhibitsPropertyCaching | GetOwnPropertySlotMayBeWrongAboutDontEnum;
     static_assert(!(StructureFlags & ImplementsDefaultHasInstance), "using customHasInstance");
 
     ~JSCallbackObject();
@@ -182,6 +186,11 @@ public:
 
     using Parent::methodTable;
 
+    static EncodedJSValue callImpl(JSGlobalObject*, CallFrame*);
+    static EncodedJSValue constructImpl(JSGlobalObject*, CallFrame*);
+    static EncodedJSValue staticFunctionGetterImpl(JSGlobalObject*, EncodedJSValue, PropertyName);
+    static EncodedJSValue callbackGetterImpl(JSGlobalObject*, EncodedJSValue, PropertyName);
+
 private:
     JSCallbackObject(JSGlobalObject*, Structure*, JSClassRef, void* data);
     JSCallbackObject(VM&, JSClassRef, Structure*);
@@ -206,34 +215,41 @@ private:
 
     static bool customHasInstance(JSObject*, JSGlobalObject*, JSValue);
 
-    static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
     static CallData getConstructData(JSCell*);
     static CallData getCallData(JSCell*);
 
-    static void visitChildren(JSCell* cell, SlotVisitor& visitor)
-    {
-        JSCallbackObject* thisObject = jsCast<JSCallbackObject*>(cell);
-        ASSERT_GC_OBJECT_INHERITS((static_cast<Parent*>(thisObject)), JSCallbackObject<Parent>::info());
-        Parent::visitChildren(thisObject, visitor);
-        thisObject->m_callbackObjectData->visitChildren(visitor);
-    }
+    DECLARE_VISIT_CHILDREN;
 
     void init(JSGlobalObject*);
 
     static JSCallbackObject* asCallbackObject(JSValue);
     static JSCallbackObject* asCallbackObject(EncodedJSValue);
 
-    static EncodedJSValue JSC_HOST_CALL call(JSGlobalObject*, CallFrame*);
-    static EncodedJSValue JSC_HOST_CALL construct(JSGlobalObject*, CallFrame*);
+    using RawNativeFunction = EncodedJSValue(JSC_HOST_CALL_ATTRIBUTES*)(JSGlobalObject*, CallFrame*);
+
+    static RawNativeFunction getCallFunction();
+    static RawNativeFunction getConstructFunction();
+
+    static GetValueFunc getStaticFunctionGetter();
+    static GetValueFunc getCallbackGetter();
 
     JSValue getStaticValue(JSGlobalObject*, PropertyName);
-    static EncodedJSValue staticFunctionGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
-    static EncodedJSValue callbackGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
 
     std::unique_ptr<JSCallbackObjectData> m_callbackObjectData;
     const ClassInfo* m_classInfo { nullptr };
 };
+
+template <class Parent>
+template<typename Visitor>
+void JSCallbackObject<Parent>::visitChildrenImpl(JSCell* cell, Visitor& visitor)
+{
+    JSCallbackObject* thisObject = jsCast<JSCallbackObject*>(cell);
+    ASSERT_GC_OBJECT_INHERITS((static_cast<Parent*>(thisObject)), JSCallbackObject<Parent>::info());
+    Parent::visitChildren(thisObject, visitor);
+    thisObject->m_callbackObjectData->visitChildren(visitor);
+}
 
 } // namespace JSC
 

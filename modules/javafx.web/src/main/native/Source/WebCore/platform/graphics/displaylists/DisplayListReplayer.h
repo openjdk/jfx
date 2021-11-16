@@ -38,24 +38,47 @@ class ImageData;
 
 namespace DisplayList {
 
+enum class StopReplayReason : uint8_t {
+    ReplayedAllItems,
+    MissingCachedResource,
+    ChangeDestinationImageBuffer,
+    InvalidItem,
+    OutOfMemory
+};
+
+struct ReplayResult {
+    std::unique_ptr<DisplayList> trackedDisplayList;
+    size_t numberOfBytesRead { 0 };
+    Optional<RenderingResourceIdentifier> nextDestinationImageBuffer;
+    Optional<RenderingResourceIdentifier> missingCachedResourceIdentifier;
+    StopReplayReason reasonForStopping { StopReplayReason::ReplayedAllItems };
+};
+
 class Replayer {
     WTF_MAKE_NONCOPYABLE(Replayer);
 public:
     class Delegate;
-    WEBCORE_EXPORT Replayer(GraphicsContext&, const DisplayList&, Delegate* = nullptr);
+    WEBCORE_EXPORT Replayer(GraphicsContext&, const DisplayList&, const ImageBufferHashMap* = nullptr, const NativeImageHashMap* = nullptr, const FontRenderingResourceMap* = nullptr, Delegate* = nullptr);
     WEBCORE_EXPORT ~Replayer();
 
-    WEBCORE_EXPORT std::unique_ptr<DisplayList> replay(const FloatRect& initialClip = { }, bool trackReplayList = false);
+    WEBCORE_EXPORT ReplayResult replay(const FloatRect& initialClip = { }, bool trackReplayList = false);
 
     class Delegate {
     public:
         virtual ~Delegate() { }
-        virtual bool apply(Item&, GraphicsContext&) { return false; }
+        virtual bool apply(ItemHandle, GraphicsContext&) { return false; }
     };
 
 private:
-    const DisplayList& m_displayList;
+    GraphicsContext& context() const;
+    std::pair<Optional<StopReplayReason>, Optional<RenderingResourceIdentifier>> applyItem(ItemHandle);
+
     GraphicsContext& m_context;
+    RefPtr<WebCore::ImageBuffer> m_maskImageBuffer;
+    const DisplayList& m_displayList;
+    const ImageBufferHashMap& m_imageBuffers;
+    const NativeImageHashMap& m_nativeImages;
+    const FontRenderingResourceMap& m_fonts;
     Delegate* m_delegate;
 };
 

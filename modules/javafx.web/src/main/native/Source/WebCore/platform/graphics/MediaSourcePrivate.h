@@ -27,8 +27,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef MediaSourcePrivate_h
-#define MediaSourcePrivate_h
+
+#pragma once
 
 #if ENABLE(MEDIA_SOURCE)
 
@@ -49,18 +49,33 @@ public:
     MediaSourcePrivate() = default;
     virtual ~MediaSourcePrivate() = default;
 
-    enum AddStatus { Ok, NotSupported, ReachedIdLimit };
-    virtual AddStatus addSourceBuffer(const ContentType&, RefPtr<SourceBufferPrivate>&) = 0;
-    virtual void durationChanged() = 0;
+    enum class AddStatus : uint8_t {
+        Ok,
+        NotSupported,
+        ReachedIdLimit
+    };
+    virtual AddStatus addSourceBuffer(const ContentType&, bool webMParserEnabled, RefPtr<SourceBufferPrivate>&) = 0;
+    virtual void durationChanged(const MediaTime&) = 0;
     enum EndOfStreamStatus { EosNoError, EosNetworkError, EosDecodeError };
     virtual void markEndOfStream(EndOfStreamStatus) = 0;
     virtual void unmarkEndOfStream() = 0;
+    virtual bool isEnded() const = 0;
 
     virtual MediaPlayer::ReadyState readyState() const = 0;
     virtual void setReadyState(MediaPlayer::ReadyState) = 0;
 
+    virtual void setIsSeeking(bool isSeeking) { m_isSeeking = isSeeking; }
     virtual void waitForSeekCompleted() = 0;
     virtual void seekCompleted() = 0;
+
+    virtual void setTimeFudgeFactor(const MediaTime& fudgeFactor) { m_timeFudgeFactor = fudgeFactor; }
+
+    MediaTime timeFudgeFactor() const { return m_timeFudgeFactor; }
+    bool isSeeking() const { return m_isSeeking; }
+
+private:
+    MediaTime m_timeFudgeFactor;
+    bool m_isSeeking { false };
 };
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus);
@@ -88,7 +103,15 @@ struct LogArgument<WebCore::MediaSourcePrivate::EndOfStreamStatus> {
     }
 };
 
+template<> struct EnumTraits<WebCore::MediaSourcePrivate::AddStatus> {
+    using values = EnumValues<
+        WebCore::MediaSourcePrivate::AddStatus,
+        WebCore::MediaSourcePrivate::AddStatus::Ok,
+        WebCore::MediaSourcePrivate::AddStatus::NotSupported,
+        WebCore::MediaSourcePrivate::AddStatus::ReachedIdLimit
+    >;
+};
+
 } // namespace WTF
 
-#endif
 #endif

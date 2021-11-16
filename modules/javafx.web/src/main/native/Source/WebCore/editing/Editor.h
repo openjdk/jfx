@@ -322,7 +322,7 @@ public:
     TextCheckingGuesses guessesForMisspelledOrUngrammatical();
     bool isSpellCheckingEnabledInFocusedNode() const;
     bool isSpellCheckingEnabledFor(Node*) const;
-    WEBCORE_EXPORT void markMisspellingsAfterTypingToWord(const VisiblePosition &wordStart, const VisibleSelection& selectionAfterTyping, bool doReplacement);
+    WEBCORE_EXPORT void markMisspellingsAfterTypingToWord(const VisiblePosition& wordStart, const VisibleSelection& selectionAfterTyping, bool doReplacement);
     Optional<SimpleRange> markMisspellings(const VisibleSelection&); // Returns first misspelling range.
     void markBadGrammar(const VisibleSelection&);
     void markMisspellingsAndBadGrammar(const VisibleSelection& spellingSelection, bool markGrammar, const VisibleSelection& grammarSelection);
@@ -336,7 +336,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     NO_RETURN_DUE_TO_ASSERT
 #endif
-    void changeBackToReplacedString(const String& replacedString);
+    WEBCORE_EXPORT void changeBackToReplacedString(const String& replacedString);
 
 #if !PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void advanceToNextMisspelling(bool startBeforeSelection = false);
@@ -379,7 +379,7 @@ public:
     WEBCORE_EXPORT void setComposition(const String&, const Vector<CompositionUnderline>&, const Vector<CompositionHighlight>&, unsigned selectionStart, unsigned selectionEnd);
     WEBCORE_EXPORT void confirmComposition();
     WEBCORE_EXPORT void confirmComposition(const String&); // if no existing composition, replaces selection
-    void confirmCompositionAndNotifyClient();
+    void confirmOrCancelCompositionAndNotifyClient();
     WEBCORE_EXPORT void cancelComposition();
     bool cancelCompositionIfSelectionIsInvalid();
     WEBCORE_EXPORT Optional<SimpleRange> compositionRange() const;
@@ -462,7 +462,7 @@ public:
     void selectionWillChange();
     void respondToChangedSelection(const VisibleSelection& oldSelection, OptionSet<FrameSelection::SetSelectionOption>);
     WEBCORE_EXPORT void updateEditorUINowIfScheduled();
-    bool shouldChangeSelection(const VisibleSelection& oldSelection, const VisibleSelection& newSelection, EAffinity, bool stillSelecting) const;
+    bool shouldChangeSelection(const VisibleSelection& oldSelection, const VisibleSelection& newSelection, Affinity, bool stillSelecting) const;
     WEBCORE_EXPORT unsigned countMatchesForText(const String&, const Optional<SimpleRange>&, FindOptions, unsigned limit, bool markMatches, Vector<SimpleRange>*);
     bool markedTextMatchesAreHighlighted() const;
     WEBCORE_EXPORT void setMarkedTextMatchesAreHighlighted(bool);
@@ -489,7 +489,7 @@ public:
     EditorParagraphSeparator defaultParagraphSeparator() const { return m_defaultParagraphSeparator; }
     void setDefaultParagraphSeparator(EditorParagraphSeparator separator) { m_defaultParagraphSeparator = separator; }
     Vector<String> dictationAlternativesForMarker(const DocumentMarker&);
-    void applyDictationAlternativelternative(const String& alternativeString);
+    void applyDictationAlternative(const String& alternativeString);
 
 #if USE(APPKIT)
     WEBCORE_EXPORT void uppercaseWord();
@@ -511,6 +511,7 @@ public:
     WEBCORE_EXPORT void toggleAutomaticTextReplacement();
     WEBCORE_EXPORT bool isAutomaticSpellingCorrectionEnabled();
     WEBCORE_EXPORT void toggleAutomaticSpellingCorrection();
+    WEBCORE_EXPORT bool canEnableAutomaticSpellingCorrection() const;
 #endif
 
     RefPtr<DocumentFragment> webContentFromPasteboard(Pasteboard&, const SimpleRange& context, bool allowPlainText, bool& chosePlainText);
@@ -569,8 +570,6 @@ public:
     void getPasteboardTypesAndDataForAttachment(Element&, Vector<String>& outTypes, Vector<RefPtr<SharedBuffer>>& outData);
 #endif
 #endif
-
-    WEBCORE_EXPORT RefPtr<HTMLImageElement> insertEditableImage();
 
     WEBCORE_EXPORT RefPtr<TextPlaceholderElement> insertTextPlaceholder(const IntSize&);
     WEBCORE_EXPORT void removeTextPlaceholder(TextPlaceholderElement&);

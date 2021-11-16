@@ -58,10 +58,10 @@ class LibWebRTCProvider;
 class MediaRecorderProvider;
 class PaymentCoordinatorClient;
 class PerformanceLoggingClient;
-class PlugInClient;
 class PluginInfoProvider;
 class ProgressTrackerClient;
 class SocketProvider;
+class SpeechRecognitionProvider;
 class StorageNamespaceProvider;
 class UserContentProvider;
 class UserContentURLPattern;
@@ -73,7 +73,7 @@ class SpeechSynthesisClient;
 class PageConfiguration {
     WTF_MAKE_NONCOPYABLE(PageConfiguration); WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<LibWebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<MediaRecorderProvider>&&);
+    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<LibWebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<UserContentProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<SpeechRecognitionProvider>&&, UniqueRef<MediaRecorderProvider>&&);
     WEBCORE_EXPORT ~PageConfiguration();
     PageConfiguration(PageConfiguration&&);
 
@@ -101,7 +101,6 @@ public:
 
     UniqueRef<LibWebRTCProvider> libWebRTCProvider;
 
-    std::unique_ptr<PlugInClient> plugInClient;
     UniqueRef<ProgressTrackerClient> progressTrackerClient;
     Ref<BackForwardClient> backForwardClient;
     Ref<CookieJar> cookieJar;
@@ -121,18 +120,21 @@ public:
     Ref<CacheStorageProvider> cacheStorageProvider;
     RefPtr<PluginInfoProvider> pluginInfoProvider;
     RefPtr<StorageNamespaceProvider> storageNamespaceProvider;
-    RefPtr<UserContentProvider> userContentProvider;
+    Ref<UserContentProvider> userContentProvider;
     RefPtr<VisitedLinkStore> visitedLinkStore;
 
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     RefPtr<DeviceOrientationUpdateProvider> deviceOrientationUpdateProvider;
 #endif
     Vector<UserContentURLPattern> corsDisablingPatterns;
+    UniqueRef<SpeechRecognitionProvider> speechRecognitionProvider;
     UniqueRef<MediaRecorderProvider> mediaRecorderProvider;
     bool loadsSubresources { true };
     bool loadsFromNetwork { true };
     bool userScriptsShouldWaitUntilNotification { true };
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
+    bool textInteractionEnabled { true };
+    bool httpsUpgradeEnabled { true };
 };
 
 }

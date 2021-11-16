@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,23 +35,6 @@ namespace WebCore {
 
 void BitmapTextureJava::updateContents(const void*, const IntRect&, const IntPoint&, int)
 {
-}
-
-void BitmapTextureJava::updateContents(TextureMapper& mapper, GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& sourceOffset, float /*scale*/)
-{
-    GraphicsContext& context = m_image->context();
-    // Share RenderThemeJava context
-    context.platformContext()->setJRenderTheme(static_cast<TextureMapperJava&>(mapper).graphicsContext()->platformContext()->jRenderTheme());
-
-    context.clearRect(targetRect);
-
-    IntRect sourceRect(targetRect);
-    sourceRect.setLocation(sourceOffset);
-    context.save();
-    context.clip(targetRect);
-    context.translate(targetRect.x() - sourceOffset.x(), targetRect.y() - sourceOffset.y());
-    sourceLayer->paintGraphicsLayerContents(context, sourceRect);
-    context.restore();
 }
 
 void BitmapTextureJava::didReset()

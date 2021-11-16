@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,7 +93,8 @@ public abstract class PrismFontFactory implements FontFactory {
         isEmbedded = PlatformUtil.isEmbedded();
         int[] tempCacheLayoutSize = {0x10000};
 
-        debugFonts = AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> {
                     NativeLibLoader.loadLibrary("javafx_font");
                     String dbg = System.getProperty("prism.debugfonts", "");
@@ -132,7 +133,7 @@ public abstract class PrismFontFactory implements FontFactory {
                         }
                     }
 
-                    boolean lcdTextOff = isIOS || isAndroid || isEmbedded;
+                    boolean lcdTextOff = isMacOSX || isIOS || isAndroid || isEmbedded;
                     String defLCDProp = lcdTextOff ? "false" : "true";
                     String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
                     lcdEnabled = lcdProp.equals("true");
@@ -153,6 +154,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     return debug;
                 }
         );
+        debugFonts = tmp;
         cacheLayoutSize = tempCacheLayoutSize[0];
     }
 
@@ -725,31 +727,6 @@ public abstract class PrismFontFactory implements FontFactory {
         return null;
     }
 
-    boolean isInstalledFont(String fileName) {
-        // avoid loading the full windows map. Ignore drive letter
-        // as its common to install on D: too in multi-boot.
-        String fileKey;
-        if (isWindows) {
-            if (fileName.toLowerCase().contains("\\windows\\fonts")) {
-                return true;
-            }
-            File f = new File(fileName);
-            fileKey = f.getName();
-        } else {
-            if (isMacOSX && fileName.toLowerCase().contains("/library/fonts")) {
-                // Most fonts are installed in either /System/Library/Fonts/
-                // or /Library/Fonts/
-                return true;
-            }
-            File f = new File(fileName);
-            // fileToFontMap key is the full path on non-windows
-            fileKey = f.getPath();
-        }
-
-        getFullNameToFileMap();
-        return fileToFontMap.get(fileKey.toLowerCase()) != null;
-    }
-
     /* To be called only by methods that already inited the maps
      */
     synchronized private FontResource
@@ -1233,6 +1210,7 @@ public abstract class PrismFontFactory implements FontFactory {
             return sysFontDir+"\\"+filename;
         }
 
+        @SuppressWarnings("removal")
         String path = AccessController.doPrivileged(
             new PrivilegedAction<String>() {
                 public String run() {
@@ -1411,7 +1389,8 @@ public abstract class PrismFontFactory implements FontFactory {
                     }
                 }
             };
-            java.security.AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = java.security.AccessController.doPrivileged(
                     (PrivilegedAction<Object>) () -> {
                         /* The thread must be a member of a thread group
                          * which will not get GCed before VM exit.
@@ -1817,6 +1796,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return fontToFileMap;
     }
 
+    @SuppressWarnings("removal")
     public final boolean hasPermission() {
         try {
             SecurityManager sm = System.getSecurityManager();
@@ -1887,9 +1867,11 @@ public abstract class PrismFontFactory implements FontFactory {
         final File dir = new File(fontDir);
         String[] files = null;
         try {
-            files = AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            String[] tmp = AccessController.doPrivileged(
                     (PrivilegedExceptionAction<String[]>) () -> dir.list(TTFilter.getInstance())
             );
+            files = tmp;
         } catch (Exception e) {
         }
 

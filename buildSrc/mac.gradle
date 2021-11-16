@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,10 @@ def defaultSdkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOS
 def isAarch64 = TARGET_ARCH == "aarch64" || TARGET_ARCH == "arm64";
 def macOSMinVersion = isAarch64 ? "11.0" : "10.12";
 defineProperty("MACOSX_MIN_VERSION", macOSMinVersion);
+
+def macOSMinVersionArr = macOSMinVersion.split("\\.")
+def macOSMinVersionMajor = macOSMinVersionArr[0]
+def macOSMinVersionMinor = macOSMinVersionArr[1]
 
 // Create $buildDir/mac_tools.properties file and load props from it
 setupTools("mac_tools",
@@ -178,7 +182,9 @@ MAC.glass.javahInclude = [
     "com/sun/glass/ui/mac/*"]
 MAC.glass.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/mac")
 MAC.glass.compiler = compiler
-MAC.glass.ccFlags = [ccFlags].flatten()
+MAC.glass.ccFlags = [ccFlags,
+    "-DMACOS_MIN_VERSION_MAJOR=$macOSMinVersionMajor",
+    "-DMACOS_MIN_VERSION_MINOR=$macOSMinVersionMinor"].flatten()
 MAC.glass.linker = linker
 MAC.glass.linkFlags = [linkFlags].flatten()
 MAC.glass.lib = "glass"

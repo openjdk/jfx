@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,18 +65,40 @@ public final class Match implements Comparable<Match> {
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoClasses;
     }
 
+    /**
+     * Gets the {@code Selector}.
+     * @return the {@code Selector}
+     */
     public Selector getSelector() {
         return selector;
     }
 
+    /**
+     * Gets the pseudo class state.
+     * @return the pseudo class state
+     */
     public PseudoClassState getPseudoClasses() {
         return pseudoClasses;
     }
 
+    /**
+     * Gets the specificity.
+     * @return the specificity
+     */
     public int getSpecificity() {
         return specificity;
     }
 
+    /**
+     * Compares this object with the given {@code Match} object.
+     * <p>
+     * Comparison is based on the specificity of the objects.
+     * Specificity is calculated based on the id count, the style class count and
+     * the pseudoclass count.
+     * @param o the {@code Match} object to be compared
+     * @return the difference between the specificity of this object and
+     * the specificity of the given {@code Match} object
+     */
     @Override public int compareTo(Match o) {
         return specificity - o.specificity;
     }

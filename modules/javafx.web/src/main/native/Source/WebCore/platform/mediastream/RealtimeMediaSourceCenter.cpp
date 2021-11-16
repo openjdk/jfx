@@ -42,6 +42,8 @@
 
 namespace WebCore {
 
+static const Seconds deviceChangeDebounceTimerInterval { 200_ms };
+
 RealtimeMediaSourceCenter& RealtimeMediaSourceCenter::singleton()
 {
     ASSERT(isMainThread());
@@ -50,6 +52,7 @@ RealtimeMediaSourceCenter& RealtimeMediaSourceCenter::singleton()
 }
 
 RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
+    : m_debounceTimer(RunLoop::main(), this, &RealtimeMediaSourceCenter::triggerDevicesChangedObservers)
 {
     m_supportedConstraints.setSupportsEchoCancellation(true);
     m_supportedConstraints.setSupportsWidth(true);
@@ -62,6 +65,8 @@ RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
 }
 
 RealtimeMediaSourceCenter::~RealtimeMediaSourceCenter() = default;
+
+RealtimeMediaSourceCenter::Observer::~Observer() = default;
 
 void RealtimeMediaSourceCenter::createMediaStream(Ref<const Logger>&& logger, NewMediaStreamHandler&& completionHandler, String&& hashSalt, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest& request)
 {
@@ -112,23 +117,48 @@ void RealtimeMediaSourceCenter::createMediaStream(Ref<const Logger>&& logger, Ne
     audioSource->whenReady(WTFMove(whenAudioSourceReady));
 }
 
-Vector<CaptureDevice> RealtimeMediaSourceCenter::getMediaStreamDevices()
+void RealtimeMediaSourceCenter::getMediaStreamDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion)
 {
-    Vector<CaptureDevice> result;
-    for (auto& device : audioCaptureFactory().audioCaptureDeviceManager().captureDevices()) {
-        if (device.enabled())
-            result.append(device);
-    }
-    for (auto& device : videoCaptureFactory().videoCaptureDeviceManager().captureDevices()) {
-        if (device.enabled())
-            result.append(device);
-    }
-    for (auto& device : displayCaptureFactory().displayCaptureDeviceManager().captureDevices()) {
-        if (device.enabled())
-            result.append(device);
-    }
+    class CaptureDeviceAccumulator : public RefCounted<CaptureDeviceAccumulator> {
+    public:
+        static Ref<CaptureDeviceAccumulator> create(CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion)
+        {
+            return adoptRef(*new CaptureDeviceAccumulator(WTFMove(completion)));
+        }
 
-    return result;
+        ~CaptureDeviceAccumulator()
+        {
+            m_completionHandler(WTFMove(m_results));
+        }
+
+        CompletionHandler<void(Vector<CaptureDevice>&&)> accumulate()
+        {
+            return [this, protectedThis = makeRef(*this)] (Vector<CaptureDevice>&& result) {
+                m_results.appendVector(WTFMove(result));
+            };
+        }
+
+    private:
+        explicit CaptureDeviceAccumulator(CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion)
+            : m_completionHandler(WTFMove(completion))
+        {
+        }
+
+        CompletionHandler<void(Vector<CaptureDevice>&&)> m_completionHandler;
+        Vector<CaptureDevice> m_results;
+    };
+
+    auto accumulator = CaptureDeviceAccumulator::create([completion = WTFMove(completion)] (auto&& devices) mutable {
+        devices.removeAllMatching([] (auto& captureDevice) {
+            return !captureDevice.enabled();
+        });
+        completion(WTFMove(devices));
+    });
+
+    audioCaptureFactory().audioCaptureDeviceManager().getCaptureDevices(accumulator->accumulate());
+    videoCaptureFactory().videoCaptureDeviceManager().getCaptureDevices(accumulator->accumulate());
+    displayCaptureFactory().displayCaptureDeviceManager().getCaptureDevices(accumulator->accumulate());
+    audioCaptureFactory().getSpeakerDevices(accumulator->accumulate());
 }
 
 static void addStringToSHA1(SHA1& sha1, const String& string)
@@ -163,18 +193,34 @@ String RealtimeMediaSourceCenter::hashStringWithSalt(const String& id, const Str
     return SHA1::hexDigest(digest).data();
 }
 
-void RealtimeMediaSourceCenter::setDevicesChangedObserver(std::function<void()>&& observer)
+void RealtimeMediaSourceCenter::addDevicesChangedObserver(Observer& observer)
 {
     ASSERT(isMainThread());
-    ASSERT(!m_deviceChangedObserver);
-    m_deviceChangedObserver = WTFMove(observer);
+    m_observers.add(observer);
+}
+
+void RealtimeMediaSourceCenter::removeDevicesChangedObserver(Observer& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.remove(observer);
 }
 
 void RealtimeMediaSourceCenter::captureDevicesChanged()
 {
     ASSERT(isMainThread());
-    if (m_deviceChangedObserver)
-        m_deviceChangedObserver();
+
+    // When a device with camera and microphone is attached or detached, the CaptureDevice notification for
+    // the different devices won't arrive at the same time so delay a bit so we can coalesce the callbacks.
+    if (!m_debounceTimer.isActive())
+        m_debounceTimer.startOneShot(deviceChangeDebounceTimerInterval);
+}
+
+void RealtimeMediaSourceCenter::triggerDevicesChangedObservers()
+{
+    auto protectedThis = makeRef(*this);
+    m_observers.forEach([](auto& observer) {
+        observer.devicesChanged();
+    });
 }
 
 void RealtimeMediaSourceCenter::getDisplayMediaDevices(const MediaStreamRequest& request, Vector<DeviceInfo>& diaplayDeviceInfo, String& firstInvalidConstraint)

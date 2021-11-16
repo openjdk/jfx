@@ -27,6 +27,7 @@
 
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
+#include "Styleable.h"
 #include "WebAnimation.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
@@ -45,7 +46,7 @@ public:
 
     bool isDeclarativeAnimation() const final { return true; }
 
-    Element* owningElement() const;
+    const Optional<const Styleable> owningElement() const;
     const Animation& backingAnimation() const { return m_backingAnimation; }
     void setBackingAnimation(const Animation&);
     void cancelFromStyle();
@@ -72,9 +73,9 @@ public:
     void flushPendingStyleChanges() const;
 
 protected:
-    DeclarativeAnimation(Element&, const Animation&);
+    DeclarativeAnimation(const Styleable&, const Animation&);
 
-    virtual void initialize(const RenderStyle* oldStyle, const RenderStyle& newStyle);
+    virtual void initialize(const RenderStyle* oldStyle, const RenderStyle& newStyle, const RenderStyle* parentElementStyle);
     virtual void syncPropertiesWithBackingAnimation();
     // elapsedTime is the animation's current time at the time the event is added and is exposed through the DOM API, timelineTime is the animations'
     // timeline current time and is not exposed through the DOM API but used by the DocumentTimeline for sorting events before dispatch.
@@ -90,6 +91,7 @@ private:
     AnimationEffectPhase m_previousPhase { AnimationEffectPhase::Idle };
 
     WeakPtr<Element> m_owningElement;
+    PseudoId m_owningPseudoId;
     Ref<Animation> m_backingAnimation;
     double m_previousIteration;
 };

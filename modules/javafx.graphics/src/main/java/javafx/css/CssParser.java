@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,10 +107,14 @@ import java.util.Map;
 import java.util.Stack;
 
 /**
+ * A parser for a CSS document string.
  * @since 9
  */
 final public class CssParser {
 
+    /**
+     * Constructs a {@code CssParser}.
+     */
     public CssParser() {
         properties = new HashMap<String,String>();
     }
@@ -180,10 +184,10 @@ final public class CssParser {
     }
 
     /**
-     * Creates a stylesheet from a CSS document string.
+     * Creates a {@code Stylesheet} from a CSS document string.
      *
      * @param stylesheetText the CSS document to parse
-     * @return the Stylesheet
+     * @return the {@code Stylesheet}
      */
     public Stylesheet parse(final String stylesheetText) {
         final Stylesheet stylesheet = new Stylesheet();
@@ -199,8 +203,8 @@ final public class CssParser {
     }
 
     /**
-     * Creates a stylesheet from a CSS document string using docbase as the base
-     * URL for resolving references within stylesheet.
+     * Creates a {@code Stylesheet} from a CSS document string using docbase as the base
+     * URL for resolving references within {@code Stylesheet}.
      *
      * @param docbase the doc base for resolving URL references
      * @param stylesheetText the CSS document to parse
@@ -256,7 +260,8 @@ final public class CssParser {
 
     }
 
-    /** Parse an in-line style from a Node.
+    /**
+     * Parse an in-line style from a {@code Node}.
      * @param node the styleable node
      * @return the style sheet
      */
@@ -809,16 +814,15 @@ final public class CssParser {
             ParsedValueImpl value = parseStrokeType(root);
             if (value == null) error(root, "Expected \'centered', \'inside\' or \'outside\'");
             return value;
-        } else if ("-fx-font-smoothing-type".equals(prop)) {
-            // TODO: Figure out a way that these properties don't need to be
-            // special cased.
+        } else if ("-fx-font-smoothing-type".equals(prop) || "-fx-blend-mode".equals(prop)) {
+            // TODO: Figure out a way that these properties don't need to be special cased.
             String str = null;
             int ttype = -1;
             final Token token = root.token;
 
             if (root.token == null
                     || ((ttype = root.token.getType()) != CssLexer.STRING
-                         && ttype != CssLexer.IDENT)
+                        && ttype != CssLexer.IDENT)
                     || (str = root.token.getText()) == null
                     || str.isEmpty()) {
                 error(root,  "Expected STRING or IDENT");
@@ -4715,6 +4719,10 @@ final public class CssParser {
         return term;
     }
 
+    /**
+     * List of errors that may have occurred during CSS processing.
+     * @return an {@code ObservableList} of {@code ParseError}
+     */
     public static ObservableList<ParseError> errorsProperty() {
         return StyleManager.errorsProperty();
     }
@@ -4722,16 +4730,23 @@ final public class CssParser {
 
 
     /**
-     * Encapsulate information about the source and nature of errors encountered
-     * while parsing CSS or applying styles to Nodes.
+     * A class that encapsulates information about the source and nature
+     *  of errors encountered while parsing CSS or applying styles to Nodes.
      */
     public static class ParseError {
 
-        /** @return The error message from the CSS code. */
+        /**
+         * Returns the error message.
+         * @return the error message
+         */
         public final String getMessage() {
             return message;
         }
 
+        /**
+         * Constructs a {@code ParseError} object with the message.
+         * @param message the message
+         */
         public ParseError(String message) {
             this.message = message;
         }
@@ -4815,6 +4830,12 @@ final public class CssParser {
             private final CssMetaData styleableProperty;
             private final Styleable styleable;
 
+            /**
+             * Constructs a {@code PropertySetError} object.
+             * @param styleableProperty CSS meta data
+             * @param styleable styleable node
+             * @param message parse error message
+             */
             public PropertySetError(CssMetaData styleableProperty,
                     Styleable styleable, String message) {
                 super(message);

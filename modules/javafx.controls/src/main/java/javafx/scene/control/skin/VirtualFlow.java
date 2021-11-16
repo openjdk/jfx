@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,7 +84,7 @@ import java.util.List;
  */
 public class VirtualFlow<T extends IndexedCell> extends Region {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -119,7 +119,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -307,7 +307,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -590,6 +590,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         verticalProperty().addListener(listenerX);
         hbar.valueProperty().addListener(listenerX);
         hbar.visibleProperty().addListener(listenerX);
+        visibleProperty().addListener(listenerX);
+        sceneProperty().addListener(listenerX);
 
 //        ChangeListener listenerY = new ChangeListener() {
 //            @Override public void handle(Bean bean, PropertyReference property) {
@@ -723,7 +725,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -996,7 +998,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -1828,7 +1830,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -3052,7 +3054,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

@@ -23,9 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://w3c.github.io/media-playback-quality/#idl-def-videoplaybackquality
+// FIXME: This is not specified as "LegacyNoInterfaceObject". It should have an interface object.
 [
     Conditional=VIDEO,
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     ImplementationLacksVTable,
 ] interface VideoPlaybackQuality {
     readonly attribute unrestricted double creationTime;

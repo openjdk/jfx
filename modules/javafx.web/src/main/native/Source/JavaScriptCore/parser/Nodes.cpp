@@ -177,6 +177,7 @@ ModuleProgramNode::ModuleProgramNode(ParserArena& parserArena, const JSTokenLoca
     : ScopeNode(parserArena, startLocation, endLocation, source, children, varEnvironment, WTFMove(funcStack), lexicalVariables, WTFMove(sloppyModeHoistedFunctions), features, innerArrowFunctionCodeFeatures, numConstants)
     , m_startColumn(startColumn)
     , m_endColumn(endColumn)
+    , m_usesAwait(features & AwaitFeature)
     , m_moduleScopeData(*WTFMove(moduleScopeData))
 {
 }
@@ -202,6 +203,7 @@ FunctionMetadataNode::FunctionMetadataNode(
         , m_constructorKind(static_cast<unsigned>(constructorKind))
         , m_needsClassFieldInitializer(static_cast<unsigned>(NeedsClassFieldInitializer::No))
         , m_isArrowFunctionBodyExpression(isArrowFunctionBodyExpression)
+        , m_privateBrandRequirement(static_cast<unsigned>(PrivateBrandRequirement::None))
         , m_parseMode(mode)
         , m_startColumn(startColumn)
         , m_endColumn(endColumn)
@@ -226,6 +228,7 @@ FunctionMetadataNode::FunctionMetadataNode(
         , m_constructorKind(static_cast<unsigned>(constructorKind))
         , m_needsClassFieldInitializer(static_cast<unsigned>(NeedsClassFieldInitializer::No))
         , m_isArrowFunctionBodyExpression(isArrowFunctionBodyExpression)
+        , m_privateBrandRequirement(static_cast<unsigned>(PrivateBrandRequirement::None))
         , m_parseMode(mode)
         , m_startColumn(startColumn)
         , m_endColumn(endColumn)

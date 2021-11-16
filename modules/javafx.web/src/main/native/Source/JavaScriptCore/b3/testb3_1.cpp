@@ -891,6 +891,11 @@ static void run(const char*)
 
 #endif // ENABLE(B3_JIT)
 
+#if ENABLE(JIT_OPERATION_VALIDATION)
+extern const uintptr_t startOfJITOperationsInTestB3 __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const uintptr_t endOfJITOperationsInTestB3 __asm("section$end$__DATA_CONST$__jsc_ops");
+#endif
+
 int main(int argc, char** argv)
 {
     const char* filter = nullptr;
@@ -909,6 +914,10 @@ int main(int argc, char** argv)
 
     WTF::initializeMainThread();
     JSC::initialize();
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+    JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
+#endif
 
     for (unsigned i = 0; i <= 2; ++i) {
         JSC::Options::defaultB3OptLevel() = i;

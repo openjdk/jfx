@@ -36,10 +36,10 @@ dictionary TextDecodeOptions {
     Exposed=(Window,Worker),
     ImplementationLacksVTable,
 ] interface TextDecoder {
-    [MayThrowException] constructor(optional DOMString label = "utf-8", optional TextDecoderOptions options);
+    constructor(optional DOMString label = "utf-8", optional TextDecoderOptions options);
 
     readonly attribute DOMString encoding;
     readonly attribute boolean fatal;
     readonly attribute boolean ignoreBOM;
-    [MayThrowException] USVString decode(optional BufferSource? input, optional TextDecodeOptions options);
+    [MayThrowException] USVString decode(optional [AllowShared] BufferSource? input, optional TextDecodeOptions options);
 };

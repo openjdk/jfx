@@ -280,6 +280,14 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
             return completionHandler(WTFMove(newRequest));
         }
 
+        if (!portAllowed(newRequest.url())) {
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load (redirect) canceled because it attempted to use a blocked port");
+            if (m_frame)
+                FrameLoader::reportBlockedLoadFailed(*m_frame, newRequest.url());
+            cancel(frameLoader()->blockedError(newRequest));
+            return completionHandler(WTFMove(newRequest));
+        }
+
         auto accessControlCheckResult = checkRedirectionCrossOriginAccessControl(request(), redirectResponse, newRequest);
         if (!accessControlCheckResult) {
             auto errorMessage = makeString("Cross-origin redirection to ", newRequest.url().string(), " denied by Cross-Origin Resource Sharing policy: ", accessControlCheckResult.error());
@@ -574,14 +582,15 @@ static void logResourceLoaded(Frame* frame, CachedResource::Type type)
         resourceType = DiagnosticLoggingKeys::scriptKey();
         break;
     case CachedResource::Type::FontResource:
-#if ENABLE(SVG_FONTS)
     case CachedResource::Type::SVGFontResource:
-#endif
         resourceType = DiagnosticLoggingKeys::fontKey();
         break;
     case CachedResource::Type::Beacon:
     case CachedResource::Type::Ping:
     case CachedResource::Type::MediaResource:
+#if ENABLE(MODEL_ELEMENT)
+    case CachedResource::Type::ModelResource:
+#endif
     case CachedResource::Type::Icon:
     case CachedResource::Type::RawResource:
         resourceType = DiagnosticLoggingKeys::rawKey();
@@ -753,7 +762,7 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
 
 void SubresourceLoader::didFail(const ResourceError& error)
 {
-    RELEASE_LOG_IF_ALLOWED("didFail: (type = %d, code = %d)", static_cast<int>(error.type()), error.errorCode());
+    RELEASE_LOG_IF_ALLOWED("didFail: (type=%d, code=%d)", static_cast<int>(error.type()), error.errorCode());
 
 #if USE(QUICK_LOOK)
     if (auto previewLoader = m_previewLoader.get())
@@ -791,7 +800,7 @@ void SubresourceLoader::didFail(const ResourceError& error)
 
 void SubresourceLoader::willCancel(const ResourceError& error)
 {
-    RELEASE_LOG_IF_ALLOWED("willCancel: (type = %d, code = %d)", static_cast<int>(error.type()), error.errorCode());
+    RELEASE_LOG_IF_ALLOWED("willCancel: (type=%d, code=%d)", static_cast<int>(error.type()), error.errorCode());
 
 #if PLATFORM(IOS_FAMILY)
     // Since we defer initialization to scheduling time on iOS but
@@ -821,8 +830,10 @@ void SubresourceLoader::willCancel(const ResourceError& error)
 
 void SubresourceLoader::didCancel(const ResourceError&)
 {
-    if (m_state == Uninitialized)
+    if (m_state == Uninitialized || reachedTerminalState())
         return;
+
+    ASSERT(m_resource);
 
     if (m_resource->type() != CachedResource::Type::MainResource)
         tracePoint(SubresourceLoadDidEnd);
@@ -863,9 +874,6 @@ void SubresourceLoader::releaseResources()
 
 void SubresourceLoader::reportResourceTiming(const NetworkLoadMetrics& networkLoadMetrics)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().resourceTimingEnabled())
-        return;
-
     if (!ResourceTimingInformation::shouldAddResourceTiming(*m_resource))
         return;
 

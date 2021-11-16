@@ -47,7 +47,7 @@ class FetchRequest;
 struct ReadableStreamChunk;
 class ReadableStreamSource;
 
-class FetchResponse final : public FetchBodyOwner, public CanMakeWeakPtr<FetchResponse> {
+class FetchResponse final : public FetchBodyOwner {
 public:
     using Type = ResourceResponse::Type;
 
@@ -107,6 +107,9 @@ public:
     void initializeOpaqueLoadIdentifierForTesting() { m_opaqueLoadIdentifier = 1; }
 
     const HTTPHeaderMap& internalResponseHeaders() const { return m_internalResponse.httpHeaderFields(); }
+
+    bool isCORSSameOrigin() const;
+    bool hasWasmMIMEType() const;
 
 private:
     FetchResponse(ScriptExecutionContext&, Optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);

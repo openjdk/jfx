@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -66,9 +66,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "16.0.1"
-      BOOT_JDK_FILENAME: "openjdk-16.0.1_linux-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk16.0.1/7147401fd7354114ac51ef3e1328291f/9/GPL/openjdk-16.0.1_linux-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "16.0.2"
+      BOOT_JDK_FILENAME: "openjdk-16.0.2_linux-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk16.0.2/d4a915d82b4c4fbb9bde534da945d746/7/GPL/openjdk-16.0.2_linux-x64_bin.tar.gz"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -83,7 +83,7 @@ jobs:
         run: |
           set -x
           sudo apt-get update
-          sudo apt-get install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-10=10.2.0-5ubuntu1~20.04 g++-10=10.2.0-5ubuntu1~20.04
+          sudo apt-get install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-10=10.3.0-1ubuntu1~20.04 g++-10=10.3.0-1ubuntu1~20.04
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10
           mkdir -p "${HOME}/build-tools"
           wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
@@ -148,9 +148,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "16.0.1"
-      BOOT_JDK_FILENAME: "openjdk-16.0.1_osx-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk16.0.1/7147401fd7354114ac51ef3e1328291f/9/GPL/openjdk-16.0.1_osx-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "16.0.2"
+      BOOT_JDK_FILENAME: "openjdk-16.0.2_osx-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk16.0.2/d4a915d82b4c4fbb9bde534da945d746/7/GPL/openjdk-16.0.2_osx-x64_bin.tar.gz"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -229,9 +229,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "16.0.1"
-      BOOT_JDK_FILENAME: "openjdk-16.0.1_windows-x64_bin.zip"
-      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk16.0.1/7147401fd7354114ac51ef3e1328291f/9/GPL/openjdk-16.0.1_windows-x64_bin.zip"
+      BOOT_JDK_VERSION: "16.0.2"
+      BOOT_JDK_FILENAME: "openjdk-16.0.2_windows-x64_bin.zip"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk16.0.2/d4a915d82b4c4fbb9bde534da945d746/7/GPL/openjdk-16.0.2_windows-x64_bin.zip"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"

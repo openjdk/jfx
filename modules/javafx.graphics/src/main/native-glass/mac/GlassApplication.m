@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,28 +98,19 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     {
         assert(pthread_main_np() == 1);
         JNIEnv *env = jEnv;
-        if (env != NULL)
+        if (env != NULL && self->jRunnable != NULL)
         {
             (*env)->CallVoidMethod(env, self->jRunnable, jRunnableRun);
             GLASS_CHECK_EXCEPTION(env);
+
+            (*env)->DeleteGlobalRef(env, self->jRunnable);
         }
+
+        self->jRunnable = NULL;
 
         [self release];
     }
     [pool drain];
-}
-
-- (void)dealloc
-{
-    assert(pthread_main_np() == 1);
-    JNIEnv *env = jEnv;
-    if (env != NULL)
-    {
-        (*env)->DeleteGlobalRef(env, self->jRunnable);
-    }
-    self->jRunnable = NULL;
-
-    [super dealloc];
 }
 
 @end
@@ -792,6 +783,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 (JNIEnv *env, jclass jClass, jboolean jDisableSyncRendering)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initIDs");
+
+    // Check minimum OS version
+    NSOperatingSystemVersion osVer;
+    osVer = [[NSProcessInfo processInfo] operatingSystemVersion];
+    NSInteger osVerMajor = osVer.majorVersion;
+    NSInteger osVerMinor = osVer.minorVersion;
+
+    // Map 10.16 to 11.0, since macOS will return 10.16 by default (for compatibility)
+    if (osVerMajor == 10 && osVerMinor >= 16) {
+        // FIXME: if we ever need to know which minor version of macOS 11.x we
+        // are running on, we will need to look it up using a similar technique
+        // to what the JDK does.
+        osVerMajor = 11;
+        osVerMinor = 0;
+    }
+
+    if (osVerMajor < MACOS_MIN_VERSION_MAJOR ||
+            (osVerMajor == MACOS_MIN_VERSION_MAJOR &&
+             osVerMinor < MACOS_MIN_VERSION_MINOR))
+    {
+        NSLog(@"ERROR: macOS version is %d.%d, which is below the minimum of %d.%d",
+              (int)osVerMajor, (int)osVerMinor, MACOS_MIN_VERSION_MAJOR, MACOS_MIN_VERSION_MINOR);
+        jclass exceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
+        if (exceptionClass != 0) {
+            (*env)->ThrowNew(env, exceptionClass, "Unsupported macOS version");
+        }
+        return;
+    }
 
     disableSyncRendering = jDisableSyncRendering ? YES : NO;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -201,7 +201,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [GlassTouches stopTracking:self];
 
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
+
     if (env != NULL)
     {
         (*env)->DeleteGlobalRef(env, self->jView);
@@ -931,10 +932,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     int mask;
     NSDragOperation operation = [info draggingSourceOperationMask];
+    jint recommendedAction = com_sun_glass_ui_Clipboard_ACTION_NONE;
 
-    [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMask:operation]];
+    if (info.draggingSource != nil) {
+        [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMaskInternal:operation]];
+        recommendedAction = [GlassDragSource getRecommendedActionForMaskInternal:operation];
+    }
+    else {
+        [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMaskExternal:operation]];
+        recommendedAction = [GlassDragSource getRecommendedActionForMaskExternal:operation];
+    }
 
-    jint recommendedAction = [GlassDragSource getRecommendedActionForMask:operation];
     switch (type)
     {
         case com_sun_glass_events_DndEvent_ENTER:
@@ -968,6 +976,16 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
 {
+    // The Command key masks out every operation other than NSDragOperationGeneric. We want
+    // internal Move events to get through this filtering so we copy the Move bit into the
+    // Generic bit and treat Generic as a synonym for Move.
+    if (isLocal)
+    {
+        NSDragOperation result = self->dragOperation;
+        if (result & NSDragOperationMove)
+            result |= NSDragOperationGeneric;
+        return result;
+    }
     return self->dragOperation;
 }
 

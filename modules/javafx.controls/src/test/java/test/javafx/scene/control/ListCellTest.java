@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.skin.ListCellSkin;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.InvalidationListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -39,11 +40,14 @@ import javafx.scene.control.ListView.EditEvent;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.SelectionMode;
+
 import java.util.List;
 import java.util.ArrayList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
 
 import static javafx.scene.control.ControlShim.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
@@ -55,6 +59,7 @@ public class ListCellTest {
     private ListCell<String> cell;
     private ListView<String> list;
     private ObservableList<String> model;
+    private StageLoader stageLoader;
 
     @Before public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
@@ -71,6 +76,7 @@ public class ListCellTest {
     }
 
     @After public void cleanup() {
+        if (stageLoader != null) stageLoader.dispose();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
@@ -666,6 +672,17 @@ public class ListCellTest {
         assertTrue(called[0]);
     }
 
+    @Test public void editCellDoesNotFireEventWhileAlreadyEditing() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(2);
+        cell.startEdit();
+        List<EditEvent<?>> events = new ArrayList<>();
+        list.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must not fire event while editing", 0, events.size());
+    }
+
     // commitEdit()
     @Test public void commitWhenListIsNullIsOK() {
         cell.updateIndex(1);
@@ -749,6 +766,114 @@ public class ListCellTest {
         assertTrue(other.isEditing());
         assertFalse(cell.isEditing());
     }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnCell() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        cell.cancelEdit();
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnList() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        list.edit(-1);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
+    }
+
+    @Test
+    public void testEditCancelEventAfterChangeEditingIndexOnList() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        list.edit(0);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCellReuse() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        cell.updateIndex(0);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
+    }
+
+    @Test
+    public void testEditCancelEventAfterModifyItems() {
+        list.setEditable(true);
+        stageLoader = new StageLoader(list);
+        int editingIndex = 1;
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        list.getItems().add(0, "added");
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
+    }
+
+    @Test
+    public void testEditCancelEventAfterRemoveEditingItem() {
+        list.setEditable(true);
+        stageLoader = new StageLoader(list);
+        int editingIndex = 1;
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        list.getItems().remove(editingIndex);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("removing item must cancel edit on list", -1, list.getEditingIndex());
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotFireStartEdit() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(list.getItems().size());
+        List<EditEvent<?>> events = new ArrayList<>();
+        list.addEventHandler(ListView.editStartEvent(), events::add);
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("must not fire editStart", 0, events.size());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(list.getItems().size());
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("list editing location must not be updated", -1, list.getEditingIndex());
+    }
+
 
     // When the list view item's change and affects a cell that is editing, then what?
     // When the list cell's index is changed while it is editing, then what?

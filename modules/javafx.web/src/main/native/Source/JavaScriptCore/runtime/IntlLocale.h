@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +61,7 @@ public:
     const String& language();
     const String& script();
     const String& region();
+
     const String& calendar();
     const String& caseFirst();
     const String& collation();
@@ -70,7 +72,7 @@ public:
 private:
     IntlLocale(VM&, Structure*);
     void finishCreation(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     String keywordValue(ASCIILiteral, bool isBoolean = false) const;
 
@@ -83,11 +85,11 @@ private:
     String m_language;
     String m_script;
     String m_region;
-    String m_calendar;
-    String m_caseFirst;
-    String m_collation;
-    String m_hourCycle;
-    String m_numberingSystem;
+    Optional<String> m_calendar;
+    Optional<String> m_caseFirst;
+    Optional<String> m_collation;
+    Optional<String> m_hourCycle;
+    Optional<String> m_numberingSystem;
     TriState m_numeric { TriState::Indeterminate };
 };
 

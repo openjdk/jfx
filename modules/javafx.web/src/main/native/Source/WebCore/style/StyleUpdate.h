@@ -44,17 +44,18 @@ namespace Style {
 
 struct ElementUpdate {
     std::unique_ptr<RenderStyle> style;
-    Change change { NoChange };
+    Change change { Change::None };
     bool recompositeLayer { false };
 };
 
 enum class DescendantsToResolve { None, ChildrenWithExplicitInherit, Children, All };
 
+using PseudoIdToElementUpdateMap = HashMap<PseudoId, ElementUpdate, WTF::IntHash<PseudoId>, WTF::StrongEnumHashTraits<PseudoId>>;
+
 struct ElementUpdates {
     ElementUpdate update;
     DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
-    Optional<ElementUpdate> beforePseudoElementUpdate;
-    Optional<ElementUpdate> afterPseudoElementUpdate;
+    PseudoIdToElementUpdateMap pseudoElementUpdates;
 };
 
 struct TextUpdate {

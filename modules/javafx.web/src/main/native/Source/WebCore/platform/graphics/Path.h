@@ -58,13 +58,6 @@ class PlatformContextDirect2D;
 #elif USE(CAIRO)
 #include "RefPtrCairo.h"
 
-#elif USE(WINGDI)
-
-namespace WebCore {
-class PlatformPath;
-}
-typedef WebCore::PlatformPath PlatformPath;
-
 #elif PLATFORM(JAVA)
 #include <wtf/RefPtr.h>
 #include "RQRef.h"
@@ -142,6 +135,15 @@ public:
     WEBCORE_EXPORT Path& operator=(const Path&);
     WEBCORE_EXPORT Path& operator=(Path&&);
 
+#if ENABLE(INLINE_PATH_DATA)
+    static Path from(const InlinePathData& inlineData)
+    {
+        Path path;
+        path.m_inlineData = inlineData;
+        return path;
+    }
+#endif
+
     static Path polygonPathFromPoints(const Vector<FloatPoint>&);
 
     bool contains(const FloatPoint&, WindRule = WindRule::NonZero) const;
@@ -175,7 +177,7 @@ public:
     WEBCORE_EXPORT void closeSubpath();
 
     void addArc(const FloatPoint&, float radius, float startAngle, float endAngle, bool anticlockwise);
-    void addRect(const FloatRect&);
+    WEBCORE_EXPORT void addRect(const FloatRect&);
     void addEllipse(FloatPoint, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, bool anticlockwise);
     void addEllipse(const FloatRect&);
 
@@ -242,10 +244,17 @@ public:
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<Path> decode(Decoder&);
 
+#if ENABLE(INLINE_PATH_DATA)
+    template<typename DataType> const DataType& inlineData() const;
+    InlinePathData inlineData() const { return m_inlineData; }
+    template<typename DataType> bool hasInlineData() const;
+    bool hasInlineData() const;
+#endif
+
 private:
 #if ENABLE(INLINE_PATH_DATA)
-    template<typename DataType> bool hasInlineData() const;
-    bool hasAnyInlineData() const;
+    template<typename DataType> DataType& inlineData();
+    Optional<FloatRect> fastBoundingRectFromInlineData() const;
     Optional<FloatRect> boundingRectFromInlineData() const;
 #endif
 
@@ -300,7 +309,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
 template<class Encoder> void Path::encode(Encoder& encoder) const
 {
 #if ENABLE(INLINE_PATH_DATA)
-    bool hasInlineData = hasAnyInlineData();
+    bool hasInlineData = this->hasInlineData();
     encoder << hasInlineData;
     if (hasInlineData) {
         encoder << m_inlineData;
@@ -422,7 +431,17 @@ template <typename DataType> inline bool Path::hasInlineData() const
     return WTF::holds_alternative<DataType>(m_inlineData);
 }
 
-inline bool Path::hasAnyInlineData() const
+template<typename DataType> inline const DataType& Path::inlineData() const
+{
+    return WTF::get<DataType>(m_inlineData);
+}
+
+template<typename DataType> inline DataType& Path::inlineData()
+{
+    return WTF::get<DataType>(m_inlineData);
+}
+
+inline bool Path::hasInlineData() const
 {
     return !hasInlineData<Monostate>();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -313,7 +313,7 @@ void ChromeClientJava::takeFocus(FocusDirection direction)
 
     ASSERT(m_webPage);
 
-    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirectionForward);
+    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirection::Forward);
     WTF::CheckAndClearException(env);
 }
 
@@ -629,7 +629,7 @@ void ChromeClientJava::setToolTip(const String& toolTip)
     WTF::CheckAndClearException(env);
 }
 
-void ChromeClientJava::print(Frame&)
+void ChromeClientJava::print(Frame&, const StringWithDirection&)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -671,7 +671,7 @@ void ChromeClientJava::setNeedsOneShotDrawingSynchronization()
             ->setNeedsOneShotDrawingSynchronization();
 }
 
-void ChromeClientJava::scheduleRenderingUpdate()
+void ChromeClientJava::triggerRenderingUpdate()
 {
     WebPage::webPageFromJObject(m_webPage)->scheduleRenderingUpdate();
 }

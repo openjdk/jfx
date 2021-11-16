@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ import javafx.beans.value.WeakChangeListener;
  */
 public class TreeCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -90,7 +90,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and events                                                    *
      *                                                                         *
@@ -186,7 +186,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -346,7 +346,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -376,17 +376,19 @@ public class TreeCell<T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        treeItemAtStartEdit = getTreeItem();
          // Inform the TreeView of the edit starting.
         if (tree != null) {
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editStartEvent(),
-                    getTreeItem(),
+                    treeItemAtStartEdit,
                     getItem(),
                     null));
-
+            tree.edit(treeItemAtStartEdit);
             tree.requestFocus();
         }
-        treeItemAtStartEdit = getTreeItem();
     }
 
      /** {@inheritDoc} */
@@ -465,7 +467,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         return new TreeCellSkin<T>(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -617,7 +619,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Expert API                                                              *
      *                                                                         *
@@ -659,7 +661,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -671,7 +673,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

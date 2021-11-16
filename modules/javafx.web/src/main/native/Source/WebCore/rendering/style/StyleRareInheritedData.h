@@ -73,6 +73,7 @@ public:
     bool hasColorFilters() const;
 
     RefPtr<StyleImage> listStyleImage;
+    AtomString listStyleStringValue;
 
     Color textStrokeColor;
     float textStrokeWidth;
@@ -156,6 +157,8 @@ public:
     unsigned joinStyle : 2; // LineJoin
     unsigned hasSetStrokeWidth : 1;
     unsigned hasSetStrokeColor : 1;
+
+    unsigned mathStyle : 1;
 
     OptionSet<TouchAction> effectiveTouchActions;
     OptionSet<EventListenerRegionType> eventListenerRegionTypes;

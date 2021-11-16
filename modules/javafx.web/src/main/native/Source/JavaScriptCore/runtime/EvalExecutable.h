@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,13 +62,14 @@ public:
 
     DECLARE_INFO;
 
-    ExecutableInfo executableInfo() const { return ExecutableInfo(usesEval(), false, false, ConstructorKind::None, JSParserScriptMode::Classic, SuperBinding::NotNeeded, SourceParseMode::ProgramMode, derivedContextType(), needsClassFieldInitializer(), isArrowFunctionContext(), false, evalContextType()); }
+    ExecutableInfo executableInfo() const { return ExecutableInfo(usesEval(), false, PrivateBrandRequirement::None, false, ConstructorKind::None, JSParserScriptMode::Classic, SuperBinding::NotNeeded, SourceParseMode::ProgramMode, derivedContextType(), needsClassFieldInitializer(), isArrowFunctionContext(), false, evalContextType()); }
 
     unsigned numVariables() { return m_unlinkedEvalCodeBlock->numVariables(); }
     unsigned numFunctionHoistingCandidates() { return m_unlinkedEvalCodeBlock->numFunctionHoistingCandidates(); }
     unsigned numTopLevelFunctionDecls() { return m_unlinkedEvalCodeBlock->numberOfFunctionDecls(); }
     bool allowDirectEvalCache() const { return m_unlinkedEvalCodeBlock->allowDirectEvalCache(); }
     NeedsClassFieldInitializer needsClassFieldInitializer() const { return static_cast<NeedsClassFieldInitializer>(m_needsClassFieldInitializer); }
+    PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
 protected:
@@ -76,11 +77,12 @@ protected:
     friend class ScriptExecutable;
 
     using Base::finishCreation;
-    EvalExecutable(JSGlobalObject*, const SourceCode&, bool inStrictContext, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer);
+    EvalExecutable(JSGlobalObject*, const SourceCode&, bool inStrictContext, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     unsigned m_needsClassFieldInitializer : 1;
+    unsigned m_privateBrandRequirement : 1;
 
     WriteBarrier<ExecutableToCodeBlockEdge> m_evalCodeBlock;
     WriteBarrier<UnlinkedEvalCodeBlock> m_unlinkedEvalCodeBlock;

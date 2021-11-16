@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 /**
- * Convert a Size to Number
+ * Converter to convert a {@code Size} to a {@code Number}.
  *
  * @since 9
  */
@@ -43,6 +43,10 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Nu
         static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
+    /**
+     * Gets the {@code SizeConverter} instance.
+     * @return the {@code SizeConverter} instance
+     */
     public static StyleConverter<ParsedValue<?, Size>, Number> getInstance() {
         return Holder.INSTANCE;
     }
@@ -62,11 +66,16 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Nu
         return "SizeConverter";
     }
 
-    /*
-     * Convert [<size>]+ to an array of Number[].
+    /**
+     * Converter to convert a sequence of sizes to an array of {@code Number}.
+     * @since 9
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue[], Number[]> {
 
+        /**
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
+         */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
         }

@@ -22,7 +22,6 @@ MediaController conditional=VIDEO
 MediaDevices conditional=MEDIA_STREAM
 MediaKeySession conditional=ENCRYPTED_MEDIA
 MediaQueryList
-MediaRemoteControls conditional=MEDIA_SESSION
 MediaRecorder conditional=MEDIA_STREAM
 MediaSource conditional=MEDIA_SOURCE
 MediaStream conditional=MEDIA_STREAM
@@ -39,15 +38,18 @@ RemotePlayback conditional=WIRELESS_PLAYBACK_TARGET
 RTCDataChannel conditional=WEB_RTC
 RTCDTMFSender conditional=WEB_RTC
 RTCPeerConnection conditional=WEB_RTC
+RTCRtpScriptTransform conditional=WEB_RTC
 ServiceWorker conditional=SERVICE_WORKER
 ServiceWorkerContainer conditional=SERVICE_WORKER
 ServiceWorkerGlobalScope conditional=SERVICE_WORKER
 ServiceWorkerRegistration conditional=SERVICE_WORKER
 SourceBuffer conditional=MEDIA_SOURCE
 SourceBufferList conditional=MEDIA_SOURCE
+SpeechRecognition
 SpeechSynthesisUtterance conditional=SPEECH_SYNTHESIS
 TextTrack conditional=VIDEO
 TextTrackCue conditional=VIDEO
+TextTrackCueGeneric conditional=VIDEO
 TextTrackList conditional=VIDEO
 VideoTrackList conditional=VIDEO
 VisualViewport
@@ -56,7 +58,7 @@ WebGPUDevice conditional=WEBGPU
 WebKitMediaKeySession conditional=LEGACY_ENCRYPTED_MEDIA
 WebSocket
 Worker
-WorkletGlobalScope conditional=CSS_PAINTING_API
+WorkletGlobalScope
 XMLHttpRequest
 XMLHttpRequestUpload
 WebXRLayer conditional=WEBXR

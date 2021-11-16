@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ import javafx.scene.control.skin.ListCellSkin;
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -87,7 +87,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *     We have to listen to a number of properties on the ListView itself  *
@@ -228,7 +228,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -315,7 +315,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -347,14 +347,17 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
+    // index at time of startEdit - fix for JDK-8165214
+    private int indexAtStartEdit;
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final ListView<T> list = getListView();
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
@@ -365,15 +368,19 @@ public class ListCell<T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        indexAtStartEdit = getIndex();
          // Inform the ListView of the edit starting.
         if (list != null) {
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editStartEvent(),
                     null,
-                    getIndex()));
-            list.edit(getIndex());
+                    indexAtStartEdit));
+            list.edit(indexAtStartEdit);
             list.requestFocus();
         }
+
     }
 
     /** {@inheritDoc} */
@@ -418,13 +425,11 @@ public class ListCell<T> extends IndexedCell<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
 
-         // Inform the ListView of the edit being cancelled.
-        ListView<T> list = getListView();
-
         super.cancelEdit();
 
+        // Inform the ListView of the edit being cancelled.
+        ListView<T> list = getListView();
         if (list != null) {
-            int editingIndex = list.getEditingIndex();
 
             // reset the editing index on the ListView
             if (updateEditingIndex) list.edit(-1);
@@ -438,7 +443,7 @@ public class ListCell<T> extends IndexedCell<T> {
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editCancelEvent(),
                     null,
-                    editingIndex));
+                    indexAtStartEdit));
         }
     }
 
@@ -563,7 +568,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -573,7 +578,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

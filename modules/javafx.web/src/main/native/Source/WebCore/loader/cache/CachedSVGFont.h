@@ -25,17 +25,17 @@
 
 #pragma once
 
-#if ENABLE(SVG_FONTS)
-
 #include "CachedFont.h"
 
 namespace WebCore {
 
 class SVGFontFaceElement;
+class Settings;
 
 class CachedSVGFont final : public CachedFont {
 public:
-    CachedSVGFont(CachedResourceRequest&&, const PAL::SessionID&, const CookieJar*);
+    CachedSVGFont(CachedResourceRequest&&, const PAL::SessionID&, const CookieJar*, const Settings&);
+    CachedSVGFont(CachedResourceRequest&&, CachedSVGFont&);
 
     bool ensureCustomFontData(const AtomString& remoteURI) override;
 
@@ -52,10 +52,9 @@ private:
     RefPtr<SharedBuffer> m_convertedFont;
     RefPtr<SVGDocument> m_externalSVGDocument;
     SVGFontElement* m_externalSVGFontElement;
+    const Ref<const Settings> m_settings;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedSVGFont, CachedResource::Type::SVGFontResource)
-
-#endif // ENABLE(SVG_FONTS)

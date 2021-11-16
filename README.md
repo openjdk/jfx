@@ -4,7 +4,7 @@ OpenJFX is an open source, next generation client application platform for deskt
 
 OpenJFX is free software, licensed under [GPL v2 with the Classpath exception](LICENSE), just like the JDK. Anybody is welcome to contribute to this project, port it to other platforms or devices, or do anything else that a free software license allows you to do!
 
-OpenJFX is a project under the charter of the OpenJDK. The [OpenJDK Bylaws](https://openjdk.java.net/bylaws) and [License](LICENSE) govern our work. The OpenJFX project membership can be found on the [OpenJDK Census](https://openjdk.java.net/census#openjfx). We welcome patches and involvement from individual contributors or companies. If this is your first time contributing to an OpenJDK project, you will need to review the rules on [becoming a Contributor](https://openjdk.java.net/bylaws#contributor), and sign the [Oracle Contributor Agreement](https://www.oracle.com/technetwork/community/oca-486395.html) (OCA).
+OpenJFX is a project under the charter of the OpenJDK. The [OpenJDK Bylaws](https://openjdk.java.net/bylaws) and [License](LICENSE) govern our work. The OpenJFX project membership can be found on the [OpenJDK Census](https://openjdk.java.net/census#openjfx). We welcome patches and involvement from individual contributors or companies. If this is your first time contributing to an OpenJDK project, you will need to review the rules on [becoming a Contributor](https://openjdk.java.net/bylaws#contributor), and sign the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/) (OCA).
 
 ## Issue tracking
 

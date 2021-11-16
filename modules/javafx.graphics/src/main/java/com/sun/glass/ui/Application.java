@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,6 +96,7 @@ public abstract class Application {
     private static boolean loaded = false;
     private static Application application;
     private static Thread eventThread;
+    @SuppressWarnings("removal")
     private static final boolean disableThreadChecks =
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             final String str =
@@ -214,6 +215,7 @@ public abstract class Application {
      */
     public String getDataDirectory() {
         checkEventThread();
+        @SuppressWarnings("removal")
         String userHome = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.home"));
         return userHome + File.separator + "." + name + File.separator;
     }
@@ -673,6 +675,10 @@ public abstract class Application {
     protected abstract long staticView_getMultiClickTime();
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
+
+    public String getHighContrastScheme(String themeName) {
+        return themeName;
+    }
 
     /**
      * Gets the Name of the currently active high contrast theme.

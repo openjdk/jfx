@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 
+/**
+ * Converter to convert a parsed representation of color ladder values to a {@code Color}.
+ * @since 9
+ */
 public final class LadderConverter extends StyleConverter<ParsedValue[], Color> {
 
     // lazy, thread-safe instatiation
@@ -38,6 +42,10 @@ public final class LadderConverter extends StyleConverter<ParsedValue[], Color> 
         static final LadderConverter INSTANCE = new LadderConverter();
     }
 
+    /**
+     * Gets the {@code LadderConverter} instance.
+     * @return the {@code LadderConverter} instance
+     */
     public static LadderConverter getInstance() {
         return Holder.INSTANCE;
     }

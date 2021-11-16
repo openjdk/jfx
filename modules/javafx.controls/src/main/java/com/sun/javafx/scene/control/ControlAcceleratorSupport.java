@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.input.KeyCombination;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -75,21 +76,23 @@ public class ControlAcceleratorSupport {
         }
 
         final Scene scene = anchor.getScene();
-        if (scene == null) {
-            // listen to the scene property on the anchor until it is set, and
-            // then install the accelerators
-            anchor.sceneProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    Scene scene = anchor.getScene();
-                    if (scene != null) {
-                        anchor.sceneProperty().removeListener(this);
-                        doAcceleratorInstall(items, scene);
-                    }
-                }
-            });
-        } else {
+        if (scene != null) {
             doAcceleratorInstall(items, scene);
         }
+        // Scene change listener is added to the anchor for scenarios like,
+        // 1. Installing accelerators when Control is added to Scene
+        // 2. Removing accelerators when Control is removed from Scene
+        // Remove previously added listener if any
+        WeakReference<ChangeListener<Scene>> listenerW = sceneChangeListenerMap.get(anchor);
+        if (listenerW != null) {
+            ChangeListener<Scene> listener = listenerW.get();
+            if (listener != null) {
+                anchor.sceneProperty().removeListener(listener);
+            }
+            sceneChangeListenerMap.remove(anchor);
+        }
+        // Add a new listener
+        anchor.sceneProperty().addListener(getSceneChangeListener(anchor, items));
     }
 
     private static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Object anchor) {
@@ -113,6 +116,26 @@ public class ControlAcceleratorSupport {
         } else {
             addAcceleratorsIntoScene(items, control);
         }
+    }
+
+    /* It's okay to have the value Weak, because we only remember it to remove the listener later on */
+    private static Map<Object, WeakReference<ChangeListener<Scene>>> sceneChangeListenerMap = new WeakHashMap<>();
+
+    private static ChangeListener<Scene> getSceneChangeListener(Object anchor, ObservableList<MenuItem> items) {
+        WeakReference<ChangeListener<Scene>> sceneChangeListenerW = sceneChangeListenerMap.get(anchor);
+        ChangeListener<Scene> sceneChangeListener = sceneChangeListenerW == null ? null : sceneChangeListenerW.get();
+        if (sceneChangeListener == null) {
+             sceneChangeListener = (ov, oldScene, newScene) -> {
+                if (oldScene != null) {
+                    removeAcceleratorsFromScene(items, oldScene);
+                }
+                if (newScene != null) {
+                    doAcceleratorInstall(items, newScene);
+                }
+            };
+            sceneChangeListenerMap.put(anchor, new WeakReference<>(sceneChangeListener));
+        }
+        return sceneChangeListener;
     }
 
     private static void doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene) {
@@ -177,11 +200,13 @@ public class ControlAcceleratorSupport {
         }
     }
 
-    private static Map<MenuItem, ChangeListener<KeyCombination>> changeListenerMap = new WeakHashMap<>();
+    /* It's okay to have the value Weak, because we only remember it to remove the listener later on */
+    private static Map<MenuItem, WeakReference<ChangeListener<KeyCombination>>> changeListenerMap = new WeakHashMap<>();
 
     private static ChangeListener<KeyCombination> getListener(final Scene scene, MenuItem menuItem) {
 
-        ChangeListener<KeyCombination> listener = changeListenerMap.get(menuItem);
+        WeakReference<ChangeListener<KeyCombination>> listenerW = changeListenerMap.get(menuItem);
+        ChangeListener<KeyCombination> listener = listenerW == null ? null : listenerW.get();
         if (listener == null) {
             listener = (observable, oldValue, newValue) -> {
                 final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
@@ -194,7 +219,7 @@ public class ControlAcceleratorSupport {
                     accelerators.put(newValue, _acceleratorRunnable);
                 }
             };
-            changeListenerMap.put(menuItem, listener);
+            changeListenerMap.put(menuItem, new WeakReference<>(listener));
         }
         return listener;
     }
@@ -222,6 +247,18 @@ public class ControlAcceleratorSupport {
 
     public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Node anchor) {
         Scene scene = anchor.getScene();
+        if (scene == null) {
+            // The Node is not part of a Scene: Remove the Scene listener that was added
+            // at the time of installing the accelerators.
+            WeakReference<ChangeListener<Scene>> listenerW = sceneChangeListenerMap.get(anchor);
+            if (listenerW  != null) {
+                ChangeListener<Scene> listener = listenerW.get();
+                if (listener != null) {
+                    anchor.sceneProperty().removeListener(listener);
+                }
+                sceneChangeListenerMap.remove(anchor);
+            }
+        }
         removeAcceleratorsFromScene(items, scene);
     }
 
@@ -248,9 +285,12 @@ public class ControlAcceleratorSupport {
                 final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
                 accelerators.remove(menuitem.getAccelerator());
 
-                ChangeListener<KeyCombination> listener = changeListenerMap.get(menuitem);
-                if (listener != null) {
-                    menuitem.acceleratorProperty().removeListener(listener);
+                WeakReference<ChangeListener<KeyCombination>> listenerW = changeListenerMap.get(menuitem);
+                if (listenerW  != null) {
+                    ChangeListener<KeyCombination> listener = listenerW.get();
+                    if (listener != null) {
+                        menuitem.acceleratorProperty().removeListener(listener);
+                    }
                     changeListenerMap.remove(menuitem);
                 }
             }

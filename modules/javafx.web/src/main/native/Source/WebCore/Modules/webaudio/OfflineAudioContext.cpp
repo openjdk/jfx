@@ -29,6 +29,7 @@
 #include "OfflineAudioContext.h"
 
 #include "AudioBuffer.h"
+#include "AudioUtilities.h"
 #include "Document.h"
 #include "JSAudioBuffer.h"
 #include <wtf/IsoMallocInlines.h>
@@ -37,27 +38,28 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(OfflineAudioContext);
 
-inline OfflineAudioContext::OfflineAudioContext(Document& document, AudioBuffer* renderTarget)
-    : BaseAudioContext(document, renderTarget)
+inline OfflineAudioContext::OfflineAudioContext(Document& document, unsigned numberOfChannels, unsigned length, float sampleRate, RefPtr<AudioBuffer>&& renderTarget)
+    : BaseAudioContext(document, numberOfChannels, sampleRate, WTFMove(renderTarget))
+    , m_length(length)
 {
 }
 
-ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, unsigned numberOfChannels, size_t length, float sampleRate)
+ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, unsigned numberOfChannels, unsigned length, float sampleRate)
 {
-    // FIXME: Add support for workers.
     if (!is<Document>(context))
-        return Exception { NotSupportedError };
-    if (!numberOfChannels || numberOfChannels > 10)
+        return Exception { NotSupportedError, "OfflineAudioContext is only supported in Document contexts"_s };
+    if (!numberOfChannels || numberOfChannels > maxNumberOfChannels())
         return Exception { SyntaxError, "Number of channels is not in range"_s };
     if (!length)
         return Exception { SyntaxError, "length cannot be 0"_s };
     if (!isSupportedSampleRate(sampleRate))
         return Exception { SyntaxError, "sampleRate is not in range"_s };
+
     auto renderTarget = AudioBuffer::create(numberOfChannels, length, sampleRate);
     if (!renderTarget)
-        return Exception { SyntaxError, "Unable to create AudioBuffer"_s };
+        context.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Failed to construct internal AudioBuffer with ", numberOfChannels, " channel(s), a sample rate of ", sampleRate, " and a length of ", length, "."));
 
-    auto audioContext = adoptRef(*new OfflineAudioContext(downcast<Document>(context), renderTarget.get()));
+    auto audioContext = adoptRef(*new OfflineAudioContext(downcast<Document>(context), numberOfChannels, length, sampleRate, WTFMove(renderTarget)));
     audioContext->suspendIfNeeded();
     return audioContext;
 }
@@ -67,26 +69,147 @@ ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutio
     return create(context, contextOptions.numberOfChannels, contextOptions.length, contextOptions.sampleRate);
 }
 
+void OfflineAudioContext::uninitialize()
+{
+    BaseAudioContext::uninitialize();
+
+    Vector<RefPtr<DeferredPromise>> promisesToReject;
+
+    {
+        AutoLocker locker(*this);
+        promisesToReject.reserveInitialCapacity(m_suspendRequests.size());
+        for (auto& promise : m_suspendRequests.values())
+            promisesToReject.uncheckedAppend(promise);
+        m_suspendRequests.clear();
+    }
+
+    if (m_pendingOfflineRenderingPromise)
+        promisesToReject.append(std::exchange(m_pendingOfflineRenderingPromise, nullptr));
+
+    for (auto& promise : promisesToReject)
+        promise->reject(Exception { InvalidStateError, "Context is going away"_s });
+}
+
 void OfflineAudioContext::startOfflineRendering(Ref<DeferredPromise>&& promise)
 {
-    if (isStopped() || !willBeginPlayback()) {
-        promise->reject(Exception { InvalidStateError });
+    if (isStopped()) {
+        promise->reject(Exception { InvalidStateError, "Context is stopped"_s });
         return;
     }
 
-    auto result = destination()->startRendering();
-    if (result.hasException()) {
-        promise->reject(result.releaseException());
+    if (m_didStartOfflineRendering) {
+        promise->reject(Exception { InvalidStateError, "Rendering was already started"_s });
         return;
     }
 
-    makePendingActivity();
-    m_pendingOfflineRenderingPromise = WTFMove(promise);
-    setState(State::Running);
+    if (!renderTarget()) {
+        promise->reject(Exception { NotSupportedError, "Failed to create audio buffer"_s });
+        return;
+    }
+
+    lazyInitialize();
+
+    destination()->startRendering([this, promise = WTFMove(promise), pendingActivity = ActiveDOMObject::makePendingActivity(*this)](Optional<Exception>&& exception) mutable {
+        if (exception) {
+            promise->reject(WTFMove(*exception));
+            return;
+        }
+
+        makePendingActivity();
+        m_pendingOfflineRenderingPromise = WTFMove(promise);
+        m_didStartOfflineRendering = true;
+        setState(State::Running);
+    });
+}
+
+void OfflineAudioContext::suspendOfflineRendering(double suspendTime, Ref<DeferredPromise>&& promise)
+{
+    if (isStopped()) {
+        promise->reject(Exception { InvalidStateError, "Context is stopped"_s });
+        return;
+    }
+
+    if (suspendTime < 0) {
+        promise->reject(Exception { InvalidStateError, "suspendTime cannot be negative"_s });
+        return;
+    }
+
+    double totalRenderDuration = length() / sampleRate();
+    if (totalRenderDuration <= suspendTime) {
+        promise->reject(Exception { InvalidStateError, "suspendTime cannot be greater than total rendering duration"_s });
+        return;
+    }
+
+    size_t frame = AudioUtilities::timeToSampleFrame(suspendTime, sampleRate());
+    frame = AudioUtilities::renderQuantumSize * ((frame + AudioUtilities::renderQuantumSize - 1) / AudioUtilities::renderQuantumSize);
+    if (frame < currentSampleFrame()) {
+        promise->reject(Exception { InvalidStateError, "Suspension frame is earlier than current frame"_s });
+        return;
+    }
+
+    AutoLocker locker(*this);
+    auto addResult = m_suspendRequests.add(frame, promise.ptr());
+    if (!addResult.isNewEntry) {
+        promise->reject(Exception { InvalidStateError, "There is already a pending suspend request at this frame"_s });
+        return;
+    }
+}
+
+void OfflineAudioContext::resumeOfflineRendering(Ref<DeferredPromise>&& promise)
+{
+    if (!m_didStartOfflineRendering) {
+        promise->reject(Exception { InvalidStateError, "Cannot resume an offline audio context that has not started"_s });
+        return;
+    }
+    if (isClosed()) {
+        promise->reject(Exception { InvalidStateError, "Cannot resume an offline audio context that is closed"_s });
+        return;
+    }
+    if (state() == AudioContextState::Running) {
+        promise->resolve();
+        return;
+    }
+    ASSERT(state() == AudioContextState::Suspended);
+
+    destination()->startRendering([this, promise = WTFMove(promise), pendingActivity = ActiveDOMObject::makePendingActivity(*this)](Optional<Exception>&& exception) mutable {
+        if (exception) {
+            promise->reject(WTFMove(*exception));
+            return;
+        }
+
+        makePendingActivity();
+        setState(State::Running);
+        promise->resolve();
+    });
+}
+
+bool OfflineAudioContext::shouldSuspend()
+{
+    ASSERT(!isMainThread());
+    // Note that OfflineAutoLocker uses lock() instead of tryLock(). We usually avoid blocking the AudioThread
+    // on lock() but we don't have a choice here since the suspension need to be exact.
+    OfflineAutoLocker locker(*this);
+    return m_suspendRequests.contains(currentSampleFrame());
+}
+
+void OfflineAudioContext::didSuspendRendering(size_t frame)
+{
+    BaseAudioContext::didSuspendRendering(frame);
+
+    RefPtr<DeferredPromise> promise;
+    {
+        AutoLocker locker(*this);
+        promise = m_suspendRequests.take(frame);
+    }
+    ASSERT(promise);
+    if (promise)
+        promise->resolve();
 }
 
 void OfflineAudioContext::didFinishOfflineRendering(ExceptionOr<Ref<AudioBuffer>>&& result)
 {
+    m_didStartOfflineRendering = false;
+
     if (!m_pendingOfflineRenderingPromise)
         return;
 
@@ -98,9 +221,10 @@ void OfflineAudioContext::didFinishOfflineRendering(ExceptionOr<Ref<AudioBuffer>
     promise->resolve<IDLInterface<AudioBuffer>>(result.releaseReturnValue());
 }
 
-unsigned OfflineAudioContext::length() const
+void OfflineAudioContext::offlineLock(bool& mustReleaseLock)
 {
-    return renderTarget()->length();
+    ASSERT(!isMainThread());
+    lockInternal(mustReleaseLock);
 }
 
 } // namespace WebCore

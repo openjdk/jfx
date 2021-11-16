@@ -112,16 +112,12 @@ PatternData* RenderSVGResourcePattern::buildPattern(RenderElement& renderer, Opt
 
     const IntSize tileImageSize = tileImage->logicalSize();
 
-    RefPtr<Image> copiedImage = ImageBuffer::sinkIntoImage(WTFMove(tileImage));
+    auto copiedImage = ImageBuffer::sinkIntoNativeImage(WTFMove(tileImage));
     if (!copiedImage)
         return nullptr;
 
-    // Build pattern.
-    auto patternData = makeUnique<PatternData>();
-    patternData->pattern = Pattern::create(copiedImage.releaseNonNull(), true, true);
-
     // Compute pattern space transformation.
-
+    auto patternData = makeUnique<PatternData>();
     patternData->transform.translate(tileBoundaries.location());
     patternData->transform.scale(tileBoundaries.size() / tileImageSize);
 
@@ -135,7 +131,9 @@ PatternData* RenderSVGResourcePattern::buildPattern(RenderElement& renderer, Opt
         if (shouldTransformOnTextPainting(renderer, additionalTextTransformation))
             patternData->transform *= additionalTextTransformation;
     }
-    patternData->pattern->setPatternSpaceTransform(patternData->transform);
+
+    // Build pattern.
+    patternData->pattern = Pattern::create(copiedImage.releaseNonNull(), { true, true, patternData->transform });
 
     // Various calls above may trigger invalidations in some fringe cases (ImageBuffer allocation
     // failures in the SVG image cache for example). To avoid having our PatternData deleted by
@@ -252,10 +250,10 @@ bool RenderSVGResourcePattern::buildTileImageTransform(RenderElement& renderer,
     return true;
 }
 
-std::unique_ptr<ImageBuffer> RenderSVGResourcePattern::createTileImage(const PatternAttributes& attributes, const FloatRect& tileBoundaries, const FloatRect& absoluteTileBoundaries, const AffineTransform& tileImageTransform, FloatRect& clampedAbsoluteTileBoundaries, RenderingMode renderingMode) const
+RefPtr<ImageBuffer> RenderSVGResourcePattern::createTileImage(const PatternAttributes& attributes, const FloatRect& tileBoundaries, const FloatRect& absoluteTileBoundaries, const AffineTransform& tileImageTransform, FloatRect& clampedAbsoluteTileBoundaries, RenderingMode renderingMode) const
 {
     clampedAbsoluteTileBoundaries = ImageBuffer::clampedRect(absoluteTileBoundaries);
-    auto tileImage = SVGRenderingContext::createImageBuffer(absoluteTileBoundaries, clampedAbsoluteTileBoundaries, ColorSpace::SRGB, renderingMode);
+    auto tileImage = SVGRenderingContext::createImageBuffer(absoluteTileBoundaries, clampedAbsoluteTileBoundaries, DestinationColorSpace::SRGB, renderingMode);
     if (!tileImage)
         return nullptr;
 

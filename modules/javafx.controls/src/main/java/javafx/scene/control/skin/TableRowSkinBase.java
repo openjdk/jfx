@@ -57,7 +57,7 @@ import com.sun.javafx.tk.Toolkit;
  * @param <T> The type of the cell (i.e. the generic type of the {@link IndexedCell} subclass).
  * @param <C> The cell type (e.g. TableRow or TreeTableRow)
  * @param <R> The type of cell that is contained within each row (e.g.
- *           {@link javafx.scene.control.TableCell or {@link javafx.scene.control.TreeTableCell}}).
+ *           {@link javafx.scene.control.TableCell} or {@link javafx.scene.control.TreeTableCell}).
  *
  * @since 9
  * @see javafx.scene.control.TableRow
@@ -69,7 +69,7 @@ public abstract class TableRowSkinBase<T,
                                        C extends IndexedCell/*<T>*/,
                                        R extends IndexedCell> extends CellSkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -105,7 +105,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -138,7 +138,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -182,7 +182,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -198,7 +198,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -234,7 +234,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Methods                                                          *
      *                                                                         *
@@ -657,7 +657,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *

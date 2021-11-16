@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,7 +112,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_ColorChooser_twkSetSelectedColor
     using namespace WebCore;
     ColorChooserJava* cc = static_cast<ColorChooserJava*>jlong_to_ptr(self);
     if (cc) {
-        cc->setSelectedColor(clampToComponentBytes<SRGBA>(r, g, b));
+        cc->setSelectedColor(makeFromComponentsClamping<SRGBA<uint8_t>>(r, g, b));
     }
 }
 

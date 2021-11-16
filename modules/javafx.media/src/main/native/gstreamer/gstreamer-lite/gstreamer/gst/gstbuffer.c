@@ -1801,7 +1801,7 @@ gst_buffer_resize_range (GstBuffer * buffer, guint idx, gint length,
 /**
  * gst_buffer_map:
  * @buffer: a #GstBuffer.
- * @info: (out): info about the mapping
+ * @info: (out caller-allocates): info about the mapping
  * @flags: flags for the mapping
  *
  * This function fills @info with the #GstMapInfo of all merged memory
@@ -1831,7 +1831,7 @@ gst_buffer_map (GstBuffer * buffer, GstMapInfo * info, GstMapFlags flags)
  * @buffer: a #GstBuffer.
  * @idx: an index
  * @length: a length
- * @info: (out): info about the mapping
+ * @info: (out caller-allocates): info about the mapping
  * @flags: flags for the mapping
  *
  * This function fills @info with the #GstMapInfo of @length merged memory blocks

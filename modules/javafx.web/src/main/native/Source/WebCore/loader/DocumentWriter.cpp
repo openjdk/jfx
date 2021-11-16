@@ -55,7 +55,9 @@ namespace WebCore {
 
 static inline bool canReferToParentFrameEncoding(const Frame* frame, const Frame* parentFrame)
 {
-    return parentFrame && parentFrame->document()->securityOrigin().canAccess(frame->document()->securityOrigin());
+    if (is<XMLDocument>(frame->document()))
+        return false;
+    return parentFrame && parentFrame->document()->securityOrigin().isSameOriginDomain(frame->document()->securityOrigin());
 }
 
 // This is only called by ScriptController::executeIfJavaScriptURL
@@ -115,7 +117,7 @@ Ref<Document> DocumentWriter::createDocument(const URL& url)
 #endif
     if (!m_frame->loader().client().hasHTMLView())
         return Document::createNonRenderedPlaceholder(*m_frame, url);
-    return DOMImplementation::createDocument(m_mimeType, m_frame, url);
+    return DOMImplementation::createDocument(m_mimeType, m_frame.get(), m_frame->settings(), url);
 }
 
 bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument)
@@ -136,15 +138,17 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
 
     // FIXME: Do we need to consult the content security policy here about blocked plug-ins?
 
-    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url);
+    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument()
+        && m_frame->document()->isSecureTransitionTo(url)
+        && (!m_frame->window() || !m_frame->window()->wasWrappedWithoutInitializedSecurityOrigin());
 
     // Temporarily extend the lifetime of the existing document so that FrameLoader::clear() doesn't destroy it as
     // we need to retain its ongoing set of upgraded requests in new navigation contexts per <http://www.w3.org/TR/upgrade-insecure-requests/>
     // and we may also need to inherit its Content Security Policy below.
     RefPtr<Document> existingDocument = m_frame->document();
 
-    WTF::Function<void()> handleDOMWindowCreation = [this, document, url] {
-        if (m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url))
+    Function<void()> handleDOMWindowCreation = [this, document, shouldReuseDefaultView] {
+        if (shouldReuseDefaultView)
             document->takeDOMWindowFrom(*m_frame->document());
         else
             document->createDOMWindow();
@@ -188,6 +192,8 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(existingDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade());
     }
 
+    auto protectedFrame = makeRef(*m_frame);
+
     m_frame->loader().didBeginDocument(dispatch);
 
     document->implicitOpen();
@@ -220,10 +226,10 @@ TextResourceDecoder& DocumentWriter::decoder()
         // an attack vector.
         // FIXME: This might be too cautious for non-7bit-encodings and
         // we may consider relaxing this later after testing.
-        if (canReferToParentFrameEncoding(m_frame, parentFrame))
+        if (canReferToParentFrameEncoding(m_frame.get(), parentFrame))
             m_decoder->setHintEncoding(parentFrame->document()->decoder());
         if (m_encoding.isEmpty()) {
-            if (canReferToParentFrameEncoding(m_frame, parentFrame))
+            if (canReferToParentFrameEncoding(m_frame.get(), parentFrame))
                 m_decoder->setEncoding(parentFrame->document()->textEncoding(), TextResourceDecoder::EncodingFromParentFrame);
         } else {
             m_decoder->setEncoding(m_encoding,
@@ -293,6 +299,11 @@ void DocumentWriter::setEncoding(const String& name, bool userChosen)
 {
     m_encoding = name;
     m_encodingWasChosenByUser = userChosen;
+}
+
+void DocumentWriter::setFrame(Frame& frame)
+{
+    m_frame = makeWeakPtr(frame);
 }
 
 void DocumentWriter::setDocumentWasLoadedAsPartOfNavigation()

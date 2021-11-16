@@ -31,7 +31,7 @@ function reduce(callback /*, initialValue */)
     var array = @toObject(this, "Array.prototype.reduce requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.reduce callback must be a function");
 
     var argumentCount = @argumentCount();
@@ -64,7 +64,7 @@ function reduceRight(callback /*, initialValue */)
     var array = @toObject(this, "Array.prototype.reduceRight requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.reduceRight callback must be a function");
 
     var argumentCount = @argumentCount();
@@ -97,7 +97,7 @@ function every(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.every requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.every callback must be a function");
     
     var thisArg = @argument(1);
@@ -119,7 +119,7 @@ function forEach(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.forEach requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.forEach callback must be a function");
     
     var thisArg = @argument(1);
@@ -137,7 +137,7 @@ function filter(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.filter requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.filter callback must be a function");
     
     var thisArg = @argument(1);
@@ -163,7 +163,7 @@ function map(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.map requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.map callback must be a function");
     
     var thisArg = @argument(1);
@@ -185,7 +185,7 @@ function some(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.some requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.some callback must be a function");
     
     var thisArg = @argument(1);
@@ -205,7 +205,7 @@ function fill(value /* [, start [, end]] */)
     var array = @toObject(this, "Array.prototype.fill requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    var relativeStart = @toInteger(@argument(1));
+    var relativeStart = @toIntegerOrInfinity(@argument(1));
     var k = 0;
     if (relativeStart < 0) {
         k = length + relativeStart;
@@ -219,7 +219,7 @@ function fill(value /* [, start [, end]] */)
     var relativeEnd = length;
     var end = @argument(2);
     if (end !== @undefined)
-        relativeEnd = @toInteger(end);
+        relativeEnd = @toIntegerOrInfinity(end);
     var final = 0;
     if (relativeEnd < 0) {
         final = length + relativeEnd;
@@ -242,7 +242,7 @@ function find(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.find requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.find callback must be a function");
     
     var thisArg = @argument(1);
@@ -261,7 +261,7 @@ function findIndex(callback /*, thisArg */)
     var array = @toObject(this, "Array.prototype.findIndex requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.findIndex callback must be a function");
     
     var thisArg = @argument(1);
@@ -285,7 +285,7 @@ function includes(searchElement /*, fromIndex*/)
     var fromIndex = 0;
     var from = @argument(1);
     if (from !== @undefined)
-        fromIndex = @toInteger(from);
+        fromIndex = @toIntegerOrInfinity(from);
 
     var index;
     if (fromIndex >= 0)
@@ -306,238 +306,198 @@ function includes(searchElement /*, fromIndex*/)
     return false;
 }
 
+@globalPrivate
+function sortStringComparator(a, b)
+{
+    "use strict";
+
+    var aString = a.string;
+    var bString = b.string;
+
+    if (aString === bString)
+        return 0;
+
+    return aString > bString ? 1 : -1;
+}
+
+@globalPrivate
+function sortCompact(receiver, receiverLength, compacted, isStringSort)
+{
+    "use strict";
+
+    var undefinedCount = 0;
+    var compactedIndex = 0;
+
+    for (var i = 0; i < receiverLength; ++i) {
+        if (i in receiver) {
+            var value = receiver[i];
+            if (value === @undefined)
+                ++undefinedCount;
+            else {
+                @putByValDirect(compacted, compactedIndex,
+                    isStringSort ? {string: @toString(value), value} : value);
+                ++compactedIndex;
+            }
+        }
+    }
+
+    return undefinedCount;
+}
+
+@globalPrivate
+function sortCommit(receiver, receiverLength, sorted, undefinedCount)
+{
+    "use strict";
+
+    // Move undefineds and holes to the end of an array. Result is [values..., undefineds..., holes...].
+
+    @assert(@isJSArray(sorted));
+    var sortedLength = sorted.length;
+    @assert(sortedLength + undefinedCount <= receiverLength);
+
+    var i = 0;
+    if (@isJSArray(receiver) && sortedLength >= 64 && typeof sorted[0] !== "number") { // heuristic
+        @appendMemcpy(receiver, sorted, 0);
+        i = sortedLength;
+    } else {
+        for (; i < sortedLength; ++i)
+            receiver[i] = sorted[i];
+    }
+
+    for (; i < sortedLength + undefinedCount; ++i)
+        receiver[i] = @undefined;
+
+    for (; i < receiverLength; ++i)
+        delete receiver[i];
+}
+
+@globalPrivate
+function sortMerge(dst, src, srcIndex, srcEnd, width, comparator)
+{
+    "use strict";
+
+    var left = srcIndex;
+    var leftEnd = @min(left + width, srcEnd);
+    var right = leftEnd;
+    var rightEnd = @min(right + width, srcEnd);
+
+    for (var dstIndex = left; dstIndex < rightEnd; ++dstIndex) {
+        if (right < rightEnd) {
+            if (left >= leftEnd) {
+                @putByValDirect(dst, dstIndex, src[right]);
+                ++right;
+                continue;
+            }
+
+            // See https://bugs.webkit.org/show_bug.cgi?id=47825 on boolean special-casing
+            var comparisonResult = comparator(src[right], src[left]);
+            if (comparisonResult === false || comparisonResult < 0) {
+                @putByValDirect(dst, dstIndex, src[right]);
+                ++right;
+                continue;
+            }
+
+        }
+
+        @putByValDirect(dst, dstIndex, src[left]);
+        ++left;
+    }
+}
+
+@globalPrivate
+function sortMergeSort(array, comparator)
+{
+    "use strict";
+
+    var valueCount = array.length;
+    var buffer = @newArrayWithSize(valueCount);
+
+    var dst = buffer;
+    var src = array;
+    for (var width = 1; width < valueCount; width *= 2) {
+        for (var srcIndex = 0; srcIndex < valueCount; srcIndex += 2 * width)
+            @sortMerge(dst, src, srcIndex, valueCount, width, comparator);
+
+        var tmp = src;
+        src = dst;
+        dst = tmp;
+    }
+
+    return src;
+}
+
+@globalPrivate
+function sortBucketSort(array, dst, bucket, depth)
+{
+    "use strict";
+
+    if (bucket.length < 32 || depth > 32) {
+        var sorted = @sortMergeSort(bucket, @sortStringComparator);
+        for (var i = 0; i < sorted.length; ++i) {
+            @putByValDirect(array, dst, sorted[i].value);
+            ++dst;
+        }
+        return dst;
+    }
+
+    var buckets = [ ];
+    @setPrototypeDirect.@call(buckets, null);
+    for (var i = 0; i < bucket.length; ++i) {
+        var entry = bucket[i];
+        var string = entry.string;
+        if (string.length == depth) {
+            @putByValDirect(array, dst, entry.value);
+            ++dst;
+            continue;
+        }
+
+        var c = string.@charCodeAt(depth);
+        var cBucket = buckets[c];
+        if (cBucket)
+            @arrayPush(cBucket, entry);
+        else
+            @putByValDirect(buckets, c, [ entry ]);
+    }
+
+    for (var i = 0; i < buckets.length; ++i) {
+        if (!buckets[i])
+            continue;
+        dst = @sortBucketSort(array, dst, buckets[i], depth + 1);
+    }
+
+    return dst;
+}
+
 function sort(comparator)
 {
     "use strict";
 
-    function min(a, b)
-    {
-        return a < b ? a : b;
-    }
+    var isStringSort = false;
+    if (comparator === @undefined)
+        isStringSort = true;
+    else if (!@isCallable(comparator))
+        @throwTypeError("Array.prototype.sort requires the comparator argument to be a function or undefined");
 
-    function stringComparator(a, b)
-    {
-        var aString = a.string;
-        var bString = b.string;
-
-        var aLength = aString.length;
-        var bLength = bString.length;
-        var length = min(aLength, bLength);
-
-        for (var i = 0; i < length; ++i) {
-            var aCharCode = aString.@charCodeAt(i);
-            var bCharCode = bString.@charCodeAt(i);
-
-            if (aCharCode == bCharCode)
-                continue;
-
-            return aCharCode - bCharCode;
-        }
-
-        return aLength - bLength;
-    }
-
-    // Move undefineds and holes to the end of a sparse array. Result is [values..., undefineds..., holes...].
-    function compactSparse(array, dst, src, length)
-    {
-        var values = [ ];
-        var seen = { };
-        var valueCount = 0;
-        var undefinedCount = 0;
-
-        // Clean up after the in-progress non-sparse compaction that failed.
-        for (var i = dst; i < src; ++i)
-            delete array[i];
-
-        for (var object = array; object; object = @Object.@getPrototypeOf(object)) {
-            var propertyNames = @Object.@getOwnPropertyNames(object);
-            for (var i = 0; i < propertyNames.length; ++i) {
-                var index = propertyNames[i];
-                if (index < length) { // Exclude non-numeric properties and properties past length.
-                    if (seen[index]) // Exclude duplicates.
-                        continue;
-                    seen[index] = 1;
-
-                    var value = array[index];
-                    delete array[index];
-
-                    if (value === @undefined) {
-                        ++undefinedCount;
-                        continue;
-                    }
-
-                    array[valueCount++] = value;
-                }
-            }
-        }
-
-        for (var i = valueCount; i < valueCount + undefinedCount; ++i)
-            array[i] = @undefined;
-
-        return valueCount;
-    }
-
-    function compactSlow(array, length)
-    {
-        var holeCount = 0;
-
-        var dst = 0;
-        var src = 0;
-        for (; src < length; ++src) {
-            if (!(src in array)) {
-                ++holeCount;
-                if (holeCount < 256)
-                    continue;
-                return compactSparse(array, dst, src, length);
-            }
-
-            var value = array[src];
-            if (value === @undefined)
-                continue;
-
-            array[dst++] = value;
-        }
-
-        var valueCount = dst;
-        var undefinedCount = length - valueCount - holeCount;
-
-        for (var i = valueCount; i < valueCount + undefinedCount; ++i)
-            array[i] = @undefined;
-
-        for (var i = valueCount + undefinedCount; i < length; ++i)
-            delete array[i];
-
-        return valueCount;
-    }
-
-    // Move undefineds and holes to the end of an array. Result is [values..., undefineds..., holes...].
-    function compact(array, length)
-    {
-        for (var i = 0; i < array.length; ++i) {
-            if (array[i] === @undefined)
-                return compactSlow(array, length);
-        }
-
-        return length;
-    }
-
-    function merge(dst, src, srcIndex, srcEnd, width, comparator)
-    {
-        var left = srcIndex;
-        var leftEnd = min(left + width, srcEnd);
-        var right = leftEnd;
-        var rightEnd = min(right + width, srcEnd);
-
-        for (var dstIndex = left; dstIndex < rightEnd; ++dstIndex) {
-            if (right < rightEnd) {
-                if (left >= leftEnd) {
-                    dst[dstIndex] = src[right++];
-                    continue;
-                }
-
-                var comparisonResult = comparator(src[right], src[left]);
-                if ((typeof comparisonResult === "boolean" && !comparisonResult) || comparisonResult < 0) {
-                    dst[dstIndex] = src[right++];
-                    continue;
-                }
-
-            }
-
-            dst[dstIndex] = src[left++];
-        }
-    }
-
-    function mergeSort(array, valueCount, comparator)
-    {
-        var buffer = [ ];
-        buffer.length = valueCount;
-
-        var dst = buffer;
-        var src = array;
-        for (var width = 1; width < valueCount; width *= 2) {
-            for (var srcIndex = 0; srcIndex < valueCount; srcIndex += 2 * width)
-                merge(dst, src, srcIndex, valueCount, width, comparator);
-
-            var tmp = src;
-            src = dst;
-            dst = tmp;
-        }
-
-        if (src != array) {
-            for(var i = 0; i < valueCount; i++)
-                array[i] = src[i];
-        }
-    }
-
-    function bucketSort(array, dst, bucket, depth)
-    {
-        if (bucket.length < 32 || depth > 32) {
-            mergeSort(bucket, bucket.length, stringComparator);
-            for (var i = 0; i < bucket.length; ++i)
-                array[dst++] = bucket[i].value;
-            return dst;
-        }
-
-        var buckets = [ ];
-        for (var i = 0; i < bucket.length; ++i) {
-            var entry = bucket[i];
-            var string = entry.string;
-            if (string.length == depth) {
-                array[dst++] = entry.value;
-                continue;
-            }
-
-            var c = string.@charCodeAt(depth);
-            if (!buckets[c])
-                buckets[c] = [ ];
-            buckets[c][buckets[c].length] = entry;
-        }
-
-        for (var i = 0; i < buckets.length; ++i) {
-            if (!buckets[i])
-                continue;
-            dst = bucketSort(array, dst, buckets[i], depth + 1);
-        }
-
-        return dst;
-    }
-
-    function comparatorSort(array, length, comparator)
-    {
-        var valueCount = compact(array, length);
-        mergeSort(array, valueCount, comparator);
-    }
-
-    function stringSort(array, length)
-    {
-        var valueCount = compact(array, length);
-
-        var strings = @newArrayWithSize(valueCount);
-        for (var i = 0; i < valueCount; ++i)
-            strings[i] = { string: @toString(array[i]), value: array[i] };
-
-        bucketSort(array, 0, strings, 0);
-    }
-
-    var sortFunction;
-    if (typeof comparator == "function")
-        sortFunction = comparatorSort;
-    else if (comparator === @undefined)
-        sortFunction = stringSort;
-    else
-        @throwTypeError("Array.prototype.sort requires the comparsion function be a function or undefined");
-
-    var array = @toObject(this, "Array.prototype.sort requires that |this| not be null or undefined");
-
-    var length = @toLength(array.length);
+    var receiver = @toObject(this, "Array.prototype.sort requires that |this| not be null or undefined");
+    var receiverLength = @toLength(receiver.length);
 
     // For compatibility with Firefox and Chrome, do nothing observable
     // to the target array if it has 0 or 1 sortable properties.
-    if (length < 2)
-        return array;
+    if (receiverLength < 2)
+        return receiver;
 
-    sortFunction(array, length, comparator);
-    return array;
+    var compacted = [ ];
+    var sorted = null;
+    var undefinedCount = @sortCompact(receiver, receiverLength, compacted, isStringSort);
+
+    if (isStringSort) {
+        sorted = @newArrayWithSize(compacted.length);
+        @sortBucketSort(sorted, 0, compacted, 0);
+    } else
+        sorted = @sortMergeSort(compacted, comparator);
+
+    @sortCommit(receiver, receiverLength, sorted, undefinedCount);
+    return receiver;
 }
 
 @globalPrivate
@@ -616,10 +576,10 @@ function copyWithin(target, start /*, end */)
     var array = @toObject(this, "Array.prototype.copyWithin requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    var relativeTarget = @toInteger(target);
+    var relativeTarget = @toIntegerOrInfinity(target);
     var to = (relativeTarget < 0) ? maxWithPositives(length + relativeTarget, 0) : minWithMaybeNegativeZeroAndPositive(relativeTarget, length);
 
-    var relativeStart = @toInteger(start);
+    var relativeStart = @toIntegerOrInfinity(start);
     var from = (relativeStart < 0) ? maxWithPositives(length + relativeStart, 0) : minWithMaybeNegativeZeroAndPositive(relativeStart, length);
 
     var relativeEnd;
@@ -627,7 +587,7 @@ function copyWithin(target, start /*, end */)
     if (end === @undefined)
         relativeEnd = length;
     else
-        relativeEnd = @toInteger(end);
+        relativeEnd = @toIntegerOrInfinity(end);
 
     var finalValue = (relativeEnd < 0) ? maxWithPositives(length + relativeEnd, 0) : minWithMaybeNegativeZeroAndPositive(relativeEnd, length);
 
@@ -681,7 +641,7 @@ function flat()
     var depthNum = 1;
     var depth = @argument(0);
     if (depth !== @undefined)
-        depthNum = @toInteger(depth);
+        depthNum = @toIntegerOrInfinity(depth);
 
     var result = @arraySpeciesCreate(array, 0);
 
@@ -717,7 +677,7 @@ function flatMap(callback)
     var array = @toObject(this, "Array.prototype.flatMap requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
-    if (typeof callback !== "function")
+    if (!@isCallable(callback))
         @throwTypeError("Array.prototype.flatMap callback must be a function");
 
     var thisArg = @argument(1);
@@ -725,4 +685,18 @@ function flatMap(callback)
     var result = @arraySpeciesCreate(array, 0);
 
     return @flatIntoArrayWithCallback(result, array, length, 0, callback, thisArg);
+}
+
+function at(index)
+{
+    "use strict";
+
+    var array = @toObject(this, "Array.prototype.at requires that |this| not be null or undefined");
+    var length = @toLength(array.length);
+
+    var k = @toIntegerOrInfinity(index);
+    if (k < 0)
+        k += length;
+
+    return (k >= 0 && k < length) ? array[k] : @undefined;
 }

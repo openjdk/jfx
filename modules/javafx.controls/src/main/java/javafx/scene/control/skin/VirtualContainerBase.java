@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ import javafx.scene.control.SkinBase;
  */
 public abstract class VirtualContainerBase<C extends Control, I extends IndexedCell> extends SkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -57,14 +57,14 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
     private EventHandler<? super ScrollToEvent<Integer>> scrollToEventHandler;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
 
     /**
-     *
+     * Constructor for subclasses to call.
      * @param control the control
      */
     public VirtualContainerBase(final C control) {
@@ -86,7 +86,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract API                                                            *
      *                                                                         *
@@ -108,7 +108,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -159,7 +159,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         checkState();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *

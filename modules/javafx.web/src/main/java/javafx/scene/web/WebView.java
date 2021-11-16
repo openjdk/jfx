@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -38,6 +39,7 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.ColorConverter;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
@@ -53,6 +55,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.paint.Color;
 import javafx.scene.text.FontSmoothingType;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -115,6 +118,7 @@ final public class WebView extends Parent {
 
     private static final boolean DEFAULT_CONTEXT_MENU_ENABLED = true;
     private static final FontSmoothingType DEFAULT_FONT_SMOOTHING_TYPE = FontSmoothingType.LCD;
+    private static final Color DEFAULT_PAGE_FILL = Color.WHITE;
     private static final double DEFAULT_ZOOM = 1.0;
     private static final double DEFAULT_FONT_SCALE = 1.0;
     private static final double DEFAULT_MIN_WIDTH = 0;
@@ -272,6 +276,7 @@ final public class WebView extends Parent {
         engine.setView(this);
         page = engine.getPage();
         page.setFontSmoothingType(DEFAULT_FONT_SMOOTHING_TYPE.ordinal());
+        page.setBackgroundColor(DEFAULT_PAGE_FILL);
 
         registerEventHandlers();
         stagePulseListener = () -> {
@@ -693,6 +698,59 @@ final public class WebView extends Parent {
     }
 
     /**
+     * Specifies the background color of the web page.
+     *
+     * <p>With this property, the {@code WebView} control's background
+     * can have any solid color, including some or complete
+     * level of transparency.
+     * However, if the HTML content being loaded sets its own
+     * background color, that color will take precedence.
+     *
+     * @defaultValue {@code Color.WHITE}
+     *
+     * @since 18
+     */
+    private ObjectProperty<Color> pageFill;
+
+    public final void setPageFill(Color value) {
+        pageFillProperty().set(value);
+    }
+
+    public final Color getPageFill() {
+        return pageFill == null ? DEFAULT_PAGE_FILL : pageFill.get();
+    }
+
+    public final ObjectProperty<Color> pageFillProperty() {
+        if (pageFill == null) {
+            pageFill = new StyleableObjectProperty<>(DEFAULT_PAGE_FILL) {
+
+                @Override
+                protected void invalidated() {
+                    Toolkit.getToolkit().checkFxUserThread();
+                    Color color = get();
+                    page.setBackgroundColor(color);
+                }
+
+                @Override
+                public CssMetaData<WebView,Color> getCssMetaData() {
+                    return WebView.StyleableProperties.PAGE_FILL;
+                }
+
+                @Override
+                public Object getBean() {
+                    return WebView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "pageFill";
+                }
+            };
+        }
+        return pageFill;
+    }
+
+    /**
      * Specifies whether context menu is enabled.
      *
      * @defaultValue true
@@ -767,6 +825,21 @@ final public class WebView extends Parent {
                 return (StyleableProperty<FontSmoothingType>)view.fontSmoothingTypeProperty();
             }
         };
+
+        private static final CssMetaData<WebView, Color> PAGE_FILL =
+                new CssMetaData<>("-fx-page-fill",
+                        ColorConverter.getInstance(), DEFAULT_PAGE_FILL) {
+
+                    @Override
+                    public boolean isSettable(WebView n) {
+                        return n.pageFill == null || !n.pageFill.isBound();
+                    }
+
+                    @Override
+                    public StyleableProperty<Color> getStyleableProperty(WebView n) {
+                        return (StyleableProperty<Color>)(WritableValue<Color>)n.pageFillProperty();
+                    }
+                };
 
         private static final CssMetaData<WebView, Number> ZOOM
                 = new CssMetaData<WebView, Number>(
@@ -893,6 +966,7 @@ final public class WebView extends Parent {
                     = new ArrayList<CssMetaData<? extends Styleable, ?>>(Parent.getClassCssMetaData());
             styleables.add(CONTEXT_MENU_ENABLED);
             styleables.add(FONT_SMOOTHING_TYPE);
+            styleables.add(PAGE_FILL);
             styleables.add(ZOOM);
             styleables.add(FONT_SCALE);
             styleables.add(MIN_WIDTH);
@@ -906,8 +980,9 @@ final public class WebView extends Parent {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

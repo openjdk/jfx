@@ -29,11 +29,14 @@
 #include "ElementData.h"
 #include "HTMLNames.h"
 #include "ScrollTypes.h"
+#include "ShadowRootInit.h"
 #include "ShadowRootMode.h"
 #include "SimulatedClickOptions.h"
 #include "StyleChange.h"
 #include "WebAnimationTypes.h"
 #include <JavaScriptCore/Strong.h>
+
+#define DUMP_NODE_STATISTICS 0
 
 namespace WebCore {
 
@@ -63,6 +66,8 @@ struct GetAnimationsOptions;
 struct KeyframeAnimationOptions;
 struct ScrollIntoViewOptions;
 struct ScrollToOptions;
+
+enum class EventProcessing : uint8_t;
 
 #if ENABLE(INTERSECTION_OBSERVER)
 struct IntersectionObserverData;
@@ -153,18 +158,18 @@ public:
 
     void scrollBy(const ScrollToOptions&);
     void scrollBy(double x, double y);
-    virtual void scrollTo(const ScrollToOptions&, ScrollClamping = ScrollClamping::Clamped);
+    virtual void scrollTo(const ScrollToOptions&, ScrollClamping = ScrollClamping::Clamped, ScrollSnapPointSelectionMethod = ScrollSnapPointSelectionMethod::Closest);
     void scrollTo(double x, double y);
 
     WEBCORE_EXPORT void scrollByLines(int lines);
     WEBCORE_EXPORT void scrollByPages(int pages);
 
-    WEBCORE_EXPORT double offsetLeftForBindings();
-    WEBCORE_EXPORT double offsetLeft();
-    WEBCORE_EXPORT double offsetTopForBindings();
-    WEBCORE_EXPORT double offsetTop();
-    WEBCORE_EXPORT double offsetWidth();
-    WEBCORE_EXPORT double offsetHeight();
+    WEBCORE_EXPORT int offsetLeftForBindings();
+    WEBCORE_EXPORT int offsetLeft();
+    WEBCORE_EXPORT int offsetTopForBindings();
+    WEBCORE_EXPORT int offsetTop();
+    WEBCORE_EXPORT int offsetWidth();
+    WEBCORE_EXPORT int offsetHeight();
 
     bool mayCauseRepaintInsideViewport(const IntRect* visibleRect = nullptr) const;
 
@@ -175,10 +180,10 @@ public:
     const Element* rootElement() const;
 
     Element* offsetParent();
-    WEBCORE_EXPORT double clientLeft();
-    WEBCORE_EXPORT double clientTop();
-    WEBCORE_EXPORT double clientWidth();
-    WEBCORE_EXPORT double clientHeight();
+    WEBCORE_EXPORT int clientLeft();
+    WEBCORE_EXPORT int clientTop();
+    WEBCORE_EXPORT int clientWidth();
+    WEBCORE_EXPORT int clientHeight();
 
     virtual int scrollLeft();
     virtual int scrollTop();
@@ -293,17 +298,15 @@ public:
     WEBCORE_EXPORT ShadowRoot* shadowRoot() const;
     ShadowRoot* shadowRootForBindings(JSC::JSGlobalObject&) const;
 
-    struct ShadowRootInit {
-        ShadowRootMode mode;
-        bool delegatesFocus { false };
-    };
-    ExceptionOr<ShadowRoot&> attachShadow(const ShadowRootInit&);
+    WEBCORE_EXPORT ExceptionOr<ShadowRoot&> attachShadow(const ShadowRootInit&);
 
     RefPtr<ShadowRoot> userAgentShadowRoot() const;
     WEBCORE_EXPORT ShadowRoot& ensureUserAgentShadowRoot();
 
     void setIsDefinedCustomElement(JSCustomElementInterface&);
-    void setIsFailedCustomElement(JSCustomElementInterface&);
+    void setIsFailedCustomElement();
+    void setIsFailedCustomElementWithoutClearingReactionQueue();
+    void clearReactionQueueFromFailedCustomElement();
     void setIsCustomElementUpgradeCandidate();
     void enqueueToUpgrade(JSCustomElementInterface&);
     CustomElementReactionQueue* reactionQueue() const;
@@ -316,10 +319,10 @@ public:
     bool hovered() const { return isUserActionElement() && isUserActionElementHovered(); }
     bool focused() const { return isUserActionElement() && isUserActionElementFocused(); }
     bool isBeingDragged() const { return isUserActionElement() && isUserActionElementDragged(); }
-    bool hasFocusWithin() const { return getFlag(HasFocusWithin); };
+    bool hasFocusWithin() const { return hasNodeFlag(NodeFlag::HasFocusWithin); };
 
-    virtual void setActive(bool = true, bool pause = false);
-    virtual void setHovered(bool = true);
+    virtual void setActive(bool = true, bool pause = false, Style::InvalidationScope = Style::InvalidationScope::All);
+    virtual void setHovered(bool = true, Style::InvalidationScope = Style::InvalidationScope::All);
     virtual void setFocus(bool);
     void setBeingDragged(bool);
     void setHasFocusWithin(bool);
@@ -351,31 +354,32 @@ public:
     bool isVisibleWithoutResolvingFullStyle() const;
 
     // Methods for indicating the style is affected by dynamic updates (e.g., children changing, our position changing in our sibling list, etc.)
-    bool styleAffectedByEmpty() const { return hasStyleFlag(ElementStyleFlag::StyleAffectedByEmpty); }
-    bool descendantsAffectedByPreviousSibling() const { return getFlag(DescendantsAffectedByPreviousSiblingFlag); }
-    bool childrenAffectedByFirstChildRules() const { return getFlag(ChildrenAffectedByFirstChildRulesFlag); }
-    bool childrenAffectedByLastChildRules() const { return getFlag(ChildrenAffectedByLastChildRulesFlag); }
-    bool childrenAffectedByForwardPositionalRules() const { return hasStyleFlag(ElementStyleFlag::ChildrenAffectedByForwardPositionalRules); }
-    bool descendantsAffectedByForwardPositionalRules() const { return hasStyleFlag(ElementStyleFlag::DescendantsAffectedByForwardPositionalRules); }
-    bool childrenAffectedByBackwardPositionalRules() const { return hasStyleFlag(ElementStyleFlag::ChildrenAffectedByBackwardPositionalRules); }
-    bool descendantsAffectedByBackwardPositionalRules() const { return hasStyleFlag(ElementStyleFlag::DescendantsAffectedByBackwardPositionalRules); }
-    bool childrenAffectedByPropertyBasedBackwardPositionalRules() const { return hasStyleFlag(ElementStyleFlag::ChildrenAffectedByPropertyBasedBackwardPositionalRules); }
-    bool affectsNextSiblingElementStyle() const { return getFlag(AffectsNextSiblingElementStyle); }
+    bool styleAffectedByEmpty() const { return hasDynamicStyleRelationFlag(DynamicStyleRelationFlag::StyleAffectedByEmpty); }
+    bool descendantsAffectedByPreviousSibling() const { return hasStyleFlag(NodeStyleFlag::DescendantsAffectedByPreviousSibling); }
+    bool childrenAffectedByFirstChildRules() const { return hasStyleFlag(NodeStyleFlag::ChildrenAffectedByFirstChildRules); }
+    bool childrenAffectedByLastChildRules() const { return hasStyleFlag(NodeStyleFlag::ChildrenAffectedByLastChildRules); }
+    bool childrenAffectedByForwardPositionalRules() const { return hasDynamicStyleRelationFlag(DynamicStyleRelationFlag::ChildrenAffectedByForwardPositionalRules); }
+    bool descendantsAffectedByForwardPositionalRules() const { return hasDynamicStyleRelationFlag(DynamicStyleRelationFlag::DescendantsAffectedByForwardPositionalRules); }
+    bool childrenAffectedByBackwardPositionalRules() const { return hasDynamicStyleRelationFlag(DynamicStyleRelationFlag::ChildrenAffectedByBackwardPositionalRules); }
+    bool descendantsAffectedByBackwardPositionalRules() const { return hasDynamicStyleRelationFlag(DynamicStyleRelationFlag::DescendantsAffectedByBackwardPositionalRules); }
+    bool childrenAffectedByPropertyBasedBackwardPositionalRules() const { return hasDynamicStyleRelationFlag(DynamicStyleRelationFlag::ChildrenAffectedByPropertyBasedBackwardPositionalRules); }
+    bool affectsNextSiblingElementStyle() const { return hasStyleFlag(NodeStyleFlag::AffectsNextSiblingElementStyle); }
+    bool styleIsAffectedByPreviousSibling() const { return hasStyleFlag(NodeStyleFlag::StyleIsAffectedByPreviousSibling); }
     unsigned childIndex() const { return hasRareData() ? rareDataChildIndex() : 0; }
 
     bool hasFlagsSetDuringStylingOfChildren() const;
 
-    void setStyleAffectedByEmpty() { setStyleFlag(ElementStyleFlag::StyleAffectedByEmpty); }
-    void setDescendantsAffectedByPreviousSibling() { setFlag(DescendantsAffectedByPreviousSiblingFlag); }
-    void setChildrenAffectedByFirstChildRules() { setFlag(ChildrenAffectedByFirstChildRulesFlag); }
-    void setChildrenAffectedByLastChildRules() { setFlag(ChildrenAffectedByLastChildRulesFlag); }
-    void setChildrenAffectedByForwardPositionalRules() { setStyleFlag(ElementStyleFlag::ChildrenAffectedByForwardPositionalRules); }
-    void setDescendantsAffectedByForwardPositionalRules() { setStyleFlag(ElementStyleFlag::DescendantsAffectedByForwardPositionalRules); }
-    void setChildrenAffectedByBackwardPositionalRules() { setStyleFlag(ElementStyleFlag::ChildrenAffectedByBackwardPositionalRules); }
-    void setDescendantsAffectedByBackwardPositionalRules() { setStyleFlag(ElementStyleFlag::DescendantsAffectedByBackwardPositionalRules); }
-    void setChildrenAffectedByPropertyBasedBackwardPositionalRules() { setStyleFlag(ElementStyleFlag::ChildrenAffectedByPropertyBasedBackwardPositionalRules); }
-    void setAffectsNextSiblingElementStyle() { setFlag(AffectsNextSiblingElementStyle); }
-    void setStyleIsAffectedByPreviousSibling() { setFlag(StyleIsAffectedByPreviousSibling); }
+    void setStyleAffectedByEmpty() { setDynamicStyleRelationFlag(DynamicStyleRelationFlag::StyleAffectedByEmpty); }
+    void setDescendantsAffectedByPreviousSibling() { setStyleFlag(NodeStyleFlag::DescendantsAffectedByPreviousSibling); }
+    void setChildrenAffectedByFirstChildRules() { setStyleFlag(NodeStyleFlag::ChildrenAffectedByFirstChildRules); }
+    void setChildrenAffectedByLastChildRules() { setStyleFlag(NodeStyleFlag::ChildrenAffectedByLastChildRules); }
+    void setChildrenAffectedByForwardPositionalRules() { setDynamicStyleRelationFlag(DynamicStyleRelationFlag::ChildrenAffectedByForwardPositionalRules); }
+    void setDescendantsAffectedByForwardPositionalRules() { setDynamicStyleRelationFlag(DynamicStyleRelationFlag::DescendantsAffectedByForwardPositionalRules); }
+    void setChildrenAffectedByBackwardPositionalRules() { setDynamicStyleRelationFlag(DynamicStyleRelationFlag::ChildrenAffectedByBackwardPositionalRules); }
+    void setDescendantsAffectedByBackwardPositionalRules() { setDynamicStyleRelationFlag(DynamicStyleRelationFlag::DescendantsAffectedByBackwardPositionalRules); }
+    void setChildrenAffectedByPropertyBasedBackwardPositionalRules() { setDynamicStyleRelationFlag(DynamicStyleRelationFlag::ChildrenAffectedByPropertyBasedBackwardPositionalRules); }
+    void setAffectsNextSiblingElementStyle() { setStyleFlag(NodeStyleFlag::AffectsNextSiblingElementStyle); }
+    void setStyleIsAffectedByPreviousSibling() { setStyleFlag(NodeStyleFlag::StyleIsAffectedByPreviousSibling); }
     void setChildIndex(unsigned);
 
     WEBCORE_EXPORT AtomString computeInheritedLanguage() const;
@@ -395,7 +399,7 @@ public:
     virtual String target() const { return String(); }
 
     static AXTextStateChangeIntent defaultFocusTextStateChangeIntent() { return AXTextStateChangeIntent(AXTextStateChangeTypeSelectionMove, AXTextSelection { AXTextSelectionDirectionDiscontiguous, AXTextSelectionGranularityUnknown, true }); }
-    virtual void focus(bool restorePreviousSelection = true, FocusDirection = FocusDirectionNone);
+    virtual void focus(SelectionRestorationMode = SelectionRestorationMode::RestoreOrSelectAll, FocusDirection = FocusDirection::None);
     void revealFocusedElement(SelectionRestorationMode);
     virtual RefPtr<Element> focusAppearanceUpdateTarget();
     virtual void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode = SelectionRevealMode::Reveal);
@@ -476,39 +480,31 @@ public:
 
     virtual bool childShouldCreateRenderer(const Node&) const;
 
-    bool hasPendingResources() const;
-    void setHasPendingResources();
-    void clearHasPendingResources();
+    bool hasPendingResources() const { return hasNodeFlag(NodeFlag::HasPendingResources); }
+    void setHasPendingResources() { setNodeFlag(NodeFlag::HasPendingResources); }
+    void clearHasPendingResources() { clearNodeFlag(NodeFlag::HasPendingResources); }
     virtual void buildPendingResource() { };
 
-    bool hasCSSAnimation() const;
-    void setHasCSSAnimation();
-    void clearHasCSSAnimation();
+    KeyframeEffectStack* keyframeEffectStack(PseudoId) const;
+    KeyframeEffectStack& ensureKeyframeEffectStack(PseudoId);
+    bool hasKeyframeEffects(PseudoId) const;
 
-    KeyframeEffectStack* keyframeEffectStack() const;
-    KeyframeEffectStack& ensureKeyframeEffectStack();
-    bool hasKeyframeEffects() const;
-    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle&);
+    const AnimationCollection* animations(PseudoId) const;
+    bool hasCompletedTransitionForProperty(PseudoId, CSSPropertyID) const;
+    bool hasRunningTransitionForProperty(PseudoId, CSSPropertyID) const;
+    bool hasRunningTransitions(PseudoId) const;
+    AnimationCollection& ensureAnimations(PseudoId);
 
-    const AnimationCollection* webAnimations() const;
-    const AnimationCollection* cssAnimations() const;
-    const AnimationCollection* transitions() const;
-    bool hasCompletedTransitionsForProperty(CSSPropertyID) const;
-    bool hasRunningTransitionsForProperty(CSSPropertyID) const;
-    bool hasRunningTransitions() const;
-    AnimationCollection& ensureWebAnimations();
-    AnimationCollection& ensureCSSAnimations();
-    AnimationCollection& ensureTransitions();
-    PropertyToTransitionMap& ensureCompletedTransitionsByProperty();
-    PropertyToTransitionMap& ensureRunningTransitionsByProperty();
-    CSSAnimationCollection& animationsCreatedByMarkup();
-    void setAnimationsCreatedByMarkup(CSSAnimationCollection&&);
+    PropertyToTransitionMap& ensureCompletedTransitionsByProperty(PseudoId);
+    PropertyToTransitionMap& ensureRunningTransitionsByProperty(PseudoId);
+    CSSAnimationCollection& animationsCreatedByMarkup(PseudoId);
+    void setAnimationsCreatedByMarkup(PseudoId, CSSAnimationCollection&&);
 
-    const RenderStyle* lastStyleChangeEventStyle() const;
-    void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&&);
+    const RenderStyle* lastStyleChangeEventStyle(PseudoId) const;
+    void setLastStyleChangeEventStyle(PseudoId, std::unique_ptr<const RenderStyle>&&);
 
 #if ENABLE(FULLSCREEN_API)
-    WEBCORE_EXPORT bool containsFullScreenElement() const;
+    bool containsFullScreenElement() const { return hasNodeFlag(NodeFlag::ContainsFullScreenElement); }
     void setContainsFullScreenElement(bool);
     void setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(bool);
     WEBCORE_EXPORT virtual void webkitRequestFullscreen();
@@ -533,7 +529,7 @@ public:
     void setSavedLayerScrollPosition(const IntPoint&);
 
     bool dispatchMouseEvent(const PlatformMouseEvent&, const AtomString& eventType, int clickCount = 0, Element* relatedTarget = nullptr);
-    bool dispatchWheelEvent(const PlatformWheelEvent&);
+    bool dispatchWheelEvent(const PlatformWheelEvent&, OptionSet<EventHandling>&, Event::IsCancelable = Event::IsCancelable::Yes);
     bool dispatchKeyEvent(const PlatformKeyboardEvent&);
     bool dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions = SendNoEvents, SimulatedClickVisualOptions = ShowPressedLook);
     void dispatchFocusInEvent(const AtomString& eventType, RefPtr<Element>&& oldFocusedElement);
@@ -556,7 +552,7 @@ public:
     LayoutRect absoluteEventHandlerBounds(bool& includesFixedPositionElements) override;
 
     const RenderStyle* existingComputedStyle() const;
-    WEBCORE_EXPORT const RenderStyle* renderOrDisplayContentsStyle() const;
+    WEBCORE_EXPORT const RenderStyle* renderOrDisplayContentsStyle(PseudoId = PseudoId::None) const;
 
     void clearBeforePseudoElement();
     void clearAfterPseudoElement();
@@ -632,8 +628,7 @@ protected:
     void removeAllEventListeners() final;
     virtual void parserDidSetAttributes();
 
-    void clearTabIndexExplicitlyIfNeeded();
-    void setTabIndexExplicitly(int);
+    void setTabIndexExplicitly(Optional<int>);
 
     void classAttributeChanged(const AtomString& newClassString);
     void partAttributeChanged(const AtomString& newValue);
@@ -695,10 +690,6 @@ private:
     LayoutRect absoluteEventBounds(bool& boundsIncludeAllDescendantElements, bool& includesFixedPositionElements);
     LayoutRect absoluteEventBoundsOfElementAndDescendants(bool& includesFixedPositionElements);
 
-#if ENABLE(TREE_DEBUGGING)
-    void formatForDebugger(char* buffer, unsigned length) const override;
-#endif
-
 #if ENABLE(INTERSECTION_OBSERVER)
     void disconnectFromIntersectionObservers();
 #endif
@@ -724,8 +715,8 @@ private:
     ElementRareData* elementRareData() const;
     ElementRareData& ensureElementRareData();
 
-    ElementAnimationRareData* animationRareData() const;
-    ElementAnimationRareData& ensureAnimationRareData();
+    ElementAnimationRareData* animationRareData(PseudoId) const;
+    ElementAnimationRareData& ensureAnimationRareData(PseudoId);
 
     virtual int defaultTabIndex() const;
 

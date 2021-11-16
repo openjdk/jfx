@@ -72,7 +72,7 @@ static bool processContentRuleListsForLoad(const Frame& frame, ResourceRequest& 
     auto* page = frame.page();
     if (!page)
         return false;
-    auto results = page->userContentProvider().processContentRuleListsForLoad(request.url(), resourceType, *documentLoader);
+    auto results = page->userContentProvider().processContentRuleListsForLoad(*page, request.url(), resourceType, *documentLoader);
     bool result = results.summary.blockedLoad;
     ContentExtensions::applyResultsToRequest(WTFMove(results), page, request);
     return result;
@@ -87,6 +87,11 @@ void PingLoader::loadImage(Frame& frame, const URL& url)
 
     if (!document.securityOrigin().canDisplay(url)) {
         FrameLoader::reportLocalLoadFailed(&frame, url.string());
+        return;
+    }
+
+    if (!portAllowed(url)) {
+        FrameLoader::reportBlockedLoadFailed(frame, url);
         return;
     }
 

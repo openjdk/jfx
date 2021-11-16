@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -151,7 +151,7 @@ import javafx.util.Callback;
  */
 public class FlowPane extends Pane {
 
-    /********************************************************************
+    /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
     private static final String MARGIN_CONSTRAINT = "flowpane-margin";
@@ -186,7 +186,7 @@ public class FlowPane extends Pane {
         setMargin(child, null);
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
@@ -806,7 +806,7 @@ public class FlowPane extends Pane {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -939,8 +939,9 @@ public class FlowPane extends Pane {
 
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

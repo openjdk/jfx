@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
  */
 public class TreeTableCell<S,T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -92,7 +92,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -103,7 +103,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -192,7 +192,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             new WeakInvalidationListener(rootPropertyListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -200,22 +200,22 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     // --- TableColumn
     /**
-     * The TreeTableColumn instance that backs this TreeTableCell.
+     * The {@code TreeTableColumn} instance that backs this {@code TreeTableCell}.
      */
-    private ReadOnlyObjectWrapper<TreeTableColumn<S,T>> treeTableColumn =
-            new ReadOnlyObjectWrapper<TreeTableColumn<S,T>>(this, "treeTableColumn") {
+    private ReadOnlyObjectWrapper<TreeTableColumn<S,T>> tableColumn =
+            new ReadOnlyObjectWrapper<TreeTableColumn<S,T>>(this, "tableColumn") {
         @Override protected void invalidated() {
             updateColumnIndex();
         }
     };
-    public final ReadOnlyObjectProperty<TreeTableColumn<S,T>> tableColumnProperty() { return treeTableColumn.getReadOnlyProperty(); }
-    private void setTableColumn(TreeTableColumn<S,T> value) { treeTableColumn.set(value); }
-    public final TreeTableColumn<S,T> getTableColumn() { return treeTableColumn.get(); }
+    public final ReadOnlyObjectProperty<TreeTableColumn<S,T>> tableColumnProperty() { return tableColumn.getReadOnlyProperty(); }
+    private void setTableColumn(TreeTableColumn<S,T> value) { tableColumn.set(value); }
+    public final TreeTableColumn<S,T> getTableColumn() { return tableColumn.get(); }
 
 
     // --- TableView
     /**
-     * The TreeTableView associated with this TreeTableCell.
+     * The {@code TreeTableView} associated with this {@code TreeTableCell}.
      */
     private ReadOnlyObjectWrapper<TreeTableView<S>> treeTableView;
     private void setTreeTableView(TreeTableView<S> value) {
@@ -284,21 +284,43 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     // --- TableRow
     /**
-     * The TreeTableRow that this TreeTableCell currently finds itself placed within.
+     * The {@code TreeTableRow} that this {@code TreeTableCell} currently finds itself placed within.
      */
-    private ReadOnlyObjectWrapper<TreeTableRow<S>> treeTableRow =
-            new ReadOnlyObjectWrapper<TreeTableRow<S>>(this, "treeTableRow");
-    private void setTreeTableRow(TreeTableRow<S> value) { treeTableRow.set(value); }
-    public final TreeTableRow<S> getTreeTableRow() { return treeTableRow.get(); }
-    public final ReadOnlyObjectProperty<TreeTableRow<S>> tableRowProperty() { return treeTableRow;  }
+    private ReadOnlyObjectWrapper<TreeTableRow<S>> tableRow =
+            new ReadOnlyObjectWrapper<TreeTableRow<S>>(this, "tableRow");
+    private void setTableRow(TreeTableRow<S> value) { tableRow.set(value); }
+    /**
+     * Gets the value of the property {@code tableRow}.
+     * @return the value of the property {@code tableRow}
+     * @since 17
+     */
+    public final TreeTableRow<S> getTableRow() { return tableRow.get(); }
+    public final ReadOnlyObjectProperty<TreeTableRow<S>> tableRowProperty() {
+        return tableRow.getReadOnlyProperty();
+    }
+
+    // The following method was misnamed and is deprecated in favor of the
+    // correctly named method.
+    /**
+     * @deprecated Use {@link getTableRow} instead.
+     * @return the {@code TreeTableRow}
+     */
+    @Deprecated(since = "17")
+    public final TreeTableRow<S> getTreeTableRow() { return getTableRow(); }
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
+
+    // editing location at start of edit - fix for JDK-8187229
+    private TreeTablePosition<S, T> editingCellAtStartEdit = null;
+    // test-only
+    TreeTablePosition<S, T> getEditingCellAtStartEdit() {
+        return editingCellAtStartEdit;
+    }
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -306,9 +328,11 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
         final TreeTableView<S> table = getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
-        if (! isEditable() ||
-                (table != null && ! table.isEditable()) ||
-                (column != null && ! getTableColumn().isEditable())) {
+        final TreeTableRow<S> row = getTableRow();
+        if (!isEditable() ||
+                (table != null && !table.isEditable()) ||
+                (column != null && !column.isEditable()) ||
+                (row != null && !row.isEditable())) {
             return;
         }
 
@@ -324,31 +348,34 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
         if (column != null) {
-            CellEditEvent editEvent = new CellEditEvent(
+            CellEditEvent<S, T> editEvent = new CellEditEvent<>(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TreeTableColumn.<S,T>editStartEvent(),
                 null
             );
 
             Event.fireEvent(column, editEvent);
         }
+        if (table != null) {
+            table.edit(editingCellAtStartEdit.getRow(), editingCellAtStartEdit.getTableColumn());
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
-        if (! isEditing()) return;
+        if (!isEditing()) return;
 
         final TreeTableView<S> table = getTreeTableView();
-        if (table != null) {
-            @SuppressWarnings("unchecked")
-            TreeTablePosition<S,T> editingCell = (TreeTablePosition<S,T>) table.getEditingCell();
-
-            // Inform the TableView of the edit being ready to be committed.
+        if (getTableColumn() != null) {
+            // Inform the TreeTableColumn of the edit being ready to be committed.
             CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
                 table,
-                editingCell,
+                editingCellAtStartEdit,
                 TreeTableColumn.<S,T>editCommitEvent(),
                 newValue
             );
@@ -380,31 +407,28 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
-        if (! isEditing()) return;
-
-        final TreeTableView<S> table = getTreeTableView();
+        if (!isEditing()) return;
 
         super.cancelEdit();
 
-        // reset the editing index on the TableView
+        final TreeTableView<S> table = getTreeTableView();
         if (table != null) {
-            @SuppressWarnings("unchecked")
-            TreeTablePosition<S,T> editingCell = (TreeTablePosition<S,T>) table.getEditingCell();
-
+            // reset the editing index on the TableView
             if (updateEditingIndex) table.edit(-1, null);
-
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
             // clicked out of the table entirely and given focus to something else.
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+        }
 
+        if (getTableColumn() != null) {
             CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
-                table,
-                editingCell,
-                TreeTableColumn.<S,T>editCancelEvent(),
-                null
-            );
+                    table,
+                    editingCellAtStartEdit,
+                    TreeTableColumn.<S,T>editCancelEvent(),
+                    null
+                    );
 
             Event.fireEvent(getTableColumn(), editEvent);
         }
@@ -424,7 +448,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // out, as it is valid for an empty TableCell to be selected, as long
         // as the parent TableRow is not empty (see RT-15529).
         /*if (selected && isEmpty()) return;*/
-        if (getTreeTableRow() == null || getTreeTableRow().isEmpty()) return;
+        if (getTableRow() == null || getTableRow().isEmpty()) return;
         setSelected(selected);
     }
 
@@ -617,7 +641,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         final boolean isEmpty = isEmpty();
         final T oldValue = getItem();
 
-        final TreeTableRow<S> tableRow = getTreeTableRow();
+        final TreeTableRow<S> tableRow = getTableRow();
         final S rowItem = tableRow == null ? null : tableRow.getItem();
 
         final boolean indexExceedsItemCount = index >= itemCount;
@@ -692,46 +716,49 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                              Expert API                                 *
      *                                                                         *
      **************************************************************************/
 
     /**
-     * Updates the TreeTableView associated with this TreeTableCell. This is typically
-     * only done once when the TreeTableCell is first added to the TreeTableView.
-     *
+     * Updates the {@code TreeTableView} associated with this {@code TreeTableCell}.
+     * This is typically only done once when the {@code TreeTableCell} is first
+     * added to the {@code TreeTableView}.
+     * <p>
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param tv the TreeTableView associated with this TreeTableCell
+     * @param tv the {@code TreeTableView} associated with this {@code TreeTableCell}
      */
     public final void updateTreeTableView(TreeTableView<S> tv) {
         setTreeTableView(tv);
     }
 
     /**
-     * Updates the TreeTableRow associated with this TreeTableCell.
-     *
+     * Updates the {@code TreeTableRow} associated with this {@code TreeTableCell}.
+     * <p>
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param treeTableRow the TreeTableRow associated with this TreeTableCell
+     * @param row the {@code TreeTableRow} associated with this {@code TreeTableCell}
+     * @since 17
      */
-    public final void updateTreeTableRow(TreeTableRow<S> treeTableRow) {
-        this.setTreeTableRow(treeTableRow);
+    public final void updateTableRow(TreeTableRow<S> row) {
+        this.setTableRow(row);
     }
 
     /**
-     * Updates the TreeTableColumn associated with this TreeTableCell.
-     *
+     * Updates the {@code TreeTableColumn} associated with this {@code TreeTableCell}.
+     * <p>
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param col the TreeTableColumn associated with this TreeTableCell
+     * @param column the {@code TreeTableColumn} associated with this {@code TreeTableCell}
+     * @since 17
      */
-    public final void updateTreeTableColumn(TreeTableColumn<S,T> col) {
+    public final void updateTableColumn(TreeTableColumn<S,T> column) {
         // remove style class of existing tree table column, if it is non-null
         TreeTableColumn<S,T> oldCol = getTableColumn();
         if (oldCol != null) {
@@ -751,23 +778,42 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             }
         }
 
-        setTableColumn(col);
+        setTableColumn(column);
 
-        if (col != null) {
-            getStyleClass().addAll(col.getStyleClass());
-            col.getStyleClass().addListener(weakColumnStyleClassListener);
+        if (column != null) {
+            getStyleClass().addAll(column.getStyleClass());
+            column.getStyleClass().addListener(weakColumnStyleClassListener);
 
-            col.idProperty().addListener(weakColumnIdListener);
-            col.styleProperty().addListener(weakColumnStyleListener);
+            column.idProperty().addListener(weakColumnIdListener);
+            column.styleProperty().addListener(weakColumnStyleListener);
 
-            possiblySetId(col.getId());
-            possiblySetStyle(col.getStyle());
+            possiblySetId(column.getId());
+            possiblySetStyle(column.getStyle());
         }
     }
 
+    // The following methods were misnamed and are deprecated in favor of the
+    // correctly named methods.
+    /**
+     * @deprecated Use {@link updateTableRow} instead.
+     * @param row the {@code TreeTableRow}
+     */
+    @Deprecated(since = "17")
+    public final void updateTreeTableRow(TreeTableRow<S> row) {
+        updateTableRow(row);
+    }
+
+    /**
+     * @deprecated Use {@link updateTableColumn} instead.
+     * @param column the {@code TreeTableColumn}
+     */
+    @Deprecated(since = "17")
+    public final void updateTreeTableColumn(TreeTableColumn<S,T> column) {
+        updateTableColumn(column);
+    }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -795,7 +841,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -807,7 +853,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         switch (attribute) {
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();
+            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

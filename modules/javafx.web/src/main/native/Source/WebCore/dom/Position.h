@@ -49,6 +49,8 @@ enum PositionMoveType {
     BackwardDeletion // Subject to platform conventions.
 };
 
+struct InlineRunAndOffset;
+
 class Position {
 public:
     enum AnchorType {
@@ -158,8 +160,8 @@ public:
 
     // FIXME: Make these non-member functions and put them somewhere in the editing directory.
     // These aren't really basic "position" operations. More high level editing helper functions.
-    WEBCORE_EXPORT Position leadingWhitespacePosition(EAffinity, bool considerNonCollapsibleWhitespace = false) const;
-    WEBCORE_EXPORT Position trailingWhitespacePosition(EAffinity, bool considerNonCollapsibleWhitespace = false) const;
+    WEBCORE_EXPORT Position leadingWhitespacePosition(Affinity, bool considerNonCollapsibleWhitespace = false) const;
+    WEBCORE_EXPORT Position trailingWhitespacePosition(Affinity, bool considerNonCollapsibleWhitespace = false) const;
 
     // These return useful visually equivalent positions.
     WEBCORE_EXPORT Position upstream(EditingBoundaryCrossingRule = CannotCrossEditingBoundary) const;
@@ -169,8 +171,8 @@ public:
     bool isRenderedCharacter() const;
     bool rendersInDifferentPosition(const Position&) const;
 
-    void getInlineBoxAndOffset(EAffinity, InlineBox*&, int& caretOffset) const;
-    void getInlineBoxAndOffset(EAffinity, TextDirection primaryDirection, InlineBox*&, int& caretOffset) const;
+    InlineRunAndOffset inlineRunAndOffset(Affinity) const;
+    InlineRunAndOffset inlineRunAndOffset(Affinity, TextDirection primaryDirection) const;
 
     TextDirection primaryDirection() const;
 
@@ -179,18 +181,13 @@ public:
 
     static bool hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement&);
     static bool nodeIsUserSelectNone(Node*);
-#if ENABLE(USERSELECT_ALL)
     static bool nodeIsUserSelectAll(const Node*);
     static Node* rootUserSelectAllForNode(Node*);
-#else
-    static bool nodeIsUserSelectAll(const Node*) { return false; }
-    static Node* rootUserSelectAllForNode(Node*) { return 0; }
-#endif
 
     void debugPosition(const char* msg = "") const;
 
 #if ENABLE(TREE_DEBUGGING)
-    void formatForDebugger(char* buffer, unsigned length) const;
+    String debugDescription() const;
     void showAnchorTypeAndOffset() const;
     void showTreeForThis() const;
 #endif
@@ -203,12 +200,12 @@ private:
     // For creating legacy editing positions: (Anchor type will be determined from editingIgnoresContent(node))
     enum class LegacyEditingPositionFlag { On };
     WEBCORE_EXPORT Position(Node* anchorNode, unsigned offset, LegacyEditingPositionFlag);
-    friend Position createLegacyEditingPosition(Node*, unsigned offset);
+    friend Position makeDeprecatedLegacyPosition(Node*, unsigned offset);
 
     WEBCORE_EXPORT int offsetForPositionAfterAnchor() const;
 
-    Position previousCharacterPosition(EAffinity) const;
-    Position nextCharacterPosition(EAffinity) const;
+    Position previousCharacterPosition(Affinity) const;
+    Position nextCharacterPosition(Affinity) const;
 
     static AnchorType anchorTypeForLegacyEditingPosition(Node* anchorNode, unsigned offset);
 
@@ -223,14 +220,19 @@ private:
 
 bool operator==(const Position&, const Position&);
 bool operator!=(const Position&, const Position&);
+
+template<TreeType treeType> PartialOrdering treeOrder(const Position&, const Position&);
+WEBCORE_EXPORT PartialOrdering documentOrder(const Position&, const Position&);
 bool operator<(const Position&, const Position&);
 bool operator>(const Position&, const Position&);
 bool operator>=(const Position&, const Position&);
 bool operator<=(const Position&, const Position&);
 
-// FIXME: Consider renaming this to "make" instead of "create" since we normally use "create" for functions that allocate heap objects.
-Position createLegacyEditingPosition(Node*, unsigned offset);
-WEBCORE_EXPORT Position createLegacyEditingPosition(const BoundaryPoint&);
+Position makeContainerOffsetPosition(Node*, unsigned offset);
+WEBCORE_EXPORT Position makeContainerOffsetPosition(const BoundaryPoint&);
+
+Position makeDeprecatedLegacyPosition(Node*, unsigned offset);
+WEBCORE_EXPORT Position makeDeprecatedLegacyPosition(const BoundaryPoint&);
 
 WEBCORE_EXPORT Optional<BoundaryPoint> makeBoundaryPoint(const Position&);
 
@@ -245,10 +247,9 @@ Position positionAfterNode(Node* anchorNode);
 Position firstPositionInNode(Node* anchorNode);
 Position lastPositionInNode(Node* anchorNode);
 
-int minOffsetForNode(Node* anchorNode, unsigned offset);
 bool offsetIsBeforeLastNodeOffset(unsigned offset, Node* anchorNode);
 
-RefPtr<Node> commonShadowIncludingAncestor(const Position&, const Position&);
+Node* commonInclusiveAncestor(const Position&, const Position&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const Position&);
 
@@ -261,15 +262,21 @@ Optional<SimpleRange> makeSimpleRange(const PositionRange&);
 
 // inlines
 
-inline Position createLegacyEditingPosition(Node* node, unsigned offset)
+inline Position makeContainerOffsetPosition(Node* node, unsigned offset)
+{
+    return { node, offset, Position::PositionIsOffsetInAnchor };
+}
+
+inline Position makeDeprecatedLegacyPosition(Node* node, unsigned offset)
 {
     return { node, offset, Position::LegacyEditingPositionFlag::On };
 }
 
+// FIXME: Positions at the same document location with different anchoring will return false; that's unlike <= and >=.
+// FIXME: This ignores differences in m_isLegacyEditingPosition in a subtle way.
+// FIXME: For legacy editing positions, <div><img></div> [div, 0] != [img, 0] even though most of editing code will treat them as identical.
 inline bool operator==(const Position& a, const Position& b)
 {
-    // FIXME: In <div><img></div> [div, 0] != [img, 0] even though most of the
-    // editing code will treat them as identical.
     return a.anchorNode() == b.anchorNode() && a.deprecatedEditingOffset() == b.deprecatedEditingOffset() && a.anchorType() == b.anchorType();
 }
 
@@ -280,26 +287,22 @@ inline bool operator!=(const Position& a, const Position& b)
 
 inline bool operator<(const Position& a, const Position& b)
 {
-    if (a.isNull() || b.isNull())
-        return false;
-    if (a.anchorNode() == b.anchorNode())
-        return a.deprecatedEditingOffset() < b.deprecatedEditingOffset();
-    return b.anchorNode()->compareDocumentPosition(*a.anchorNode()) == Node::DOCUMENT_POSITION_PRECEDING;
+    return is_lt(documentOrder(a, b));
 }
 
 inline bool operator>(const Position& a, const Position& b)
 {
-    return !a.isNull() && !b.isNull() && a != b && b < a;
+    return is_gt(documentOrder(a, b));
 }
 
 inline bool operator>=(const Position& a, const Position& b)
 {
-    return !a.isNull() && !b.isNull() && (a == b || a > b);
+    return is_gteq(documentOrder(a, b));
 }
 
 inline bool operator<=(const Position& a, const Position& b)
 {
-    return !a.isNull() && !b.isNull() && (a == b || a < b);
+    return is_lteq(documentOrder(a, b));
 }
 
 // positionBeforeNode and positionAfterNode return neighbor-anchored positions, construction is O(1)
@@ -328,17 +331,6 @@ inline Position lastPositionInNode(Node* anchorNode)
     if (anchorNode->isTextNode())
         return Position(anchorNode, anchorNode->length(), Position::PositionIsOffsetInAnchor);
     return Position(anchorNode, Position::PositionIsAfterChildren);
-}
-
-inline int minOffsetForNode(Node* anchorNode, unsigned offset)
-{
-    if (is<CharacterData>(*anchorNode))
-        return std::min(offset, downcast<CharacterData>(*anchorNode).length());
-
-    unsigned newOffset = 0;
-    for (Node* node = anchorNode->firstChild(); node && newOffset < offset; node = node->nextSibling())
-        newOffset++;
-    return newOffset;
 }
 
 inline bool offsetIsBeforeLastNodeOffset(unsigned offset, Node* anchorNode)

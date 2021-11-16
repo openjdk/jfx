@@ -227,7 +227,7 @@ void PageOverlayController::uninstallPageOverlay(PageOverlay& overlay, PageOverl
     overlay.setPage(nullptr);
 
     if (auto optionalLayer = m_overlayGraphicsLayers.take(&overlay))
-        optionalLayer.value()->removeFromParent();
+        optionalLayer->removeFromParent();
 
     bool removed = m_pageOverlays.removeFirst(&overlay);
     ASSERT_UNUSED(removed, removed);
@@ -318,7 +318,7 @@ void PageOverlayController::didChangeDeviceScaleFactor()
 
 void PageOverlayController::didChangeViewExposedRect()
 {
-    m_page.renderingUpdateScheduler().scheduleTimedRenderingUpdate();
+    m_page.scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
 }
 
 void PageOverlayController::didScrollFrame(Frame& frame)
@@ -412,7 +412,7 @@ float PageOverlayController::deviceScaleFactor() const
 
 void PageOverlayController::notifyFlushRequired(const GraphicsLayer*)
 {
-    m_page.renderingUpdateScheduler().scheduleTimedRenderingUpdate();
+    m_page.scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
 }
 
 void PageOverlayController::didChangeOverlayFrame(PageOverlay& overlay)
