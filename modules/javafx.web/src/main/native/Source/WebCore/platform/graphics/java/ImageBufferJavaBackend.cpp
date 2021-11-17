@@ -49,13 +49,18 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         "(II)Lcom/sun/webkit/graphics/WCImage;");
     ASSERT(midCreateImage);
 
-    auto image = RQRef::create(JLObject(env->CallObjectMethod(
+    jobject imageObj = env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
         (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.width()),
         (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.height())
-    )));
-    WTF::CheckAndClearException(env);
+    );
+
+    if (WTF::CheckAndClearException(env) || !imageObj) {
+        return nullptr;
+    }
+
+    auto image = RQRef::create(JLObject(imageObj));
 
     static jmethodID midCreateBufferedContextRQ = env->GetMethodID(
         PG_GetGraphicsManagerClass(env),
@@ -68,7 +73,9 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         midCreateBufferedContextRQ,
         (jobject)(image->cloneLocalCopy())));
     ASSERT(wcRenderQueue);
-    WTF::CheckAndClearException(env);
+    if (WTF::CheckAndClearException(env) || !wcRenderQueue) {
+        return nullptr;
+    }
 
     auto context = makeUnique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
 
@@ -113,8 +120,11 @@ void *ImageBufferJavaBackend::getData() const
         "()Ljava/nio/ByteBuffer;");
     ASSERT(midGetBGRABytes);
 
-    JLObject byteBuffer(env->CallObjectMethod(getWCImage(), midGetBGRABytes));
-    WTF::CheckAndClearException(env);
+    jobject pixelBuf = env->CallObjectMethod(getWCImage(), midGetBGRABytes);
+    if (WTF::CheckAndClearException(env) || !pixelBuf) {
+        return NULL;
+    }
+    JLObject byteBuffer(pixelBuf);
 
     return env->GetDirectBufferAddress(byteBuffer);
 }
@@ -192,8 +202,7 @@ String ImageBufferJavaBackend::toDataURL(const String& mimeType, Optional<double
                 midToDataURL,
                 (jstring) JLString(mimeType.toJavaString(env))));
 
-        WTF::CheckAndClearException(env);
-        if (data) {
+        if (!WTF::CheckAndClearException(env) && data) {
             return String(env, data);
         }
     }
@@ -220,8 +229,7 @@ Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<
                 midToData,
                 (jstring) JLString(mimeType.toJavaString(env))));
 
-        WTF::CheckAndClearException(env);
-        if (jdata) {
+        if (!WTF::CheckAndClearException(env) && jdata) {
             uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
             Vector<uint8_t> data;
             data.append(dataArray, env->GetArrayLength(jdata));
