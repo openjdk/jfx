@@ -50,7 +50,7 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
  * files are generated with the following command lines:
  */
 
-final class ArrayCacheIntClean {
+public final class ArrayCacheIntClean {
 
     /* members */
     private final int bucketCapacity;
@@ -249,7 +249,7 @@ final class ArrayCacheIntClean {
         }
     }
 
-    static void check(final int[] array, final int fromIndex,
+    public static void check(final int[] array, final int fromIndex,
                       final int toIndex, final int value)
     {
         if (DO_CHECKS) {

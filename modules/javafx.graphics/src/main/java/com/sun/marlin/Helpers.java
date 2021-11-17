@@ -992,7 +992,7 @@ final class Helpers implements MarlinConst {
             }
         }
 
-        void pullAll(final double[] points, final DPathConsumer2D io, 
+        void pullAll(final double[] points, final DPathConsumer2D io,
                      final boolean moveFirst)
         {
             final int nc = end;
@@ -1000,9 +1000,9 @@ final class Helpers implements MarlinConst {
                 return;
             }
             final int[] _values = indices;
-            
+
             int i = 0;
-            
+
             if (moveFirst) {
                 int j = _values[i] << 1;
                 io.moveTo(points[j], points[j + 1]);

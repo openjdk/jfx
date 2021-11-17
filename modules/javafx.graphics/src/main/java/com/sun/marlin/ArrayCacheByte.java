@@ -51,7 +51,7 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
  * files are generated with the following command lines:
  */
 
-final class ArrayCacheByte {
+public final class ArrayCacheByte {
 
     /* members */
     private final int bucketCapacity;

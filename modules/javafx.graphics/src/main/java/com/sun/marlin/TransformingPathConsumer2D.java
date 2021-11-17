@@ -517,7 +517,7 @@ public final class TransformingPathConsumer2D {
 
         // the outcode of the starting point
         private int sOutCode = 0;
-        
+
         // the cumulated (and) outcode of the complete path
         private int gOutCode = MarlinConst.OUTCODE_MASK_T_B_L_R;
 
@@ -646,7 +646,7 @@ public final class TransformingPathConsumer2D {
             this.cx0 = sx0;
             this.cy0 = sy0;
         }
-        
+
         private void _closePath() {
             // preserve outside flag for the lineTo call below
             final boolean prevOutside = outside;

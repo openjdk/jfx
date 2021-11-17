@@ -372,7 +372,7 @@ public final class Dasher implements StartFlagPathConsumer2D, MarlinConst {
             rdrCtx.firstFlags |= 0b010;
         }
     }
-    
+
     @Override
     public void lineTo(final double x1, final double y1) {
         final int outcode0 = this.cOutCode;
