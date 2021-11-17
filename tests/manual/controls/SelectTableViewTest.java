@@ -12,16 +12,17 @@ import javafx.stage.Stage;
 
 public class SelectTableViewTest extends Application {
 
-    final int COL_COUNT = 3;
     final int ROW_COUNT = 700_00;
-    //	final int ROW_COUNT = 80_000;
-    //	final int ROW_COUNT = 50_000;
-    //	final int ROW_COUNT = 8_000;
+    //  final int ROW_COUNT = 80_000;
+    //  final int ROW_COUNT = 50_000;
+    //  final int ROW_COUNT = 8_000;
+    final int COL_COUNT = 3;
 
     @Override
     public void start(Stage stage) {
         TableView<String[]> tableView = new TableView<>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+//      tableView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
         final ObservableList<TableColumn<String[], ?>> columns = tableView.getColumns();
         for(int i=0; i<COL_COUNT; i++) {
@@ -74,16 +75,19 @@ public class SelectTableViewTest extends Application {
         tableView.getSelectionModel().selectAll();
         System.out.println("time:"+ (System.currentTimeMillis() - t));
     }
+
     private void clearSelection(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().clearSelection();
         System.out.println("time:"+ (System.currentTimeMillis() - t));
     }
+
     private void selectToStart(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectRange(0, tableView.getSelectionModel().getFocusedIndex());
         System.out.println("time:"+ (System.currentTimeMillis() - t));
     }
+
     private void selectToLast(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectRange(tableView.getSelectionModel().getFocusedIndex(), tableView.getItems().size());

@@ -11,9 +11,10 @@ import javafx.stage.Stage;
 public class SelectListViewTest extends Application {
 
     final int ROW_COUNT = 70_000;
-    //	final int ROW_COUNT = 400_000;
-    //	final int ROW_COUNT = 10_000_000;
-	// final int ROW_COUNT = 7_000;
+    //  final int ROW_COUNT = 400_000;
+    //  final int ROW_COUNT = 400_000;
+    //  final int ROW_COUNT = 10_000_000;
+    // final int ROW_COUNT = 7_000;
 
     @Override
     public void start(Stage stage) {
@@ -59,16 +60,19 @@ public class SelectListViewTest extends Application {
         listView.getSelectionModel().selectAll();
         System.out.println("time:"+ (System.currentTimeMillis() - t));
     }
+
     private void clearSelection(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().clearSelection();
         System.out.println("time:"+ (System.currentTimeMillis() - t));
     }
+
     private void selectToStart(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectRange(0, listView.getSelectionModel().getSelectedIndex());
         System.out.println("time:"+ (System.currentTimeMillis() - t));
     }
+
     private void selectToLast(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectRange(listView.getSelectionModel().getSelectedIndex(), listView.getItems().size());
