@@ -189,6 +189,10 @@ public final class MarlinProperties {
         return getFloat("prism.marlin.clip.subdivider.minLength", 100.0f, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
     }
 
+    public static boolean isUseDPQS() {
+        return getBoolean("prism.marlin.useDPQS", "true");
+    }
+
     // debugging parameters
 
     public static boolean isDoStats() {
@@ -222,6 +226,7 @@ public final class MarlinProperties {
     }
 
     // quality settings
+
     public static float getCurveLengthError() {
         return getFloat("prism.marlin.curve_len_err", 0.01f, 1e-6f, 1.0f);
     }

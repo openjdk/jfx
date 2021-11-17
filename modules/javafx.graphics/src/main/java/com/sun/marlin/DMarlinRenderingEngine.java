@@ -229,6 +229,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
                 + MarlinProperties.getQuadDecD2());
 
         logInfo("Renderer settings:");
+        logInfo("SORT         = " + MergeSort.SORT_TYPE);
         logInfo("CUB_DEC_BND  = " + Renderer.CUB_DEC_BND);
         logInfo("CUB_INC_BND  = " + Renderer.CUB_INC_BND);
         logInfo("QUAD_DEC_BND = " + Renderer.QUAD_DEC_BND);
