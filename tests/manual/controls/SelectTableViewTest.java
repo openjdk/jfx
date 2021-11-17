@@ -12,11 +12,11 @@ import javafx.stage.Stage;
 
 public class SelectTableViewTest extends Application {
 
-    final int ROW_COUNT = 700_00;
+    final int COL_COUNT = 3;
+    final int ROW_COUNT = 70_000;
     //  final int ROW_COUNT = 80_000;
     //  final int ROW_COUNT = 50_000;
     //  final int ROW_COUNT = 8_000;
-    final int COL_COUNT = 3;
 
     @Override
     public void start(Stage stage) {
