@@ -129,7 +129,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             registerChangeListener(treeTableView.treeColumnProperty(), e -> {
                 // Fix for RT-27782: Need to set isDirty to true, rather than the
                 // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.leftLabelPadding()
+                // be recalculated in TreeTableCellSkin.calculateIndentation()
                 isDirty = true;
                 getSkinnable().requestLayout();
             });
