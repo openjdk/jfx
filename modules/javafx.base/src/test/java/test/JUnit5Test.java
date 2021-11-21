@@ -25,6 +25,8 @@
 
 package test;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.junit.jupiter.api.Test;
 
 public class JUnit5Test {
@@ -32,5 +34,6 @@ public class JUnit5Test {
     @Test
     void junit5ShouldWork() {
         System.err.println("JUnit 5 test working!");
+        assertNotNull(this);
     }
 }
