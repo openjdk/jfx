@@ -223,4 +223,34 @@ public class ImageStorageTest {
         assertEquals(0, data[7]);
         assertEquals(-1, data[8]);
     }
+
+    @Test
+    public void testLoadImageFromDataURIWithWrongMimeTypeFails() {
+        String url =
+            "data:application/octet-stream;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
+            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
+            + "ieT81GAGKoAAAAAElFTkSuQmCC";
+
+        try {
+            ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
+            fail();
+        } catch (ImageStorageException ex) {
+            assertTrue(ex.getMessage().startsWith("Unexpected MIME type"));
+        }
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithoutMimeTypeFails() {
+        String url =
+            "data:base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
+            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
+            + "ieT81GAGKoAAAAAElFTkSuQmCC";
+
+        try {
+            ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
+            fail();
+        } catch (ImageStorageException ex) {
+            assertTrue(ex.getMessage().startsWith("Unexpected MIME type"));
+        }
+    }
 }
