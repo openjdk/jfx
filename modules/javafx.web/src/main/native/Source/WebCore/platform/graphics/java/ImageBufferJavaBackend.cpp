@@ -247,13 +247,21 @@ Vector<uint8_t> ImageBufferJavaBackend::toBGRAData() const
 
 RefPtr<ImageData> ImageBufferJavaBackend::getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const
 {
-    return ImageBufferBackend::getImageData(outputFormat, srcRect, getData());
+    void *data = getData();
+    if (!data)
+        return nullptr;
+
+    return ImageBufferBackend::getImageData(outputFormat, srcRect, data);
 }
 
 void ImageBufferJavaBackend::putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData,
     const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    ImageBufferBackend::putImageData(inputFormat, imageData, srcRect, destPoint, destFormat, getData());
+    void *data = getData();
+    if (!data)
+        return;
+
+    ImageBufferBackend::putImageData(inputFormat, imageData, srcRect, destPoint, destFormat, data);
     update();
 }
 
