@@ -1338,16 +1338,30 @@ public class SplitPaneTest {
 
     /**
      * Verifies that a divider position change of the {@link SplitPane} does not hang the layout.
-     * Previously, this may happen when the divider position changed too a large number (>1),
-     * which can hang the layout when done during layout (in layoutChildren).
+     * Previously, this may happen when the divider position changed to a large number (>1),
+     * which can hang the layout as it resulted in multiple layout requests (through SplitPaneSkin.layoutChildren).
      */
     @Test
-    public void testSplitPaneDividerChangeDoesNotHangLayout() {
-        AtomicInteger counter = new AtomicInteger();
+    public void testDividerOverOneDoesNotHangLayout() {
+        testSetDividerPositionDoesNotHangLayout(10);
+    }
+
+    /**
+     * Verifies that a divider position change of the {@link SplitPane} does not hang the layout.
+     * Previously, this may happen when the divider position changed to a negative number (<1),
+     * which can hang the layout as it resulted in multiple layout requests (through SplitPaneSkin.layoutChildren).
+     */
+    @Test
+    public void testDividerUnderZeroDoesNotHangLayout() {
+        testSetDividerPositionDoesNotHangLayout(-1);
+    }
+
+    private void testSetDividerPositionDoesNotHangLayout(double dividerPosition) {
+        AtomicInteger layoutCounter = new AtomicInteger();
         ComboBox<String> cbx = new ComboBox<>(FXCollections.observableArrayList("1", "2", "3")) {
             @Override
             protected void layoutChildren() {
-                counter.incrementAndGet();
+                layoutCounter.incrementAndGet();
                 super.layoutChildren();
             }
         };
@@ -1358,18 +1372,17 @@ public class SplitPaneTest {
 
         Toolkit.getToolkit().firePulse();
 
-        // Set a too big divider position.
-        pane.setDividerPosition(0, 12);
+        pane.setDividerPosition(0, dividerPosition);
 
         Toolkit.getToolkit().firePulse();
 
-        // Reset counter
-        counter.set(0);
+        // Reset layout counter
+        layoutCounter.set(0);
 
         cbx.getSelectionModel().select(0);
         Toolkit.getToolkit().firePulse();
 
-        assertTrue(counter.get() > 0);
+        assertTrue(layoutCounter.get() > 0);
         stageLoader.dispose();
     }
 

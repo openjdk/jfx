@@ -65,9 +65,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private ObservableList<ContentDivider> contentDividers;
     private boolean horizontal;
     /**
-     * Flag which is set to <code>true</code> during {@link #layoutChildren(double, double, double, double)}
-     * and to <code>false</code> after. It is used to determine whether we need to request layout when a
-     * divider position changed or not.
+     * Flag which is used to determine whether we need to request layout when a divider position changed or not.
+     * E.g. We don't want to request layout when we are changing the divider position in
+     * {@link #layoutChildren(double, double, double, double)} since we are currently doing the layout.
      */
     private boolean duringLayout;
 
