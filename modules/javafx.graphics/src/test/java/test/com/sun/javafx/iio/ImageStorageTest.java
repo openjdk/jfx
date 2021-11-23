@@ -225,11 +225,45 @@ public class ImageStorageTest {
     }
 
     @Test
-    public void testLoadImageFromDataURIWithWrongMimeTypeFails() {
+    public void testLoadImageFromDataURIWithMismatchedMimeSubtype() throws ImageStorageException {
+        // The data contained in this URI is actually a PNG image
         String url =
-            "data:application/octet-stream;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
+            "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
             + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
             + "ieT81GAGKoAAAAAElFTkSuQmCC";
+
+        ImageFrame[] frames = ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
+        assertEquals(1, frames.length);
+
+        byte[] data = (byte[])frames[0].getImageData().array();
+        assertEquals(-1, data[0]);
+        assertEquals(0, data[1]);
+        assertEquals(0, data[2]);
+
+        assertEquals(0, data[3]);
+        assertEquals(-1, data[4]);
+        assertEquals(0, data[5]);
+
+        assertEquals(0, data[6]);
+        assertEquals(0, data[7]);
+        assertEquals(-1, data[8]);
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithUnsupportedImageSubtypeFails() {
+        String url = "data:image/foo;base64,";
+
+        try {
+            ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
+            fail();
+        } catch (ImageStorageException ex) {
+            assertTrue(ex.getMessage().startsWith("Unsupported MIME subtype"));
+        }
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithNonImageTypeFails() {
+        String url = "data:application/octet-stream;base64,";
 
         try {
             ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
@@ -241,10 +275,7 @@ public class ImageStorageTest {
 
     @Test
     public void testLoadImageFromDataURIWithoutMimeTypeFails() {
-        String url =
-            "data:base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
-            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
-            + "ieT81GAGKoAAAAAElFTkSuQmCC";
+        String url = "data:base64,";
 
         try {
             ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
