@@ -183,7 +183,10 @@
 {
     GET_MAIN_JENV;
 
-    if ([window isZoomed]) {
+    // This is called both to zoom a window and to unzoom it. If the window was
+    // zoomed when it was initially created the OS might try to unzoom it to a
+    // very small size.
+    if (newFrame.size.width <= 1 || newFrame.size.height <= 1) {
         return NO;
     }
 

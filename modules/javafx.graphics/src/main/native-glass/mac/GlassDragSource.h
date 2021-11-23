@@ -39,8 +39,10 @@
 + (void)flushWithMask:(jint)mask;
 
 + (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask;
-+ (jint)mapNsOperationToJavaMask:(NSDragOperation)operation;
-+ (jint)getRecommendedActionForMask:(NSDragOperation)operation;
++ (jint)mapNsOperationToJavaMaskExternal:(NSDragOperation)operation;
++ (jint)mapNSOperationToJavaMaskInternal:(NSDragOperation)operation;
++ (jint)getRecommendedActionForMaskExternal:(NSDragOperation)operation;
++ (jint)getRecommendedActionForMaskInternal:(NSDragOperation)operation;
 
 + (void)setMask:(jint)mask;
 + (jint)getMask;
