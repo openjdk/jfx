@@ -93,6 +93,10 @@ import javafx.beans.property.SimpleIntegerProperty;
  * the protocol handlers that are registered for the application.
  * If a URL uses the "data" scheme, the data must be base64-encoded
  * and the MIME type must be a subtype of the {@code image} type.
+ * The MIME type must match the image format of the data contained in
+ * the URL. In case of a mismatch between MIME type and image format,
+ * the image will be loaded if the image format can be determined by
+ * JavaFX, and a warning will be logged.
  *
  * <p>Use {@link ImageView} for displaying images loaded with this
  * class. The same {@code Image} instance can be displayed by multiple
