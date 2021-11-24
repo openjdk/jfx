@@ -1282,6 +1282,8 @@ final public class WebView extends Parent {
         //Drag source implementation:
         setOnDragDetected(event -> {
                if (page.isDragConfirmed()) {
+                   mimes = null;
+                   values = null;
                    page.confirmStartDrag();
                    event.consume();
                }
