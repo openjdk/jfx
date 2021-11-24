@@ -5316,13 +5316,6 @@ compileTargets { t ->
 sdk.dependsOn(buildModules)
 
 // Build the jmod for each module for the standalone SDK only.
-//
-// TODO: Use SOURCE_DATE_EPOCH when the following JMOD enhancements are
-// complete, provisionally by adding '--source-date <timestamp>'.
-// - Enable deterministic file content ordering for Jar and Jmod
-//   https://bugs.openjdk.java.net/browse/JDK-8276764
-// - Enable jar and jmod to produce deterministic timestamped content
-//   https://bugs.openjdk.java.net/browse/JDK-8276766
 compileTargets { t ->
     if (!HAS_JAVAFX_MODULES) {
         def targetProperties = project.ext[t.upper]
@@ -5375,6 +5368,9 @@ compileTargets { t ->
                         }
                         args("--legal-notices")
                         args(srcLegalDir)
+                        if (sourceDateEpoch != null) {
+                            args("--source-date", sourceDateEpoch)
+                        }
                         args(jmodFile)
                     }
                 }
