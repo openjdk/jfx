@@ -119,17 +119,25 @@ public class ImageStorage {
     /**
      * A mapping of format signature byte sequences to loader factories.
      */
-    private static final HashMap<Signature, ImageLoaderFactory> loaderFactoriesBySignature;
+    private final HashMap<Signature, ImageLoaderFactory> loaderFactoriesBySignature;
     /**
      * A mapping of lower case MIME subtypes to loader factories.
      */
-    private static final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
-    private static final ImageLoaderFactory[] loaderFactories;
+    private final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
+    private final ImageLoaderFactory[] loaderFactories;
+    private int maxSignatureLength;
+
     private static final boolean isIOS = PlatformUtil.isIOS();
 
-    private static int maxSignatureLength;
+    private static class InstanceHolder {
+        static final ImageStorage INSTANCE = new ImageStorage();
+    }
 
-    static {
+    public static ImageStorage getInstance() {
+        return InstanceHolder.INSTANCE;
+    }
+
+    public ImageStorage() {
         if (isIOS) {
             //On iOS we have single factory/ native loader
             //for all image formats
@@ -155,7 +163,7 @@ public class ImageStorage {
         }
     }
 
-    public static ImageFormatDescription[] getSupportedDescriptions() {
+    public ImageFormatDescription[] getSupportedDescriptions() {
         ImageFormatDescription[] formats = new ImageFormatDescription[loaderFactories.length];
         for (int i = 0; i < loaderFactories.length; i++) {
             formats[i] = loaderFactories[i].getFormatDescription();
@@ -169,7 +177,7 @@ public class ImageStorage {
      * @param type the type of image
      * @return the number of bands of a raw image of this type
      */
-    public static int getNumBands(ImageType type) {
+    public int getNumBands(ImageType type) {
         int numBands = -1;
         switch (type) {
             case GRAY:
@@ -203,7 +211,7 @@ public class ImageStorage {
      *
      * @param factory the factory to register.
      */
-    public static void addImageLoaderFactory(ImageLoaderFactory factory) {
+    public void addImageLoaderFactory(ImageLoaderFactory factory) {
         ImageFormatDescription desc = factory.getFormatDescription();
 //        String[] extensions = desc.getExtensions();
 //        for (int j = 0; j < extensions.length; j++) {
@@ -265,7 +273,7 @@ public class ImageStorage {
      * @return the sequence of all images in the specified source or
      * <code>null</code> on error.
      */
-    public static ImageFrame[] loadAll(InputStream input, ImageLoadListener listener,
+    public ImageFrame[] loadAll(InputStream input, ImageLoadListener listener,
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageLoader loader = null;
@@ -300,7 +308,7 @@ public class ImageStorage {
      * Load all images present in the specified input. For more details refer to
      * {@link #loadAll(InputStream, ImageLoadListener, double, double, boolean, float, boolean)}.
      */
-    public static ImageFrame[] loadAll(String input, ImageLoadListener listener,
+    public ImageFrame[] loadAll(String input, ImageLoadListener listener,
             double width, double height, boolean preserveAspectRatio,
             float devPixelScale, boolean smooth) throws ImageStorageException {
 
@@ -403,7 +411,7 @@ public class ImageStorage {
         return images;
     }
 
-    private static synchronized int getMaxSignatureLength() {
+    private synchronized int getMaxSignatureLength() {
         if (maxSignatureLength < 0) {
             maxSignatureLength = 0;
             for (final Signature signature:
@@ -418,7 +426,7 @@ public class ImageStorage {
         return maxSignatureLength;
     }
 
-    private static ImageFrame[] loadAll(ImageLoader loader,
+    private ImageFrame[] loadAll(ImageLoader loader,
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
@@ -475,9 +483,11 @@ public class ImageStorage {
 //        return loader;
 //    }
 
-    private static ImageLoader getLoaderBySignature(InputStream stream, ImageLoadListener listener) throws IOException {
+    private ImageLoader getLoaderBySignature(InputStream stream, ImageLoadListener listener) throws IOException {
         byte[] header = new byte[getMaxSignatureLength()];
-        ImageTools.readFully(stream, header);
+        if (stream.read(header) <= 0) {
+            return null;
+        }
 
         for (final Entry<Signature, ImageLoaderFactory> factoryRegistration:
                  loaderFactoriesBySignature.entrySet()) {
@@ -495,8 +505,5 @@ public class ImageStorage {
 
         // not found
         return null;
-    }
-
-    private ImageStorage() {
     }
 }
