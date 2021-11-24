@@ -52,17 +52,19 @@ public class MacPasteboardTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        Platform.startup(() -> {
-            if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac()) {
+            Platform.startup(() -> {
                 macPasteboardShim = new MacPasteboardShim();
-            }
-            startupLatch.countDown();
-        });
+                startupLatch.countDown();
+            });
+        }
     }
 
     @AfterClass
     public static void teardown() {
-        Platform.exit();
+        if (PlatformUtil.isMac()) {
+            Platform.exit();
+        }
     }
 
     @Test
