@@ -44,7 +44,7 @@ final class CookieJar {
     private static void fwkPut(String url, String cookie) {
         @SuppressWarnings("removal")
         CookieHandler handler =
-            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) () -> CookieHandler.getDefault());
+            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) CookieHandler::getDefault);
         if (handler != null) {
             URI uri = null;
             try {
@@ -68,7 +68,7 @@ final class CookieJar {
     private static String fwkGet(String url, boolean includeHttpOnlyCookies) {
         @SuppressWarnings("removal")
         CookieHandler handler =
-            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) () -> CookieHandler.getDefault());
+            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) CookieHandler::getDefault);
         if (handler != null) {
             URI uri = null;
             try {
