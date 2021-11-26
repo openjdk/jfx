@@ -12,9 +12,8 @@ public class SelectListViewTest extends Application {
 
     final int ROW_COUNT = 70_000;
     //  final int ROW_COUNT = 400_000;
-    //  final int ROW_COUNT = 400_000;
     //  final int ROW_COUNT = 10_000_000;
-    // final int ROW_COUNT = 7_000;
+    //  final int ROW_COUNT = 7_000;
 
     @Override
     public void start(Stage stage) {
