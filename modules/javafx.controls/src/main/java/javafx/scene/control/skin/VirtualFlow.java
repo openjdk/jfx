@@ -898,6 +898,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     public final int getCellCount() { return cellCount.get(); }
     public final void setCellCount(int value) {
         resetSizeEstimates();
+        recalculateAndImproveEstimatedSize(2);
+
         cellCount.set(value);
         adjustAbsoluteOffset();
     }
