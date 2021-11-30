@@ -40,7 +40,7 @@
 
 + (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask;
 + (jint)mapNsOperationToJavaMaskExternal:(NSDragOperation)operation;
-+ (jint)mapNSOperationToJavaMaskInternal:(NSDragOperation)operation;
++ (jint)mapNsOperationToJavaMaskInternal:(NSDragOperation)operation;
 + (jint)getRecommendedActionForMaskExternal:(NSDragOperation)operation;
 + (jint)getRecommendedActionForMaskInternal:(NSDragOperation)operation;
 

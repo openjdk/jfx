@@ -424,6 +424,10 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         case NSScrollWheel:
             type = com_sun_glass_events_MouseEvent_WHEEL;
             break;
+
+        default:
+            // To mollify the compiler.
+            break;
     }
 
     NSPoint viewPoint = [nsView convertPoint:[theEvent locationInWindow] fromView:nil]; // convert from window coordinates to view coordinates

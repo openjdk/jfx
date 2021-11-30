@@ -197,6 +197,8 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
             [button setAction:nil];                                                     \
             [button setEnabled:NO];                                                     \
             break;                                                                      \
+        default:                                                                        \
+            break;                                                                      \
     }                                                                                   \
     return button;                                                                      \
 }                                                                                       \

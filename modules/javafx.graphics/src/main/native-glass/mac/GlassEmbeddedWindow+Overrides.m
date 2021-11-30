@@ -191,7 +191,7 @@
 
     self->isKeyWindow = YES;
     [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidBecomeKeyNotification object:nil userInfo:nil];
-    [[self delegate] windowDidBecomeKey:nil];
+    [[self delegate] windowDidBecomeKey: [NSNotification notificationWithName:NSWindowDidBecomeKeyNotification object:self]];
 }
 
 - (void)resignKeyWindow
@@ -200,7 +200,7 @@
 
     self->isKeyWindow = NO;
     [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidResignKeyNotification object:nil userInfo:nil];
-    [[self delegate] windowDidResignKey:nil];
+    [[self delegate] windowDidResignKey:[NSNotification notificationWithName:NSWindowDidResignKeyNotification object:self]];
 }
 
 //#pragma mark --- Debug
