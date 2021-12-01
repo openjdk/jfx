@@ -891,13 +891,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             */
             if (vsb.getVisibleAmount() < vsb.getMax()) {
                 double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                double vPixelValue;
-                if (nodeHeight > 0.0) {
-                    vPixelValue = vRange / (nodeHeight - contentHeight);
-                }
-                else {
-                    vPixelValue = 0.0;
-                }
+                double vPixelValue = vRange / (nodeHeight - contentHeight);
+                vPixelValue = Double.isFinite(vPixelValue) ? vPixelValue : 0.0;
                 double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
                 if (!Properties.IS_TOUCH_SUPPORTED) {
                     if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
@@ -923,14 +918,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
             if (hsb.getVisibleAmount() < hsb.getMax()) {
                 double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
-                double hPixelValue;
-                if (nodeWidth > 0.0) {
-                    hPixelValue = hRange / (nodeWidth - contentWidth);
-                }
-                else {
-                    hPixelValue = 0.0;
-                }
-
+                double hPixelValue = hRange / (nodeWidth - contentWidth);
+                hPixelValue = Double.isFinite(hPixelValue) ? hPixelValue : 0.0;
                 double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
                 if (!Properties.IS_TOUCH_SUPPORTED) {
                     if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
@@ -999,6 +988,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
         if (dx != 0) {
             double sdx = dx * (hsb.getMax() - hsb.getMin()) / (nodeWidth - contentWidth);
+            sdx = Double.isFinite(sdx) ? sdx : 0.0;
             // Adjust back for some amount so that the Node border is not too close to view border
             sdx += -1 * Math.signum(sdx) * hsb.getUnitIncrement() / 5; // This accounts to 2% of view width
             hsb.setValue(hsb.getValue() + sdx);
@@ -1006,6 +996,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         }
         if (dy != 0) {
             double sdy = dy * (vsb.getMax() - vsb.getMin()) / (nodeHeight - contentHeight);
+            sdy = Double.isFinite(sdy) ? sdy : 0.0;
             // Adjust back for some amount so that the Node border is not too close to view border
             sdy += -1 * Math.signum(sdy) * vsb.getUnitIncrement() / 5; // This accounts to 2% of view height
             vsb.setValue(vsb.getValue() + sdy);
@@ -1180,6 +1171,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
         double minX = Math.min((- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)), 0);
+        minX = Double.isFinite(minX) ? minX : 0.0;
         viewContent.setLayoutX(snapPositionX(minX));
         if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
@@ -1188,6 +1180,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
         double minY = Math.min((- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)), 0);
+        minY = Double.isFinite(minY) ? minY : 0.0;
         viewContent.setLayoutY(snapPositionY(minY));
         if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
