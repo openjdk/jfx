@@ -5369,9 +5369,7 @@ compileTargets { t ->
                         args("--legal-notices")
                         args(srcLegalDir)
                         if (sourceDateEpoch != null) {
-                            def seconds = Long.parseLong(sourceDateEpoch)
-                            def instant = Instant.ofEpochSecond(seconds)
-                            args("--date", instant)
+                            args("--date", buildTimestamp)
                         }
                         args(jmodFile)
                     }
