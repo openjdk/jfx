@@ -1503,6 +1503,7 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
+        assertTrue(rt_31200_count > 0);
         assertTrue(rt_31200_count < 18);
 
         // resize the stage
@@ -1510,6 +1511,7 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
+        assertTrue(rt_31200_count > 0);
         assertTrue(rt_31200_count < 18);
 
         sl.dispose();

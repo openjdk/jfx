@@ -2514,6 +2514,7 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
+        assertTrue(rt_31200_count > 0);
         assertTrue(rt_31200_count < 20);
 
         // resize the stage
@@ -2521,6 +2522,7 @@ public class TreeTableViewTest {
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
+        assertTrue(rt_31200_count > 0);
         assertTrue(rt_31200_count < 20);
 
         sl.dispose();
@@ -4251,14 +4253,14 @@ public class TreeTableViewTest {
                     treeTableView.scrollTo(5);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        // assertEquals(rt_35395_counter , 15);
+                        assertTrue(rt_35395_counter > 0);
                         assertTrue(rt_35395_counter < 18);
                         rt_35395_counter = 0;
                         treeTableView.scrollTo(55);
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
-                            // assertEquals(useFixedCellSize ? 22 : 22, rt_35395_counter);
+                            assertTrue(rt_35395_counter > 0);
                             assertTrue(rt_35395_counter < 30);
                             sl.dispose();
                         });
