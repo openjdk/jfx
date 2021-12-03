@@ -857,7 +857,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         @Override protected void invalidated() {
             int cellCount = get();
             resetSizeEstimates();
-            recalculateAndImproveEstimatedSize(2);
+            recalculateEstimatedSize();
 
             boolean countChanged = oldCount != cellCount;
             oldCount = cellCount;
