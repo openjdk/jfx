@@ -28,8 +28,6 @@ package com.sun.webkit.network;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLStreamHandler;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -41,15 +39,10 @@ public final class URLs {
      * The mapping between WebPane-specific protocol names and their
      * respective handlers.
      */
-    private static final Map<String,URLStreamHandler> handlerMap;
-    static {
-        Map<String,URLStreamHandler> map =
-                new HashMap<String,URLStreamHandler>(2);
-//        map.put("about", new com.sun.webkit.network.about.Handler());
-//        map.put("data", new com.sun.webkit.network.data.Handler());
-        handlerMap = Collections.unmodifiableMap(map);
-    }
-
+    private static final Map<String,URLStreamHandler> HANDLER_MAP = Map.of(
+//        "about", new com.sun.webkit.network.about.Handler(),
+//        "data", new com.sun.webkit.network.data.Handler()
+    );
 
     /**
      * The private default constructor. Ensures non-instantiability.
@@ -92,7 +85,7 @@ public final class URLs {
             URLStreamHandler handler = null;
             int colonPosition = spec.indexOf(':');
             if (colonPosition != -1) {
-                handler = handlerMap.get(
+                handler = HANDLER_MAP.get(
                         spec.substring(0, colonPosition).toLowerCase());
             }
             if (handler == null) {

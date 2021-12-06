@@ -814,16 +814,15 @@ final public class CssParser {
             ParsedValueImpl value = parseStrokeType(root);
             if (value == null) error(root, "Expected \'centered', \'inside\' or \'outside\'");
             return value;
-        } else if ("-fx-font-smoothing-type".equals(prop)) {
-            // TODO: Figure out a way that these properties don't need to be
-            // special cased.
+        } else if ("-fx-font-smoothing-type".equals(prop) || "-fx-blend-mode".equals(prop)) {
+            // TODO: Figure out a way that these properties don't need to be special cased.
             String str = null;
             int ttype = -1;
             final Token token = root.token;
 
             if (root.token == null
                     || ((ttype = root.token.getType()) != CssLexer.STRING
-                         && ttype != CssLexer.IDENT)
+                        && ttype != CssLexer.IDENT)
                     || (str = root.token.getText()) == null
                     || str.isEmpty()) {
                 error(root,  "Expected STRING or IDENT");

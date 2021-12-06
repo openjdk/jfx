@@ -24,11 +24,14 @@
  */
 package javafx.scene.control.skin;
 
+import java.util.List;
+
 import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
+import javafx.scene.control.Skin;
 import javafx.scene.layout.StackPane;
 
 public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
@@ -109,6 +112,36 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     }
 
     //------------------- statics --------------------
+
+    /**
+     * Returns the VirtualFlow managed by the given skin.
+     */
+    public static <T extends IndexedCell<?>> VirtualFlow<T> getVirtualFlow(Skin<?> skin) {
+        return ((VirtualContainerBase<?, T>) skin).getVirtualFlow();
+    }
+
+    /**
+     * Returns the list of cells displayed in the viewport of the flow.
+     *
+     * @see VirtualFlow#getCells()
+     */
+    public static <T extends IndexedCell<?>> List<T> getCells(VirtualFlow<T> flow) {
+        return flow.getCells();
+    }
+
+    /**
+     * Returns the vertical scrollbar of the given flow.
+     */
+    public static ScrollBar getVBar(VirtualFlow<?> flow) {
+        return flow.getVbar();
+    }
+
+    /**
+     * Returns the horizontal scrollbar of the given flow.
+     */
+    public static ScrollBar getHBar(VirtualFlow<?> flow) {
+        return flow.getHbar();
+    }
 
     public static <T> T cells_getFirst(VirtualFlow.ArrayLinkedList<T> list) {
         return list.getFirst();

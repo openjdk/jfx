@@ -349,6 +349,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         super.startEdit();
 
         if (!isEditing()) return;
+
         editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent<S, T> editEvent = new CellEditEvent<>(
@@ -359,6 +360,9 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             );
 
             Event.fireEvent(column, editEvent);
+        }
+        if (table != null) {
+            table.edit(editingCellAtStartEdit.getRow(), editingCellAtStartEdit.getTableColumn());
         }
     }
 

@@ -1144,6 +1144,15 @@ public class VirtualFlowTest {
     }
 
     @Test
+    public void testImmediateScrollTo() {
+        flow.setCellCount(100);
+        flow.scrollTo(90);
+        pulse();
+        IndexedCell vc = flow.getVisibleCell(90);
+        assertNotNull(vc);
+    }
+
+    @Test
     // see JDK-8197536
     public void testScrollOneCell() {
         assertLastCellInsideViewport(true);

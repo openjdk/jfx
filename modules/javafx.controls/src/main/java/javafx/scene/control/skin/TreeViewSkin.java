@@ -166,13 +166,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         setRoot(getSkinnable().getRoot());
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingItem() != null) {
-                control.edit(null);
-            }
-
             // This ensures that the tree maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the

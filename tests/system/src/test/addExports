@@ -1,7 +1,10 @@
 #
 --add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
 #
+--add-exports java.desktop/sun.awt.datatransfer=ALL-UNNAMED
+#
 --add-exports javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.glass.ui.mac=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.animation=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
