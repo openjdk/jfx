@@ -339,7 +339,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
     private static class BaseInvalidationListener<E> extends WeakReference<ListPropertyBase<E>> implements InvalidationListener, WeakListener {
 
-        public Listener(ListPropertyBase<E> ref) {
+        public BaseInvalidationListener(ListPropertyBase<E> ref) {
             super(ref);
         }
 
