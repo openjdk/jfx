@@ -32,6 +32,7 @@ import javafx.beans.Observable;
 import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 
@@ -51,11 +52,7 @@ import javafx.collections.SetChangeListener;
  */
 public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
-    private final SetChangeListener<E> setChangeListener = change -> {
-        invalidateProperties();
-        invalidated();
-        fireValueChangedEvent(change);
-    };
+    private final SetChangeListener<E> setChangeListener = new BaseChangeListener(this);
 
     private ObservableSet<E> value;
     private ObservableValue<? extends ObservableSet<E>> observable = null;
@@ -276,7 +273,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener<>(this);
+                listener = new BaseInvalidationListener<>(this);
             }
             observable.addListener(listener);
             markInvalid(value);
@@ -321,17 +318,37 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
         return result.toString();
     }
 
-    private static class Listener<E> implements InvalidationListener, WeakListener {
+    private static class BaseChangeListener<E> extends WeakReference<SetPropertyBase<E>> implements SetChangeListener<E>, WeakListener {
 
-        private final WeakReference<SetPropertyBase<E>> wref;
+        BaseChangeListener(SetPropertyBase<E> ref) {
+            super(ref);
+        }
 
-        public Listener(SetPropertyBase<E> ref) {
-            this.wref = new WeakReference<SetPropertyBase<E>>(ref);
+        @Override
+        public boolean wasGarbageCollected() {
+            return get() == null;
+        }
+
+        @Override
+        public void onChanged(Change<? extends E> change) {
+            SetPropertyBase<E> ref = get();
+            if(ref != null) {
+                ref.invalidateProperties();
+                ref.invalidated();
+                ref.fireValueChangedEvent(change);
+            }
+        }
+    }
+
+    private static class BaseInvalidationListener<E> extends WeakReference<SetPropertyBase<E>> implements InvalidationListener, WeakListener {
+
+        public BaseInvalidationListener(SetPropertyBase<E> ref) {
+            super(ref);
         }
 
         @Override
         public void invalidated(Observable observable) {
-            SetPropertyBase<E> ref = wref.get();
+            SetPropertyBase<E> ref = get();
             if (ref == null) {
                 observable.removeListener(this);
             } else {
@@ -341,7 +358,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
         @Override
         public boolean wasGarbageCollected() {
-            return wref.get() == null;
+            return get() == null;
         }
     }
 }

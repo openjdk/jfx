@@ -51,11 +51,7 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
-    private final ListChangeListener<E> listChangeListener = change -> {
-        invalidateProperties();
-        invalidated();
-        fireValueChangedEvent(change);
-    };
+    private final ListChangeListener<E> listChangeListener = new BaseChangeListener<>(this);
 
     private ObservableList<E> value;
     private ObservableValue<? extends ObservableList<E>> observable = null;
@@ -274,7 +270,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener<>(this);
+                listener = new BaseInvalidationListener<>(this);
             }
             observable.addListener(listener);
             markInvalid(value);
@@ -319,17 +315,37 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         return result.toString();
     }
 
-    private static class Listener<E> implements InvalidationListener, WeakListener {
+    private static class BaseChangeListener<E> extends WeakReference<ListPropertyBase<E>> implements ListChangeListener<E>, WeakListener {
 
-        private final WeakReference<ListPropertyBase<E>> wref;
+        BaseChangeListener(ListPropertyBase<E> ref) {
+            super(ref);
+        }
+
+        @Override
+        public boolean wasGarbageCollected() {
+            return get() == null;
+        }
+
+        @Override
+        public void onChanged(Change<? extends E> change) {
+            ListPropertyBase<E> ref = get();
+            if(ref != null) {
+                ref.invalidateProperties();
+                ref.invalidated();
+                ref.fireValueChangedEvent(change);
+            }
+        }
+    }
+
+    private static class BaseInvalidationListener<E> extends WeakReference<ListPropertyBase<E>> implements InvalidationListener, WeakListener {
 
         public Listener(ListPropertyBase<E> ref) {
-            this.wref = new WeakReference<ListPropertyBase<E>>(ref);
+            super(ref);
         }
 
         @Override
         public void invalidated(Observable observable) {
-            ListPropertyBase<E> ref = wref.get();
+            ListPropertyBase<E> ref = get();
             if (ref == null) {
                 observable.removeListener(this);
             } else {
@@ -339,7 +355,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
         @Override
         public boolean wasGarbageCollected() {
-            return wref.get() == null;
+            return get() == null;
         }
     }
 }

@@ -39,6 +39,7 @@ import java.util.HashMap;
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.MapPropertyBase;
 import javafx.beans.property.SimpleMapProperty;
+import test.util.memory.JMemoryBuddy;
 
 import static test.javafx.collections.MockMapObserver.Call;
 import static org.junit.Assert.*;
@@ -783,6 +784,25 @@ public class MapPropertyBaseTest {
         v1.set(value0);
         assertEquals("MapProperty [bean: " + bean.toString() + ", name: My name, value: " + value0 + "]", v1.toString());
         assertEquals("MapProperty [name: My name, value: " + value1 + "]", v4.toString());
+    }
+
+    @Test
+    public void testBindingLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            // given
+            System.out.println("Start collection: " + FXCollections.observableArrayList());
+            MapProperty<Object, Object> listA = new SimpleMapProperty<>(FXCollections.observableHashMap());
+            MapProperty<Object, Object> listB = new SimpleMapProperty<>(FXCollections.observableHashMap());
+
+            listB.bind(listA);
+
+            // when
+            listB.unbind();
+
+            // then
+            checker.setAsReferenced(listB);
+            checker.assertCollectable(listA);
+        });
     }
 
     private static class MapPropertyMock extends MapPropertyBase<Object, Object> {

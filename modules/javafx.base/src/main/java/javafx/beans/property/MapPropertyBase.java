@@ -51,11 +51,7 @@ import javafx.collections.*;
  */
 public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
-    private final MapChangeListener<K, V> mapChangeListener = change -> {
-        invalidateProperties();
-        invalidated();
-        fireValueChangedEvent(change);
-    };
+    private final MapChangeListener<K, V> mapChangeListener = new BaseChangeListener<>(this);
 
     private ObservableMap<K, V> value;
     private ObservableValue<? extends ObservableMap<K, V>> observable = null;
@@ -275,7 +271,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener<>(this);
+                listener = new BaseInvalidationListener<>(this);
             }
             observable.addListener(listener);
             markInvalid(value);
@@ -320,17 +316,37 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         return result.toString();
     }
 
-    private static class Listener<K,V> implements InvalidationListener, WeakListener {
+    private static class BaseChangeListener<K,V> extends WeakReference<MapPropertyBase<K,V>> implements MapChangeListener<K,V>, WeakListener {
 
-        private final WeakReference<MapPropertyBase<K,V>> wref;
+        BaseChangeListener(MapPropertyBase<K,V> ref) {
+            super(ref);
+        }
 
-        public Listener(MapPropertyBase<K,V> ref) {
-            this.wref = new WeakReference<>(ref);
+        @Override
+        public boolean wasGarbageCollected() {
+            return get() == null;
+        }
+
+        @Override
+        public void onChanged(Change<? extends K, ? extends V> change) {
+            MapPropertyBase<K,V> ref = get();
+            if(ref != null) {
+                ref.invalidateProperties();
+                ref.invalidated();
+                ref.fireValueChangedEvent(change);
+            }
+        }
+    }
+
+    private static class BaseInvalidationListener<K,V> extends WeakReference<MapPropertyBase<K,V>> implements InvalidationListener, WeakListener {
+
+        public BaseInvalidationListener(MapPropertyBase<K,V> ref) {
+            super(ref);
         }
 
         @Override
         public void invalidated(Observable observable) {
-            MapPropertyBase<K,V> ref = wref.get();
+            MapPropertyBase<K,V> ref = get();
             if (ref == null) {
                 observable.removeListener(this);
             } else {
@@ -340,7 +356,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
         @Override
         public boolean wasGarbageCollected() {
-            return wref.get() == null;
+            return get() == null;
         }
     }
 }

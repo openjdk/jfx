@@ -42,6 +42,7 @@ import javafx.beans.property.ListProperty;
 import javafx.beans.property.ListPropertyBase;
 import javafx.beans.property.SimpleListProperty;
 import test.javafx.collections.Person;
+import test.util.memory.JMemoryBuddy;
 
 import static org.junit.Assert.*;
 
@@ -812,6 +813,25 @@ public class ListPropertyBaseTest {
         v1.set(value0);
         assertEquals("ListProperty [bean: " + bean.toString() + ", name: My name, value: " + value0 + "]", v1.toString());
         assertEquals("ListProperty [name: My name, value: " + value1 + "]", v4.toString());
+    }
+
+    @Test
+    public void testBindingLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            // given
+            System.out.println("Start collection: " + FXCollections.observableArrayList());
+            ListProperty<Object> listA = new SimpleListProperty<>(FXCollections.observableArrayList());
+            ListProperty<Object> listB = new SimpleListProperty<>(FXCollections.observableArrayList());
+
+            listB.bind(listA);
+
+            // when
+            listB.unbind();
+
+            // then
+            checker.setAsReferenced(listB);
+            checker.assertCollectable(listA);
+        });
     }
 
     private static class ListPropertyMock extends ListPropertyBase<Object> {
