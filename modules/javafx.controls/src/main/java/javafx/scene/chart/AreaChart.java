@@ -34,6 +34,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -53,7 +54,6 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.converter.BooleanConverter;
-import javafx.beans.property.BooleanProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -467,8 +467,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             if (x < dataXMin || y < dataYMin) {
                 if (prevDataPoint == null) {
                     prevDataPoint = new LineTo(x, y);
-                } else if ((sortX && prevDataPoint.getX() <= x) ||
-                           (sortY && prevDataPoint.getY() <= y))
+                } else if ((sortX && prevDataPoint.getX() < x) ||
+                           (sortY && prevDataPoint.getY() < y))
                 {
                     prevDataPoint.setX(x);
                     prevDataPoint.setY(y);
@@ -478,8 +478,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             } else {
                 if (nextDataPoint == null) {
                     nextDataPoint = new LineTo(x, y);
-                } else if ((sortX && x <= nextDataPoint.getX()) ||
-                           (sortY && y <= nextDataPoint.getY()))
+                } else if ((sortX && x < nextDataPoint.getX()) ||
+                           (sortY && y < nextDataPoint.getY()))
                 {
                     nextDataPoint.setX(x);
                     nextDataPoint.setY(y);

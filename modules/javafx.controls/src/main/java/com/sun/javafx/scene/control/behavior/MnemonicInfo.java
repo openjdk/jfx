@@ -30,6 +30,7 @@ import javafx.scene.input.KeyCombination;
 import java.util.Objects;
 
 /**
+ * Provides information about mnemonics contained within a string.
  * <p>
  * The syntax of the string content is as follows:
  * </p>
@@ -60,7 +61,7 @@ import java.util.Objects;
  * modifier key is pressed.
  * </ul>
  */
-public class TextBinding {
+public class MnemonicInfo {
 
     /**
      * the marker symbol used when parsing for mnemonics
@@ -154,11 +155,11 @@ public class TextBinding {
     }
 
     /**
-     * Creates a new TextBinding instance from the given string.
+     * Creates a new MnemonicInfo instance from the given string.
      *
      * @param s the action text string
      */
-    public TextBinding(String s) {
+    public MnemonicInfo(String s) {
         update(s);
     }
 
