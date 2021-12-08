@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.net.CookieHandler;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +42,9 @@ final class CookieJar {
     }
 
     private static void fwkPut(String url, String cookie) {
-        CookieHandler handler = CookieHandler.getDefault();
+        @SuppressWarnings("removal")
+        CookieHandler handler =
+            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) CookieHandler::getDefault);
         if (handler != null) {
             URI uri = null;
             try {
@@ -62,7 +66,9 @@ final class CookieJar {
     }
 
     private static String fwkGet(String url, boolean includeHttpOnlyCookies) {
-        CookieHandler handler = CookieHandler.getDefault();
+        @SuppressWarnings("removal")
+        CookieHandler handler =
+            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) CookieHandler::getDefault);
         if (handler != null) {
             URI uri = null;
             try {

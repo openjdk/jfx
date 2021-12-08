@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ import javafx.scene.input.Mnemonic;
 import javafx.collections.ObservableList;
 import javafx.scene.input.KeyCombination;
 
-import com.sun.javafx.scene.control.behavior.TextBinding.MnemonicKeyCombination;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo.MnemonicKeyCombination;
 import javafx.scene.Node;
 import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.shape.Rectangle;

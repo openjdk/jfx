@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,26 @@
  * questions.
  */
 
-package test.javafx.stage;
+package com.sun.glass.ui.mac;
 
-import javafx.application.Platform;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import com.sun.glass.ui.Clipboard;
 
-public class FocusedWindowMonocleTest extends FocusedWindowTestBase {
+import java.util.HashMap;
 
-    static {
-        System.setProperty("glass.platform","Monocle");
-        System.setProperty("monocle.platform","Headless");
-        System.setProperty("prism.order","sw");
+public class MacPasteboardShim {
+
+    private static MacSystemClipboard dndClipboard;
+
+    public MacPasteboardShim() {
+        dndClipboard = new MacSystemClipboard(Clipboard.DND);
     }
 
-    @BeforeClass
-    public static void initFX() throws Exception {
-        initFXBase();
+    public void pushMacPasteboard(HashMap<String, Object> data) {
+        dndClipboard.pushToSystem(data, Clipboard.ACTION_ANY);
     }
 
-    @Test
-    public void testClosedFocusedStageLeak() throws Exception {
-        testClosedFocusedStageLeakBase();
+    public Object popMacPasteboard(String mime) {
+        return dndClipboard.popFromSystem(mime);
     }
 
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Platform.exit();
-        });
-    }
 }
