@@ -31,8 +31,25 @@
 #include <gdk/gdkkeysyms.h>
 #include <X11/XKBlib.h>
 
+#include <map>
+
 static gboolean key_initialized = FALSE;
 static GHashTable *keymap;
+
+// As the user types we query each key to determine which characters
+// it can generate and stash them in a map. This map is used by
+// getKeyCodeForChar.
+static std::map<guint32, jint> unicode_to_java_keycode;
+// If the user changes their layout (group) the map becomes invalid.
+static gint unicode_to_java_keycode_group = -1;
+// If the user adds or removes layouts from the list of input sources
+// we need to invalidate the map. The group number is an index into
+// that list so it's now pointing at a different layout.
+static void on_keys_changed(GdkKeymap* k, void* user_data) {
+    (void)k;
+    (void)user_data;
+    unicode_to_java_keycode.clear();
+}
 
 static void glass_g_hash_table_insert_int(GHashTable *table, gint key, gint value)
 {
@@ -209,6 +226,7 @@ static void initialize_key()
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Insert), com_sun_glass_events_KeyEvent_VK_INSERT);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Delete), com_sun_glass_events_KeyEvent_VK_DELETE);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Divide), com_sun_glass_events_KeyEvent_VK_DIVIDE);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Equal), com_sun_glass_events_KeyEvent_VK_EQUALS);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Begin),
             com_sun_glass_events_KeyEvent_VK_CLEAR); // 5 key on keypad with Num Lock turned off
 
@@ -224,6 +242,13 @@ static void initialize_key()
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F10), com_sun_glass_events_KeyEvent_VK_F10);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F11), com_sun_glass_events_KeyEvent_VK_F11);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F12), com_sun_glass_events_KeyEvent_VK_F12);
+
+    // This signal is sent when the user changes the list of available layouts. It is not sent when they
+    // switch from one layout to another.
+    // The documented signal sent by most versions of Gtk.
+    g_signal_connect(gdk_keymap_get_default(), "keys-changed", G_CALLBACK(on_keys_changed), nullptr);
+    // The actual signal sent by the X11 version.
+    g_signal_connect(gdk_keymap_get_default(), "keys_changed", G_CALLBACK(on_keys_changed), nullptr);
 }
 
 static void init_keymap() {
@@ -264,6 +289,49 @@ jint get_glass_key(GdkEventKey* e) {
 
         key = GPOINTER_TO_INT(g_hash_table_lookup(keymap,
                 GINT_TO_POINTER(keyValue)));
+    }
+
+    // If the user changed layouts since the last keystroke invalidate
+    // the map.
+    if (e->group != unicode_to_java_keycode_group) {
+        unicode_to_java_keycode.clear();
+        unicode_to_java_keycode_group = e->group;
+    }
+
+    // Record all the Unicode characters that this key can generate.
+    if (key != com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+    {
+        GdkKeymapKey* keys = nullptr;
+        guint* keyvals = nullptr;
+        gint count = 0;
+        if (gdk_keymap_get_entries_for_keycode(gdk_keymap_get_default(),
+                e->hardware_keycode, &keys, &keyvals, &count))
+        {
+            gint search_group = e->group;
+            // For keys that don't vary by group (e.g. Space or the keypad)
+            // this call might return results on group 0 even if that's not
+            // the current group.
+            if (search_group != 0) {
+                bool all_are_zero = true;
+                for (gint i = 0; i < count; ++i) {
+                    if (keys[i].group != 0) {
+                        all_are_zero = false;
+                        break;
+                    }
+                }
+                if (all_are_zero)
+                    search_group = 0;
+            }
+            for (gint i = 0; i < count; ++i) {
+                if (keys[i].group == search_group) {
+                    guint32 unicode = gdk_keyval_to_unicode(keyvals[i]);
+                    if (unicode != 0)
+                        unicode_to_java_keycode[unicode] = key;
+                }
+            }
+        }
+        g_free(keyvals);
+        g_free(keys);
     }
 
     return key;
@@ -365,6 +433,11 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
     (void)env;
     (void)jApplication;
 
+    // Query what we learned as the user was typing.
+    auto f = unicode_to_java_keycode.find(character);
+    if (f != unicode_to_java_keycode.end())
+        return f->second;
+
     gunichar *ucs_char = g_utf16_to_ucs4(&character, 1, NULL, NULL, NULL);
     if (ucs_char == NULL) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
@@ -432,6 +505,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
         keyval = gdk_keymap_lookup_key(keymap, &unshifted);
         jKeyCode = gdk_keyval_to_glass(keyval);
     }
+
+    // Update the map, there's no point in going through this search again.
+    unicode_to_java_keycode[character] = jKeyCode;
+
     return jKeyCode;
 }
 
