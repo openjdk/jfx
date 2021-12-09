@@ -487,27 +487,30 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     }
     if (jview) {
         if (press) {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+            mainEnv->CallBooleanMethod(jview, jViewNotifyKeyEx,
                     com_sun_glass_events_KeyEvent_PRESS,
                     glassKey,
                     jChars,
-                    glassModifier);
+                    glassModifier,
+                    event->hardware_keycode);
             CHECK_JNI_EXCEPTION(mainEnv)
 
             if (jview && key > 0) { // TYPED events should only be sent for printable characters.
-                mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                mainEnv->CallBooleanMethod(jview, jViewNotifyKeyEx,
                         com_sun_glass_events_KeyEvent_TYPED,
                         com_sun_glass_events_KeyEvent_VK_UNDEFINED,
                         jChars,
-                        glassModifier);
+                        glassModifier,
+                        event->hardware_keycode);
                 CHECK_JNI_EXCEPTION(mainEnv)
             }
         } else {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+            mainEnv->CallVoidMethod(jview, jViewNotifyKeyEx,
                     com_sun_glass_events_KeyEvent_RELEASE,
                     glassKey,
                     jChars,
-                    glassModifier);
+                    glassModifier,
+                    event->hardware_keycode);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
     }

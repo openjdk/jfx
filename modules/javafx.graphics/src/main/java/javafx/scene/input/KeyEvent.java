@@ -26,14 +26,14 @@
 package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.scene.input.KeyEventHelper;
+
 import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
 import com.sun.javafx.scene.input.KeyCodeMap;
 import javafx.event.Event;
-import javafx.scene.input.ScrollEvent.HorizontalTextScrollUnits;
-import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
 
 /**
  * An event which indicates that a keystroke occurred in a {@link javafx.scene.Node}.
@@ -139,6 +139,7 @@ public final class KeyEvent extends InputEvent {
         this.controlDown = controlDown;
         this.altDown = altDown;
         this.metaDown = metaDown;
+        this.hardwareCode = -1;
     }
 
     /**
@@ -167,6 +168,7 @@ public final class KeyEvent extends InputEvent {
         this.controlDown = controlDown;
         this.altDown = altDown;
         this.metaDown = metaDown;
+        this.hardwareCode = -1;
     }
 
     /**
@@ -383,6 +385,32 @@ public final class KeyEvent extends InputEvent {
         return (EventType<KeyEvent>) super.getEventType();
     }
 
+    /**
+     * The hardware key code which is private to the implementation.
+     */
+    private int hardwareCode;
 
+    int getHardwareCode() {
+        return hardwareCode;
+    }
 
+    void setHardwareCode(int newCode) {
+        hardwareCode = newCode;
+    }
+
+    static {
+        KeyEventHelper.setKeyEventAccessor(
+            new KeyEventHelper.KeyEventAccessor() {
+                @Override
+                public void setHardwareCode(KeyEvent keyEvent, int hardwareCode) {
+                    keyEvent.setHardwareCode(hardwareCode);
+                }
+
+                @Override
+                public int getHardwareCode(KeyEvent keyEvent) {
+                    return keyEvent.getHardwareCode();
+                }
+            }
+        );
+    }
 }

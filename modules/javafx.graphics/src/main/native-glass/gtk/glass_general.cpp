@@ -54,7 +54,7 @@ jmethodID jScreenNotifySettingsChanged;
 jmethodID jViewNotifyResize;
 jmethodID jViewNotifyMouse;
 jmethodID jViewNotifyRepaint;
-jmethodID jViewNotifyKey;
+jmethodID jViewNotifyKeyEx;
 jmethodID jViewNotifyView;
 jmethodID jViewNotifyDragEnter;
 jmethodID jViewNotifyDragOver;
@@ -196,7 +196,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyRepaint = env->GetMethodID(clazz, "notifyRepaint", "(IIII)V");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyKey = env->GetMethodID(clazz, "notifyKey", "(II[CI)V");
+    jViewNotifyKeyEx = env->GetMethodID(clazz, "notifyKeyEx", "(II[CII)Z");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyView = env->GetMethodID(clazz, "notifyView", "(I)V");
     if (env->ExceptionCheck()) return JNI_ERR;

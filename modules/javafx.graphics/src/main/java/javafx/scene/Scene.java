@@ -34,6 +34,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -382,8 +383,8 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
-                        public void processKeyEvent(Scene scene, KeyEvent e) {
-                            scene.processKeyEvent(e);
+                        public boolean processKeyEvent(Scene scene, KeyEvent e) {
+                            return scene.processKeyEvent(e);
                         }
 
                         @Override
@@ -2136,14 +2137,14 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT);
     }
 
-    void processKeyEvent(KeyEvent e) {
+    boolean processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
                 dndGesture = null;
             }
         }
 
-        getKeyHandler().process(e);
+        return getKeyHandler().process(e);
     }
 
     void requestFocus(Node node) {
@@ -2609,9 +2610,9 @@ public class Scene implements EventTarget {
 
 
         @Override
-        public void keyEvent(KeyEvent keyEvent)
+        public boolean keyEvent(KeyEvent keyEvent)
         {
-            processKeyEvent(keyEvent);
+            return processKeyEvent(keyEvent);
         }
 
         @Override
@@ -4078,7 +4079,7 @@ public class Scene implements EventTarget {
 
         private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
 
-        private void process(KeyEvent e) {
+        private boolean process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
             final EventTarget eventTarget =
                     (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner
@@ -4086,7 +4087,7 @@ public class Scene implements EventTarget {
 
             // send the key event to the current focus owner or to scene if
             // the focus owner is not set
-            Event.fireEvent(eventTarget, e);
+            return EventUtil.fireEvent(eventTarget, e) == null;
         }
 
         private void requestFocus(Node node) {

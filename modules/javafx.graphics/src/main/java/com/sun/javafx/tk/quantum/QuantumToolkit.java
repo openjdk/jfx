@@ -95,6 +95,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.scene.input.KeyEventHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.CompletionListener;
@@ -1065,6 +1066,20 @@ public final class QuantumToolkit extends Toolkit {
                 ? com.sun.glass.events.KeyEvent.getKeyCodeForChar(
                           character.charAt(0))
                 : com.sun.glass.events.KeyEvent.VK_UNDEFINED;
+    }
+
+    // The Quantum version of this call knows that we may have the hardware key code
+    // available.
+    @Override public boolean getKeyCanGenerateCharacter(KeyEvent keyEvent, String character) {
+        int hardwareCode = KeyEventHelper.getHardwareCode(keyEvent);
+        if (keyEvent.getCode() != KeyCode.UNDEFINED || hardwareCode != -1) {
+            if (character.length() == 1)
+                return Application.GetApplication().getKeyCanGenerateCharacter(
+                    hardwareCode,
+                    keyEvent.getCode().getCode(),
+                    character.charAt(0));
+        }
+        return false;
     }
 
     @Override public PathElement[] convertShapeToFXPath(Object shape) {

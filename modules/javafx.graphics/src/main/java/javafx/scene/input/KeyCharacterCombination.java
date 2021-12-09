@@ -109,12 +109,8 @@ public final class KeyCharacterCombination extends KeyCombination {
      */
     @Override
     public boolean match(final KeyEvent event) {
-        if (event.getCode() == KeyCode.UNDEFINED) {
-            return false;
-        }
-        return (event.getCode().getCode()
-                       == Toolkit.getToolkit().getKeyCodeForChar(getCharacter()))
-                   && super.match(event);
+        return (super.match(event) &&
+                Toolkit.getToolkit().getKeyCanGenerateCharacter(event, getCharacter()));
     }
 
     /**

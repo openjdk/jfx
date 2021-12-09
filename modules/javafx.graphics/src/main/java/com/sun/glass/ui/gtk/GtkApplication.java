@@ -487,6 +487,9 @@ final class GtkApplication extends Application implements
     protected native int _getKeyCodeForChar(char c);
 
     @Override
+    protected native boolean _getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c);
+
+    @Override
     protected native int _isKeyLocked(int keyCode);
 
 }

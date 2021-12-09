@@ -707,6 +707,15 @@ public abstract class Toolkit {
                            float dashOffset);
 
     public abstract int getKeyCodeForChar(String character);
+    /**
+     * The default implementation bridges into the existing getKeyCodeForChar call.
+     */
+    public boolean getKeyCanGenerateCharacter(KeyEvent event, String character) {
+        if (event.getCode() != KeyCode.UNDEFINED) {
+            return getKeyCodeForChar(character) == event.getCode().getCode();
+        }
+        return false;
+    }
     public abstract Dimension2D getBestCursorSize(int preferredWidth, int preferredHeight);
     public abstract int getMaximumCursorColors();
     public abstract PathElement[] convertShapeToFXPath(Object shape);

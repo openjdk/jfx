@@ -41,6 +41,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.scene.input.KeyEventHelper;
 import com.sun.javafx.scene.input.KeyCodeMap;
 
 import javafx.collections.ListChangeListener;
@@ -147,22 +148,25 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     private final KeyEventNotification keyNotification = new KeyEventNotification();
-    private class KeyEventNotification implements PrivilegedAction<Void> {
+    private class KeyEventNotification implements PrivilegedAction<Boolean> {
         View view;
         long time;
         int type;
         int key;
         char[] chars;
         int modifiers;
+        int hardwareCode;
 
         private KeyCode lastKeyCode;
 
         @Override
-        public Void run() {
+        public Boolean run() {
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(keyEventType(type).toString());
             }
             WindowStage stage = scene.getWindowStage();
+            Boolean consumed = Boolean.FALSE;
+
             try {
                 boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
                 boolean controlDown = (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
@@ -177,6 +181,7 @@ class GlassViewEventHandler extends View.EventHandler {
                         str, text,
                         KeyCodeMap.valueOf(key) ,
                         shiftDown, controlDown, altDown, metaDown);
+                KeyEventHelper.setHardwareCode(keyEvent, hardwareCode);
 
                 KeyCode keyCode = KeyCodeMap.valueOf(key);
                 switch (type) {
@@ -215,7 +220,8 @@ class GlassViewEventHandler extends View.EventHandler {
                             }
                         }
                         if (scene.sceneListener != null) {
-                            scene.sceneListener.keyEvent(keyEvent);
+                            if (scene.sceneListener.keyEvent(keyEvent))
+                                consumed = Boolean.TRUE;
                         }
                         break;
                     default:
@@ -231,13 +237,13 @@ class GlassViewEventHandler extends View.EventHandler {
                     PulseLogger.newInput(null);
                 }
             }
-            return null;
+            return consumed;
         }
     }
 
     @SuppressWarnings("removal")
-    @Override public void handleKeyEvent(View view, long time, int type, int key,
-                                         char[] chars, int modifiers)
+    @Override public boolean handleKeyEvent(View view, long time, int type, int key,
+                                            char[] chars, int modifiers, int hardwareCode)
     {
         keyNotification.view = view;
         keyNotification.time = time;
@@ -245,8 +251,9 @@ class GlassViewEventHandler extends View.EventHandler {
         keyNotification.key = key;
         keyNotification.chars = chars;
         keyNotification.modifiers = modifiers;
+        keyNotification.hardwareCode = hardwareCode;
 
-        QuantumToolkit.runWithoutRenderLock(() -> {
+        return QuantumToolkit.runWithoutRenderLock(() -> {
             return AccessController.doPrivileged(keyNotification, scene.getAccessControlContext());
         });
     }

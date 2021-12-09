@@ -323,12 +323,8 @@ extern "C" {
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
-  (JNIEnv *env, jobject jApplication, jchar character)
+static jint internalGetKeyCodeForChar(jchar character)
 {
-    (void)env;
-    (void)jApplication;
-
     gunichar *ucs_char = g_utf16_to_ucs4(&character, 1, NULL, NULL, NULL);
     if (ucs_char == NULL) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
@@ -344,6 +340,12 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
     g_free(ucs_char);
 
     return gdk_keyval_to_glass(keyval);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
+  (JNIEnv *env, jobject jApplication, jchar character)
+{
+    return internalGetKeyCodeForChar(character);
 }
 
 /*
@@ -364,6 +366,22 @@ static Bool isXkbAvailable(Display *display) {
     }
     return xkbAvailable;
 }
+
+/*
+  * Determine which keyboard layout is active. This is the group
+  * number in the Xkb state. There is no direct way to query this
+  * in Gdk.
+  */
+ static gint get_current_keyboard_group()
+ {
+     Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
+     if (isXkbAvailable(display)) {
+         XkbStateRec xkbState;
+         XkbGetState(display, XkbUseCoreKbd, &xkbState);
+         return xkbState.group;
+     }
+     return -1;
+ }
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
@@ -403,6 +421,59 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
     }
 
     return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+}
+
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCanGenerateCharacter
+  (JNIEnv *env, jobject jApplication, jint hardwareCode, jint vkCode, jchar character)
+{
+    (void)env;
+    (void)jApplication;
+
+    if (hardwareCode < 0) {
+        if (vkCode != com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+            return vkCode == internalGetKeyCodeForChar(character);
+        return false;
+    }
+
+    gint currentGroup = get_current_keyboard_group();
+    if (currentGroup < 0)
+        return false;
+
+    GdkKeymapKey* keys = nullptr;
+    guint* keyvals = nullptr;
+    gint count = 0;
+    bool result = false;
+
+    if (gdk_keymap_get_entries_for_keycode(gdk_keymap_get_default(), hardwareCode,
+                                           &keys, &keyvals, &count))
+    {
+        // For fixed-function keys (e.g Space or the keypad) we can get entries
+        // for group 0 even if that's not the current group.
+        gint searchGroup = currentGroup;
+        if (searchGroup != 0) {
+            bool allAreZero = true;
+            for (gint i = 0; i < count; ++i) {
+                if (keys[i].group != 0) {
+                    allAreZero = false;
+                    break;
+                }
+            }
+            if (allAreZero)
+                searchGroup = 0;
+        }
+        for (gint i = 0; i < count; ++i) {
+            if (keys[i].group == searchGroup) {
+                guint32 unicode = gdk_keyval_to_unicode(keyvals[i]);
+                if (unicode && unicode == character) {
+                    result = true;
+                    break;
+                }
+            }
+        }
+    }
+    g_free(keys);
+    g_free(keyvals);
+    return result;
 }
 
 } // extern "C"
