@@ -1287,22 +1287,24 @@ public class Scene implements EventTarget {
         // because this scene can be stage-less
         doLayoutPass();
 
-        getRoot().updateBounds();
-
-        synchronizeSceneNodesWithLock();
+         synchronizeSceneNodesWithLock();
     }
 
     private void synchronizeSceneNodesWithLock() {
+        getRoot().updateBounds();
         if (peer != null) {
             peer.waitForRenderingToComplete();
             peer.waitForSynchronization();
             try {
-                // Run the synchronizer while holding the render lock
+                syncLights();
+                scenePulseListener.synchronizeSceneProperties();
                 scenePulseListener.synchronizeSceneNodes();
             } finally {
                 peer.releaseSynchronization(false);
             }
         } else {
+            syncLights();
+            scenePulseListener.synchronizeSceneProperties();
             scenePulseListener.synchronizeSceneNodes();
         }
     }
