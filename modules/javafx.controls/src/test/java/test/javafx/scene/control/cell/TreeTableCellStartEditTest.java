@@ -106,8 +106,8 @@ public class TreeTableCellStartEditTest {
     public void testStartEditRespectsEditable() {
         treeTableCell.updateIndex(0);
 
-        treeTableCell.updateTreeTableColumn((TreeTableColumn) treeTableColumn);
-        treeTableCell.updateTreeTableRow(treeTableRow);
+        treeTableCell.updateTableColumn((TreeTableColumn) treeTableColumn);
+        treeTableCell.updateTableRow(treeTableRow);
         treeTableCell.updateTreeTableView(treeTable);
 
         for (boolean isTableEditable : EDITABLE_STATES) {
