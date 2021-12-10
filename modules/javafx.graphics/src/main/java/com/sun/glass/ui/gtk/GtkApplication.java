@@ -383,11 +383,6 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    public Window createWindow(long parent) {
-        return new GtkChildWindow(parent);
-    }
-
-    @Override
     public View createView() {
         return new GtkView();
     }

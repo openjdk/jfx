@@ -70,7 +70,6 @@ class WindowStage extends GlassStage {
     private boolean rtl = false;
     private boolean transparent = false;
     private boolean isPrimaryStage = false;
-    private boolean isAppletStage = false; // true if this is an embedded applet window
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
     private boolean isAlwaysOnTop = false;
@@ -86,14 +85,6 @@ class WindowStage extends GlassStage {
     private static List<WindowStage> activeWindows = new LinkedList<>();
 
     private static Map<Window, WindowStage> platformWindows = new HashMap<>();
-
-    private static GlassAppletWindow appletWindow = null;
-    static void setAppletWindow(GlassAppletWindow aw) {
-        appletWindow = aw;
-    }
-    static GlassAppletWindow getAppletWindow() {
-        return appletWindow;
-    }
 
     private static final Locale LOCALE = Locale.getDefault();
 
@@ -124,10 +115,6 @@ class WindowStage extends GlassStage {
 
     final void setIsPrimary() {
         isPrimaryStage = true;
-        if (appletWindow != null) {
-            // this is an embedded applet stage
-            isAppletStage = true;
-        }
     }
 
     final void setIsPopup() {
@@ -152,73 +139,70 @@ class WindowStage extends GlassStage {
     private void initPlatformWindow() {
         if (platformWindow == null) {
             Application app = Application.GetApplication();
-            if (isPrimaryStage && (null != appletWindow)) {
-                platformWindow = app.createWindow(appletWindow.getGlassWindow().getNativeWindow());
-            } else {
-                Window ownerWindow = null;
-                if (owner instanceof WindowStage) {
-                    ownerWindow = ((WindowStage)owner).platformWindow;
-                }
-                boolean resizable = false;
-                boolean focusable = true;
-                int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
-                if (isPopupStage) { // TODO: make it a stage style?
-                    windowMask |= Window.POPUP;
-                    if (style == StageStyle.TRANSPARENT) {
-                        windowMask |= Window.TRANSPARENT;
-                    }
-                    focusable = false;
-                } else {
-                    switch (style) {
-                        case UNIFIED:
-                            if (app.supportsUnifiedWindows()) {
-                                windowMask |= Window.UNIFIED;
-                            }
-                            // fall through
-                        case DECORATED:
-                            windowMask |=
-                                Window.TITLED | Window.CLOSABLE |
-                                Window.MINIMIZABLE | Window.MAXIMIZABLE;
-                            if (ownerWindow != null || modality != Modality.NONE) {
-                                windowMask &=
-                                    ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
-                            }
-                            resizable = true;
-                            break;
-                        case UTILITY:
-                            windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
-                            break;
-                        default:
-                            windowMask |=
-                                    (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
-                            break;
-                    }
-                }
-                if (modality != Modality.NONE) {
-                    windowMask |= Window.MODAL;
-                }
-                platformWindow =
-                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
-                platformWindow.setResizable(resizable);
-                platformWindow.setFocusable(focusable);
-                if (securityDialog) {
-                    platformWindow.setLevel(Window.Level.FLOATING);
-                }
-                if (fxStage != null && fxStage.getScene() != null) {
-                    javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
-                    if (paint instanceof javafx.scene.paint.Color) {
-                        javafx.scene.paint.Color color = (javafx.scene.paint.Color) paint;
-                        platformWindow.setBackground((float) color.getRed(), (float) color.getGreen(), (float) color.getBlue());
-                    } else if (paint instanceof javafx.scene.paint.LinearGradient) {
-                        javafx.scene.paint.LinearGradient lgradient = (javafx.scene.paint.LinearGradient) paint;
-                        computeAndSetBackground(lgradient.getStops());
-                    } else if (paint instanceof javafx.scene.paint.RadialGradient) {
-                        javafx.scene.paint.RadialGradient rgradient = (javafx.scene.paint.RadialGradient) paint;
-                        computeAndSetBackground(rgradient.getStops());
-                    }
-                }
 
+            Window ownerWindow = null;
+            if (owner instanceof WindowStage) {
+                ownerWindow = ((WindowStage)owner).platformWindow;
             }
+            boolean resizable = false;
+            boolean focusable = true;
+            int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
+            if (isPopupStage) { // TODO: make it a stage style?
+                windowMask |= Window.POPUP;
+                if (style == StageStyle.TRANSPARENT) {
+                    windowMask |= Window.TRANSPARENT;
+                }
+                focusable = false;
+            } else {
+                switch (style) {
+                    case UNIFIED:
+                        if (app.supportsUnifiedWindows()) {
+                            windowMask |= Window.UNIFIED;
+                        }
+                        // fall through
+                    case DECORATED:
+                        windowMask |=
+                            Window.TITLED | Window.CLOSABLE |
+                            Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                        if (ownerWindow != null || modality != Modality.NONE) {
+                            windowMask &=
+                                ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
+                        }
+                        resizable = true;
+                        break;
+                    case UTILITY:
+                        windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
+                        break;
+                    default:
+                        windowMask |=
+                                (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
+                        break;
+                }
+            }
+            if (modality != Modality.NONE) {
+                windowMask |= Window.MODAL;
+            }
+            platformWindow =
+                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+            platformWindow.setResizable(resizable);
+            platformWindow.setFocusable(focusable);
+            if (securityDialog) {
+                platformWindow.setLevel(Window.Level.FLOATING);
+            }
+            if (fxStage != null && fxStage.getScene() != null) {
+                javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
+                if (paint instanceof javafx.scene.paint.Color) {
+                    javafx.scene.paint.Color color = (javafx.scene.paint.Color) paint;
+                    platformWindow.setBackground((float) color.getRed(), (float) color.getGreen(), (float) color.getBlue());
+                } else if (paint instanceof javafx.scene.paint.LinearGradient) {
+                    javafx.scene.paint.LinearGradient lgradient = (javafx.scene.paint.LinearGradient) paint;
+                    computeAndSetBackground(lgradient.getStops());
+                } else if (paint instanceof javafx.scene.paint.RadialGradient) {
+                    javafx.scene.paint.RadialGradient rgradient = (javafx.scene.paint.RadialGradient) paint;
+                    computeAndSetBackground(rgradient.getStops());
+                }
+            }
+
         }
         platformWindows.put(platformWindow, this);
     }
@@ -331,9 +315,6 @@ class WindowStage extends GlassStage {
                 vscene.updateSceneState();
                 vscene.entireSceneNeedsRepaint();
             }
-        }
-        if (isAppletStage) {
-            xSet = ySet = false;
         }
         if (xSet || ySet || w > 0 || h > 0 || cw > 0 || ch > 0) {
             platformWindow.setBounds(x, y, xSet, ySet, w, h, cw, ch, xGravity, yGravity);
@@ -545,9 +526,6 @@ class WindowStage extends GlassStage {
             } else if (modality == Modality.APPLICATION_MODAL) {
                 windowsSetEnabled(false);
             }
-            if (isAppletStage && null != appletWindow) {
-                appletWindow.assertStageOrder();
-            }
         }
 
         applyFullScreen();
@@ -622,10 +600,6 @@ class WindowStage extends GlassStage {
     // Safely exit full screen
     void exitFullScreen() {
         setFullScreen(false);
-    }
-
-    boolean isApplet() {
-        return isPrimaryStage && null != appletWindow;
     }
 
     private boolean hasPermission(Permission perm) {
@@ -783,17 +757,11 @@ class WindowStage extends GlassStage {
 
     @Override public void toBack() {
         platformWindow.toBack();
-        if (isAppletStage && null != appletWindow) {
-            appletWindow.assertStageOrder();
-        }
     }
 
     @Override public void toFront() {
         platformWindow.requestFocus(); // RT-17836
         platformWindow.toFront();
-        if (isAppletStage && null != appletWindow) {
-            appletWindow.assertStageOrder();
-        }
     }
 
     private boolean isClosePostponed = false;
@@ -921,11 +889,6 @@ class WindowStage extends GlassStage {
             return;
         }
         setPlatformEnabled(enabled);
-        if (enabled) {
-            if (isAppletStage && null != appletWindow) {
-                appletWindow.assertStageOrder();
-            }
-        }
     }
 
     @Override

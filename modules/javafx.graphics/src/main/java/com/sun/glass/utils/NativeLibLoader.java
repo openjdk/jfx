@@ -318,7 +318,7 @@ public class NativeLibLoader {
 
         } catch (IllegalArgumentException | NoSuchAlgorithmException | IOException | SecurityException e) {
             // IOException also covers MalformedURLException
-            // SecurityException means some untrusted applet
+            // SecurityException means some untrusted app
 
             // Fall through...
         }
