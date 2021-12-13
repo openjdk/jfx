@@ -237,6 +237,11 @@ public abstract class GraphicsPipeline {
                 if (PrismSettings.verbose) {
                     System.err.println("GraphicsPipeline.createPipeline: error"+
                                        " initializing pipeline "+ className);
+                    if (newPipeline == null) {
+                        System.err.println("Reason: could not create an instance");
+                    } else {
+                        System.err.println("Reason: could not initialize the instance");
+                    }
                 }
             } catch (Throwable t) {
                 if (PrismSettings.verbose) {
