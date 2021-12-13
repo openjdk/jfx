@@ -235,7 +235,7 @@ public abstract class GraphicsPipeline {
                     newPipeline = null;
                 }
                 if (PrismSettings.verbose) {
-                    System.err.println("GraphicsPipeline.createPipeline: error"+
+                    System.err.println("GraphicsPipeline.createPipeline: error" +
                                        " initializing pipeline "+ className);
                     if (newPipeline == null) {
                         System.err.println("Reason: could not create an instance");

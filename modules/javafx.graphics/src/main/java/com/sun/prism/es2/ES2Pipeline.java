@@ -72,12 +72,11 @@ public class ES2Pipeline extends GraphicsPipeline {
 
         creator = Thread.currentThread();
 
-
         if (glFactory != null) {
             es2Enabled = glFactory.initialize(PrismSettings.class,
                     pixelFormatAttributes);
             if (!es2Enabled && PrismSettings.verbose) {
-                System.out.println("GLFactory " + glFactory + "could not be initialized. ES2Pipeline not available.");
+                System.out.println("GLFactory " + glFactory + " could not be initialized. ES2Pipeline not available.");
             }
         } else {
             if (PrismSettings.verbose) {
