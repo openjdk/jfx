@@ -695,7 +695,8 @@ static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder, IMFSample *
         if (pGstBuffer == NULL || !gst_buffer_map(pGstBuffer, &info, GST_MAP_WRITE))
         {
             pMediaBuffer->Unlock();
-            gst_buffer_unref(pGstBuffer); // INLINE - gst_buffer_unref()
+             if (pGstBuffer != NULL)
+                gst_buffer_unref(pGstBuffer); // INLINE - gst_buffer_unref()
             return GST_FLOW_ERROR;
         }
 

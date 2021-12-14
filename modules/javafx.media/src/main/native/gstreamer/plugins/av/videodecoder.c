@@ -522,7 +522,7 @@ static gboolean videodecoder_convert_frame(VideoDecoder *decoder)
 
     if (decoder->sws_context == NULL || decoder->dest_frame == NULL ||
             decoder->sws_scale_func == NULL)
-        return TRUE;
+        return FALSE;
 
     int ret = decoder->sws_scale_func(decoder->sws_context,
                                       base->frame->data,
@@ -731,19 +731,20 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
         else
         {
 #if HEVC_SUPPORT
-            if (!videodecoder_convert_frame(decoder))
+            // Check to see if we need to convert frame to YUV420p
+            if (base->frame->format != AV_PIX_FMT_YUV420P)
             {
-                gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
-                                         GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                         g_strdup("Video frame conversion failed"), NULL,
-                                         ("videodecoder.c"), ("videodecoder_chain"), 0);
+                if (!videodecoder_convert_frame(decoder))
+                {
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                                             GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                                             g_strdup("Video frame conversion failed"), NULL,
+                                             ("videodecoder.c"), ("videodecoder_chain"), 0);
 
-                result = GST_FLOW_ERROR;
-                goto _exit;
-            }
+                    result = GST_FLOW_ERROR;
+                    goto _exit;
+                }
 
-            if (decoder->dest_frame)
-            {
                 reordered_opaque = decoder->dest_frame->reordered_opaque;
                 data0 = decoder->dest_frame->data[0];
                 data1 = decoder->dest_frame->data[1];
