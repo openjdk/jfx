@@ -461,6 +461,7 @@ ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
+ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 
 // Specifies whether to enable the Maven publishing tasks
 defineProperty("MAVEN_PUBLISH", "false")
@@ -4977,7 +4978,7 @@ compileTargets { t ->
 
         def library = targetProperties.library
 
-        def doStrip = targetProperties.containsKey('strip') && !IS_DEBUG_NATIVE
+        def doStrip = targetProperties.containsKey('strip') && IS_RELEASE
         def strip = doStrip ? targetProperties.strip : null
         def stripArgs = doStrip ? targetProperties.stripArgs : null
         def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
