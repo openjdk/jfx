@@ -1,13 +1,17 @@
 package test.javafx.beans.value;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -15,14 +19,6 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-
-/*
- * This is a JUnit 5 style test which has been backported to JUnit 4.
- * Once JUnit 5 is available, the declared annotations and all
- * JUnit 4 tests (marked with @org.junit.Test) should be removed.
- *
- * The used static imports for assertions can be upgraded as well.
- */
 
 public class ObservableValueFluentBindingsTest {
     private StringProperty property = new SimpleStringProperty("A");
@@ -368,191 +364,5 @@ public class ObservableValueFluentBindingsTest {
                 }
             }
         }
-    }
-
-    /*
-     * Backported code for JUnit 4 which can be removed starts here:
-     */
-
-    @interface Nested {}
-
-    @interface Test {}
-
-    public static <T extends Throwable> T assertThrows(Class<T> expected, Runnable runnable) {
-        try {
-            runnable.run();
-        }
-        catch (Throwable t) {
-            if (expected.isInstance(t)) {
-                return (T) t;
-            }
-
-            throw new AssertionError("unexpected exception thrown: " + t);
-        }
-
-        throw new AssertionError("expected " + expected + ", but nothing was thrown");
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNull__shouldThrowNullPointerException() {
-        new When_map_Called().new WithNull().shouldThrowNullPointerException();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__shouldNotBeNull() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().shouldNotBeNull();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__shouldNotBeStronglyReferenced() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().shouldNotBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__When_getValue_Called__shouldReturnPropertyValuesWithOperationApplied() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new When_getValue_Called()
-                .shouldReturnPropertyValuesWithOperationApplied();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__When_getValue_Called__shouldNotOperateOnNull() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new When_getValue_Called()
-                .shouldNotOperateOnNull();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldApplyOperation() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved().shouldApplyOperation();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldNotOperateOnNull() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved()
-                .shouldNotOperateOnNull();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldBeStronglyReferenced() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved()
-                .shouldBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__AndWhenUnobserved__shouldNoLongerBeCalled() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved().new AndWhenUnobserved()
-                .shouldNoLongerBeCalled();
-    }
-
-    @org.junit.Test
-    public void When_map_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__AndWhenUnobserved__shouldNoLongerBeStronglyReferenced() {
-        new When_map_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved().new AndWhenUnobserved()
-                .shouldNoLongerBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__shouldNotBeNull() {
-        new When_orElse_CalledReturns_ObservableValue_Which().shouldNotBeNull();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__shouldNotBeStronglyReferenced() {
-        new When_orElse_CalledReturns_ObservableValue_Which().shouldNotBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__When_getValue_Called__shouldReturnPropertyValuesWithOperationApplied() {
-        new When_orElse_CalledReturns_ObservableValue_Which().new When_getValue_Called()
-                .shouldReturnPropertyValuesWithOperationApplied();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__WhenObserved__shouldApplyOperation() {
-        new When_orElse_CalledReturns_ObservableValue_Which().new WhenObserved().shouldApplyOperation();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__WhenObserved__shouldBeStronglyReferenced() {
-        new When_orElse_CalledReturns_ObservableValue_Which().new WhenObserved().shouldBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__WhenObserved__AndWhenUnobserved__shouldNoLongerBeCalled() {
-        new When_orElse_CalledReturns_ObservableValue_Which().new WhenObserved().new AndWhenUnobserved()
-                .shouldNoLongerBeCalled();
-    }
-
-    @org.junit.Test
-    public void When_orElse_CalledReturns_ObservableValue_Which__WhenObserved__AndWhenUnobserved__shouldNoLongerBeStronglyReferenced() {
-        new When_orElse_CalledReturns_ObservableValue_Which().new WhenObserved().new AndWhenUnobserved()
-                .shouldNoLongerBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNull__shouldThrowNullPointerException() {
-        new When_flatMap_Called().new WithNull().shouldThrowNullPointerException();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__shouldNotBeNull() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().shouldNotBeNull();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__shouldNotBeStronglyReferenced() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().shouldNotBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__When_getValue_Called__shouldReturnPropertyValuesWithOperationApplied() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new When_getValue_Called()
-                .shouldReturnPropertyValuesWithOperationApplied();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__When_getValue_Called__shouldNotOperateOnNull() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new When_getValue_Called()
-                .shouldNotOperateOnNull();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__When_getValue_Called__shouldIgnoreFlatMapsToNull() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new When_getValue_Called()
-                .shouldIgnoreFlatMapsToNull();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldApplyOperation() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved()
-                .shouldApplyOperation();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldNotOperateOnNull() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved()
-                .shouldNotOperateOnNull();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldIgnoreFlatMapsToNull() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved()
-                .shouldIgnoreFlatMapsToNull();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__shouldBeStronglyReferenced() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved()
-                .shouldBeStronglyReferenced();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__AndWhenUnobserved__shouldNoLongerBeCalled() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved().new AndWhenUnobserved()
-                .shouldNoLongerBeCalled();
-    }
-
-    @org.junit.Test
-    public void When_flatMap_Called__WithNotNullReturns_ObservableValue_Which__WhenObserved__AndWhenUnobserved__shouldNoLongerBeStronglyReferenced() {
-        new When_flatMap_Called().new WithNotNullReturns_ObservableValue_Which().new WhenObserved().new AndWhenUnobserved()
-                .shouldNoLongerBeStronglyReferenced();
     }
 }

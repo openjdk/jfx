@@ -25,21 +25,16 @@
 
 package test.javafx.beans.value;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.LazyObjectBindingStub;
-
-/*
- * This is a JUnit 5 style test which has been backported to JUnit 4.
- * Once JUnit 5 is available, the declared annotations and all
- * JUnit 4 tests (marked with @org.junit.Test) should be removed.
- *
- * The used static imports for assertions can be upgraded as well.
- */
 
 public class LazyObjectBindingTest {
     private LazyObjectBindingStub<String> binding = new LazyObjectBindingStub<>();
@@ -206,172 +201,5 @@ public class LazyObjectBindingTest {
                 }
             }
         }
-    }
-
-    /*
-     * Backported code for JUnit 4 which can be removed starts here:
-     */
-
-    @interface Nested {}
-    @interface Test {}
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__shouldBeValid() {
-        new WhenObservedWithInvalidationListener()
-            .shouldBeValid();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__shouldStartObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .shouldStartObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__shouldNotStopObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .shouldNotStopObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__shouldCallComputeValueOneOrTwoTimes() {
-        new WhenObservedWithInvalidationListener()
-            .shouldCallComputeValueOneOrTwoTimes();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__shouldStillBeValid() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .shouldStillBeValid();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__shouldNotStartObservingSourceAgain() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .shouldNotStartObservingSourceAgain();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__shouldNotStopObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .shouldNotStopObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__shouldNotComputeValueAgain() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .shouldNotComputeValueAgain();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__shouldStillBeValid() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .shouldStillBeValid();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__shouldNotStartObservingSourceAgain() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .shouldNotStartObservingSourceAgain();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__shouldNotStopObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .shouldNotStopObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__shouldNotComputeValueAgain() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .shouldNotComputeValueAgain();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__shouldNotStartObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .shouldNotStartObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__shouldStopObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .shouldStopObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__shouldNotComputeValue() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .shouldNotComputeValue();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__shouldNoLongerBeValid() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .shouldNoLongerBeValid();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__AndTheListenerIsRemovedAgain__shouldNotStartObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .new AndTheListenerIsRemovedAgain()
-            .shouldNotStartObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__AndTheListenerIsRemovedAgain__shouldNotStopObservingSource() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .new AndTheListenerIsRemovedAgain()
-            .shouldNotStopObservingSource();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__AndTheListenerIsRemovedAgain__shouldNotComputeValue() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .new AndTheListenerIsRemovedAgain()
-            .shouldNotComputeValue();
-    }
-
-    @org.junit.Test
-    public void WhenObservedWithInvalidationListener__AndWhenObservedAgain__AndThenOneObserverIsRemoved__AndThenTheLastObserverIsRemoved__AndTheListenerIsRemovedAgain__shouldNotBeValid() {
-        new WhenObservedWithInvalidationListener()
-            .new AndWhenObservedAgain()
-            .new AndThenOneObserverIsRemoved()
-            .new AndThenTheLastObserverIsRemoved()
-            .new AndTheListenerIsRemovedAgain()
-            .shouldNotBeValid();
     }
 }
