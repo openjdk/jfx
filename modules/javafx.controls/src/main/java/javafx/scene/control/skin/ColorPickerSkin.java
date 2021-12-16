@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,7 +75,7 @@ import static javafx.scene.paint.Color.*;
  */
 public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -90,7 +90,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -136,7 +136,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -258,7 +258,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -321,7 +321,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -570,7 +570,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
     *                                                                         *
     *                         picker-color-cell                               *
     *                                                                         *
@@ -584,10 +584,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             final double height = getHeight();
             final double right = snappedRightInset();
             final double bottom = snappedBottomInset();
-            colorRect.setX(snapPosition(colorRectX.get()));
-            colorRect.setY(snapPosition(colorRectY.get()));
-            colorRect.setWidth(snapSize(colorRectWidth.get()));
-            colorRect.setHeight(snapSize(colorRectHeight.get()));
+            colorRect.setX(snapPositionX(colorRectX.get()));
+            colorRect.setY(snapPositionY(colorRectY.get()));
+            colorRect.setWidth(snapSizeX(colorRectWidth.get()));
+            colorRect.setHeight(snapSizeY(colorRectHeight.get()));
             if (getChildren().size() == 2) {
                 final ImageView icon = (ImageView) getChildren().get(1);
                 Pos childAlignment = StackPane.getAlignment(icon);
@@ -609,7 +609,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
     *                                                                         *
     *                         Stylesheet Handling                             *
     *                                                                         *

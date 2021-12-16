@@ -203,7 +203,7 @@
 #endif
 
 #ifdef G_OS_WIN32
-#include <process.h>    /* For getpid() */
+#include <process.h>        /* For getpid() */
 #include <io.h>
 #  include <windows.h>
 
@@ -493,19 +493,19 @@ typedef struct _GLogDomain  GLogDomain;
 typedef struct _GLogHandler GLogHandler;
 struct _GLogDomain
 {
-  gchar   *log_domain;
+  gchar     *log_domain;
   GLogLevelFlags fatal_mask;
-  GLogHandler *handlers;
-  GLogDomain  *next;
+  GLogHandler   *handlers;
+  GLogDomain    *next;
 };
 struct _GLogHandler
 {
-  guint    id;
+  guint      id;
   GLogLevelFlags log_level;
   GLogFunc   log_func;
   gpointer   data;
   GDestroyNotify destroy;
-  GLogHandler *next;
+  GLogHandler   *next;
 };
 
 
@@ -669,8 +669,8 @@ g_log_domain_check_free_L (GLogDomain *domain)
 
 static GLogFunc
 g_log_domain_get_handler_L (GLogDomain  *domain,
-          GLogLevelFlags log_level,
-          gpointer  *data)
+                            GLogLevelFlags log_level,
+                gpointer    *data)
 {
   if (domain && log_level)
     {
@@ -985,7 +985,7 @@ g_test_log_set_fatal_handler (GTestLogFatalFunc log_func,
  */
 void
 g_log_remove_handler (const gchar *log_domain,
-          guint    handler_id)
+              guint    handler_id)
 {
   GLogDomain *domain;
 
@@ -1149,7 +1149,7 @@ format_unsigned (gchar  *buf,
 /* string size big enough to hold level prefix */
 #define STRING_BUFFER_SIZE  (FORMAT_UNSIGNED_BUFSIZE + 32)
 
-#define ALERT_LEVELS    (G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING)
+#define ALERT_LEVELS        (G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING)
 
 /* these are emitted by the default log handler */
 #define DEFAULT_LEVELS (G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING | G_LOG_LEVEL_MESSAGE)
@@ -1251,9 +1251,9 @@ static GSList *expected_messages = NULL;
  */
 void
 g_logv (const gchar   *log_domain,
-  GLogLevelFlags log_level,
-  const gchar   *format,
-  va_list        args)
+        GLogLevelFlags log_level,
+        const gchar   *format,
+    va_list        args)
 {
   gboolean was_fatal = (log_level & G_LOG_FLAG_FATAL) != 0;
   gboolean was_recursion = (log_level & G_LOG_FLAG_RECURSION) != 0;
@@ -1313,7 +1313,7 @@ g_logv (const gchar   *log_domain,
     {
       GLogLevelFlags test_level;
 
-      test_level = 1 << i;
+      test_level = 1L << i;
       if (log_level & test_level)
   {
     GLogDomain *domain;
@@ -3063,7 +3063,7 @@ escape_string (GString *string)
  *
  * - `G_MESSAGES_PREFIXED`: A :-separated list of log levels for which
  *   messages should be prefixed by the program name and PID of the
- *   aplication.
+ *   application.
  *
  * - `G_MESSAGES_DEBUG`: A space-separated list of log domains for
  *   which debug and informational messages are printed. By default
@@ -3078,9 +3078,9 @@ escape_string (GString *string)
  */
 void
 g_log_default_handler (const gchar   *log_domain,
-           GLogLevelFlags log_level,
-           const gchar   *message,
-           gpointer       unused_data)
+                       GLogLevelFlags log_level,
+                       const gchar   *message,
+               gpointer       unused_data)
 {
   GLogField fields[4];
   int n_fields = 0;

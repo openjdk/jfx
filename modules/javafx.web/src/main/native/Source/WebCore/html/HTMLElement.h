@@ -34,6 +34,11 @@ namespace WebCore {
 class FormAssociatedElement;
 class FormNamedItem;
 class HTMLFormElement;
+class VisibleSelection;
+
+#if ENABLE(IMAGE_EXTRACTION)
+struct ImageExtractionResult;
+#endif
 
 enum class EnterKeyHint : uint8_t;
 
@@ -81,7 +86,6 @@ public:
     bool hasDirectionAuto() const;
     TextDirection directionalityIfhasDirAutoAttribute(bool& isAuto) const;
 
-    virtual bool isHTMLUnknownElement() const { return false; }
     virtual bool isTextControlInnerTextElement() const { return false; }
 
     bool willRespondToMouseMoveEvents() override;
@@ -122,6 +126,13 @@ public:
     String enterKeyHint() const;
     void setEnterKeyHint(const String& value);
 
+    static bool shouldUpdateSelectionForMouseDrag(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
+    bool hasImageOverlay() const;
+
+#if ENABLE(IMAGE_EXTRACTION)
+    WEBCORE_EXPORT void updateWithImageExtractionResult(ImageExtractionResult&&);
+#endif
+
 protected:
     HTMLElement(const QualifiedName& tagName, Document&, ConstructionType);
 
@@ -151,7 +162,7 @@ private:
 
     void dirAttributeChanged(const AtomString&);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
-    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChangeType);
+    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
     TextDirection directionality(Node** strongDirectionalityTextNode= 0) const;
 
     static void populateEventHandlerNameMap(EventHandlerNameMap&, const QualifiedName* const table[], size_t tableSize);

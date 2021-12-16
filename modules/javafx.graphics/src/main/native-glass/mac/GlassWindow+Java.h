@@ -34,7 +34,7 @@
 - (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame;
 - (void)_sendJavaWindowResizeEvent:(int)type forFrame:(NSRect)frame;
 
-- (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow jIsChild:(jboolean)jIsChild;
+- (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow;
 - (NSWindow*)_getCurrentWindow;
 - (void)_ungrabFocus;
 + (void)_resetGrab;

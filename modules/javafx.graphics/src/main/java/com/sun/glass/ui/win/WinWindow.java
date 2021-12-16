@@ -54,10 +54,6 @@ class WinWindow extends Window {
         super(owner, screen, styleMask);
     }
 
-    protected WinWindow(long parent) {
-        super(parent);
-    }
-
     @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
                           float w, float h, float cw, float ch,
@@ -245,16 +241,12 @@ class WinWindow extends Window {
         // call to setBackground causes flickering when resizing window.
         // For more details see JDK-8171852: JavaFX Stage flickers on resize on
         // Windows platforms
-        if (this.getAppletMode()) {
-            return _setBackground2(ptr, r, g, b);
-        }
         return true;
     }
 
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
-    @Override native protected long _createChildWindow(long parent);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
     @Override native protected boolean _setMenubar(long ptr, long menubarPtr);
@@ -279,8 +271,6 @@ class WinWindow extends Window {
     @Override native protected void _exitModal(long ptr);
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);
-    @Override native protected int _getEmbeddedX(long ptr);
-    @Override native protected int _getEmbeddedY(long ptr);
     @Override native protected void _setCursor(long ptr, Cursor cursor);
 
     @Override

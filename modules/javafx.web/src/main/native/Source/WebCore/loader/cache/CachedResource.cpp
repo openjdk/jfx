@@ -24,6 +24,7 @@
 #include "config.h"
 #include "CachedResource.h"
 
+#include "CachePolicy.h"
 #include "CachedResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceHandle.h"
@@ -81,9 +82,7 @@ ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
     case Type::CSSStyleSheet:
     case Type::Script:
         return ResourceLoadPriority::High;
-#if ENABLE(SVG_FONTS)
     case Type::SVGFontResource:
-#endif
     case Type::MediaResource:
     case Type::FontResource:
     case Type::RawResource:
@@ -105,6 +104,10 @@ ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
 #if ENABLE(VIDEO)
     case Type::TextTrackResource:
         return ResourceLoadPriority::Low;
+#endif
+#if ENABLE(MODEL_ELEMENT)
+    case Type::ModelResource:
+        return ResourceLoadPriority::Medium;
 #endif
 #if ENABLE(APPLICATION_MANIFEST)
     case Type::ApplicationManifest:
@@ -245,7 +248,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     FrameLoader& frameLoader = frame.loader();
     if (m_options.securityCheck == SecurityCheckPolicy::DoSecurityCheck && !m_options.keepAlive && !shouldUsePingLoad(type())) {
         while (true) {
-            if (frameLoader.state() == FrameStateProvisional)
+            if (frameLoader.state() == FrameState::Provisional)
                 RELEASE_LOG_IF_ALLOWED_WITH_FRAME("load: Failed security check -- state is provisional", frame);
             else if (!frameLoader.activeDocumentLoader())
                 RELEASE_LOG_IF_ALLOWED_WITH_FRAME("load: Failed security check -- not active document", frame);
@@ -267,8 +270,8 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
         const String& lastModified = resourceToRevalidate->response().httpHeaderField(HTTPHeaderName::LastModified);
         const String& eTag = resourceToRevalidate->response().httpHeaderField(HTTPHeaderName::ETag);
         if (!lastModified.isEmpty() || !eTag.isEmpty()) {
-            ASSERT(cachedResourceLoader.cachePolicy(type(), url()) != CachePolicyReload);
-            if (cachedResourceLoader.cachePolicy(type(), url()) == CachePolicyRevalidate)
+            ASSERT(cachedResourceLoader.cachePolicy(type(), url()) != CachePolicy::Reload);
+            if (cachedResourceLoader.cachePolicy(type(), url()) == CachePolicy::Revalidate)
                 m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
             if (!lastModified.isEmpty())
                 m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::IfModifiedSince, lastModified);
@@ -438,9 +441,7 @@ bool CachedResource::isCORSSameOrigin() const
 {
     // Following resource types do not use CORS
     ASSERT(type() != Type::FontResource);
-#if ENABLE(SVG_FONTS)
     ASSERT(type() != Type::SVGFontResource);
-#endif
 #if ENABLE(XSLT)
     ASSERT(type() != Type::XSLStyleSheet);
 #endif
@@ -848,13 +849,13 @@ bool CachedResource::canUseCacheValidator() const
 CachedResource::RevalidationDecision CachedResource::makeRevalidationDecision(CachePolicy cachePolicy) const
 {
     switch (cachePolicy) {
-    case CachePolicyHistoryBuffer:
+    case CachePolicy::HistoryBuffer:
         return RevalidationDecision::No;
 
-    case CachePolicyReload:
+    case CachePolicy::Reload:
         return RevalidationDecision::YesDueToCachePolicy;
 
-    case CachePolicyRevalidate:
+    case CachePolicy::Revalidate:
         if (m_response.cacheControlContainsImmutable() && m_response.url().protocolIs("https")) {
             if (isExpired())
                 return RevalidationDecision::YesDueToExpired;
@@ -862,7 +863,7 @@ CachedResource::RevalidationDecision CachedResource::makeRevalidationDecision(Ca
         }
         return RevalidationDecision::YesDueToCachePolicy;
 
-    case CachePolicyVerify:
+    case CachePolicy::Verify:
         if (m_response.cacheControlContainsNoCache())
             return RevalidationDecision::YesDueToNoCache;
         // FIXME: Cache-Control:no-store should prevent storing, not reuse.

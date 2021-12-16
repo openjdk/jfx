@@ -67,6 +67,8 @@ public:
     static Ref<MediaKeySession> create(Document&, WeakPtr<MediaKeys>&&, MediaKeySessionType, bool useDistinctiveIdentifier, Ref<CDM>&&, Ref<CDMInstanceSession>&&);
     virtual ~MediaKeySession();
 
+    using CDMInstanceSessionClient::weakPtrFactory;
+    using WeakValueType = CDMInstanceSessionClient::WeakValueType;
     using RefCounted<MediaKeySession>::ref;
     using RefCounted<MediaKeySession>::deref;
 
@@ -82,7 +84,7 @@ public:
     void close(Ref<DeferredPromise>&&);
     void remove(Ref<DeferredPromise>&&);
 
-    using ClosedPromise = DOMPromiseProxy<IDLVoid>;
+    using ClosedPromise = DOMPromiseProxy<IDLUndefined>;
     ClosedPromise& closed() { return m_closedPromise.get(); }
 
     const Vector<std::pair<Ref<SharedBuffer>, MediaKeyStatus>>& statuses() const { return m_statuses; }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ void jWriteSelection(bool canSmartCopyOrDelete, const String& plainText, const S
 void jWriteImage(const Image& image)
 {
     DEFINE_PB_STATIC_METHOD("writeImage", "(Lcom/sun/webkit/graphics/WCImageFrame;)V");
-    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()));
+    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()->platformImage()->getImage()));
 }
 
 void jWriteURL(const String& url, const String& markup)
@@ -222,7 +222,7 @@ Pasteboard::Pasteboard(RefPtr<DataObjectJava> dataObject, bool copyPasteMode = f
     ASSERT(m_dataObject);
 }
 
-Pasteboard::Pasteboard() : Pasteboard(DataObjectJava::create())
+Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&&) : Pasteboard(DataObjectJava::create())
 {
 }
 
@@ -231,7 +231,7 @@ std::unique_ptr<Pasteboard> Pasteboard::create(RefPtr<DataObjectJava> dataObject
     return std::unique_ptr<Pasteboard>(new Pasteboard(dataObject));
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<PasteboardContext>&&)
 {
     // Use single shared data instance for all copy'n'paste pasteboards.
     static RefPtr<DataObjectJava> data = DataObjectJava::create();
@@ -241,12 +241,12 @@ std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
 }
 
 #if ENABLE(DRAG_SUPPORT)
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(std::unique_ptr<PasteboardContext>&&)
 {
     return create(DataObjectJava::create());
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
+std::unique_ptr<Pasteboard> Pasteboard::create(const DragData& dragData)
 {
     return create(dragData.platformData());
 }

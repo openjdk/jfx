@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,9 +89,9 @@ class MouseInput {
         newState.setY(y);
         // Get the cached window for the old state and compute the window for
         // the new state
-        MonocleWindow oldWindow = state.getWindow(false);
+        MonocleWindow oldWindow = state.getWindow(false, null);
         boolean recalculateWindow = state.getButtonsPressed().isEmpty();
-        MonocleWindow window = newState.getWindow(recalculateWindow);
+        MonocleWindow window = newState.getWindow(recalculateWindow, null);
         MonocleView view = (window == null) ? null : (MonocleView) window.getView();
         // send exit event
         if (oldWindow != window && oldWindow != null) {

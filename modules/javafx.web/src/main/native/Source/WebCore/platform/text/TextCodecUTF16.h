@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,11 @@
 #pragma once
 
 #include "TextCodec.h"
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
-class TextCodecUTF16 : public TextCodec {
+class TextCodecUTF16 final : public TextCodec {
 public:
     static void registerEncodingNames(EncodingNameRegistrar);
     static void registerCodecs(TextCodecRegistrar);
@@ -37,12 +38,14 @@ public:
     explicit TextCodecUTF16(bool littleEndian);
 
 private:
+    void stripByteOrderMark() final { m_shouldStripByteOrderMark = true; }
     String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) final;
-    Vector<uint8_t> encode(StringView, UnencodableHandling) final;
+    Vector<uint8_t> encode(StringView, UnencodableHandling) const final;
 
     bool m_littleEndian;
-    bool m_haveBufferedByte { false };
-    unsigned char m_bufferedByte;
+    Optional<uint8_t> m_leadByte;
+    Optional<UChar> m_leadSurrogate;
+    bool m_shouldStripByteOrderMark { false };
 };
 
 } // namespace WebCore

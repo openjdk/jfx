@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -153,7 +153,7 @@ import javafx.css.converter.StringConverter;
 @DefaultProperty("buttonTypes")
 public class DialogPane extends Pane {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -175,7 +175,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -198,7 +198,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -218,11 +218,8 @@ public class DialogPane extends Pane {
         contentLabel = createContentLabel("");
         getChildren().add(contentLabel);
 
-        buttonBar = createButtonBar();
-        if (buttonBar != null) {
-            getChildren().add(buttonBar);
-        }
-
+        // Add this listener before calling #createButtonBar, so that the listener added in #createButtonBar will run
+        // after this one.
         buttons.addListener((ListChangeListener<ButtonType>) c -> {
             while (c.next()) {
                 if (c.wasRemoved()) {
@@ -239,11 +236,16 @@ public class DialogPane extends Pane {
                 }
             }
         });
+
+        buttonBar = createButtonBar();
+        if (buttonBar != null) {
+            getChildren().add(buttonBar);
+        }
     }
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -701,7 +703,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -845,7 +847,7 @@ public class DialogPane extends Pane {
         double h;
 
         if (prefHeight > currentHeight && prefHeight > minHeight && (prefHeight <= dialogHeight || dialogHeight == 0)) {
-            h = prefHeight;
+            h = Utils.boundedSize(prefHeight, minHeight, maxHeight);
             resize(w, h);
         } else {
             boolean isDialogGrowing = currentHeight > oldHeight;
@@ -1035,7 +1037,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      * @param buttonBar
@@ -1057,7 +1059,7 @@ public class DialogPane extends Pane {
 
         boolean hasDefault = false;
         for (ButtonType cmd : getButtonTypes()) {
-            Node button = buttonNodes.computeIfAbsent(cmd, dialogButton -> createButton(cmd));
+            Node button = buttonNodes.get(cmd);
 
             // keep only first default button
             if (button instanceof Button) {
@@ -1184,7 +1186,7 @@ public class DialogPane extends Pane {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1219,8 +1221,9 @@ public class DialogPane extends Pane {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;

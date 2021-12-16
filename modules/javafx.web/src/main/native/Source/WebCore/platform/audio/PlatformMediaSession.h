@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "DocumentIdentifier.h"
+#include "MediaSessionGroupIdentifier.h"
 #include "MediaSessionIdentifier.h"
 #include "Timer.h"
 #include <wtf/LoggerHelper.h>
@@ -115,9 +115,13 @@ public:
     virtual void suspendBuffering() { }
     virtual void resumeBuffering() { }
 
-    typedef union {
-        double asDouble;
-    } RemoteCommandArgument;
+    struct RemoteCommandArgument {
+        Optional<double> time;
+        Optional<bool> fastSeek;
+
+        template<class Encoder> void encode(Encoder&) const;
+        template<class Decoder> static Optional<RemoteCommandArgument> decode(Decoder&);
+    };
 
     enum RemoteControlCommandType : uint8_t {
         NoCommand,
@@ -130,9 +134,15 @@ public:
         BeginSeekingForwardCommand,
         EndSeekingForwardCommand,
         SeekToPlaybackPositionCommand,
+        SkipForwardCommand,
+        SkipBackwardCommand,
+        NextTrackCommand,
+        PreviousTrackCommand,
+        BeginScrubbing,
+        EndScrubbing,
     };
     bool canReceiveRemoteControlCommands() const;
-    void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument* argument = nullptr);
+    virtual void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument&);
     bool supportsSeeking() const;
 
     enum DisplayType : uint8_t {
@@ -205,11 +215,11 @@ private:
     WeakPtr<PlatformMediaSessionManager> m_manager;
     PlatformMediaSessionClient& m_client;
     MediaSessionIdentifier m_mediaSessionIdentifier;
-    State m_state;
-    State m_stateToRestore;
+    State m_state { Idle };
+    State m_stateToRestore { Idle };
     InterruptionType m_interruptionType { NoInterruption };
     int m_interruptionCount { 0 };
-    bool m_notifyingClient;
+    bool m_notifyingClient { false };
     bool m_isPlayingToWirelessPlaybackTarget { false };
     bool m_hasPlayedSinceLastInterruption { false };
 
@@ -235,7 +245,7 @@ public:
     virtual void suspendPlayback() = 0;
 
     virtual bool canReceiveRemoteControlCommands() const = 0;
-    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument*) = 0;
+    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
     virtual bool supportsSeeking() const = 0;
 
     virtual bool canProduceAudio() const { return false; }
@@ -252,7 +262,7 @@ public:
 
     virtual bool isPlayingOnSecondScreen() const { return false; }
 
-    virtual DocumentIdentifier hostingDocumentIdentifier() const = 0;
+    virtual MediaSessionGroupIdentifier mediaSessionGroupIdentifier() const = 0;
 
     virtual bool hasMediaStreamSource() const { return false; }
 
@@ -271,7 +281,29 @@ protected:
 String convertEnumerationToString(PlatformMediaSession::State);
 String convertEnumerationToString(PlatformMediaSession::InterruptionType);
 String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType);
+
+template<class Encoder> inline void PlatformMediaSession::RemoteCommandArgument::encode(Encoder& encoder) const
+{
+    encoder << time << fastSeek;
 }
+
+template<class Decoder> inline Optional<PlatformMediaSession::RemoteCommandArgument> PlatformMediaSession::RemoteCommandArgument::decode(Decoder& decoder)
+{
+#define DECODE(name, type) \
+    Optional<Optional<type>> name; \
+    decoder >> name; \
+    if (!name) \
+        return WTF::nullopt; \
+
+    DECODE(time, double);
+    DECODE(fastSeek, bool);
+
+#undef DECODE
+
+    return { { *time, *fastSeek } };
+}
+
+} // namespace WebCore
 
 namespace WTF {
 
@@ -358,7 +390,13 @@ template <> struct EnumTraits<WebCore::PlatformMediaSession::RemoteControlComman
     WebCore::PlatformMediaSession::RemoteControlCommandType::EndSeekingBackwardCommand,
     WebCore::PlatformMediaSession::RemoteControlCommandType::BeginSeekingForwardCommand,
     WebCore::PlatformMediaSession::RemoteControlCommandType::EndSeekingForwardCommand,
-    WebCore::PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand
+    WebCore::PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::SkipForwardCommand,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::NextTrackCommand,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::PreviousTrackCommand,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::BeginScrubbing,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::EndScrubbing
     >;
 };
 

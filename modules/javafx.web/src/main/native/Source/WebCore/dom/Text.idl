@@ -19,6 +19,7 @@
 
 [
     CustomToJSObject,
+    Exposed=Window
 ] interface Text : CharacterData {
     [CallWith=Document] constructor(optional DOMString data = "");
 
@@ -26,4 +27,4 @@
     readonly attribute DOMString wholeText;
 };
 
-Text implements Slotable;
+Text includes Slotable;

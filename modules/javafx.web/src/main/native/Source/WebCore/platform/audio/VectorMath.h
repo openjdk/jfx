@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2020, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,8 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VectorMath_h
-#define VectorMath_h
+#pragma once
 
 // Defines the interface for several vector math functions whose implementation will ideally be optimized.
 
@@ -31,29 +31,40 @@ namespace WebCore {
 
 namespace VectorMath {
 
-// Vector scalar multiply and then add.
-void vsma(const float* sourceP, int sourceStride, const float* scale, float* destP, int destStride, size_t framesToProcess);
+// Multiples inputVector by scalar then adds the result to outputVector (simplified vsma).
+// for (n = 0; n < numberOfElementsToProcess; ++n)
+//     outputVector[n] += inputVector[n] * scalar;
+void multiplyByScalarThenAddToOutput(const float* inputVector, float scalar, float* outputVector, size_t numberOfElementsToProcess);
 
-void vsmul(const float* sourceP, int sourceStride, const float* scale, float* destP, int destStride, size_t framesToProcess);
-void vadd(const float* source1P, int sourceStride1, const float* source2P, int sourceStride2, float* destP, int destStride, size_t framesToProcess);
+// Adds a vector inputVector2 to the product of a scalar value and a single-precision vector inputVector1 (vsma).
+// for (n = 0; n < numberOfElementsToProcess; ++n)
+//     outputVector[n] = inputVector1[n] * scalar + inputVector2[n];
+void multiplyByScalarThenAddToVector(const float* inputVector1, float scalar, const float* inputVector2, float* outputVector, size_t numberOfElementsToProcess);
+
+// Multiplies the sum of two vectors by a scalar value (vasm).
+void addVectorsThenMultiplyByScalar(const float* inputVector1, const float* inputVector2, float scalar, float* outputVector, size_t numberOfElementsToProcess);
+
+void multiplyByScalar(const float* inputVector, float scalar, float* outputVector, size_t numberOfElementsToProcess);
+void addScalar(const float* inputVector, float scalar, float* outputVector, size_t numberOfElementsToProcess);
+void add(const float* inputVector1, const float* inputVector2, float* outputVector, size_t numberOfElementsToProcess);
 
 // Finds the maximum magnitude of a float vector.
-void vmaxmgv(const float* sourceP, int sourceStride, float* maxP, size_t framesToProcess);
+float maximumMagnitude(const float* inputVector, size_t numberOfElementsToProcess);
 
-// Sums the squares of a float vector's elements.
-void vsvesq(const float* sourceP, int sourceStride, float* sumP, size_t framesToProcess);
+// Sums the squares of a float vector's elements (svesq).
+float sumOfSquares(const float* inputVector, size_t numberOfElementsToProcess);
 
 // For an element-by-element multiply of two float vectors.
-void vmul(const float* source1P, int sourceStride1, const float* source2P, int sourceStride2, float* destP, int destStride, size_t framesToProcess);
+void multiply(const float* inputVector1, const float* inputVector2, float* outputVector, size_t numberOfElementsToProcess);
 
-// Multiplies two complex vectors.
-void zvmul(const float* real1P, const float* imag1P, const float* real2P, const float* imag2P, float* realDestP, float* imagDestP, size_t framesToProcess);
+// Multiplies two complex vectors (zvmul).
+void multiplyComplex(const float* realVector1, const float* imagVector1, const float* realVector2, const float* imagVector2, float* realOutputVector, float* imagOutputVector, size_t numberOfElementsToProcess);
 
 // Copies elements while clipping values to the threshold inputs.
-void vclip(const float* sourceP, int sourceStride, const float* lowThresholdP, const float* highThresholdP, float* destP, int destStride, size_t framesToProcess);
+void clamp(const float* inputVector, float mininum, float maximum, float* outputVector, size_t numberOfElementsToProcess);
+
+void linearToDecibels(const float* inputVector, float* outputVector, size_t numberOfElementsToProcess);
 
 } // namespace VectorMath
 
 } // namespace WebCore
-
-#endif // VectorMath_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ import java.util.List;
  */
 public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -88,7 +88,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -256,7 +256,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         return (kc == KeyCode.UP || kc == KeyCode.DOWN) && behavior.arrowsAreVertical();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -404,7 +404,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -430,7 +430,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

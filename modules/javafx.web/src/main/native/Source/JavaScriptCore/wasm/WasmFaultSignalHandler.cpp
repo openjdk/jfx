@@ -29,10 +29,12 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "ExecutableAllocator.h"
+#include "LLIntData.h"
 #include "MachineContext.h"
 #include "WasmCallee.h"
 #include "WasmCalleeRegistry.h"
 #include "WasmCapabilities.h"
+#include "WasmContextInlines.h"
 #include "WasmExceptionType.h"
 #include "WasmMemory.h"
 #include "WasmThunks.h"
@@ -50,10 +52,12 @@ static constexpr bool verbose = false;
 
 static bool fastHandlerInstalled { false };
 
-#if ENABLE(WEBASSEMBLY_FAST_MEMORY)
+#if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 
-static SignalAction trapHandler(Signal, SigInfo& sigInfo, PlatformRegisters& context)
+static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegisters& context)
 {
+    RELEASE_ASSERT(signal == Signal::AccessFault);
+
     auto instructionPointer = MachineContext::instructionPointer(context);
     if (!instructionPointer)
         return SignalAction::NotHandled;
@@ -61,41 +65,47 @@ static SignalAction trapHandler(Signal, SigInfo& sigInfo, PlatformRegisters& con
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "starting handler for fault at: ", RawPointer(faultingInstruction));
 
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "JIT memory start: ", RawPointer(startOfFixedExecutableMemoryPool()), " end: ", RawPointer(endOfFixedExecutableMemoryPool()));
-    // First we need to make sure we are in JIT code before we can aquire any locks. Otherwise,
+    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "WasmLLInt memory start: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmLLIntPCRangeStart)), " end: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmLLIntPCRangeEnd)));
+    // First we need to make sure we are in JIT code or Wasm LLInt code before we can aquire any locks. Otherwise,
     // we might have crashed in code that is already holding one of the locks we want to aquire.
     assertIsNotTagged(faultingInstruction);
-    if (isJITPC(faultingInstruction)) {
-        bool faultedInActiveFastMemory = false;
+    if (isJITPC(faultingInstruction) || LLInt::isWasmLLIntPC(faultingInstruction)) {
+        bool faultedInActiveGrowableMemory = false;
         {
             void* faultingAddress = sigInfo.faultingAddress;
             dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "checking faulting address: ", RawPointer(faultingAddress), " is in an active fast memory");
-            faultedInActiveFastMemory = Wasm::Memory::addressIsInActiveFastMemory(faultingAddress);
+            faultedInActiveGrowableMemory = Wasm::Memory::addressIsInGrowableOrFastMemory(faultingAddress);
         }
-        if (faultedInActiveFastMemory) {
+        if (faultedInActiveGrowableMemory) {
             dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found active fast memory for faulting address");
-            auto& calleeRegistry = CalleeRegistry::singleton();
-            auto locker = holdLock(calleeRegistry.getLock());
-            for (auto* callee : calleeRegistry.allCallees(locker)) {
-                auto [start, end] = callee->range();
-                dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
-                if (start <= faultingInstruction && faultingInstruction < end) {
-                    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found match");
-                    MacroAssemblerCodeRef<JITThunkPtrTag> exceptionStub = Thunks::singleton().existingStub(throwExceptionFromWasmThunkGenerator);
-                    // If for whatever reason we don't have a stub then we should just treat this like a regular crash.
-                    if (!exceptionStub)
-                        break;
-                    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found stub: ", RawPointer(exceptionStub.code().executableAddress()));
-                    MachineContext::argumentPointer<1>(context) = reinterpret_cast<void*>(ExceptionType::OutOfBoundsMemoryAccess);
-                    MachineContext::setInstructionPointer(context, exceptionStub.code().retagged<CFunctionPtrTag>());
-                    return SignalAction::Handled;
+
+            auto didFaultInWasm = [](void* faultingInstruction) {
+                if (LLInt::isWasmLLIntPC(faultingInstruction))
+                    return true;
+                auto& calleeRegistry = CalleeRegistry::singleton();
+                auto locker = holdLock(calleeRegistry.getLock());
+                for (auto* callee : calleeRegistry.allCallees(locker)) {
+                    auto [start, end] = callee->range();
+                    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
+                    if (start <= faultingInstruction && faultingInstruction < end) {
+                        dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found match");
+                        return true;
+                    }
                 }
+                return false;
+            };
+
+            if (didFaultInWasm(faultingInstruction)) {
+                MachineContext::setInstructionPointer(context,
+                    LLInt::getCodePtr<CFunctionPtrTag>(Wasm::Context::useFastTLS() ? wasm_throw_from_fault_handler_trampoline_fastTLS : wasm_throw_from_fault_handler_trampoline_reg_instance));
+                return SignalAction::Handled;
             }
         }
     }
     return SignalAction::NotHandled;
 }
 
-#endif // ENABLE(WEBASSEMBLY_FAST_MEMORY)
+#endif // ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 
 bool fastMemoryEnabled()
 {
@@ -104,13 +114,13 @@ bool fastMemoryEnabled()
 
 void enableFastMemory()
 {
-#if ENABLE(WEBASSEMBLY_FAST_MEMORY)
+#if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     static std::once_flag once;
     std::call_once(once, [] {
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWebAssemblyFastMemory())
+        if (!Options::useWebAssemblyFastMemory() && !Options::useSharedArrayBuffer())
             return;
 
         activateSignalHandlersFor(Signal::AccessFault);
@@ -122,20 +132,20 @@ void enableFastMemory()
 
 void prepareFastMemory()
 {
-#if ENABLE(WEBASSEMBLY_FAST_MEMORY)
+#if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     static std::once_flag once;
     std::call_once(once, [] {
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWebAssemblyFastMemory())
+        if (!Options::useWebAssemblyFastMemory() && !Options::useSharedArrayBuffer())
             return;
 
         addSignalHandler(Signal::AccessFault, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {
             return trapHandler(signal, sigInfo, ucontext);
         });
     });
-#endif // ENABLE(WEBASSEMBLY_FAST_MEMORY)
+#endif // ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 }
 
 } } // namespace JSC::Wasm

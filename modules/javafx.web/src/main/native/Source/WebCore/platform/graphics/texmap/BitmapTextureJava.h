@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,14 +42,13 @@ public:
     bool isValid() const override { return m_image.get(); }
     inline GraphicsContext* graphicsContext() { return m_image ? &(m_image->context()) : nullptr; }
     void updateContents(Image*, const IntRect&, const IntPoint&) override;
-    void updateContents(TextureMapper&, GraphicsLayer*, const IntRect& target, const IntPoint& offset, float scale = 1) override;
     void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine) override;
     RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&) override;
     ImageBuffer* image() const { return m_image.get(); }
 
 private:
     BitmapTextureJava() { }
-    std::unique_ptr<ImageBuffer> m_image;
+    RefPtr<ImageBuffer> m_image;
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,8 @@ import java.util.*;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.animation.FadeTransition;
-import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.WeakListChangeListener;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
 import javafx.geometry.Insets;
@@ -57,7 +54,7 @@ import com.sun.javafx.tk.Toolkit;
  * @param <T> The type of the cell (i.e. the generic type of the {@link IndexedCell} subclass).
  * @param <C> The cell type (e.g. TableRow or TreeTableRow)
  * @param <R> The type of cell that is contained within each row (e.g.
- *           {@link javafx.scene.control.TableCell or {@link javafx.scene.control.TreeTableCell}}).
+ *           {@link javafx.scene.control.TableCell} or {@link javafx.scene.control.TreeTableCell}).
  *
  * @since 9
  * @see javafx.scene.control.TableRow
@@ -69,7 +66,7 @@ public abstract class TableRowSkinBase<T,
                                        C extends IndexedCell/*<T>*/,
                                        R extends IndexedCell> extends CellSkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -104,8 +101,7 @@ public abstract class TableRowSkinBase<T,
     private static final int DEFAULT_FULL_REFRESH_COUNTER = 100;
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -133,12 +129,12 @@ public abstract class TableRowSkinBase<T,
     boolean isDirty = false;
     boolean updateCells = false;
 
+    // FIXME: replace cached values with direct lookup - JDK-8277000
     double fixedCellSize;
     boolean fixedCellSizeEnabled;
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -162,13 +158,13 @@ public abstract class TableRowSkinBase<T,
         // watches for any change in the leaf columns observableArrayList - this will indicate
         // that the column order has changed and that we should update the row
         // such that the cells are in the new order
-        getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        registerListChangeListener(getVisibleLeafColumns(), c -> updateLeafColumns());
         // --- end init bindings
 
 
         // use invalidation listener here to update even when item equality is true
         // (e.g. see RT-22463)
-        control.itemProperty().addListener(o -> requestCellUpdate());
+        registerInvalidationListener(control.itemProperty(), o -> requestCellUpdate());
         registerChangeListener(control.indexProperty(), e -> {
             // Fix for RT-36661, where empty table cells were showing content, as they
             // had incorrect table cell indices (but the table row index was correct).
@@ -182,23 +178,18 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
 
-    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = c -> {
+    private void updateLeafColumns() {
         isDirty = true;
         getSkinnable().requestLayout();
-    };
+    }
 
-    private WeakListChangeListener<TableColumnBase> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<>(visibleLeafColumnsListener);
-
-
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -234,7 +225,7 @@ public abstract class TableRowSkinBase<T,
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Methods                                                          *
      *                                                                         *
@@ -542,18 +533,18 @@ public abstract class TableRowSkinBase<T,
 
         // update children of each row
         if (fixedCellSizeEnabled) {
-            // we leave the adding / removing up to the layoutChildren method mostly,
-            // but here we remove any children cells that refer to columns that are
-            // not visible
+            // we leave the adding / removing up to the layoutChildren method mostly, but here we remove any children
+            // cells that refer to columns that are removed or not visible.
             List<Node> toRemove = new ArrayList<>();
             for (Node cell : getChildren()) {
-                if (! (cell instanceof IndexedCell)) continue;
-                if (!getTableColumn((R)cell).isVisible()) {
+                if (!(cell instanceof IndexedCell)) continue;
+                TableColumnBase<T, ?> tableColumn = getTableColumn((R) cell);
+                if (!getVisibleLeafColumns().contains(tableColumn)) {
                     toRemove.add(cell);
                 }
             }
             getChildren().removeAll(toRemove);
-        } else if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
+        } else if (resetChildren || cellsEmpty) {
             getChildren().setAll(cells);
         }
     }
@@ -655,9 +646,17 @@ public abstract class TableRowSkinBase<T,
         }
     }
 
+    // test-only
+    boolean isDirty() {
+        return isDirty;
+    }
 
+    // test-only
+    void setDirty(boolean dirty) {
+        isDirty = dirty;
+    }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *

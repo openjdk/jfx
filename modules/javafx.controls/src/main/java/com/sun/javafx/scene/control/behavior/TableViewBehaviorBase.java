@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -891,15 +891,20 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
 
         TablePositionBase<TC> cell = getFocusedCell();
-        sm.select(cell.getRow(), cell.getTableColumn());
+        TC tableColumn = cell.getTableColumn();
+        sm.select(cell.getRow(), tableColumn);
         setAnchor(cell);
 
+        if (tableColumn == null) {
+           return;
+        }
+
         // check if we are editable
-        boolean isEditable = isControlEditable() && cell.getTableColumn().isEditable();
+        boolean isEditable = isControlEditable() && tableColumn.isEditable();
 
         // edit this row also
         if (isEditable && cell.getRow() >= 0) {
-            editCell(cell.getRow(), cell.getTableColumn());
+            editCell(cell.getRow(), tableColumn);
             e.consume();
         }
     }

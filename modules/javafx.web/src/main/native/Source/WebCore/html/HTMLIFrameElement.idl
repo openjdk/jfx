@@ -18,13 +18,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface HTMLIFrameElement : HTMLElement {
+[
+    Exposed=Window
+] interface HTMLIFrameElement : HTMLElement {
     [Reflect, CEReactions=NotNeeded] attribute DOMString align;
     [Reflect, CEReactions=NotNeeded] attribute DOMString frameBorder;
     [Reflect, CEReactions=NotNeeded] attribute DOMString height;
     [Reflect, URL, CEReactions=NotNeeded] attribute USVString longDesc;
-    [Reflect, CEReactions=NotNeeded] attribute [TreatNullAs=EmptyString] DOMString marginHeight;
-    [Reflect, CEReactions=NotNeeded] attribute [TreatNullAs=EmptyString] DOMString marginWidth;
+    [Reflect, CEReactions=NotNeeded] attribute [LegacyNullToEmptyString] DOMString marginHeight;
+    [Reflect, CEReactions=NotNeeded] attribute [LegacyNullToEmptyString] DOMString marginWidth;
     [Reflect, CEReactions=NotNeeded] attribute DOMString name;
 
     [PutForwards=value] readonly attribute DOMTokenList sandbox;
@@ -42,5 +44,7 @@ interface HTMLIFrameElement : HTMLElement {
 
     [CheckSecurityForNode, MayThrowException] Document getSVGDocument();
 
-    [EnabledAtRuntime=ReferrerPolicyAttribute, ImplementedAs=referrerPolicyForBindings, CEReactions=NotNeeded] attribute DOMString referrerPolicy;
+    [EnabledBySetting=ReferrerPolicyAttribute, ImplementedAs=referrerPolicyForBindings, CEReactions=NotNeeded] attribute DOMString referrerPolicy;
+
+    [CEReactions, EnabledBySetting=LazyIframeLoading, ImplementedAs=loadingForBindings] attribute DOMString loading;
 };

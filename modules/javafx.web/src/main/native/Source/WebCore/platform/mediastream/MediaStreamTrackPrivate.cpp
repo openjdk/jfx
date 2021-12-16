@@ -37,7 +37,7 @@
 #include <wtf/UUID.h>
 
 #if PLATFORM(COCOA)
-#include "WebAudioSourceProviderAVFObjC.h"
+#include "MediaStreamTrackAudioSourceProviderCocoa.h"
 #elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
 #include "AudioSourceProviderGStreamer.h"
 #else
@@ -184,16 +184,15 @@ void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constrain
     m_source->applyConstraints(constraints, WTFMove(completionHandler));
 }
 
-AudioSourceProvider* MediaStreamTrackPrivate::audioSourceProvider()
+RefPtr<WebAudioSourceProvider> MediaStreamTrackPrivate::createAudioSourceProvider()
 {
 #if PLATFORM(COCOA)
-    if (!m_audioSourceProvider)
-        m_audioSourceProvider = WebAudioSourceProviderAVFObjC::create(*this);
+    return MediaStreamTrackAudioSourceProviderCocoa::create(*this);
 #elif USE(LIBWEBRTC) && USE(GSTREAMER)
-    if (!m_audioSourceProvider)
-        m_audioSourceProvider = AudioSourceProviderGStreamer::create(*this);
+    return AudioSourceProviderGStreamer::create(*this);
+#else
+    return nullptr;
 #endif
-    return m_audioSourceProvider.get();
 }
 
 void MediaStreamTrackPrivate::sourceStarted()

@@ -106,7 +106,6 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/GeneratorPrototype.js \
     $(JavaScriptCore)/builtins/GlobalObject.js \
     $(JavaScriptCore)/builtins/GlobalOperations.js \
-    $(JavaScriptCore)/builtins/InspectorInstrumentationObject.js \
     $(JavaScriptCore)/builtins/InternalPromiseConstructor.js \
     $(JavaScriptCore)/builtins/IteratorHelpers.js \
     $(JavaScriptCore)/builtins/IteratorPrototype.js \
@@ -153,13 +152,14 @@ OBJECT_LUT_HEADERS = \
     DatePrototype.lut.h \
     ErrorPrototype.lut.h \
     GeneratorPrototype.lut.h \
-    InspectorInstrumentationObject.lut.h \
     IntlCollatorConstructor.lut.h \
     IntlCollatorPrototype.lut.h \
     IntlDateTimeFormatConstructor.lut.h \
     IntlDateTimeFormatPrototype.lut.h \
     IntlDisplayNamesConstructor.lut.h \
     IntlDisplayNamesPrototype.lut.h \
+    IntlListFormatConstructor.lut.h \
+    IntlListFormatPrototype.lut.h \
     IntlLocalePrototype.lut.h \
     IntlNumberFormatConstructor.lut.h \
     IntlNumberFormatPrototype.lut.h \
@@ -168,6 +168,10 @@ OBJECT_LUT_HEADERS = \
     IntlPluralRulesPrototype.lut.h \
     IntlRelativeTimeFormatConstructor.lut.h \
     IntlRelativeTimeFormatPrototype.lut.h \
+    IntlSegmentIteratorPrototype.lut.h \
+    IntlSegmenterConstructor.lut.h \
+    IntlSegmenterPrototype.lut.h \
+    IntlSegmentsPrototype.lut.h \
     JSDataViewPrototype.lut.h \
     JSGlobalObject.lut.h \
     JSInternalPromiseConstructor.lut.h \

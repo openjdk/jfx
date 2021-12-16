@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,7 @@ abstract class GlassStage implements TKStage {
 
     private boolean important = true;
 
+    @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
     protected static final AtomicReference<GlassStage> activeFSWindow = new AtomicReference<>();
@@ -96,6 +97,7 @@ abstract class GlassStage implements TKStage {
     }
 
     // To be used by subclasses to enforce context check
+    @SuppressWarnings("removal")
     final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {
             throw new RuntimeException("Stage security context has not been set!");
@@ -103,6 +105,7 @@ abstract class GlassStage implements TKStage {
         return accessCtrlCtx;
     }
 
+    @SuppressWarnings("removal")
     static AccessControlContext doIntersectionPrivilege(PrivilegedAction<AccessControlContext> action,
                                                        AccessControlContext stack,
                                                        AccessControlContext context) {
@@ -113,6 +116,7 @@ abstract class GlassStage implements TKStage {
         },  context);
     }
 
+    @SuppressWarnings("removal")
     public final void setSecurityContext(AccessControlContext ctx) {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Stage security context has been already set!");
@@ -187,6 +191,7 @@ abstract class GlassStage implements TKStage {
     }
 
     // Cmd+Q action
+    @SuppressWarnings("removal")
     static void requestClosingAllWindows() {
         GlassStage fsWindow = activeFSWindow.get();
         if (fsWindow != null) {

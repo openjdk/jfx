@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -764,8 +764,8 @@ public class LabeledTest {
 
     @Test public void canSpecifyLabelPaddingFromCSS() {
         Insets insets = new Insets(5, 4, 3, 2);
-        CssMetaData styleable = ((StyleableProperty)labeled.labelPaddingProperty()).getCssMetaData();
-        styleable.set(labeled, insets, null);
+        StyleableProperty prop = ((StyleableProperty)labeled.labelPaddingProperty());
+        prop.applyStyle(null, insets);
         assertEquals(insets, labeled.getLabelPadding());
         assertEquals(insets, labeled.labelPaddingProperty().get());
     }

@@ -49,6 +49,7 @@
 #include "gpattern.h"
 #include "grand.h"
 #include "gstrfuncs.h"
+#include "gstrfuncsprivate.h"
 #include "gtimer.h"
 #include "gslice.h"
 #include "gspawn.h"
@@ -660,10 +661,28 @@
  */
 
 /**
+ * g_assert_no_errno:
+ * @expr: the expression to check
+ *
+ * Debugging macro to check that an expression has a non-negative return value,
+ * as used by traditional POSIX functions (such as `rmdir()`) to indicate
+ * success.
+ *
+ * If the assertion fails (i.e. the @expr returns a negative value), an error
+ * message is logged and the testcase is marked as failed. The error message
+ * will contain the value of `errno` and its human-readable message from
+ * g_strerror().
+ *
+ * This macro will clear the value of `errno` before executing @expr.
+ *
+ * Since: 2.66
+ */
+
+/**
  * g_assert_cmpmem:
- * @m1: pointer to a buffer
+ * @m1: (nullable): pointer to a buffer
  * @l1: length of @m1
- * @m2: pointer to another buffer
+ * @m2: (nullable): pointer to another buffer
  * @l2: length of @m2
  *
  * Debugging macro to compare memory regions. If the comparison fails,
@@ -674,6 +693,8 @@
  * the same as `g_assert_true (l1 == l2 && memcmp (m1, m2, l1) == 0)`.
  * The advantage of this macro is that it can produce a message that
  * includes the actual values of @l1 and @l2.
+ *
+ * @m1 may be %NULL if (and only if) @l1 is zero; similarly for @m2 and @l2.
  *
  * |[<!-- language="C" -->
  *   g_assert_cmpmem (buf->data, buf->len, expected, sizeof (expected));
@@ -1510,7 +1531,10 @@ void
 
           test_prgname = g_path_get_basename (g_get_prgname ());
           if (*test_prgname == '\0')
-            test_prgname = g_strdup ("unknown");
+            {
+              g_free (test_prgname);
+              test_prgname = g_strdup ("unknown");
+            }
           tmpl = g_strdup_printf ("test_%s_XXXXXX", test_prgname);
           g_free (test_prgname);
 
@@ -2068,8 +2092,11 @@ g_test_run (void)
  * @data_test:     (scope async): the actual test function
  * @data_teardown: (scope async): the function to teardown the fixture data
  *
- * Create a new #GTestCase, named @test_name, this API is fairly
- * low level, calling g_test_add() or g_test_add_func() is preferable.
+ * Create a new #GTestCase, named @test_name.
+ *
+ * This API is fairly low level, and calling g_test_add() or g_test_add_func()
+ * is preferable.
+ *
  * When this test is executed, a fixture structure of size @data_size
  * will be automatically allocated and filled with zeros. Then @data_setup is
  * called to initialize the fixture. After fixture setup, the actual test
@@ -2078,10 +2105,10 @@ g_test_run (void)
  * after that the memory is automatically released by the test framework.
  *
  * Splitting up a test run into fixture setup, test function and
- * fixture teardown is most useful if the same fixture is used for
+ * fixture teardown is most useful if the same fixture type is used for
  * multiple tests. In this cases, g_test_create_case() will be
- * called with the same fixture, but varying @test_name and
- * @data_test arguments.
+ * called with the same type of fixture (the @data_size argument), but varying
+ * @test_name and @data_test arguments.
  *
  * Returns: a newly allocated #GTestCase.
  *
@@ -2306,16 +2333,14 @@ g_test_failed (void)
 /**
  * g_test_set_nonfatal_assertions:
  *
- * Changes the behaviour of g_assert_cmpstr(), g_assert_cmpint(),
- * g_assert_cmpuint(), g_assert_cmphex(), g_assert_cmpfloat(),
- * g_assert_true(), g_assert_false(), g_assert_null(), g_assert_no_error(),
- * g_assert_error(), g_test_assert_expected_messages() and the various
- * g_test_trap_assert_*() macros to not abort to program, but instead
+ * Changes the behaviour of the various `g_assert_*()` macros,
+ * g_test_assert_expected_messages() and the various
+ * `g_test_trap_assert_*()` macros to not abort to program, but instead
  * call g_test_fail() and continue. (This also changes the behavior of
  * g_test_fail() so that it will not cause the test program to abort
  * after completing the failed test.)
  *
- * Note that the g_assert_not_reached() and g_assert() are not
+ * Note that the g_assert_not_reached() and g_assert() macros are not
  * affected by this.
  *
  * This function can only be called after g_test_init().
@@ -3064,7 +3089,7 @@ test_trap_clear (void)
 #ifdef G_OS_UNIX
 
 static int
-sane_dup2 (int fd1,
+safe_dup2 (int fd1,
            int fd2)
 {
   int ret;
@@ -3316,7 +3341,7 @@ g_test_trap_fork (guint64        usec_timeout,
           if (fd0 < 0)
             g_error ("failed to open /dev/null for stdin redirection");
         }
-      if (sane_dup2 (stdout_pipe[1], 1) < 0 || sane_dup2 (stderr_pipe[1], 2) < 0 || (fd0 >= 0 && sane_dup2 (fd0, 0) < 0))
+      if (safe_dup2 (stdout_pipe[1], 1) < 0 || safe_dup2 (stderr_pipe[1], 2) < 0 || (fd0 >= 0 && safe_dup2 (fd0, 0) < 0))
         {
           errsv = errno;
           g_error ("failed to dup2() in forked test program: %s", g_strerror (errsv));
@@ -3693,6 +3718,9 @@ g_test_trap_assertions (const char     *domain,
       g_assertion_message (domain, file, line, func, msg);
       g_free (msg);
     }
+
+  (void) logged_child_output;  /* shut up scan-build about the final unread assignment */
+
   g_free (process_id);
 }
 
@@ -3797,7 +3825,7 @@ g_test_log_extract (GTestLogBuffer *tbuffer)
       if (p <= tbuffer->data->str + mlength)
         {
           g_string_erase (tbuffer->data, 0, mlength);
-          tbuffer->msgs = g_slist_prepend (tbuffer->msgs, g_memdup (&msg, sizeof (msg)));
+          tbuffer->msgs = g_slist_prepend (tbuffer->msgs, g_memdup2 (&msg, sizeof (msg)));
           return TRUE;
         }
 

@@ -47,8 +47,6 @@ JGlobalRef<jobject> GlassApplication::sm_nestedLoopReturnValue;
 
 jobject GlassApplication::sm_glassClassLoader;
 HINSTANCE GlassApplication::hInstace = NULL;
-unsigned int GlassApplication::sm_mouseLLHookCounter = 0;
-HHOOK GlassApplication::sm_hMouseLLHook = NULL;
 
 jfloat GlassApplication::overrideUIScale = -1.0f;
 
@@ -199,51 +197,6 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         }
     }
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
-}
-
-LRESULT CALLBACK GlassApplication::MouseLLHook(int nCode, WPARAM wParam, LPARAM lParam)
-{
-    if (nCode >= 0) {
-        switch (wParam) {
-            case WM_LBUTTONDOWN:
-            case WM_RBUTTONDOWN:
-            case WM_MBUTTONDOWN:
-            case WM_NCLBUTTONDOWN:
-            case WM_NCMBUTTONDOWN:
-            case WM_NCRBUTTONDOWN:
-            case WM_NCXBUTTONDOWN:
-            case WM_MOUSEACTIVATE:
-                {
-                    POINT pt = ((MSLLHOOKSTRUCT*)lParam)->pt;
-                    HWND hwnd = ::GetAncestor(::WindowFromPoint(pt), GA_ROOT);
-
-                    BaseWnd *pWindow = BaseWnd::FromHandle(hwnd);
-                    if (!pWindow) {
-                        // A click on a non-Glass, supposedly browser window
-                        GlassWindow::ResetGrab();
-                    }
-                }
-                break;
-        }
-    }
-    return ::CallNextHookEx(GlassApplication::sm_hMouseLLHook, nCode, wParam, lParam);
-}
-
-void GlassApplication::InstallMouseLLHook()
-{
-    if (++GlassApplication::sm_mouseLLHookCounter == 1) {
-        GlassApplication::sm_hMouseLLHook =
-            ::SetWindowsHookEx(WH_MOUSE_LL,
-                    (HOOKPROC)GlassApplication::MouseLLHook,
-                    GlassApplication::GetHInstance(), 0);
-    }
-}
-
-void GlassApplication::UninstallMouseLLHook()
-{
-    if (--GlassApplication::sm_mouseLLHookCounter == 0) {
-        ::UnhookWindowsHookEx(GlassApplication::sm_hMouseLLHook);
-    }
 }
 
 /* static */

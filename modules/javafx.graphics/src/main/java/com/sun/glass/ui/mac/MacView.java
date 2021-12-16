@@ -137,18 +137,6 @@ final class MacView extends View {
         return _getNativeLayer(getNativeView());
     }
 
-    native protected int _getNativeRemoteLayerId(long ptr, String serverName);
-    @Override public int getNativeRemoteLayerId(String serverName) {
-        // used when run inside plugin
-        return _getNativeRemoteLayerId(getNativeLayer(), serverName);
-    }
-
-    native protected void _hostRemoteLayerId(long ptr, int nativeLayerId);
-    public void hostRemoteLayerId(int nativeLayerId) {
-        // used when run inside plugin
-        _hostRemoteLayerId(getNativeLayer(), nativeLayerId);
-    }
-
     protected void notifyInputMethodMac(String str, int attrib, int length,
                                             int cursor, int selStart, int selLength) {
         byte atts[] = new byte[1];

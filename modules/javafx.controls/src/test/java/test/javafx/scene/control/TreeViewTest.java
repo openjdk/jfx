@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,29 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.scene.control.*;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import javafx.scene.control.skin.TextFieldSkin;
-import test.com.sun.javafx.scene.control.test.Employee;
-import test.com.sun.javafx.scene.control.test.Person;
-import test.com.sun.javafx.scene.control.test.RT_22463_Person;
-import com.sun.javafx.tk.Toolkit;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import com.sun.javafx.tk.Toolkit;
+
+import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -61,9 +59,21 @@ import javafx.event.ActionEvent;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeCellShim;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.control.TreeViewShim;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
-import com.sun.javafx.scene.control.VirtualScrollBar;
+import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -72,10 +82,14 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.test.Employee;
+import test.com.sun.javafx.scene.control.test.Person;
+import test.com.sun.javafx.scene.control.test.RT_22463_Person;
+import test.javafx.collections.MockListObserver;
 
 public class TreeViewTest {
     private TreeView<String> treeView;
@@ -118,6 +132,14 @@ public class TreeViewTest {
     }
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         treeView = new TreeView<String>();
         sm = treeView.getSelectionModel();
         fm = treeView.getFocusModel();
@@ -154,6 +176,11 @@ public class TreeViewTest {
             judyMayer,
             gregorySmith
         );
+    }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     private void installChildren() {
@@ -906,7 +933,9 @@ public class TreeViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
     @Test public void test_rt27180_collapseBranch_childSelected_singleSelection() {
@@ -3679,4 +3708,83 @@ public class TreeViewTest {
         // in the selectedIndices and selectedItems list
         childNode1.setExpanded(false);
     }
+
+    @Test public void testRemovedSelectedItemsWhenBranchIsCollapsed() {
+        TreeItem<String> c1, c2, c3;
+        TreeItem<String> root = new TreeItem<>("foo");
+        root.getChildren().add(c1 = new TreeItem<>("bar"));
+        root.getChildren().add(c2 = new TreeItem<>("baz"));
+        root.getChildren().add(c3 = new TreeItem<>("qux"));
+        root.setExpanded(true);
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().selectAll();
+
+        MockListObserver<TreeItem<String>> observer = new MockListObserver<>();
+        treeView.getSelectionModel().getSelectedItems().addListener(observer);
+        root.setExpanded(false);
+
+        observer.check1();
+        observer.checkAddRemove(0, treeView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
+    }
+
+
+
+    /**
+     * Test that cell.cancelEdit can switch tree editing off
+     * even if a subclass violates its contract.
+     *
+     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     *
+     */
+    @Test
+    public void testMisbehavingCancelEditTerminatesEdit() {
+        // setup for editing
+        TreeCell<String> cell = new MisbehavingOnCancelTreeCell<>();
+        treeView.setEditable(true);
+        installChildren();
+        cell.updateTreeView(treeView);
+        // test editing: first round
+        // switch cell off editing by table api
+        int editingIndex = 1;
+        int intermediate = 0;
+        cell.updateIndex(editingIndex);
+        TreeItem editingItem = treeView.getTreeItem(editingIndex);
+        TreeItem intermediateTreeItem = treeView.getTreeItem(intermediate);
+        treeView.edit(editingItem);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            treeView.edit(intermediateTreeItem);
+        } catch (Exception ex) {
+            // catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("table must be editing at intermediate index",
+                    intermediateTreeItem, treeView.getEditingItem());
+        }
+        // test editing: second round
+        // switch cell off editing by cell api
+        treeView.edit(editingItem);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            cell.cancelEdit();
+        } catch (Exception ex) {
+            // catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertNull("table editing must be cancelled by cell", treeView.getEditingItem());
+        }
+    }
+
+    public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            throw new RuntimeException("violating contract");
+        }
+
+    }
+
 }

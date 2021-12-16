@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.image;
 
+import java.io.File;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
@@ -55,6 +56,7 @@ import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.DataURI;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -65,7 +67,6 @@ import javafx.beans.property.SimpleIntegerProperty;
  *
  * <p>
  * Supported image formats are:
- * </p>
  * <ul>
  * <li><a href="http://msdn.microsoft.com/en-us/library/dd183376(v=vs.85).aspx">BMP</a></li>
  * <li><a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a></li>
@@ -78,19 +79,27 @@ import javafx.beans.property.SimpleIntegerProperty;
  * memory consumed by the image). The application can specify the quality of
  * filtering used when scaling, and whether or not to preserve the original
  * image's aspect ratio.
- * </p>
  *
- * <p>
- * All URLs supported by {@link URL} can be passed to the constructor.
- * If the passed string is not a valid URL, but a path instead, the Image is
- * searched on the classpath in that case.
- * </p>
+ * <p>If a URL string is passed to a constructor, it be any of the following:
+ * <ol>
+ *     <li>the name of a resource that can be resolved by the context
+ *         {@link ClassLoader} for this thread
+ *     <li>a file path that can be resolved by {@link java.io.File}
+ *     <li>a URL that can be resolved by {@link java.net.URL} and for
+ *         which a protocol handler exists
+ * </ol>
+ *
+ * <p>The RFC 2397 "data" scheme for URLs is supported in addition to
+ * the protocol handlers that are registered for the application.
+ * If a URL uses the "data" scheme, the data must be base64-encoded
+ * and the MIME type must either be empty or a subtype of the
+ * {@code image} type.
  *
  * <p>Use {@link ImageView} for displaying images loaded with this
  * class. The same {@code Image} instance can be displayed by multiple
- * {@code ImageView}s.</p>
+ * {@code ImageView}s.
  *
- *<p>Example code for loading images.</p>
+ *<p>Example code for loading images:
 
 <PRE>
 import javafx.scene.image.Image;
@@ -606,13 +615,11 @@ public class Image {
     }
 
     /**
-     * Constructs an {@code Image} with content loaded from the specified
-     * url.
+     * Constructs an {@code Image} with content loaded from the specified URL.
      *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @param url a resource path, file path, or URL
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(@NamedArg("url") String url) {
         this(validateUrl(url), null, 0, 0, false, false, false);
@@ -620,14 +627,14 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters.
+     * Constructs an {@code Image} with content loaded from the specified URL
+     * using the specified parameters.
      *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
+     * @param url a resource path, file path, or URL
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(@NamedArg("url") String url, @NamedArg("backgroundLoading") boolean backgroundLoading) {
         this(validateUrl(url), null, 0, 0, false, false, backgroundLoading);
@@ -635,10 +642,10 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters.
+     * Constructs an {@code Image} with content loaded from the specified URL
+     * using the specified parameters.
      *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
+     * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -647,8 +654,8 @@ public class Image {
      * @param smooth indicates whether to use a better quality filtering
      *      algorithm or a faster one when scaling this image to fit within
      *      the specified bounding box
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(@NamedArg("url") String url, @NamedArg("requestedWidth") double requestedWidth, @NamedArg("requestedHeight") double requestedHeight,
                  @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth) {
@@ -658,14 +665,10 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters.
+     * Constructs an {@code Image} with content loaded from the specified URL
+     * using the specified parameters.
      *
-     * The <i>url</i> without scheme is threated as relative to classpath,
-     * url with scheme is treated accordingly to the scheme using
-     * {@link URL#openStream()}
-     *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
+     * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -676,8 +679,8 @@ public class Image {
      *      the specified bounding box
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(
             @NamedArg(value="url", defaultValue="\"\"") String url,
@@ -1117,13 +1120,17 @@ public class Image {
                     throw new IllegalArgumentException("Invalid URL or resource not found");
                 }
                 return resource.toString();
+            } else if (DataURI.matchScheme(url)) {
+                return url;
             }
+
+            if (new File(url).exists()) {
+                return url;
+            }
+
             // Use URL constructor for validation
             return new URL(url).toString();
-        } catch (final IllegalArgumentException e) {
-            throw new IllegalArgumentException(
-                    constructDetailedExceptionMessage("Invalid URL", e), e);
-        } catch (final MalformedURLException e) {
+        } catch (final IllegalArgumentException | MalformedURLException e) {
             throw new IllegalArgumentException(
                     constructDetailedExceptionMessage("Invalid URL", e), e);
         }

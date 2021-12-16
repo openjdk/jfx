@@ -178,7 +178,7 @@ GLIB_AVAILABLE_IN_ALL
 guint        g_date_get_iso8601_week_of_year (const GDate *date);
 
 /* If you create a static date struct you need to clear it to get it
- * in a sane state before use. You can clear a whole array at
+ * in a safe state before use. You can clear a whole array at
  * once with the ndates argument.
  */
 GLIB_AVAILABLE_IN_ALL

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -283,6 +283,83 @@ public class ComboBoxTest {
     @Test public void selectionModelCanBeNull() {
         comboBox.setSelectionModel(null);
         assertNull(comboBox.getSelectionModel());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getValue());
+        assertEquals(items.get(1), comboBox.getButtonCell().getText());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnLayout() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setItems(items);
+
+        comboBox.setValue(items.get(1));
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.layout();
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnEditableChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setEditable(false);
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getValue());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnListViewSelect() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+        ListView<String> listView = (ListView<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getPopupContent();
+
+        // Should not throw an NPE.
+        listView.getSelectionModel().select(1);
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnSkinCreation() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
     }
 
     @Test public void selectionModelCanBeBound() {
@@ -640,7 +717,7 @@ public class ComboBoxTest {
     @Test public void defaultConverterCanHandleIncorrectType_1() {
         ComboBox cb = new ComboBox();
         StringConverter sc = cb.getConverter();
-        assertEquals("42", sc.toString(new Integer(42)));
+        assertEquals("42", sc.toString(Integer.valueOf(42)));
     }
 
     @Test(expected=ClassCastException.class)
@@ -1306,6 +1383,27 @@ public class ComboBoxTest {
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
+    }
+
+    @Test public void testEditorKeyInputsWhenPopupIsNotShowing() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b"));
+        sl = new StageLoader(cb);
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+        cb.requestFocus();
+
+        // Sanity
+        assertFalse(cb.isShowing());
+        assertEquals(null, cb.getValue());
+
+        // Test DOWN and UP key
+        keyboard.doKeyPress(KeyCode.DOWN);
+        assertEquals("a", cb.getValue());
+        keyboard.doKeyPress(KeyCode.DOWN);
+        assertEquals("b", cb.getValue());
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals("a", cb.getValue());
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals("a", cb.getValue());
     }
 
     @Test public void testEditorKeyInputsWhenPopupIsShowing() {

@@ -37,7 +37,7 @@ import javafx.application.Application.Parameters;
 
 /**
  * Implementation class for Application parameters. This is called by the
- * applet or application launcher to create the startup parameters for the
+ * application launcher to create the startup parameters for the
  * given class.
  */
 public class ParametersImpl extends Parameters {

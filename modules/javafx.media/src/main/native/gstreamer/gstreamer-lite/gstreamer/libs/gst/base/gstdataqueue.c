@@ -156,7 +156,7 @@ gst_data_queue_class_init (GstDataQueueClass * klass)
   gst_data_queue_signals[SIGNAL_EMPTY] =
       g_signal_new ("empty", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
       G_STRUCT_OFFSET (GstDataQueueClass, empty), NULL, NULL,
-      g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+      NULL, G_TYPE_NONE, 0);
 
   /**
    * GstDataQueue::full: (skip)
@@ -170,7 +170,7 @@ gst_data_queue_class_init (GstDataQueueClass * klass)
   gst_data_queue_signals[SIGNAL_FULL] =
       g_signal_new ("full", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
       G_STRUCT_OFFSET (GstDataQueueClass, full), NULL, NULL,
-      g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+      NULL, G_TYPE_NONE, 0);
 
   /* properties */
   g_object_class_install_property (gobject_class, PROP_CUR_LEVEL_BYTES,

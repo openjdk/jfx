@@ -41,7 +41,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * Sign the Contributor Agreement
 
-    In order for us to evaluate your contribution, you need to sign the [Oracle Contributor Agreement](https://www.oracle.com/technetwork/community/oca-486395.html) (OCA). We are not asking you to give up your copyright, but to give us the right to distribute your code without restriction. By doing this you assert that the code you contribute is *yours* to contribute, and not third-party code that you do not own. We ask this of all contributors in order to assure our users of the origin and continuing existence of the code. You only need to sign the OCA once.
+    In order for us to evaluate your contribution, you need to sign the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/) (OCA). We are not asking you to give up your copyright, but to give us the right to distribute your code without restriction. By doing this you assert that the code you contribute is *yours* to contribute, and not third-party code that you do not own. We ask this of all contributors in order to assure our users of the origin and continuing existence of the code. You only need to sign the OCA once.
 
 * Read the code review policies
 

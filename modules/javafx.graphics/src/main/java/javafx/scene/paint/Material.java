@@ -76,6 +76,9 @@ public abstract class Material {
      No plan to support Multi-texture
      */
 
+    /**
+     * Constructor for subclasses to call.
+     */
     protected Material() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Material.class.getName();

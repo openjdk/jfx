@@ -33,7 +33,6 @@
 #include "ApplyStyleCommand.h"
 #include "BackForwardCache.h"
 #include "BackForwardController.h"
-#include "CSSAnimationController.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
 #include "CachedCSSStyleSheet.h"
@@ -149,14 +148,13 @@ static inline float parentTextZoomFactor(Frame* frame)
 
 Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoaderClient>&& frameLoaderClient)
     : m_mainFrame(ownerElement ? page.mainFrame() : *this)
-    , m_page(&page)
+    , m_page(makeWeakPtr(page))
     , m_settings(&page.settings())
     , m_treeNode(*this, parentFromOwnerElement(ownerElement))
     , m_loader(makeUniqueRef<FrameLoader>(*this, WTFMove(frameLoaderClient)))
     , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
-    , m_ownerElement(ownerElement)
+    , m_ownerElement(makeWeakPtr(ownerElement))
     , m_script(makeUniqueRef<ScriptController>(*this))
-    , m_animationController(makeUniqueRef<CSSAnimationController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
@@ -165,7 +163,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoa
 
     if (ownerElement) {
         m_mainFrame.selfOnlyRef();
-        ownerElement->setContentFrame(this);
+        ownerElement->setContentFrame(*this);
     }
 
 #ifndef NDEBUG
@@ -192,7 +190,13 @@ Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, Unique
 Frame::~Frame()
 {
     setView(nullptr);
-    loader().cancelAndClear();
+    navigationScheduler().cancel();
+
+    if (!loader().isComplete())
+        loader().closeURL();
+
+    loader().clear(document(), false);
+    script().updatePlatformScriptObjects();
 
     // FIXME: We should not be doing all this work inside the destructor
 
@@ -209,14 +213,24 @@ Frame::~Frame()
         m_mainFrame.selfOnlyDeref();
 }
 
-void Frame::addDestructionObserver(FrameDestructionObserver* observer)
+Page* Frame::page() const
 {
-    m_destructionObservers.add(observer);
+    return m_page.get();
 }
 
-void Frame::removeDestructionObserver(FrameDestructionObserver* observer)
+HTMLFrameOwnerElement* Frame::ownerElement() const
 {
-    m_destructionObservers.remove(observer);
+    return m_ownerElement.get();
+}
+
+void Frame::addDestructionObserver(FrameDestructionObserver& observer)
+{
+    m_destructionObservers.add(&observer);
+}
+
+void Frame::removeDestructionObserver(FrameDestructionObserver& observer)
+{
+    m_destructionObservers.remove(&observer);
 }
 
 void Frame::setView(RefPtr<FrameView>&& view)
@@ -302,23 +316,33 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     m_documentIsBeingReplaced = false;
 }
 
-void Frame::invalidateContentEventRegionsIfNeeded()
+void Frame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason reason)
 {
     if (!m_page || !m_doc || !m_doc->renderView())
         return;
-    bool hasTouchActionElements = false;
-    bool hasEditableElements = false;
+
+    bool needsUpdateForWheelEventHandlers = false;
+    bool needsUpdateForTouchActionElements = false;
+    bool needsUpdateForEditableElements = false;
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    needsUpdateForWheelEventHandlers = m_doc->hasWheelEventHandlers() || reason == InvalidateContentEventRegionsReason::EventHandlerChange;
+#else
+    UNUSED_PARAM(reason);
+#endif
 #if ENABLE(TOUCH_ACTION_REGIONS)
-    hasTouchActionElements = m_doc->mayHaveElementsWithNonAutoTouchAction();
+    // Document::mayHaveElementsWithNonAutoTouchAction never changes from true to false currently.
+    needsUpdateForTouchActionElements = m_doc->mayHaveElementsWithNonAutoTouchAction();
 #endif
 #if ENABLE(EDITABLE_REGION)
-    hasEditableElements = m_doc->mayHaveEditableElements() && m_page->shouldBuildEditableRegion();
+    // Document::mayHaveEditableElements never changes from true to false currently.
+    needsUpdateForEditableElements = m_doc->mayHaveEditableElements() && m_page->shouldBuildEditableRegion();
 #endif
-    // FIXME: This needs to look at wheel event handlers too.
-    if (!hasTouchActionElements && !hasEditableElements)
+    if (!needsUpdateForTouchActionElements && !needsUpdateForEditableElements && !needsUpdateForWheelEventHandlers)
         return;
+
     if (!m_doc->renderView()->compositor().viewNeedsToInvalidateEventRegionOfEnclosingCompositingLayerForRepaint())
         return;
+
     if (m_ownerElement)
         m_ownerElement->document().invalidateEventRegionsForFrame(*m_ownerElement);
 }
@@ -536,7 +560,7 @@ bool Frame::selectionChangeCallbacksDisabled() const
 
 bool Frame::requestDOMPasteAccess()
 {
-    if (m_settings->javaScriptCanAccessClipboard() && m_settings->DOMPasteAllowed())
+    if (m_settings->javaScriptCanAccessClipboard() && m_settings->domPasteAllowed())
         return true;
 
     if (!m_doc)
@@ -657,6 +681,7 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
 
 void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript& script)
 {
+#if ENABLE(APP_BOUND_DOMAINS)
     if (loader().client().shouldEnableInAppBrowserPrivacyProtections()) {
         if (auto* document = this->document())
             document->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user script injection for non-app bound domain."_s);
@@ -664,6 +689,7 @@ void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript
         return;
     }
     loader().client().notifyPageOfAppBoundBehavior();
+#endif
 
     auto* document = this->document();
     if (!document)
@@ -708,7 +734,7 @@ RenderView* Frame::contentRenderer() const
 
 RenderWidget* Frame::ownerRenderer() const
 {
-    auto* ownerElement = m_ownerElement;
+    auto* ownerElement = m_ownerElement.get();
     if (!ownerElement)
         return nullptr;
     auto* object = ownerElement->renderer();
@@ -735,11 +761,8 @@ void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
         view->layoutContext().unscheduleLayout();
-        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
-            if (auto* timelines = document->timelinesController())
-                timelines->suspendAnimations();
-        } else
-            view->frame().legacyAnimation().suspendAnimationsForDocument(document);
+        if (auto* timelines = document->timelinesController())
+            timelines->suspendAnimations();
         view->frame().eventHandler().stopAutoscrollTimer();
     }
 }
@@ -1027,11 +1050,8 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
 
     // Frame::clearTimers() suspended animations and pending relayouts.
 
-    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
-        if (auto* timelines = m_doc->timelinesController())
-            timelines->resumeAnimations();
-    } else
-        legacyAnimation().resumeAnimationsForDocument(m_doc.get());
+    if (auto* timelines = m_doc->timelinesController())
+        timelines->resumeAnimations();
     if (m_view)
         m_view->layoutContext().scheduleLayout();
 }
@@ -1068,6 +1088,23 @@ bool Frame::mayPrewarmLocalStorage() const
 {
     ASSERT(isMainFrame());
     return m_localStoragePrewarmingCount < maxlocalStoragePrewarmingCount;
+}
+
+FloatSize Frame::screenSize() const
+{
+    if (!m_overrideScreenSize.isEmpty())
+        return m_overrideScreenSize;
+    return screenRect(view()).size();
+}
+
+void Frame::setOverrideScreenSize(FloatSize&& screenSize)
+{
+    if (m_overrideScreenSize == screenSize)
+        return;
+
+    m_overrideScreenSize = WTFMove(screenSize);
+    if (auto* document = this->document())
+        document->updateViewportArguments();
 }
 
 void Frame::selfOnlyRef()
@@ -1110,6 +1147,11 @@ TextStream& operator<<(TextStream& ts, const Frame& frame)
 {
     ts << frame.debugDescription();
     return ts;
+}
+
+bool Frame::arePluginsEnabled()
+{
+    return settings().arePluginsEnabled();
 }
 
 } // namespace WebCore

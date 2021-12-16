@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -117,6 +117,17 @@ public class URLConverterTest {
         Font font = null;
         String result = value.convert(font);
         assertEquals(expResult, result);
+    }
+
+    @Test
+    public void testConvertWithDataURI() {
+        String dataUri = "data:text/plain;charset=utf-8;base64,SGVsbG8sIFdvcmxkIQ==";
+
+        ParsedValue[] values = new ParsedValue[] { new ParsedValueImpl<String,String>(dataUri, null) };
+        ParsedValueImpl<ParsedValue[], String> value = new ParsedValueImpl<>(values, URLConverter.getInstance());
+
+        String result = value.convert(null);
+        assertEquals(dataUri, result);
     }
 
 }

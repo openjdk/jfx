@@ -28,11 +28,9 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "IntRect.h"
-#include "RectEdges.h"
 #include "ScrollSnapOffsetsInfo.h"
-#include "ScrollTypes.h"
 #include "ScrollableArea.h"
-#include "ScrollingCoordinator.h"
+#include "ScrollingTree.h"
 #include "ScrollingTreeNode.h"
 
 namespace WebCore {
@@ -55,8 +53,8 @@ public:
     void commitStateAfterChildren(const ScrollingStateNode&) override;
     void didCompleteCommitForNode() final;
 
-    virtual bool canHandleWheelEvent(const PlatformWheelEvent&) const;
-    virtual WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&);
+    virtual bool canHandleWheelEvent(const PlatformWheelEvent&, EventTargeting) const;
+    virtual WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting = EventTargeting::Propagate);
 
     FloatPoint currentScrollPosition() const { return m_currentScrollPosition; }
     FloatPoint currentScrollOffset() const { return ScrollableArea::scrollOffsetFromPosition(m_currentScrollPosition, toFloatSize(m_scrollOrigin)); }
@@ -66,7 +64,6 @@ public:
     const IntPoint& scrollOrigin() const { return m_scrollOrigin; }
 
     RectEdges<bool> edgePinnedState() const;
-    bool isRubberBanding() const;
 
     bool isUserScrollProgress() const;
     void setUserScrollInProgress(bool);
@@ -98,10 +95,7 @@ public:
     bool canHaveScrollbars() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarAlwaysOff || m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarAlwaysOff; }
 
 #if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
-    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
-    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
-    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
+    const ScrollSnapOffsetsInfo<float>& snapOffsetsInfo() const;
     unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
     unsigned currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
     void setCurrentHorizontalSnapPointIndex(unsigned index) { m_currentHorizontalSnapPointIndex = index; }
@@ -125,9 +119,11 @@ protected:
 
     FloatPoint clampScrollPosition(const FloatPoint&) const;
 
+    virtual void willDoProgrammaticScroll(const FloatPoint&) { }
+
     virtual FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped) const;
 
-    virtual void currentScrollPositionChanged(ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
+    virtual void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
     virtual void updateViewportForCurrentScrollPosition(Optional<FloatRect> = { }) { }
     virtual bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, Optional<FloatRect> overrideLayoutViewport);
 
@@ -149,8 +145,8 @@ protected:
     ScrollElasticity horizontalScrollElasticity() const { return m_scrollableAreaParameters.horizontalScrollElasticity; }
     ScrollElasticity verticalScrollElasticity() const { return m_scrollableAreaParameters.verticalScrollElasticity; }
 
-    bool hasEnabledHorizontalScrollbar() const { return m_scrollableAreaParameters.hasEnabledHorizontalScrollbar; }
-    bool hasEnabledVerticalScrollbar() const { return m_scrollableAreaParameters.hasEnabledVerticalScrollbar; }
+    bool allowsHorizontalScrolling() const { return m_scrollableAreaParameters.allowsHorizontalScrolling; }
+    bool allowsVerticalScrolling() const { return m_scrollableAreaParameters.allowsVerticalScrolling; }
 
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 

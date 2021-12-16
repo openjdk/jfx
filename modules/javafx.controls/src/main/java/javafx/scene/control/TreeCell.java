@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ import javafx.beans.value.WeakChangeListener;
  */
 public class TreeCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -90,7 +90,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and events                                                    *
      *                                                                         *
@@ -186,7 +186,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -346,11 +346,13 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+    // treeItem at time of startEdit - fix for JDK-8267094
+    private TreeItem<T> treeItemAtStartEdit;
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -374,14 +376,17 @@ public class TreeCell<T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        treeItemAtStartEdit = getTreeItem();
          // Inform the TreeView of the edit starting.
         if (tree != null) {
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editStartEvent(),
-                    getTreeItem(),
+                    treeItemAtStartEdit,
                     getItem(),
                     null));
-
+            tree.edit(treeItemAtStartEdit);
             tree.requestFocus();
         }
     }
@@ -424,6 +429,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
         }
+        treeItemAtStartEdit = null;
     }
 
     /** {@inheritDoc} */
@@ -435,6 +441,9 @@ public class TreeCell<T> extends IndexedCell<T> {
         super.cancelEdit();
 
         if (tree != null) {
+            TreeItem<T> editingItem = treeItemAtStartEdit;
+            T value = editingItem != null ? editingItem.getValue() : null;
+
             // reset the editing index on the TreeView
             if (updateEditingIndex) tree.edit(null);
 
@@ -446,10 +455,11 @@ public class TreeCell<T> extends IndexedCell<T> {
 
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editCancelEvent(),
-                    getTreeItem(),
-                    getItem(),
+                    editingItem,
+                    value,
                     null));
         }
+        treeItemAtStartEdit = null;
     }
 
     /** {@inheritDoc} */
@@ -457,7 +467,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         return new TreeCellSkin<T>(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -481,6 +491,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateItem(oldIndex);
             updateSelection();
             updateFocus();
+            updateEditing();
         }
     }
 
@@ -572,7 +583,13 @@ public class TreeCell<T> extends IndexedCell<T> {
         final TreeItem<T> editItem = tree == null ? null : tree.getEditingItem();
         final boolean editing = isEditing();
 
-        if (index == -1 || tree == null || treeItem == null) return;
+        if (index == -1 || tree == null || treeItem == null) {
+            if (editing) {
+                // JDK-8265210: must cancel edit if index changed to -1 by re-use
+                doCancelEditing();
+            }
+            return;
+        }
 
         final boolean match = treeItem.equals(editItem);
 
@@ -581,21 +598,28 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (match && !editing) {
             startEdit();
         } else if (! match && editing) {
-            // If my tree item is not the one being edited then I need to cancel
-            // the edit. The tricky thing here is that as part of this call
-            // I cannot end up calling tree.edit(null) the way that the standard
-            // cancelEdit method would do. Yet, I need to call cancelEdit
-            // so that subclasses which override cancelEdit can execute. So,
-            // I have to use a kind of hacky flag workaround.
+            doCancelEditing();
+        }
+    }
+
+    private void doCancelEditing() {
+        // If my tree item is not the one being edited then I need to cancel
+        // the edit. The tricky thing here is that as part of this call
+        // I cannot end up calling tree.edit(null) the way that the standard
+        // cancelEdit method would do. Yet, I need to call cancelEdit
+        // so that subclasses which override cancelEdit can execute. So,
+        // I have to use a kind of hacky flag workaround.
+        try {
+            // try-finally to make certain that the flag is reliably reset to true
             updateEditingIndex = false;
             cancelEdit();
+        } finally {
             updateEditingIndex = true;
         }
     }
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Expert API                                                              *
      *                                                                         *
@@ -637,7 +661,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -649,7 +673,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

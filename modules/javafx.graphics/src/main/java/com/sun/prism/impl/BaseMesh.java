@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -815,6 +815,11 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         // Assign to 1st smoothing group if smoothing is null.
         face[6] = smoothing != null ? smoothing[fIdx] : 1;
         return face;
+    }
+
+    @Override
+    public boolean isValid() {
+        return true;
     }
 
     // Package scope method for testing

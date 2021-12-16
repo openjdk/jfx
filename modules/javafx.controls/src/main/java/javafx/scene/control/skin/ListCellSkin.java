@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ import javafx.scene.layout.Region;
  */
 public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -50,7 +50,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 
     private final BehaviorBase<ListCell<T>> behavior;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -71,7 +71,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
 //        control.setInputMap(behavior.getInputMap());
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

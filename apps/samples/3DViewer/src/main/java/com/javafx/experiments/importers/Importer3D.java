@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 package com.javafx.experiments.importers;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
@@ -122,7 +123,7 @@ public final class Importer3D {
             for (String name : names) {
                 try {
                     Class<?> clazz = Class.forName(name);
-                    Object obj = clazz.newInstance();
+                    Object obj = clazz.getDeclaredConstructor().newInstance();
                     if (obj instanceof Importer) {
                         Importer plugin = (Importer) obj;
                         if (plugin.isSupported(extension)) {
@@ -131,7 +132,8 @@ public final class Importer3D {
                             break;
                         }
                     }
-                } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+                         | InvocationTargetException | NoSuchMethodException e) {
                     // FAIL SILENTLY
                 }
             }

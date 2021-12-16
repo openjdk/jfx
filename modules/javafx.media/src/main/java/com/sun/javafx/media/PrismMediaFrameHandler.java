@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.media;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -36,6 +37,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 
@@ -63,7 +65,8 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         return ret;
     }
 
-    private boolean registeredWithFactory = false;
+    private WeakReference<ResourceFactory> registeredWithFactory = null;
+
     private PrismMediaFrameHandler(Object provider) {
     }
 
@@ -129,11 +132,12 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
 
         PrismFrameBuffer prismBuffer = new PrismFrameBuffer(vdb);
         if (tme.texture == null) {
-            if (!registeredWithFactory) {
+            ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
+            if (registeredWithFactory == null || registeredWithFactory.get() != factory) {
                 // make sure we've registered with the resource factory so we know
                 // when to purge old textures
-                GraphicsPipeline.getDefaultResourceFactory().addFactoryListener(this);
-                registeredWithFactory = true;
+                factory.addFactoryListener(this);
+                registeredWithFactory = new WeakReference<>(factory);
             }
 
             tme.texture = GraphicsPipeline.getPipeline().

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,6 +80,7 @@ class FontFileWriter implements FontConstants {
         return file;
     }
 
+    @SuppressWarnings("removal")
     public File openFile() throws PrivilegedActionException {
         pos = 0;
         writtenBytes = 0;
@@ -123,6 +124,7 @@ class FontFileWriter implements FontConstants {
         }
     }
 
+    @SuppressWarnings("removal")
     public void deleteFile() {
         if (file != null) {
             if (tracker != null) {
@@ -252,6 +254,7 @@ class FontFileWriter implements FontConstants {
      * If a thread can create temp files anyway, there is no point in counting
      * font bytes.
      */
+    @SuppressWarnings("removal")
     static boolean hasTempPermission() {
         if (System.getSecurityManager() == null) {
             return true;
@@ -342,6 +345,7 @@ class FontFileWriter implements FontConstants {
                 new HashMap<File, RandomAccessFile>();
 
             private static Thread t = null;
+            @SuppressWarnings("removal")
             static void init() {
                 if (t == null) {
                     // Add a shutdown hook to remove the temp file.

@@ -36,10 +36,12 @@ enum class TaskSource : uint8_t {
     MediaElement,
     Microtask,
     Networking,
+    PerformanceTimeline,
     PostedMessageQueue,
     UserInteraction,
     WebGL,
     WebXR,
+    Speech,
 
     // Internal to WebCore
     InternalAsyncTask, // Safe to re-order or delay.

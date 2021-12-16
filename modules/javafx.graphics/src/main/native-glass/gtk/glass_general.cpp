@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -742,7 +742,7 @@ grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
                                                context->window,
                                                GDK_OWNERSHIP_NONE,
                                                TRUE,
-                                               GDK_ALL_EVENTS_MASK,
+                                               GDK_FILTERED_EVENTS_MASK,
                                                NULL,
                                                GDK_CURRENT_TIME);
 #else
@@ -752,7 +752,7 @@ grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
                                                context->window,
                                                GDK_OWNERSHIP_NONE,
                                                TRUE,
-                                               GDK_ALL_EVENTS_MASK,
+                                               GDK_FILTERED_EVENTS_MASK,
                                                NULL,
                                                GDK_CURRENT_TIME);
                                        */

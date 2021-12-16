@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1022,10 +1022,8 @@ public class ControlTest {
             String what = someClass.getName();
             try {
                 // should get NoSuchMethodException if ctor is not public
-//                Constructor ctor = someClass.getConstructor((Class[])null);
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
-//                Node node = (Node)ctor.newInstance((Object[])null);
-                Node node = (Node)someClass.newInstance();
+                Node node = (Node)someClass.getDeclaredConstructor().newInstance();
                 for (CssMetaData styleable : (List<CssMetaData<? extends Styleable, ?>>) m.invoke(null)) {
 
                     what = someClass.getName() + " " + styleable.getProperty();
@@ -1033,7 +1031,7 @@ public class ControlTest {
                     assertNotNull(what, writable);
 
                     Object defaultValue = writable.getValue();
-                    Object initialValue = styleable.getInitialValue((Node) someClass.newInstance());
+                    Object initialValue = styleable.getInitialValue((Node) someClass.getDeclaredConstructor().newInstance());
 
                     if (defaultValue instanceof Number) {
                         // 5 and 5.0 are not the same according to equals,

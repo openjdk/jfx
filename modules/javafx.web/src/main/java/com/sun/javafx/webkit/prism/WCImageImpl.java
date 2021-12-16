@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,9 +90,15 @@ final class WCImageImpl extends PrismImage {
             int dstx1, int dsty1, int dstx2, int dsty2,
             int srcx1, int srcy1, int srcx2, int srcy2)
     {
+        ResourceFactory resourceFactory = g.getResourceFactory();
+        if (resourceFactory.isDisposed()) {
+            log.fine("WCImageImpl::draw : skip because device disposed or not ready");
+            return;
+        }
+
         if (g instanceof PrinterGraphics) {
             // We're printing. Wrap [img] into a J2DTexture and draw it.
-            Texture t = g.getResourceFactory().createTexture(
+            Texture t = resourceFactory.createTexture(
                     img, Texture.Usage.STATIC, Texture.WrapMode.CLAMP_NOT_NEEDED);
             g.drawTexture(t,
                     dstx1, dsty1, dstx2, dsty2,
@@ -108,7 +114,6 @@ final class WCImageImpl extends PrismImage {
             }
         }
         if (texture == null && compoundTexture == null) {
-            ResourceFactory resourceFactory = g.getResourceFactory();
             int maxSize = resourceFactory.getMaximumTextureSize();
             if (img.getWidth() <= maxSize && img.getHeight() <= maxSize) {
                 texture = resourceFactory.createTexture(img, Texture.Usage.DEFAULT, Texture.WrapMode.CLAMP_TO_EDGE);

@@ -98,7 +98,6 @@ struct WindowGeometry {
 
 };
 
-class WindowContextChild;
 class WindowContextTop;
 
 class WindowContext {
@@ -164,10 +163,6 @@ public:
     virtual GtkWindow *get_gtk_window() = 0;
     virtual jobject get_jview() = 0;
     virtual jobject get_jwindow() = 0;
-
-    virtual int getEmbeddedX() = 0;
-    virtual int getEmbeddedY() = 0;
-
 
     virtual void increment_events_counter() = 0;
     virtual void decrement_events_counter() = 0;
@@ -256,9 +251,6 @@ public:
 
     void notify_state(jint);
 
-    int getEmbeddedX() { return 0; }
-    int getEmbeddedY() { return 0; }
-
     void increment_events_counter();
     void decrement_events_counter();
     size_t get_events_count();
@@ -269,97 +261,6 @@ protected:
     virtual void applyShapeMask(void*, uint width, uint height) = 0;
 private:
     bool im_filter_keypress(GdkEventKey*);
-};
-
-class WindowContextPlug: public WindowContextBase {
-    WindowContext* parent;
-public:
-    bool set_view(jobject);
-    void set_bounds(int, int, bool, bool, int, int, int, int);
-    //WindowFrameExtents get_frame_extents() { return WindowFrameExtents{0, 0, 0, 0}; };
-    WindowFrameExtents get_frame_extents() { WindowFrameExtents ext = {0, 0, 0, 0}; return ext;}
-
-    void enter_fullscreen() {}
-    void exit_fullscreen() {}
-    void set_resizable(bool) {}
-    void request_focus() {}
-    void set_focusable(bool) {}
-    void set_title(const char*) {}
-    void set_alpha(double) {}
-    void set_enabled(bool) {}
-    void set_minimum_size(int, int) {}
-    void set_maximum_size(int, int) {}
-    void set_minimized(bool) {}
-    void set_maximized(bool) {}
-    void set_icon(GdkPixbuf*) {}
-    void restack(bool) {}
-    void set_modal(bool, WindowContext*) {}
-    void set_gravity(float, float) {}
-    void process_property_notify(GdkEventProperty*) {}
-    void process_configure(GdkEventConfigure*);
-    void process_gtk_configure(GdkEventConfigure*);
-
-    void applyShapeMask(void*, uint width, uint height) {
-        (void)width;
-        (void)height;
-    }
-    GtkWindow *get_gtk_window(); // TODO, get window from parent
-
-    WindowContextPlug(jobject, void*);
-    GtkWidget* gtk_container;
-    std::vector<WindowContextChild *> embedded_children;
-private:
-    //HACK: remove once set_bounds is implemented correctly
-    void window_configure(XWindowChanges *, unsigned int);
-    WindowContextPlug(WindowContextPlug&);
-    WindowContextPlug& operator= (const WindowContextPlug&);
-};
-
-class WindowContextChild: public WindowContextBase {
-    WindowContextPlug* parent;
-    WindowContextTop* full_screen_window;
-    GlassView* view; // not null while in Full Screen
-public:
-    void process_mouse_button(GdkEventButton*);
-    bool set_view(jobject);
-    void set_bounds(int, int, bool, bool, int, int, int, int);
-    //WindowFrameExtents get_frame_extents() { return WindowFrameExtents{0, 0, 0, 0}; };
-    WindowFrameExtents get_frame_extents() { WindowFrameExtents ext = {0, 0, 0, 0}; return ext;}
-
-    void enter_fullscreen();
-    void exit_fullscreen();
-    void set_resizable(bool) {}
-    void request_focus() {}
-    void set_focusable(bool) {}
-    void set_title(const char*) {}
-    void set_alpha(double) {}
-    void set_enabled(bool) {}
-    void set_minimum_size(int, int) {}
-    void set_maximum_size(int, int) {}
-    void set_minimized(bool) {}
-    void set_maximized(bool) {}
-    void set_icon(GdkPixbuf*) {}
-    void restack(bool);
-    void set_modal(bool, WindowContext*) {}
-    void set_gravity(float, float) {}
-    void process_property_notify(GdkEventProperty*) {}
-    void process_configure(GdkEventConfigure*);
-    void process_destroy();
-    void set_visible(bool visible);
-
-    int getEmbeddedX();
-    int getEmbeddedY();
-
-    void applyShapeMask(void*, uint width, uint height) {
-        (void)width;
-        (void)height;
-    }
-    GtkWindow *get_gtk_window(); // TODO, get window from parent
-
-    WindowContextChild(jobject, void*, GtkWidget *parent_widget, WindowContextPlug *parent_context);
-private:
-    WindowContextChild(WindowContextChild&);
-    WindowContextChild& operator= (const WindowContextChild&);
 };
 
 class WindowContextTop: public WindowContextBase {

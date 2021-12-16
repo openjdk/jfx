@@ -47,10 +47,9 @@ private:
     bool canRenderToDefaultFramebuffer() override;
     IntSize defaultFrameBufferSize() override;
     void swapInterval(int) override;
-    cairo_device_t* cairoDevice() override;
     bool isEGLContext() const override { return false; }
 
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL)
     PlatformGraphicsContextGL platformContext() override;
 #endif
 
@@ -68,7 +67,6 @@ private:
     XUniqueGLXPbuffer m_pbuffer;
     XUniquePixmap m_pixmap;
     XUniqueGLXPixmap m_glxPixmap;
-    cairo_device_t* m_cairoDevice { nullptr };
 };
 
 } // namespace WebCore

@@ -27,7 +27,6 @@
 #include "LineWidth.h"
 #include "RenderBlock.h"
 #include "RenderLineBoxList.h"
-#include "SimpleLineLayout.h"
 #include "TrailingObjects.h"
 #include <memory>
 
@@ -341,17 +340,16 @@ public:
     RootInlineBox* firstRootBox() const { return complexLineLayout() ? complexLineLayout()->firstRootBox() : nullptr; }
     RootInlineBox* lastRootBox() const { return complexLineLayout() ? complexLineLayout()->lastRootBox() : nullptr; }
 
+    void setChildrenInline(bool) final;
+
     bool hasLines() const;
     void invalidateLineLayoutPath() final;
 
-    enum LineLayoutPath { UndeterminedPath = 0, SimpleLinesPath, LineBoxesPath, LayoutFormattingContextPath, ForceLineBoxesPath };
+    enum LineLayoutPath { UndeterminedPath = 0, LineBoxesPath, ModernPath, ForceLineBoxesPath };
     LineLayoutPath lineLayoutPath() const { return static_cast<LineLayoutPath>(renderBlockFlowLineLayoutPath()); }
     void setLineLayoutPath(LineLayoutPath path) { setRenderBlockFlowLineLayoutPath(path); }
 
-    // Helper methods for computing line counts and heights for line counts.
-    RootInlineBox* lineAtIndex(int) const;
     int lineCount() const;
-    int heightForLineCount(int);
     void clearTruncation();
 
     void setHasMarkupTruncation(bool b) { setRenderBlockFlowHasMarkupTruncation(b); }
@@ -359,19 +357,18 @@ public:
 
     bool containsNonZeroBidiLevel() const;
 
-    const SimpleLineLayout::Layout* simpleLineLayout() const;
-    SimpleLineLayout::Layout* simpleLineLayout();
     const ComplexLineLayout* complexLineLayout() const;
     ComplexLineLayout* complexLineLayout();
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    const LayoutIntegration::LineLayout* layoutFormattingContextLineLayout() const;
-    LayoutIntegration::LineLayout* layoutFormattingContextLineLayout();
+    const LayoutIntegration::LineLayout* modernLineLayout() const;
+    LayoutIntegration::LineLayout* modernLineLayout();
 #endif
 
     void ensureLineBoxes();
     void generateLineBoxTree();
 
 #if ENABLE(TREE_DEBUGGING)
+    void outputFloatingObjects(WTF::TextStream&, int depth) const;
     void outputLineTreeAndMark(WTF::TextStream&, const InlineBox* markedBox, int depth) const;
 #endif
 
@@ -533,7 +530,6 @@ private:
     GapRects inlineSelectionGaps(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
         LayoutUnit& lastLogicalTop, LayoutUnit& lastLogicalLeft, LayoutUnit& lastLogicalRight, const LogicalSelectionOffsetCaches&, const PaintInfo*) override;
 
-    Position positionForBox(InlineBox*, bool start = true) const;
     VisiblePosition positionForPointWithInlineChildren(const LayoutPoint& pointInLogicalContents, const RenderFragmentContainer*) override;
     void addFocusRingRectsForInlineChildren(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) override;
 
@@ -543,14 +539,11 @@ public:
 
 private:
     bool hasLineLayout() const;
-    bool hasSimpleLineLayout() const;
     bool hasComplexLineLayout() const;
 
-    void layoutSimpleLines(bool relayoutChildren, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
-
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    bool hasLayoutFormattingContextLineLayout() const;
-    void layoutLFCLines(bool relayoutChildren, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
+    bool hasModernLineLayout() const;
+    void layoutModernLines(bool relayoutChildren, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
 #endif
 
     void adjustIntrinsicLogicalWidthsForColumns(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
@@ -592,7 +585,6 @@ protected:
 private:
     Variant<
         WTF::Monostate,
-        Ref<SimpleLineLayout::Layout>,
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         std::unique_ptr<LayoutIntegration::LineLayout>,
 #endif
@@ -624,35 +616,20 @@ inline ComplexLineLayout* RenderBlockFlow::complexLineLayout()
     return hasComplexLineLayout() ? WTF::get<std::unique_ptr<ComplexLineLayout>>(m_lineLayout).get() : nullptr;
 }
 
-inline bool RenderBlockFlow::hasSimpleLineLayout() const
-{
-    return WTF::holds_alternative<Ref<SimpleLineLayout::Layout>>(m_lineLayout);
-}
-
-inline const SimpleLineLayout::Layout* RenderBlockFlow::simpleLineLayout() const
-{
-    return hasSimpleLineLayout() ? WTF::get<Ref<SimpleLineLayout::Layout>>(m_lineLayout).ptr() : nullptr;
-}
-
-inline SimpleLineLayout::Layout* RenderBlockFlow::simpleLineLayout()
-{
-    return hasSimpleLineLayout() ? WTF::get<Ref<SimpleLineLayout::Layout>>(m_lineLayout).ptr() : nullptr;
-}
-
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-inline bool RenderBlockFlow::hasLayoutFormattingContextLineLayout() const
+inline bool RenderBlockFlow::hasModernLineLayout() const
 {
     return WTF::holds_alternative<std::unique_ptr<LayoutIntegration::LineLayout>>(m_lineLayout);
 }
 
-inline const LayoutIntegration::LineLayout* RenderBlockFlow::layoutFormattingContextLineLayout() const
+inline const LayoutIntegration::LineLayout* RenderBlockFlow::modernLineLayout() const
 {
-    return hasLayoutFormattingContextLineLayout() ? WTF::get<std::unique_ptr<LayoutIntegration::LineLayout>>(m_lineLayout).get() : nullptr;
+    return hasModernLineLayout() ? WTF::get<std::unique_ptr<LayoutIntegration::LineLayout>>(m_lineLayout).get() : nullptr;
 }
 
-inline LayoutIntegration::LineLayout* RenderBlockFlow::layoutFormattingContextLineLayout()
+inline LayoutIntegration::LineLayout* RenderBlockFlow::modernLineLayout()
 {
-    return hasLayoutFormattingContextLineLayout() ? WTF::get<std::unique_ptr<LayoutIntegration::LineLayout>>(m_lineLayout).get() : nullptr;
+    return hasModernLineLayout() ? WTF::get<std::unique_ptr<LayoutIntegration::LineLayout>>(m_lineLayout).get() : nullptr;
 }
 #endif
 

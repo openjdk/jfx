@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,18 +34,22 @@ class D3DLight {
 public:
     D3DLight();
     virtual ~D3DLight();
+    bool isPointLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
-//  void setRange(float r);
-    float position[4]; // Only need x, y, z. The last float is needed for padding when upload to shader.
+
+    float position[3];
     float color[3];
     float w;
     float attenuation[3]; // ca, la, qa
     float maxRange;
+    float direction[3];
+    float innerAngle;
+    float outerAngle;
+    float falloff;
 
 private:
 
 };
 
 #endif  /* D3DLIGHT_H */
-

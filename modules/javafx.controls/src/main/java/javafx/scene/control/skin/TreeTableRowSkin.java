@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
@@ -56,7 +54,6 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.TreeView;
 
 /**
  * Default skin implementation for the {@link TreeTableRow} control.
@@ -66,7 +63,7 @@ import javafx.scene.control.TreeView;
  */
 public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTableRow<T>, TreeTableCell<T,?>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -85,7 +82,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -120,20 +117,19 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         setupTreeTableViewListeners();
     }
 
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            getSkinnable().treeTableViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().treeTableViewProperty().removeListener(this);
-                    setupTreeTableViewListeners();
-                }
+            registerInvalidationListener(getSkinnable().treeTableViewProperty(), e -> {
+                unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
+                setupTreeTableViewListeners();
             });
         } else {
             registerChangeListener(treeTableView.treeColumnProperty(), e -> {
                 // Fix for RT-27782: Need to set isDirty to true, rather than the
                 // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.leftLabelPadding()
+                // be recalculated in TreeTableCellSkin.calculateIndentation()
                 isDirty = true;
                 getSkinnable().requestLayout();
             });
@@ -157,19 +153,18 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
 
-    private final InvalidationListener graphicListener = o -> {
+    private void updateTreeItemGraphic() {
         disclosureNodeDirty = true;
         getSkinnable().requestLayout();
-    };
+    }
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -203,7 +198,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -253,8 +248,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -265,7 +259,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         TreeTableColumn tableColumn = (TreeTableColumn<T,?>) tcb;
         TreeTableCell cell = (TreeTableCell) tableColumn.getCellFactory().call(tableColumn);
 
-        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTableColumn(tableColumn);
         cell.updateTreeTableView(tableColumn.getTreeTableView());
 
         return cell;
@@ -321,7 +315,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected void updateCell(TreeTableCell<T, ?> cell, TreeTableRow<T> row) {
-        cell.updateTreeTableRow(row);
+        cell.updateTableRow(row);
     }
 
     /** {@inheritDoc} */
@@ -331,21 +325,14 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected ObjectProperty<Node> graphicProperty() {
-        TreeTableRow<T> treeTableRow = getSkinnable();
-        if (treeTableRow == null) return null;
         if (treeItem == null) return null;
-
         return treeItem.graphicProperty();
     }
 
     private void updateTreeItem() {
-        if (treeItem != null) {
-            treeItem.graphicProperty().removeListener(graphicListener);
-        }
+        unregisterInvalidationListeners(graphicProperty());
         treeItem = getSkinnable().getTreeItem();
-        if (treeItem != null) {
-            treeItem.graphicProperty().addListener(graphicListener);
-        }
+        registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
     }
 
     private TreeTableView<T> getTreeTableView() {
@@ -403,8 +390,17 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         }
     }
 
+    // test-only
+    TreeTableViewSkin<T> getTableViewSkin() {
+        return treeTableViewSkin;
+    }
 
-    /***************************************************************************
+    // test-only
+    TreeItem<T> getTreeItem() {
+        return (TreeItem<T>) treeItem;
+    }
+
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

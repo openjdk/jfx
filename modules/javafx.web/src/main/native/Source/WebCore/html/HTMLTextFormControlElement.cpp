@@ -311,6 +311,12 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
         if (!isTextField())
             return;
 
+        // Double-check our connected state after the layout update.
+        if (!isConnected()) {
+            cacheSelection(start, end, direction);
+            return;
+        }
+
         // Double-check the state of innerTextElement after the layout.
         innerText = innerTextElement();
         auto* rendererTextControl = renderer();
@@ -534,12 +540,8 @@ bool HTMLTextFormControlElement::isInnerTextElementEditable() const
 
 void HTMLTextFormControlElement::updateInnerTextElementEditability()
 {
-    if (auto innerText = innerTextElement()) {
-        static MainThreadNeverDestroyed<const AtomString> plainTextOnlyName("plaintext-only", AtomString::ConstructFromLiteral);
-        static MainThreadNeverDestroyed<const AtomString> falseName("false", AtomString::ConstructFromLiteral);
-        const auto& value = isInnerTextElementEditable() ? plainTextOnlyName.get() : falseName.get();
-        innerText->setAttributeWithoutSynchronization(contenteditableAttr, value);
-    }
+    if (auto innerText = innerTextElement())
+        innerText->updateInnerTextElementEditability(isInnerTextElementEditable());
 }
 
 bool HTMLTextFormControlElement::lastChangeWasUserEdit() const
@@ -584,7 +586,7 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
 #if ENABLE(ACCESSIBILITY) && !PLATFORM(COCOA)
         if (textIsChanged && renderer()) {
             if (AXObjectCache* cache = document().existingAXObjectCache())
-                cache->postNotification(this, AXObjectCache::AXValueChanged, TargetObservableParent);
+                cache->postNotification(this, AXObjectCache::AXValueChanged, PostTarget::ObservableParent);
         }
 #endif
 

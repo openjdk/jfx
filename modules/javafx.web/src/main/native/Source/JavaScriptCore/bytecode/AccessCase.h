@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -108,6 +108,8 @@ public:
         InstanceOfHit,
         InstanceOfMiss,
         InstanceOfGeneric,
+        CheckPrivateBrand,
+        SetPrivateBrand,
         IndexedInt32Load,
         IndexedDoubleLoad,
         IndexedContiguousLoad,
@@ -154,6 +156,9 @@ public:
     static std::unique_ptr<AccessCase> createDelete(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure,
         Structure* newStructure);
 
+    static std::unique_ptr<AccessCase> createCheckPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure*);
+    static std::unique_ptr<AccessCase> createSetPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure* oldStructure, Structure* newStructure);
+
     static std::unique_ptr<AccessCase> fromStructureStubInfo(VM&, JSCell* owner, CacheableIdentifier, StructureStubInfo&);
 
     AccessType type() const { return m_type; }
@@ -162,7 +167,7 @@ public:
 
     Structure* structure() const
     {
-        if (m_type == Transition || m_type == Delete)
+        if (m_type == Transition || m_type == Delete || m_type == SetPrivateBrand)
             return m_structure->previousID();
         return m_structure.get();
     }
@@ -170,7 +175,7 @@ public:
 
     Structure* newStructure() const
     {
-        ASSERT(m_type == Transition || m_type == Delete);
+        ASSERT(m_type == Transition || m_type == Delete || m_type == SetPrivateBrand);
         return m_structure.get();
     }
 
@@ -275,9 +280,9 @@ private:
     template<typename Functor>
     void forEachDependentCell(VM&, const Functor&) const;
 
-    void visitAggregate(SlotVisitor&) const;
+    DECLARE_VISIT_AGGREGATE_WITH_MODIFIER(const);
     bool visitWeak(VM&) const;
-    bool propagateTransitions(SlotVisitor&) const;
+    template<typename Visitor> bool propagateTransitions(Visitor&) const;
 
     // FIXME: This only exists because of how AccessCase puts post-generation things into itself.
     // https://bugs.webkit.org/show_bug.cgi?id=156456

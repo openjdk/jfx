@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,6 @@ import com.sun.javafx.font.FontFileReader.Buffer;
 import static com.sun.javafx.font.PrismMetrics.*;
 
 public abstract class PrismFontFile implements FontResource, FontConstants {
-
-    private int fontInstallationType = -1; // unknown, 0=embedded, 1=system
 
     // TrueType fonts can have multiple names, most notably split up by
     // platform and locale. Whilst fonts that have different names for
@@ -117,6 +115,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     /* This is called only for fonts where a temp file was created
      */
+    @SuppressWarnings("removal")
     protected synchronized void disposeOnShutdown() {
         if (isCopy || isDecoded) {
             AccessController.doPrivileged(
@@ -155,13 +154,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return AA_GREYSCALE;
     }
 
-    public boolean isInstalledFont() {
-        if (fontInstallationType == -1) {
-            PrismFontFactory factory = PrismFontFactory.getFontFactory();
-            fontInstallationType = factory.isInstalledFont(filename) ? 1 : 0;
-        }
-        return fontInstallationType > 0;
-    }
 
 
     /* A TTC file resource is shared, so reference count and delete
@@ -227,6 +219,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             this.refKey = refKey;
         }
 
+        @SuppressWarnings("removal")
         public synchronized void dispose() {
             if (fileName != null) {
                 AccessController.doPrivileged(
@@ -1245,6 +1238,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             if (length >= 30) {
                 smetrics[STRIKETHROUGH_THICKNESS] = os_2.getShort(26) / upem;
                 smetrics[STRIKETHROUGH_OFFSET] = -os_2.getShort(28) / upem;
+                if (smetrics[STRIKETHROUGH_THICKNESS] < 0f) {
+                    smetrics[STRIKETHROUGH_THICKNESS] = 0.05f;
+                }
+                if (Math.abs(smetrics[STRIKETHROUGH_OFFSET]) > 2.0f) {
+                    smetrics[STRIKETHROUGH_OFFSET] = -0.4f;
+                }
             } else {
                 smetrics[STRIKETHROUGH_THICKNESS] = 0.05f;
                 smetrics[STRIKETHROUGH_OFFSET] = -0.4f;
@@ -1308,6 +1307,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             } else {
                 smetrics[UNDERLINE_OFFSET] = -postTable.getShort(8) / upem;
                 smetrics[UNDERLINE_THICKESS] = postTable.getShort(10) / upem;
+                if (smetrics[UNDERLINE_THICKESS] < 0f) {
+                    smetrics[UNDERLINE_THICKESS] = 0.05f;
+                }
+                if (Math.abs(smetrics[UNDERLINE_OFFSET]) > 2.0f) {
+                    smetrics[UNDERLINE_OFFSET] = 0.1f;
+                }
             }
             styleMetrics = smetrics;
         }

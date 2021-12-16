@@ -45,13 +45,13 @@ private:
     bool accessKeyAction(bool sendMouseEvents) final;
 
     // Overridden to update the hover/active state of the corresponding control.
-    void setActive(bool = true, bool pause = false) final;
-    void setHovered(bool = true) final;
+    void setActive(bool, bool pause, Style::InvalidationScope) final;
+    void setHovered(bool, Style::InvalidationScope) final;
 
     // Overridden to either click() or focus() the corresponding control.
     void defaultEventHandler(Event&) final;
 
-    void focus(bool restorePreviousSelection, FocusDirection) final;
+    void focus(SelectionRestorationMode, FocusDirection) final;
 
     bool isInteractiveContent() const final { return true; }
 };

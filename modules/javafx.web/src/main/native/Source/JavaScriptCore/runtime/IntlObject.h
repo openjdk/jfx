@@ -34,6 +34,8 @@ struct UFieldPositionIterator;
 
 namespace JSC {
 
+extern const uint8_t ducetWeights[128];
+
 enum class LocaleMatcher : uint8_t {
     Lookup,
     BestFit,
@@ -81,15 +83,17 @@ private:
 String defaultLocale(JSGlobalObject*);
 const HashSet<String>& intlAvailableLocales();
 const HashSet<String>& intlCollatorAvailableLocales();
+const HashSet<String>& intlSegmenterAvailableLocales();
 inline const HashSet<String>& intlDateTimeFormatAvailableLocales() { return intlAvailableLocales(); }
 inline const HashSet<String>& intlDisplayNamesAvailableLocales() { return intlAvailableLocales(); }
 inline const HashSet<String>& intlNumberFormatAvailableLocales() { return intlAvailableLocales(); }
 inline const HashSet<String>& intlPluralRulesAvailableLocales() { return intlAvailableLocales(); }
 inline const HashSet<String>& intlRelativeTimeFormatAvailableLocales() { return intlAvailableLocales(); }
+inline const HashSet<String>& intlListFormatAvailableLocales() { return intlAvailableLocales(); }
 
-TriState intlBooleanOption(JSGlobalObject*, JSValue options, PropertyName);
-String intlStringOption(JSGlobalObject*, JSValue options, PropertyName, std::initializer_list<const char*> values, const char* notFound, const char* fallback);
-unsigned intlNumberOption(JSGlobalObject*, JSValue options, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
+TriState intlBooleanOption(JSGlobalObject*, Optional<JSObject&> options, PropertyName);
+String intlStringOption(JSGlobalObject*, Optional<JSObject&> options, PropertyName, std::initializer_list<const char*> values, const char* notFound, const char* fallback);
+unsigned intlNumberOption(JSGlobalObject*, Optional<JSObject&> options, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
 unsigned intlDefaultNumberOption(JSGlobalObject*, JSValue, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
 Vector<char, 32> localeIDBufferForLanguageTag(const CString&);
 String languageTagForLocaleID(const char*, bool isImmortal = false);
@@ -110,6 +114,8 @@ String bestAvailableLocale(const HashSet<String>& availableLocales, const String
 template<typename Predicate> String bestAvailableLocale(const String& requestedLocale, Predicate);
 Vector<String> numberingSystemsForLocale(const String& locale);
 
+Vector<char, 32> canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(Vector<char, 32>&&);
+
 bool isUnicodeLocaleIdentifierType(StringView);
 
 bool isUnicodeLanguageSubtag(StringView);
@@ -117,6 +123,7 @@ bool isUnicodeScriptSubtag(StringView);
 bool isUnicodeRegionSubtag(StringView);
 bool isUnicodeVariantSubtag(StringView);
 bool isUnicodeLanguageId(StringView);
+bool isStructurallyValidLanguageTag(StringView);
 
 bool isWellFormedCurrencyCode(StringView);
 

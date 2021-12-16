@@ -97,7 +97,7 @@ public abstract class Labeled extends Control {
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -126,7 +126,7 @@ public abstract class Labeled extends Control {
         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(null, graphic);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -836,7 +836,7 @@ public abstract class Labeled extends Control {
         return builder.toString();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1080,8 +1080,9 @@ public abstract class Labeled extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

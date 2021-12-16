@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -531,11 +531,15 @@ public class StyleConverter<F, T> {
 
 
     /**
-     * The StringStore class
+     * The StringStore class.
      * @since 9
      */
     public static class StringStore {
         private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
+
+        /**
+         * List of strings of this {@code StringStore}.
+         */
         public final List<String> strings = new ArrayList<String>();
 
         /**
@@ -544,6 +548,11 @@ public class StyleConverter<F, T> {
         public StringStore() {
         }
 
+        /**
+         * Adds given string to the {@code StringStore}.
+         * @param s string to be added to the {@code StringStore}
+         * @return index at which the given string gets added
+         */
         public int addString(String s) {
             Integer index = stringMap.get(s);
             if (index == null) {
@@ -554,6 +563,11 @@ public class StyleConverter<F, T> {
             return index;
         }
 
+        /**
+         * Writes the {@code StringStore} strings to a given {@code DataOutputStream}.
+         * @param os {@code DataOutputStream} where the StringStore strings need to be written
+         * @throws IOException if writing to {@code DataOutputStream} fails
+         */
         public void writeBinary(DataOutputStream os) throws IOException {
             os.writeShort(strings.size());
             if (stringMap.containsKey(null)) {
@@ -570,6 +584,12 @@ public class StyleConverter<F, T> {
         }
 
         // TODO: this isn't parallel with writeBinary
+        /**
+         * Read the StringStore strings from a given {@code DataInputStream}.
+         * @param is {@code DataInputStream} from where StringStore strings need to be read from
+         * @return a {@code String} array constructed by reading {@code DataInputStream}
+         * @throws IOException if reading from {@code DataInputStream} fails
+         */
         public static String[] readBinary(DataInputStream is) throws IOException {
             int nStrings = is.readShort();
             int nullIndex = is.readShort();

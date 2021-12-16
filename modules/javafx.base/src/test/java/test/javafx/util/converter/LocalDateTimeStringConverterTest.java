@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,13 +57,10 @@ public class LocalDateTimeStringConverterTest {
     private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy HH mm ss");
     private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("yyyy MM dd hh mm ss a");
 
-    @BeforeClass
-    public static void initDefaultLocale() {
+    @Parameterized.Parameters public static Collection implementations() {
         // Tests require that default locale is en_US
         Locale.setDefault(Locale.US);
-    }
 
-    @Parameterized.Parameters public static Collection implementations() {
         return Arrays.asList(new Object[][] {
             { new LocalDateTimeStringConverter(),
               Locale.getDefault(Locale.Category.FORMAT), FormatStyle.SHORT, FormatStyle.SHORT,

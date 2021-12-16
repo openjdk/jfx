@@ -82,8 +82,8 @@
 #include <glib/gslist.h>
 #include <glib/gspawn.h>
 #include <glib/gstrfuncs.h>
-#include <glib/gstring.h>
 #include <glib/gstringchunk.h>
+#include <glib/gstring.h>
 #include <glib/gtestutils.h>
 #include <glib/gthread.h>
 #include <glib/gthreadpool.h>
@@ -93,15 +93,16 @@
 #include <glib/gtree.h>
 #include <glib/gtypes.h>
 #include <glib/gunicode.h>
-#include <glib/gurifuncs.h>
+#include <glib/guri.h>
 #include <glib/gutils.h>
 #ifndef GSTREAMER_LITE
 #include <glib/guuid.h>
 #endif // GSTREAMER_LITE
-#include <glib/gvarianttype.h>
 #include <glib/gvariant.h>
+#include <glib/gvarianttype.h>
 #include <glib/gversion.h>
 #include <glib/gversionmacros.h>
+
 #ifdef G_PLATFORM_WIN32
 #include <glib/gwin32.h>
 #endif

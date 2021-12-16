@@ -38,9 +38,7 @@
 
 namespace WebCore {
 
-using namespace VectorMath;
-
-const int InputBufferSize = 8 * 16384;
+constexpr int InputBufferSize = 8 * 16384;
 
 // We only process the leading portion of the impulse response in the real-time thread.  We don't exceed this length.
 // It turns out then, that the background thread has about 278msec of scheduling slop.
@@ -49,12 +47,12 @@ const int InputBufferSize = 8 * 16384;
 // This was found to be a good value on Mac OS X, and may work well on other platforms as well, assuming
 // the very rough scheduling latencies are similar on these time-scales.  Of course, this code may need to be
 // tuned for individual platforms if this assumption is found to be incorrect.
-const size_t RealtimeFrameLimit = 8192  + 4096; // ~278msec @ 44.1KHz
+constexpr size_t RealtimeFrameLimit = 8192  + 4096; // ~278msec @ 44.1KHz
 
-const size_t MinFFTSize = 128;
-const size_t MaxRealtimeFFTSize = 2048;
+constexpr size_t MinFFTSize = 128;
+constexpr size_t MaxRealtimeFFTSize = 2048;
 
-ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSliceSize, size_t maxFFTSize, size_t convolverRenderPhase, bool useBackgroundThreads)
+ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSliceSize, size_t maxFFTSize, size_t convolverRenderPhase, bool useBackgroundThreads, float scale)
     : m_impulseResponseLength(impulseResponse->length())
     , m_accumulationBuffer(impulseResponse->length() + renderSliceSize)
     , m_inputBuffer(InputBufferSize)
@@ -94,7 +92,7 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
 
         bool useDirectConvolver = !stageOffset;
 
-        auto stage = makeUnique<ReverbConvolverStage>(response, totalResponseLength, reverbTotalLatency, stageOffset, stageSize, fftSize, renderPhase, renderSliceSize, &m_accumulationBuffer, useDirectConvolver);
+        auto stage = makeUnique<ReverbConvolverStage>(response, totalResponseLength, reverbTotalLatency, stageOffset, stageSize, fftSize, renderPhase, renderSliceSize, &m_accumulationBuffer, scale, useDirectConvolver);
 
         bool isBackgroundStage = false;
 
@@ -135,7 +133,7 @@ ReverbConvolver::~ReverbConvolver()
 
         // Wake up thread so it can return
         {
-            auto locker = holdLock(m_backgroundThreadMutex);
+            auto locker = holdLock(m_backgroundThreadLock);
             m_moreInputBuffered = true;
             m_backgroundThreadConditionVariable.notifyOne();
         }
@@ -150,7 +148,7 @@ void ReverbConvolver::backgroundThreadEntry()
         // Wait for realtime thread to give us more input
         m_moreInputBuffered = false;
         {
-            std::unique_lock<Lock> lock(m_backgroundThreadMutex);
+            std::unique_lock<Lock> lock(m_backgroundThreadLock);
 
             m_backgroundThreadConditionVariable.wait(lock, [this] { return m_moreInputBuffered || m_wantsToExit; });
         }
@@ -204,8 +202,8 @@ void ReverbConvolver::process(const AudioChannel* sourceChannel, AudioChannel* d
     // signal from time to time, since we'll get to it the next time we're called.  We're called repeatedly
     // and frequently (around every 3ms).  The background thread is processing well into the future and has a considerable amount of
     // leeway here...
-    std::unique_lock<Lock> lock(m_backgroundThreadMutex, std::try_to_lock);
-    if (!lock.owns_lock())
+    auto locker = tryHoldLock(m_backgroundThreadLock);
+    if (!locker)
         return;
 
     m_moreInputBuffered = true;

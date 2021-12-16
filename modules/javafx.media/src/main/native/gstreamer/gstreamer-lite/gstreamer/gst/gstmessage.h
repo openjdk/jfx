@@ -37,7 +37,9 @@ typedef struct _GstMessage GstMessage;
  * flushing seek in the pipeline, which will undo the EOS state again.
  * @GST_MESSAGE_ERROR: an error occurred. When the application receives an error
  * message it should stop playback of the pipeline and not assume that more
- * data will be played.
+ * data will be played. It is possible to specify a redirection url to the error
+ * messages by setting a `redirect-location` field into the error message, application
+ * or high level bins might use the information as required.
  * @GST_MESSAGE_WARNING: a warning occurred.
  * @GST_MESSAGE_INFO: an info message occurred
  * @GST_MESSAGE_TAG: a tag was found.
@@ -121,6 +123,9 @@ typedef struct _GstMessage GstMessage;
  *     response is received with a non-HTTP URL inside. (Since: 1.10)
  * @GST_MESSAGE_DEVICE_CHANGED: Message indicating a #GstDevice was changed
  *     a #GstDeviceProvider (Since: 1.16)
+ * @GST_MESSAGE_INSTANT_RATE_REQUEST: Message sent by elements to request the
+ *     running time from the pipeline when an instant rate change should
+ *     be applied (which may be in the past when the answer arrives). (Since: 1.18)
  * @GST_MESSAGE_ANY: mask for all of the above messages.
  *
  * The different message types that are available.
@@ -174,6 +179,7 @@ typedef enum
   GST_MESSAGE_STREAMS_SELECTED  = GST_MESSAGE_EXTENDED + 5,
   GST_MESSAGE_REDIRECT          = GST_MESSAGE_EXTENDED + 6,
   GST_MESSAGE_DEVICE_CHANGED    = GST_MESSAGE_EXTENDED + 7,
+  GST_MESSAGE_INSTANT_RATE_REQUEST = GST_MESSAGE_EXTENDED + 8,
   GST_MESSAGE_ANY               = (gint) (0xffffffff)
 } GstMessageType;
 
@@ -360,47 +366,20 @@ const gchar*    gst_message_type_get_name       (GstMessageType type);
 GST_API
 GQuark          gst_message_type_to_quark       (GstMessageType type);
 
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 /* refcounting */
-/**
- * gst_message_ref:
- * @msg: the message to ref
- *
- * Convenience macro to increase the reference count of the message.
- *
- * Returns: @msg (for convenience when doing assignments)
- */
 static inline GstMessage *
 gst_message_ref (GstMessage * msg)
 {
   return (GstMessage *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (msg));
 }
 
-/**
- * gst_message_unref:
- * @msg: the message to unref
- *
- * Convenience macro to decrease the reference count of the message, possibly
- * freeing it.
- */
 static inline void
 gst_message_unref (GstMessage * msg)
 {
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (msg));
 }
 
-/**
- * gst_clear_message: (skip)
- * @msg_ptr: a pointer to a #GstMessage reference
- *
- * Clears a reference to a #GstMessage.
- *
- * @msg_ptr must not be %NULL.
- *
- * If the reference is %NULL then this function does nothing. Otherwise, the
- * reference count of the message is decreased and the pointer is set to %NULL.
- *
- * Since: 1.16
- */
 static inline void
 gst_clear_message (GstMessage ** msg_ptr)
 {
@@ -408,21 +387,25 @@ gst_clear_message (GstMessage ** msg_ptr)
 }
 
 /* copy message */
-/**
- * gst_message_copy:
- * @msg: the message to copy
- *
- * Creates a copy of the message. Returns a copy of the message.
- *
- * Returns: (transfer full): a new copy of @msg.
- *
- * MT safe
- */
+static inline GstMessage * gst_message_copy (const GstMessage * msg);
 static inline GstMessage *
 gst_message_copy (const GstMessage * msg)
 {
   return GST_MESSAGE_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (msg)));
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstMessage *  gst_message_ref   (GstMessage * msg);
+
+GST_API
+void          gst_message_unref (GstMessage * msg);
+
+GST_API
+void          gst_clear_message (GstMessage ** msg_ptr);
+
+GST_API
+GstMessage *  gst_message_copy  (const GstMessage * msg);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /**
  * gst_message_is_writable:
@@ -444,50 +427,30 @@ gst_message_copy (const GstMessage * msg)
  * MT safe
  */
 #define         gst_message_make_writable(msg)  GST_MESSAGE_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (msg)))
-/**
- * gst_message_replace:
- * @old_message: (inout) (transfer full) (nullable): pointer to a
- *     pointer to a #GstMessage to be replaced.
- * @new_message: (allow-none) (transfer none): pointer to a #GstMessage that will
- *     replace the message pointed to by @old_message.
- *
- * Modifies a pointer to a #GstMessage to point to a different #GstMessage. The
- * modification is done atomically (so this is useful for ensuring thread safety
- * in some cases), and the reference counts are updated appropriately (the old
- * message is unreffed, the new one is reffed).
- *
- * Either @new_message or the #GstMessage pointed to by @old_message may be %NULL.
- *
- * Returns: %TRUE if @new_message was different from @old_message
- */
+
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
+static inline gboolean gst_message_replace (GstMessage **old_message, GstMessage *new_message);
 static inline gboolean
 gst_message_replace (GstMessage **old_message, GstMessage *new_message)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_message, (GstMiniObject *) new_message);
 }
 
-/**
- * gst_message_take:
- * @old_message: (inout) (transfer full): pointer to a pointer to a #GstMessage
- *     to be replaced.
- * @new_message: (transfer full) (allow-none): pointer to a #GstMessage that
- *     will replace the message pointed to by @old_message.
- *
- * Modifies a pointer to a #GstMessage to point to a different #GstMessage. This
- * function is similar to gst_message_replace() except that it takes ownership
- * of @new_message.
- *
- * Returns: %TRUE if @new_message was different from @old_message
- *
- * Since: 1.16
- */
 static inline gboolean
 gst_message_take (GstMessage **old_message, GstMessage *new_message)
 {
   return gst_mini_object_take ((GstMiniObject **) old_message,
       (GstMiniObject *) new_message);
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+gboolean  gst_message_replace                   (GstMessage ** old_message,
+                                                 GstMessage * new_message);
 
+GST_API
+gboolean  gst_message_take                      (GstMessage ** old_message,
+                                                 GstMessage * new_message);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /* custom messages */
 
@@ -873,9 +836,14 @@ void            gst_message_parse_redirect_entry     (GstMessage * message, gsiz
 GST_API
 gsize           gst_message_get_num_redirect_entries (GstMessage * message);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+/* INSTANT_RATE_REQUEST */
+
+GST_API
+GstMessage *    gst_message_new_instant_rate_request   (GstObject * src, gdouble rate_multiplier) G_GNUC_MALLOC;
+GST_API
+void            gst_message_parse_instant_rate_request (GstMessage * message, gdouble * rate_multiplier);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstMessage, gst_message_unref)
-#endif
 
 G_END_DECLS
 

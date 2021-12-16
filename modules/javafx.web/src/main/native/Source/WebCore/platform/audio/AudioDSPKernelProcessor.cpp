@@ -41,7 +41,6 @@ namespace WebCore {
 // setNumberOfChannels() may later be called if the object is not yet in an "initialized" state.
 AudioDSPKernelProcessor::AudioDSPKernelProcessor(float sampleRate, unsigned numberOfChannels)
     : AudioProcessor(sampleRate, numberOfChannels)
-    , m_hasJustReset(true)
 {
 }
 
@@ -90,6 +89,15 @@ void AudioDSPKernelProcessor::process(const AudioBus* source, AudioBus* destinat
         m_kernels[i]->process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
 }
 
+void AudioDSPKernelProcessor::processOnlyAudioParams(size_t framesToProcess)
+{
+    if (!isInitialized())
+        return;
+
+    for (unsigned i = 0; i < m_kernels.size(); ++i)
+        m_kernels[i]->processOnlyAudioParams(framesToProcess);
+}
+
 // Resets filter state
 void AudioDSPKernelProcessor::reset()
 {
@@ -124,6 +132,12 @@ double AudioDSPKernelProcessor::latencyTime() const
 {
     // It is expected that all the kernels have the same latencyTime.
     return !m_kernels.isEmpty() ? m_kernels.first()->latencyTime() : 0;
+}
+
+bool AudioDSPKernelProcessor::requiresTailProcessing() const
+{
+    // Always return true even if the tail time and latency might both be zero.
+    return true;
 }
 
 } // namespace WebCore

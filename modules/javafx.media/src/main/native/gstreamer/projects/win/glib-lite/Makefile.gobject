@@ -39,7 +39,8 @@ INCLUDES = -I$(SRCBASE_DIR) \
            -I$(SRCBASE_DIR)/glib \
            -I$(SRCBASE_DIR)/gobject \
            -I$(SRCBASE_DIR)/build/win32/vs100 \
-	  -I$(LIBFFI_DIR)/include
+	  -I$(LIBFFI_DIR)/include \
+	  -I$(LIBFFI_DIR)/src/x86
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \

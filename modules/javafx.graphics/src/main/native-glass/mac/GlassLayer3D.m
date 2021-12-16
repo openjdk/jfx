@@ -26,7 +26,6 @@
 #import "GlassLayer3D.h"
 
 #import "GlassMacros.h"
-#import "RemoteLayerSupport.h"
 #import "GlassScreen.h"
 
 //#define VERBOSE
@@ -40,31 +39,6 @@
 
 static NSArray *allModes = nil;
 
-- (void)_connectToRemoteServer:(NSString*)serverName
-{
-    // SAK: Note that RemoteLayerGetServerPort can return 0/MACH_PORT_NULL. This is
-    // not an error, and means that JRSRenderServer is tracking the port for us.
-    // Yes, this is odd, and I've asked Apple to clarify it for us.
-    self->_serverPort = RemoteLayerGetServerPort(serverName);
-    self->_remoteLayer = RemoteLayerGetRemoteFromLocal(self->_serverPort, self);
-    if (self->_remoteLayer != nil)
-    {
-        self->_remoteLayerID = RemoteLayerGetIdForRemote(self->_remoteLayer);
-        if (self->_remoteLayerID != 0)
-        {
-            [self->_remoteLayer retain];
-        }
-        else
-        {
-            NSLog(@"RemoteLayer ERROR: 0 _remoteLayerID for serverName:%@", serverName);
-        }
-    }
-    else
-    {
-        NSLog(@"RemoteLayer ERROR: nil remoteLayer for serverName:%@", serverName);
-    }
-}
-
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
@@ -74,10 +48,6 @@ static NSArray *allModes = nil;
     self = [super init];
     if (self != nil)
     {
-        self->_serverPort = MACH_PORT_NULL;
-        self->_remoteLayer = nil;
-        self->_remoteLayerID = 0;
-
         self->_painterOffscreen = [[GlassOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
         self->_glassOffscreen = [[GlassOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
         [self->_glassOffscreen setLayer:self];
@@ -118,9 +88,6 @@ static NSArray *allModes = nil;
 
     [self->_painterOffscreen release];
     self->_painterOffscreen = nil;
-
-    [self->_remoteLayer dealloc];
-    self->_remoteLayer = nil;
 
     [super dealloc];
 }
@@ -198,36 +165,6 @@ static NSArray *allModes = nil;
                                                            withObject:nil
                                                         waitUntilDone:NO
                                                                 modes:allModes];
-    }
-}
-
-- (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName
-{
-    if (self->_remoteLayerID == 0)
-    {
-        Class JRSRemoteLayer_class = objc_getClass("JRSRenderServer");
-        if (JRSRemoteLayer_class != nil)
-        {
-            [self _connectToRemoteServer:serverName];
-        }
-        else
-        {
-            NSLog(@"GlassLayer3D: no remote CALayer server support detected!");
-            // we're running on JDK without remote CALayer server (JRSRemoteLayer.h) support
-        }
-    }
-    return self->_remoteLayerID;
-}
-
-- (void)hostRemoteLayerId:(uint32_t)layerId
-{
-    if (layerId > 0)
-    {
-        RemoteLayerHostRemoteIdInLocal(layerId, self);
-    }
-    else
-    {
-        NSLog(@"GlassLayer3D: invalid remote layer id!");
     }
 }
 

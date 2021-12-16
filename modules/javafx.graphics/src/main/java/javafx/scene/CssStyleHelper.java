@@ -24,6 +24,7 @@
  */
 package javafx.scene;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -176,7 +177,7 @@ final class CssStyleHelper {
 
         helper.cacheContainer = new CacheContainer(node, styleMap, depth);
 
-        helper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+        helper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
         // If this node had a style helper, then reset properties to their initial value
         // since the style map might now be different
@@ -209,7 +210,7 @@ final class CssStyleHelper {
                 // TODO : check why calling createStyleHelper(parentNode) does not work here?
                 if (parentNode.styleHelper == null) {
                     parentNode.styleHelper = new CssStyleHelper();
-                    parentNode.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(parentNode) ;
+                    parentNode.styleHelper.firstStyleableAncestor = new WeakReference(findFirstStyleableAncestor(parentNode)) ;
                 }
                 parentNode.styleHelper.triggerStates.addAll(triggerState);
 
@@ -232,8 +233,8 @@ final class CssStyleHelper {
             if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
         }
 
-        Styleable styleableParent = firstStyleableAncestor;
-        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor);
+        Styleable styleableParent = firstStyleableAncestor.get();
+        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor.get());
 
         if (parentStyleHelper != null) {
             return parentStyleHelper.isUserSetFont(styleableParent);
@@ -300,7 +301,7 @@ final class CssStyleHelper {
         }
 
         //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
-        node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+        node.styleHelper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
         // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
         // Under this condition, there are no styles for this node _and_ no styles inherit.
@@ -322,7 +323,7 @@ final class CssStyleHelper {
             return true;
         }
 
-        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor);
+        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor.get());
 
         if (parentHelper != null && parentHelper.cacheContainer != null) {
 
@@ -349,9 +350,11 @@ final class CssStyleHelper {
         return false;
     }
 
+    private static final WeakReference<Node> EMPTY_NODE = new WeakReference<>(null);
+
     /* This is the first Styleable parent (of Node this StyleHelper belongs to)
      * having a valid StyleHelper */
-    private Node firstStyleableAncestor;
+    private WeakReference<Node> firstStyleableAncestor = EMPTY_NODE;
 
     private CacheContainer cacheContainer;
 
@@ -450,12 +453,15 @@ final class CssStyleHelper {
         private boolean forceSlowpath = false;
     }
 
+    private boolean resetInProgress = false;
+
     private void resetToInitialValues(final Styleable styleable) {
 
         if (cacheContainer == null ||
                 cacheContainer.cssSetProperties == null ||
                 cacheContainer.cssSetProperties.isEmpty()) return;
 
+        resetInProgress = true;
         // RT-31714 - make a copy of the entry set and clear the cssSetProperties immediately.
         Set<Entry<CssMetaData, CalculatedValue>> entrySet = new HashSet<>(cacheContainer.cssSetProperties.entrySet());
         cacheContainer.cssSetProperties.clear();
@@ -471,6 +477,7 @@ final class CssStyleHelper {
                 styleableProperty.applyStyle(calculatedValue.getOrigin(), calculatedValue.getValue());
             }
         }
+        resetInProgress = false;
     }
 
 
@@ -586,9 +593,20 @@ final class CssStyleHelper {
     // Any modifications to the method transitionToState() should be applied here if needed.
     void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
 
-        if (transitionStateInProgress) {
-            // If transitionToState() is being executed for the current control then all the css properties will get
-            // calculated there, and so we need to do anything here.
+        if (transitionStateInProgress || resetInProgress) {
+            // It is not required to recalculate the relative sized properties,
+            // 1. [transitionStateInProgress]: if transitionToState() is being executed for the current control then all
+            //    the css properties will get calculated there, OR
+            // 2. [resetInProgress]: if resetToInitialValues() is being executed, which sets font to default font.
+            //    The css style set by user if any is applied post this reset which calls
+            //    recalculateRelativeSizeProperties() again.
+            //    JDK-8266966: StyleManager.styleMapList stores the StyleMaps of nodes using an id as key.
+            //    Each node stores this id in CssStyleHelper.CacheContainer.smapId
+            //    CssStyleHelper.getStyleMap(node) gets a StyleMap from StyleManager.styleMapList by using the
+            //    CssStyleHelper.CacheContainer.smapId as key.
+            //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
+            //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
+
             return;
         }
         if (cacheContainer == null) {
@@ -1221,7 +1239,7 @@ final class CssStyleHelper {
             final Styleable styleable,
             final String property) {
 
-        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor;
+        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
         CssStyleHelper parentStyleHelper = getStyleHelper((Node) parent);
 
         if (parent != null && parentStyleHelper != null) {
@@ -1266,7 +1284,7 @@ final class CssStyleHelper {
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
 
-                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor;
+                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
                 CssStyleHelper parentStyleHelper = getStyleHelper((Node) styleableParent);
 
                 if (styleableParent == null || parentStyleHelper == null) {

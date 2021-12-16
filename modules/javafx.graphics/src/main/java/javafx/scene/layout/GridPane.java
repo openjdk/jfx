@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -268,7 +268,7 @@ public class GridPane extends Pane {
      */
     public static final int REMAINING = Integer.MAX_VALUE;
 
-    /********************************************************************
+    /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
     private static final String MARGIN_CONSTRAINT = "gridpane-margin";
@@ -722,7 +722,7 @@ public class GridPane extends Pane {
         return array;
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
@@ -2393,7 +2393,7 @@ public class GridPane extends Pane {
         return new double[][] {currentWidths.asArray(), currentHeights.asArray()};
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -2483,8 +2483,9 @@ public class GridPane extends Pane {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

@@ -38,12 +38,15 @@ namespace JSC {
 
 const ClassInfo WebAssemblyLinkErrorConstructor::s_info = { "Function", &Base::s_info, &constructorTableWebAssemblyLinkError, nullptr, CREATE_METHOD_TABLE(WebAssemblyLinkErrorConstructor) };
 
+static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyLinkError);
+static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyLinkError);
+
 /* Source for WebAssemblyLinkErrorConstructor.lut.h
  @begin constructorTableWebAssemblyLinkError
  @end
  */
 
-static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyLinkError(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyLinkError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -58,11 +61,11 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyLinkError(JSGlobalObje
     RELEASE_AND_RETURN(scope, JSValue::encode(JSWebAssemblyLinkError::create(globalObject, vm, structure, message)));
 }
 
-static EncodedJSValue JSC_HOST_CALL callJSWebAssemblyLinkError(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyLinkError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue message = callFrame->argument(0);
     Structure* errorStructure = globalObject->webAssemblyLinkErrorStructure();
-    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, message, nullptr, TypeNothing, false));
+    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, message, nullptr, TypeNothing, ErrorType::Error, false));
 }
 
 WebAssemblyLinkErrorConstructor* WebAssemblyLinkErrorConstructor::create(VM& vm, Structure* structure, WebAssemblyLinkErrorPrototype* thisPrototype)
@@ -79,9 +82,8 @@ Structure* WebAssemblyLinkErrorConstructor::createStructure(VM& vm, JSGlobalObje
 
 void WebAssemblyLinkErrorConstructor::finishCreation(VM& vm, WebAssemblyLinkErrorPrototype* prototype)
 {
-    Base::finishCreation(vm, "LinkError"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "LinkError"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 WebAssemblyLinkErrorConstructor::WebAssemblyLinkErrorConstructor(VM& vm, Structure* structure)

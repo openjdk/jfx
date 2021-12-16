@@ -61,7 +61,7 @@ void ScrollingTreeOverflowScrollingNodeNicosia::commitStateAfterChildren(const S
     ScrollingTreeOverflowScrollingNode::commitStateAfterChildren(stateNode);
 
     const auto& overflowStateNode = downcast<ScrollingStateOverflowScrollingNode>(stateNode);
-    if (overflowStateNode.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition)) {
+    if (overflowStateNode.hasChangedProperty(ScrollingStateNode::Property::RequestedScrollPosition)) {
         stopScrollAnimations();
         const auto& requestedScrollData = overflowStateNode.requestedScrollData();
         scrollTo(requestedScrollData.scrollPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
@@ -80,7 +80,7 @@ FloatPoint ScrollingTreeOverflowScrollingNodeNicosia::adjustedScrollPosition(con
 
 void ScrollingTreeOverflowScrollingNodeNicosia::repositionScrollingLayers()
 {
-    auto* scrollLayer = static_cast<Nicosia::PlatformLayer*>(scrolledContentsLayer());
+    auto* scrollLayer = static_cast<Nicosia::PlatformLayer*>(scrollContainerLayer());
     ASSERT(scrollLayer);
     auto& compositionLayer = downcast<Nicosia::CompositionLayer>(*scrollLayer);
 
@@ -148,9 +148,9 @@ void ScrollingTreeOverflowScrollingNodeNicosia::ensureScrollAnimationSmooth()
 }
 #endif
 
-WheelEventHandlingResult ScrollingTreeOverflowScrollingNodeNicosia::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
+WheelEventHandlingResult ScrollingTreeOverflowScrollingNodeNicosia::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
 {
-    if (!canHandleWheelEvent(wheelEvent))
+    if (!canHandleWheelEvent(wheelEvent, eventTargeting))
         return WheelEventHandlingResult::unhandled();
 
 #if ENABLE(KINETIC_SCROLLING)
@@ -226,14 +226,6 @@ void ScrollingTreeOverflowScrollingNodeNicosia::stopScrollAnimations()
 #if ENABLE(SMOOTH_SCROLLING)
     if (m_smoothAnimation)
         m_smoothAnimation->stop();
-#endif
-}
-
-void ScrollingTreeOverflowScrollingNodeNicosia::stopScrollAnimations()
-{
-#if ENABLE(KINETIC_SCROLLING)
-    m_kineticAnimation->stop();
-    m_kineticAnimation->clearScrollHistory();
 #endif
 }
 

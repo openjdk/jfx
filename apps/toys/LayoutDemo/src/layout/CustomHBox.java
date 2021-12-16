@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,8 +176,8 @@ public class CustomHBox extends HBox {
 //    @Override protected void layoutChildren() {
 //        List<Node> sortedChidlren = new ArrayList<>(getChildren());
 //        Collections.sort(sortedChidlren, (c1, c2)
-//                -> new Double(c2.prefHeight(-1)).compareTo(
-//                        new Double(c1.prefHeight(-1))));
+//                -> Double.valueOf(c2.prefHeight(-1)).compareTo(
+//                        Double.valueOf(c1.prefHeight(-1))));
 //        double currentX = pad;
 //        for (Node c : sortedChidlren) {
 //            double width = c.prefWidth(-1);

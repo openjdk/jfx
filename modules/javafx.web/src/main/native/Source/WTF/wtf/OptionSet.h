@@ -193,6 +193,14 @@ public:
         m_storage &= ~optionSet.m_storage;
     }
 
+    constexpr void set(OptionSet optionSet, bool value)
+    {
+        if (value)
+            add(optionSet);
+        else
+            remove(optionSet);
+    }
+
     constexpr bool hasExactlyOneBitSet() const
     {
         return m_storage && !(m_storage & (m_storage - 1));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -648,6 +648,41 @@ public class MapPropertyBaseTest {
         assertTrue(property.isBound());
         assertEquals(0, property.counter);
         invalidationListener.check(null, 0);
+    }
+
+    @Test
+    public void testRebind_Identity() {
+        final MapProperty<Object, Object> v1 = new SimpleMapProperty<>(FXCollections.observableHashMap());
+        final MapProperty<Object, Object> v2 = new SimpleMapProperty<>(FXCollections.observableHashMap());
+        attachMapChangeListener();
+
+        // bind
+        property.bind(v1);
+        property.check(1);
+        mapChangeListener.clear();
+
+        // rebind to same
+        property.bind(v1);
+        property.check(0);
+        mapChangeListener.check0();
+
+        // rebind to other, without explicitly unbinding
+        property.bind(v2);
+        property.check(1);
+        mapChangeListener.clear();
+
+        v2.put("One", "1");
+        mapChangeListener.assertAdded(MockMapObserver.Tuple.tup("One", "1"));
+        mapChangeListener.clear();
+
+        v2.put("Two", "2");
+        mapChangeListener.assertAdded(MockMapObserver.Tuple.tup("Two", "2"));
+        mapChangeListener.clear();
+
+        property.check(4);
+        assertTrue(property.isBound());
+        assertEquals(2, property.size());
+        assertEquals("MapProperty [bound, value: {One=1, Two=2}]", property.toString());
     }
 
     @Test

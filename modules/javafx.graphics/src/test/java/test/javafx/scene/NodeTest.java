@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import javafx.scene.effect.BlendMode;
 import test.javafx.scene.shape.TestUtils;
 import test.javafx.scene.shape.CircleTest;
 import com.sun.javafx.geom.PickRay;
@@ -474,7 +475,7 @@ public class NodeTest {
 
         v.set(value);
         NodeTest.syncNode(node);
-        assertTrue(numbersEquals(new Integer(value),
+        assertTrue(numbersEquals(value,
                 (Number)TestUtils.getObjectValue(node, pgPropertyName)));
     }
 
@@ -519,7 +520,7 @@ public class NodeTest {
 
         v.set(value);
         NodeTest.syncNode(node);
-        assertTrue(numbersEquals(new Double(value),
+        assertTrue(numbersEquals(value,
                 (Number)TestUtils.getObjectValue(node, pgPropertyName)));
     }
 
@@ -1088,6 +1089,34 @@ public class NodeTest {
         node.visibleProperty().set(false);
         assertFalse(node.isVisible());
         assertFalse(node.visibleProperty().get());
+    }
+
+    @Test
+    public void testDefaultValueForManagedIsTrueWhenReadFromGetter() {
+        final Node node = new Rectangle();
+        assertTrue(node.isManaged());
+    }
+
+    @Test
+    public void testDefaultValueForManagedIsTrueWhenReadFromProperty() {
+        final Node node = new Rectangle();
+        assertTrue(node.managedProperty().get());
+    }
+
+    @Test
+    public void settingManagedThroughSetterShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.setManaged(false);
+        assertFalse(node.isManaged());
+        assertFalse(node.managedProperty().get());
+    }
+
+    @Test
+    public void settingManagedThroughPropertyShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.managedProperty().set(false);
+        assertFalse(node.isManaged());
+        assertFalse(node.managedProperty().get());
     }
 
     @Test
@@ -1892,6 +1921,22 @@ public class NodeTest {
         stage.setScene(scene);
         stage.show();
         assertEquals(100.0, scene.getWidth(), 0.00001);
+    }
+
+    @Test public void managedSetFromCSS() {
+        final AnchorPane node = new AnchorPane();
+        node.setStyle("-fx-managed: false");
+        Scene s = new Scene(node);
+        node.applyCss();
+        assertFalse(node.isManaged());
+    }
+
+    @Test public void testBlendModeSetFromCSS() {
+        final AnchorPane node = new AnchorPane();
+        node.setStyle("-fx-blend-mode: red");
+        new Scene(node);
+        node.applyCss();
+        assertEquals(BlendMode.RED, node.getBlendMode());
     }
 
     private Node createTestRect() {

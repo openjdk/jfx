@@ -834,7 +834,7 @@ g_node_depth_traverse_level (GNode             *node,
  *              its grandchildren, and so on. Note that this is less
  *              efficient than the other orders.
  *
- * Specifies the type of traveral performed by g_tree_traverse(),
+ * Specifies the type of traversal performed by g_tree_traverse(),
  * g_node_traverse() and g_node_find(). The different orders are
  * illustrated here:
  * - In order: A, B, C, D, E, F, G, H, I

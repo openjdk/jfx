@@ -152,6 +152,9 @@ public abstract class PopupWindow extends Window {
     private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
     private TreeShowingExpression treeShowingExpression;
 
+    /**
+     * Constructor for subclasses to call.
+     */
     public PopupWindow() {
         final Pane popupRoot = new Pane();
         popupRoot.setBackground(Background.EMPTY);
@@ -509,6 +512,7 @@ public abstract class PopupWindow extends Window {
             // Setup the peer
             StageStyle popupStyle;
             try {
+                @SuppressWarnings("removal")
                 final SecurityManager securityManager =
                         System.getSecurityManager();
                 if (securityManager != null) {

@@ -28,7 +28,9 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "WasmModuleInformation.h"
 #include "WasmOps.h"
+#include "WasmParser.h"
 #include "WasmSectionParser.h"
 #include "WasmSignatureInlines.h"
 #include <wtf/Optional.h>
@@ -79,7 +81,7 @@ auto StreamingParser::parseModuleHeader(Vector<uint8_t>&& data) -> State
 {
     ASSERT(data.size() == moduleHeaderSize);
     dataLogLnIf(WasmStreamingParserInternal::verbose, "header validation");
-    WASM_PARSER_FAIL_IF(data[0] != '\0' || data[1] != 'a' || data[2] != 's' || data[3] != 'm', "modules doesn't start with '\\0asm'");
+    WASM_PARSER_FAIL_IF(data[0] != '\0' || data[1] != 'a' || data[2] != 's' || data[3] != 'm', "module doesn't start with '\\0asm'");
     uint32_t versionNumber = WTF::unalignedLoad<uint32_t>(data.data() + 4);
     WASM_PARSER_FAIL_IF(versionNumber != expectedVersionNumber, "unexpected version number ", versionNumber, " expected ", expectedVersionNumber);
     return State::SectionID;

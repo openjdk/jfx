@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,12 +65,15 @@ struct OpcodeGroupInitializer {
 { groupIndex, groupClass::mask, groupClass::pattern, groupClass::format }
 
 static const OpcodeGroupInitializer opcodeGroupList[] = {
+    OPCODE_GROUP_ENTRY(0x08, A64DOpcodeCAS),
     OPCODE_GROUP_ENTRY(0x08, A64DOpcodeLoadStoreRegisterPair),
     OPCODE_GROUP_ENTRY(0x08, A64DOpcodeLoadStoreExclusive),
     OPCODE_GROUP_ENTRY(0x09, A64DOpcodeLoadStoreRegisterPair),
     OPCODE_GROUP_ENTRY(0x0a, A64DOpcodeLogicalShiftedRegister),
     OPCODE_GROUP_ENTRY(0x0b, A64DOpcodeAddSubtractExtendedRegister),
     OPCODE_GROUP_ENTRY(0x0b, A64DOpcodeAddSubtractShiftedRegister),
+    OPCODE_GROUP_ENTRY(0x0c, A64DOpcodeLoadStoreRegisterPair),
+    OPCODE_GROUP_ENTRY(0x0d, A64DOpcodeLoadStoreRegisterPair),
     OPCODE_GROUP_ENTRY(0x11, A64DOpcodeAddSubtractImmediate),
     OPCODE_GROUP_ENTRY(0x12, A64DOpcodeMoveWide),
     OPCODE_GROUP_ENTRY(0x12, A64DOpcodeLogicalImmediate),
@@ -96,6 +99,8 @@ static const OpcodeGroupInitializer opcodeGroupList[] = {
     OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadStoreImmediate),
     OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadStoreRegisterOffset),
     OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadStoreAuthenticated),
+    OPCODE_GROUP_ENTRY(0x18, A64DOpcodeLoadAtomic),
+    OPCODE_GROUP_ENTRY(0x18, A64DOpcodeSwapAtomic),
     OPCODE_GROUP_ENTRY(0x19, A64DOpcodeLoadStoreUnsignedImmediate),
     OPCODE_GROUP_ENTRY(0x1a, A64DOpcodeConditionalSelect),
     OPCODE_GROUP_ENTRY(0x1a, A64DOpcodeDataProcessing1Source),
@@ -627,7 +632,7 @@ const char* A64OpcodeExceptionGeneration::format()
         return A64DOpcode::format();
 
     appendInstructionName(opname);
-    appendUnsignedImmediate(immediate16());
+    appendUnsignedHexImmediate(immediate16());
     return m_formatBuffer;
 }
 
@@ -1255,6 +1260,86 @@ const char* A64DOpcodeLoadStoreAuthenticated::format()
     return m_formatBuffer;
 }
 
+const char* const A64DOpcodeLoadAtomic::s_opNames[64] = {
+    "ldaddb", "ldaddlb", "ldaddab", "ldaddalb",
+    "ldaddh", "ldaddlh", "ldaddah", "ldaddalh",
+    "ldadd", "ldaddl", "ldadda", "ldaddal",
+    "ldadd", "ldaddl", "ldadda", "ldaddal",
+
+    "ldclrb", "ldclrlb", "ldclrab", "ldclralb",
+    "ldclrh", "ldclrlh", "ldclrah", "ldclralh",
+    "ldclr", "ldclrl", "ldclra", "ldclral",
+    "ldclr", "ldclrl", "ldclra", "ldclral",
+
+    "ldeorb", "ldeorlb", "ldeorab", "ldeoralb",
+    "ldeorh", "ldeorlh", "ldeorah", "ldeoralh",
+    "ldeor", "ldeorl", "ldeora", "ldeoral",
+    "ldeor", "ldeorl", "ldeora", "ldeoral",
+
+    "ldsetb", "ldsetlb", "ldsetab", "ldsetalb",
+    "ldseth", "ldsetlh", "ldsetah", "ldsetalh",
+    "ldset", "ldsetl", "ldseta", "ldsetal",
+    "ldset", "ldsetl", "ldseta", "ldsetal",
+};
+
+const char* A64DOpcodeLoadAtomic::format()
+{
+    const auto* name = opName();
+    if (!name)
+        return A64DOpcode::format();
+    appendInstructionName(name);
+    appendSPOrRegisterName(rs(), is64Bit());
+    appendSeparator();
+    appendSPOrRegisterName(rt(), is64Bit());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn(), is64Bit());
+    appendCharacter(']');
+    return m_formatBuffer;
+}
+
+const char* const A64DOpcodeSwapAtomic::s_opNames[16] = {
+    "swpb", "swplb", "swpab", "swpalb",
+    "swph", "swplh", "swpah", "swpalh",
+    "swp", "swpl", "swpa", "swpal",
+    "swp", "swpl", "swpa", "swpal",
+};
+
+const char* A64DOpcodeSwapAtomic::format()
+{
+    const auto* name = opName();
+    appendInstructionName(name);
+    appendSPOrRegisterName(rs(), is64Bit());
+    appendSeparator();
+    appendSPOrRegisterName(rt(), is64Bit());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn(), is64Bit());
+    appendCharacter(']');
+    return m_formatBuffer;
+}
+
+const char* const A64DOpcodeCAS::s_opNames[16] = {
+    "casb", "caslb", "casab", "casalb",
+    "cash", "caslh", "casah", "casalh",
+    "cas", "casl", "casa", "casal",
+    "cas", "casl", "casa", "casal",
+};
+
+const char* A64DOpcodeCAS::format()
+{
+    const auto* name = opName();
+    appendInstructionName(name);
+    appendSPOrRegisterName(rs(), is64Bit());
+    appendSeparator();
+    appendSPOrRegisterName(rt(), is64Bit());
+    appendSeparator();
+    appendCharacter('[');
+    appendSPOrRegisterName(rn(), is64Bit());
+    appendCharacter(']');
+    return m_formatBuffer;
+}
+
 const char* A64DOpcodeLoadStoreRegisterPair::opName()
 {
     if (!vBit() && lBit() && size() == 0x1)
@@ -1280,9 +1365,9 @@ const char* A64DOpcodeLoadStoreRegisterPair::format()
     appendInstructionName(thisOpName);
     unsigned offsetShift;
     if (vBit()) {
-        appendFPRegisterName(rt(), size());
+        appendFPRegisterName(rt(), size() + 2);
         appendSeparator();
-        appendFPRegisterName(rt2(), size());
+        appendFPRegisterName(rt2(), size() + 2);
         offsetShift = size() + 2;
     } else {
         if (!lBit())

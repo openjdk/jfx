@@ -95,7 +95,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) final { }
     void dispatchDidReachVisuallyNonEmptyState() final { }
 
-    Frame* dispatchCreatePage(const NavigationAction&) final { return nullptr; }
+    Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) final { return nullptr; }
     void dispatchShow() final { }
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String&, FramePolicyFunction&&) final { }
@@ -175,7 +175,6 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void didDetectXSS(const URL&, bool) final { }
     RefPtr<Frame> createFrame(const String&, HTMLFrameOwnerElement&) final;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) final;
-    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&, const Vector<String>&, const Vector<String>&) final;
 
     ObjectContentType objectContentType(const URL&, const String&) final { return ObjectContentType::None; }
     String overrideMediaType() const final { return { }; }

@@ -46,8 +46,16 @@ endif
 INCLUDES = -I$(SRCBASE_DIR) \
 	   -I$(SRCBASE_DIR)/glib \
 	   -I$(SRCBASE_DIR)/build/osx \
-	   -I$(LIBFFI_DIR)/include \
-	   -I$(LIBFFI_DIR)/include/mac/x64
+	   -I$(LIBFFI_DIR)/src \
+	   -I$(LIBFFI_DIR)/include
+
+ifeq ($(ARCH), arm64)
+INCLUDES += -I$(LIBFFI_DIR)/src/aarch64 \
+	    -I$(LIBFFI_DIR)/include/mac/aarch64
+else
+INCLUDES += -I$(LIBFFI_DIR)/src/x86 \
+	    -I$(LIBFFI_DIR)/include/mac/x64
+endif
 
 LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -Wl,-framework \
@@ -55,7 +63,8 @@ LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -liconv \
            -L$(BUILD_DIR) -lffi
 
-C_SOURCES = glib/garray.c \
+C_SOURCES = glib/garcbox.c \
+            glib/garray.c \
             glib/gasyncqueue.c \
             glib/gatomic.c \
             glib/gbacktrace.c \
@@ -122,7 +131,7 @@ C_SOURCES = glib/garray.c \
             glib/gunibreak.c \
             glib/gunidecomp.c \
             glib/guniprop.c \
-            glib/gurifuncs.c \
+            glib/guri.c \
             glib/gutf8.c \
             glib/gutils.c \
             glib/ghostutils.c \

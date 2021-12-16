@@ -63,6 +63,8 @@ public:
 
     AffineTransform baseTransform() const final { ASSERT(m_destinationGraphicsContext && m_copiedBuffer); return m_copiedBuffer->baseTransform(); }
     Image* copiedImage() const final;
+    void clearCopiedImage() const final;
+
     void replayDisplayList(GraphicsContext*) const;
 
     using RefCounted::ref;
@@ -77,7 +79,7 @@ private:
 
     std::unique_ptr<CanvasRenderingContext> m_context;
     mutable GraphicsContext* m_destinationGraphicsContext = nullptr;
-    mutable std::unique_ptr<ImageBuffer> m_copiedBuffer;
+    mutable RefPtr<ImageBuffer> m_copiedBuffer;
     mutable RefPtr<Image> m_copiedImage;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #if ENABLE(WEBGL)
 
 #include "WebGLRenderingContextBase.h"
+#include <JavaScriptCore/AbstractSlotVisitorInlines.h>
+#include <wtf/Locker.h>
 
 namespace WebCore {
 
@@ -39,17 +41,17 @@ WebGLVertexArrayObjectBase::WebGLVertexArrayObjectBase(WebGLRenderingContextBase
     m_vertexAttribState.resize(context.getMaxVertexAttribs());
 }
 
-void WebGLVertexArrayObjectBase::setElementArrayBuffer(WebGLBuffer* buffer)
+void WebGLVertexArrayObjectBase::setElementArrayBuffer(const AbstractLocker& locker, WebGLBuffer* buffer)
 {
     if (buffer)
         buffer->onAttached();
     if (m_boundElementArrayBuffer)
-        m_boundElementArrayBuffer->onDetached(context()->graphicsContextGL());
+        m_boundElementArrayBuffer->onDetached(locker, context()->graphicsContextGL());
     m_boundElementArrayBuffer = buffer;
 
 }
 
-void WebGLVertexArrayObjectBase::setVertexAttribState(GCGLuint index, GCGLsizei bytesPerElement, GCGLint size, GCGLenum type, GCGLboolean normalized, GCGLsizei stride, GCGLintptr offset, WebGLBuffer* buffer)
+void WebGLVertexArrayObjectBase::setVertexAttribState(const AbstractLocker& locker, GCGLuint index, GCGLsizei bytesPerElement, GCGLint size, GCGLenum type, GCGLboolean normalized, GCGLsizei stride, GCGLintptr offset, bool isInteger, WebGLBuffer* buffer)
 {
     GCGLsizei validatedStride = stride ? stride : bytesPerElement;
 
@@ -58,7 +60,7 @@ void WebGLVertexArrayObjectBase::setVertexAttribState(GCGLuint index, GCGLsizei 
     if (buffer)
         buffer->onAttached();
     if (state.bufferBinding)
-        state.bufferBinding->onDetached(context()->graphicsContextGL());
+        state.bufferBinding->onDetached(locker, context()->graphicsContextGL());
 
     state.bufferBinding = buffer;
     state.bytesPerElement = bytesPerElement;
@@ -68,19 +70,20 @@ void WebGLVertexArrayObjectBase::setVertexAttribState(GCGLuint index, GCGLsizei 
     state.stride = validatedStride;
     state.originalStride = stride;
     state.offset = offset;
+    state.isInteger = isInteger;
 }
 
-void WebGLVertexArrayObjectBase::unbindBuffer(WebGLBuffer& buffer)
+void WebGLVertexArrayObjectBase::unbindBuffer(const AbstractLocker& locker, WebGLBuffer& buffer)
 {
     if (m_boundElementArrayBuffer == &buffer) {
-        m_boundElementArrayBuffer->onDetached(context()->graphicsContextGL());
+        m_boundElementArrayBuffer->onDetached(locker, context()->graphicsContextGL());
         m_boundElementArrayBuffer = nullptr;
     }
 
     for (size_t i = 0; i < m_vertexAttribState.size(); ++i) {
         auto& state = m_vertexAttribState[i];
         if (state.bufferBinding == &buffer) {
-            buffer.onDetached(context()->graphicsContextGL());
+            buffer.onDetached(locker, context()->graphicsContextGL());
 
 #if !USE(ANGLE)
             if (!i && !context()->isGLES2Compliant()) {
@@ -103,6 +106,13 @@ void WebGLVertexArrayObjectBase::unbindBuffer(WebGLBuffer& buffer)
 void WebGLVertexArrayObjectBase::setVertexAttribDivisor(GCGLuint index, GCGLuint divisor)
 {
     m_vertexAttribState[index].divisor = divisor;
+}
+
+void WebGLVertexArrayObjectBase::addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor& visitor)
+{
+    visitor.addOpaqueRoot(m_boundElementArrayBuffer.get());
+    for (auto& state : m_vertexAttribState)
+        visitor.addOpaqueRoot(state.bufferBinding.get());
 }
 
 }

@@ -141,7 +141,7 @@ typedef enum {
  * @GST_NAVIGATION_QUERY_COMMANDS: command query
  * @GST_NAVIGATION_QUERY_ANGLES: viewing angle query
  *
- * Tyoes of navigation interface queries.
+ * Types of navigation interface queries.
  */
 typedef enum
 {
@@ -260,6 +260,9 @@ gboolean        gst_navigation_message_parse_event          (GstMessage *message
  * event.
  * @GST_NAVIGATION_EVENT_COMMAND: A navigation command event. Use
  * gst_navigation_event_parse_command() to extract the details from the event.
+ * @GST_NAVIGATION_EVENT_MOUSE_SCROLL: A mouse scroll event. Use
+ * gst_navigation_event_parse_mouse_scroll_event() to extract the details from
+ * the event. (Since: 1.18)
  *
  * Enum values for the various events that an element implementing the
  * GstNavigation interface might send up the pipeline.
@@ -271,7 +274,8 @@ typedef enum {
   GST_NAVIGATION_EVENT_MOUSE_BUTTON_PRESS         = 3,
   GST_NAVIGATION_EVENT_MOUSE_BUTTON_RELEASE       = 4,
   GST_NAVIGATION_EVENT_MOUSE_MOVE                 = 5,
-  GST_NAVIGATION_EVENT_COMMAND                    = 6
+  GST_NAVIGATION_EVENT_COMMAND                    = 6,
+  GST_NAVIGATION_EVENT_MOUSE_SCROLL               = 7
 } GstNavigationEventType;
 
 GST_VIDEO_API
@@ -290,6 +294,11 @@ gboolean        gst_navigation_event_parse_mouse_move_event   (GstEvent *event,
                                                                gdouble *x, gdouble *y);
 
 GST_VIDEO_API
+gboolean        gst_navigation_event_parse_mouse_scroll_event (GstEvent *event,
+                                                               gdouble *x, gdouble *y,
+                                                               gdouble *delta_x, gdouble *delta_y);
+
+GST_VIDEO_API
 gboolean        gst_navigation_event_parse_command            (GstEvent *event,
                                                                GstNavigationCommand *command);
 
@@ -306,6 +315,10 @@ void    gst_navigation_send_key_event   (GstNavigation *navigation,
 GST_VIDEO_API
 void    gst_navigation_send_mouse_event (GstNavigation *navigation,
                                          const char *event, int button, double x, double y);
+
+GST_VIDEO_API
+void    gst_navigation_send_mouse_scroll_event (GstNavigation *navigation,
+                                                double x, double y, double delta_x, double delta_y);
 
 GST_VIDEO_API
 void    gst_navigation_send_command     (GstNavigation *navigation,

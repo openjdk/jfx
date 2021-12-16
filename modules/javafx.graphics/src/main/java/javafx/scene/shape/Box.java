@@ -85,6 +85,11 @@ public class Box extends Shape3D {
 
     private TriangleMesh mesh;
 
+    /**
+     * Default size of the {@code Box}.
+     * @deprecated This field was exposed mistakenly and will be removed.
+     */
+    @Deprecated(since = "18", forRemoval = true)
     public static final double DEFAULT_SIZE = 2;
 
     {

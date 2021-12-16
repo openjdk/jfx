@@ -42,19 +42,18 @@ public:
         return m_frame->document()->referrerPolicy() == ReferrerPolicy::NoReferrerWhenDowngrade;
     }
 
+    Frame* frame() const { return m_frame.get(); }
+
 protected:
     explicit FrameNetworkingContext(Frame* frame)
-        : m_frame(frame)
+        : m_frame(makeWeakPtr(frame))
     {
     }
 
-public:
-    Frame* frame() const { return m_frame; }
-
 private:
-    bool isValid() const override { return m_frame; }
+    bool isValid() const override { return !!m_frame; }
 
-    Frame* m_frame;
+    WeakPtr<Frame> m_frame;
 };
 
 }

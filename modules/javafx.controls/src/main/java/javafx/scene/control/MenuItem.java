@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
 @IDProperty("id")
 public class MenuItem implements EventTarget, Styleable {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -134,7 +134,7 @@ public class MenuItem implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -148,7 +148,7 @@ public class MenuItem implements EventTarget, Styleable {
     private Object userData;
     private ObservableMap<Object, Object> properties;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -442,7 +442,7 @@ public class MenuItem implements EventTarget, Styleable {
         return mnemonicParsing;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -536,7 +536,7 @@ public class MenuItem implements EventTarget, Styleable {
         return properties;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

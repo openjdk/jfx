@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ import java.util.function.Consumer;
  * @since 9
  */
 public class ScrollPaneSkin extends SkinBase<ScrollPane> {
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -90,7 +90,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -148,7 +148,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -243,7 +243,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -318,7 +318,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -376,7 +376,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -613,7 +613,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -684,7 +684,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                     computeScrollNodeSize(getWidth(),getHeight());
                 }
                 if (scrollNode != null && scrollNode.isResizable()) {
-                    scrollNode.resize(snapSize(nodeWidth), snapSize(nodeHeight));
+                    scrollNode.resize(snapSizeX(nodeWidth), snapSizeY(nodeHeight));
                     if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
                         getSkinnable().requestLayout();
                     }
@@ -891,13 +891,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             */
             if (vsb.getVisibleAmount() < vsb.getMax()) {
                 double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                double vPixelValue;
-                if (nodeHeight > 0.0) {
-                    vPixelValue = vRange / nodeHeight;
-                }
-                else {
-                    vPixelValue = 0.0;
-                }
+                double hDelta = nodeHeight - contentHeight;
+                double vPixelValue = hDelta > 0.0 ? vRange / hDelta : 0.0;
                 double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
                 if (!Properties.IS_TOUCH_SUPPORTED) {
                     if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
@@ -923,14 +918,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
             if (hsb.getVisibleAmount() < hsb.getMax()) {
                 double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
-                double hPixelValue;
-                if (nodeWidth > 0.0) {
-                    hPixelValue = hRange / nodeWidth;
-                }
-                else {
-                    hPixelValue = 0.0;
-                }
-
+                double wDelta = nodeWidth - contentWidth;
+                double hPixelValue = wDelta > 0.0 ? hRange / wDelta : 0.0;
                 double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
                 if (!Properties.IS_TOUCH_SUPPORTED) {
                     if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
@@ -998,14 +987,16 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         // But to do this we have to set the scrollbars' values appropriately.
 
         if (dx != 0) {
-            double sdx = dx * (hsb.getMax() - hsb.getMin()) / (nodeWidth - contentWidth);
+            double wd = nodeWidth - contentWidth;
+            double sdx = wd > 0.0 ? dx * (hsb.getMax() - hsb.getMin()) / wd : 0;
             // Adjust back for some amount so that the Node border is not too close to view border
             sdx += -1 * Math.signum(sdx) * hsb.getUnitIncrement() / 5; // This accounts to 2% of view width
             hsb.setValue(hsb.getValue() + sdx);
             getSkinnable().requestLayout();
         }
         if (dy != 0) {
-            double sdy = dy * (vsb.getMax() - vsb.getMin()) / (nodeHeight - contentHeight);
+            double hd = nodeHeight - contentHeight;
+            double sdy = hd > 0.0 ? dy * (vsb.getMax() - vsb.getMin()) / hd : 0.0;
             // Adjust back for some amount so that the Node border is not too close to view border
             sdy += -1 * Math.signum(sdy) * vsb.getUnitIncrement() / 5; // This accounts to 2% of view height
             vsb.setValue(vsb.getValue() + sdy);
@@ -1179,7 +1170,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     private double updatePosX() {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
-        double minX = Math.min((- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)), 0);
+        double hsbRange = hsb.getMax() - hsb.getMin();
+        double minX = hsbRange > 0 ? Math.min(-x / hsbRange * (nodeWidth - contentWidth), 0) : 0;
         viewContent.setLayoutX(snapPositionX(minX));
         if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
@@ -1187,7 +1179,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
-        double minY = Math.min((- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)), 0);
+        double vsbRange = vsb.getMax() - vsb.getMin();
+        double minY = vsbRange > 0 ? Math.min(-posY / vsbRange * (nodeHeight - contentHeight), 0) : 0;
         viewContent.setLayoutY(snapPositionY(minY));
         if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;

@@ -17,17 +17,16 @@
 #include "unicode/platform.h"
 #include "unicode/uniset.h"
 #include "standardplural.h"
+#include "formatted_string_builder.h"
 
-U_NAMESPACE_BEGIN namespace number {
+U_NAMESPACE_BEGIN
+namespace number {
 namespace impl {
 
-// Typedef several enums for brevity and for easier comparison to Java.
+// For convenience and historical reasons, import the Field typedef to the namespace.
+typedef FormattedStringBuilder::Field Field;
 
-// Convention: bottom 4 bits for field, top 4 bits for field category.
-// Field category 0 implies the number category so that the number field
-// literals can be directly passed as a Field type.
-// See the helper functions in "NumFieldUtils" in number_utils.h
-typedef uint8_t Field;
+// Typedef several enums for brevity and for easier comparison to Java.
 
 typedef UNumberFormatRoundingMode RoundingMode;
 
@@ -49,7 +48,6 @@ static constexpr char16_t kFallbackPaddingString[] = u" ";
 class Modifier;
 class MutablePatternModifier;
 class DecimalQuantity;
-class NumberStringBuilder;
 class ModifierStore;
 struct MicroProps;
 
@@ -91,6 +89,14 @@ enum AffixPatternType {
 
 enum CompactType {
     TYPE_DECIMAL, TYPE_CURRENCY
+};
+
+enum Signum {
+    SIGNUM_NEG = 0,
+    SIGNUM_NEG_ZERO = 1,
+    SIGNUM_POS_ZERO = 2,
+    SIGNUM_POS = 3,
+    SIGNUM_COUNT = 4,
 };
 
 
@@ -160,7 +166,7 @@ class U_I18N_API Modifier {
      *            formatted.
      * @return The number of characters (UTF-16 code units) that were added to the string builder.
      */
-    virtual int32_t apply(NumberStringBuilder& output, int leftIndex, int rightIndex,
+    virtual int32_t apply(FormattedStringBuilder& output, int leftIndex, int rightIndex,
                           UErrorCode& status) const = 0;
 
     /**
@@ -188,7 +194,7 @@ class U_I18N_API Modifier {
     /**
      * Whether the modifier contains at least one occurrence of the given field.
      */
-    virtual bool containsField(UNumberFormatFields field) const = 0;
+    virtual bool containsField(Field field) const = 0;
 
     /**
      * A fill-in for getParameters(). obj will always be set; if non-null, the other
@@ -196,11 +202,11 @@ class U_I18N_API Modifier {
      */
     struct U_I18N_API Parameters {
         const ModifierStore* obj = nullptr;
-        int8_t signum;
+        Signum signum;
         StandardPlural::Form plural;
 
         Parameters();
-        Parameters(const ModifierStore* _obj, int8_t _signum, StandardPlural::Form _plural);
+        Parameters(const ModifierStore* _obj, Signum _signum, StandardPlural::Form _plural);
     };
 
     /**
@@ -231,7 +237,7 @@ class U_I18N_API ModifierStore {
     /**
      * Returns a Modifier with the given parameters (best-effort).
      */
-    virtual const Modifier* getModifier(int8_t signum, StandardPlural::Form plural) const = 0;
+    virtual const Modifier* getModifier(Signum signum, StandardPlural::Form plural) const = 0;
 };
 
 
@@ -240,31 +246,31 @@ class U_I18N_API ModifierStore {
  * itself. The {@link #processQuantity} method performs the final step in the number processing pipeline: it uses the
  * quantity to generate a finalized {@link MicroProps}, which can be used to render the number to output.
  *
- * <p>
  * In other words, this interface is used for the parts of number processing that are <em>quantity-dependent</em>.
  *
- * <p>
  * In order to allow for multiple different objects to all mutate the same MicroProps, a "chain" of MicroPropsGenerators
  * are linked together, and each one is responsible for manipulating a certain quantity-dependent part of the
  * MicroProps. At the tail of the linked list is a base instance of {@link MicroProps} with properties that are not
  * quantity-dependent. Each element in the linked list calls {@link #processQuantity} on its "parent", then does its
  * work, and then returns the result.
  *
+ * This chain of MicroPropsGenerators is typically constructed by NumberFormatterImpl::macrosToMicroGenerator() when
+ * constructing a NumberFormatter.
+ *
  * Exported as U_I18N_API because it is a base class for other exported types
  *
  */
 class U_I18N_API MicroPropsGenerator {
   public:
-    virtual ~MicroPropsGenerator();
+    virtual ~MicroPropsGenerator() = default;
 
     /**
-     * Considers the given {@link DecimalQuantity}, optionally mutates it, and returns a {@link MicroProps}.
+     * Considers the given {@link DecimalQuantity}, optionally mutates it, and
+     * populates a {@link MicroProps} instance.
      *
-     * @param quantity
-     *            The quantity for consideration and optional mutation.
-     * @param micros
-     *            The MicroProps instance to populate.
-     * @return A MicroProps instance resolved for the quantity.
+     * @param quantity The quantity for consideration and optional mutation.
+     * @param micros The MicroProps instance to populate. It will be modified as
+     *   needed for the given quantity.
      */
     virtual void processQuantity(DecimalQuantity& quantity, MicroProps& micros,
                                  UErrorCode& status) const = 0;

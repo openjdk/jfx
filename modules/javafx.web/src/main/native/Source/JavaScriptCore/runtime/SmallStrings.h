@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,6 @@ namespace JSC {
 
 class VM;
 class JSString;
-class SlotVisitor;
 
 static constexpr unsigned maxSingleCharacterString = 0xFF;
 
@@ -78,7 +77,7 @@ public:
     JSString** singleCharacterStrings() { return &m_singleCharacterStrings[0]; }
 
     void initializeCommonStrings(VM&);
-    void visitStrongReferences(SlotVisitor&);
+    template<typename Visitor> void visitStrongReferences(Visitor&);
 
 #define JSC_COMMON_STRINGS_ACCESSOR_DEFINITION(name) \
     JSString* name##String() const                   \
@@ -117,6 +116,9 @@ public:
     JSString* nullObjectString() const { return m_nullObjectString; }
     JSString* undefinedObjectString() const { return m_undefinedObjectString; }
     JSString* boundPrefixString() const { return m_boundPrefixString; }
+    JSString* notEqualString() const { return m_notEqualString; }
+    JSString* timedOutString() const { return m_timedOutString; }
+    JSString* okString() const { return m_okString; }
 
     bool needsToBeVisited(CollectionScope scope) const
     {
@@ -138,6 +140,9 @@ private:
     JSString* m_nullObjectString { nullptr };
     JSString* m_undefinedObjectString { nullptr };
     JSString* m_boundPrefixString { nullptr };
+    JSString* m_notEqualString { nullptr };
+    JSString* m_timedOutString { nullptr };
+    JSString* m_okString { nullptr };
     JSString* m_singleCharacterStrings[singleCharacterStringCount] { nullptr };
     bool m_needsToBeVisited { true };
     bool m_isInitialized { false };

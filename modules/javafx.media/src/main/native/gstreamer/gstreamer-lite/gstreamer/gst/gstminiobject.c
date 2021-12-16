@@ -722,7 +722,7 @@ gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
       *olddata, *olddata ? (*olddata)->refcount : 0,
       newdata, newdata ? newdata->refcount : 0);
 
-  olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+  olddata_val = (GstMiniObject *) g_atomic_pointer_get ((gpointer *) olddata);
 
   if (G_UNLIKELY (olddata_val == newdata))
     return FALSE;
@@ -731,7 +731,7 @@ gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
     gst_mini_object_ref (newdata);
 
   while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              olddata, olddata_val, newdata))) {
+              olddata, (gpointer) olddata_val, newdata))) {
     olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
     if (G_UNLIKELY (olddata_val == newdata))
       break;
@@ -764,11 +764,11 @@ gst_mini_object_steal (GstMiniObject ** olddata)
       *olddata, *olddata ? (*olddata)->refcount : 0);
 
   do {
-    olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    olddata_val = (GstMiniObject *) g_atomic_pointer_get ((gpointer *) olddata);
     if (olddata_val == NULL)
       break;
   } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              olddata, olddata_val, NULL)));
+              olddata, (gpointer) olddata_val, NULL)));
 
   return olddata_val;
 }
@@ -800,11 +800,11 @@ gst_mini_object_take (GstMiniObject ** olddata, GstMiniObject * newdata)
       newdata, newdata ? newdata->refcount : 0);
 
   do {
-    olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    olddata_val = (GstMiniObject *) g_atomic_pointer_get ((gpointer *) olddata);
     if (G_UNLIKELY (olddata_val == newdata))
       break;
   } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              olddata, olddata_val, newdata)));
+              olddata, (gpointer) olddata_val, newdata)));
 
   if (olddata_val)
     gst_mini_object_unref (olddata_val);
@@ -953,7 +953,7 @@ gst_mini_object_get_qdata (GstMiniObject * object, GQuark quark)
  * @quark: A #GQuark, naming the user data pointer
  *
  * This function gets back user data pointers stored via gst_mini_object_set_qdata()
- * and removes the data from @object without invoking its destroy() function (if
+ * and removes the data from @object without invoking its `destroy()` function (if
  * any was set).
  *
  * Returns: (transfer full) (nullable): The user data pointer set, or

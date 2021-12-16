@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,7 +124,7 @@ import javafx.css.StyleableProperty;
 @DefaultProperty("items")
 public class SplitPane extends Control {
 
-    /********************************************************************
+    /* ******************************************************************
      *  static methods
      ********************************************************************/
     private static final String RESIZABLE_WITH_PARENT = "resizable-with-parent";
@@ -162,7 +162,7 @@ public class SplitPane extends Control {
         return true;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -237,7 +237,7 @@ public class SplitPane extends Control {
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -300,7 +300,7 @@ public class SplitPane extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -314,7 +314,7 @@ public class SplitPane extends Control {
     // Cache the divider positions if the items have not been created.
     private final WeakHashMap<Integer, Double> dividerCache = new WeakHashMap<Integer, Double>();
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -390,7 +390,7 @@ public class SplitPane extends Control {
         return new SplitPaneSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -431,8 +431,9 @@ public class SplitPane extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -464,7 +465,7 @@ public class SplitPane extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *

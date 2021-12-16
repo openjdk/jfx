@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.scene.Cursor;
 import javafx.scene.text.Font;
 
 /**
+ * Converter to convert a {@code String} to a {@code Cursor}.
  * @since 9
  */
 public final class CursorConverter extends StyleConverter<String, Cursor> {
@@ -40,6 +41,10 @@ public final class CursorConverter extends StyleConverter<String, Cursor> {
         static final CursorConverter INSTANCE = new CursorConverter();
     }
 
+    /**
+     * Gets the {@code CursorConverter} instance.
+     * @return the {@code CursorConverter} instance
+     */
     public static StyleConverter<String, Cursor> getInstance() {
         return Holder.INSTANCE;
     }

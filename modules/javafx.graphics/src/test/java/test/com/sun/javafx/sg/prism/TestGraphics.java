@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,6 +179,7 @@ public class TestGraphics extends BaseGraphics {
 
     private static class TestResourceFactory implements ResourceFactory {
         @Override public boolean isDeviceReady() { return true; }
+        @Override public boolean isDisposed() { return false; }
 
         @Override public TextureResourcePool getTextureResourcePool() { return null; }
         @Override public Texture createTexture(Image image, Texture.Usage usageHint, WrapMode wrapMode) { return null; }
