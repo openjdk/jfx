@@ -461,6 +461,7 @@ ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
+ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 
 // Specifies whether to enable the Maven publishing tasks
 defineProperty("MAVEN_PUBLISH", "false")
@@ -4977,6 +4978,9 @@ compileTargets { t ->
 
         def library = targetProperties.library
 
+        def doStrip = targetProperties.containsKey('strip') && IS_RELEASE
+        def strip = doStrip ? targetProperties.strip : null
+        def stripArgs = doStrip ? targetProperties.stripArgs : null
         def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
         def modLibDest = targetProperties.modLibDest
         def moduleNativeDirName = "${platformPrefix}module-$modLibDest"
@@ -5025,7 +5029,8 @@ compileTargets { t ->
             group = "Basic"
             description = "copies javafx.graphics native libraries"
 
-            into "${graphicsProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${graphicsProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             from("${graphicsProject.buildDir}/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
             def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
@@ -5051,13 +5056,32 @@ compileTargets { t ->
                     from ("$winsdklib");
                 }
             }
+
+            if (doStrip) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+                    // FIXME: if we ever need to strip on Windows platforms, we must
+                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.media native libraries"
 
-            into "${mediaProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${mediaProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             def mediaBuildType = project(":media").ext.buildType
             if (IS_COMPILE_MEDIA) {
@@ -5088,19 +5112,52 @@ compileTargets { t ->
                     from ("$MEDIA_STUB/${library("glib-lite")}")
                 }
             }
+
+            if (doStrip && IS_COMPILE_MEDIA) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.web native libraries"
 
-            into "${webProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${webProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             if (IS_COMPILE_WEBKIT) {
                 from ("${webProject.buildDir}/libs/${t.name}/${library('jfxwebkit')}")
             } else {
                 if (t.name != "android" && t.name != "ios" && t.name != "dalvik") {
                     from ("$WEB_STUB/${library('jfxwebkit')}")
+                }
+            }
+
+            if (doStrip && IS_COMPILE_WEBKIT) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
                 }
             }
         }
