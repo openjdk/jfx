@@ -83,7 +83,7 @@ public class VirtualizedControlTestUtils {
     }
 
     /**
-     * Returns a vertical ScrollBar of the control.
+     * Returns a horizontal ScrollBar of the control.
      * @throws IllegalStateException if control's skin is not VirtualContainerBase
      */
     public static ScrollBar getHorizontalScrollBar(Control control) {
